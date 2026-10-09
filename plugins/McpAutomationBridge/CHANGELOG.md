@@ -16,6 +16,7 @@ All notable changes to the MCP Automation Bridge plugin will be documented in th
 ### Fixed
 - **`create_node` and `add_node` check the graph's schema** (`CanCreateUnderSpecifiedSchema`) and refuse a node it cannot hold with `NODE_NOT_ALLOWED_IN_GRAPH`.
 - **`import` picks the mesh as the asset it answers with and renames**, before animations, materials and textures.
+- **`open_level` and `manage_level` `load` reply after the level settles** (ten frames and texture streaming quiet, eight seconds at most) and restore the game view the load switched off.
 
 ## [0.6.0-beta-e] - 2026-10-09
 

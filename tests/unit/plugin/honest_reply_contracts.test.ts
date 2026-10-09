@@ -572,7 +572,7 @@ describe('handlers answer what they did', () => {
       expect(noop, 'a no-op neither stops a running PIE session nor loads').not.toContain('McpSafeLoadMap');
       expect(source.indexOf('if (bAlreadyOpen) {'), 'decided before the load runs').toBeLessThan(source.indexOf('const bool bLoaded = McpSafeLoadMap('));
       expect(compact()).toContain('Resp->SetBoolField(TEXT("alreadyLoaded"), !bReloaded); Resp->SetBoolField(TEXT("reloaded"), bReloaded);');
-      expect(compact()).toContain('TEXT("Level loaded"), LoadReply(true), FString());');
+      expect(compact()).toContain('TEXT("Level loaded"), LoadReply(true), bWasGameView);');
     });
 
     it('refuses the headless load over dirty packages only for a real load, and honours saveDirtyPackages in every mode', () => {
@@ -1146,6 +1146,19 @@ describe('Make and Break nodes of structs with native functions', () => {
     expect(dynamic).toContain('NodeClass->IsChildOf(UK2Node_MakeStruct::StaticClass()) ? TEXT("HasNativeMake") : TEXT("HasNativeBreak")');
     expect(dynamic).toMatch(/FindObject<UFunction>\(nullptr, \*Native\)\)\s*\{\s*FGraphNodeCreator<UK2Node_CallFunction> NativeCreator\(\*Context\.TargetGraph\);/u);
     expect(dynamic.indexOf('HasNativeBreak')).toBeLessThan(dynamic.indexOf('NewObject<UEdGraphNode>(Context.TargetGraph, NodeClass)'));
+  });
+});
+
+describe('opening a level answers once the level has settled', () => {
+  // A screenshot right after open_level showed placeholder textures and editor icons: the reply came the moment the
+  // load returned, and the load had switched the viewport's game view off.
+  it('both load paths reply through the settle wait and keep game view', () => {
+    const open = code('ControlEditor', 'McpAutomationBridge_ControlEditorLevel.cpp');
+    expect(open).toContain('McpReplyWhenLevelSettles(WeakThis, Socket, RequestId, TEXT("Level opened"), Resp, bWasGameView);');
+    expect(open).toContain('const int32 Streaming = IStreamingManager::Get().GetNumWantingResources();');
+    expect(open).toContain('View->SetGameView(true);');
+    const load = code('Level', 'Lifecycle', 'McpAutomationBridge_LevelHandlersLoad.cpp');
+    expect(load).toContain('McpReplyWhenLevelSettles(TWeakObjectPtr<UMcpAutomationBridgeSubsystem>(&Subsystem), RequestingSocket, RequestId,');
   });
 });
 

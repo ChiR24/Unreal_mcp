@@ -1,5 +1,6 @@
 #include "Domains/Level/McpAutomationBridge_LevelHandlersActions.h"
 #include "Domains/Level/Lifecycle/McpAutomationBridge_LevelHandlersDirtyPackageLoad.h"
+#include "Domains/ControlEditor/McpAutomationBridge_ControlEditorSupport.h"
 
 #include "Editor.h"
 #include "Engine/Level.h"
@@ -231,6 +232,8 @@ bool HandleLoadLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FStri
         return true;
       }
 
+      const FEditorViewportClient* ViewBefore = GetActiveEditorViewportClientForMcp();
+      const bool bWasGameView = ViewBefore && ViewBefore->IsInGameView();
       const bool bLoaded = McpSafeLoadMap(ResolvedFileToLoad);
 
       if (bLoaded) {
@@ -247,8 +250,8 @@ bool HandleLoadLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FStri
           }
         }
 
-        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true,
-                               TEXT("Level loaded"), LoadReply(true), FString());
+        McpReplyWhenLevelSettles(TWeakObjectPtr<UMcpAutomationBridgeSubsystem>(&Subsystem), RequestingSocket, RequestId,
+                                 TEXT("Level loaded"), LoadReply(true), bWasGameView);
         return true;
       } else {
         Subsystem.SendAutomationResponse(

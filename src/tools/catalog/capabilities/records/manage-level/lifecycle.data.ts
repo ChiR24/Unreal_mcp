@@ -32,6 +32,7 @@ export const LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
       unsaved: { type: 'boolean', description: 'alreadyLoaded only: whether the open level (or one of its external actor packages) still has unsaved changes after any save the call made.' },
       unsavedPackages: { type: 'array', items: { type: 'string' }, description: 'alreadyLoaded only: the packages with unsaved changes (the first 100).' },
       unsavedPackageCount: { type: 'number', description: 'alreadyLoaded only: how many packages have unsaved changes.' },
+      settledSeconds: { type: 'number', description: 'How long the reply waited for the level to settle (its water, streamed textures and effects drawn), so a screenshot right after shows the level as it looks.' }, texturesStillStreaming: { type: 'number', description: 'Textures still streaming in when the wait ended at its cap; absent when streaming had gone quiet.' },
     },
     outputRequired: [],
     effect: 'write', behavior: { idempotency: 'idempotent' }, costLatency: 'interactive', costResources: 'medium',

@@ -56,6 +56,11 @@
 bool IsSafeConsoleArgumentToken(const FString &Value);
 FString MakeSafeConsoleName(const FString &RawName, const TCHAR *Prefix);
 FEditorViewportClient *GetActiveEditorViewportClientForMcp();
+// Sends a level-load reply once the level has settled (some frames, texture streaming quiet, a few seconds at most),
+// with settledSeconds; bRestoreGameView puts back the game view the load switched off.
+void McpReplyWhenLevelSettles(TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakThis, TSharedPtr<FMcpBridgeWebSocket> Socket,
+                              const FString &RequestId, const FString &Message, TSharedPtr<FJsonObject> Resp,
+                              bool bRestoreGameView);
 // The editor viewport that draws the play world while the player is ejected from its pawn (Simulate in Editor);
 // null when Play In Editor is not running or the player still possesses a pawn.
 FEditorViewportClient *GetEjectedPieViewportClientForMcp();

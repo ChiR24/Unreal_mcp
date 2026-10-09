@@ -4554,7 +4554,7 @@
                     "description": "z"
                   }
                 },
-                "description": "editor_viewport (and game_viewport while the player is ejected): put the camera here first, in the same call ({x, y, z}); it stays there. That is the level viewport camera, or, while Play In Editor runs with the player ejected, the ejected view. While Play In Editor runs and the player is not ejected there is no free camera to move and the call is refused with PIE_VIEW_NOT_EJECTED (eject first, or point the game camera with set_camera cameraOp=view_target), exactly as set_camera is.",
+                "description": "editor_viewport (and game_viewport while the player is ejected): put the camera here first, in the same call ({x, y, z}); it stays there. Water and streamed texture detail follow the view over the next frames, which this call does not wait for: after a jump far from the last view (or right after a level opens) the picture can show black water or soft textures, so capture again from the same spot, or move with set_camera first. That is the level viewport camera, or, while Play In Editor runs with the player ejected, the ejected view. While Play In Editor runs and the player is not ejected there is no free camera to move and the call is refused with PIE_VIEW_NOT_EJECTED (eject first, or point the game camera with set_camera cameraOp=view_target), exactly as set_camera is.",
                 "additionalProperties": false
               }
             ],

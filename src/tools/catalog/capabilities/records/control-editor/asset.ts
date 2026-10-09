@@ -97,6 +97,8 @@ export const ASSET_RECORDS: readonly CapabilityRecordSource[] = [
       'Open levels have unsaved changes: opening another level would drop them, so the call is refused with DIRTY_PACKAGES, listing them in unsavedPackages. Save first (manage_level save), or use manage_level load, which takes saveDirtyPackages or discardUnsaved.'],
     inputProps: { levelPath: P.levelPath, path: P.path, assetPath: P.assetPath },
     required: ['levelPath'],
+    outputProps: { settledSeconds: { type: 'number', description: 'How long the reply waited for the level to settle (its water, streamed textures and effects drawn), so a screenshot right after shows the level as it looks.' }, texturesStillStreaming: { type: 'number', description: 'Textures still streaming in when the wait ended at its cap; absent when streaming had gone quiet.' }, },
+    outputRequired: [],
     effect: 'write',
     costLatency: 'interactive', costResources: 'medium',
     exampleInput: { action: 'open_level', levelPath: '/Game/Maps/EntryMap' },

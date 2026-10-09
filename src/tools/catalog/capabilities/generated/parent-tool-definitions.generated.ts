@@ -5412,7 +5412,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                   "description": "z"
                 }
               },
-              "description": "editor_viewport (and game_viewport while the player is ejected): put the camera here first, in the same call ({x, y, z}); it stays there. That is the level viewport camera, or, while Play In Editor runs with the player ejected, the ejected view. While Play In Editor runs and the player is not ejected there is no free camera to move and the call is refused with PIE_VIEW_NOT_EJECTED (eject first, or point the game camera with set_camera cameraOp=view_target), exactly as set_camera is.",
+              "description": "editor_viewport (and game_viewport while the player is ejected): put the camera here first, in the same call ({x, y, z}); it stays there. Water and streamed texture detail follow the view over the next frames, which this call does not wait for: after a jump far from the last view (or right after a level opens) the picture can show black water or soft textures, so capture again from the same spot, or move with set_camera first. That is the level viewport camera, or, while Play In Editor runs with the player ejected, the ejected view. While Play In Editor runs and the player is not ejected there is no free camera to move and the call is refused with PIE_VIEW_NOT_EJECTED (eject first, or point the game camera with set_camera cameraOp=view_target), exactly as set_camera is.",
               "additionalProperties": false
             }
           ],
@@ -6019,6 +6019,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Saved screenshot file path."
         },
+        "settledSeconds": {
+          "type": "number",
+          "description": "How long the reply waited for the level to settle (its water, streamed textures and effects drawn), so a screenshot right after shows the level as it looks."
+        },
         "shaderWait": {
           "type": "object",
           "additionalProperties": true,
@@ -6044,6 +6048,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "tabId": {
           "type": "string",
           "description": "Tab id acted on."
+        },
+        "texturesStillStreaming": {
+          "type": "number",
+          "description": "Textures still streaming in when the wait ended at its cap; absent when streaming had gone quiet."
         },
         "throttleOff": {
           "type": "boolean",
@@ -19211,6 +19219,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether any world setting was written."
         },
+        "settledSeconds": {
+          "type": "number",
+          "description": "How long the reply waited for the level to settle (its water, streamed textures and effects drawn), so a screenshot right after shows the level as it looks."
+        },
         "success": {
           "type": "boolean",
           "description": "Whether the action succeeded."
@@ -19220,6 +19232,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true,
           "description": "Asset-registry tag/value pairs (asset-registry lookup)."
+        },
+        "texturesStillStreaming": {
+          "type": "number",
+          "description": "Textures still streaming in when the wait ended at its cap; absent when streaming had gone quiet."
         },
         "timeDilation": {
           "type": "number",

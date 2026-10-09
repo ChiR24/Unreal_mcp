@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "b459681cfc8e53e5",
+  "catalogRevision": "0586b176b23980d5",
   "recordCount": 408,
   "records": [
     {
@@ -38089,6 +38089,14 @@
               "type": "object",
               "x-unreal-reflection-boundary": true,
               "description": "Additional handler result fields not named by the contract."
+            },
+            "settledSeconds": {
+              "type": "number",
+              "description": "How long the reply waited for the level to settle (its water, streamed textures and effects drawn), so a screenshot right after shows the level as it looks."
+            },
+            "texturesStillStreaming": {
+              "type": "number",
+              "description": "Textures still streaming in when the wait ended at its cap; absent when streaming had gone quiet."
             }
           },
           "required": [
@@ -38136,8 +38144,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "bc2f400ba7bac656485752017f4a2af9de08a6784b442884dfcb66743112a1f3",
-        "content": "04ebbcdbcbed9d78e877758f9f6b78f21e4d3d130b57c3c615f7b87c5ce416e4"
+        "schema": "506f438c253f3dac734cd1b31cc0cbd30dc5c69e7c0cbfeb7daa6e611dc13c51",
+        "content": "2f30b301f37c4d3d00a5f2a5a15aa2f2b0115e3eb61ebecd7f4fddf8e6e41a0a"
       }
     },
     {
@@ -38943,7 +38951,7 @@
                   "description": "z"
                 }
               },
-              "description": "editor_viewport (and game_viewport while the player is ejected): put the camera here first, in the same call ({x, y, z}); it stays there. That is the level viewport camera, or, while Play In Editor runs with the player ejected, the ejected view. While Play In Editor runs and the player is not ejected there is no free camera to move and the call is refused with PIE_VIEW_NOT_EJECTED (eject first, or point the game camera with set_camera cameraOp=view_target), exactly as set_camera is.",
+              "description": "editor_viewport (and game_viewport while the player is ejected): put the camera here first, in the same call ({x, y, z}); it stays there. Water and streamed texture detail follow the view over the next frames, which this call does not wait for: after a jump far from the last view (or right after a level opens) the picture can show black water or soft textures, so capture again from the same spot, or move with set_camera first. That is the level viewport camera, or, while Play In Editor runs with the player ejected, the ejected view. While Play In Editor runs and the player is not ejected there is no free camera to move and the call is refused with PIE_VIEW_NOT_EJECTED (eject first, or point the game camera with set_camera cameraOp=view_target), exactly as set_camera is.",
               "additionalProperties": false
             },
             "rotation": {
@@ -39148,8 +39156,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "3ae292427b1b944580140d57a707ea1a2125458b43458519c7da8658288afe8d",
-        "content": "ab8a24dac79afa90bc3e74c8acc7a2fef15f28967119190567a612aad143f07f"
+        "schema": "496a336944edd343aad086f9735c01717b1f9cbdc8f230acaa7176df4dd58a76",
+        "content": "7fba9cbd53245d0c198cb4978c5c3d38cf065926d2ee4c2445b1e2e784c3a964"
       }
     },
     {
@@ -70748,6 +70756,14 @@
             "unsavedPackageCount": {
               "type": "number",
               "description": "alreadyLoaded only: how many packages have unsaved changes."
+            },
+            "settledSeconds": {
+              "type": "number",
+              "description": "How long the reply waited for the level to settle (its water, streamed textures and effects drawn), so a screenshot right after shows the level as it looks."
+            },
+            "texturesStillStreaming": {
+              "type": "number",
+              "description": "Textures still streaming in when the wait ended at its cap; absent when streaming had gone quiet."
             }
           },
           "required": [
@@ -70796,8 +70812,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "01c967d5b1478b0a75813057cd836db2a5c50d59bcda2b3fdfa05500cfda3634",
-        "content": "4976bab29713355cc69a289d39a78119983398a5ad7747eafda88f1ef837996d"
+        "schema": "4971b9a7d68ca16d4aa9cb28576ba422a6479113491b123577090f69e8b80fda",
+        "content": "84cec769bb2d1f0672af930d5bbe5cf489fa837e0baad5bfb20e72df6f1271d3"
       }
     },
     {
