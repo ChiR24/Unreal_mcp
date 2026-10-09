@@ -7,6 +7,7 @@
 #include "McpConnectionManager.h"
 #include "Core/Errors/McpRequestErrorDevice.h"
 #include "Foundation/Diagnostics/McpDiagnosticsSnapshot.h"
+#include "Foundation/Diagnostics/McpWorldTickTimer.h"
 #include "Domains/ControlEditor/McpAutomationBridge_ControlEditorSupport.h"
 #include "Domains/ControlEditor/McpAutomationBridge_ControlEditorScreenshotSupport.h"
 #include "Domains/Log/McpAutomationBridge_LogHistory.h"
@@ -120,6 +121,7 @@ void UMcpAutomationBridgeSubsystem::Initialize(FSubsystemCollectionBase& Collect
     // Published only here, at the END of a non-commandlet initialization that
     // registered handlers and installed the ticker. Readiness is a POSITIVE
     // observation: the early commandlet return above leaves it false.
+    McpWorldTickTimer::Start();
     FMcpReadinessState::Get().SetEditorReady(true);
 
     UE_LOG(
@@ -131,6 +133,7 @@ void UMcpAutomationBridgeSubsystem::Initialize(FSubsystemCollectionBase& Collect
 void UMcpAutomationBridgeSubsystem::Deinitialize()
 {
     FMcpReadinessState::Get().Reset();
+    McpWorldTickTimer::Stop();
     StopAcceptingAutomationRequests();
     McpStopLiveStateTracking();
     // Enhanced Input holds live on the core ticker, which outlives this module.

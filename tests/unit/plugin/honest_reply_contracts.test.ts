@@ -1719,6 +1719,21 @@ describe('a batch lists the steps that have something to say', () => {
   });
 });
 
+// get_stats in Play In Editor read a 21 ms game thread, 8 ms of it the editor's own UI, while the world ticked in 10.5.
+describe('performance stats give the game\'s own share of the frame', () => {
+  it('times each world\'s tick from the subsystem\'s start and reports the measured world\'s as worldTickMs', () => {
+    const lifecycle = code('..', 'Core', 'Subsystem', 'McpAutomationBridgeSubsystemLifecycle.cpp');
+    expect(lifecycle).toContain('McpWorldTickTimer::Start();');
+    expect(lifecycle).toContain('McpWorldTickTimer::Stop();');
+    const timer = code('..', 'Foundation', 'Diagnostics', 'McpWorldTickTimer.cpp');
+    expect(timer).toContain('FWorldDelegates::OnWorldTickStart.AddLambda(');
+    expect(timer).toContain('FWorldDelegates::OnWorldPostActorTick.AddLambda(');
+    expect(timer).toContain('FWorldDelegates::OnWorldTickStart.Remove(GMcpWorldTickStartHandle);');
+    const stats = code('Environment', 'Inspection', 'McpAutomationBridge_EnvironmentHandlersInspectStats.cpp');
+    expect(stats).toContain('if (WorldTickMs >= 0.0) Resp->SetNumberField(TEXT("worldTickMs"), WorldTickMs);');
+  });
+});
+
 // get_splines_info with actorName answered the spline at the top level and again under splines; save_all carried every
 // count its message gives as a field.
 describe('a reply says each thing once', () => {

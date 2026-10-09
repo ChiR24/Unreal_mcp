@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "b1983c216b30b0cd",
+  "catalogRevision": "70d9dceb2b156f0f",
   "recordCount": 397,
   "records": [
     {
@@ -41643,7 +41643,11 @@
             },
             "gameThreadMs": {
               "type": "number",
-              "description": "Game thread time in milliseconds."
+              "description": "Game thread time in milliseconds; while Play In Editor runs it also holds the editor's own UI and viewports, so worldTickMs is the game's share."
+            },
+            "worldTickMs": {
+              "type": "number",
+              "description": "The measured world's own tick in milliseconds (actors, components and physics, from the start of its tick to the end of its tick groups), averaged over about 30 frames: the game's share of gameThreadMs. Absent until the world has ticked."
             },
             "renderThreadMs": {
               "type": "number",
@@ -41805,8 +41809,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "0be07f4b1168be953398eae3226a9732782b05549d73586ef9c03c552e8e4a45",
-        "content": "0799234f98b71c763d2be661b4b864b58fe4ec072fb91cd89f086f95907b0a71"
+        "schema": "08c682cdadc902db138dfe47388fd71504b920670b73352e85f7fb11b1dcac8e",
+        "content": "f0f535fb4902a6f1834230c579217a1e98bb36e603683b6e68e99c511c7cc89b"
       }
     },
     {

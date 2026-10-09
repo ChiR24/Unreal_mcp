@@ -1,4 +1,5 @@
 #include "Domains/Environment/McpAutomationBridge_EnvironmentHandlersShared.h"
+#include "Foundation/Diagnostics/McpWorldTickTimer.h"
 
 #include "Animation/SkeletalMeshActor.h"
 #include "Camera/CameraActor.h"
@@ -209,6 +210,10 @@ bool HandleInspectStatsAction(
             Resp->SetBoolField(TEXT("frameDeltaMayBeEditorThrottled"),
                                WorldType != TEXT("PIE"));
             Resp->SetNumberField(TEXT("gameThreadMs"), GameThreadMs);
+            // The game's own share: in PIE the game thread time also holds the editor's UI and viewports (21 ms read
+            // as a slow game while its world ticked in 10).
+            const double WorldTickMs = McpWorldTickTimer::AverageMs(StatWorld);
+            if (WorldTickMs >= 0.0) Resp->SetNumberField(TEXT("worldTickMs"), WorldTickMs);
             Resp->SetNumberField(TEXT("renderThreadMs"), RenderThreadMs);
             Resp->SetNumberField(TEXT("rhiThreadMs"), RHIThreadMs);
             Resp->SetNumberField(TEXT("gpuMs"), GPUFrameMs);

@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`create_metasound` `oneShot` `false` makes a continuous source.** The engine never virtualizes a one-shot MetaSound, so a hum or ambience left playing on an AudioComponent that started out of earshot was dropped for good, silent even after `Play`. Without the One-Shot interface the source counts as looping and resumes when the listener comes near; the reply says `oneShot`.
 - **`set_property` `objectPaths` writes the same value on several objects.** Each entry is a target as `objectPath` takes it (an actor, `Actor.Component`, an asset, a class default), written as a single call would be, with `properties` too, and answered under `targets`; the call fails naming each target that did not take the write. Turning down eight ambient sounds took eight calls.
 - **A Blueprint compile warns about a sound heard everywhere.** A `PlaySoundAtLocation`, `SpawnSoundAtLocation` or `SpawnSoundAttached` node with no attenuation, on the node or on its sound, plays at full volume at any distance (a splash meant for one puddle filled the level). Every compile's `diagnostics` now name such a node, its graph and the sound.
+- **`get_stats` performance gives the game's own share of the frame.** While Play In Editor runs, the game thread time also holds the editor's UI and viewports (a 21 ms frame read as a slow game while its world ticked in 10.5); `worldTickMs` times the measured world's own tick, actors, components and physics.
 
 </details>
 

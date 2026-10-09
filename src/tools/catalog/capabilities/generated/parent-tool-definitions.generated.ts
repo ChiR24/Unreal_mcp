@@ -6448,7 +6448,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "gameThreadMs": {
           "type": "number",
-          "description": "Game thread time in milliseconds."
+          "description": "Game thread time in milliseconds; while Play In Editor runs it also holds the editor's own UI and viewports, so worldTickMs is the game's share."
         },
         "generatedBy": {
           "type": "string",
@@ -6982,6 +6982,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "worldPath": {
           "type": "string",
           "description": "Package path of that world."
+        },
+        "worldTickMs": {
+          "type": "number",
+          "description": "The measured world's own tick in milliseconds (actors, components and physics, from the start of its tick to the end of its tick groups), averaged over about 30 frames: the game's share of gameThreadMs. Absent until the world has ticked."
         },
         "worldType": {
           "type": "string",
