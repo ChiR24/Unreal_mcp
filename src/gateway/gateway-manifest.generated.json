@@ -4636,6 +4636,7 @@
         "name",
         "objectKind",
         "objectPath",
+        "objectPaths",
         "offset",
         "outputPath",
         "properties",
@@ -4804,6 +4805,15 @@
           "objectPath": {
             "type": "string",
             "description": "Object path of the world actor or asset (e.g. /Game/Maps/Demo.Demo_PersistentLevel)."
+          },
+          "objectPaths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "maxItems": 64,
+            "description": "The same write on several targets in one call, in place of objectPath: each entry is a target as objectPath takes it (an actor, \"Actor.Component\", an asset, a class default), written as a single call would be, with properties too. Answered under targets; the call fails naming each target that did not take the write, and the others keep it."
           },
           "offset": {
             "type": "number",

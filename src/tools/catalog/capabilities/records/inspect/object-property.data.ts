@@ -266,10 +266,11 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'inspect', action: 'set_property', dispatchAction: 'set_property', domain: D, family: 'property',
     topics: ['write property', 'set value', 'change property', 'modify property', 'edit property', 'set field', 'set property on actor', 'set game instance variable'],
-    summary: 'Write a property value on a world actor, asset, or Blueprint CDO, or several at once (properties).',
+    summary: 'Write a property value on a world actor, asset, or Blueprint CDO; several at once (properties), or the same on several objects (objectPaths).',
     whenToUse: [
       'A single property value must be written.',
       'Several properties of one target must be written in one call (properties).',
+      'The same property must be written on several objects in one call (objectPaths), e.g. one volume on every ambient sound.',
       'A placed actor\'s component property must be written ("StaticMeshComponent0.StaticMesh", "Mesh.BodyInstance.CollisionEnabled"): a StaticMesh, collision, SimulatePhysics or Mobility key goes through the component\'s own setter, as control_actor edit_component writes it.',
     ],
     whenNotToUse: [
@@ -284,6 +285,7 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
         'x-unreal-reflection-boundary': true,
         description: 'Several writes on the same target in place of propertyName and value: {name or dotted path: value}, e.g. {"BoxExtent": {"X": 20, "Y": 90, "Z": 100}, "CollisionProfileName": "OverlapAllDynamic"}. Each is written as a single call would be and reported under properties; the call fails naming any that did not apply. watch applies to single writes only.',
       },
+      objectPaths: { type: 'array', items: { type: 'string' }, minItems: 1, maxItems: 64, description: 'The same write on several targets in one call, in place of objectPath: each entry is a target as objectPath takes it (an actor, "Actor.Component", an asset, a class default), written as a single call would be, with properties too. Answered under targets; the call fails naming each target that did not take the write, and the others keep it.' },
       // A UMG pop set off by a write ran on real time and ended between two calls; LivesPop was only
       // provable by slowing the asset 50x.
       watch: {
@@ -304,7 +306,8 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
     outputProps: {
       watch: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'With watch: objectPath, propertyName, samples ({t, value}, kept when the value changed), sampleCount, changed (it took more than one value) and frames.' },
       properties: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, 'x-unreal-reflection-boundary': true, description: 'With properties: each write as {propertyName, applied, value read back}.' },
-      applied: { type: 'number', description: 'With properties: how many writes applied.' },
+      targets: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, 'x-unreal-reflection-boundary': true, description: 'With objectPaths: each target as {objectPath as given, applied, the value read back (properties with properties), actorPath, saved, saveSkippedReason}.' },
+      applied: { type: 'number', description: 'With properties: how many writes applied; with objectPaths: how many targets.' },
       saved: { type: 'boolean', description: 'Whether the target\'s package was written to disk after the write; with properties, the last write\'s save, which holds every write of the call. False with saveSkippedReason when nothing was saved.' },
       saveSkippedReason: { type: 'string', description: 'Why nothing was saved: markDirty was false, a running-game or transient object (the change lasts until PIE stops), level content (saved with its level), engine content, or a save that failed (the change is only in memory).' },
       instancesUpdated: { type: 'number', description: 'A write to a class default or component template: how many placed copies, and derived Blueprints\' defaults with their own copies, still held the old default and took the new one, as the details panel does; one that overrides the value keeps it. Absent for any other target.' },

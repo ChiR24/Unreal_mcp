@@ -5945,6 +5945,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Object path of the world actor or asset (e.g. /Game/Maps/Demo.Demo_PersistentLevel)."
         },
+        "objectPaths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "maxItems": 64,
+          "description": "The same write on several targets in one call, in place of objectPath: each entry is a target as objectPath takes it (an actor, \"Actor.Component\", an asset, a class default), written as a single call would be, with properties too. Answered under targets; the call fails naming each target that did not take the write, and the others keep it."
+        },
         "offset": {
           "type": "number",
           "description": "Matching objects to skip before the first one returned, for paging (default 0); hasMore says whether more follow."
@@ -6202,7 +6211,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "applied": {
           "type": "number",
-          "description": "With properties: how many writes applied."
+          "description": "With properties: how many writes applied; with objectPaths: how many targets."
         },
         "availablePhysicalBytes": {
           "type": "number",
@@ -6830,6 +6839,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "string"
           },
           "description": "Actor tags."
+        },
+        "targets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "x-unreal-reflection-boundary": true,
+          "description": "With objectPaths: each target as {objectPath as given, applied, the value read back (properties with properties), actorPath, saved, saveSkippedReason}."
         },
         "threadTimeDerivedFps": {
           "type": "number",

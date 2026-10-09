@@ -27,7 +27,7 @@ bool AllListed(const FJsonArray& Items, const TArray<FString>& Listed)
 	return true;
 }
 
-// A payload list (warnings, changedAssets) whose every entry the receipt already lists, at its root and down
+// A payload list (warnings, changedAssets, changedEntities) whose every entry the receipt already lists, at its root and down
 // details (where the receipt collects them).
 TSharedPtr<FJsonObject> WithoutListed(const TSharedPtr<FJsonObject>& Payload, const TCHAR* Field, const TArray<FString>& Listed)
 {
@@ -187,8 +187,9 @@ TSharedPtr<FJsonObject> CompactExecute(const TSharedPtr<FJsonObject>& Reply)
 	if (TopWarnings && AllListed(*TopWarnings, Listed)) Out->RemoveField(TEXT("warnings"));
 	if (const TSharedPtr<FJsonObject> Data = ObjectField(Out, TEXT("data")))
 	{
-		TSharedPtr<FJsonObject> Shown = WithoutRepeatedValues(WithoutListed(
-			WithoutListed(Data, TEXT("warnings"), Listed), TEXT("changedAssets"), StringItems(ArrayField(Outcome, TEXT("changes")))));
+		const TArray<FString> Changes = StringItems(ArrayField(Outcome, TEXT("changes")));
+		TSharedPtr<FJsonObject> Shown = WithoutRepeatedValues(WithoutListed(WithoutListed(
+			WithoutListed(Data, TEXT("warnings"), Listed), TEXT("changedAssets"), Changes), TEXT("changedEntities"), Changes));
 		if (SameField(Shown, TEXT("success"), Out, TEXT("success"))) Shown->RemoveField(TEXT("success"));
 		if (SameField(Shown, TEXT("message"), Out, TEXT("message"))) Shown->RemoveField(TEXT("message"));
 		Out->SetObjectField(TEXT("data"), Shown);

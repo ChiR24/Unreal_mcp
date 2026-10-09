@@ -40,7 +40,7 @@ function strings(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
 }
 
-// A payload list (warnings, changedAssets) whose every entry the receipt already lists, at its root and down
+// A payload list (warnings, changedAssets, changedEntities) whose every entry the receipt already lists, at its root and down
 // `details` (where the receipt collects them from).
 function withoutListed(payload: Json, field: string, listed: readonly string[]): Json {
   const out = { ...payload };
@@ -146,7 +146,8 @@ function compactExecute(reply: Json): Json {
     delete out.warnings;
   }
   if (isRecord(out.data)) {
-    const data = withoutRepeatedValues(withoutListed(withoutListed(out.data, 'warnings', listed), 'changedAssets', strings(receipt?.changes)));
+    const changes = strings(receipt?.changes);
+    const data = withoutRepeatedValues(withoutListed(withoutListed(withoutListed(out.data, 'warnings', listed), 'changedAssets', changes), 'changedEntities', changes));
     if (same(data.success, out.success)) delete data.success;
     if (same(data.message, out.message)) delete data.message;
     out.data = data;

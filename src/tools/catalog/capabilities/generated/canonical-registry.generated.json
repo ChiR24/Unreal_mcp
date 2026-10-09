@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "dcd50b1b7493b1e1",
+  "catalogRevision": "ae9fd934b8089940",
   "recordCount": 397,
   "records": [
     {
@@ -43671,10 +43671,11 @@
           "set property on actor",
           "set game instance variable"
         ],
-        "summary": "Write a property value on a world actor, asset, or Blueprint CDO, or several at once (properties).",
+        "summary": "Write a property value on a world actor, asset, or Blueprint CDO; several at once (properties), or the same on several objects (objectPaths).",
         "whenToUse": [
           "A single property value must be written.",
           "Several properties of one target must be written in one call (properties).",
+          "The same property must be written on several objects in one call (objectPaths), e.g. one volume on every ambient sound.",
           "A placed actor's component property must be written (\"StaticMeshComponent0.StaticMesh\", \"Mesh.BodyInstance.CollisionEnabled\"): a StaticMesh, collision, SimulatePhysics or Mobility key goes through the component's own setter, as control_actor edit_component writes it."
         ],
         "whenNotToUse": [
@@ -43727,6 +43728,15 @@
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true,
               "description": "Several writes on the same target in place of propertyName and value: {name or dotted path: value}, e.g. {\"BoxExtent\": {\"X\": 20, \"Y\": 90, \"Z\": 100}, \"CollisionProfileName\": \"OverlapAllDynamic\"}. Each is written as a single call would be and reported under properties; the call fails naming any that did not apply. watch applies to single writes only."
+            },
+            "objectPaths": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "maxItems": 64,
+              "description": "The same write on several targets in one call, in place of objectPath: each entry is a target as objectPath takes it (an actor, \"Actor.Component\", an asset, a class default), written as a single call would be, with properties too. Answered under targets; the call fails naming each target that did not take the write, and the others keep it."
             },
             "watch": {
               "type": "object",
@@ -43795,9 +43805,19 @@
               "x-unreal-reflection-boundary": true,
               "description": "With properties: each write as {propertyName, applied, value read back}."
             },
+            "targets": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "x-unreal-reflection-boundary": true,
+              "description": "With objectPaths: each target as {objectPath as given, applied, the value read back (properties with properties), actorPath, saved, saveSkippedReason}."
+            },
             "applied": {
               "type": "number",
-              "description": "With properties: how many writes applied."
+              "description": "With properties: how many writes applied; with objectPaths: how many targets."
             },
             "saved": {
               "type": "boolean",
@@ -43828,7 +43848,7 @@
       },
       "examples": [
         {
-          "title": "Write a property value on a world actor, asset, or Blueprint CDO, or several at once (properties).",
+          "title": "Write a property value on a world actor, asset, or Blueprint CDO; several at once (properties), or the same on several objects (objectPaths).",
           "input": {
             "action": "set_property",
             "objectPath": "/Game/Maps/Demo.Demo_PersistentLevel.PlayerStart_1",
@@ -43867,8 +43887,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "bf7261d41cc7f6dce4b9ad77d32f9556780242c7e223748388ec0f84978065f8",
-        "content": "4f436e8f16e23a568d4e1ead8e617cee4a618b65361c6c21b7fee3ad619715f3"
+        "schema": "97c5abeb81ae77e6f6454153463e8d3620b4fdd6c211920fdd097cba036928ef",
+        "content": "be3748a4aaacada4bb759674e07973f0fb03a4077c766d59baa025754ad9e77b"
       }
     },
     {

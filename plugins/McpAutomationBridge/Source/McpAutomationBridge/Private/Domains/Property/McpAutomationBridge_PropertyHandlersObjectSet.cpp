@@ -12,7 +12,6 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/Reflection/McpPropertyReflection.h"
 #include "Safety/McpSafeReflectionTarget.h"
-#include "Core/Requests/McpResponseCaptureRegistry.h"
 
 #include "Components/ActorComponent.h"
 #include "GameFramework/Actor.h"
@@ -30,47 +29,12 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
       !LowerAction.Contains(TEXT("set_object_property")))
     return false;
 
-  // properties: several values on one target in one call ({BoxExtent, CollisionProfileName}). Each runs through
-  // this handler under a captured id, so every write keeps its own checks; a watch stays a single-write feature.
-  const TSharedPtr<FJsonObject> *Properties = nullptr;
-  if (Payload->TryGetObjectField(TEXT("properties"), Properties) && (*Properties)->Values.Num() > 0) {
-    TArray<TSharedPtr<FJsonValue>> Rows;
-    TArray<FString> Failed;
-    TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
-    double InstancesUpdated = -1.0;
-    for (const TPair<FString, TSharedPtr<FJsonValue>> &Pair : (*Properties)->Values) {
-      TSharedPtr<FJsonObject> One = MakeShared<FJsonObject>();
-      One->Values = Payload->Values;
-      for (const TCHAR *Field : {TEXT("properties"), TEXT("propertyPath"), TEXT("watch")}) One->RemoveField(Field);
-      One->SetStringField(TEXT("propertyName"), Pair.Key);
-      One->SetField(TEXT("value"), Pair.Value);
-      const FString ItemId = FString::Printf(TEXT("%s#prop%d"), *RequestId, Rows.Num());
-      FMcpResponseCaptureRegistry::Get().Begin(ItemId);
-      HandleSetObjectProperty(ItemId, Action, One, RequestingSocket);
-      const FMcpCapturedResponse Reply = FMcpResponseCaptureRegistry::Get().End(ItemId);
-      TSharedPtr<FJsonObject> Row = McpHandlerUtils::CreateResultObject();
-      Row->SetStringField(TEXT("propertyName"), Pair.Key);
-      Row->SetBoolField(TEXT("applied"), Reply.bSuccess);
-      if (!Reply.bSuccess) Failed.Add(FString::Printf(TEXT("%s: %s"), *Pair.Key, *Reply.Message));
-      // assetPath names the Blueprint or material a class-default or expression write saved: without it a batch on
-      // a Blueprint's class defaults recompiled and saved the Blueprint while its receipt listed no change. Every row
-      // saves the same package, so the last row's saved/saveSkippedReason is what reached disk.
-      for (const TCHAR *Field : {TEXT("value"), TEXT("actorName"), TEXT("actorPath"), TEXT("packagePath"), TEXT("blueprintCompiled"),
-                                 TEXT("assetPath"), TEXT("materialRebuilt"), TEXT("saved"), TEXT("saveSkippedReason")}) {
-        const TSharedPtr<FJsonValue> Value = Reply.Result.IsValid() ? Reply.Result->TryGetField(Field) : nullptr;
-        if (Value.IsValid()) (FCString::Strcmp(Field, TEXT("value")) == 0 ? Row : Data)->SetField(Field, Value);
-      }
-      double Updated = 0.0;
-      // The same placed copies follow every write of the batch, so the count is the most any one write moved, not a sum.
-      if (Reply.Result.IsValid() && Reply.Result->TryGetNumberField(TEXT("instancesUpdated"), Updated)) InstancesUpdated = FMath::Max(InstancesUpdated, Updated);
-      Rows.Add(MakeShared<FJsonValueObject>(Row));
-    }
-    if (InstancesUpdated >= 0.0) Data->SetNumberField(TEXT("instancesUpdated"), InstancesUpdated);
-    Data->SetArrayField(TEXT("properties"), Rows);
-    Data->SetNumberField(TEXT("applied"), Rows.Num() - Failed.Num());
-    SendAutomationResponse(RequestingSocket, RequestId, Failed.Num() == 0, Failed.Num() == 0
-        ? FString::Printf(TEXT("Set %d properties."), Rows.Num()) : FString::Join(Failed, TEXT("; ")),
-        Data, Failed.Num() == 0 ? FString() : FString(TEXT("PROPERTY_BATCH_INCOMPLETE")));
+  // properties (several values on one target) and objectPaths (the same write on several targets) run every write
+  // through this handler again under a captured id, so each one keeps its own checks.
+  McpPropertyTarget::FSetBatchReply Batch;
+  if (McpPropertyTarget::RunSetBatch(RequestId, Payload, [&](const FString &ItemId, const TSharedPtr<FJsonObject> &One) {
+        HandleSetObjectProperty(ItemId, Action, One, RequestingSocket); }, Batch)) {
+    SendAutomationResponse(RequestingSocket, RequestId, Batch.bSuccess, Batch.Message, Batch.Data, Batch.ErrorCode);
     return true;
   }
 

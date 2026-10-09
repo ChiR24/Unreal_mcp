@@ -68,4 +68,21 @@ bool SaveAfterWrite(UObject* Target, UBlueprint* Blueprint, bool bMarkDirty, FSt
 bool ResolvePropertyTarget(UMcpAutomationBridgeSubsystem& Bridge, const FString& RequestId,
                            const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket,
                            FPropertyTarget& Out);
+
+// One write of a batch: set_object_property run again on One under the captured id ItemId.
+using FSetBatchWrite = TFunctionRef<void(const FString& ItemId, const TSharedPtr<FJsonObject>& One)>;
+
+struct FSetBatchReply
+{
+  bool bSuccess = true;
+  FString Message;
+  FString ErrorCode;
+  TSharedPtr<FJsonObject> Data;
+};
+
+// set_object_property's batches: properties (several values on one target, rows under properties) and objectPaths (the
+// same write, or the same properties, on several targets, rows under targets). Every write runs through RunOne, so it
+// keeps each check a single call makes; a watch stays a single-write feature. A write that did not apply fails the call
+// with PROPERTY_BATCH_INCOMPLETE naming it. False, Out untouched, when Payload asks for no batch.
+bool RunSetBatch(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, FSetBatchWrite RunOne, FSetBatchReply& Out);
 }

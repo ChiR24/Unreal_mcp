@@ -911,7 +911,7 @@ describe('multi-property writes on class defaults', () => {
   // set_property properties {CharMoveComp.bCanWalkOffLedges, CharMoveComp.PerchRadiusThreshold} on a Character Blueprint recompiled and
   // saved the Blueprint while its receipt listed no change: the batch kept only actor fields from each write.
   it('a multi-property write names the asset it saved and how many placed copies took the new default', () => {
-    const source = code('Property', 'McpAutomationBridge_PropertyHandlersObjectSet.cpp');
+    const source = code('Property', 'McpAutomationBridge_PropertyHandlersObjectSetBatch.cpp');
     expect(source).toContain('TEXT("assetPath"), TEXT("materialRebuilt"), TEXT("saved"), TEXT("saveSkippedReason")}) {');
     expect(source).toContain('if (InstancesUpdated >= 0.0) Data->SetNumberField(TEXT("instancesUpdated"), InstancesUpdated);');
   });
@@ -1510,7 +1510,7 @@ describe('a Niagara parameter write answers in the capability shape', () => {
 // A set_property batch on an asset never said whether the package reached disk; the single write did.
 describe('a property batch says whether it saved', () => {
   it('carries saved and saveSkippedReason from the writes', () => {
-    const source = code('Property', 'McpAutomationBridge_PropertyHandlersObjectSet.cpp');
+    const source = code('Property', 'McpAutomationBridge_PropertyHandlersObjectSetBatch.cpp');
     expect(source).toMatch(/TEXT\("materialRebuilt"\), TEXT\("saved"\), TEXT\("saveSkippedReason"\)\}\)/u);
   });
 });
