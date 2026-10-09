@@ -84,6 +84,10 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
     {
         return HandleInspectRaycastWorldAction(*this, RequestId, Payload, RequestingSocket);
     }
+    if (LowerSubAction.Equals(TEXT("check_mesh")))
+    {
+        return HandleInspectMeshCheckAction(*this, RequestId, Payload, RequestingSocket);
+    }
     if (LowerSubAction.Equals(TEXT("get_bounding_box")) ||
         LowerSubAction.Equals(TEXT("get_metadata")) ||
         LowerSubAction.Equals(TEXT("export")))

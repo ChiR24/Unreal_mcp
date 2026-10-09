@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `3025a70201a3c8a9`
+Catalog revision: `84bcbc51c62b5cca`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 398 capabilities across
+The catalog declares 399 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -40,7 +40,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `build_environment` | 40 | 5 | 32 | 3 | environment |
 | `control_actor` | 24 | 8 | 14 | 2 | actor |
 | `control_editor` | 24 | 9 | 12 | 3 | editor |
-| `inspect` | 18 | 13 | 4 | 1 | inspect |
+| `inspect` | 19 | 14 | 4 | 1 | inspect |
 | `manage_ai` | 16 | 2 | 14 | 0 | manage ai |
 | `manage_asset` | 46 | 9 | 32 | 5 | asset, datatable, enum, material, struct, texture |
 | `manage_audio` | 13 | 2 | 11 | 0 | audio |
@@ -62,7 +62,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-64 of 398 capabilities require consent.
+64 of 399 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -303,6 +303,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `enum.edit_enum` | `manage_asset` | `create_enum` | write | write | explicit | `manage_asset.edit_enum` `manage_asset.create_enum` `manage_asset.add_enum_value` `manage_asset.rename_enum_value` `manage_asset.reorder_enum_values` `manage_asset.set_enum_value_metadata` `manage_asset.split_enum` |
 | `enum.get_enum` | `manage_asset` | `get_enum` | read | read | none | `manage_asset.get_enum` |
 | `inspect.add_tag` | `inspect` | `control_actor` | write | write | none | `inspect.add_tag` |
+| `inspect.check_mesh` | `inspect` | `check_mesh` | read | read | none | `inspect.check_mesh` |
 | `inspect.create_snapshot` | `inspect` | `control_actor` | write | write | none | `inspect.create_snapshot` `inspect.restore_snapshot` |
 | `inspect.delete_object` | `inspect` | `control_actor` | destructive | destructive | explicit | `inspect.delete_object` |
 | `inspect.find_by_class` | `inspect` | `find_by_class` | read | read | none | `inspect.find_by_class` |

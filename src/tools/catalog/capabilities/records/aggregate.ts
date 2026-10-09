@@ -30,7 +30,7 @@ import { MANAGE_GEOMETRY_SOURCES } from './world/manage-geometry.index.js';
 import { MANAGE_LEVEL_STRUCTURE_SOURCES } from './world/manage-level-structure.index.js';
 import { MANAGE_PCG_SOURCES } from './world/manage-pcg.index.js';
 
-export const ALL_CAPABILITY_RECORD_COUNT = 398 as const;
+export const ALL_CAPABILITY_RECORD_COUNT = 399 as const;
 
 const ALL_SOURCES: readonly CapabilityRecordSource[] = [
   // world

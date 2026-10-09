@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "3025a70201a3c8a9",
-  "recordCount": 398,
+  "catalogRevision": "84bcbc51c62b5cca",
+  "recordCount": 399,
   "records": [
     {
       "id": "animation_physics.bind_cloth_to_skeletal_mesh",
@@ -40158,6 +40158,232 @@
         "algorithm": "sha256",
         "schema": "747a2f225b45a47b6cebfbc00b6946eb7702e7ca69742027f8ce08cf80d261fd",
         "content": "600166552f5a96541ee111c731232418b9fd260d3c9619452cdd43782722f407"
+      }
+    },
+    {
+      "id": "inspect.check_mesh",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "inspect",
+          "action": "check_mesh"
+        }
+      ],
+      "discovery": {
+        "domain": "inspect",
+        "family": "object",
+        "topics": [
+          "check_mesh",
+          "check mesh",
+          "mesh holes",
+          "watertight",
+          "non manifold",
+          "flipped normals",
+          "mesh parts",
+          "broken mesh",
+          "mesh volume"
+        ],
+        "summary": "Check whether a static mesh's geometry is sound, from its source triangles: closed (watertight) or open with how many holes, edges shared by three or more faces, faces turned inside out, faces with no area, seams where faces do not share their corners, and how many separate parts it is made of, with its size, surface area and (when closed) volume.",
+        "whenToUse": [
+          "An imported, downloaded or generated mesh must be proven sound before it is placed, merged, used for collision or booleans, or shipped.",
+          "A mesh shows see-through gaps, black or inside-out faces, or splits into loose pieces."
+        ],
+        "whenNotToUse": [
+          "Only the mesh's size, pivot, slots or triangle counts per material are needed (use inspect_object objectKind mesh).",
+          "The mesh must be cut into one asset per part (use manage_geometry split_mesh)."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "meshPath": {
+              "type": "string",
+              "description": "Static mesh asset path, e.g. /Game/Meshes/SM_Rock. Its source triangles (LOD 0 as imported or built) are checked, so a Nanite mesh answers at full detail. A placed actor's mesh is named by get_components."
+            }
+          },
+          "required": [
+            "action",
+            "meshPath"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "meshPath": {
+              "type": "string",
+              "description": "The mesh checked."
+            },
+            "triangles": {
+              "type": "number",
+              "description": "Source triangles (LOD 0)."
+            },
+            "vertices": {
+              "type": "number",
+              "description": "Distinct corner positions (to 0.01 cm): corners at one place count once, whether or not the source shares the vertex."
+            },
+            "size": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "description": "Extent [x, y, z] in cm, in the mesh's own space."
+            },
+            "surfaceArea": {
+              "type": "number",
+              "description": "Total face area in cm²."
+            },
+            "closed": {
+              "type": "boolean",
+              "description": "True when every edge joins exactly two faces (seams count as joined): the surface is watertight (a solid, not a sheet or a shell with gaps)."
+            },
+            "volume": {
+              "type": "number",
+              "description": "With closed: the volume it encloses, in cm³."
+            },
+            "openEdges": {
+              "type": "number",
+              "description": "Edges with a face on one side only and none on the other at that place: the outlines of holes and open rims."
+            },
+            "holes": {
+              "type": "number",
+              "description": "Separate outlines those open edges form (one per hole or open rim)."
+            },
+            "seamEdges": {
+              "type": "number",
+              "description": "Places where two faces meet without sharing their corners (split for flat shading or UV seams): the surface renders whole, but booleans, remeshing and collision built from the mesh need it welded."
+            },
+            "nonManifoldEdges": {
+              "type": "number",
+              "description": "Edges shared by three or more faces (fins, faces stacked on one edge); they break booleans, remeshing and collision generation."
+            },
+            "flippedEdges": {
+              "type": "number",
+              "description": "Edges (seams included) whose two faces wind the same way along them, so one of the two faces points inward (a face turned inside out renders dark or vanishes)."
+            },
+            "degenerateTriangles": {
+              "type": "number",
+              "description": "Faces with no area (slivers or a repeated corner)."
+            },
+            "parts": {
+              "type": "number",
+              "description": "Separate pieces: groups of faces joined by corners at the same place."
+            },
+            "largestParts": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Up to 8 pieces, largest first: triangles, size [x, y, z] and center [x, y, z] in cm, in the mesh's own space."
+            }
+          },
+          "required": [
+            "success",
+            "meshPath",
+            "triangles",
+            "closed",
+            "parts"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Check whether a static mesh's geometry is sound, from its source triangles: closed (watertight) or open with how many holes, edges shared by three or more faces, faces turned inside out, faces with no area, seams where faces do not share their corners, and how many separate parts it is made of, with its size, surface area and (when closed) volume.",
+          "input": {
+            "action": "check_mesh",
+            "meshPath": "/Engine/BasicShapes/Cube"
+          },
+          "output": {
+            "success": true,
+            "message": "Cube: 48 triangles in 1 part(s), closed.",
+            "meshPath": "/Engine/BasicShapes/Cube.Cube",
+            "triangles": 48,
+            "vertices": 26,
+            "size": [
+              100,
+              100,
+              100
+            ],
+            "surfaceArea": 60000,
+            "closed": true,
+            "volume": 1000000,
+            "openEdges": 0,
+            "holes": 0,
+            "seamEdges": 0,
+            "nonManifoldEdges": 0,
+            "flippedEdges": 0,
+            "degenerateTriangles": 0,
+            "parts": 1,
+            "largestParts": [
+              {
+                "triangles": 48,
+                "size": [
+                  100,
+                  100,
+                  100
+                ],
+                "center": [
+                  0,
+                  0,
+                  0
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "read",
+        "idempotency": "idempotent",
+        "longRunning": false,
+        "safeToRetry": true
+      },
+      "policy": {
+        "requiredScope": "read",
+        "consent": "none",
+        "dataAccess": "project-read"
+      },
+      "cost": {
+        "latency": "interactive",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "inspect",
+        "dispatchAction": "check_mesh"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "92cee7dd0377c5473c761e05a9c41adddc708c48ba3f9e89fecea570ee1a23c8",
+        "content": "7c0c2b79267924e0f42542e4e826ed3dd550bcfa8135fde2a3be0a689bf8c8b4"
       }
     },
     {

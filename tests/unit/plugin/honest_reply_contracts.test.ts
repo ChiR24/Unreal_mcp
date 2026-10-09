@@ -1866,3 +1866,21 @@ describe('run_tests runs each test and answers with its result', () => {
     expect(tests).toMatch(/if \(bTimedOut\) \{\s*Framework\.DequeueAllCommands\(\);/u);
   });
 });
+
+// A model cannot see a mesh: a hole, a crack, a fin or a face turned inside out passed every other check.
+describe('check_mesh reads the soundness of a mesh from its source topology', () => {
+  it('counts open, non-manifold and flipped edges from the faces each source edge joins', () => {
+    const check = code('Environment', 'Inspection', 'McpAutomationBridge_EnvironmentHandlersInspectMeshCheck.cpp');
+    expect(check).toContain('const FMeshDescription *Description = Mesh ? Mesh->GetMeshDescription(0) : nullptr;');
+    expect(check).toContain('const TArrayView<const FTriangleID> Faces = Description->GetEdgeConnectedTriangleIDs(Edge);');
+    expect(check).toContain('Flipped += First.From != First.To && First.From == Runs(Faces[1], From, To).From ? 1 : 0;');
+    // Faces split along a seam (corners at one place, not shared) are joined, not a hole, and still checked for winding.
+    expect(check).toContain('Flipped += Seen.Count == 1 && Seen.From == Run.From ? 1 : 0;');
+    expect(check).toContain('Weld[Vertex.GetValue()] = Found ? *Found : WeldIds.Add(Key, WeldIds.Num());');
+    // Only a closed surface reports a volume.
+    expect(check).toContain('const bool bClosed = TriangleCount > 0 && Open == 0 && NonManifold == 0;');
+    expect(check).toContain('McpHandlerUtils::MarkNoAssetsChanged(Result);');
+    const inspect = code('Environment', 'Inspection', 'McpAutomationBridge_EnvironmentHandlersInspect.cpp');
+    expect(inspect).toContain('return HandleInspectMeshCheckAction(*this, RequestId, Payload, RequestingSocket);');
+  });
+});

@@ -4640,6 +4640,7 @@
         "inspect_object",
         "get_blueprint_details",
         "raycast_mesh",
+        "check_mesh",
         "raycast_world",
         "get_property",
         "set_property",
@@ -4826,7 +4827,7 @@
           },
           "meshPath": {
             "type": "string",
-            "description": "Static mesh asset path, e.g. /Game/Meshes/SM_Rock. Rays meet its source triangles, so a Nanite mesh answers at full detail."
+            "description": "Static mesh asset path, e.g. /Game/Meshes/SM_Rock. Its source triangles (LOD 0 as imported or built) are checked, so a Nanite mesh answers at full detail. A placed actor's mesh is named by get_components."
           },
           "name": {
             "type": "string",
@@ -5039,6 +5040,7 @@
               "inspect_object",
               "get_blueprint_details",
               "raycast_mesh",
+              "check_mesh",
               "raycast_world",
               "get_property",
               "set_property",

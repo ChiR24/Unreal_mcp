@@ -5975,7 +5975,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "meshPath": {
           "type": "string",
-          "description": "Static mesh asset path, e.g. /Game/Meshes/SM_Rock. Rays meet its source triangles, so a Nanite mesh answers at full detail."
+          "description": "Static mesh asset path, e.g. /Game/Meshes/SM_Rock. Its source triangles (LOD 0 as imported or built) are checked, so a Nanite mesh answers at full detail. A placed actor's mesh is named by get_components."
         },
         "name": {
           "type": "string",
@@ -6188,6 +6188,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "inspect_object",
             "get_blueprint_details",
             "raycast_mesh",
+            "check_mesh",
             "raycast_world",
             "get_property",
             "set_property",
@@ -6316,6 +6317,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Full /Script class path of the inspected object."
         },
+        "closed": {
+          "type": "boolean",
+          "description": "True when every edge joins exactly two faces (seams count as joined): the surface is watertight (a solid, not a sheet or a shell with gaps)."
+        },
         "companyName": {
           "type": "string",
           "description": "Company name."
@@ -6376,6 +6381,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true,
           "description": "Default value of each property on the class default object, as text."
+        },
+        "degenerateTriangles": {
+          "type": "number",
+          "description": "Faces with no area (slivers or a repeated corner)."
         },
         "deleted": {
           "type": "string",
@@ -6443,6 +6452,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "additionalProperties": false,
           "description": "Class flags as booleans."
+        },
+        "flippedEdges": {
+          "type": "number",
+          "description": "Edges (seams included) whose two faces wind the same way along them, so one of the two faces points inward (a face turned inside out renders dark or vanishes)."
         },
         "fps": {
           "type": "number",
@@ -6579,6 +6592,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "One entry per line, in order."
         },
+        "holes": {
+          "type": "number",
+          "description": "Separate outlines those open edges form (one per hole or open rim)."
+        },
         "homepage": {
           "type": "string",
           "description": "Project homepage URL."
@@ -6655,6 +6672,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Z height below which actors are killed."
         },
+        "largestParts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Up to 8 pieces, largest first: triangles, size [x, y, z] and center [x, y, z] in cm, in the mesh's own space."
+        },
         "levelName": {
           "type": "string",
           "description": "Current level name."
@@ -6683,7 +6709,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "meshPath": {
           "type": "string",
-          "description": "The mesh the rays were cast at."
+          "description": "The mesh checked."
         },
         "message": {
           "type": "string",
@@ -6715,6 +6741,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Viewport mouse sensitivity."
         },
+        "nonManifoldEdges": {
+          "type": "number",
+          "description": "Edges shared by three or more faces (fins, faces stacked on one edge); they break booleans, remeshing and collision generation."
+        },
         "objectName": {
           "type": "string",
           "description": "Object name."
@@ -6732,6 +6762,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Matching object info."
         },
+        "openEdges": {
+          "type": "number",
+          "description": "Edges with a face on one side only and none on the other at that place: the outlines of holes and open rims."
+        },
         "packageName": {
           "type": "string",
           "description": "Package name of the world asset."
@@ -6743,6 +6777,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "parentClassPath": {
           "type": "string",
           "description": "Full path of the super-class."
+        },
+        "parts": {
+          "type": "number",
+          "description": "Separate pieces: groups of faces joined by corners at the same place."
         },
         "pawn": {
           "type": "string",
@@ -6862,9 +6900,20 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true,
           "description": "World scale as {x, y, z}."
         },
+        "seamEdges": {
+          "type": "number",
+          "description": "Places where two faces meet without sharing their corners (split for flat shading or UV seams): the surface renders whole, but booleans, remeshing and collision built from the mesh need it welded."
+        },
         "shadersCompiling": {
           "type": "number",
           "description": "Every get_editor_state variant: shader compile jobs still outstanding. Above 0 the viewport, and a screenshot of it, shows the engine default material (black foliage, grey ground) for what they cover; a warning says so."
+        },
+        "size": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "description": "Extent [x, y, z] in cm, in the mesh's own space."
         },
         "slotBoundsAvailable": {
           "type": "boolean",
@@ -6885,6 +6934,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "supportContact": {
           "type": "string",
           "description": "Project support contact."
+        },
+        "surfaceArea": {
+          "type": "number",
+          "description": "Total face area in cm²."
         },
         "tags": {
           "type": "array",
@@ -6952,6 +7005,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true,
           "description": "Combined transform: location, rotation and scale."
         },
+        "triangles": {
+          "type": "number",
+          "description": "Source triangles (LOD 0)."
+        },
         "useDistanceScaledCamera": {
           "type": "boolean",
           "description": "Whether distance-scaled camera speed is used."
@@ -6979,9 +7036,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "value": {
           "description": "The value read; its type follows the property."
         },
+        "vertices": {
+          "type": "number",
+          "description": "Distinct corner positions (to 0.01 cm): corners at one place count once, whether or not the source shares the vertex."
+        },
         "viewTarget": {
           "type": "string",
           "description": "Object path of the current view target."
+        },
+        "volume": {
+          "type": "number",
+          "description": "With closed: the volume it encloses, in cm³."
         },
         "watch": {
           "type": "object",
