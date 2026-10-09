@@ -184,7 +184,9 @@ const testCases = [
   { scenario: 'Cleanup: delete execute_python file', toolName: 'system_control', arguments: { action: 'execute_python', code: DELETE_PYTHON_FILE_CODE }, expected: 'success' },
   { scenario: 'Cleanup: remove project setting', toolName: 'system_control', arguments: { action: 'execute_python', code: CLEANUP_PROJECT_SETTING_CODE }, expected: 'success' },
   { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found' },
-  { scenario: 'ACTION: run_tests', toolName: 'system_control', arguments: { action: 'run_tests', filter: 'System.Core.Time.Comparison' }, expected: 'success' },
+  // run_tests answers with each test's result; it used to say only "check the Output Log".
+  { scenario: 'ACTION: run_tests', toolName: 'system_control', arguments: { action: 'run_tests', filter: 'System.Core.Math', maxTests: 3, timeoutSeconds: 30 }, expected: 'success', assertions: [{ path: 'structuredContent.result.tests', minLength: 1, label: 'each test run answers with its result' }] },
+  { scenario: 'ERROR: run_tests names a filter no test matches', toolName: 'system_control', arguments: { action: 'run_tests', filter: 'No.Such.Test.Group' }, expected: 'error|NOT_FOUND' },
 ];
 
 // === PERFORMANCE ACTIONS ===

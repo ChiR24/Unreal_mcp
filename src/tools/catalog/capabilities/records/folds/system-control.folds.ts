@@ -45,8 +45,8 @@ export const SYSTEM_CONTROL_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'run_build', selector: 'kind',
-    summary: 'Run automation tests, or run UnrealBuildTool for a target.',
-    topics: ['automation tests', 'run tests', 'ubt', 'unreal build tool', 'build target'],
+    summary: 'Run automation tests and answer with each one\'s result (passed or not, its errors and warnings), or run UnrealBuildTool for a target.',
+    topics: ['automation tests', 'run tests', 'test results', 'ubt', 'unreal build tool', 'build target'],
     members: { tests: 'run_tests', ubt: 'run_ubt' },
   },
   {

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "ebf75a3b2095dc4f",
+  "catalogRevision": "95c6f8f8254ce05d",
   "recordCount": 398,
   "records": [
     {
@@ -92541,19 +92541,21 @@
           "run_build",
           "automation tests",
           "run tests",
+          "test results",
           "ubt",
           "unreal build tool",
           "build target",
           "test suite",
           "functional tests"
         ],
-        "summary": "Run automation tests, or run UnrealBuildTool for a target.",
+        "summary": "Run automation tests and answer with each one's result (passed or not, its errors and warnings), or run UnrealBuildTool for a target.",
         "whenToUse": [
-          "kind=tests: The project automation tests must be executed.",
+          "kind=tests: The project automation tests must be executed and their results read.",
           "kind=ubt: The project must be built via UnrealBuildTool."
         ],
         "whenNotToUse": [
           "kind=tests: A single ad-hoc console command is needed.",
+          "kind=tests: Play In Editor is running: the automation framework starts no test while a game runs (stop it first).",
           "kind=ubt: Only a console command or CVar is needed."
         ]
       },
@@ -92568,7 +92570,15 @@
             },
             "filter": {
               "type": "string",
-              "description": "Optional test name filter."
+              "description": "Run the tests whose full path contains this, ignoring case (System.Core.Math, Project.MyGame). Omitted, every test is a match, capped by maxTests. Functional tests (Project.Functional Tests.<map>.<test>) open their map in the editor."
+            },
+            "maxTests": {
+              "type": "number",
+              "description": "Run at most this many of the matching tests, in the order the editor lists them (default 50, at most 200); matched says how many there were."
+            },
+            "timeoutSeconds": {
+              "type": "number",
+              "description": "Stop a test still running after this many seconds and count it failed (default 60, at most 600)."
             },
             "target": {
               "type": "string",
@@ -92617,6 +92627,35 @@
               "type": "object",
               "x-unreal-reflection-boundary": true,
               "description": "Additional handler result fields not named by the contract."
+            },
+            "tests": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "One row per test run: name (its full path), passed, durationSeconds, errorCount and errors, warningCount and warnings (the first 10 of each), and a note when it timed out or was not run."
+            },
+            "matched": {
+              "type": "number",
+              "description": "Tests matching the filter, run or not."
+            },
+            "passed": {
+              "type": "number",
+              "description": "Tests that passed."
+            },
+            "failed": {
+              "type": "number",
+              "description": "Tests that failed or timed out."
+            },
+            "notRun": {
+              "type": "number",
+              "description": "Tests the framework did not start (another run or Play In Editor began meanwhile)."
+            },
+            "allPassed": {
+              "type": "boolean",
+              "description": "True when at least one test ran and every test passed."
             }
           },
           "required": [
@@ -92627,14 +92666,27 @@
       },
       "examples": [
         {
-          "title": "Run automation tests, or run UnrealBuildTool for a target.",
+          "title": "Run automation tests and answer with each one's result (passed or not, its errors and warnings), or run UnrealBuildTool for a target.",
           "input": {
             "action": "run_build",
-            "filter": "MyProject",
+            "filter": "System.Core.Math.Vector",
+            "maxTests": 10,
             "kind": "tests"
           },
           "output": {
-            "success": true
+            "success": true,
+            "message": "Ran 1 of 1 matching test(s): 1 passed, 0 failed",
+            "tests": [
+              {
+                "name": "System.Core.Math.Vector Normalization",
+                "passed": true,
+                "durationSeconds": 0.002
+              }
+            ],
+            "matched": 1,
+            "passed": 1,
+            "failed": 0,
+            "allPassed": true
           }
         }
       ],
@@ -92672,6 +92724,12 @@
             "filter": [
               "tests"
             ],
+            "maxTests": [
+              "tests"
+            ],
+            "timeoutSeconds": [
+              "tests"
+            ],
             "target": [
               "ubt"
             ],
@@ -92689,8 +92747,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "43605b0cbccb722c20f7bca8a1e6d1ef5f63effbb63ec9323ae43dfbe9725f1d",
-        "content": "9885eafba1c1a23703416eab8d8885fc3ac7d92feee5ad37601593512b10f004"
+        "schema": "d801f23e5ae85c043971788577a8cdf9a30373b7cc3c888936b3483067d6ea13",
+        "content": "c09db1a5b3a0b013b0f31c245c6f8f0e5468339a31dc0aa48232caf05021bc95"
       }
     },
     {

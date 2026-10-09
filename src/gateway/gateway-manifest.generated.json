@@ -17026,6 +17026,7 @@
         "lodBias",
         "maps",
         "maxFPS",
+        "maxTests",
         "message",
         "metadata",
         "minScreenRadius",
@@ -17070,6 +17071,7 @@
         "streamingDistance",
         "target",
         "text",
+        "timeoutSeconds",
         "traceFile",
         "type",
         "userIndex",
@@ -17309,6 +17311,10 @@
           "maxFPS": {
             "type": "number",
             "description": "Maximum frames per second."
+          },
+          "maxTests": {
+            "type": "number",
+            "description": "Run at most this many of the matching tests, in the order the editor lists them (default 50, at most 200); matched says how many there were."
           },
           "message": {
             "type": "string",
@@ -17559,6 +17565,10 @@
           "text": {
             "type": "string",
             "description": "Optional text for text-bearing components."
+          },
+          "timeoutSeconds": {
+            "type": "number",
+            "description": "Stop a test still running after this many seconds and count it failed (default 60, at most 600)."
           },
           "traceFile": {
             "type": "string",

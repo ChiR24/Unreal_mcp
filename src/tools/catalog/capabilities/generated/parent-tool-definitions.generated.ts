@@ -22243,6 +22243,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Maximum frames per second."
         },
+        "maxTests": {
+          "type": "number",
+          "description": "Run at most this many of the matching tests, in the order the editor lists them (default 50, at most 200); matched says how many there were."
+        },
         "message": {
           "type": "string",
           "description": "Notification message text."
@@ -22493,6 +22497,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Optional text for text-bearing components."
         },
+        "timeoutSeconds": {
+          "type": "number",
+          "description": "Stop a test still running after this many seconds and count it failed (default 60, at most 600)."
+        },
         "traceFile": {
           "type": "string",
           "description": "File mode: .utrace file name, resolved inside Saved/Profiling (default a generated McpInsights_<time>.utrace)."
@@ -22597,6 +22605,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Active trace channels."
         },
+        "allPassed": {
+          "type": "boolean",
+          "description": "True when at least one test ran and every test passed."
+        },
         "archiveDirectory": {
           "type": "string",
           "description": "Resolved absolute archive directory."
@@ -22698,6 +22710,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "launch_build only: the exit code of a game that quit before its run ended."
         },
+        "failed": {
+          "type": "number",
+          "description": "Tests that failed or timed out."
+        },
         "failedCount": {
           "type": "number",
           "description": "With paths: how many paths were not deleted."
@@ -22788,6 +22804,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "The offset of the next page; present only when hasMore is true."
         },
+        "notRun": {
+          "type": "number",
+          "description": "Tests the framework did not start (another run or Play In Editor began meanwhile)."
+        },
         "offset": {
           "type": "number",
           "description": "The offset this page starts at."
@@ -22809,6 +22829,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "parentName": {
           "type": "string",
           "description": "Panel it was added under."
+        },
+        "passed": {
+          "type": "number",
+          "description": "Tests that passed."
         },
         "path": {
           "type": "string",
@@ -22981,6 +23005,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "success": {
           "type": "boolean",
           "description": "Whether the action succeeded."
+        },
+        "tests": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "One row per test run: name (its full path), passed, durationSeconds, errorCount and errors, warningCount and warnings (the first 10 of each), and a note when it timed out or was not run."
         },
         "total": {
           "type": "number",

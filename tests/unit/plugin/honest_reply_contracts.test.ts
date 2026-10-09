@@ -1835,3 +1835,30 @@ describe('validate_assets runs Data Validation on request', () => {
     expect(check).toContain('if (Counts[0] > 0) {');
   });
 });
+
+// run_tests typed "automation RunTests" into the console and answered "check the Output Log".
+describe('run_tests runs each test and answers with its result', () => {
+  const tests = code('SystemControl', 'McpAutomationBridge_SystemControlHandlersTests.cpp');
+
+  it('drives each test as the engine automation worker does and reads what it reported', () => {
+    expect(tests).not.toContain('automation RunTests');
+    expect(tests).toContain('Framework.StartTestByName(Test.GetTestName(), 0);');
+    expect(tests).toContain('if (!bTimedOut && !(Framework.ExecuteLatentCommands() && Framework.ExecuteNetworkCommands())) {');
+    expect(tests).toContain('Run.Current->GetExecutionInfo(Info);');
+    expect(tests).toContain('const bool bPassed = Run.Current->GetLastExecutionSuccessState() && !bTimedOut;');
+    expect(tests).toContain('for (const FAutomationExecutionEntry& Entry : Info.GetEntries()) {');
+  });
+
+  // StopTest and ExecuteLatentCommands check() that a test is running: a test the framework refused to start
+  // (Play In Editor, a slow task, an unknown name) must never reach them.
+  it('only stops a test the framework really started, and never runs beside another runner or a game', () => {
+    expect(tests).toMatch(/Framework\.StartTestByName\(Test\.GetTestName\(\), 0\);\s*Run\.Current = GIsAutomationTesting \? Framework\.GetCurrentTest\(\) : nullptr;\s*if \(Run\.Current\) \{/u);
+    // The editor's automation worker may finish the test first: only a test still running, and still ours, is stopped here.
+    expect(tests).toContain('if (GIsAutomationTesting && Framework.GetCurrentTest() == Run.Current) {');
+    expect(tests).toContain('const bool bBlocked = GIsAutomationTesting || (GEditor && GEditor->PlayWorld);');
+    expect(tests).toContain('TEXT("PIE_RUNNING")');
+    expect(tests).toContain('TEXT("AUTOMATION_BUSY")');
+    // A test still running at its timeout has its queued commands dropped before it is stopped.
+    expect(tests).toMatch(/if \(bTimedOut\) \{\s*Framework\.DequeueAllCommands\(\);/u);
+  });
+});
