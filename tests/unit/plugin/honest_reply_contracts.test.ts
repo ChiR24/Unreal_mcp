@@ -1197,6 +1197,18 @@ describe('start minimized', () => {
       'McpAutomationBridgeSubsystemLifecycle.cpp'), 'utf8').replace(/\/\*[\s\S]*?\*\//gu, ' ').replace(/\/\/[^\n]*/gu, ' ');
     expect(lifecycle).toMatch(/Root->IsVisible\(\)\)\s*\{\s*if \(!Root->IsWindowMinimized\(\)\)\s*\{\s*MinimizeWindowForMcp\(Root\.ToSharedRef\(\)\);\s*\}\s*if \(\*HoldUntil == 0\.0\)/u);
   });
+
+  // A restore asked for 3 minutes after launch was put away again within seconds; one 23 s later stayed up.
+  it('a restore made over the bridge ends the hold, and a timed run leaves a window restored meanwhile up', () => {
+    const lifecycle = readFileSync(join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private', 'Core', 'Subsystem',
+      'McpAutomationBridgeSubsystemLifecycle.cpp'), 'utf8');
+    expect(lifecycle).toMatch(/CreateLambda\(\[GiveUpAt, HoldUntil\]\(float\)\s*\{\s*if \(McpWindowRestoreCount\(\) != 0\)\s*\{\s*return false;/u);
+    const windows = code('ControlEditor', 'McpAutomationBridge_ControlEditorScreenshotWindows.cpp');
+    expect(windows).toMatch(/::SetWindowPlacement\(Hwnd, &Placement\);\s*\}\s*\+\+GMcpWindowRestoreCount;/u);
+    expect(windows).toMatch(/\} else \{\s*\+\+GMcpWindowRestoreCount;\s*RestoreWindowForCaptureForMcp\(Root\.ToSharedRef\(\)\);/u);
+    expect(windows).toContain('Hold.RestoreCount = GMcpWindowRestoreCount;');
+    expect(windows).toContain('if (Hold.bWindowRestored && Hold.RestoreCount == GMcpWindowRestoreCount) {');
+  });
 });
 
 describe('save game slots', () => {

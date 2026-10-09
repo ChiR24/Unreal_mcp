@@ -145,6 +145,10 @@ TSharedPtr<SWindow> FindEditorSlateWindowForMcp(const FString &Query,
   return nullptr;
 }
 
+static uint32 GMcpWindowRestoreCount = 0;
+
+uint32 McpWindowRestoreCount() { return GMcpWindowRestoreCount; }
+
 bool RestoreWindowForCaptureForMcp(const TSharedRef<SWindow> &Window) {
   if (!Window->IsWindowMinimized()) {
     return false;
@@ -166,6 +170,7 @@ bool RestoreWindowForCaptureForMcp(const TSharedRef<SWindow> &Window) {
       Placement.showCmd = SW_SHOWNOACTIVATE;
       ::SetWindowPlacement(Hwnd, &Placement);
     }
+    ++GMcpWindowRestoreCount;
     // Slate composites on the game thread; one tick gives the restored window a
     // frame to draw before ReadPixels runs, otherwise the capture is blank.
     FSlateApplication::Get().Tick();
@@ -207,6 +212,7 @@ FMcpEditorRunHold BeginEditorRunForMcp() {
   if (const TSharedPtr<SWindow> Root = FGlobalTabmanager::Get()->GetRootWindow()) {
     Hold.bWindowRestored = RestoreWindowForCaptureForMcp(Root.ToSharedRef());
   }
+  Hold.RestoreCount = GMcpWindowRestoreCount;
   UEditorPerformanceSettings *Performance = GetMutableDefault<UEditorPerformanceSettings>();
   Hold.bThrottleWasOn = Performance && Performance->bThrottleCPUWhenNotForeground;
   if (Hold.bThrottleWasOn) {
@@ -219,7 +225,7 @@ void EndEditorRunForMcp(const FMcpEditorRunHold &Hold) {
   if (Hold.bThrottleWasOn) {
     GetMutableDefault<UEditorPerformanceSettings>()->bThrottleCPUWhenNotForeground = true;
   }
-  if (Hold.bWindowRestored) {
+  if (Hold.bWindowRestored && Hold.RestoreCount == GMcpWindowRestoreCount) {
     if (const TSharedPtr<SWindow> Root = FGlobalTabmanager::Get()->GetRootWindow()) {
       MinimizeWindowForMcp(Root.ToSharedRef());
     }
@@ -250,6 +256,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorRestoreWindow(
   if (bMinimize) {
     MinimizeWindowForMcp(Root.ToSharedRef());
   } else {
+    ++GMcpWindowRestoreCount;
     RestoreWindowForCaptureForMcp(Root.ToSharedRef());
   }
   UEditorPerformanceSettings *Performance = GetMutableDefault<UEditorPerformanceSettings>();

@@ -86,12 +86,18 @@ void UMcpAutomationBridgeSubsystem::Initialize(FSubsystemCollectionBase& Collect
     // startup (FMainFrameHandler::ShowMainFrameWindow), which undid a minimize made before that. So this waits until
     // the window is on screen, puts it away without taking focus, and keeps it down for 10 s in case startup brings it
     // back. Bounded, because a ticker left registered would outlive a Live Coding module unload (see Deinitialize).
+    // A restore made over the bridge ends the hold: one asked for 3 minutes after launch was put away again within
+    // seconds, while a second one 23 s later stayed up.
     if (FParse::Param(FCommandLine::Get(), TEXT("McpStartMinimized")))
     {
         const double GiveUpAt = FPlatformTime::Seconds() + 600.0;
         const TSharedRef<double> HoldUntil = MakeShared<double>(0.0);
         FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda([GiveUpAt, HoldUntil](float)
         {
+            if (McpWindowRestoreCount() != 0)
+            {
+                return false;
+            }
             const double Now = FPlatformTime::Seconds();
             const TSharedPtr<SWindow> Root = FGlobalTabmanager::Get()->GetRootWindow();
             // The hold starts the first time the window is on screen, down already or not: a window that came up

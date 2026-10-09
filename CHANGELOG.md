@@ -97,6 +97,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **A function call answers what it did.** Every `call_actor_function` reply carried ten function and target diagnostics (flags, thunk, parameter size, validity); it now holds the object the call reached, the outputs and the return value.
 - **A batch lists the steps that have something to say.** `build_graph`, the material graph batch and `build_metasound` listed every step, so a 108-step graph build answered some 70 identical `connected` rows. A step that ran with nothing more to report is counted in `succeeded`; created nodes, pin reports, replaced links, warnings and failures stay listed.
 - **A plane's depth runs along Y.** `create_primitive` said `depth` is the size along Z for every primitive, but a plane lies flat in XY, centred and facing +Z: its depth is its Y size.
+- **A restored editor window stays up.** A `configure_editor` restore made in the minutes after a `-McpStartMinimized` launch was put away again within seconds; any restore over the bridge now ends that start-up hold, and a timed run that restored the window for itself leaves it up when a restore was asked for while it ran.
 
 </details>
 
