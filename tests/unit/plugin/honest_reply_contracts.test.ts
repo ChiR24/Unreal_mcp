@@ -340,6 +340,10 @@ describe('handlers answer what they did', () => {
     const setter = code('MaterialAuthoring', 'Parameters', 'McpAutomationBridge_MaterialAuthoringParameterValue.cpp');
 
     expect(setter).toContain('Payload->TryGetBoolField(TEXT("save"), bSave);');
+    // The reply says whether the write reached disk; it did not, so a refused save read as done.
+    expect(setter).toContain('const bool bSaved = bSave && McpSafeAssetSave(BaseMaterial);');
+    expect(setter).toContain('const bool bSaved = bSave && McpSafeAssetSave(Instance);');
+    expect(setter.split('Result->SetBoolField(TEXT("saved"), bSaved);'), 'both branches').toHaveLength(3);
     expect(list).toMatch(
       /One->SetStringField\(TEXT\("assetPath"\), AssetPath\);\s*if \(Shared\.IsValid\(\) && !One->HasField\(TEXT\("save"\)\) && Shared->HasField\(TEXT\("save"\)\)\) \{\s*One->SetField\(TEXT\("save"\), Shared->TryGetField\(TEXT\("save"\)\)\);\s*\}/u
     );

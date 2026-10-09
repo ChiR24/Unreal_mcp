@@ -56,12 +56,13 @@ void SetMaterialParameterValue(UMcpAutomationBridgeSubsystem* Bridge, const FStr
     }
     BaseMaterial->PostEditChange();
     BaseMaterial->MarkPackageDirty();
-    if (bSave) { McpSafeAssetSave(BaseMaterial); }
+    // Whether the write reached disk: save false, or a save the editor refused, leaves it in memory only.
+    const bool bSaved = bSave && McpSafeAssetSave(BaseMaterial);
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     McpHandlerUtils::AddVerification(Result, BaseMaterial);
     Result->SetStringField(TEXT("parameterName"), ParamName);
     Writer.DescribeValue(BaseMaterial, Name, Result);
-    Result->SetStringField(TEXT("note"), TEXT("Base material (not an instance): the parameter expression's DefaultValue was updated."));
+    Result->SetBoolField(TEXT("saved"), bSaved);
     Bridge->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("%s parameter '%s' default set on base material."), Writer.Kind, *ParamName), Result);
     return;
@@ -86,11 +87,12 @@ void SetMaterialParameterValue(UMcpAutomationBridgeSubsystem* Bridge, const FStr
   Writer.SetOverride(Instance, Name);
   Instance->PostEditChange();
   Instance->MarkPackageDirty();
-  if (bSave) { McpSafeAssetSave(Instance); }
+  const bool bSaved = bSave && McpSafeAssetSave(Instance);
   TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
   McpHandlerUtils::AddVerification(Result, Instance);
   Result->SetStringField(TEXT("parameterName"), ParamName);
   Writer.DescribeValue(Instance, Name, Result);
+  Result->SetBoolField(TEXT("saved"), bSaved);
   Bridge->SendAutomationResponse(Socket, RequestId, true,
       FString::Printf(TEXT("%s parameter '%s' set."), Writer.Kind, *ParamName), Result);
 }
