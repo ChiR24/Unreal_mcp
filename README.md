@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <sub>🧭 One tool, nearly 400 capabilities &nbsp;·&nbsp; ⚙️ Native C++ editor plugin &nbsp;·&nbsp; 🌐 HTTP or stdio &nbsp;·&nbsp; 🔐 Local and token-protected by default &nbsp;·&nbsp; 🎮 Unreal Engine 5.0 – 5.8</sub>
+  <sub>🧭 One tool, over 400 capabilities &nbsp;·&nbsp; ⚙️ Native C++ editor plugin &nbsp;·&nbsp; 🌐 HTTP or stdio &nbsp;·&nbsp; 🔐 Local and token-protected by default &nbsp;·&nbsp; 🎮 Unreal Engine 5.0 – 5.8</sub>
 </p>
 
 <p align="center">
