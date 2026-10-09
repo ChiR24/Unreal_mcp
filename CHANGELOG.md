@@ -16,6 +16,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 </details>
 
+<details>
+<summary><b>🛡️ Security</b></summary>
+
+- **The proxy's tool-list cache moved out of the shared temp dir** to the user's cache folder (`%LOCALAPPDATA%`, `$XDG_CACHE_HOME` or `~/.cache`, under `unreal-mcp`), written owner-only, so another account cannot plant the tool list and instructions it serves.
+- **`package-plugin.mjs` refuses an argument holding `"`, `%`, `!` or a line break** before it reaches `cmd.exe`, and runs it with delayed expansion off.
+- **source-map-js 1.2.2** (development only) clears GHSA-68fv-2mgg-jv7q.
+
+</details>
+
 ---
 
 ## 🏷️ [0.6.0-beta-d] - 2026-10-09

@@ -66,9 +66,12 @@ function fail(message) {
 }
 
 function run(command, args, env) {
-  // A .bat can only run through cmd; quote every argument so paths with spaces survive.
+  // A .bat can only run through cmd; quote every argument so paths with spaces survive. Inside the quotes cmd still
+  // ends the quote at " and expands %VAR% and !VAR!, so an argument holding one of them (or a line break) is refused.
+  const unsafe = process.platform === 'win32' ? [command, ...args].find((a) => /["%!\r\n\0]/.test(a)) : undefined;
+  if (unsafe !== undefined) fail(`argument not passed to cmd (it holds " % ! or a line break): ${unsafe}`);
   const result = process.platform === 'win32'
-    ? spawnSync('cmd.exe', ['/d', '/s', '/c', `"${[command, ...args].map((a) => `"${a}"`).join(' ')}"`],
+    ? spawnSync('cmd.exe', ['/d', '/v:off', '/s', '/c', `"${[command, ...args].map((a) => `"${a}"`).join(' ')}"`],
       { stdio: 'inherit', env, windowsVerbatimArguments: true })
     : spawnSync(command, args, { stdio: 'inherit', env });
   if (result.status !== 0) fail(`${basename(command)} exited with ${result.status ?? result.signal}`);
@@ -104,7 +107,8 @@ async function main() {
   const outputDir = resolve(outputArgs[0] ?? join(repoRoot, 'build'));
   mkdirSync(outputDir, { recursive: true });
 
-  const platform = { win32: 'Win64', darwin: 'Mac', linux: 'Linux' }[process.platform] ?? fail(`unsupported platform ${process.platform}`);
+  const platform = { win32: 'Win64', darwin: 'Mac', linux: 'Linux' }[process.platform];
+  if (!platform) fail(`unsupported platform ${process.platform}`);
   const runUat = join(engineDir, 'Engine', 'Build', 'BatchFiles', process.platform === 'win32' ? 'RunUAT.bat' : 'RunUAT.sh');
   if (!existsSync(runUat)) fail(`RunUAT not found: ${runUat} (the first argument must be the UE installation root)`);
 
@@ -138,7 +142,8 @@ async function main() {
       { ...process.env, UnrealBuildTool_BuildConfiguration__bUseAdaptiveUnityBuild: 'false' });
 
     const pluginDir = [packageDir, join(packageDir, 'HostProject', 'Plugins', PLUGIN)]
-      .find((dir) => existsSync(join(dir, `${PLUGIN}.uplugin`))) ?? fail(`packaged plugin output not found under ${packageDir}`);
+      .find((dir) => existsSync(join(dir, `${PLUGIN}.uplugin`)));
+    if (!pluginDir) fail(`packaged plugin output not found under ${packageDir}`);
     const outputPlugin = join(pluginDir, `${PLUGIN}.uplugin`);
     writeJson(outputPlugin, { ...readJson(outputPlugin), Installed: true });
     stripSymbols(pluginDir);

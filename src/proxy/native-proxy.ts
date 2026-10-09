@@ -10,9 +10,9 @@
  * token file under UE_PROJECT_PATH), sent as X-MCP-Capability-Token.
  */
 import { request } from 'node:http';
-import { readFileSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { dirname, join } from 'node:path';
 import { createInterface } from 'node:readline';
 import type { Readable, Writable } from 'node:stream';
 
@@ -45,8 +45,11 @@ export interface NativeProxyOptions {
 
 export function startNativeProxy(options: NativeProxyOptions = {}): { close: () => void } {
   const upstream = options.upstream ?? process.env.UNREAL_MCP_URL ?? 'http://127.0.0.1:3000/mcp';
+  // The cache is served to the client as its tool list and instructions, so it lives in the user's own cache folder:
+  // a fixed name in the shared temp dir could be planted by another account on the machine.
   const cacheFile = options.cacheFile ?? process.env.UNREAL_MCP_PROXY_CACHE
-    ?? join(tmpdir(), `unreal-mcp-proxy-${new URL(upstream).port || '80'}.json`);
+    ?? join(process.env.LOCALAPPDATA ?? process.env.XDG_CACHE_HOME ?? join(homedir(), '.cache'), 'unreal-mcp',
+      `proxy-${new URL(upstream).port || '80'}.json`);
   const output = options.output ?? process.stdout;
   const log = new Logger('NativeProxy');
   const tokenProvider = new CapabilityTokenProvider(undefined, log);
@@ -67,7 +70,10 @@ export function startNativeProxy(options: NativeProxyOptions = {}): { close: () 
   const write = (message: unknown): void => { output.write(`${JSON.stringify(message)}\n`); };
   const remember = (patch: Cache): void => {
     cache = { ...cache, ...patch };
-    try { writeFileSync(cacheFile, JSON.stringify(cache)); } catch (error) { log.warn(`cache not written: ${String(error)}`); }
+    try {
+      mkdirSync(dirname(cacheFile), { recursive: true, mode: 0o700 });
+      writeFileSync(cacheFile, JSON.stringify(cache), { mode: 0o600 });
+    } catch (error) { log.warn(`cache not written: ${String(error)}`); }
   };
 
   // One POST per message with Connection: close (pooled sockets trip a libuv assertion on Windows at exit).

@@ -32,7 +32,6 @@ const categoryPath = '${captured:categoryPath}';
 const lootTablePath = '${captured:lootTablePath}';
 const lootTable2Path = '${captured:lootTable2Path}';
 const recipePath = '${captured:recipePath}';
-const stationPath = '${captured:stationPath}';
 
 const testCases = [
   // === SETUP ===
