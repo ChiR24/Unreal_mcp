@@ -87,5 +87,6 @@ export const corpus: readonly CorpusCase[] = [
   { id: 'plain.bone_over_time', kind: 'exact', intent: 'track a bone position over time', expected: { tool: 'control_actor', action: 'sample_motion' }, allowedAlternatives: [] },
   { id: 'plain.test_results', kind: 'exact', intent: 'run the automation tests and read the results', expected: { tool: 'system_control', action: 'run_tests' }, allowedAlternatives: [] },
   { id: 'plain.data_validation', kind: 'exact', intent: 'check that assets pass data validation', expected: { tool: 'system_control', action: 'validate_assets' }, allowedAlternatives: [] },
+  { id: 'plain.mesh_watertight', kind: 'exact', intent: 'is the mesh watertight', expected: { tool: 'inspect', action: 'check_mesh' }, allowedAlternatives: [] },
   { id: 'n.near_tie_del', kind: 'near_tie_destructive', intent: 'delete the selected object', expected: { tool: 'control_actor', action: 'delete' }, allowedAlternatives: [{ tool: 'manage_level', action: 'delete_level' }, { tool: 'manage_asset', action: 'delete_asset' }] },
 ];

@@ -160,7 +160,7 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'inspect', action: 'check_mesh', dispatchAction: 'check_mesh', domain: D, family: 'object',
     summary: 'Check whether a static mesh\'s geometry is sound, from its source triangles: closed (watertight) or open with how many holes, edges shared by three or more faces, faces turned inside out, faces with no area, seams where faces do not share their corners, and how many separate parts it is made of, with its size, surface area and (when closed) volume.',
-    topics: ['check mesh', 'mesh holes', 'watertight', 'non manifold', 'flipped normals', 'mesh parts', 'broken mesh', 'mesh volume'],
+    topics: ['check mesh', 'mesh holes', 'mesh has holes', 'watertight', 'non manifold edges', 'flipped normals', 'inside out faces', 'mesh parts', 'broken mesh', 'mesh volume'],
     whenToUse: ['An imported, downloaded or generated mesh must be proven sound before it is placed, merged, used for collision or booleans, or shipped.', 'A mesh shows see-through gaps, black or inside-out faces, or splits into loose pieces.'],
     whenNotToUse: ['Only the mesh\'s size, pivot, slots or triangle counts per material are needed (use inspect_object objectKind mesh).', 'The mesh must be cut into one asset per part (use manage_geometry split_mesh).'],
     inputProps: {

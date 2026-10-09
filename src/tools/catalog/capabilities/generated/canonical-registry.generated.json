@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "84bcbc51c62b5cca",
+  "catalogRevision": "e558bd58c70df6c5",
   "recordCount": 399,
   "records": [
     {
@@ -40176,9 +40176,11 @@
           "check_mesh",
           "check mesh",
           "mesh holes",
+          "mesh has holes",
           "watertight",
-          "non manifold",
+          "non manifold edges",
           "flipped normals",
+          "inside out faces",
           "mesh parts",
           "broken mesh",
           "mesh volume"
@@ -40383,7 +40385,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "92cee7dd0377c5473c761e05a9c41adddc708c48ba3f9e89fecea570ee1a23c8",
-        "content": "7c0c2b79267924e0f42542e4e826ed3dd550bcfa8135fde2a3be0a689bf8c8b4"
+        "content": "df150685fb2f41a2554ad3484b1e19cc421792a187305400c3e03095ac0da73f"
       }
     },
     {
