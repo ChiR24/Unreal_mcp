@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## 🏷️ [Unreleased]
 
+_Nothing yet._
+
+---
+
+## 🏷️ [0.6.0-beta-d] - 2026-10-09
+
+> [!NOTE]
+> **Beta.** Published as a semver prerelease (`0.6.0-beta-d`) under the npm `beta` dist-tag, so `npm install` keeps serving the newest stable release, **`0.5.30`**. This section is everything on `dev` since the `v0.6.0-beta-c` tag, written from the code diff.
+
 <details>
 <summary><b>✨ Added</b></summary>
 
@@ -78,6 +87,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Environment**: water bodies come out complete with varied waves; `create_sdf` names a too-thin shape; spline reads give both point spaces; `create_primitive` warns about a taken label.
 - **Timing**: Fab library and media waits count real time; an accepted file delete counts as done; a refused call's text summary no longer reads `success: true`.
 - **Builds**: the plugin compiles again on UE 5.0-5.4, on Fab's MSVC and clang toolchains, and without the Geometry Script plugin.
+
+</details>
+
+<details>
+<summary><b>👥 Contributors</b></summary>
+
+- @SoloGorilla for stopping the gateway from making partial or non-numeric vectors out of arrays (#657).
+
+</details>
+
+<details>
+<summary><b>📊 Change Statistics</b></summary>
+
+| Metric | Count |
+|--------|-------|
+| Diff range | `v0.6.0-beta-c..v0.6.0-beta-d` |
+| Commits | 171, the version bump and this release entry included |
+| Files changed | 467 (447 hand-written, not counting generated files or line-ending-only changes) |
+| Insertions / deletions | 19,964 / 4,034 (hand-written: 13,982 / 2,601) |
+| Capability records | 402 |
+| Callable `{tool, action}` pairs | 1,515 |
+| C++ domain directories | 55 |
 
 </details>
 

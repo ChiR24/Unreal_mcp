@@ -6,6 +6,12 @@ All notable changes to the MCP Automation Bridge plugin will be documented in th
 
 ## [Unreleased]
 
+_Nothing yet._
+
+## [0.6.0-beta-d] - 2026-10-09
+
+Plugin-side changes since the `v0.6.0-beta-c` tag, from the code diff. The server-side view is in the root `CHANGELOG.md`.
+
 ### Added
 - **`describe_view`** and **`capture_passes`** (inspect): the level viewport's view as text (actors with share, screen box, brightness, distance) and as aligned id, depth (EXR) and normal passes, read from the editor's hit proxy map and transient scene captures.
 - **`check_mesh`** (inspect): closed or open, holes, seams, non-manifold, inside-out and degenerate faces, parts, area and volume from a static mesh's source triangles.
