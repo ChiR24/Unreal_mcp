@@ -68,6 +68,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "animation_physics::edit_anim_graph": "interactive|low",
   "animation_physics::edit_animation": "interactive|low",
   "animation_physics::edit_blend_space": "long-running|medium",
+  "animation_physics::edit_control_rig": "interactive|medium",
   "animation_physics::edit_montage": "interactive|low",
   "animation_physics::edit_morph_target": "long-running|high",
   "animation_physics::edit_physics_asset": "interactive|medium",
@@ -76,6 +77,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "animation_physics::force_rebuild_blend_space": "long-running|medium",
   "animation_physics::get_animation_info": "instant|low",
   "animation_physics::get_bone_transform": "instant|low",
+  "animation_physics::get_control_rig": "instant|low",
   "animation_physics::get_physics_asset_info": "instant|low",
   "animation_physics::get_skeleton_info": "instant|low",
   "animation_physics::import_morph_targets": "long-running|high",
@@ -83,6 +85,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "animation_physics::list_bones": "instant|low",
   "animation_physics::list_morph_targets": "instant|low",
   "animation_physics::list_physics_bodies": "instant|low",
+  "animation_physics::list_rig_units": "instant|low",
   "animation_physics::list_sockets": "instant|low",
   "animation_physics::list_virtual_bones": "instant|low",
   "animation_physics::mirror_weights": "long-running|high",
@@ -1553,4 +1556,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1540;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1543;

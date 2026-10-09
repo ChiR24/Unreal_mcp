@@ -254,6 +254,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Name of the created physics constraint."
         },
+        "controlType": {
+          "type": "string",
+          "enum": [
+            "transform",
+            "float",
+            "bool",
+            "position",
+            "rotator"
+          ],
+          "description": "add_control: the value the control drives (default transform)."
+        },
         "createConstraints": {
           "type": "boolean",
           "description": "Create joint constraints between bodies."
@@ -336,6 +347,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "set_axis_settings",
             "set_interpolation_settings",
             "rebuild",
+            "add_unit",
+            "connect",
+            "disconnect",
+            "set_pin",
+            "remove_node",
+            "import_bones",
+            "add_null",
+            "add_control",
+            "remove_element",
             "auto",
             "set",
             "copy",
@@ -352,7 +372,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "set_deltas",
             "import"
           ],
-          "description": "Which configure anim graph node variant to run."
+          "description": "The edit to make (each step of steps names its own)."
         },
         "element": {
           "type": "string",
@@ -399,6 +419,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Frames per second (default 30)."
         },
+        "from": {
+          "type": "string",
+          "description": "connect, disconnect: the output pin, Node.Pin as get_control_rig lists it; execution runs from the event's execute pin to each unit's (ExecutePin in UE 5.8)."
+        },
         "fromSection": {
           "type": "string",
           "description": "Source montage section."
@@ -410,6 +434,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "geomType": {
           "type": "string",
           "description": "Body primitive: Sphyl, Box, Sphere, TaperedCapsule, MultiConvexHull or SingleConvexHull."
+        },
+        "global": {
+          "type": "boolean",
+          "description": "add_bone, add_null: location, rotation and scale are in rig space, not relative to the parent."
         },
         "gridDivisions": {
           "type": "number",
@@ -498,6 +526,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Capsule length between the end caps (default 20)."
         },
+        "limit": {
+          "type": "number",
+          "description": "Most units to list (default 50, up to 500); matched counts them all."
+        },
         "limits": {
           "type": "object",
           "additionalProperties": false,
@@ -534,12 +566,26 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Linear damping value."
         },
         "location": {
-          "type": "array",
-          "items": {
-            "type": "number"
-          },
-          "minItems": 3,
-          "maxItems": 3,
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 3,
+              "maxItems": 3,
+              "description": "World or relative location as [x, y, z]."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 3,
+              "maxItems": 3,
+              "description": "add_bone, add_null, add_control: location [x, y, z] in cm (a control's offset), relative to the parent unless global."
+            }
+          ],
           "description": "World or relative location as [x, y, z]."
         },
         "lodIndex": {
@@ -605,6 +651,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Replacement bone name."
         },
+        "node": {
+          "type": "string",
+          "description": "One node's name: only that node, with every struct member pin by its full path."
+        },
         "nodeId": {
           "type": "string",
           "description": "The node GUID; an alternative to nodeName."
@@ -633,6 +683,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Overwrite an existing asset with the same name."
         },
+        "parent": {
+          "type": "string",
+          "description": "add_bone, add_null, add_control: the parent element's name (a bone, null or control); omitted, the top of the hierarchy."
+        },
         "parentBoneName": {
           "type": "string",
           "description": "Parent bone name."
@@ -653,6 +707,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Canonical /Game PhysicsAsset path."
         },
+        "pin": {
+          "type": "string",
+          "description": "set_pin: the pin, Node.Pin; a struct member has its own pin (SetTransform.Item.Name, SetTransform.Transform.Translation.X)."
+        },
         "pitch": {
           "type": "number",
           "description": "Aim offset pitch in degrees."
@@ -667,6 +725,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "string"
           },
           "description": "Distinct names for the poses in frame order; frames without a name keep the engine default name."
+        },
+        "position": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "add_unit: graph position [x, y] (default right of the last node)."
         },
         "positionX": {
           "type": "number",
@@ -687,6 +754,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "propertyName": {
           "type": "string",
           "description": "The property: a member of the node's settings struct (Alpha, PlayRate, bLoopAnimation, Sequence) or of the graph node (NodeComment), with dots for a nested one (Node.PlayRate). On an asset player the asset property (Sequence, BlendSpace) is written through the node's own setter and read back, and fails when the node did not take it; any other property is written by reflection and its stored value read back."
+        },
+        "query": {
+          "type": "string",
+          "description": "Words to match in the unit's name, display name, category or keywords (spaces ignored), e.g. two bone, aim, set transform."
         },
         "radius": {
           "type": "number",
@@ -767,6 +838,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "minItems": 3,
               "maxItems": 3,
               "description": "Rotation as [pitch, yaw, roll] in degrees."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 3,
+              "maxItems": 3,
+              "description": "add_bone, add_null, add_control: rotation [pitch, yaw, roll] in degrees."
             }
           ],
           "description": "Box or capsule rotation relative to the bone as [pitch, yaw, roll]."
@@ -795,6 +875,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "minItems": 3,
               "maxItems": 3,
               "description": "Bone scale as [x, y, z] (default [1, 1, 1])."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 3,
+              "maxItems": 3,
+              "description": "add_bone, add_null, add_control: scale [x, y, z] (default 1)."
             }
           ],
           "description": "Bone scale as [x, y, z] (default [1, 1, 1])."
@@ -906,6 +995,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "StaticMesh to skin, e.g. a coat downloaded as a rigid mesh."
         },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Several edits in order, each an object with edit and its own fields as above; the first that fails stops the rest, and those before it stay (failedStep names it)."
+        },
         "suffix": {
           "type": "string",
           "description": "Suffix appended to each retargeted asset name."
@@ -945,6 +1043,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "time": {
           "type": "number",
           "description": "Time in seconds."
+        },
+        "to": {
+          "type": "string",
+          "description": "connect, disconnect: the input pin, Node.Pin."
         },
         "toSection": {
           "type": "string",
@@ -1001,6 +1103,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Comment/name for the blend node (alias of name)."
         },
+        "unit": {
+          "type": "string",
+          "description": "add_unit: the unit, as an object path (/Script/ControlRig.RigUnit_SetTransform), its struct name with or without RigUnit_ (SetTransform), or its display name."
+        },
         "value": {
           "oneOf": [
             {
@@ -1008,6 +1114,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             },
             {
               "description": "The value: a number, boolean or string, an {x,y,z} or {r,g,b,a} object for a struct, or for an asset property the asset path (/Game/Anims/A_Idle)."
+            },
+            {
+              "type": [
+                "string",
+                "number",
+                "boolean"
+              ],
+              "description": "set_pin: the value as text (Bone, foot_l), a number, or true/false."
             }
           ],
           "description": "Property value (any type)."
@@ -1094,6 +1208,9 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "edit_anim_graph",
             "edit_animation",
             "create_control_rig",
+            "edit_control_rig",
+            "get_control_rig",
+            "list_rig_units",
             "setup_ik",
             "edit_montage",
             "play_montage",
@@ -1181,6 +1298,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "string"
           },
           "description": "Requested animation paths that could not be loaded."
+        },
+        "applied": {
+          "type": "number",
+          "description": "Edits applied."
         },
         "assetPath": {
           "type": "string",
@@ -1285,6 +1406,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether any mapping changed."
         },
+        "compileErrors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The compile errors, when there were any."
+        },
+        "compiled": {
+          "type": "boolean",
+          "description": "Whether the rig compiled after the edits."
+        },
         "compiledAnimBlueprints": {
           "type": "array",
           "items": {
@@ -1328,9 +1460,26 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true,
           "description": "Additional handler result fields not named by the contract."
         },
+        "elementCount": {
+          "type": "number",
+          "description": "All hierarchy elements."
+        },
+        "elements": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Hierarchy elements in order (up to 500): type (Bone, Null, Control, Curve ...), name and parent."
+        },
         "existingAsset": {
           "type": "boolean",
           "description": "Boolean parameter."
+        },
+        "failedStep": {
+          "type": "number",
+          "description": "steps: the step that failed (0-based); the ones before it were applied, compiled and saved."
         },
         "frameRate": {
           "type": "number",
@@ -1366,6 +1515,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Numeric parameter."
         },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Each link: from (output pin) and to (input pin)."
+        },
         "location": {
           "type": "object",
           "additionalProperties": false,
@@ -1386,6 +1544,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "State machine name."
         },
+        "made": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "What the edits made: {node, unit, pins} for an added unit, {pin, value} for a set pin (the value as stored), {element} for an added element, {importedFrom, bones} for a skeleton's bones imported (bones the rig already had are matched in place)."
+        },
         "mapping": {
           "type": "array",
           "items": {
@@ -1403,6 +1570,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "additionalProperties": false
           },
           "description": "Every target chain with the source chain now driving it (None when unmapped)."
+        },
+        "matched": {
+          "type": "number",
+          "description": "Units that match."
         },
         "maxInfluencesAfter": {
           "type": "number",
@@ -1466,6 +1637,22 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "nodeName": {
           "type": "string",
           "description": "Object name of the node that was set."
+        },
+        "nodeNames": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "With a node that is not there: the nodes there are."
+        },
+        "nodes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Each node: name, title, unit (struct path), position [x, y] and pins [{pin, direction, type, default, linked}]."
         },
         "numBodies": {
           "type": "number",
@@ -1605,6 +1792,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "success": {
           "type": "boolean",
           "description": "Whether the action succeeded."
+        },
+        "units": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Matching units sorted by struct name: unit (the object path add_unit takes), name and category."
         },
         "unmappedBones": {
           "type": "array",

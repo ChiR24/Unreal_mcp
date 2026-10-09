@@ -12,6 +12,9 @@
         "edit_anim_graph",
         "edit_animation",
         "create_control_rig",
+        "edit_control_rig",
+        "get_control_rig",
+        "list_rig_units",
         "setup_ik",
         "edit_montage",
         "play_montage",
@@ -82,6 +85,7 @@
         "conditionVariable",
         "connectToOutput",
         "constraintName",
+        "controlType",
         "createConstraints",
         "createIfMissing",
         "crossfadeDuration",
@@ -99,9 +103,11 @@
         "forceRootLock",
         "frame",
         "frameRate",
+        "from",
         "fromSection",
         "fromState",
         "geomType",
+        "global",
         "gridDivisions",
         "groupName",
         "height",
@@ -114,6 +120,7 @@
         "kind",
         "layerSetup",
         "length",
+        "limit",
         "limits",
         "linearDamping",
         "location",
@@ -132,6 +139,7 @@
         "morphTargets",
         "name",
         "newBoneName",
+        "node",
         "nodeId",
         "nodeName",
         "notifyClass",
@@ -139,19 +147,23 @@
         "numFrames",
         "outputPath",
         "overwrite",
+        "parent",
         "parentBoneName",
         "parentClass",
         "path",
         "physicsAssetName",
         "physicsAssetPath",
+        "pin",
         "pitch",
         "playRate",
         "poseNames",
+        "position",
         "positionX",
         "positionY",
         "priorityOrder",
         "profileName",
         "propertyName",
+        "query",
         "radius",
         "ragdoll",
         "rebuildBlendParameters",
@@ -189,6 +201,7 @@
         "stateName",
         "states",
         "staticMeshPath",
+        "steps",
         "suffix",
         "targetBoneName",
         "targetChain",
@@ -199,12 +212,14 @@
         "targetWeightInterpolationSpeed",
         "threshold",
         "time",
+        "to",
         "toSection",
         "toState",
         "trackIndex",
         "transitions",
         "transmission",
         "treeName",
+        "unit",
         "value",
         "vehicleType",
         "verticalAxisName",
@@ -455,6 +470,17 @@
             "type": "string",
             "description": "Name of the created physics constraint."
           },
+          "controlType": {
+            "type": "string",
+            "enum": [
+              "transform",
+              "float",
+              "bool",
+              "position",
+              "rotator"
+            ],
+            "description": "add_control: the value the control drives (default transform)."
+          },
           "createConstraints": {
             "type": "boolean",
             "description": "Create joint constraints between bodies."
@@ -537,6 +563,15 @@
               "set_axis_settings",
               "set_interpolation_settings",
               "rebuild",
+              "add_unit",
+              "connect",
+              "disconnect",
+              "set_pin",
+              "remove_node",
+              "import_bones",
+              "add_null",
+              "add_control",
+              "remove_element",
               "auto",
               "set",
               "copy",
@@ -553,7 +588,7 @@
               "set_deltas",
               "import"
             ],
-            "description": "Which configure anim graph node variant to run."
+            "description": "The edit to make (each step of steps names its own)."
           },
           "element": {
             "type": "string",
@@ -600,6 +635,10 @@
             "type": "number",
             "description": "Frames per second (default 30)."
           },
+          "from": {
+            "type": "string",
+            "description": "connect, disconnect: the output pin, Node.Pin as get_control_rig lists it; execution runs from the event's execute pin to each unit's (ExecutePin in UE 5.8)."
+          },
           "fromSection": {
             "type": "string",
             "description": "Source montage section."
@@ -611,6 +650,10 @@
           "geomType": {
             "type": "string",
             "description": "Body primitive: Sphyl, Box, Sphere, TaperedCapsule, MultiConvexHull or SingleConvexHull."
+          },
+          "global": {
+            "type": "boolean",
+            "description": "add_bone, add_null: location, rotation and scale are in rig space, not relative to the parent."
           },
           "gridDivisions": {
             "type": "number",
@@ -699,6 +742,10 @@
             "type": "number",
             "description": "Capsule length between the end caps (default 20)."
           },
+          "limit": {
+            "type": "number",
+            "description": "Most units to list (default 50, up to 500); matched counts them all."
+          },
           "limits": {
             "type": "object",
             "additionalProperties": false,
@@ -735,12 +782,26 @@
             "description": "Linear damping value."
           },
           "location": {
-            "type": "array",
-            "items": {
-              "type": "number"
-            },
-            "minItems": 3,
-            "maxItems": 3,
+            "oneOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 3,
+                "maxItems": 3,
+                "description": "World or relative location as [x, y, z]."
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 3,
+                "maxItems": 3,
+                "description": "add_bone, add_null, add_control: location [x, y, z] in cm (a control's offset), relative to the parent unless global."
+              }
+            ],
             "description": "World or relative location as [x, y, z]."
           },
           "lodIndex": {
@@ -806,6 +867,10 @@
             "type": "string",
             "description": "Replacement bone name."
           },
+          "node": {
+            "type": "string",
+            "description": "One node's name: only that node, with every struct member pin by its full path."
+          },
           "nodeId": {
             "type": "string",
             "description": "The node GUID; an alternative to nodeName."
@@ -834,6 +899,10 @@
             "type": "boolean",
             "description": "Overwrite an existing asset with the same name."
           },
+          "parent": {
+            "type": "string",
+            "description": "add_bone, add_null, add_control: the parent element's name (a bone, null or control); omitted, the top of the hierarchy."
+          },
           "parentBoneName": {
             "type": "string",
             "description": "Parent bone name."
@@ -854,6 +923,10 @@
             "type": "string",
             "description": "Canonical /Game PhysicsAsset path."
           },
+          "pin": {
+            "type": "string",
+            "description": "set_pin: the pin, Node.Pin; a struct member has its own pin (SetTransform.Item.Name, SetTransform.Transform.Translation.X)."
+          },
           "pitch": {
             "type": "number",
             "description": "Aim offset pitch in degrees."
@@ -868,6 +941,15 @@
               "type": "string"
             },
             "description": "Distinct names for the poses in frame order; frames without a name keep the engine default name."
+          },
+          "position": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2,
+            "description": "add_unit: graph position [x, y] (default right of the last node)."
           },
           "positionX": {
             "type": "number",
@@ -888,6 +970,10 @@
           "propertyName": {
             "type": "string",
             "description": "The property: a member of the node's settings struct (Alpha, PlayRate, bLoopAnimation, Sequence) or of the graph node (NodeComment), with dots for a nested one (Node.PlayRate). On an asset player the asset property (Sequence, BlendSpace) is written through the node's own setter and read back, and fails when the node did not take it; any other property is written by reflection and its stored value read back."
+          },
+          "query": {
+            "type": "string",
+            "description": "Words to match in the unit's name, display name, category or keywords (spaces ignored), e.g. two bone, aim, set transform."
           },
           "radius": {
             "type": "number",
@@ -968,6 +1054,15 @@
                 "minItems": 3,
                 "maxItems": 3,
                 "description": "Rotation as [pitch, yaw, roll] in degrees."
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 3,
+                "maxItems": 3,
+                "description": "add_bone, add_null, add_control: rotation [pitch, yaw, roll] in degrees."
               }
             ],
             "description": "Box or capsule rotation relative to the bone as [pitch, yaw, roll]."
@@ -996,6 +1091,15 @@
                 "minItems": 3,
                 "maxItems": 3,
                 "description": "Bone scale as [x, y, z] (default [1, 1, 1])."
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 3,
+                "maxItems": 3,
+                "description": "add_bone, add_null, add_control: scale [x, y, z] (default 1)."
               }
             ],
             "description": "Bone scale as [x, y, z] (default [1, 1, 1])."
@@ -1107,6 +1211,15 @@
             "type": "string",
             "description": "StaticMesh to skin, e.g. a coat downloaded as a rigid mesh."
           },
+          "steps": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true
+            },
+            "description": "Several edits in order, each an object with edit and its own fields as above; the first that fails stops the rest, and those before it stay (failedStep names it)."
+          },
           "suffix": {
             "type": "string",
             "description": "Suffix appended to each retargeted asset name."
@@ -1146,6 +1259,10 @@
           "time": {
             "type": "number",
             "description": "Time in seconds."
+          },
+          "to": {
+            "type": "string",
+            "description": "connect, disconnect: the input pin, Node.Pin."
           },
           "toSection": {
             "type": "string",
@@ -1202,6 +1319,10 @@
             "type": "string",
             "description": "Comment/name for the blend node (alias of name)."
           },
+          "unit": {
+            "type": "string",
+            "description": "add_unit: the unit, as an object path (/Script/ControlRig.RigUnit_SetTransform), its struct name with or without RigUnit_ (SetTransform), or its display name."
+          },
           "value": {
             "oneOf": [
               {
@@ -1209,6 +1330,14 @@
               },
               {
                 "description": "The value: a number, boolean or string, an {x,y,z} or {r,g,b,a} object for a struct, or for an asset property the asset path (/Game/Anims/A_Idle)."
+              },
+              {
+                "type": [
+                  "string",
+                  "number",
+                  "boolean"
+                ],
+                "description": "set_pin: the value as text (Bone, foot_l), a number, or true/false."
               }
             ],
             "description": "Property value (any type)."
@@ -1295,6 +1424,9 @@
               "edit_anim_graph",
               "edit_animation",
               "create_control_rig",
+              "edit_control_rig",
+              "get_control_rig",
+              "list_rig_units",
               "setup_ik",
               "edit_montage",
               "play_montage",

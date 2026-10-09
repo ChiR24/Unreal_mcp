@@ -3,9 +3,10 @@
  */
 import type { CapabilityRecordSource } from '../../../model.js';
 import { buildRecord } from '../helpers.js';
+import { ANY_EDITOR_STATE } from '../../core/builder.js';
 import { P } from '../properties.js';
 import { A } from './animation-properties.js';
-import { bool, num, str } from '../../shared/schema-props.js';
+import { bool, num, str, vec3 } from '../../shared/schema-props.js';
 
 const T = 'animation_physics';
 const F = 'animation';
@@ -142,4 +143,89 @@ export const ANIM_AUTHORED_1: readonly CapabilityRecordSource[] = [
     inputProps: { name: P.name, path: P.path, skeletonPath: P.skeletonPath, skeletalMeshPath: str('Skeletal mesh to build the rig from; wins over skeletonPath.'), modularRig: bool('Create a Modular Rig (UE 5.5+; older engines report modularRig false).'), save: A.save }, required: ['name'],
     effect: 'write', latency: 'interactive', resources: 'medium', plugins: ['ControlRig', 'RigVM', 'EditorScriptingUtilities'],
     exampleInput: { action: 'create_control_rig', name: 'CR_Char', skeletonPath: '/Game/SK_Char' } }),
+  // A Control Rig could be created but its graph and hierarchy could not be edited or read.
+  buildRecord({ parentTool: T, id: `${T}.edit_control_rig`, action: 'edit_control_rig', family: F,
+    topics: ['control rig graph', 'rig unit', 'add rig node', 'connect rig pins', 'wire control rig pins', 'control rig hierarchy', 'add control', 'rig bones'],
+    summary: 'Edit a Control Rig: add a unit node (list_rig_units finds them), connect or disconnect pins, set a pin value, remove a node, import the skeleton\'s bones, add a bone, null or control, or remove an element; one edit or many steps, then one compile and save. The reply lists what each edit made (a new node with its pins).',
+    whenToUse: ['A Control Rig needs its logic built: units such as Get Transform, Two Bone IK or Set Transform wired from the Forwards Solve event (a new rig may have none: add_unit BeginExecution adds it).', 'A rig needs bones from its skeleton, or controls and nulls to drive them.'],
+    whenNotToUse: ['The rig asset does not exist yet (use create_control_rig).', 'Only reading the rig (use get_control_rig).', 'An IK Rig or retargeter (use create_ik_rig, setup_ik).'],
+    inputProps: {
+      assetPath: str('Control Rig asset path, e.g. /Game/Rigs/CR_Arm.'),
+      edit: { type: 'string', enum: ['add_unit', 'connect', 'disconnect', 'set_pin', 'remove_node', 'import_bones', 'add_bone', 'add_null', 'add_control', 'remove_element'], description: 'The edit to make (each step of steps names its own).' },
+      unit: str('add_unit: the unit, as an object path (/Script/ControlRig.RigUnit_SetTransform), its struct name with or without RigUnit_ (SetTransform), or its display name.'),
+      name: str('add_unit: the new node\'s name (default the unit\'s, made unique); add_bone, add_null, add_control, remove_element: the element\'s name.'),
+      position: { type: 'array', items: { type: 'number' }, minItems: 2, maxItems: 2, description: 'add_unit: graph position [x, y] (default right of the last node).' },
+      from: str('connect, disconnect: the output pin, Node.Pin as get_control_rig lists it; execution runs from the event\'s execute pin to each unit\'s (ExecutePin in UE 5.8).'),
+      to: str('connect, disconnect: the input pin, Node.Pin.'),
+      pin: str('set_pin: the pin, Node.Pin; a struct member has its own pin (SetTransform.Item.Name, SetTransform.Transform.Translation.X).'),
+      value: { type: ['string', 'number', 'boolean'], description: 'set_pin: the value as text (Bone, foot_l), a number, or true/false.' },
+      node: str('remove_node: the node\'s name.'),
+      skeletonPath: str('import_bones: the skeleton whose bones are imported (default the skeleton of the rig\'s preview mesh).'),
+      parent: str('add_bone, add_null, add_control: the parent element\'s name (a bone, null or control); omitted, the top of the hierarchy.'),
+      location: vec3('add_bone, add_null, add_control: location [x, y, z] in cm (a control\'s offset), relative to the parent unless global.'),
+      rotation: vec3('add_bone, add_null, add_control: rotation [pitch, yaw, roll] in degrees.'),
+      scale: vec3('add_bone, add_null, add_control: scale [x, y, z] (default 1).'),
+      global: bool('add_bone, add_null: location, rotation and scale are in rig space, not relative to the parent.'),
+      controlType: { type: 'string', enum: ['transform', 'float', 'bool', 'position', 'rotator'], description: 'add_control: the value the control drives (default transform).' },
+      steps: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Several edits in order, each an object with edit and its own fields as above; the first that fails stops the rest, and those before it stay (failedStep names it).' },
+      save: A.save,
+    },
+    required: ['assetPath'],
+    effect: 'write', latency: 'interactive', resources: 'medium', plugins: CR_ESU,
+    exampleInput: { action: 'edit_control_rig', assetPath: '/Game/Rigs/CR_Arm', steps: [{ edit: 'add_unit', unit: 'BeginExecution', name: 'ForwardsSolve' }, { edit: 'add_unit', unit: 'SetTransform', name: 'SetHand' }, { edit: 'set_pin', pin: 'SetHand.Item.Name', value: 'hand_r' }, { edit: 'connect', from: 'ForwardsSolve.ExecutePin', to: 'SetHand.ExecutePin' }] },
+    exampleOutput: { success: true, message: 'Applied 4 edit(s) to CR_Arm.', assetPath: '/Game/Rigs/CR_Arm.CR_Arm', applied: 4, compiled: true, saved: true,
+      made: [{ node: 'SetHand', unit: '/Script/ControlRig.RigUnit_SetTransform', pins: [{ pin: 'SetHand.Item', direction: 'Input', type: 'FRigElementKey' }] }, { pin: 'SetHand.Item.Name', value: 'hand_r' }] },
+    outputProps: {
+      assetPath: str('The rig edited.'),
+      applied: num('Edits applied.'),
+      made: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'What the edits made: {node, unit, pins} for an added unit, {pin, value} for a set pin (the value as stored), {element} for an added element, {importedFrom, bones} for a skeleton\'s bones imported (bones the rig already had are matched in place).' },
+      compiled: bool('Whether the rig compiled after the edits.'),
+      compileErrors: { type: 'array', items: { type: 'string' }, description: 'The compile errors, when there were any.' },
+      saved: bool('Whether the rig was saved.'),
+      failedStep: num('steps: the step that failed (0-based); the ones before it were applied, compiled and saved.'),
+    },
+    outputRequired: ['assetPath', 'applied'] }),
+  buildRecord({ parentTool: T, id: `${T}.get_control_rig`, action: 'get_control_rig', family: F,
+    topics: ['read control rig', 'control rig nodes', 'rig pins', 'rig hierarchy'],
+    summary: 'Read a Control Rig: each node of its graph with its unit and pins (path, direction, type, default, linked), the links between pins, its hierarchy (bones, nulls, controls with their parents) and whether it compiled; node names one node with every struct member pin.',
+    whenToUse: ['Before editing a rig: the exact pin paths connect and set_pin take, and what is already wired.', 'To check a rig after edits: links, hierarchy, compile state.'],
+    whenNotToUse: ['Finding a unit to add (use list_rig_units).'],
+    inputProps: {
+      assetPath: str('Control Rig asset path, e.g. /Game/Rigs/CR_Arm.'),
+      node: str('One node\'s name: only that node, with every struct member pin by its full path.'),
+    },
+    required: ['assetPath'],
+    effect: 'read', editorStates: ANY_EDITOR_STATE, latency: 'instant', resources: 'low', plugins: CR_ESU,
+    exampleInput: { action: 'get_control_rig', assetPath: '/Game/Rigs/CR_Arm' },
+    exampleOutput: { success: true, message: 'CR_Arm: 2 node(s), 1 link(s), 3 hierarchy element(s).', assetPath: '/Game/Rigs/CR_Arm.CR_Arm',
+      nodes: [{ name: 'ForwardsSolve', title: 'Forwards Solve', unit: '/Script/ControlRig.RigUnit_BeginExecution', position: [0, 0], pins: [{ pin: 'ForwardsSolve.ExecutePin', direction: 'Output', type: 'FRigVMExecuteContext', linked: true }] }],
+      links: [{ from: 'ForwardsSolve.ExecutePin', to: 'SetHand.ExecutePin' }], elements: [{ type: 'Bone', name: 'root' }, { type: 'Bone', name: 'hand_r', parent: 'root' }], elementCount: 3, compiled: true },
+    outputProps: {
+      assetPath: str('The rig read.'),
+      nodes: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Each node: name, title, unit (struct path), position [x, y] and pins [{pin, direction, type, default, linked}].' },
+      links: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Each link: from (output pin) and to (input pin).' },
+      elements: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Hierarchy elements in order (up to 500): type (Bone, Null, Control, Curve ...), name and parent.' },
+      elementCount: num('All hierarchy elements.'),
+      compiled: bool('Whether the rig is compiled and up to date.'),
+      nodeNames: { type: 'array', items: { type: 'string' }, description: 'With a node that is not there: the nodes there are.' },
+    },
+    outputRequired: ['assetPath', 'nodes'] }),
+  buildRecord({ parentTool: T, id: `${T}.list_rig_units`, action: 'list_rig_units', family: F,
+    topics: ['rig units', 'find rig unit', 'control rig node types'],
+    summary: 'Find the units a Control Rig graph can hold (Get Transform, Two Bone IK, Aim, math and more): each unit\'s object path, name and category, for edit_control_rig add_unit.',
+    whenToUse: ['A unit is needed for add_unit and its name is not known.'],
+    whenNotToUse: ['Reading what a rig already holds (use get_control_rig).'],
+    inputProps: {
+      query: str('Words to match in the unit\'s name, display name, category or keywords (spaces ignored), e.g. two bone, aim, set transform.'),
+      limit: num('Most units to list (default 50, up to 500); matched counts them all.'),
+    },
+    required: [],
+    effect: 'read', editorStates: ANY_EDITOR_STATE, latency: 'instant', resources: 'low', plugins: CR_ESU,
+    exampleInput: { action: 'list_rig_units', query: 'two bone' },
+    exampleOutput: { success: true, message: '2 rig unit(s) match.', matched: 2, units: [{ unit: '/Script/ControlRig.RigUnit_TwoBoneIKSimplePerItem', name: 'Basic IK', category: 'Hierarchy' }] },
+    outputProps: {
+      units: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Matching units sorted by struct name: unit (the object path add_unit takes), name and category.' },
+      matched: num('Units that match.'),
+    },
+    outputRequired: ['units', 'matched'] }),
 ];

@@ -9,7 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## 🏷️ [Unreleased]
 
-_Nothing yet._
+<details>
+<summary><b>✨ Added</b></summary>
+
+- **Control Rig graphs**: `animation_physics` `edit_control_rig` adds, wires, sets and removes rig units and adds or removes bones, nulls and controls (or imports a skeleton's bones), one edit or a batch, then compiles; `get_control_rig` reads the graph and hierarchy; `list_rig_units` finds units by name or category.
+
+</details>
 
 ---
 

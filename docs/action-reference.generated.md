@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `52e14225df31d2d9`
+Catalog revision: `6a9b00e40ef5b820`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 402 capabilities across
+The catalog declares 405 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -36,7 +36,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 | Parent tool | Capabilities | read | write | destructive | Domains |
 | --- | --- | --- | --- | --- | --- |
-| `animation_physics` | 26 | 2 | 22 | 2 | animation physics |
+| `animation_physics` | 29 | 4 | 23 | 2 | animation physics |
 | `build_environment` | 40 | 5 | 32 | 3 | environment |
 | `control_actor` | 24 | 8 | 14 | 2 | actor |
 | `control_editor` | 24 | 9 | 12 | 3 | editor |
@@ -62,7 +62,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-64 of 402 capabilities require consent.
+64 of 405 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -147,13 +147,16 @@ validates against, so `execute` cannot accept an action this table omits.
 | `animation_physics.edit_anim_graph` | `animation_physics` | `add_blend_node` | write | write | none | `animation_physics.edit_anim_graph` `animation_physics.add_blend_node` `animation_physics.add_cached_pose` `animation_physics.add_slot_node` `animation_physics.create_state_machine` `animation_physics.add_state_machine` `animation_physics.add_state` `animation_physics.add_transition` `animation_physics.set_transition_rules` `animation_physics.delete_transition` `animation_physics.create_blend_tree` |
 | `animation_physics.edit_animation` | `animation_physics` | `add_bone_track` | write | write | none | `animation_physics.edit_animation` `animation_physics.add_bone_track` `animation_physics.set_bone_key` `animation_physics.set_curve_key` `animation_physics.add_notify` `animation_physics.add_notify_state` `animation_physics.add_sync_marker` `animation_physics.set_additive_settings` `animation_physics.set_root_motion_settings` `animation_physics.set_sequence_length` `animation_physics.add_aim_offset_sample` |
 | `animation_physics.edit_blend_space` | `animation_physics` | `add_blend_sample` | write | write | none | `animation_physics.edit_blend_space` `animation_physics.add_blend_sample` `animation_physics.set_axis_settings` `animation_physics.set_interpolation_settings` `animation_physics.force_rebuild_blend_space` |
+| `animation_physics.edit_control_rig` | `animation_physics` | `edit_control_rig` | write | write | none | `animation_physics.edit_control_rig` |
 | `animation_physics.edit_montage` | `animation_physics` | `add_montage_notify` | write | write | none | `animation_physics.edit_montage` `animation_physics.add_montage_notify` `animation_physics.add_montage_section` `animation_physics.add_montage_slot` `animation_physics.link_sections` `animation_physics.set_blend_in` `animation_physics.set_blend_out` `animation_physics.set_section_timing` |
 | `animation_physics.edit_morph_target` | `animation_physics` | `create_morph_target` | write | write | none | `animation_physics.edit_morph_target` `animation_physics.create_morph_target` `animation_physics.set_morph_target_deltas` `animation_physics.import_morph_targets` `animation_physics.set_morph_target_value` |
 | `animation_physics.edit_physics_asset` | `animation_physics` | `create_physics_asset` | write | write | none | `animation_physics.edit_physics_asset` `animation_physics.create_physics_asset` `animation_physics.add_physics_body` `animation_physics.configure_physics_body` `animation_physics.modify_physics_body` `animation_physics.add_physics_constraint` `animation_physics.set_physics_constraint` `animation_physics.configure_constraint_limits` `animation_physics.set_physics_asset` |
 | `animation_physics.edit_skeleton` | `animation_physics` | `add_bone` | write | write | none | `animation_physics.edit_skeleton` `animation_physics.add_bone` `animation_physics.rename_bone` `animation_physics.set_bone_parent` `animation_physics.set_bone_transform` `animation_physics.create_virtual_bone` |
 | `animation_physics.edit_skin_weights` | `animation_physics` | `auto_skin_weights` | write | write | none | `animation_physics.edit_skin_weights` `animation_physics.auto_skin_weights` `animation_physics.set_vertex_weights` `animation_physics.copy_weights` `animation_physics.mirror_weights` `animation_physics.prune_weights` |
 | `animation_physics.get_animation_info` | `animation_physics` | `get_animation_info` | read | read | none | `animation_physics.get_animation_info` |
+| `animation_physics.get_control_rig` | `animation_physics` | `get_control_rig` | read | read | none | `animation_physics.get_control_rig` |
 | `animation_physics.get_skeleton_info` | `animation_physics` | `get_skeleton_info` | read | read | none | `animation_physics.get_skeleton_info` `animation_physics.list_bones` `animation_physics.list_sockets` `animation_physics.list_virtual_bones` `animation_physics.get_bone_transform` `animation_physics.list_morph_targets` `animation_physics.get_physics_asset_info` `animation_physics.list_physics_bodies` |
+| `animation_physics.list_rig_units` | `animation_physics` | `list_rig_units` | read | read | none | `animation_physics.list_rig_units` |
 | `animation_physics.play_montage` | `animation_physics` | `play_montage` | write | write | none | `animation_physics.play_montage` `animation_physics.play_anim_montage` |
 | `animation_physics.remove_skeleton_element` | `animation_physics` | `remove_bone` | destructive | destructive | explicit | `animation_physics.remove_skeleton_element` `animation_physics.remove_bone` `animation_physics.remove_socket` `animation_physics.remove_physics_body` |
 | `animation_physics.setup_ik` | `animation_physics` | `setup_ik` | write | write | none | `animation_physics.setup_ik` `animation_physics.create_ik_rig` `animation_physics.create_ik_retargeter` `animation_physics.set_retarget_chain_mapping` |

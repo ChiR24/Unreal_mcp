@@ -1956,3 +1956,20 @@ describe('export_mesh writes a file through the editor exporters, unattended', (
     expect(assets).toContain('return McpMeshExport::HandleExportMesh(this, RequestId, Payload, RequestingSocket);');
   });
 });
+
+// A Control Rig could be created but its graph and hierarchy could not be edited or read.
+describe('edit_control_rig edits a rig through its own controllers and keeps what a batch applied', () => {
+  it('stops at the first failing step, then compiles and saves the steps before it', () => {
+    const edit = code('AnimationAuthoring', 'ControlRig', 'McpAutomationBridge_ControlRigGraphEdit.cpp');
+    expect(edit).toContain('for (int32 Index = 0; Index < Steps.Num() && Failed == INDEX_NONE; ++Index)');
+    expect(edit).toMatch(/if \(Applied > 0\)\s*\{\s*FCompilerResultsLog Results;\s*FKismetEditorUtilities::CompileBlueprint\(Edit\.Rig, EBlueprintCompileOptions::None, &Results\);/u);
+    expect(edit).toContain('Edit.Graph->AddUnitNodeFromStructPath(Struct->GetPathName(), TEXT("Execute"), Position, GetJsonStringField(Step, TEXT("name")), true);');
+    // A set pin answers the value as stored, read back off the pin.
+    expect(edit).toContain('Extra->SetStringField(TEXT("value"), Pin->GetDefaultValue());');
+    const hierarchy = code('AnimationAuthoring', 'ControlRig', 'McpAutomationBridge_ControlRigHierarchyEdit.cpp');
+    expect(hierarchy).toContain('Edit.Hierarchy->ImportBones(Skeleton, NAME_None, true, true, false, true);');
+    expect(hierarchy).toContain('Extra->SetNumberField(TEXT("bones"), Skeleton->GetReferenceSkeleton().GetNum());');
+    const read = code('AnimationAuthoring', 'ControlRig', 'McpAutomationBridge_ControlRigGraphRead.cpp');
+    expect(read).toContain('McpHandlerUtils::MarkNoAssetsChanged(Response);');
+  });
+});

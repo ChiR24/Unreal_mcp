@@ -1,6 +1,7 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h"
 #include "Domains/AnimationAuthoring/McpAutomationBridge_AnimationAuthoringSupport.h"
+#include "Domains/AnimationAuthoring/ControlRig/McpAutomationBridge_ControlRigGraph.h"
 
 namespace McpAnimationAuthoring {
 
@@ -171,7 +172,7 @@ TSharedPtr<FJsonObject> HandleControlRigActions(const FString& SubAction, const 
         return Response;
     }
 
-    return nullptr;
+    return HandleControlRigGraphActions(SubAction, Params, Response);
 }
 
 } // namespace McpAnimationAuthoring
