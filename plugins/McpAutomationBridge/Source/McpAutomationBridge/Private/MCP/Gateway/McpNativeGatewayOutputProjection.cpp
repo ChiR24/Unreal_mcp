@@ -52,12 +52,13 @@ TSharedPtr<FJsonObject> McpProjectCanonicalOutput(
 				Details = *ExistingObject;
 			}
 		}
+		// The receipt carries the message at its top: folded here as well, every reply printed it twice.
 		auto Fold = [&Properties, &Details](const TSharedPtr<FJsonObject>& Source)
 		{
 			for (const auto& Entry : Source->Values)
 			{
 				if (Entry.Key == TEXT("data") || Entry.Key == TEXT("requestId") || Entry.Key == TEXT("type") ||
-					Entry.Key == TEXT("liveRevisions") || (*Properties)->HasField(Entry.Key))
+					Entry.Key == TEXT("liveRevisions") || Entry.Key == TEXT("message") || (*Properties)->HasField(Entry.Key))
 				{
 					continue;
 				}
