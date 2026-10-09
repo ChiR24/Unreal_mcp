@@ -60,7 +60,7 @@ const testCases = [
   { scenario: 'ACTION: activate_effect by system asset', toolName: 'manage_effect', arguments: { action: 'activate_effect', assetPath: SYSTEM_PATH, reset: true }, expected: 'success' },
   { scenario: 'ACTION: deactivate', toolName: 'manage_effect', arguments: { action: 'deactivate', actorName: EFFECT_ACTOR }, expected: 'success' },
   { scenario: 'ACTION: reset', toolName: 'manage_effect', arguments: { action: 'reset', actorName: EFFECT_ACTOR }, expected: 'success' },
-  { scenario: 'PLAYBACK: advance_simulation', toolName: 'manage_effect', arguments: { action: 'advance_simulation', actorName: EFFECT_ACTOR, deltaTime: 0.016, steps: 2 }, expected: 'success', assertions: [{ path: 'structuredContent.result.steps', equals: 2, label: 'native simulation step count applied' }] },
+  { scenario: 'PLAYBACK: advance_simulation', toolName: 'manage_effect', arguments: { action: 'advance_simulation', actorName: EFFECT_ACTOR, reset: true, deltaTime: 0.016, steps: 2 }, expected: 'success', assertions: [{ path: 'structuredContent.result.steps', equals: 2, label: 'native simulation step count applied' }] },
 
   // === GRAPH ===
   { scenario: 'ADD: add_niagara_module', toolName: 'manage_effect', arguments: { action: 'add_niagara_module', assetPath: SYSTEM_PATH, systemPath: SYSTEM_PATH, emitterName: DEFAULT_EMITTER, modulePath: '/Niagara/Modules/Emitter/EmitterState.EmitterState', scriptType: 'Update', save: false }, expected: 'success|already exists', captureResult: { key: 'niagaraModuleNodeId', fromField: 'result.nodeId' } },

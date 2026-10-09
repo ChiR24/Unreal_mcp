@@ -1884,3 +1884,28 @@ describe('check_mesh reads the soundness of a mesh from its source topology', ()
     expect(inspect).toContain('return HandleInspectMeshCheckAction(*this, RequestId, Payload, RequestingSocket);');
   });
 });
+
+// A particle system advanced (or a component edited) right before a capture drew its old state: its render data is
+// only sent at the end of the next frame, so the picture missed it.
+describe('an editor viewport capture shows what changed since the last frame', () => {
+  it('sends the world\'s pending render updates before every frame it draws', () => {
+    const windows = code('ControlEditor', 'McpAutomationBridge_ControlEditorScreenshotWindows.cpp');
+    expect(windows).toMatch(/if \(World\) \{\s*World->SendAllEndOfFrameUpdates\(\);\s*\}\s*Viewport->Draw\(\);\s*FlushRenderingCommands\(\);/u);
+    const screenshot = code('ControlEditor', 'McpAutomationBridge_ControlEditorScreenshot.cpp');
+    expect(screenshot).toContain('DrawViewportFramesForMcp(Viewport, CaptureClient ? CaptureClient->GetWorld() : nullptr, bCameraMoved ? 3 : 1);');
+  });
+});
+
+// advance_simulation answered "advanced" for a finished, paused or never-started system, which the engine steps
+// without a word; activate answered active true while its system was still waiting to start.
+describe('a Niagara advance or activate says what the system did', () => {
+  it('reads the age reached, and refuses when the system did not move', () => {
+    const lifecycle = code('Effect', 'McpAutomationBridge_EffectHandlersNiagaraLifecycle.cpp');
+    expect(lifecycle).toContain('const double AgeBefore = McpNiagaraAge(NiagaraComponent);');
+    expect(lifecycle).toMatch(/if \(Age <= AgeBefore\)\s*\{[\s\S]*?TEXT\("NOT_ADVANCED"\)\);\s*return true;/u);
+    expect(lifecycle).toContain('Response->SetBoolField(TEXT("complete"), bComplete);');
+    expect(lifecycle).toMatch(/if \(GetJsonBoolField\(Context\.Payload, TEXT\("reset"\)\)\)\s*\{\s*NiagaraComponent->ResetSystem\(\);/u);
+    expect(lifecycle).toContain('Response->SetBoolField(TEXT("active"), bActive);');
+    expect(lifecycle).not.toContain('SetBoolField(TEXT("active"), true)');
+  });
+});

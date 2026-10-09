@@ -68,6 +68,9 @@ struct FMcpEditorRunHold {
 FMcpEditorRunHold BeginEditorRunForMcp();
 void EndEditorRunForMcp(const FMcpEditorRunHold &Hold);
 void AppendEditorWindowListForMcp(const TSharedPtr<FJsonObject> &Resp);
+// Draws the viewport Frames times, each after World sends its pending render updates, so a component edited or a
+// particle system advanced since the last frame shows in the picture (it drew the old state). World may be null.
+void DrawViewportFramesForMcp(FViewport *Viewport, UWorld *World, int32 Frames);
 // Resolves a window by list index or case-insensitive title substring.
 TSharedPtr<SWindow> FindEditorSlateWindowForMcp(const FString &Query,
                                                 FString &OutResolvedTitle,

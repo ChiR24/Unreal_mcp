@@ -5,6 +5,7 @@
  */
 import type { CapabilityRecordSource, JsonObject } from '../../../model.js';
 import { buildRecord } from '../helpers.js';
+import { ANY_EDITOR_STATE } from '../../core/builder.js';
 import { P } from '../properties.js';
 import { E } from './effect-properties.js';
 import { bool } from '../../shared/schema-props.js';
@@ -99,30 +100,34 @@ export const EFFECT_RECORDS: readonly CapabilityRecordSource[] = [
     effect: 'write', latency: 'interactive', resources: 'medium', plugins: NIAGARA,
     exampleInput: { action: 'create_niagara_ribbon', name: 'NR_Slash' } }),
   buildRecord({ parentTool: T, id: `${T}.activate`, action: 'activate', family: F,
-    summary: 'Activate a spawned effect component (PIE).', whenToUse: ['Effect must turn on at runtime.'], whenNotToUse: ['Author the effect.'],
+    summary: 'Activate a placed Niagara component, in the level editor or a running game; reset restarts it from age 0.', whenToUse: ['Effect must turn on.'], whenNotToUse: ['Author the effect.'],
     inputProps: { actorName: P.actorName, reset: E.reset }, required: ['actorName'],
-    effect: 'write', editorStates: ['pie', 'simulate'], behavior: { idempotency: 'idempotent' }, latency: 'instant', resources: 'low', plugins: NIAGARA,
+    effect: 'write', editorStates: ANY_EDITOR_STATE, behavior: { idempotency: 'idempotent' }, latency: 'instant', resources: 'low', plugins: NIAGARA,
     exampleInput: { action: 'activate', actorName: 'FX_1', reset: false } }),
   buildRecord({ parentTool: T, id: `${T}.activate_effect`, action: 'activate_effect', family: F,
     summary: 'Activate a Niagara component by actor, or by the system asset it plays (on actorName, else anywhere in the world).', whenToUse: ['Asset-driven runtime FX.'], whenNotToUse: ['Use activate.'],
     inputProps: { actorName: P.actorName, assetPath: { type: 'string', description: 'Niagara system asset the component plays; picks that component on actorName, or the first one in the world without actorName.' }, systemName: E.systemName, reset: E.reset }, required: [], requiredOneOf: ['actorName', 'assetPath', 'systemName'],
-    effect: 'write', editorStates: ['pie', 'simulate'], behavior: {  }, latency: 'instant', resources: 'low', plugins: NIAGARA,
+    effect: 'write', editorStates: ANY_EDITOR_STATE, behavior: {  }, latency: 'instant', resources: 'low', plugins: NIAGARA,
     exampleInput: { action: 'activate_effect', systemName: 'FX_1' } }),
   buildRecord({ parentTool: T, id: `${T}.deactivate`, action: 'deactivate', family: F,
-    summary: 'Deactivate a runtime effect component.', whenToUse: ['Effect must turn off.'], whenNotToUse: ['Use activate.'],
+    summary: 'Deactivate a placed Niagara component, in the level editor or a running game.', whenToUse: ['Effect must turn off.'], whenNotToUse: ['Use activate.'],
     inputProps: { actorName: P.actorName }, required: ['actorName'],
-    effect: 'write', editorStates: ['pie', 'simulate'], behavior: { idempotency: 'idempotent' }, latency: 'instant', resources: 'low', plugins: NIAGARA,
+    effect: 'write', editorStates: ANY_EDITOR_STATE, behavior: { idempotency: 'idempotent' }, latency: 'instant', resources: 'low', plugins: NIAGARA,
     exampleInput: { action: 'deactivate', actorName: 'FX_1' } }),
   buildRecord({ parentTool: T, id: `${T}.reset`, action: 'reset', family: F,
-    summary: 'Reset a runtime effect to initial state.', whenToUse: ['Effect must restart.'], whenNotToUse: ['Use deactivate.'],
+    summary: 'Restart a placed Niagara component from age 0, in the level editor or a running game.', whenToUse: ['Effect must restart.'], whenNotToUse: ['Use deactivate.'],
     inputProps: { actorName: P.actorName }, required: ['actorName'],
-    effect: 'write', editorStates: ['pie', 'simulate'], behavior: { safeToRetry: true }, latency: 'instant', resources: 'low', plugins: NIAGARA,
+    effect: 'write', editorStates: ANY_EDITOR_STATE, behavior: { safeToRetry: true }, latency: 'instant', resources: 'low', plugins: NIAGARA,
     exampleInput: { action: 'reset', actorName: 'FX_1' } }),
+  // An effect could be judged at a chosen age only by starting Play In Editor and stepping frames.
   buildRecord({ parentTool: T, id: `${T}.advance_simulation`, action: 'advance_simulation', family: F,
-    summary: 'Advance a Niagara simulation by time (PIE/editor).', whenToUse: ['Step the sim manually.'], whenNotToUse: ['Let it run.'],
-    inputProps: { actorName: P.actorName, deltaTime: E.deltaTime, steps: E.steps }, required: [],
+    topics: ['preview effect', 'effect at an age', 'scrub particles', 'step niagara'],
+    summary: 'Advance a placed Niagara system by steps of deltaTime right away, in the level editor as in a running game, to look at it at a chosen age: spawn it with spawn_niagara, advance it, then capture it with control_editor screenshot from a camera location. The reply gives the age reached and whether the system has finished; NOT_ADVANCED means it did not move (finished, paused or not running).',
+    whenToUse: ['An effect must be judged at chosen ages (a splash 0.2 s and 0.6 s after it starts) without starting Play In Editor: advance with reset true to the first age, screenshot, advance again; the ages add up.'],
+    whenNotToUse: ['The effect should simply play in a running game (it runs by itself).'],
+    inputProps: { actorName: P.actorName, deltaTime: E.deltaTime, steps: E.steps, reset: bool('Restart the system from age 0 before stepping, so it ends at exactly steps x deltaTime seconds; also plays a finished system again. Without it the steps add to the age it has.') }, required: ['actorName'],
     effect: 'write', editorStates: ['edit', 'pie', 'simulate'], latency: 'instant', resources: 'low', plugins: NIAGARA,
-    exampleInput: { action: 'advance_simulation', deltaTime: 0.016, steps: 2 } }),
+    exampleInput: { action: 'advance_simulation', actorName: 'FX_Splash', reset: true, deltaTime: 0.02, steps: 10 } }),
   buildRecord({ parentTool: T, id: `${T}.add_niagara_module`, action: 'add_niagara_module', family: F,
     summary: 'Add a module to a Niagara emitter.', whenToUse: ['Emitter needs a module.'], whenNotToUse: ['Use connect_niagara_pins.'],
     inputProps: { assetPath: P.assetPath, systemPath: E.systemPath, emitterName: E.emitterName, modulePath: E.modulePath, scriptType: E.scriptType, save: SAVE }, required: [], requiredOneOf: SYSTEM_ONE_OF,

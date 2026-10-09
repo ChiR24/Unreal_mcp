@@ -285,3 +285,13 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorRestoreWindow(
   SendAutomationResponse(RequestingSocket, RequestId, true, Message, Data);
   return true;
 }
+
+void DrawViewportFramesForMcp(FViewport *Viewport, UWorld *World, int32 Frames) {
+  for (int32 Frame = 0; Frame < Frames; ++Frame) {
+    if (World) {
+      World->SendAllEndOfFrameUpdates();
+    }
+    Viewport->Draw();
+    FlushRenderingCommands();
+  }
+}

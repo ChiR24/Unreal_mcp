@@ -15074,7 +15074,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "deltaTime": {
           "type": "number",
-          "description": "Simulation delta time per step, in seconds."
+          "description": "Seconds per step (default 0.1); steps of about a frame (0.02) simulate the way the game does."
         },
         "density": {
           "type": "number",
@@ -15351,7 +15351,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "reset": {
           "type": "boolean",
-          "description": "Whether the effect restarts from its initial state."
+          "description": "Restart the system from age 0 before stepping, so it ends at exactly steps x deltaTime seconds; also plays a finished system again. Without it the steps add to the age it has."
         },
         "rotation": {
           "type": "array",
@@ -15407,7 +15407,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "steps": {
           "type": "number",
-          "description": "Number of simulation steps to advance."
+          "description": "Steps to run (default 1): the system ages steps x deltaTime seconds."
         },
         "system": {
           "type": "string",

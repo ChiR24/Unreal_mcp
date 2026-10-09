@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "6bb5e7b9761e6e7c",
+  "catalogRevision": "2af5c801ae5d438a",
   "recordCount": 399,
   "records": [
     {
@@ -55260,7 +55260,7 @@
         ],
         "summary": "Activate, deactivate or reset a Niagara component on an actor, or activate an effect by asset or system name.",
         "whenToUse": [
-          "control=activate: Effect must turn on at runtime.",
+          "control=activate: Effect must turn on.",
           "control=deactivate: Effect must turn off.",
           "control=reset: Effect must restart.",
           "control=effect: Asset-driven runtime FX."
@@ -55348,6 +55348,7 @@
           "Niagara"
         ],
         "editorStates": [
+          "edit",
           "pie",
           "simulate"
         ]
@@ -55395,7 +55396,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "a9a6f0572cd99b432ce7eb6ad6106bc1a852a4994ddd4c413d82bf6124e3d842",
-        "content": "e3a77905b1c336c300670accf4e1aaab40d0ac4a3d247a601ee7a1cfd1924b82"
+        "content": "75364e0d173799cbef55e34255bddcdb8a938619ce8eea6bf66ceff9147da963"
       }
     },
     {
@@ -56085,14 +56086,18 @@
         "domain": "manage effect",
         "family": "effect",
         "topics": [
-          "advance_simulation"
+          "advance_simulation",
+          "preview effect",
+          "effect at an age",
+          "scrub particles",
+          "step niagara"
         ],
-        "summary": "Advance a Niagara simulation by time (PIE/editor).",
+        "summary": "Advance a placed Niagara system by steps of deltaTime right away, in the level editor as in a running game, to look at it at a chosen age: spawn it with spawn_niagara, advance it, then capture it with control_editor screenshot from a camera location. The reply gives the age reached and whether the system has finished; NOT_ADVANCED means it did not move (finished, paused or not running).",
         "whenToUse": [
-          "Step the sim manually."
+          "An effect must be judged at chosen ages (a splash 0.2 s and 0.6 s after it starts) without starting Play In Editor: advance with reset true to the first age, screenshot, advance again; the ages add up."
         ],
         "whenNotToUse": [
-          "Let it run."
+          "The effect should simply play in a running game (it runs by itself)."
         ]
       },
       "schemas": {
@@ -56106,14 +56111,20 @@
             },
             "deltaTime": {
               "type": "number",
-              "description": "Simulation delta time per step, in seconds."
+              "description": "Seconds per step (default 0.1); steps of about a frame (0.02) simulate the way the game does."
             },
             "steps": {
               "type": "number",
-              "description": "Number of simulation steps to advance."
+              "description": "Steps to run (default 1): the system ages steps x deltaTime seconds."
+            },
+            "reset": {
+              "type": "boolean",
+              "description": "Restart the system from age 0 before stepping, so it ends at exactly steps x deltaTime seconds; also plays a finished system again. Without it the steps add to the age it has."
             }
           },
-          "required": [],
+          "required": [
+            "actorName"
+          ],
           "additionalProperties": false
         },
         "output": {
@@ -56142,11 +56153,13 @@
       },
       "examples": [
         {
-          "title": "Advance a Niagara simulation by time (PIE/editor).",
+          "title": "Advance a placed Niagara system by steps of deltaTime right away, in the level editor as in a running game, to look at it at a chosen age: spawn it with spawn_niagara, advance it, then capture it with control_editor screenshot from a camera location. The reply gives the age reached and whether the system has finished; NOT_ADVANCED means it did not move (finished, paused or not running).",
           "input": {
             "action": "advance_simulation",
-            "deltaTime": 0.016,
-            "steps": 2
+            "actorName": "FX_Splash",
+            "reset": true,
+            "deltaTime": 0.02,
+            "steps": 10
           },
           "output": {
             "success": true
@@ -56184,8 +56197,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "fc707ecfa2e835e665ad6e4ff6db58d07fcaa1a552619fbe134a5b2ebecc6f2a",
-        "content": "41553a2d2a51e144de23412c0e73260e3feb1033e8b9bed75a9082955a68fd0e"
+        "schema": "4fff5f60d381d5a12cb2413e3d542e73f0b40294ff939b896ba660ad21b2037b",
+        "content": "cd955bfb13904d3ded0accc3147f351fa9a90f29d1bb2ec9ce00cdab305d898e"
       }
     },
     {
