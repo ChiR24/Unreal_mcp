@@ -136,10 +136,12 @@ struct FMcpFindTextScan
                 }
                 // The node id is what set_pin_default_value and delete_node take.
                 NodeId = Node->NodeGuid.ToString();
-                const FString Where = Graph->GetName() + TEXT(": ") + Node->GetNodeTitle(ENodeTitleType::ListView).ToString();
+                const FString ListTitle = Node->GetNodeTitle(ENodeTitleType::ListView).ToString();
+                const FString Where = Graph->GetName() + TEXT(": ") + ListTitle;
                 // The node itself, by its title: "which Blueprints call StartCameraFade" had no answer but reading
-                // every graph.
-                Hit(Asset, Where, TEXT("node"), Node->GetNodeTitle(ENodeTitleType::ListView).ToString());
+                // every graph. A call's list title is its function's name (PlaySoundAtLocation), so the title the graph
+                // shows (Play Sound at Location, Target is Gameplay Statics) is matched too.
+                Hit(Asset, Where, TEXT("node"), ListTitle.Contains(Query, Case) ? ListTitle : Node->GetNodeTitle(ENodeTitleType::FullTitle).ToString().Replace(TEXT("\n"), TEXT(" ")));
                 Hit(Asset, Where, TEXT("comment"), Node->NodeComment);
                 for (const UEdGraphPin* Pin : Node->Pins)
                 {

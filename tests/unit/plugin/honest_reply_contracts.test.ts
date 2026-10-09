@@ -1154,10 +1154,12 @@ describe('asset queries point at what they found', () => {
     expect(scan).toMatch(/void Reference\(const FString& Asset, const FString& Where, const FString& Field, const FString& Path\)\s*\{\s*if \(!Path\.IsEmpty\(\) && !Path\.StartsWith\(TEXT\("\/Script\/"\)\)/u);
   });
 
-  // "Which Blueprints call StartCameraFade" found nothing: node titles were never searched.
+  // "Which Blueprints call StartCameraFade" found nothing: node titles were never searched. A call node's list title is
+  // its function's name, so "Play Sound at Location" found no call until the title the graph shows was matched too.
   it('find_text matches a graph node by its title', () => {
-    expect(code('AssetQuery', 'McpAutomationBridge_AssetQueryFindText.cpp'))
-      .toContain('Hit(Asset, Where, TEXT("node"), Node->GetNodeTitle(ENodeTitleType::ListView).ToString());');
+    const scan = code('AssetQuery', 'McpAutomationBridge_AssetQueryFindText.cpp');
+    expect(scan).toContain('const FString ListTitle = Node->GetNodeTitle(ENodeTitleType::ListView).ToString();');
+    expect(scan).toContain('Hit(Asset, Where, TEXT("node"), ListTitle.Contains(Query, Case) ? ListTitle : Node->GetNodeTitle(ENodeTitleType::FullTitle)');
   });
 
   // lookup=graph on a MetaSound answered "Asset does not have a graph structure".
