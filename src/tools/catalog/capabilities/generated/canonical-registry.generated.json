@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "95c6f8f8254ce05d",
+  "catalogRevision": "3025a70201a3c8a9",
   "recordCount": 398,
   "records": [
     {
@@ -32476,6 +32476,8 @@
           "record trajectory",
           "track actor over time",
           "foot sliding",
+          "feet slide",
+          "foot contact",
           "bone position over time",
           "actor rotation",
           "watch actor move",
@@ -32845,7 +32847,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "ba995aa4e510b01da6f84237731eb05800f6584766e1486f3ce066b045e03ba4",
-        "content": "86df01e41ef3a78d6beae35a87be84e2e2ae6e628fda96908fe5f960b0c47da6"
+        "content": "f3a04b47b36993bcfff1fc6d9d1a10c4e592b6b33ca394b9d842c96b462b911d"
       }
     },
     {

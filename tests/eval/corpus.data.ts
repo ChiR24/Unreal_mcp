@@ -81,5 +81,11 @@ export const corpus: readonly CorpusCase[] = [
   { id: 'plain.copy_button', kind: 'collision', intent: 'copy button', expected: { tool: 'manage_blueprint', action: 'duplicate_widget' }, allowedAlternatives: [] },
   { id: 'plain.delete_button', kind: 'exact', intent: 'delete the quit button', expected: { tool: 'manage_blueprint', action: 'remove_widget' }, allowedAlternatives: [] },
   { id: 'plain.move_button', kind: 'exact', intent: 'move the button', expected: { tool: 'manage_blueprint', action: 'set_position' }, allowedAlternatives: [] },
+  // Verification a small model asks for in its own words: a long call's result, feet that slide, test results, validators.
+  { id: 'plain.task_result', kind: 'exact', intent: 'read the result of a call that is still running', expected: { tool: 'manage_tools', action: 'get_task_result' }, allowedAlternatives: [] },
+  { id: 'plain.feet_slide', kind: 'exact', intent: 'do the feet slide', expected: { tool: 'control_actor', action: 'sample_motion' }, allowedAlternatives: [] },
+  { id: 'plain.bone_over_time', kind: 'exact', intent: 'track a bone position over time', expected: { tool: 'control_actor', action: 'sample_motion' }, allowedAlternatives: [] },
+  { id: 'plain.test_results', kind: 'exact', intent: 'run the automation tests and read the results', expected: { tool: 'system_control', action: 'run_tests' }, allowedAlternatives: [] },
+  { id: 'plain.data_validation', kind: 'exact', intent: 'check that assets pass data validation', expected: { tool: 'system_control', action: 'validate_assets' }, allowedAlternatives: [] },
   { id: 'n.near_tie_del', kind: 'near_tie_destructive', intent: 'delete the selected object', expected: { tool: 'control_actor', action: 'delete' }, allowedAlternatives: [{ tool: 'manage_level', action: 'delete_level' }, { tool: 'manage_asset', action: 'delete_asset' }] },
 ];

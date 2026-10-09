@@ -19,7 +19,7 @@ export const CONTROL_ACTOR_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'get_transform', selector: 'readMode',
     summary: 'Read where an actor is (the player\'s pawn too): its transform now, or watch it over game time in PIE (motion): location, velocity, rotation, chosen properties and points on it (bones, sockets, components, with their height over the ground) at every interval, to prove a jump, launch, patrol, fall, foot plant or a rocking hull in one call.',
-    topics: ['actor location', 'where is the actor', 'where is the player', 'player location', 'actor position', 'sample motion', 'record trajectory', 'track actor over time', 'foot sliding', 'bone position over time'],
+    topics: ['actor location', 'where is the actor', 'where is the player', 'player location', 'actor position', 'sample motion', 'record trajectory', 'track actor over time', 'foot sliding', 'feet slide', 'foot contact', 'bone position over time'],
     members: { transform: 'get_transform', motion: 'sample_motion' },
     aliasMembers: ['get_actor_transform'],
   },
