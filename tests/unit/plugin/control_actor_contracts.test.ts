@@ -307,6 +307,11 @@ describe('get_components rows name the mesh and materials a component draws', ()
   it('world rows add the shared mesh asset fields', () => {
     expect(read('McpAutomationBridge_ControlActorComponentDetails.cpp')).toContain('McpHandlerUtils::AddMeshAssetFields(Component, Entry);');
   });
+
+  // Each row listed the first ten property names its class declares, with no values: most of a pawn's 30 KB answer.
+  it('world rows carry no property name list', () => {
+    expect(read('McpAutomationBridge_ControlActorComponentDetails.cpp')).not.toContain('TEXT("properties")');
+  });
 });
 
 // set_actor_collision opened no transaction, one actor or many, so control_editor.undo had nothing to take

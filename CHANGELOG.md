@@ -92,6 +92,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **A component named `Root` is the parent `attachTo` names.** `add_scs_component`, `reparent` and the parent check took `Root`, `RootComponent` and `DefaultSceneRoot` as the Blueprint's root even when a component had that name (the interaction tools name their scene root `Root`), so a part attached to it landed on the DefaultSceneRoot above it; a component of that exact name now wins.
 - **A bool property answers to its name without the `b`.** A Blueprint component's `properties` bag, `edit_scs` `set_property` and `get_property`/`set_property` refused `SimulatePhysics`, the Details panel's name for `BodyInstance.bSimulatePhysics`; a name that matches nothing now tries the `b`-prefixed bool, at the end of a path and among struct members.
 - **A write echoes what can be written.** `set_property` read a written struct, or an array of them, back with every field, runtime state included: four buoyancy pontoons answered 4 KB of `LocalForce`, `WaterHeight` and the like. The echo now holds the editable fields; reads still show every field.
+- **A component list lists components.** `get_components` rows on a placed actor carried the first ten property names each component's class declares, with no values: a 36-component pawn answered 30 KB. A row now holds the name, class, parent, visibility, transform, mesh and materials; `get_component_property` reads a property.
 
 </details>
 
