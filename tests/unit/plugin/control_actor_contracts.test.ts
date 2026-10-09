@@ -186,6 +186,20 @@ describe('sample_motion runs at full rate or says it did not', () => {
     expect(source).toContain('McpSlowFrameWarning(Run->LastGame - Run->StartGame, Run->Frames)');
   });
 
+  // A foot that slid, sank or floated was invisible in the actor's own location.
+  it('follows points on the actor and measures each one against the ground below it', () => {
+    const points = read('Motion', 'McpAutomationBridge_MotionPoints.cpp');
+    expect(source).toContain('McpSampleMotionPoints(Run.Points, Actor, *Sample, GameTime);');
+    expect(source).toContain('McpAddMotionPointStats(Run.Points, *Data);');
+    expect(source).toContain('!McpParseMotionPoints(Found, Payload, Run->Points, TimelineError)');
+    // Fewer samples with each point, so the reply stays inside the response budget.
+    expect(source).toContain('Run.Samples.Num() >= McpMotionSampleCap(McpMaxMotionSamples, Run.Points)');
+    // Traced from above the point, so a sunk foot is found; a trace that starts inside a surface proves nothing.
+    expect(points).toContain('const FVector Start = Location + FVector(0.0, 0.0, McpGroundTraceUp);');
+    expect(points).toContain('|| Hit.bStartPenetrating)');
+    expect(points).toContain('const double Planted = Low + Points.ContactCm;');
+  });
+
   // A title screen holds the game paused: the run sat out its whole 25 s real-time cap for one sample.
   it('ends a run whose game time stood still for 3 s, and says why', () => {
     expect(source).toMatch(/Run\.LastAdvanceReal = Now > Run\.LastGame \? FPlatformTime::Seconds\(\) : Run\.LastAdvanceReal;\s*if \(FPlatformTime::Seconds\(\) - Run\.LastAdvanceReal > 3\.0\) \{\s*return TEXT\("gamePaused"\);/u);

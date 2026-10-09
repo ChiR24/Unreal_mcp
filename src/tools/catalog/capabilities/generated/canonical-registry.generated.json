@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "cadc4115a7a175b8",
+  "catalogRevision": "03fb6071aba7faa4",
   "recordCount": 398,
   "records": [
     {
@@ -32475,16 +32475,19 @@
           "sample motion",
           "record trajectory",
           "track actor over time",
+          "foot sliding",
+          "bone position over time",
           "actor rotation",
           "watch actor move",
           "jump height"
         ],
-        "summary": "Read where an actor is (the player's pawn too): its transform now, or watch it over game time in PIE (motion): location, velocity, rotation and chosen properties at every interval, to prove a jump, launch, patrol, fall or a rocking hull in one call.",
+        "summary": "Read where an actor is (the player's pawn too): its transform now, or watch it over game time in PIE (motion): location, velocity, rotation, chosen properties and points on it (bones, sockets, components, with their height over the ground) at every interval, to prove a jump, launch, patrol, fall, foot plant or a rocking hull in one call.",
         "whenToUse": [
           "readMode=transform: The current transform of an actor must be inspected.",
           "readMode=motion: A jump, spring launch, moving platform, enemy patrol or fall must be proven in PIE without a sleep-and-poll loop.",
           "readMode=motion: The peak height, landing point or path of a moving actor is needed.",
-          "readMode=motion: An input must land at an exact moment (jump when a platform appears): inputs and startWhen run the whole timeline inside one call, so the caller's own delay between calls cannot shift it."
+          "readMode=motion: An input must land at an exact moment (jump when a platform appears): inputs and startWhen run the whole timeline inside one call, so the caller's own delay between calls cannot shift it.",
+          "readMode=motion: Feet must be proven to plant without sliding, sinking or floating, or a hand or muzzle must be followed: points with groundTrace measure it per point."
         ],
         "whenNotToUse": [
           "readMode=transform: The transform should be changed (use set_transform).",
@@ -32547,6 +32550,22 @@
                 "additionalProperties": false
               },
               "description": "Keys pressed and released at exact game times during the run (at most 32), e.g. [{\"key\":\"D\",\"atSeconds\":0,\"holdSeconds\":2},{\"key\":\"SpaceBar\",\"atSeconds\":0.6,\"holdSeconds\":0.2}]. A key still held when the run ends is released."
+            },
+            "points": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 8,
+              "description": "Places on the actor sampled with it (at most 8): a component by its name (LegL), a bone or socket of any of its components (foot_l, hand_r), or a component's own socket as Component.Socket (Weapon.Muzzle). Each sample's points gives each one's world location [x, y, z]; a name the actor lacks is refused with the names it has. Fewer samples are kept with points: 400 x 2 / (2 + points)."
+            },
+            "groundTrace": {
+              "type": "boolean",
+              "description": "With points: each sample's aboveGround gives each point's height over the first surface below it that blocks Visibility (the actor and what is attached to it ignored), negative when the point is inside that surface, and pointStats sums up its contact."
+            },
+            "contactCm": {
+              "type": "number",
+              "description": "With groundTrace: how far above its own lowest height a point still counts as planted (default 2 cm), so an ankle bone that never reaches the floor still counts as down when the foot is."
             },
             "startWhen": {
               "type": "object",
@@ -32650,7 +32669,7 @@
                 "additionalProperties": true,
                 "x-unreal-reflection-boundary": true
               },
-              "description": "One entry per sample: t (game seconds since the start), location [x, y, z], velocity [x, y, z], rotation [pitch, yaw, roll] in degrees (on the first sample and on each one where it changed, so a sample without it still has the last one written), properties."
+              "description": "One entry per sample: t (game seconds since the start), location [x, y, z], velocity [x, y, z], rotation [pitch, yaw, roll] in degrees (on the first sample and on each one where it changed, so a sample without it still has the last one written), properties, and with points their world locations (points) and heights over the ground (aboveGround, with groundTrace; a point with nothing below it within 10 m is left out)."
             },
             "sampleCount": {
               "type": "number",
@@ -32716,6 +32735,12 @@
               },
               "description": "propertyNames the actor's class does not have."
             },
+            "pointStats": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "Per point: min and max [x, y, z] over the run; with groundTrace also minAboveGround and maxAboveGround (a negative minimum means it sank into the surface, a large one that it never touched it), contactSeconds (time spent planted) and contactSlip (cm it moved across the ground while planted: a planted foot that slides shows here)."
+            },
             "windowRestored": {
               "type": "boolean",
               "description": "True when the editor window was minimized: a minimized editor runs PIE at about 3 fps, so it was put back on screen, without taking focus, before the run and is minimized again when the run ends. The background CPU throttle (Use Less CPU when in Background) is off for the run only, whatever the window did."
@@ -32729,7 +32754,7 @@
       },
       "examples": [
         {
-          "title": "Read where an actor is (the player's pawn too): its transform now, or watch it over game time in PIE (motion): location, velocity, rotation and chosen properties at every interval, to prove a jump, launch, patrol, fall or a rocking hull in one call.",
+          "title": "Read where an actor is (the player's pawn too): its transform now, or watch it over game time in PIE (motion): location, velocity, rotation, chosen properties and points on it (bones, sockets, components, with their height over the ground) at every interval, to prove a jump, launch, patrol, fall, foot plant or a rocking hull in one call.",
           "input": {
             "action": "get_transform",
             "actorName": "Cube1",
@@ -32802,6 +32827,15 @@
             "inputs": [
               "motion"
             ],
+            "points": [
+              "motion"
+            ],
+            "groundTrace": [
+              "motion"
+            ],
+            "contactCm": [
+              "motion"
+            ],
             "startWhen": [
               "motion"
             ]
@@ -32810,8 +32844,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "1814eb220d8da9a79c39d7f720ad4969f1f41ae517c2544f5b476b5c368b524d",
-        "content": "aec545e3fb7e326a0e84d3fb22f5d3fd53d5bb7dadd3003b0102c707a8598ef8"
+        "schema": "ba995aa4e510b01da6f84237731eb05800f6584766e1486f3ce066b045e03ba4",
+        "content": "86df01e41ef3a78d6beae35a87be84e2e2ae6e628fda96908fe5f960b0c47da6"
       }
     },
     {

@@ -193,12 +193,13 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
       action: 'sample_motion',
       domain: DOMAIN,
       family: FAMILY_TRANSFORM,
-      topics: ['sample motion', 'record trajectory', 'track actor over time', 'watch actor move', 'jump height'],
-      summary: 'Watch an actor over game time in Play-In-Editor and return its location, velocity, rotation and chosen properties at every interval, plus start/end and min/max extents, in one call; it can also press keys at exact game times (inputs) and wait for another actor\'s property to change before it starts (startWhen).',
+      topics: ['sample motion', 'record trajectory', 'track actor over time', 'watch actor move', 'jump height', 'foot sliding', 'bone position over time'],
+      summary: 'Watch an actor over game time in Play-In-Editor and return its location, velocity, rotation and chosen properties at every interval, plus start/end and min/max extents, in one call; it can also follow points on the actor (bones, sockets, components) with their height over the ground, press keys at exact game times (inputs) and wait for another actor\'s property to change before it starts (startWhen).',
       whenToUse: [
         'A jump, spring launch, moving platform, enemy patrol or fall must be proven in PIE without a sleep-and-poll loop.',
         'The peak height, landing point or path of a moving actor is needed.',
         'An input must land at an exact moment (jump when a platform appears): inputs and startWhen run the whole timeline inside one call, so the caller\'s own delay between calls cannot shift it.',
+        'Feet must be proven to plant without sliding, sinking or floating, or a hand or muzzle must be followed: points with groundTrace measure it per point.',
       ],
       whenNotToUse: ['Only the current transform is needed (use get_transform).', 'Nothing is playing: the editor world does not simulate (start PIE with control_editor.play).'],
       inputProps: {
@@ -221,6 +222,12 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
           },
           description: 'Keys pressed and released at exact game times during the run (at most 32), e.g. [{"key":"D","atSeconds":0,"holdSeconds":2},{"key":"SpaceBar","atSeconds":0.6,"holdSeconds":0.2}]. A key still held when the run ends is released.',
         },
+        points: {
+          type: 'array', items: { type: 'string' }, maxItems: 8,
+          description: 'Places on the actor sampled with it (at most 8): a component by its name (LegL), a bone or socket of any of its components (foot_l, hand_r), or a component\'s own socket as Component.Socket (Weapon.Muzzle). Each sample\'s points gives each one\'s world location [x, y, z]; a name the actor lacks is refused with the names it has. Fewer samples are kept with points: 400 x 2 / (2 + points).',
+        },
+        groundTrace: { type: 'boolean', description: 'With points: each sample\'s aboveGround gives each point\'s height over the first surface below it that blocks Visibility (the actor and what is attached to it ignored), negative when the point is inside that surface, and pointStats sums up its contact.' },
+        contactCm: { type: 'number', description: 'With groundTrace: how far above its own lowest height a point still counts as planted (default 2 cm), so an ankle bone that never reaches the floor still counts as down when the foot is.' },
         startWhen: {
           type: 'object',
           properties: {
@@ -240,7 +247,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
         actorName: { type: 'string', description: 'The actor watched.' },
         samples: {
           type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
-          description: 'One entry per sample: t (game seconds since the start), location [x, y, z], velocity [x, y, z], rotation [pitch, yaw, roll] in degrees (on the first sample and on each one where it changed, so a sample without it still has the last one written), properties.',
+          description: 'One entry per sample: t (game seconds since the start), location [x, y, z], velocity [x, y, z], rotation [pitch, yaw, roll] in degrees (on the first sample and on each one where it changed, so a sample without it still has the last one written), properties, and with points their world locations (points) and heights over the ground (aboveGround, with groundTrace; a point with nothing below it within 10 m is left out).',
         },
         sampleCount: { type: 'number', description: 'How many samples were taken.' },
         gameSeconds: { type: 'number', description: 'Game time covered.' },
@@ -256,6 +263,10 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
         min: { type: 'array', items: { type: 'number' }, description: 'Smallest x, y and z sampled (the lowest point is min[2]).' },
         max: { type: 'array', items: { type: 'number' }, description: 'Largest x, y and z sampled (the peak height is max[2]).' },
         missingProperties: { type: 'array', items: { type: 'string' }, description: 'propertyNames the actor\'s class does not have.' },
+        pointStats: {
+          type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true,
+          description: 'Per point: min and max [x, y, z] over the run; with groundTrace also minAboveGround and maxAboveGround (a negative minimum means it sank into the surface, a large one that it never touched it), contactSeconds (time spent planted) and contactSlip (cm it moved across the ground while planted: a planted foot that slides shows here).',
+        },
         windowRestored: { type: 'boolean', description: 'True when the editor window was minimized: a minimized editor runs PIE at about 3 fps, so it was put back on screen, without taking focus, before the run and is minimized again when the run ends. The background CPU throttle (Use Less CPU when in Background) is off for the run only, whatever the window did.' },
       },
       outputRequired: [],

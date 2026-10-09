@@ -1,4 +1,5 @@
 #include "Domains/ControlActor/McpAutomationBridge_ControlActorSupport.h"
+#include "Domains/ControlActor/Motion/McpAutomationBridge_MotionPoints.h"
 #include "Containers/Ticker.h"
 #include "Domains/ControlEditor/McpAutomationBridge_ControlEditorScreenshotSupport.h"
 #include "Foundation/Reflection/McpPropertyReflection.h"
@@ -32,6 +33,7 @@ struct FMcpMotionRun {
   FVector First = FVector::ZeroVector, Last = FVector::ZeroVector;
   TOptional<FRotator> LastRotation; // the rotation the samples last carried
   TArray<FMcpMotionInput> Inputs;
+  FMcpMotionPoints Points;
   FMcpMotionTrigger Trigger;
   int32 Frames = 0;
   FMcpEditorRunHold Hold; // what the run changed in the editor, undone by EndEditorRunForMcp
@@ -77,6 +79,7 @@ void McpTakeMotionSample(FMcpMotionRun &Run, AActor *Actor, double GameTime) {
   Run.Last = Location;
   Run.LastSampleGame = GameTime;
   Run.Extent += Location;
+  McpSampleMotionPoints(Run.Points, Actor, *Sample, GameTime);
   Run.Samples.Add(MakeShared<FJsonValueObject>(Sample));
 }
 
@@ -98,6 +101,7 @@ TSharedPtr<FJsonObject> McpMotionResult(const FMcpMotionRun &Run, const FString 
   if (Run.Missing.Num() > 0) {
     Data->SetArrayField(TEXT("missingProperties"), Run.Missing);
   }
+  McpAddMotionPointStats(Run.Points, *Data);
   if (Run.Inputs.Num() > 0) {
     Data->SetArrayField(TEXT("inputsApplied"), McpMotionInputsJson(Run.Inputs));
   }
@@ -158,7 +162,7 @@ FString McpAdvanceMotionRun(FMcpMotionRun &Run) {
   if (Now >= Run.EndGame) {
     return TEXT("duration");
   }
-  if (Run.Samples.Num() >= McpMaxMotionSamples) {
+  if (Run.Samples.Num() >= McpMotionSampleCap(McpMaxMotionSamples, Run.Points)) {
     return TEXT("sampleCap");
   }
   if (FPlatformTime::Seconds() - Run.StartReal >= Run.MaxReal) {
@@ -216,7 +220,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSampleMotion(
     (*When)->TryGetStringField(TEXT("actorName"), GateName);
     Run->bWaiting = McpInitMotionTrigger(FindActorByName(GateName), *When, World, Run->Trigger, TimelineError);
   }
-  if (!TimelineError.IsEmpty() || !McpParseMotionInputs(Payload, Run->Inputs, TimelineError)) {
+  if (!TimelineError.IsEmpty() || !McpParseMotionInputs(Payload, Run->Inputs, TimelineError) ||
+      !McpParseMotionPoints(Found, Payload, Run->Points, TimelineError)) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"), TimelineError);
     return true;
   }

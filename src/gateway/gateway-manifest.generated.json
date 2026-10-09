@@ -3346,6 +3346,7 @@
         "componentName",
         "componentNames",
         "componentType",
+        "contactCm",
         "defaults",
         "deleteScope",
         "distance",
@@ -3357,6 +3358,7 @@
         "folder",
         "force",
         "functionName",
+        "groundTrace",
         "info",
         "inputs",
         "intervalSeconds",
@@ -3377,6 +3379,7 @@
         "newName",
         "offset",
         "parentActor",
+        "points",
         "properties",
         "propertyName",
         "propertyNames",
@@ -3593,6 +3596,10 @@
             "type": "string",
             "description": "Component class to add."
           },
+          "contactCm": {
+            "type": "number",
+            "description": "With groundTrace: how far above its own lowest height a point still counts as planted (default 2 cm), so an ankle bone that never reaches the floor still counts as down when the foot is."
+          },
           "defaults": {
             "type": "object",
             "additionalProperties": true,
@@ -3660,6 +3667,10 @@
           "functionName": {
             "type": "string",
             "description": "Actor function name to call."
+          },
+          "groundTrace": {
+            "type": "boolean",
+            "description": "With points: each sample's aboveGround gives each point's height over the first surface below it that blocks Visibility (the actor and what is attached to it ignored), negative when the point is inside that surface, and pointStats sums up its contact."
           },
           "info": {
             "type": "string",
@@ -3830,6 +3841,14 @@
           "parentActor": {
             "type": "string",
             "description": "Parent actor name to attach to."
+          },
+          "points": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 8,
+            "description": "Places on the actor sampled with it (at most 8): a component by its name (LegL), a bone or socket of any of its components (foot_l, hand_r), or a component's own socket as Component.Socket (Weapon.Muzzle). Each sample's points gives each one's world location [x, y, z]; a name the actor lacks is refused with the names it has. Fewer samples are kept with points: 400 x 2 / (2 + points)."
           },
           "properties": {
             "type": "object",

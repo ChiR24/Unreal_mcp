@@ -3699,6 +3699,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Component class to add."
         },
+        "contactCm": {
+          "type": "number",
+          "description": "With groundTrace: how far above its own lowest height a point still counts as planted (default 2 cm), so an ankle bone that never reaches the floor still counts as down when the foot is."
+        },
         "defaults": {
           "type": "object",
           "additionalProperties": true,
@@ -3766,6 +3770,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "functionName": {
           "type": "string",
           "description": "Actor function name to call."
+        },
+        "groundTrace": {
+          "type": "boolean",
+          "description": "With points: each sample's aboveGround gives each point's height over the first surface below it that blocks Visibility (the actor and what is attached to it ignored), negative when the point is inside that surface, and pointStats sums up its contact."
         },
         "info": {
           "type": "string",
@@ -3936,6 +3944,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "parentActor": {
           "type": "string",
           "description": "Parent actor name to attach to."
+        },
+        "points": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 8,
+          "description": "Places on the actor sampled with it (at most 8): a component by its name (LegL), a bone or socket of any of its components (foot_l, hand_r), or a component's own socket as Component.Socket (Weapon.Muzzle). Each sample's points gives each one's world location [x, y, z]; a name the actor lacks is refused with the names it has. Fewer samples are kept with points: 400 x 2 / (2 + points)."
         },
         "properties": {
           "type": "object",
@@ -4649,6 +4665,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Items that spawned but look misplaced (sunk into the surface under them, floating, intersecting other actors or with nothing below); each carries its placementWarning in results. A warning is not a failure: it changes neither failed nor success."
         },
+        "pointStats": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "Per point: min and max [x, y, z] over the run; with groundTrace also minAboveGround and maxAboveGround (a negative minimum means it sank into the surface, a large one that it never touched it), contactSeconds (time spent planted) and contactSlip (cm it moved across the ground while planted: a planted foot that slides shows here)."
+        },
         "problems": {
           "type": "array",
           "description": "Findings worst-first: actorName, kind, severity in world units, the issue in words, suggestedZ when a resting height can be computed, overlappingActors when it intersects others (up to 8, each with actorName, actorClass and penetrationDepth), and coplanarFaces when faces z-fight: one entry per pair with direction (the axis both faces point along, e.g. -Y), component, otherActor, otherComponent, gap and overlapU x overlapV. Fix a pair by moving the face about 2 units along direction (this piece shows) or against it (the other shows, right for a piece sunk into it, such as a ramp in the floor), by moving or scaling the actor.",
@@ -4731,7 +4753,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "additionalProperties": true,
             "x-unreal-reflection-boundary": true
           },
-          "description": "One entry per sample: t (game seconds since the start), location [x, y, z], velocity [x, y, z], rotation [pitch, yaw, roll] in degrees (on the first sample and on each one where it changed, so a sample without it still has the last one written), properties."
+          "description": "One entry per sample: t (game seconds since the start), location [x, y, z], velocity [x, y, z], rotation [pitch, yaw, roll] in degrees (on the first sample and on each one where it changed, so a sample without it still has the last one written), properties, and with points their world locations (points) and heights over the ground (aboveGround, with groundTrace; a point with nothing below it within 10 m is left out)."
         },
         "scale": {
           "oneOf": [
