@@ -110,6 +110,34 @@ export const ASSET_ADVANCED_RECORDS: readonly RecordSpec[] = [
       ],
       examples: [ex('Make an imported rock standable with one box', { assetPath: '/Game/Meshes/SM_Rock', collisionType: 'box' }, { success: true, assetPath: '/Game/Meshes/SM_Rock', collisionType: 'box', shapeCount: 1, componentsRefreshed: 3, saved: true })] }
   ),
+  // A mesh could not leave the editor: a DCC tool, a web viewer or a mesh checker outside Unreal had nothing to open.
+  r('export_mesh', 'asset', 'Export a static or skeletal mesh asset (or an animation sequence, on its preview mesh) to a file through the editor\'s own exporters: glb (default: one self-contained glTF binary), gltf (JSON with its buffers and textures beside it), fbx or obj. It is written under Saved/Exports unless outputPath says otherwise; the reply gives the path, the size, the files written beside it and any exporter warnings.',
+    schema({
+      assetPath: str('Asset to export, e.g. /Game/Meshes/SM_Rock or /Engine/BasicShapes/Cube. A skeletal mesh is written with its skeleton; an animation sequence is written on its skeleton\'s preview mesh.'),
+      format: { type: 'string', enum: ['glb', 'gltf', 'fbx', 'obj'], description: 'File format; default glb, or the extension outputPath ends in. glb and gltf are scaled to meters with materials converted to glTF PBR; fbx and obj keep centimeters.' },
+      outputPath: str('Where to write, inside the project, project-relative or absolute: a file (Saved/Exports/Rocks/SM_Rock.glb) or a folder, which gets <asset name>.<format>. A file already there is replaced.'),
+    }, ['assetPath']),
+    schema({
+      success: bool('Operation succeeded.'),
+      assetPath: str('The asset exported.'),
+      format: str('The format written.'),
+      path: str('Absolute path of the file written.'),
+      bytes: num('Its size in bytes.'),
+      otherFiles: arrObj('Files the export wrote beside it, each {name, bytes}: a gltf\'s .bin buffers and textures, obj\'s UV and collision variants.'),
+      details: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Operation details.' },
+    }, ['success']),
+    READ, READ_POLICY, MEDIUM,
+    { topics: ['export mesh', 'export gltf', 'export glb', 'export fbx', 'export obj', 'save mesh to file', 'mesh to blender', 'export model'],
+      whenToUse: [
+        'A mesh must leave the editor as a file: for Blender or another DCC tool, a web viewer, a mesh checker or a 3D printer.',
+        'An animation must be looked at or checked outside Unreal (export the sequence as glb).',
+      ],
+      whenNotToUse: [
+        'A file must come into the project (use asset.import).',
+        'Only the mesh\'s soundness must be checked (use inspect.check_mesh, which needs no file).',
+      ],
+      examples: [ex('Export a mesh as glTF binary', { assetPath: '/Engine/BasicShapes/Cube' }, { success: true, assetPath: '/Engine/BasicShapes/Cube.Cube', format: 'glb', path: 'X:/Games/MyGame/Saved/Exports/Cube.glb', bytes: 41764 })] }
+  ),
   r('add_material_parameter', 'asset', 'Add a parameter to a material.',
     schema({ assetPath: str('Material asset path.'), parameterName: str('Parameter name.'), parameterType: str('Parameter type.'), value: { description: 'Parameter value.' } }, ['assetPath', 'parameterName']),
     OK, WRITE, WRITE_POLICY, LOW,

@@ -1939,3 +1939,20 @@ describe('capture_passes writes aligned id, depth and normal passes of the level
     expect(ids).toContain('FMcpViewProxy McpViewProxyOf(const FColor &Id)');
   });
 });
+
+// A mesh could not leave the editor; the exporters' option dialogs and message log would also have stopped or
+// pulled up the editor.
+describe('export_mesh writes a file through the editor exporters, unattended', () => {
+  it('runs the export task automated, with dialogs and the log window held off, and checks the file', () => {
+    const exporter = code('AssetWorkflow', 'Export', 'McpAutomationBridge_AssetWorkflowMeshExport.cpp');
+    expect(exporter).toContain('Task->bAutomated = true;');
+    expect(exporter).toContain('Task->bPrompt = false;');
+    expect(exporter).toMatch(/TGuardValue<bool> Unattended\(GIsAutomationTesting, true\);\s*bExported = UExporter::RunAssetExportTask\(Task\);/u);
+    expect(exporter).toContain('if (!McpResolveProjectFilePath(Requested, File, PathError))');
+    expect(exporter).toContain('if (!bExported || Bytes <= 0)');
+    // Files written beside it are the ones new or changed since the export began, not every recent file there.
+    expect(exporter).toContain('if (Path != File && (!Was || *Was != Now.Value) && Written.Num() < McpMaxListedFiles)');
+    const assets = code('AssetWorkflow', 'McpAutomationBridge_AssetWorkflowHandlers.cpp');
+    expect(assets).toContain('return McpMeshExport::HandleExportMesh(this, RequestId, Payload, RequestingSocket);');
+  });
+});

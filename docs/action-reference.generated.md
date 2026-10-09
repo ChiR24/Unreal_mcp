@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `c0bba2875d890fca`
+Catalog revision: `52e14225df31d2d9`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 401 capabilities across
+The catalog declares 402 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -42,7 +42,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `control_editor` | 24 | 9 | 12 | 3 | editor |
 | `inspect` | 21 | 16 | 4 | 1 | inspect |
 | `manage_ai` | 16 | 2 | 14 | 0 | manage ai |
-| `manage_asset` | 46 | 9 | 32 | 5 | asset, datatable, enum, material, struct, texture |
+| `manage_asset` | 47 | 10 | 32 | 5 | asset, datatable, enum, material, struct, texture |
 | `manage_audio` | 13 | 2 | 11 | 0 | audio |
 | `manage_blueprint` | 28 | 6 | 16 | 6 | blueprint, widget |
 | `manage_character` | 10 | 2 | 8 | 0 | manage character |
@@ -62,7 +62,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-64 of 401 capabilities require consent.
+64 of 402 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -167,6 +167,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `asset.delete` | `manage_asset` | `delete` | destructive | destructive | elevated | `manage_asset.delete` `manage_asset.delete_asset` `manage_asset.delete_assets` |
 | `asset.duplicate` | `manage_asset` | `duplicate` | write | write | explicit | `manage_asset.duplicate` `manage_asset.duplicate_asset` |
 | `asset.edit_material_instance` | `manage_asset` | `add_material_parameter` | write | write | explicit | `manage_asset.edit_material_instance` `manage_asset.add_material_parameter` `manage_asset.reset_instance_parameters` |
+| `asset.export_mesh` | `manage_asset` | `export_mesh` | read | read | none | `manage_asset.export_mesh` |
 | `asset.import` | `manage_asset` | `import` | write | write | explicit | `manage_asset.import` |
 | `asset.import_marketplace_asset` | `manage_asset` | `add_fab_asset_to_project` | write | write | explicit | `manage_asset.import_marketplace_asset` `manage_asset.add_fab_asset_to_project` `manage_asset.cancel_fab_import` `manage_asset.download_fab_asset` `manage_asset.import_megascans_asset` |
 | `asset.inspect_asset` | `manage_asset` | `get_metadata` | read | read | none | `manage_asset.inspect_asset` `manage_asset.get_metadata` `manage_asset.get_dependencies` `manage_asset.get_asset_graph` `manage_asset.validate` `manage_asset.generate_report` |

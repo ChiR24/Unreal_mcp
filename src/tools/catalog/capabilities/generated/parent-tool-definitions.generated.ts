@@ -8906,7 +8906,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "format": {
           "type": "string",
-          "description": "Pixel format."
+          "description": "File format; default glb, or the extension outputPath ends in. glb and gltf are scaled to meters with materials converted to glTF PBR; fbx and obj keep centimeters."
         },
         "freeOnly": {
           "type": "boolean",
@@ -10059,6 +10059,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "process_asset",
             "set_metadata",
             "create_render_target",
+            "export_mesh",
             "edit_material_instance",
             "nanite_rebuild_mesh",
             "bulk_delete",
@@ -10207,6 +10208,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "blueprintType": {
           "type": "string",
           "description": "Blueprint kind: Class, Interface, MacroLibrary, or FunctionLibrary."
+        },
+        "bytes": {
+          "type": "number",
+          "description": "Its size in bytes."
         },
         "cacheDirectory": {
           "type": "string",
@@ -10525,6 +10530,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Font size the text was fitted at, the largest whose lines (letter spacing included) fit inside the padding."
         },
+        "format": {
+          "type": "string",
+          "description": "The format written."
+        },
         "formatCode": {
           "type": "string",
           "description": "Format Fab was asked to import."
@@ -10813,6 +10822,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "The background import. Pass it to asset.query_marketplace lookup=fab_import_status. On QUEUE_FULL it names the import at the head of the queue instead, and on ADD_ALREADY_RUNNING the open import of this listing."
         },
+        "otherFiles": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Files the export wrote beside it, each {name, bytes}: a gltf's .bin buffers and textures, obj's UV and collision variants."
+        },
         "outputName": {
           "type": "string",
           "description": "Pin name, for a function output."
@@ -10882,6 +10899,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "parent": {
           "type": "string",
           "description": "MaterialInstance: the material or instance it overrides."
+        },
+        "path": {
+          "type": "string",
+          "description": "Absolute path of the file written."
         },
         "phase": {
           "type": "string",

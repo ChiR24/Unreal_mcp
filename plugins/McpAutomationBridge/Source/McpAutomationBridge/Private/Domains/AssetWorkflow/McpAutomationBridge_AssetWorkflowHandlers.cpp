@@ -21,6 +21,12 @@ namespace McpMeshCollision
     bool HandleSetMeshCollision(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId,
                                 const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 }
+// export_mesh (Export/McpAutomationBridge_AssetWorkflowMeshExport.cpp).
+namespace McpMeshExport
+{
+    bool HandleExportMesh(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId,
+                          const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
+}
 
 bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
     const FString &RequestId, const FString &Action,
@@ -151,6 +157,8 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
     return McpMeshMaterials::HandleSetMeshMaterials(this, RequestId, Payload, RequestingSocket);
   if (Lower == TEXT("set_mesh_collision"))
     return McpMeshCollision::HandleSetMeshCollision(this, RequestId, Payload, RequestingSocket);
+  if (Lower == TEXT("export_mesh"))
+    return McpMeshExport::HandleExportMesh(this, RequestId, Payload, RequestingSocket);
 
   // Source Control
   if (Lower == TEXT("source_control_checkout"))

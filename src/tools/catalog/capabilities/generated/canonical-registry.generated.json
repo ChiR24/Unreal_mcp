@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "c0bba2875d890fca",
-  "recordCount": 401,
+  "catalogRevision": "52e14225df31d2d9",
+  "recordCount": 402,
   "records": [
     {
       "id": "animation_physics.bind_cloth_to_skeletal_mesh",
@@ -7540,6 +7540,160 @@
         "algorithm": "sha256",
         "schema": "10b5148d6f265a22d412238397b7ae000bba962663d889d864e6f16bdf55b13c",
         "content": "0e9679efa8ac114df0f98c6f8ad69fd2cc06c5faf5ba9cbd68500f74385006b7"
+      }
+    },
+    {
+      "id": "asset.export_mesh",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "manage_asset",
+          "action": "export_mesh"
+        }
+      ],
+      "discovery": {
+        "domain": "asset",
+        "family": "lifecycle",
+        "topics": [
+          "export_mesh",
+          "export mesh",
+          "export gltf",
+          "export glb",
+          "export fbx",
+          "export obj",
+          "save mesh to file",
+          "mesh to blender",
+          "export model"
+        ],
+        "summary": "Export a static or skeletal mesh asset (or an animation sequence, on its preview mesh) to a file through the editor's own exporters: glb (default: one self-contained glTF binary), gltf (JSON with its buffers and textures beside it), fbx or obj. It is written under Saved/Exports unless outputPath says otherwise; the reply gives the path, the size, the files written beside it and any exporter warnings.",
+        "whenToUse": [
+          "A mesh must leave the editor as a file: for Blender or another DCC tool, a web viewer, a mesh checker or a 3D printer.",
+          "An animation must be looked at or checked outside Unreal (export the sequence as glb)."
+        ],
+        "whenNotToUse": [
+          "A file must come into the project (use asset.import).",
+          "Only the mesh's soundness must be checked (use inspect.check_mesh, which needs no file)."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "assetPath": {
+              "type": "string",
+              "description": "Asset to export, e.g. /Game/Meshes/SM_Rock or /Engine/BasicShapes/Cube. A skeletal mesh is written with its skeleton; an animation sequence is written on its skeleton's preview mesh."
+            },
+            "format": {
+              "type": "string",
+              "enum": [
+                "glb",
+                "gltf",
+                "fbx",
+                "obj"
+              ],
+              "description": "File format; default glb, or the extension outputPath ends in. glb and gltf are scaled to meters with materials converted to glTF PBR; fbx and obj keep centimeters."
+            },
+            "outputPath": {
+              "type": "string",
+              "description": "Where to write, inside the project, project-relative or absolute: a file (Saved/Exports/Rocks/SM_Rock.glb) or a folder, which gets <asset name>.<format>. A file already there is replaced."
+            }
+          },
+          "required": [
+            "assetPath"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Operation succeeded."
+            },
+            "assetPath": {
+              "type": "string",
+              "description": "The asset exported."
+            },
+            "format": {
+              "type": "string",
+              "description": "The format written."
+            },
+            "path": {
+              "type": "string",
+              "description": "Absolute path of the file written."
+            },
+            "bytes": {
+              "type": "number",
+              "description": "Its size in bytes."
+            },
+            "otherFiles": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Files the export wrote beside it, each {name, bytes}: a gltf's .bin buffers and textures, obj's UV and collision variants."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Operation details."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Export a mesh as glTF binary",
+          "input": {
+            "assetPath": "/Engine/BasicShapes/Cube"
+          },
+          "output": {
+            "success": true,
+            "assetPath": "/Engine/BasicShapes/Cube.Cube",
+            "format": "glb",
+            "path": "X:/Games/MyGame/Saved/Exports/Cube.glb",
+            "bytes": 41764
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [
+          "EditorScriptingUtilities"
+        ],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "read",
+        "idempotency": "idempotent",
+        "longRunning": false,
+        "safeToRetry": true
+      },
+      "policy": {
+        "requiredScope": "read",
+        "consent": "none",
+        "dataAccess": "project-read"
+      },
+      "cost": {
+        "latency": "interactive",
+        "resources": "medium"
+      },
+      "routing": {
+        "parentTool": "manage_asset",
+        "dispatchAction": "export_mesh"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "f11c40d9eaa6700b6d3829ad8867ad550bf9699e08e07b77c0b69900e7693d47",
+        "content": "1d223cb6110977f590a20b3197a0df37d7ea80b3dfbc9d72a9b1ec00fb1bd39e"
       }
     },
     {
