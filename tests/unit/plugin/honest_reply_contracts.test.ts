@@ -1909,3 +1909,33 @@ describe('a Niagara advance or activate says what the system did', () => {
     expect(lifecycle).not.toContain('SetBoolField(TEXT("active"), true)');
   });
 });
+
+// A model that cannot see a picture could not tell what a shot shows.
+describe('describe_view counts what the game draws in the camera view', () => {
+  it('reads a fresh id map, leaves editor-only drawing out, and refuses a running game', () => {
+    const view = code('Environment', 'Inspection', 'McpAutomationBridge_EnvironmentHandlersInspectViewContents.cpp');
+    expect(view).toMatch(/Viewport->InvalidateHitProxy\(\);\s*const TArray<FColor> &Ids = Viewport->GetRawHitProxyData\(/u);
+    expect(view).toContain('const bool bGameDraws = Actor && !(Component && (Component->IsEditorOnly() || Component->bHiddenInGame));');
+    expect(view).toContain('if (GEditor->PlayWorld && !GEditor->bIsSimulatingInEditor)');
+    expect(view).toContain('DrawViewportFramesForMcp(Viewport, Client->GetWorld(), bMoved ? 3 : 1);');
+    expect(view).toContain('McpHandlerUtils::MarkNoAssetsChanged(Result);');
+    const inspect = code('Environment', 'Inspection', 'McpAutomationBridge_EnvironmentHandlersInspect.cpp');
+    expect(inspect).toContain('return HandleInspectViewContentsAction(*this, RequestId, Payload, RequestingSocket);');
+  });
+});
+
+// A frame could only be judged by eye: no pass said which actor a region belongs to, how far it is or which way it
+// faces.
+describe('capture_passes writes aligned id, depth and normal passes of the level view', () => {
+  it('captures depth and normal at the view\'s own camera, field of view and shape, and paints ids per actor', () => {
+    const passes = code('Environment', 'Inspection', 'McpAutomationBridge_EnvironmentHandlersInspectCapturePasses.cpp');
+    expect(passes).toContain('McpCapturePass(Client->GetWorld(), Camera, Facing, Client->ViewFOV, Size, SCS_SceneDepth)');
+    expect(passes).toContain('McpCapturePass(Client->GetWorld(), Camera, Facing, Client->ViewFOV, Size, SCS_Normal)');
+    expect(passes).toContain('const FIntPoint Size(Width, FMath::Max(1, FMath::RoundToInt(double(Width) * ViewSize.Y / ViewSize.X)));');
+    expect(passes).toMatch(/Viewport->InvalidateHitProxy\(\);\s*const TArray<FColor> &Ids = Viewport->GetRawHitProxyData\(/u);
+    expect(passes).toContain('Capture->DestroyComponent();');
+    expect(passes).toContain('if (Files->Values.Num() < Passes.Num())');
+    const ids = code('Environment', 'Inspection', 'McpAutomationBridge_EnvironmentHandlersInspectViewContents.cpp');
+    expect(ids).toContain('FMcpViewProxy McpViewProxyOf(const FColor &Id)');
+  });
+});

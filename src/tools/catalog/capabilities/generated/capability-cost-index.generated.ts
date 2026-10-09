@@ -400,10 +400,12 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "control_editor::undo": "instant|low",
   "inspect::add_tag": "instant|low",
   "inspect::blueprint_get": "instant|low",
+  "inspect::capture_passes": "interactive|low",
   "inspect::check_mesh": "interactive|low",
   "inspect::control_actor": "interactive|low",
   "inspect::create_snapshot": "interactive|low",
   "inspect::delete_object": "interactive|low",
+  "inspect::describe_view": "interactive|low",
   "inspect::export": "interactive|low",
   "inspect::find_by_class": "instant|low",
   "inspect::find_by_tag": "interactive|low",
@@ -1550,4 +1552,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1537;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1539;

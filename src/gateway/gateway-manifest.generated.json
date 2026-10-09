@@ -4641,6 +4641,8 @@
         "get_blueprint_details",
         "raycast_mesh",
         "check_mesh",
+        "describe_view",
+        "capture_passes",
         "raycast_world",
         "get_property",
         "set_property",
@@ -4674,6 +4676,7 @@
         "info",
         "kind",
         "limit",
+        "location",
         "lookup",
         "markDirty",
         "meshPath",
@@ -4683,11 +4686,13 @@
         "objectPaths",
         "offset",
         "outputPath",
+        "passes",
         "properties",
         "propertyName",
         "propertyNames",
         "propertyPath",
         "rays",
+        "rotation",
         "snapshotName",
         "snapshotOp",
         "statsKind",
@@ -4695,7 +4700,8 @@
         "tag",
         "traceComplex",
         "value",
-        "watch"
+        "watch",
+        "width"
       ],
       "inputSchema": {
         "type": "object",
@@ -4810,6 +4816,22 @@
             "type": "number",
             "description": "Maximum objects to return (default 100)."
           },
+          "location": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              },
+              "z": {
+                "type": "number"
+              }
+            },
+            "additionalProperties": false,
+            "description": "Camera location {x, y, z} in cm; omitted, the viewport's current one. The camera stays there."
+          },
           "lookup": {
             "type": "string",
             "enum": [
@@ -4866,6 +4888,18 @@
           "outputPath": {
             "type": "string",
             "description": "File to also write the export to, inside the project (relative to it, or absolute under it), e.g. Saved/Exports/Actor.t3d. A path outside the project is refused with INVALID_PATH."
+          },
+          "passes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "id",
+                "depth",
+                "normal"
+              ]
+            },
+            "description": "Passes to write (default all three)."
           },
           "properties": {
             "oneOf": [
@@ -4974,6 +5008,22 @@
             ],
             "description": "Lines in world space; each answers in hits at the same index."
           },
+          "rotation": {
+            "type": "object",
+            "properties": {
+              "pitch": {
+                "type": "number"
+              },
+              "yaw": {
+                "type": "number"
+              },
+              "roll": {
+                "type": "number"
+              }
+            },
+            "additionalProperties": false,
+            "description": "Camera rotation {pitch, yaw, roll} in degrees; omitted, the viewport's current one."
+          },
           "snapshotName": {
             "type": "string",
             "description": "Snapshot name for create/restore."
@@ -5034,6 +5084,10 @@
             },
             "additionalProperties": false
           },
+          "width": {
+            "type": "number",
+            "description": "Width of every pass in pixels (default 960, 64 to 4096); the height follows the viewport's shape so the passes line up with it."
+          },
           "action": {
             "type": "string",
             "enum": [
@@ -5041,6 +5095,8 @@
               "get_blueprint_details",
               "raycast_mesh",
               "check_mesh",
+              "describe_view",
+              "capture_passes",
               "raycast_world",
               "get_property",
               "set_property",

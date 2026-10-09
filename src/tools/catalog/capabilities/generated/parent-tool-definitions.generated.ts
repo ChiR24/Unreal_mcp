@@ -5958,6 +5958,22 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Maximum objects to return (default 100)."
         },
+        "location": {
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            },
+            "z": {
+              "type": "number"
+            }
+          },
+          "additionalProperties": false,
+          "description": "Camera location {x, y, z} in cm; omitted, the viewport's current one. The camera stays there."
+        },
         "lookup": {
           "type": "string",
           "enum": [
@@ -6014,6 +6030,18 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "outputPath": {
           "type": "string",
           "description": "File to also write the export to, inside the project (relative to it, or absolute under it), e.g. Saved/Exports/Actor.t3d. A path outside the project is refused with INVALID_PATH."
+        },
+        "passes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "id",
+              "depth",
+              "normal"
+            ]
+          },
+          "description": "Passes to write (default all three)."
         },
         "properties": {
           "oneOf": [
@@ -6122,6 +6150,22 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Lines in world space; each answers in hits at the same index."
         },
+        "rotation": {
+          "type": "object",
+          "properties": {
+            "pitch": {
+              "type": "number"
+            },
+            "yaw": {
+              "type": "number"
+            },
+            "roll": {
+              "type": "number"
+            }
+          },
+          "additionalProperties": false,
+          "description": "Camera rotation {pitch, yaw, roll} in degrees; omitted, the viewport's current one."
+        },
         "snapshotName": {
           "type": "string",
           "description": "Snapshot name for create/restore."
@@ -6182,6 +6226,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "additionalProperties": false
         },
+        "width": {
+          "type": "number",
+          "description": "Width of every pass in pixels (default 960, 64 to 4096); the height follows the viewport's shape so the passes line up with it."
+        },
         "action": {
           "type": "string",
           "enum": [
@@ -6189,6 +6237,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "get_blueprint_details",
             "raycast_mesh",
             "check_mesh",
+            "describe_view",
+            "capture_passes",
             "raycast_world",
             "get_property",
             "set_property",
@@ -6242,6 +6292,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "additionalProperties": true,
                 "x-unreal-reflection-boundary": true
               },
+              "description": "Largest share first: name (actor label), class, coverage (percent of the frame), box [left, top, right, bottom] in percent of the frame's width and height, brightness (0-1, as drawn) and distance (cm from the camera to its bounds). Editor icons and shapes hidden in game are left out."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
               "description": "Matching runtime actors and their inspected components/properties."
             },
             {
@@ -6283,6 +6342,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Available virtual memory in megabytes."
         },
+        "background": {
+          "type": "number",
+          "description": "Percent of the frame where no object was drawn (sky, void)."
+        },
         "blueprintCompiled": {
           "type": "boolean",
           "description": "True when the target was a Blueprint CDO and the Blueprint was recompiled, so the value now applies to newly spawned instances. The reply (value, actorPath, actorClass) is read back from the recompiled class default object and the Blueprint package is saved; a variable the Blueprint declares keeps the value as its default, and the call fails with PROPERTY_SET_FAILED, never success, when the compile did not keep it. A Default__ objectPath resolves to the Blueprint's current default object; a copy a compile left behind (a REINST_ class, or a Blueprint object in /Engine/Transient with no game running) fails with STALE_TARGET. False for plain world actors and assets, where no compile is involved."
@@ -6291,6 +6354,28 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Blueprint asset /Game path (for CDO/component inspection without spawning)."
         },
+        "brightness": {
+          "type": "object",
+          "properties": {
+            "p10": {
+              "type": "number"
+            },
+            "median": {
+              "type": "number"
+            },
+            "p90": {
+              "type": "number"
+            },
+            "clipped": {
+              "type": "number"
+            },
+            "dark": {
+              "type": "number"
+            }
+          },
+          "additionalProperties": false,
+          "description": "The frame as drawn: p10, median and p90 brightness (0-1), and the percent of the frame clipped (a channel at full) or dark (below 0.05)."
+        },
         "buildConfig": {
           "type": "string",
           "description": "Build configuration, e.g. Development."
@@ -6298,6 +6383,18 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "busiestThreadMs": {
           "type": "number",
           "description": "Slowest of game/render/GPU thread times, in milliseconds."
+        },
+        "cameraLocation": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "Where the camera was."
+        },
+        "cameraRotation": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "Where it looked."
         },
         "cdoProperties": {
           "type": "object",
@@ -6398,6 +6495,25 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Last frame delta in seconds."
         },
+        "depth": {
+          "type": "object",
+          "properties": {
+            "min": {
+              "type": "number"
+            },
+            "median": {
+              "type": "number"
+            },
+            "max": {
+              "type": "number"
+            },
+            "sky": {
+              "type": "number"
+            }
+          },
+          "additionalProperties": false,
+          "description": "depth: nearest, median and farthest distance of the drawn pixels in cm, and the percent that is sky (nothing within 100 km)."
+        },
         "description": {
           "type": "string",
           "description": "Project description."
@@ -6418,6 +6534,22 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "estimatedFps": {
           "type": "number",
           "description": "Estimated frames per second from delta time."
+        },
+        "files": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "depth": {
+              "type": "string"
+            },
+            "normal": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "description": "Absolute path of each pass written."
         },
         "flags": {
           "type": "object",
@@ -6456,6 +6588,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "flippedEdges": {
           "type": "number",
           "description": "Edges (seams included) whose two faces wind the same way along them, so one of the two faces points inward (a face turned inside out renders dark or vanishes)."
+        },
+        "fov": {
+          "type": "number",
+          "description": "Horizontal field of view in degrees."
         },
         "fps": {
           "type": "number",
@@ -6599,6 +6735,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "homepage": {
           "type": "string",
           "description": "Project homepage URL."
+        },
+        "ids": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "id: each actor in the id image, largest first (up to 256): color (#rrggbb in the PNG), name (actor label), class and coverage (percent of the frame). Black is background (sky, void), dark grey (#404040) what only the editor draws."
         },
         "instancesUpdated": {
           "type": "number",
@@ -6745,6 +6890,22 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Edges shared by three or more faces (fins, faces stacked on one edge); they break booleans, remeshing and collision generation."
         },
+        "normal": {
+          "type": "object",
+          "properties": {
+            "up": {
+              "type": "number"
+            },
+            "down": {
+              "type": "number"
+            },
+            "side": {
+              "type": "number"
+            }
+          },
+          "additionalProperties": false,
+          "description": "normal: percent of the drawn pixels facing up (normal z above 0.7), down (below -0.7) and sideways."
+        },
         "objectName": {
           "type": "string",
           "description": "Object name."
@@ -6765,6 +6926,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "openEdges": {
           "type": "number",
           "description": "Edges with a face on one side only and none on the other at that place: the outlines of holes and open rims."
+        },
+        "other": {
+          "type": "number",
+          "description": "Percent drawn by what only the editor shows (icons, gizmos, shapes hidden in game) or no actor owns (BSP)."
         },
         "packageName": {
           "type": "string",
@@ -7043,6 +7208,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "viewTarget": {
           "type": "string",
           "description": "Object path of the current view target."
+        },
+        "visibleActors": {
+          "type": "number",
+          "description": "Actors the game would draw with at least one pixel in the frame."
         },
         "volume": {
           "type": "number",

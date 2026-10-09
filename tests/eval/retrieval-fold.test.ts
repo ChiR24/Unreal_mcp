@@ -122,7 +122,7 @@ describe('task 48 injected breaches', () => {
     expect(top1(reprojected, records)).toBeLessThanOrEqual(shippedTop1);
   });
 
-  it('Given the measured denominator, When cases are counted, Then it is exactly the 71 positive corpus cases', () => {
-    expect(retrievalCases().length).toBe(71);
+  it('Given the measured denominator, When cases are counted, Then it is exactly the 73 positive corpus cases', () => {
+    expect(retrievalCases().length).toBe(73);
   });
 });
