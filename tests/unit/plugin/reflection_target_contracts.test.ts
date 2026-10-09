@@ -138,7 +138,7 @@ describe('the reflection surface refuses /Script targets', () => {
     const firstGuardAt = source.indexOf(FIRST_GUARD);
     const secondGuardAt = source.lastIndexOf(HANDLER_GUARD);
     const reassignAt = source.indexOf('RootObject = CompTemplate;');
-    const modifyAt = source.indexOf('RootObject->Modify()');
+    const modifyAt = source.indexOf('RootObject->Modify(bMarkDirty)');
     expect(firstGuardAt).toBeGreaterThan(-1);
     expect(reassignAt, 'the component-template branch must still exist').toBeGreaterThan(-1);
     expect(secondGuardAt, 'the boundary must be re-asserted on the re-pointed target').toBeGreaterThan(
@@ -219,6 +219,6 @@ describe('set_property watch stays inside the reflection boundary', () => {
     const set = objectSet();
     const parse = set.indexOf('McpPropertyWatch::ParseWatch(');
     expect(parse).toBeGreaterThan(-1);
-    expect(parse).toBeLessThan(set.indexOf('RootObject->Modify();'));
+    expect(parse).toBeLessThan(set.indexOf('RootObject->Modify(bMarkDirty);'));
   });
 });

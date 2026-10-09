@@ -168,7 +168,9 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
   // An instanced object exports under a new name in every copy, so it never reads back as written.
   const bool bCompare = !Property->HasAnyPropertyFlags(CPF_InstancedReference | CPF_ContainsInstancedReference);
   const FString BeforeText = bCompare ? McpPropertyTarget::ValueText(Property, TargetContainer) : FString();
-  RootObject->Modify();
+  // Modify() marks the package dirty unless told not to: markDirty false left a level unsaved all the same.
+  const bool bMarkDirty = GetJsonBoolField(Payload, TEXT("markDirty"), true);
+  RootObject->Modify(bMarkDirty);
 
   FString ConversionError;
   if (!McpPropertyTarget::WriteValue(RootObject, EffectivePropertyName, Property, TargetContainer, ValueField, ConversionError))
@@ -189,7 +191,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
   }
   const FString WrittenText = bCompare ? McpPropertyTarget::ValueText(Property, TargetContainer) : FString();
 
-  const bool bMarkDirty = GetJsonBoolField(Payload, TEXT("markDirty"), true);
   if (bMarkDirty)
   {
       RootObject->MarkPackageDirty();

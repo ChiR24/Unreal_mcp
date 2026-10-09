@@ -109,7 +109,7 @@ describe('set_property refuses what a Blueprint compile left behind', () => {
     expect(flat).toContain('if (McpPropertyTarget::IsSupersededTarget(RootObject)) {');
     expect(flat).toContain('TEXT("STALE_TARGET")');
     expect(flat).toContain('Address the Blueprint itself with blueprintPath (its current default object), or the live actor or asset.');
-    expect(source.indexOf('IsSupersededTarget(RootObject)'), 'before the first write').toBeLessThan(source.indexOf('RootObject->Modify();'));
+    expect(source.indexOf('IsSupersededTarget(RootObject)'), 'before the first write').toBeLessThan(source.indexOf('RootObject->Modify(bMarkDirty);'));
   });
 });
 

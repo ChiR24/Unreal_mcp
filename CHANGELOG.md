@@ -108,6 +108,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **A reply prints its message once.** A capability whose contract declares only `success` and `details` repeated the reply's message under `details.message`; the receipt carries it at its top, on both transports.
 - **A math expression that uses a true/false value as a number is refused.** `(Speed > 0) * Gain` parses, and only the Blueprint compile refused it, after a whole `build_graph` batch had run; the batch pre-check and `set_node_property` now refuse it with `EXPRESSION_INVALID` and suggest `SelectFloat(1, 0, Speed > 0)`.
 - **A MetaSound batch saves the asset once.** `build_metasound` ran every step with the batch's own `save`, so a 63-step voice wrote its package 65 times, about six seconds of saving; it now saves once after the steps (a batch that stops at a failing step still saves the ones before it) and answers `saved`.
+- **`set_property` `markDirty` `false` leaves the package clean.** The write marked its package unsaved all the same, so a level edited with `markDirty` `false` still asked to be saved.
 
 </details>
 

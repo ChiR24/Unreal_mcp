@@ -1515,6 +1515,15 @@ describe('a property batch says whether it saved', () => {
   });
 });
 
+// set_property markDirty false still left the level unsaved: Modify() marks the package dirty unless told not to.
+describe('a property write with markDirty false leaves the package clean', () => {
+  it('passes markDirty to Modify', () => {
+    const source = code('Property', 'McpAutomationBridge_PropertyHandlersObjectSet.cpp');
+    expect(source).toContain('RootObject->Modify(bMarkDirty);');
+    expect(source).not.toContain('RootObject->Modify();');
+  });
+});
+
 // add_scs_component of a buoyancy component said parent "(root)" while its verification said it attaches to nothing.
 describe('an actor component added to a Blueprint is not reported under the root', () => {
   it('names no parent for a component that is not a scene component', () => {
