@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "46b5e04f0a4209dd",
+  "catalogRevision": "d07a329d40653fde",
   "recordCount": 396,
   "records": [
     {
@@ -50014,7 +50014,7 @@
                 "x-unreal-reflection-boundary": true
               },
               "x-unreal-reflection-boundary": true,
-              "description": "Steps run in order, 1-200, stopping at the first failure; every add_node class is looked up first, so a node class the registry does not hold fails the batch with nothing applied. Each is {edit, ...the params of that edit}: edit is add_node, connect, disconnect, remove_node, set_default, add_input or add_output (the add_metasound_node, connect_metasound_nodes, disconnect_metasound_nodes, remove_metasound_node, set_metasound_default, add_metasound_input, add_metasound_output params). Optional per step: id (names the node it creates; later steps use \"$id\" in nodeId/nodeIds/sourceNodeId/targetNodeId), from/to (\"$id.PinName\" shorthand for connect; interface nodes such as the On Play input are named with the explicit fields)."
+              "description": "Steps run in order, 1-200, stopping at the first failure; every add_node class is looked up first, so a node class the registry does not hold fails the batch with nothing applied, and so is every pin a connect or set_default names on a node the batch adds (a wrong one fails with PIN_NOT_FOUND and that node's pins). Each is {edit, ...the params of that edit}: edit is add_node, connect, disconnect, remove_node, set_default, add_input or add_output (the add_metasound_node, connect_metasound_nodes, disconnect_metasound_nodes, remove_metasound_node, set_metasound_default, add_metasound_input, add_metasound_output params). Optional per step: id (names the node it creates; later steps use \"$id\" in nodeId/nodeIds/sourceNodeId/targetNodeId), from/to (\"$id.PinName\" shorthand for connect; interface nodes such as the On Play input are named with the explicit fields)."
             },
             "edit": {
               "type": "string",
@@ -50219,8 +50219,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "0351c0692047d36bd7a315972d40041d0ecfb05fded3a223ad14a1ee6e6122e3",
-        "content": "169e7c1469068a405959df5c0b00712be81a433b6af459d9b98e2fffbcfe9f9a"
+        "schema": "b385df3a9b59b67d60e616fa08802ebc4509f0a78c9040de3967298b71644f98",
+        "content": "45d87b91545689446cd00d7ef977f22335a6b4e3ae71147848a6f749244338ac"
       }
     },
     {

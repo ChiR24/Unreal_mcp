@@ -17,6 +17,28 @@ const PRIVATE_HEADER = join(AUDIO, 'McpAutomationBridge_AudioAuthoringHandlersPr
 const source = (): string =>
   readFileSync(DISPATCHER, 'utf8').replace(/\/\*[\s\S]*?\*\//gu, ' ').replace(/\/\/[^\n]*/gu, ' ');
 
+// A wrong output name ("Band Pass Filter" for "Band Pass") stopped a build_metasound after its nodes were added.
+describe('build_metasound checks the pins it names on its own nodes before running', () => {
+  const strip = (file: string): string =>
+    readFileSync(join(AUDIO, file), 'utf8').replace(/\/\*[\s\S]*?\*\//gu, ' ').replace(/\/\/[^\n]*/gu, ' ');
+
+  it('reads the registry class pins once the add_node class resolves', () => {
+    expect(strip('McpAutomationBridge_AudioAuthoringHandlersMetaSoundNodes.cpp')).toContain('FindMetaSoundClassPins(Resolved, Request.Inputs, Request.Outputs);');
+    const search = strip(join('MetaSound', 'McpAutomationBridge_AudioAuthoringHandlersMetaSoundNodeSearch.cpp'));
+    expect(search).toMatch(/#if ENGINE_MAJOR_VERSION > 5 \|\| ENGINE_MINOR_VERSION >= 6\s*const FMetasoundFrontendClassInterface& Interface = Class\.GetDefaultInterface\(\);\s*#else\s*const FMetasoundFrontendClassInterface& Interface = Class\.Interface;/u);
+  });
+
+  it('refuses a connect or set_default pin missing on a node the batch adds, with nothing applied', () => {
+    const batch = strip(join('MetaSound', 'McpAutomationBridge_AudioAuthoringHandlersMetaSoundBatch.cpp'));
+    const precheck = batch.slice(batch.indexOf('TMap<FString, FMcpMetaSoundNodeClassRequest> Added;'), batch.indexOf('TMap<FString, FString> Aliases;'));
+    expect(precheck).toContain('MissingMetaSoundPin(Added, Step, TEXT("targetNodeId"), TEXT("targetInputName"), false, Pins);');
+    expect(precheck).toContain('bDefault ? TEXT("inputName") : TEXT("sourceOutputName"), !bDefault, Pins);');
+    expect(precheck).toContain('return McpHandlerUtils::BuildErrorResponse(TEXT("PIN_NOT_FOUND")');
+    expect(precheck).toContain('if ((*StepObj)->TryGetStringField(TEXT("id"), AddedId)) { Added.Add(AddedId, Request); }');
+    expect(batch).toContain('Known.StartsWith(Pin + TEXT(" ("), ESearchCase::IgnoreCase)');
+  });
+});
+
 describe('a MetaSound graph edit reaches playback without an editor restart', () => {
   it('re-registers through the MetaSound editor, only where the builder and the editor subsystem exist', () => {
     const code = source();

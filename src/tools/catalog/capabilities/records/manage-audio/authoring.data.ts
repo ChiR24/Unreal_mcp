@@ -63,7 +63,8 @@ export const AUDIO_AUTHORING_RECORDS: readonly CapabilityRecordSource[] = [
     operations: {
       type: 'array', items: OBJ_ITEM, 'x-unreal-reflection-boundary': true,
       description: 'Steps run in order, 1-200, stopping at the first failure; every add_node class is looked up first, so a node '
-        + 'class the registry does not hold fails the batch with nothing applied. Each is {edit, ...the params of that edit}: edit is '
+        + 'class the registry does not hold fails the batch with nothing applied, and so is every pin a connect or set_default names '
+        + 'on a node the batch adds (a wrong one fails with PIN_NOT_FOUND and that node\'s pins). Each is {edit, ...the params of that edit}: edit is '
         + 'add_node, connect, disconnect, remove_node, set_default, add_input or add_output (the add_metasound_node, connect_metasound_nodes, '
         + 'disconnect_metasound_nodes, remove_metasound_node, set_metasound_default, add_metasound_input, add_metasound_output params). Optional per step: id (names the node '
         + 'it creates; later steps use "$id" in nodeId/nodeIds/sourceNodeId/targetNodeId), from/to ("$id.PinName" shorthand for '

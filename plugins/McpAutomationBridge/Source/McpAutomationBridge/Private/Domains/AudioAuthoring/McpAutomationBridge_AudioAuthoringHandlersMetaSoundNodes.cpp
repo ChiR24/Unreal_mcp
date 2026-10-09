@@ -87,6 +87,7 @@ FMcpMetaSoundNodeClassRequest ResolveMetaSoundAddNodeClass(const TSharedPtr<FJso
 			Request.Name = Resolved.Name.ToString();
 			Request.Variant = Resolved.Variant.ToString();
 			Request.bResolvedByName = !BuildMetaSoundClassName(Request.Namespace, Request.Name, Request.Variant).Equals(Request.Requested);
+			FindMetaSoundClassPins(Resolved, Request.Inputs, Request.Outputs);
 		}
 	}
 #endif

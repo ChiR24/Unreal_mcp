@@ -124,5 +124,30 @@ bool ResolveMetaSoundNodeClassName(
 	}
 	return false;
 }
+
+void FindMetaSoundClassPins(const FMetasoundFrontendClassName& ClassName, TArray<FString>& OutInputs, TArray<FString>& OutOutputs)
+{
+	for (const FMetasoundFrontendClass& Class : Metasound::Frontend::ISearchEngine::Get().FindAllClasses(false))
+	{
+		if (Class.Metadata.GetType() != EMetasoundFrontendClassType::External || !(Class.Metadata.GetClassName() == ClassName))
+		{
+			continue;
+		}
+#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 6
+		const FMetasoundFrontendClassInterface& Interface = Class.GetDefaultInterface();
+#else
+		const FMetasoundFrontendClassInterface& Interface = Class.Interface;
+#endif
+		for (const FMetasoundFrontendClassInput& Input : Interface.Inputs)
+		{
+			OutInputs.Add(FString::Printf(TEXT("%s (%s)"), *Input.Name.ToString(), *Input.TypeName.ToString()));
+		}
+		for (const FMetasoundFrontendClassOutput& Output : Interface.Outputs)
+		{
+			OutOutputs.Add(FString::Printf(TEXT("%s (%s)"), *Output.Name.ToString(), *Output.TypeName.ToString()));
+		}
+		return;
+	}
+}
 }
 #endif

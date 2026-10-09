@@ -99,6 +99,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **A batch lists the steps that have something to say.** `build_graph`, the material graph batch and `build_metasound` listed every step, so a 108-step graph build answered some 70 identical `connected` rows. A step that ran with nothing more to report is counted in `succeeded`; created nodes, pin reports, replaced links, warnings and failures stay listed.
 - **A plane's depth runs along Y.** `create_primitive` said `depth` is the size along Z for every primitive, but a plane lies flat in XY, centred and facing +Z: its depth is its Y size.
 - **A restored editor window stays up.** A `configure_editor` restore made in the minutes after a `-McpStartMinimized` launch was put away again within seconds; any restore over the bridge now ends that start-up hold, and a timed run that restored the window for itself leaves it up when a restore was asked for while it ran.
+- **A MetaSound batch checks its pin names before it adds nodes.** `build_metasound` stopped at a `connect` whose output name was wrong ("Band Pass Filter" for "Band Pass") after its nodes were added; a pin a `connect` or `set_default` names on a node the batch adds is now checked against that node class first, refused with `PIN_NOT_FOUND` and the class's pins, and nothing is applied.
 
 </details>
 

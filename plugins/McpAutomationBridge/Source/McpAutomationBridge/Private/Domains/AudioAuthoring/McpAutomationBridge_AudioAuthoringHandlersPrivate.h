@@ -191,6 +191,8 @@ bool ResolveMetaSoundNodeClassName(
 	const FString& Variant,
 	FMetasoundFrontendClassName& OutClassName,
 	TArray<FString>& OutCandidates);
+/** The default input and output pins of a registered node class, "Name (Type)". */
+void FindMetaSoundClassPins(const FMetasoundFrontendClassName& ClassName, TArray<FString>& OutInputs, TArray<FString>& OutOutputs);
 #endif
 /** The class an add_node names (nodeClassName "Namespace.Name.Variant" or a nodeType shorthand), resolved against the
  *  live registry where the engine has a search engine. Name is empty when it names none; Requested is the spelling. */
@@ -198,6 +200,8 @@ struct FMcpMetaSoundNodeClassRequest
 {
 	FString Namespace, Name, Variant, Requested;
 	TArray<FString> Candidates;
+	/** The registry class's default pins, "Name (Type)" as connect lists them; empty where the engine has no search engine. */
+	TArray<FString> Inputs, Outputs;
 	bool bInRegistry = true;
 	bool bResolvedByName = false;
 };

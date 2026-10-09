@@ -43,6 +43,25 @@ void ExpandMetaSoundEndpoint(const TSharedPtr<FJsonObject>& Step, const TCHAR* K
 	}
 }
 
+// A pin a step names on a node this batch adds ("$id"), checked against that node class's pins before anything runs:
+// empty when the pin is there, or when the node or its pins are unknown here (the step itself then decides).
+FString MissingMetaSoundPin(const TMap<FString, FMcpMetaSoundNodeClassRequest>& Added, const TSharedPtr<FJsonObject>& Step,
+	const TCHAR* NodeField, const TCHAR* PinField, bool bOutput, TArray<FString>& OutPins)
+{
+	FString Node;
+	FString Pin;
+	const FMcpMetaSoundNodeClassRequest* Request = Step->TryGetStringField(NodeField, Node) && Node.StartsWith(TEXT("$")) &&
+		Step->TryGetStringField(PinField, Pin) ? Added.Find(Node.RightChop(1)) : nullptr;
+	const TArray<FString>* Pins = Request ? (bOutput ? &Request->Outputs : &Request->Inputs) : nullptr;
+	if (!Pins || Pins->Num() == 0 ||
+		Pins->ContainsByPredicate([&Pin](const FString& Known) { return Known.StartsWith(Pin + TEXT(" ("), ESearchCase::IgnoreCase); }))
+	{
+		return FString();
+	}
+	OutPins = *Pins;
+	return FString::Printf(TEXT("%s (%s) has no %s '%s'"), *Node, *Request->Requested, bOutput ? TEXT("output") : TEXT("input"), *Pin);
+}
+
 bool ResolveMetaSoundAliases(const TMap<FString, FString>& Aliases, const TSharedPtr<FJsonObject>& Step, FString& OutError)
 {
 	auto Resolve = [&Aliases, &OutError](const TCHAR* Field, FString& Ref)
@@ -101,16 +120,54 @@ TSharedPtr<FJsonObject> HandleMetaSoundBatchAction(const FString& SubAction, con
 
 	// Every add_node class is looked up before any step runs: one the registry does not hold stopped the batch after
 	// the steps before it were applied and saved, a voice's old nodes removed and its replacement never added.
+	TMap<FString, FMcpMetaSoundNodeClassRequest> Added;
 	for (int32 Index = 0; Index < Steps->Num(); ++Index)
 	{
 		const TSharedPtr<FJsonObject>* StepObj = nullptr;
 		FString Edit;
-		if (!(*Steps)[Index].IsValid() || !(*Steps)[Index]->TryGetObject(StepObj) || !(*StepObj)->TryGetStringField(TEXT("edit"), Edit) ||
-			MetaSoundStepSubAction(Edit) != TEXT("add_metasound_node"))
+		if (!(*Steps)[Index].IsValid() || !(*Steps)[Index]->TryGetObject(StepObj) || !(*StepObj)->TryGetStringField(TEXT("edit"), Edit))
+		{
+			continue;
+		}
+		// So are the pins a connect or set_default names on a node the batch adds: a wrong output name ("Band Pass
+		// Filter" for "Band Pass") stopped a batch after its nodes were added.
+		const FString StepSubAction = MetaSoundStepSubAction(Edit);
+		if (StepSubAction == TEXT("connect_metasound_nodes") || StepSubAction == TEXT("set_metasound_default"))
+		{
+			TSharedPtr<FJsonObject> Step = MakeShared<FJsonObject>();
+			Step->Values = (*StepObj)->Values;
+			ExpandMetaSoundEndpoint(Step, TEXT("from"), TEXT("sourceNodeId"), TEXT("sourceOutputName"));
+			ExpandMetaSoundEndpoint(Step, TEXT("to"), TEXT("targetNodeId"), TEXT("targetInputName"));
+			const bool bDefault = StepSubAction == TEXT("set_metasound_default");
+			TArray<FString> Pins;
+			const TCHAR* PinsKey = bDefault ? TEXT("availableInputs") : TEXT("sourceOutputs");
+			FString Missing = MissingMetaSoundPin(Added, Step, bDefault ? TEXT("nodeId") : TEXT("sourceNodeId"),
+				bDefault ? TEXT("inputName") : TEXT("sourceOutputName"), !bDefault, Pins);
+			if (Missing.IsEmpty() && !bDefault)
+			{
+				PinsKey = TEXT("targetInputs");
+				Missing = MissingMetaSoundPin(Added, Step, TEXT("targetNodeId"), TEXT("targetInputName"), false, Pins);
+			}
+			if (!Missing.IsEmpty())
+			{
+				TSharedPtr<FJsonObject> Details = McpHandlerUtils::CreateResultObject();
+				TArray<TSharedPtr<FJsonValue>> PinValues;
+				for (const FString& Pin : Pins) { PinValues.Add(MakeShared<FJsonValueString>(Pin)); }
+				Details->SetArrayField(PinsKey, PinValues);
+				Details->SetNumberField(TEXT("failedIndex"), Index);
+				Details->SetNumberField(TEXT("succeeded"), 0);
+				return McpHandlerUtils::BuildErrorResponse(TEXT("PIN_NOT_FOUND"), FString::Printf(
+					TEXT("build_metasound: operations[%d] (%s): %s; nothing was applied."), Index, *Edit, *Missing), Details);
+			}
+			continue;
+		}
+		if (StepSubAction != TEXT("add_metasound_node"))
 		{
 			continue;
 		}
 		const FMcpMetaSoundNodeClassRequest Request = ResolveMetaSoundAddNodeClass(*StepObj);
+		FString AddedId;
+		if ((*StepObj)->TryGetStringField(TEXT("id"), AddedId)) { Added.Add(AddedId, Request); }
 		if (!Request.Name.IsEmpty() && !Request.bInRegistry)
 		{
 			TSharedPtr<FJsonObject> Details = McpHandlerUtils::CreateResultObject();
