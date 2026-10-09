@@ -1,7 +1,14 @@
 #pragma once
 
+#include "Animation/AnimSequence.h"
 #include "Animation/Skeleton.h"
 #include "AssetRegistry/AssetRegistryModule.h"
+#include "Dom/JsonObject.h"
+#include "Engine/SkeletalMesh.h"
+#include "Engine/StaticMesh.h"
+#include "Factories/FbxSkeletalMeshImportData.h"
+#include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersJsonFields.h"
+#include "PhysicsEngine/PhysicsAsset.h"
 #include "AssetRegistry/IAssetRegistry.h"
 #include "AutomatedAssetImportData.h"
 #include "CoreMinimal.h"
@@ -14,41 +21,82 @@
 #include "UObject/SoftObjectPath.h"
 #include "UObject/UObjectGlobals.h"
 
+// What an import asked of the FBX importer beyond bringing the file in.
+struct FMcpFbxImportOptions {
+  bool bImportAnimations = false;
+  FString SkeletonPath;
+  // With SkeletonPath: the skeletal mesh bound to that skeleton, not the take alone.
+  bool bImportMesh = false;
+  TOptional<bool> CreatePhysicsAsset;
+  FString PhysicsAssetPath;
+  TOptional<bool> ImportMorphTargets;
+  bool Any() const {
+    return bImportAnimations || !SkeletonPath.IsEmpty() || bImportMesh || CreatePhysicsAsset.IsSet() ||
+           !PhysicsAssetPath.IsEmpty() || ImportMorphTargets.IsSet();
+  }
+};
+
+inline FMcpFbxImportOptions McpReadFbxImportOptions(const TSharedPtr<FJsonObject> &Payload) {
+  FMcpFbxImportOptions Options;
+  Options.bImportAnimations = GetJsonBoolField(Payload, TEXT("importAnimations"), false);
+  Options.SkeletonPath = GetJsonStringField(Payload, TEXT("skeletonPath"));
+  Options.bImportMesh = GetJsonBoolField(Payload, TEXT("importMesh"), false);
+  Options.PhysicsAssetPath = GetJsonStringField(Payload, TEXT("physicsAssetPath"));
+  bool bValue = false;
+  if (Payload.IsValid() && Payload->TryGetBoolField(TEXT("createPhysicsAsset"), bValue)) {
+    Options.CreatePhysicsAsset = bValue;
+  }
+  if (Payload.IsValid() && Payload->TryGetBoolField(TEXT("importMorphTargets"), bValue)) {
+    Options.ImportMorphTargets = bValue;
+  }
+  return Options;
+}
+
 // An FBX carrying a mocap take imports as a bare SkeletalMesh and the animation
 // is silently dropped. AssetTools routes an automated import through Interchange
 // whenever no factory is named, so naming UFbxFactory is what lets any of these
 // options reach the importer at all. Returns nullptr when the caller asked for
 // none of this, which leaves the default Interchange path untouched.
-inline UFactory *McpMakeFbxAnimationFactory(UAutomatedAssetImportData *Owner,
-                                            bool bImportAnimations,
-                                            const FString &SkeletonPath,
-                                            FString &OutError,
-                                            FString &OutErrorCode) {
-  // Naming a skeleton has no meaning except to import a take against it, so it
-  // implies animation import rather than quietly importing nothing. The TS door
-  // infers the same thing; the plugin re-derives it because it is the authority.
-  if (!bImportAnimations && SkeletonPath.IsEmpty()) {
+inline UFactory *McpMakeFbxFactory(UAutomatedAssetImportData *Owner,
+                                   const FMcpFbxImportOptions &Options,
+                                   FString &OutError,
+                                   FString &OutErrorCode) {
+  if (!Options.Any()) {
     return nullptr;
   }
-  USkeleton *Skel = SkeletonPath.IsEmpty()
+  USkeleton *Skel = Options.SkeletonPath.IsEmpty()
                         ? nullptr
-                        : LoadObject<USkeleton>(nullptr, *SkeletonPath);
+                        : LoadObject<USkeleton>(nullptr, *Options.SkeletonPath);
   // Falling back to a mesh import here would answer a request to retarget a
   // take onto a named rig with an unrelated asset, and call it success.
-  if (Skel == nullptr && !SkeletonPath.IsEmpty()) {
-    OutError = FString::Printf(TEXT("No Skeleton at %s"), *SkeletonPath);
+  if (Skel == nullptr && !Options.SkeletonPath.IsEmpty()) {
+    OutError = FString::Printf(TEXT("No Skeleton at %s"), *Options.SkeletonPath);
     OutErrorCode = TEXT("SKELETON_NOT_FOUND");
     return nullptr;
   }
+  UPhysicsAsset *Physics = Options.PhysicsAssetPath.IsEmpty()
+                               ? nullptr
+                               : LoadObject<UPhysicsAsset>(nullptr, *Options.PhysicsAssetPath);
+  if (Physics == nullptr && !Options.PhysicsAssetPath.IsEmpty()) {
+    OutError = FString::Printf(TEXT("No Physics Asset at %s"), *Options.PhysicsAssetPath);
+    OutErrorCode = TEXT("PHYSICS_ASSET_NOT_FOUND");
+    return nullptr;
+  }
+  // A skeleton alone means "import the take against this rig", which is what
+  // retargeting a downloaded clip onto an existing character needs. With
+  // importMesh the mesh itself is bound to the skeleton instead.
+  const bool bTakeAlone = Skel != nullptr && !Options.bImportMesh;
   UFbxFactory *Fbx = NewObject<UFbxFactory>(Owner);
-  Fbx->ImportUI->bImportAnimations = true;
+  Fbx->ImportUI->bImportAnimations = Options.bImportAnimations || bTakeAlone;
   Fbx->ImportUI->bAutomatedImportShouldDetectType = false;
-  // A skeleton means "import the take alone against this rig", which is what
-  // retargeting a downloaded clip onto an existing character needs.
-  Fbx->ImportUI->bImportMesh = Skel == nullptr;
-  Fbx->ImportUI->MeshTypeToImport =
-      Skel != nullptr ? FBXIT_Animation : FBXIT_SkeletalMesh;
+  Fbx->ImportUI->bImportMesh = !bTakeAlone;
+  Fbx->ImportUI->MeshTypeToImport = bTakeAlone ? FBXIT_Animation : FBXIT_SkeletalMesh;
   Fbx->ImportUI->Skeleton = Skel;
+  Fbx->ImportUI->PhysicsAsset = Physics;
+  Fbx->ImportUI->bCreatePhysicsAsset = Physics == nullptr && Options.CreatePhysicsAsset.Get(true);
+  if (Options.ImportMorphTargets.IsSet()) {
+    Fbx->ImportUI->SkeletalMeshImportData->bImportMorphTargets = Options.ImportMorphTargets.GetValue();
+  }
   // Mocap rarely lands on a whole frame, and the importer rejects a take that
   // does not, with nobody here to answer the prompt it would otherwise raise.
 #if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 1
@@ -110,4 +158,38 @@ inline bool McpClearFbxImportTarget(const FString &DestPath,
     }
   }
   return true;
+}
+
+// The asset an import is about: a mesh before its animations, before its materials and textures. The first one the
+// importer happened to return could be a texture, which then took the destination name.
+inline UObject *McpPickPrimaryImport(const TArray<UObject *> &Imported) {
+  for (UClass *Kind : {USkeletalMesh::StaticClass(), UStaticMesh::StaticClass(), UAnimSequence::StaticClass(), UObject::StaticClass()}) {
+    for (UObject *Object : Imported) {
+      if (Object && Object->IsA(Kind)) {
+        return Object;
+      }
+    }
+  }
+  return nullptr;
+}
+
+// Everything the import made besides the primary asset, and for a skeletal mesh the skeleton, physics asset, bone and
+// morph target counts it ended up with, so the next call can use them without searching.
+inline void McpDescribeImport(const TArray<UObject *> &Imported, const UObject *Primary, UObject *Reloaded,
+                              const TSharedPtr<FJsonObject> &Resp) {
+  TArray<TSharedPtr<FJsonValue>> Others;
+  for (const UObject *Object : Imported) {
+    if (Object && Object != Primary && Others.Num() < 50) {
+      Others.Add(MakeShared<FJsonValueString>(Object->GetPathName()));
+    }
+  }
+  if (Others.Num() > 0) {
+    Resp->SetArrayField(TEXT("alsoImported"), Others);
+  }
+  if (USkeletalMesh *Mesh = Cast<USkeletalMesh>(Reloaded)) {
+    Resp->SetStringField(TEXT("skeleton"), Mesh->GetSkeleton() ? Mesh->GetSkeleton()->GetPathName() : FString());
+    Resp->SetStringField(TEXT("physicsAsset"), Mesh->GetPhysicsAsset() ? Mesh->GetPhysicsAsset()->GetPathName() : FString());
+    Resp->SetNumberField(TEXT("bones"), Mesh->GetRefSkeleton().GetNum());
+    Resp->SetNumberField(TEXT("morphTargets"), Mesh->GetMorphTargets().Num());
+  }
 }

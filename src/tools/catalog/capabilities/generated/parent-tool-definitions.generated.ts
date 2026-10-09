@@ -9039,6 +9039,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "UV channel index (default 0)."
         },
+        "createPhysicsAsset": {
+          "type": "boolean",
+          "description": "Skeletal mesh: make a physics asset for it (default true); false makes none."
+        },
         "cursor": {
           "type": "string",
           "description": "Opaque pagination cursor returned by a previous list response. Forward verbatim to resume."
@@ -9117,6 +9121,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             {
               "type": "string",
               "description": "Folder for the copy, e.g. /Game/Structs, when destinationName is given, the path ends in \"/\" or the folder exists; the copy is destinationPath/destinationName, or keeps the source name without one. Otherwise the full new asset path, e.g. /Game/Structs/S_WeaponRow_V2. A copy onto an existing struct is refused with ALREADY_EXISTS."
+            },
+            {
+              "type": "string",
+              "description": "The folder the asset goes in, e.g. /Game/Imports (it keeps the source file's name), or an object path such as /Game/Chars/SK_Hero.SK_Hero to name it."
             }
           ],
           "description": "A /Game folder to move what the import created to, for example /Game/Props/Barriers. The layout beneath the import's own folder (StaticMeshes, Materials, Textures) is kept under it. Omit to leave the import where Fab put it. The shared master materials in /Game/Fab/Materials, MaterialFunctions and Textures never move, and a unreal-engine pack is left where Fab put it."
@@ -9275,6 +9283,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "importAnimations": {
           "type": "boolean",
           "description": "Import animation takes from an FBX. Off by default, which imports mesh only."
+        },
+        "importMesh": {
+          "type": "boolean",
+          "description": "With skeletonPath: import the skeletal mesh onto that skeleton (its takes too when importAnimations) instead of the take alone."
+        },
+        "importMorphTargets": {
+          "type": "boolean",
+          "description": "Skeletal mesh: import its morph targets (blend shapes)."
         },
         "inBlack": {
           "type": "number",
@@ -9934,6 +9950,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Physical material the layer applies, e.g. /Game/Physics/PM_Grass."
         },
+        "physicsAssetPath": {
+          "type": "string",
+          "description": "Skeletal mesh: an existing physics asset to use instead of making one."
+        },
         "pinName": {
           "type": "string",
           "description": "Input to unplug: a pin of nodeId by name or label (a custom node input such as OB), or for nodeId Main a material output input (BaseColor, Normal...). A name that matches none fails listing the inputs; only a material function's output node takes none, unplugging every output."
@@ -10150,7 +10170,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "skeletonPath": {
           "type": "string",
-          "description": "Existing skeleton to import the take against, e.g. /Game/Chars/SK_Hero_Skeleton. Set it to import the animation ALONE; omit it to import mesh and animation together. Implies importAnimations."
+          "description": "Existing skeleton, e.g. /Game/Chars/SK_Hero_Skeleton. Alone it imports the FBX's animation take ALONE against it (implies importAnimations); with importMesh it binds the imported skeletal mesh to it instead, so the mesh shares that skeleton's animations."
         },
         "sourceControlOp": {
           "type": "string",
@@ -10468,6 +10488,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "True when this listing was already queued or being imported and this call returned that same operation instead of starting another."
         },
+        "alsoImported": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Other assets the import made (its takes, materials, textures), at most 50."
+        },
         "applied": {
           "type": "number",
           "description": "Entries that were valid and applied."
@@ -10539,6 +10566,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "blueprintType": {
           "type": "string",
           "description": "Blueprint kind: Class, Interface, MacroLibrary, or FunctionLibrary."
+        },
+        "bones": {
+          "type": "number",
+          "description": "Skeletal mesh: bones in its reference skeleton."
         },
         "bytes": {
           "type": "number",
@@ -11098,6 +11129,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Root tokens whose directory does not exist on this machine."
         },
+        "morphTargets": {
+          "type": "number",
+          "description": "Skeletal mesh: morph targets it carries."
+        },
         "movedCount": {
           "type": "number",
           "description": "Assets moved or renamed by that relocation."
@@ -11238,6 +11273,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "phase": {
           "type": "string",
           "description": "queued when another import is running, else downloading right after Fab accepts. For alreadyRunning, the phase the operation was in."
+        },
+        "physicsAsset": {
+          "type": "string",
+          "description": "Skeletal mesh: its physics asset (empty when none)."
         },
         "pickedEngineVersion": {
           "type": "string",
@@ -11391,6 +11430,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "shapeCount": {
           "type": "number",
           "description": "Simple collision shapes the mesh holds after the call (0 for complex and none)."
+        },
+        "skeleton": {
+          "type": "string",
+          "description": "Skeletal mesh: the skeleton it is bound to."
         },
         "skippedCount": {
           "type": "number",

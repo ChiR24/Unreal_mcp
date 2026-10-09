@@ -1149,6 +1149,26 @@ describe('Make and Break nodes of structs with native functions', () => {
   });
 });
 
+describe('skeletal mesh import', () => {
+  // A skeleton could only take an animation alone: a character could not be imported onto an existing skeleton,
+  // nor its physics asset or morph targets chosen, and the reply named whichever asset the importer listed first.
+  it('binds the mesh to a named skeleton with importMesh and takes the physics and morph choices', () => {
+    const options = code('AssetWorkflow', 'Operations', 'McpAutomationBridge_AssetWorkflowFbxImportOptions.h');
+    expect(options).toContain('const bool bTakeAlone = Skel != nullptr && !Options.bImportMesh;');
+    expect(options).toContain('Fbx->ImportUI->bCreatePhysicsAsset = Physics == nullptr && Options.CreatePhysicsAsset.Get(true);');
+    expect(options).toContain('Fbx->ImportUI->SkeletalMeshImportData->bImportMorphTargets = Options.ImportMorphTargets.GetValue();');
+    expect(options).toContain('OutErrorCode = TEXT("PHYSICS_ASSET_NOT_FOUND");');
+  });
+
+  it('answers with the mesh and what it is bound to, not the first asset listed', () => {
+    const options = code('AssetWorkflow', 'Operations', 'McpAutomationBridge_AssetWorkflowFbxImportOptions.h');
+    expect(options).toContain('for (UClass *Kind : {USkeletalMesh::StaticClass(), UStaticMesh::StaticClass(), UAnimSequence::StaticClass(), UObject::StaticClass()})');
+    const handler = code('AssetWorkflow', 'Operations', 'McpAutomationBridge_AssetWorkflowImportDuplicate.cpp');
+    expect(handler).toContain('UObject *Asset = McpPickPrimaryImport(ImportedAssets);');
+    expect(handler).toContain('McpDescribeImport(ImportedAssets, Asset, ImportedAsset, Resp);');
+  });
+});
+
 describe('analyze_animation reads a sequence from its own frames', () => {
   // get_animation_info gave length, notifies and curves only; how a clip moves could not be read without playing it.
   it('samples every frame up to the cap, the first and last always in, with the root motion left on the root', () => {

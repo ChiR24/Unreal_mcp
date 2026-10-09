@@ -9,9 +9,11 @@ All notable changes to the MCP Automation Bridge plugin will be documented in th
 ### Added
 - **Animation graph nodes by class**: the node-class lookup falls back to `AnimGraphNode_<name>` (spaces ignored) after every Blueprint spelling; `list_node_types` takes `filter`.
 - **`analyze_animation`**: samples a sequence through the AnimPose API, root motion left on the root, for its root travel, foot contacts, loop seam and rotation spikes.
+- **Skeletal mesh import options**: the FBX factory binds the mesh to a named skeleton with `importMesh`, and takes the physics-asset and morph-target choices.
 
 ### Fixed
 - **`create_node` and `add_node` check the graph's schema** (`CanCreateUnderSpecifiedSchema`) and refuse a node it cannot hold with `NODE_NOT_ALLOWED_IN_GRAPH`.
+- **`import` picks the mesh as the asset it answers with and renames**, before animations, materials and textures.
 
 ## [0.6.0-beta-e] - 2026-10-09
 

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "b7fbe33c8d4f7302",
+  "catalogRevision": "5dda79e1ee0491f0",
   "recordCount": 406,
   "records": [
     {
@@ -8710,12 +8710,17 @@
           "import mp3",
           "import 3d model",
           "add file to project",
-          "import image"
+          "import image",
+          "import skeletal mesh",
+          "import character model",
+          "import onto existing skeleton",
+          "share a skeleton"
         ],
         "summary": "Import an asset from a filesystem source into the project content hierarchy.",
         "whenToUse": [
           "A source file inside the project folder (FBX, OBJ, PNG, WAV) must become an asset at a /Game path.",
-          "An FBX animation take must be imported onto an existing skeleton without importing the mesh again."
+          "An FBX animation take must be imported onto an existing skeleton without importing the mesh again.",
+          "A character FBX must become a skeletal mesh bound to an existing skeleton (skeletonPath with importMesh), so it plays that skeleton's animations; createPhysicsAsset, physicsAssetPath and importMorphTargets shape the rest."
         ],
         "whenNotToUse": [
           "The content is a Fab listing or a downloaded Megascans pack (use asset.import_marketplace_asset with marketplace=fab_listing or megascans).",
@@ -8733,7 +8738,7 @@
             },
             "destinationPath": {
               "type": "string",
-              "description": "Destination /Game asset path."
+              "description": "The folder the asset goes in, e.g. /Game/Imports (it keeps the source file's name), or an object path such as /Game/Chars/SK_Hero.SK_Hero to name it."
             },
             "overwrite": {
               "type": "boolean",
@@ -8749,7 +8754,23 @@
             },
             "skeletonPath": {
               "type": "string",
-              "description": "Existing skeleton to import the take against, e.g. /Game/Chars/SK_Hero_Skeleton. Set it to import the animation ALONE; omit it to import mesh and animation together. Implies importAnimations."
+              "description": "Existing skeleton, e.g. /Game/Chars/SK_Hero_Skeleton. Alone it imports the FBX's animation take ALONE against it (implies importAnimations); with importMesh it binds the imported skeletal mesh to it instead, so the mesh shares that skeleton's animations."
+            },
+            "importMesh": {
+              "type": "boolean",
+              "description": "With skeletonPath: import the skeletal mesh onto that skeleton (its takes too when importAnimations) instead of the take alone."
+            },
+            "createPhysicsAsset": {
+              "type": "boolean",
+              "description": "Skeletal mesh: make a physics asset for it (default true); false makes none."
+            },
+            "physicsAssetPath": {
+              "type": "string",
+              "description": "Skeletal mesh: an existing physics asset to use instead of making one."
+            },
+            "importMorphTargets": {
+              "type": "boolean",
+              "description": "Skeletal mesh: import its morph targets (blend shapes)."
             }
           },
           "required": [
@@ -8765,6 +8786,37 @@
             "success": {
               "type": "boolean",
               "description": "Operation succeeded."
+            },
+            "assetPath": {
+              "type": "string",
+              "description": "The imported asset, renamed to the destination name: a mesh when the file holds one."
+            },
+            "saved": {
+              "type": "boolean",
+              "description": "Whether it was saved."
+            },
+            "alsoImported": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Other assets the import made (its takes, materials, textures), at most 50."
+            },
+            "skeleton": {
+              "type": "string",
+              "description": "Skeletal mesh: the skeleton it is bound to."
+            },
+            "physicsAsset": {
+              "type": "string",
+              "description": "Skeletal mesh: its physics asset (empty when none)."
+            },
+            "bones": {
+              "type": "number",
+              "description": "Skeletal mesh: bones in its reference skeleton."
+            },
+            "morphTargets": {
+              "type": "number",
+              "description": "Skeletal mesh: morph targets it carries."
             },
             "details": {
               "type": "object",
@@ -8800,6 +8852,24 @@
           "output": {
             "success": true
           }
+        },
+        {
+          "title": "Import a character onto an existing skeleton",
+          "input": {
+            "sourcePath": "/Game/../Imports/Hero.fbx",
+            "destinationPath": "/Game/Chars/SK_Hero.SK_Hero",
+            "skeletonPath": "/Game/Chars/SK_Mannequin_Skeleton",
+            "importMesh": true,
+            "createPhysicsAsset": false
+          },
+          "output": {
+            "success": true,
+            "assetPath": "/Game/Chars/SK_Hero",
+            "skeleton": "/Game/Chars/SK_Mannequin_Skeleton.SK_Mannequin_Skeleton",
+            "physicsAsset": "",
+            "bones": 68,
+            "morphTargets": 0
+          }
         }
       ],
       "availability": {
@@ -8831,8 +8901,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "5bfa2da7e50a8d27c44a880440ebf39a1ec458951fe418482023ec610ee68c80",
-        "content": "cf6e8749f1fd68f8e350e831f63acfc5cb7ea9f279859b370465e1a5ba120ec1"
+        "schema": "3660c9d0f57266c210d002fc8605e19a9415fb149246d83f20b6e28d897a3844",
+        "content": "3187922b166974ced97202c23bc6396202801465768da5d2669ffd4658f6500b"
       }
     },
     {

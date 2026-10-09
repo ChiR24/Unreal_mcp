@@ -25,6 +25,15 @@ const PAGINATED_OUTPUT = schema({
   nextCursor: { type: ['string', 'null'], description: 'Opaque cursor for the next page, or null on the last page.' }
 }, ['success']);
 
+// What an import made: the asset it is about (a mesh before its animations, materials and textures), the rest, and
+// for a skeletal mesh what it is bound to.
+const IMPORT_OUTPUT = schema({
+  success: bool('Operation succeeded.'), assetPath: str('The imported asset, renamed to the destination name: a mesh when the file holds one.'),
+  saved: bool('Whether it was saved.'), alsoImported: arr('Other assets the import made (its takes, materials, textures), at most 50.'),
+  skeleton: str('Skeletal mesh: the skeleton it is bound to.'), physicsAsset: str('Skeletal mesh: its physics asset (empty when none).'),
+  bones: num('Skeletal mesh: bones in its reference skeleton.'), morphTargets: num('Skeletal mesh: morph targets it carries.'),
+  details: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Operation details.' },
+}, ['success']);
 const OK_OUTPUT = schema({ success: bool('Operation succeeded.'), details: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Operation details.' } }, ['success']);
 
 export const ASSET_LIFECYCLE_RECORDS: readonly RecordSpec[] = [
@@ -46,18 +55,19 @@ export const ASSET_LIFECYCLE_RECORDS: readonly RecordSpec[] = [
   ),
 
   r('import', 'asset', 'Import an asset from a filesystem source into the project content hierarchy.',
-    schema({ sourcePath: SOURCE_PATH, destinationPath: DEST_PATH, overwrite: bool('Replace an asset already sitting at the destination. Needed for an FBX animation import, which otherwise refuses rather than let the editor reimport the old asset with its own stored settings.'), save: bool('Save the imported asset. Defaults to true; pass false to keep it in memory only.'), importAnimations: bool('Import animation takes from an FBX. Off by default, which imports mesh only.'), skeletonPath: str('Existing skeleton to import the take against, e.g. /Game/Chars/SK_Hero_Skeleton. Set it to import the animation ALONE; omit it to import mesh and animation together. Implies importAnimations.') }, ['sourcePath', 'destinationPath']),
-    OK_OUTPUT, WRITE, WRITE_POLICY, MEDIUM,
-    { aliases: ['asset.import_asset'], topics: ['import fbx', 'import file', 'import mesh', 'import texture', 'import obj', 'import png', 'import wav', 'import sound file', 'import audio file', 'bring file into project', 'import animation', 'import mocap', 'fbx animation', 'import anim sequence', 'import mp3', 'import 3d model', 'add file to project', 'import image'],
+    schema({ sourcePath: SOURCE_PATH, destinationPath: str('The folder the asset goes in, e.g. /Game/Imports (it keeps the source file\'s name), or an object path such as /Game/Chars/SK_Hero.SK_Hero to name it.'), overwrite: bool('Replace an asset already sitting at the destination. Needed for an FBX animation import, which otherwise refuses rather than let the editor reimport the old asset with its own stored settings.'), save: bool('Save the imported asset. Defaults to true; pass false to keep it in memory only.'), importAnimations: bool('Import animation takes from an FBX. Off by default, which imports mesh only.'), skeletonPath: str('Existing skeleton, e.g. /Game/Chars/SK_Hero_Skeleton. Alone it imports the FBX\'s animation take ALONE against it (implies importAnimations); with importMesh it binds the imported skeletal mesh to it instead, so the mesh shares that skeleton\'s animations.'), importMesh: bool('With skeletonPath: import the skeletal mesh onto that skeleton (its takes too when importAnimations) instead of the take alone.'), createPhysicsAsset: bool('Skeletal mesh: make a physics asset for it (default true); false makes none.'), physicsAssetPath: str('Skeletal mesh: an existing physics asset to use instead of making one.'), importMorphTargets: bool('Skeletal mesh: import its morph targets (blend shapes).') }, ['sourcePath', 'destinationPath']),
+    IMPORT_OUTPUT, WRITE, WRITE_POLICY, MEDIUM,
+    { aliases: ['asset.import_asset'], topics: ['import fbx', 'import file', 'import mesh', 'import texture', 'import obj', 'import png', 'import wav', 'import sound file', 'import audio file', 'bring file into project', 'import animation', 'import mocap', 'fbx animation', 'import anim sequence', 'import mp3', 'import 3d model', 'add file to project', 'import image', 'import skeletal mesh', 'import character model', 'import onto existing skeleton', 'share a skeleton'],
       whenToUse: [
         'A source file inside the project folder (FBX, OBJ, PNG, WAV) must become an asset at a /Game path.',
         'An FBX animation take must be imported onto an existing skeleton without importing the mesh again.',
+        'A character FBX must become a skeletal mesh bound to an existing skeleton (skeletonPath with importMesh), so it plays that skeleton\'s animations; createPhysicsAsset, physicsAssetPath and importMorphTargets shape the rest.',
       ],
       whenNotToUse: [
         'The content is a Fab listing or a downloaded Megascans pack (use asset.import_marketplace_asset with marketplace=fab_listing or megascans).',
         'Ready-made assets from an engine template, plugin or downloaded pack must be copied in as they are (use asset.maintain_content with maintenance=migrate).',
       ],
-      examples: [ex('Import FBX', { sourcePath: '/tmp/mesh.fbx', destinationPath: '/Game/Imports/Mesh' }, { success: true }), ex('Import a mocap take onto an existing skeleton', { sourcePath: '/Game/../Imports/Mocap.fbx', destinationPath: '/Game/Anims/A_Mocap', importAnimations: true, skeletonPath: '/Game/Chars/SK_Hero_Skeleton' }, { success: true })] }
+      examples: [ex('Import FBX', { sourcePath: '/tmp/mesh.fbx', destinationPath: '/Game/Imports/Mesh' }, { success: true }), ex('Import a mocap take onto an existing skeleton', { sourcePath: '/Game/../Imports/Mocap.fbx', destinationPath: '/Game/Anims/A_Mocap', importAnimations: true, skeletonPath: '/Game/Chars/SK_Hero_Skeleton' }, { success: true }), ex('Import a character onto an existing skeleton', { sourcePath: '/Game/../Imports/Hero.fbx', destinationPath: '/Game/Chars/SK_Hero.SK_Hero', skeletonPath: '/Game/Chars/SK_Mannequin_Skeleton', importMesh: true, createPhysicsAsset: false }, { success: true, assetPath: '/Game/Chars/SK_Hero', skeleton: '/Game/Chars/SK_Mannequin_Skeleton.SK_Mannequin_Skeleton', physicsAsset: '', bones: 68, morphTargets: 0 })] }
   ),
 
   r('duplicate', 'asset', 'Duplicate an existing asset to a new path.',

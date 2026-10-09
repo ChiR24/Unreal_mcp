@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Animation graph nodes by class**: `create_node` and `add_node` take an animation node's short class name (`TwoBoneIK`, `Two Bone IK`) in an AnimGraph or a state's graph, and `inspect_graph` `info: node_types` takes `filter` (`IK` lists the IK nodes).
 - **`animation_physics` `analyze_animation`**: an Animation Sequence's motion read from its own frames: how far and fast the root travels and turns, each foot's planted intervals and planted speed, the loop seam, and the sharpest rotation spikes.
+- **Skeletal mesh import**: `import` binds an FBX's skeletal mesh to an existing skeleton (`skeletonPath` with `importMesh`), takes `createPhysicsAsset`, `physicsAssetPath` and `importMorphTargets`, and answers with the skeleton, physics asset, bone and morph-target counts and the other assets it made.
 
 </details>
 
@@ -21,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <summary><b>🔧 Fixed</b></summary>
 
 - **`create_node` and `add_node` refuse a node the graph cannot hold** (`NODE_NOT_ALLOWED_IN_GRAPH`): an animation node placed in an EventGraph compiled clean and never ran.
+- **`import` answers with the mesh it brought in**, not whichever asset the importer listed first (a material or texture could take the destination name).
 
 </details>
 

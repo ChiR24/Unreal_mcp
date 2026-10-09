@@ -57,8 +57,7 @@ bool UMcpAutomationBridgeSubsystem::HandleImportAsset(
     return true;
   }
 
-  const bool bImportAnimations = GetJsonBoolField(Payload, TEXT("importAnimations"), false);
-  const FString SkeletonPath = GetJsonStringField(Payload, TEXT("skeletonPath"));
+  const FMcpFbxImportOptions FbxOptions = McpReadFbxImportOptions(Payload);
   const bool bOverwrite = GetJsonBoolField(Payload, TEXT("overwrite"), false);
   // Declared and never read: an imported asset stayed an unsaved package.
   const bool bSave = GetJsonBoolField(Payload, TEXT("save"), true);
@@ -84,7 +83,7 @@ bool UMcpAutomationBridgeSubsystem::HandleImportAsset(
     TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakThis(this);
     GEditor->GetTimerManager()->SetTimerForNextTick(
         [WeakThis, RequestId, ResolvedSourcePath, DestPath, DestName, Socket,
-         bImportAnimations, SkeletonPath, bOverwrite, bSave]() {
+         FbxOptions, bOverwrite, bSave]() {
           UMcpAutomationBridgeSubsystem *StrongThis = WeakThis.Get();
           if (!StrongThis) {
             return;
@@ -103,8 +102,7 @@ bool UMcpAutomationBridgeSubsystem::HandleImportAsset(
           ImportData->DestinationPath = DestPath;
           ImportData->Filenames = Files;
           FString SetupError, SetupCode;
-          ImportData->Factory = McpMakeFbxAnimationFactory(
-              ImportData, bImportAnimations, SkeletonPath, SetupError, SetupCode);
+          ImportData->Factory = McpMakeFbxFactory(ImportData, FbxOptions, SetupError, SetupCode);
           if (SetupError.IsEmpty() && ImportData->Factory != nullptr) {
             McpClearFbxImportTarget(DestPath, DestName, ResolvedSourcePath,
                                     bOverwrite, SetupError, SetupCode);
@@ -117,15 +115,8 @@ bool UMcpAutomationBridgeSubsystem::HandleImportAsset(
           TArray<UObject *> ImportedAssets =
               AssetTools.ImportAssetsAutomated(ImportData);
 
-          // Find the first valid (non-null) asset in the array.
-          // ImportAssetsAutomated can return arrays with nullptr entries.
-          UObject *Asset = nullptr;
-          for (UObject *ImportedObj : ImportedAssets) {
-            if (ImportedObj) {
-              Asset = ImportedObj;
-              break;
-            }
-          }
+          // ImportAssetsAutomated can return nullptr entries, and its order puts no mesh first.
+          UObject *Asset = McpPickPrimaryImport(ImportedAssets);
 
           if (Asset) {
             // Compute the final asset path. If we rename, use the destination
@@ -156,6 +147,7 @@ bool UMcpAutomationBridgeSubsystem::HandleImportAsset(
             if (ImportedAsset) {
               McpHandlerUtils::AddVerification(Resp, ImportedAsset);
             }
+            McpDescribeImport(ImportedAssets, Asset, ImportedAsset, Resp);
             Resp->SetBoolField(TEXT("saved"), bSave && ImportedAsset && McpSafeAssetSave(ImportedAsset));
             StrongThis->SendAutomationResponse(
                 Socket, RequestId, true,
