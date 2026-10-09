@@ -111,6 +111,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`set_property` `markDirty` `false` leaves the package clean.** The write marked its package unsaved all the same, so a level edited with `markDirty` `false` still asked to be saved.
 - **A text search finds a call by the title the graph shows.** `query_asset` `text` matched a function call only by its function name (`PlaySoundAtLocation`); "Play Sound at Location", as the graph shows it, found nothing.
 - **`save_all` names what it left unsaved.** With `assetPaths` it said "left 1 other dirty package(s) unsaved" without saying which; `leftDirtyPackages` lists them.
+- **A graph batch step with an unknown edit says so.** `edit_graph` answered "each step needs `edit`" to a step whose `edit` it did not know (`set_pin_default`); it now names the edit it refused.
 
 </details>
 
