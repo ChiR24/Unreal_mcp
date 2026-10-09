@@ -34,7 +34,7 @@ export const ANIMATION_PHYSICS_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'edit_anim_graph', selector: 'edit',
-    summary: 'Edit an Animation Blueprint graph: blend, cached-pose and slot nodes, state machines, states, transitions and transition rules, blend trees.',
+    summary: 'Edit an Animation Blueprint graph: blend, cached-pose and slot nodes, state machines, states, transitions and transition rules, blend trees. Any other AnimGraph node (Two Bone IK, Modify Bone, Blend Space Player) is created by class with manage_blueprint edit_graph create_node.',
     topics: ['anim graph', 'state machine', 'add state', 'add transition', 'blend node', 'blend tree', 'cached pose', 'slot node', 'add walk state', 'locomotion states'],
     members: byName(['add_blend_node', 'add_cached_pose', 'add_slot_node', 'create_state_machine', 'add_state_machine',
       'add_state', 'add_transition', 'set_transition_rules', 'delete_transition', 'create_blend_tree']),

@@ -12934,7 +12934,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "nodeType": {
           "type": "string",
-          "description": "The node to create: CallFunction (memberName, plus memberClass for a function of another class), Event (eventName: BeginPlay, Tick), CustomEvent (customEventName), VariableGet or VariableSet (memberName), Cast (targetClass), InputAxisEvent (inputAxisName), Branch, Sequence, Select, Switch, SwitchOnInt, SwitchOnEnum, SwitchOnString, DoOnce, DoN, FlipFlop, Gate, MultiGate, ForLoop, ForEachLoop, WhileLoop (each also WithBreak), MakeArray, MakeStruct and BreakStruct (structPath), SpawnActorFromClass, GetAllActorsOfClass, Self, Timeline, Reroute, Comment (a Switch on Int is made with only Default: wire a case by its number, from \"$id.0\", \"$id.1\"..., and the case pin is added; a Sequence or a commutative math node grows its inputs the same way); a common function by name (PrintString, Delay, SetActorLocation, GetPlayerPawn, GetActorOfClass, IsValid, PlaySound2D); or a K2Node class name that inspect_graph info=node_types lists. For create_struct_make_break_nodes: make or break."
+          "description": "The node to create: CallFunction (memberName, plus memberClass for a function of another class), Event (eventName: BeginPlay, Tick), CustomEvent (customEventName), VariableGet or VariableSet (memberName), Cast (targetClass), InputAxisEvent (inputAxisName), Branch, Sequence, Select, Switch, SwitchOnInt, SwitchOnEnum, SwitchOnString, DoOnce, DoN, FlipFlop, Gate, MultiGate, ForLoop, ForEachLoop, WhileLoop (each also WithBreak), MakeArray, MakeStruct and BreakStruct (structPath), SpawnActorFromClass, GetAllActorsOfClass, Self, Timeline, Reroute, Comment (a Switch on Int is made with only Default: wire a case by its number, from \"$id.0\", \"$id.1\"..., and the case pin is added; a Sequence or a commutative math node grows its inputs the same way); a common function by name (PrintString, Delay, SetActorLocation, GetPlayerPawn, GetActorOfClass, IsValid, PlaySound2D); or a K2Node class name that inspect_graph info=node_types lists. In an Animation Blueprint's AnimGraph or a state's graph (graphName), any animation node by class: AnimGraphNode_TwoBoneIK, TwoBoneIK or Two Bone IK (info=node_types with filter IK lists them; animation_physics configure_anim_graph_node set_value sets its settings); a node the graph cannot hold is refused (NODE_NOT_ALLOWED_IN_GRAPH). For create_struct_make_break_nodes: make or break."
         },
         "offset": {
           "type": "number",
@@ -14086,7 +14086,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "properties": {
               "className": {
                 "type": "string",
-                "description": "Blueprint node class name (e.g. UK2Node_CallFunction)."
+                "description": "Node class name, the nodeType create_node takes (K2Node_CallFunction, AnimGraphNode_TwoBoneIK)."
               },
               "displayName": {
                 "type": "string",

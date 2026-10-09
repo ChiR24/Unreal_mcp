@@ -6,7 +6,11 @@ All notable changes to the MCP Automation Bridge plugin will be documented in th
 
 ## [Unreleased]
 
-_Nothing yet._
+### Added
+- **Animation graph nodes by class**: the node-class lookup falls back to `AnimGraphNode_<name>` (spaces ignored) after every Blueprint spelling; `list_node_types` takes `filter`.
+
+### Fixed
+- **`create_node` and `add_node` check the graph's schema** (`CanCreateUnderSpecifiedSchema`) and refuse a node it cannot hold with `NODE_NOT_ALLOWED_IN_GRAPH`.
 
 ## [0.6.0-beta-e] - 2026-10-09
 

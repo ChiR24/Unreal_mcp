@@ -123,6 +123,6 @@ describe('task 48 injected breaches', () => {
   });
 
   it('Given the measured denominator, When cases are counted, Then it is exactly the 75 positive corpus cases', () => {
-    expect(retrievalCases().length).toBe(75);
+    expect(retrievalCases().length).toBe(76);
   });
 });

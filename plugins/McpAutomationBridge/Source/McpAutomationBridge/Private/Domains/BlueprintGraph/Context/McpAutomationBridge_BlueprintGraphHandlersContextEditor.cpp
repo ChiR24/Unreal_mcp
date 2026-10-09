@@ -247,35 +247,4 @@ bool PrepareBlueprintAndGraph(FActionContext& Context)
     return true;
 }
 
-bool HandleListNodeTypes(FActionContext& Context)
-{
-    if (Context.SubAction != TEXT("list_node_types"))
-    {
-        return false;
-    }
-
-    TArray<TSharedPtr<FJsonValue>> NodeTypes;
-    for (TObjectIterator<UClass> It; It; ++It)
-    {
-        if (!It->IsChildOf(UK2Node::StaticClass()) ||
-            It->HasAnyClassFlags(CLASS_Abstract))
-        {
-            continue;
-        }
-        TSharedPtr<FJsonObject> TypeObj =
-            McpHandlerUtils::CreateResultObject();
-        TypeObj->SetStringField(TEXT("className"), It->GetName());
-        TypeObj->SetStringField(
-            TEXT("displayName"),
-            It->GetDisplayNameText().ToString());
-        NodeTypes.Add(MakeShared<FJsonValueObject>(TypeObj));
-    }
-
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetArrayField(TEXT("nodeTypes"), NodeTypes);
-    Result->SetNumberField(TEXT("count"), NodeTypes.Num());
-    Context.SendResponse(TEXT("Node types listed."), Result);
-    return true;
-}
-
 }

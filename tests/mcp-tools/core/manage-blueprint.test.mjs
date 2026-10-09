@@ -260,6 +260,7 @@ const testCases = [
 
   // === INFO: list_node_types (no blueprint needed) ===
   { scenario: 'INFO: list_node_types', toolName: 'manage_blueprint', arguments: { action: 'list_node_types' }, expected: 'success' },
+  { scenario: 'INFO: list_node_types filter finds an animation node class', toolName: 'manage_blueprint', arguments: { action: 'list_node_types', filter: 'TwoBoneIK' }, expected: 'success', assertions: [{ path: 'structuredContent.result.count', gte: 1, label: 'AnimGraphNode_TwoBoneIK is listed' }] },
 
   // === CONFIG: set_pin_default_value (blueprintPath + nodeGuid + pinName + value) ===
   // Uses the real nodeId captured from the first Sequence node.

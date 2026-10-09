@@ -9,7 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## 🏷️ [Unreleased]
 
-_Nothing yet._
+<details>
+<summary><b>✨ Added</b></summary>
+
+- **Animation graph nodes by class**: `create_node` and `add_node` take an animation node's short class name (`TwoBoneIK`, `Two Bone IK`) in an AnimGraph or a state's graph, and `inspect_graph` `info: node_types` takes `filter` (`IK` lists the IK nodes).
+
+</details>
+
+<details>
+<summary><b>🔧 Fixed</b></summary>
+
+- **`create_node` and `add_node` refuse a node the graph cannot hold** (`NODE_NOT_ALLOWED_IN_GRAPH`): an animation node placed in an EventGraph compiled clean and never ran.
+
+</details>
 
 ---
 

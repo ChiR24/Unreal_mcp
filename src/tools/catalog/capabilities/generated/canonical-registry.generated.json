@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "6a9b00e40ef5b820",
+  "catalogRevision": "0d313995372151ed",
   "recordCount": 405,
   "records": [
     {
@@ -1880,7 +1880,7 @@
           "add walk state",
           "locomotion states"
         ],
-        "summary": "Edit an Animation Blueprint graph: blend, cached-pose and slot nodes, state machines, states, transitions and transition rules, blend trees.",
+        "summary": "Edit an Animation Blueprint graph: blend, cached-pose and slot nodes, state machines, states, transitions and transition rules, blend trees. Any other AnimGraph node (Two Bone IK, Modify Bone, Blend Space Player) is created by class with manage_blueprint edit_graph create_node.",
         "whenToUse": [
           "edit=add_blend_node: Graph needs a blend node.",
           "edit=add_cached_pose: Pose reuse optimization needed.",
@@ -2156,7 +2156,7 @@
       },
       "examples": [
         {
-          "title": "Edit an Animation Blueprint graph: blend, cached-pose and slot nodes, state machines, states, transitions and transition rules, blend trees.",
+          "title": "Edit an Animation Blueprint graph: blend, cached-pose and slot nodes, state machines, states, transitions and transition rules, blend trees. Any other AnimGraph node (Two Bone IK, Modify Bone, Blend Space Player) is created by class with manage_blueprint edit_graph create_node.",
           "input": {
             "action": "edit_anim_graph",
             "blueprintPath": "/Game/ABP_Char",
@@ -2331,7 +2331,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "de92c8a8ddd6f559eddb1cc7b64ccae8e3cb51afc043f1f370840861cf72245e",
-        "content": "26878bf07268de435d5f5b1df66e72895404a4f2f397f9936fbbb8955efc4edf"
+        "content": "d26dad78d504c8c66a3742a532ae41fb501f649a46dcd7758efc8fa3616afa51"
       }
     },
     {
@@ -15879,6 +15879,9 @@
           "arrange nodes",
           "tidy graph",
           "clean up graph layout",
+          "anim graph node by class",
+          "add two bone ik node",
+          "animation blueprint node",
           "add node",
           "place node",
           "graph node",
@@ -15899,6 +15902,7 @@
         "whenToUse": [
           "edit=add_node: A node must be added using a friendly type alias (e.g. Branch, Cast, GetVariable).",
           "edit=create_node: A new node must be placed in a Blueprint event or function graph.",
+          "edit=create_node: An animation node (Two Bone IK, Modify Bone, Blend Space Player, Look At ...) must be placed by class in an Animation Blueprint's AnimGraph or a state's graph.",
           "edit=create_reroute_node: Wire paths need a reroute node for cleaner layout.",
           "edit=create_struct_make_break_nodes: A MakeStruct or BreakStruct node must be placed for a known struct type.",
           "edit=connect_pins: An exec or data link between two existing nodes must be created.",
@@ -15935,7 +15939,7 @@
             },
             "nodeType": {
               "type": "string",
-              "description": "The node to create: CallFunction (memberName, plus memberClass for a function of another class), Event (eventName: BeginPlay, Tick), CustomEvent (customEventName), VariableGet or VariableSet (memberName), Cast (targetClass), InputAxisEvent (inputAxisName), Branch, Sequence, Select, Switch, SwitchOnInt, SwitchOnEnum, SwitchOnString, DoOnce, DoN, FlipFlop, Gate, MultiGate, ForLoop, ForEachLoop, WhileLoop (each also WithBreak), MakeArray, MakeStruct and BreakStruct (structPath), SpawnActorFromClass, GetAllActorsOfClass, Self, Timeline, Reroute, Comment (a Switch on Int is made with only Default: wire a case by its number, from \"$id.0\", \"$id.1\"..., and the case pin is added; a Sequence or a commutative math node grows its inputs the same way); a common function by name (PrintString, Delay, SetActorLocation, GetPlayerPawn, GetActorOfClass, IsValid, PlaySound2D); or a K2Node class name that inspect_graph info=node_types lists. For create_struct_make_break_nodes: make or break."
+              "description": "The node to create: CallFunction (memberName, plus memberClass for a function of another class), Event (eventName: BeginPlay, Tick), CustomEvent (customEventName), VariableGet or VariableSet (memberName), Cast (targetClass), InputAxisEvent (inputAxisName), Branch, Sequence, Select, Switch, SwitchOnInt, SwitchOnEnum, SwitchOnString, DoOnce, DoN, FlipFlop, Gate, MultiGate, ForLoop, ForEachLoop, WhileLoop (each also WithBreak), MakeArray, MakeStruct and BreakStruct (structPath), SpawnActorFromClass, GetAllActorsOfClass, Self, Timeline, Reroute, Comment (a Switch on Int is made with only Default: wire a case by its number, from \"$id.0\", \"$id.1\"..., and the case pin is added; a Sequence or a commutative math node grows its inputs the same way); a common function by name (PrintString, Delay, SetActorLocation, GetPlayerPawn, GetActorOfClass, IsValid, PlaySound2D); or a K2Node class name that inspect_graph info=node_types lists. In an Animation Blueprint's AnimGraph or a state's graph (graphName), any animation node by class: AnimGraphNode_TwoBoneIK, TwoBoneIK or Two Bone IK (info=node_types with filter IK lists them; animation_physics configure_anim_graph_node set_value sets its settings); a node the graph cannot hold is refused (NODE_NOT_ALLOWED_IN_GRAPH). For create_struct_make_break_nodes: make or break."
             },
             "posX": {
               "type": "number",
@@ -16528,8 +16532,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "9d942cb3046d02c7443e3279a98c971bacf347a103aeaf232561f5c819e37f1d",
-        "content": "817ec554f27804f4fd9d59db6af11d3296de98b4b9673aae6cfdaf541160ab5a"
+        "schema": "7fbcd82d1e69e6b6a03457ba90c4d353a3106d06e9374840203c823de7dc75bc",
+        "content": "b77662575c3a62ad9cef55ca583ad613afdee3fe057f5822e2ae848ffba7469c"
       }
     },
     {
@@ -18785,7 +18789,8 @@
           "info=node: A single node's pins, type, and links must be inspected.",
           "info=node: What an event or function does must be read: followExec on its entry node lists every node its exec wires reach, with their inputs, in one call.",
           "info=pins: Pin-level details including linkedTo connections must be inspected for a single node.",
-          "info=node_types: The set of creatable node types must be enumerated before node creation."
+          "info=node_types: The set of creatable node types must be enumerated before node creation.",
+          "info=node_types: An animation graph node class must be found by part of its name (filter IK, Blend, Bone) before create_node places it in an AnimGraph."
         ],
         "whenNotToUse": [
           "info=node_types: A specific node type is already known."
@@ -18959,7 +18964,7 @@
                 "properties": {
                   "className": {
                     "type": "string",
-                    "description": "Blueprint node class name (e.g. UK2Node_CallFunction)."
+                    "description": "Node class name, the nodeType create_node takes (K2Node_CallFunction, AnimGraphNode_TwoBoneIK)."
                   },
                   "displayName": {
                     "type": "string",
@@ -19049,7 +19054,8 @@
               "graph"
             ],
             "filter": [
-              "graph"
+              "graph",
+              "node_types"
             ],
             "offset": [
               "graph"
@@ -19076,8 +19082,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "e55bddc00990792453a996ee471c167c2ff8923aac6eb7770c857069a62090c8",
-        "content": "7b889b09e8c708b2638edbd5786508de8e61ec66f9f9d36b3d55fd55b384c0fc"
+        "schema": "c1e233e409bb854a99aa5b31f1faab3854daf4f964d26867a93639a04b7004b3",
+        "content": "e65868512cccd767a987f6433952830b5d93dfadc8b7ba6c5bda15c040561e87"
       }
     },
     {

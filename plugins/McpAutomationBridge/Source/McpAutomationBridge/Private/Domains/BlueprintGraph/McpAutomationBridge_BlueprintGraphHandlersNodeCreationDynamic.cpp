@@ -1,5 +1,6 @@
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersPrivate.h"
 
+#include "AnimGraphNode_Base.h"
 #include "K2Node_CallArrayFunction.h"
 #include "K2Node_CallFunction.h"
 #include "K2Node_FunctionEntry.h"
@@ -93,6 +94,21 @@ static FString ReadTargetClassPayload(
     return TargetClass;
 }
 
+// The editor offers a node only in a graph whose schema can hold it: an animation node placed in an event graph
+// compiled clean and never ran.
+FString DescribeGraphMismatch(UClass* NodeClass, const UEdGraph* Graph)
+{
+    const UEdGraphSchema* Schema = Graph ? Graph->GetSchema() : nullptr;
+    if (!NodeClass || !Schema || NodeClass->GetDefaultObject<UEdGraphNode>()->CanCreateUnderSpecifiedSchema(Schema))
+    {
+        return FString();
+    }
+    return FString::Printf(TEXT("%s cannot go in graph '%s' (%s)%s"), *NodeClass->GetName(), *Graph->GetName(),
+        *Schema->GetClass()->GetName(), NodeClass->IsChildOf(UAnimGraphNode_Base::StaticClass())
+            ? TEXT(": an animation node goes in an Animation Blueprint's AnimGraph or a state's graph (graphName names it).")
+            : TEXT("."));
+}
+
 void CreateDynamicNode(
     FActionContext& Context,
     const FString& NodeType,
@@ -107,6 +123,12 @@ void CreateDynamicNode(
                 TEXT("Node type '%s' not found. Use list_node_types to see available types."),
                 *NodeType),
             TEXT("NODE_TYPE_NOT_FOUND"));
+        return;
+    }
+    const FString Mismatch = DescribeGraphMismatch(NodeClass, Context.TargetGraph);
+    if (!Mismatch.IsEmpty())
+    {
+        Context.SendError(Mismatch, TEXT("NODE_NOT_ALLOWED_IN_GRAPH"));
         return;
     }
 

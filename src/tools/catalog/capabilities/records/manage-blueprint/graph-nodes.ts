@@ -20,7 +20,7 @@ export const GRAPH_NODES_RECORDS: readonly CapabilityRecordSource[] = [
     domain: DOMAIN,
     topics: ['add node', 'place node', 'graph node', 'call function node', 'print string node'],
     summary: 'Create a graph node (function call, event, variable, branch, etc.) in a Blueprint graph.',
-    whenToUse: ['A new node must be placed in a Blueprint event or function graph.'],
+    whenToUse: ['A new node must be placed in a Blueprint event or function graph.', 'An animation node (Two Bone IK, Modify Bone, Blend Space Player, Look At ...) must be placed by class in an Animation Blueprint\'s AnimGraph or a state\'s graph.'],
     whenNotToUse: ['A reroute node for wire organization is needed (use create_reroute_node).'],
     // `parameters` gives a CustomEvent typed inputs ([{name, type}]). The
     // handler always read it; the contract never declared it, so the gateway
@@ -219,10 +219,10 @@ export const GRAPH_NODES_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'list_node_types',
     family: FAMILY,
     domain: DOMAIN,
-    summary: 'List available Blueprint node types that can be created via create_node or add_node.',
-    whenToUse: ['The set of creatable node types must be enumerated before node creation.'],
+    summary: 'List the Blueprint node types create_node can make, animation graph nodes included: all of them, or those whose class or display name contains filter.',
+    whenToUse: ['The set of creatable node types must be enumerated before node creation.', 'An animation graph node class must be found by part of its name (filter IK, Blend, Bone) before create_node places it in an AnimGraph.'],
     whenNotToUse: ['A specific node type is already known.'],
-    inputProps: { blueprintPath: P.blueprintPath },
+    inputProps: { blueprintPath: P.blueprintPath, filter: { type: 'string', description: 'Only node types whose class or display name contains this text (case-insensitive, spaces ignored), e.g. IK or TwoBoneIK.' } },
     outputProps: {
       nodeTypes: {
         type: 'array',
@@ -230,7 +230,7 @@ export const GRAPH_NODES_RECORDS: readonly CapabilityRecordSource[] = [
           type: 'object',
           additionalProperties: false,
           properties: {
-            className: { type: 'string', description: 'Blueprint node class name (e.g. UK2Node_CallFunction).' },
+            className: { type: 'string', description: 'Node class name, the nodeType create_node takes (K2Node_CallFunction, AnimGraphNode_TwoBoneIK).' },
             displayName: { type: 'string', description: 'Localized node display name shown in the Blueprint palette.' },
           },
           required: ['className', 'displayName'],
@@ -244,8 +244,8 @@ export const GRAPH_NODES_RECORDS: readonly CapabilityRecordSource[] = [
     latency: 'instant',
     resources: 'low',
     plugins: BP_PLUGINS,
-    exampleInput: { action: 'list_node_types', blueprintPath: '/Game/Blueprints/BP_Test' },
-    exampleOutput: { success: true, nodeTypes: [{ className: 'UK2Node_CallFunction', displayName: 'Call Function' }], count: 1 },
+    exampleInput: { action: 'list_node_types', filter: 'TwoBoneIK' },
+    exampleOutput: { success: true, nodeTypes: [{ className: 'AnimGraphNode_TwoBoneIK', displayName: 'Anim Graph Node Two Bone IK' }], count: 1 },
   }),
   buildRecord({
     id: 'blueprint.create_struct_make_break_nodes',

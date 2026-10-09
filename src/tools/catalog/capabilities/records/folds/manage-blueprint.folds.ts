@@ -32,7 +32,7 @@ export const MANAGE_BLUEPRINT_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'edit_graph', selector: 'edit',
     summary: 'Edit a Blueprint graph: add or create nodes (including reroute and struct make/break nodes), connect pins, set node properties and pin defaults, add a construction script, arrange nodes beside what they are wired to, or run many of those edits, variables included, in one batch.',
-    topics: ['blueprint node', 'create node', 'connect pins in blueprint', 'connect blueprint nodes', 'connect nodes', 'wire pins', 'print string', 'print to screen', 'pin default', 'node property', 'construction script', 'reroute node', 'batch graph edit', 'branch node', 'timeline', 'delay node', 'cast node', 'arrange nodes', 'tidy graph', 'clean up graph layout'],
+    topics: ['blueprint node', 'create node', 'connect pins in blueprint', 'connect blueprint nodes', 'connect nodes', 'wire pins', 'print string', 'print to screen', 'pin default', 'node property', 'construction script', 'reroute node', 'batch graph edit', 'branch node', 'timeline', 'delay node', 'cast node', 'arrange nodes', 'tidy graph', 'clean up graph layout', 'anim graph node by class', 'add two bone ik node', 'animation blueprint node'],
     members: {
       ...byName(['add_node', 'create_node', 'create_reroute_node', 'create_struct_make_break_nodes', 'connect_pins',
         'set_node_property', 'set_pin_default_value', 'add_construction_script', 'arrange_nodes']),

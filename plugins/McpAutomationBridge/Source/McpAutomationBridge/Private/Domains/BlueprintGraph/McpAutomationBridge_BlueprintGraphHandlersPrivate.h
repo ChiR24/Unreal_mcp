@@ -258,6 +258,8 @@ FString DescribeMissingFunction(UBlueprint* Blueprint, const FString& MemberName
                                 const FString& MemberClass, UClass* ResolvedClass);
 const TTuple<FString, FString>* FindCommonFunctionNode(const FString& NodeType);
 UClass* FindNodeClassByName(const FString& NodeType);
+// Empty when a node of NodeClass can go in Graph; else why not, for a NODE_NOT_ALLOWED_IN_GRAPH refusal.
+FString DescribeGraphMismatch(UClass* NodeClass, const UEdGraph* Graph);
 // The StandardMacros graph a nodeType names (ForLoop, DoOnce, DoN -> "Do N" ...), or null.
 const FString* StandardMacroGraphName(const FString& NodeType);
 // Resolve a class string (Blueprint asset path like /Game/..., generated-class

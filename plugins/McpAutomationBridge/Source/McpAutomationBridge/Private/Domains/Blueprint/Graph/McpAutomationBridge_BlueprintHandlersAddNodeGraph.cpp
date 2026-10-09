@@ -284,8 +284,15 @@ UEdGraphNode *CreateBlueprintGraphNode(
     // no longer fails UNSUPPORTED_NODE while create_node succeeds.
     NodeClass = McpBlueprintGraphHandlers::FindNodeClassByName(NodeType);
   }
-  if (NodeClass && NodeClass->IsChildOf(UEdGraphNode::StaticClass())) {
+  const FString Mismatch = McpBlueprintGraphHandlers::DescribeGraphMismatch(NodeClass, TargetGraph);
+  if (NodeClass && NodeClass->IsChildOf(UEdGraphNode::StaticClass()) && Mismatch.IsEmpty()) {
     return NewObject<UEdGraphNode>(TargetGraph, NodeClass);
+  }
+  if (!Mismatch.IsEmpty()) {
+    OutErrorResult = McpHandlerUtils::CreateResultObject();
+    OutErrorMessage = Mismatch;
+    OutErrorCode = TEXT("NODE_NOT_ALLOWED_IN_GRAPH");
+    return nullptr;
   }
 
   OutErrorResult = McpHandlerUtils::CreateResultObject();

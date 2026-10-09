@@ -213,23 +213,59 @@ UClass* FindNodeClassByName(const FString& NodeType)
         NamesToTry.Add(FString::Printf(TEXT("UK2Node_%s"), *NodeType));
     }
 
-    for (TObjectIterator<UClass> It; It; ++It)
+    const auto FindClass = [](const TArray<FString>& Names) -> UClass*
     {
-        if (!It->IsChildOf(UEdGraphNode::StaticClass()) ||
-            It->HasAnyClassFlags(CLASS_Abstract))
+        for (TObjectIterator<UClass> It; It; ++It)
         {
-            continue;
-        }
-        for (const FString& NameToMatch : NamesToTry)
-        {
-            if (It->GetName().Equals(
-                    NameToMatch,
-                    ESearchCase::IgnoreCase))
+            if (It->IsChildOf(UEdGraphNode::StaticClass()) && !It->HasAnyClassFlags(CLASS_Abstract) &&
+                Names.ContainsByPredicate([&It](const FString& Name) { return It->GetName().Equals(Name, ESearchCase::IgnoreCase); }))
             {
                 return *It;
             }
         }
+        return nullptr;
+    };
+    // An animation graph node also goes by the name after its class prefix, spaces allowed (TwoBoneIK, Two Bone IK),
+    // tried only after every Blueprint spelling so a K2 node of the same name keeps winning.
+    const FString Compact = ResolvedName.Replace(TEXT(" "), TEXT(""));
+    UClass* Found = FindClass(NamesToTry);
+    return Found ? Found : FindClass(TArray<FString>{Compact, FString::Printf(TEXT("AnimGraphNode_%s"), *Compact)});
+}
+
+bool HandleListNodeTypes(FActionContext& Context)
+{
+    if (Context.SubAction != TEXT("list_node_types"))
+    {
+        return false;
     }
-    return nullptr;
+    // filter: a class or display name containing it (case-insensitive, spaces ignored), as get_graph_details reads it.
+    FString Filter;
+    if (Context.Payload.IsValid())
+    {
+        Context.Payload->TryGetStringField(TEXT("filter"), Filter);
+    }
+    Filter.ReplaceInline(TEXT(" "), TEXT(""));
+    TArray<TSharedPtr<FJsonValue>> NodeTypes;
+    for (TObjectIterator<UClass> It; It; ++It)
+    {
+        if (!It->IsChildOf(UK2Node::StaticClass()) || It->HasAnyClassFlags(CLASS_Abstract))
+        {
+            continue;
+        }
+        const FString DisplayName = It->GetDisplayNameText().ToString();
+        if (!Filter.IsEmpty() && !It->GetName().Contains(Filter) && !DisplayName.Replace(TEXT(" "), TEXT("")).Contains(Filter))
+        {
+            continue;
+        }
+        TSharedPtr<FJsonObject> TypeObj = McpHandlerUtils::CreateResultObject();
+        TypeObj->SetStringField(TEXT("className"), It->GetName());
+        TypeObj->SetStringField(TEXT("displayName"), DisplayName);
+        NodeTypes.Add(MakeShared<FJsonValueObject>(TypeObj));
+    }
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetArrayField(TEXT("nodeTypes"), NodeTypes);
+    Result->SetNumberField(TEXT("count"), NodeTypes.Num());
+    Context.SendResponse(TEXT("Node types listed."), Result);
+    return true;
 }
 }

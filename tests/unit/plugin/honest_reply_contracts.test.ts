@@ -1149,6 +1149,25 @@ describe('Make and Break nodes of structs with native functions', () => {
   });
 });
 
+describe('animation graph nodes by class', () => {
+  // create_node took only a full AnimGraphNode_ class name, and put a Sequence Player in an EventGraph, where it
+  // compiled clean and never ran.
+  it('a short name resolves to the animation node after every Blueprint spelling', () => {
+    const catalog = code('BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersNodeCatalog.cpp');
+    expect(catalog).toContain('return Found ? Found : FindClass(TArray<FString>{Compact, FString::Printf(TEXT("AnimGraphNode_%s"), *Compact)});');
+    expect(catalog).toContain('!DisplayName.Replace(TEXT(" "), TEXT("")).Contains(Filter)');
+  });
+
+  it('both create doors refuse a node the graph cannot hold', () => {
+    const dynamic = code('BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersNodeCreationDynamic.cpp');
+    expect(dynamic).toContain('NodeClass->GetDefaultObject<UEdGraphNode>()->CanCreateUnderSpecifiedSchema(Schema)');
+    expect(dynamic.indexOf('DescribeGraphMismatch(NodeClass, Context.TargetGraph)')).toBeLessThan(dynamic.indexOf('NewObject<UEdGraphNode>(Context.TargetGraph, NodeClass)'));
+    const addNode = code('Blueprint', 'Graph', 'McpAutomationBridge_BlueprintHandlersAddNodeGraph.cpp');
+    expect(addNode).toContain('McpBlueprintGraphHandlers::DescribeGraphMismatch(NodeClass, TargetGraph)');
+    expect(addNode).toContain('OutErrorCode = TEXT("NODE_NOT_ALLOWED_IN_GRAPH");');
+  });
+});
+
 describe('asset queries point at what they found', () => {
   // Searching for a sound found nothing although a PlaySound2D node played it: an asset picked on a pin is
   // DefaultObject, which the scan never read.
