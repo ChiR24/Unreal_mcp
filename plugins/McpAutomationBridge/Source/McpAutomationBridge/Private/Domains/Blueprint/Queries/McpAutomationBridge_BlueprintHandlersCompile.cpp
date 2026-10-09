@@ -80,8 +80,8 @@ bool HandleBlueprintCompile(const FBlueprintActionContext &Context) {
           TEXT("saveAfterCompile was requested but the compile failed; the "
                "broken blueprint was NOT written to disk."));
     }
-    Out->SetStringField(TEXT("blueprintPath"), Path);
-    // The reply names the asset (the receipt lists it as the entity changed) and carries `compiled` and
+    // The reply names the asset once, as assetPath (the receipt lists it as the entity changed); blueprintPath beside it
+    // repeated the same path. It carries `compiled` and
     // `saved` as booleans. It used to push "compiled" and "saved" into changedEntities as well, which holds
     // entity paths: the receipt then listed the two status words beside the asset as things that changed.
     McpHandlerUtils::AddVerification(Out, BP);

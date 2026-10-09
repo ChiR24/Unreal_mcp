@@ -1751,6 +1751,10 @@ describe('a reply says each thing once', () => {
     expect(vars).toContain('Metadata->RemoveField(TEXT("DisplayName"));');
   });
 
+  it('names a compiled Blueprint once', () => {
+    expect(code('Blueprint', 'Queries', 'McpAutomationBridge_BlueprintHandlersCompile.cpp')).not.toContain('Out->SetStringField(TEXT("blueprintPath"), Path);');
+  });
+
   it('says a compile cleared undo history without the paragraph on why', () => {
     expect(code('..', 'Foundation', 'BridgeHelpers', 'Blueprints', 'McpAutomationBridgeHelpersBlueprintDiagnostics.h')).not.toContain('undoBufferResetReason');
   });
