@@ -10881,6 +10881,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Socket or bone name to attach the sound to."
         },
+        "attenuateWithLPF": {
+          "type": "boolean",
+          "description": "Air absorption on or off: a low-pass whose cutoff drops with distance. Sending any lpf value turns it on unless this is false."
+        },
         "attenuationPath": {
           "type": "string",
           "description": "Canonical /Game SoundAttenuation asset path."
@@ -11128,6 +11132,22 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "lowPassFilterFrequency": {
           "type": "number",
           "description": "Low-pass filter cutoff frequency in Hz."
+        },
+        "lpfFrequencyAtMax": {
+          "type": "number",
+          "description": "Low-pass cutoff in Hz at lpfRadiusMax and beyond (900 sounds like a distant, muffled engine)."
+        },
+        "lpfFrequencyAtMin": {
+          "type": "number",
+          "description": "Low-pass cutoff in Hz at lpfRadiusMin and nearer (20000 leaves the sound unfiltered)."
+        },
+        "lpfRadiusMax": {
+          "type": "number",
+          "description": "Distance in cm where the cutoff reaches lpfFrequencyAtMax."
+        },
+        "lpfRadiusMin": {
+          "type": "number",
+          "description": "Distance in cm where the low-pass starts closing; nearer than this the cutoff is lpfFrequencyAtMin."
         },
         "maxSeconds": {
           "type": "number",

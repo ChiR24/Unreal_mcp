@@ -46,3 +46,15 @@ describe('innerRadius fills the extents the attenuation shape reads', () => {
       .toBeGreaterThan(preset.lastIndexOf('EAttenuationShape::Sphere'));
   });
 });
+
+// A distant engine was muffled by writing Attenuation.bAttenuateWithLPF and the LPF fields through set_property.
+describe('distance attenuation sets air absorption', () => {
+  it('reads the four lpf values and turns the filter on when one is sent', () => {
+    const authoring = read('AudioAuthoring/McpAutomationBridge_AudioAuthoringHandlersAttenuation.cpp');
+    for (const [key, field] of [['lpfRadiusMin', 'LPFRadiusMin'], ['lpfRadiusMax', 'LPFRadiusMax'],
+      ['lpfFrequencyAtMin', 'LPFFrequencyAtMin'], ['lpfFrequencyAtMax', 'LPFFrequencyAtMax']]) {
+      expect(authoring).toContain(`{TEXT("${key}"), &Atten->Attenuation.${field}}`);
+    }
+    expect(authoring).toContain('if (bLowPassSent || Params->HasField(TEXT("attenuateWithLPF"))) { Atten->Attenuation.bAttenuateWithLPF = GetJsonBoolField(Params, TEXT("attenuateWithLPF"), true); }');
+  });
+});

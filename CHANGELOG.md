@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Motion samples carry rotation.** `get_transform` `motion` samples add `rotation` [pitch, yaw, roll] on the first sample and on each one where it changed, so a rocking hull or a turning pawn can be read over time.
 - **`add_variable` takes `exposeOnSpawn`.** The variable becomes an input on SpawnActor and Create Widget nodes for its class (and instance-editable), in a single call or a `build_graph` step, which ignored the flag before.
 - **`call_actor_function` calls a component's function.** `componentName` names one of the actor's components (a body's `GetCenterOfMass`, a movement component's `StopMovementImmediately`); a name the actor lacks is refused with `COMPONENT_NOT_FOUND`.
+- **Distance attenuation sets air absorption.** `configure_sound_attenuation` `distance` takes `lpfRadiusMin`, `lpfRadiusMax`, `lpfFrequencyAtMin` and `lpfFrequencyAtMax` (and `attenuateWithLPF`): a low-pass that closes with distance, so a far engine sounds muffled. It was reachable only through `set_property` paths.
 
 </details>
 

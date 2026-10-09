@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "3403a6c7fdc8d4e7",
+  "catalogRevision": "46b5e04f0a4209dd",
   "recordCount": 396,
   "records": [
     {
@@ -48284,11 +48284,13 @@
           "reverb send",
           "falloff distance",
           "make sound 3d",
-          "sound blocked by walls"
+          "sound blocked by walls",
+          "air absorption",
+          "muffled with distance"
         ],
-        "summary": "Configure sound attenuation: distance falloff, spatialization, occlusion, reverb send, or a named attenuation preset.",
+        "summary": "Configure sound attenuation: distance falloff and air absorption, spatialization, occlusion, reverb send, or a named attenuation preset.",
         "whenToUse": [
-          "setting=distance: Use it to configure distance attenuation.",
+          "setting=distance: Use it to configure distance attenuation: inner radius, falloff distance and curve, and air absorption (a low-pass that muffles the sound with distance).",
           "setting=spatialization: Use it to configure audio spatialization.",
           "setting=occlusion: Use it to configure audio occlusion.",
           "setting=reverb_send: Use it to configure an audio reverb send.",
@@ -48325,6 +48327,26 @@
             "save": {
               "type": "boolean",
               "description": "Persist the asset to disk (default true); false leaves the change in memory only."
+            },
+            "attenuateWithLPF": {
+              "type": "boolean",
+              "description": "Air absorption on or off: a low-pass whose cutoff drops with distance. Sending any lpf value turns it on unless this is false."
+            },
+            "lpfRadiusMin": {
+              "type": "number",
+              "description": "Distance in cm where the low-pass starts closing; nearer than this the cutoff is lpfFrequencyAtMin."
+            },
+            "lpfRadiusMax": {
+              "type": "number",
+              "description": "Distance in cm where the cutoff reaches lpfFrequencyAtMax."
+            },
+            "lpfFrequencyAtMin": {
+              "type": "number",
+              "description": "Low-pass cutoff in Hz at lpfRadiusMin and nearer (20000 leaves the sound unfiltered)."
+            },
+            "lpfFrequencyAtMax": {
+              "type": "number",
+              "description": "Low-pass cutoff in Hz at lpfRadiusMax and beyond (900 sounds like a distant, muffled engine)."
             },
             "spatialize": {
               "type": "boolean",
@@ -48439,7 +48461,7 @@
       },
       "examples": [
         {
-          "title": "Configure sound attenuation: distance falloff, spatialization, occlusion, reverb send, or a named attenuation preset.",
+          "title": "Configure sound attenuation: distance falloff and air absorption, spatialization, occlusion, reverb send, or a named attenuation preset.",
           "input": {
             "action": "configure_sound_attenuation",
             "assetPath": "/Game/Audio/Cues/Cue_FootstepConcrete",
@@ -48503,6 +48525,21 @@
             "distanceAlgorithm": [
               "distance"
             ],
+            "attenuateWithLPF": [
+              "distance"
+            ],
+            "lpfRadiusMin": [
+              "distance"
+            ],
+            "lpfRadiusMax": [
+              "distance"
+            ],
+            "lpfFrequencyAtMin": [
+              "distance"
+            ],
+            "lpfFrequencyAtMax": [
+              "distance"
+            ],
             "spatialize": [
               "spatialization"
             ],
@@ -48560,8 +48597,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "839fc06dec07b2b946ebfeb58a9dac3deb135984c0745092b0f5cd217af21d10",
-        "content": "67de1471c674c2847fe3a2b80afab1baa1df86ffa5f3ed59d47907d15dac8d83"
+        "schema": "be9020edb984cb4094cffd04de79bf1e74be6cf756ae7d89424870b54688a9a2",
+        "content": "16f29379d35b7ed94dee8d13c6fc0098539850034bdf1f97a07c565b7eda2fb5"
       }
     },
     {

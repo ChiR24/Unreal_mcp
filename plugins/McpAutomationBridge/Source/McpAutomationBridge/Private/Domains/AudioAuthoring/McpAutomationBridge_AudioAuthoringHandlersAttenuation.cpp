@@ -65,6 +65,18 @@ TSharedPtr<FJsonObject> HandleAttenuationActions(const FString& SubAction, const
 		}
 		if (Params->HasField(TEXT("innerRadius"))) { SetAttenuationInnerRadius(Atten->Attenuation, GetJsonNumberField(Params, TEXT("innerRadius"), 400.0)); }
 		if (Params->HasField(TEXT("falloffDistance"))) { Atten->Attenuation.FalloffDistance = static_cast<float>(GetJsonNumberField(Params, TEXT("falloffDistance"), 3600.0)); }
+		// Air absorption: a low-pass whose cutoff falls from LPFFrequencyAtMin to LPFFrequencyAtMax between the two
+		// radii. Only reachable through dotted set_property paths before; a sent value turns the filter on.
+		const TPair<const TCHAR*, float*> LowPass[] = {
+			{TEXT("lpfRadiusMin"), &Atten->Attenuation.LPFRadiusMin}, {TEXT("lpfRadiusMax"), &Atten->Attenuation.LPFRadiusMax},
+			{TEXT("lpfFrequencyAtMin"), &Atten->Attenuation.LPFFrequencyAtMin}, {TEXT("lpfFrequencyAtMax"), &Atten->Attenuation.LPFFrequencyAtMax}};
+		bool bLowPassSent = false;
+		for (const TPair<const TCHAR*, float*>& Field : LowPass)
+		{
+			double Value = 0.0;
+			if (Params->TryGetNumberField(Field.Key, Value)) { *Field.Value = static_cast<float>(Value); bLowPassSent = true; }
+		}
+		if (bLowPassSent || Params->HasField(TEXT("attenuateWithLPF"))) { Atten->Attenuation.bAttenuateWithLPF = GetJsonBoolField(Params, TEXT("attenuateWithLPF"), true); }
 
 		SaveAudioAsset(Atten, bSave);
 		McpHandlerUtils::AddVerification(Response, Atten);
