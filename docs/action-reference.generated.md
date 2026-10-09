@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `0d313995372151ed`
+Catalog revision: `b7fbe33c8d4f7302`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 405 capabilities across
+The catalog declares 406 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -36,7 +36,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 | Parent tool | Capabilities | read | write | destructive | Domains |
 | --- | --- | --- | --- | --- | --- |
-| `animation_physics` | 29 | 4 | 23 | 2 | animation physics |
+| `animation_physics` | 30 | 5 | 23 | 2 | animation physics |
 | `build_environment` | 40 | 5 | 32 | 3 | environment |
 | `control_actor` | 24 | 8 | 14 | 2 | actor |
 | `control_editor` | 24 | 9 | 12 | 3 | editor |
@@ -62,7 +62,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-64 of 405 capabilities require consent.
+64 of 406 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -135,6 +135,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 | Capability | Tool | Action | Effect | Scope | Consent | Legacy pairs |
 | --- | --- | --- | --- | --- | --- | --- |
+| `animation_physics.analyze_animation` | `animation_physics` | `analyze_animation` | read | read | none | `animation_physics.analyze_animation` |
 | `animation_physics.bind_cloth_to_skeletal_mesh` | `animation_physics` | `bind_cloth_to_skeletal_mesh` | write | write | none | `animation_physics.bind_cloth_to_skeletal_mesh` `animation_physics.assign_cloth_asset_to_mesh` |
 | `animation_physics.cleanup` | `animation_physics` | `cleanup` | destructive | destructive | explicit | `animation_physics.cleanup` |
 | `animation_physics.configure_anim_graph_node` | `animation_physics` | `add_layered_blend_per_bone` | write | write | none | `animation_physics.configure_anim_graph_node` `animation_physics.add_layered_blend_per_bone` `animation_physics.set_anim_graph_node_value` |

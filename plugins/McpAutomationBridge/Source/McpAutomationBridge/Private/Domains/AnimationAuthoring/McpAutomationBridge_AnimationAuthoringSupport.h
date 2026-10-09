@@ -175,6 +175,9 @@ USkeleton* LoadSkeletonFromPathAnim(const FString& SkeletonPath);
 USkeletalMesh* LoadSkeletalMeshFromPathAnim(const FString& MeshPath);
 UAnimSequence* LoadAnimSequenceFromPath(const FString& AnimPath);
 bool SaveAnimAsset(UObject* Asset, bool bShouldSave);
+// analyze_animation (Analysis/McpAutomationBridge_AnimationAnalysis.cpp): a sequence's root path, foot contacts, loop
+// seam and rotation spikes, sampled from its own frames.
+TSharedPtr<FJsonObject> HandleAnalyzeAnimation(const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
 
 UEdGraph* GetAnimGraphFromBlueprint(UAnimBlueprint* AnimBP);
 UAnimGraphNode_StateMachine* FindStateMachineNode(UEdGraph* Graph, const FString& Name);

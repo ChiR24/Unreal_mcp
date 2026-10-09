@@ -1,7 +1,321 @@
 {
-  "catalogRevision": "0d313995372151ed",
-  "recordCount": 405,
+  "catalogRevision": "b7fbe33c8d4f7302",
+  "recordCount": 406,
   "records": [
+    {
+      "id": "animation_physics.analyze_animation",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "animation_physics",
+          "action": "analyze_animation"
+        }
+      ],
+      "discovery": {
+        "domain": "animation physics",
+        "family": "physics",
+        "topics": [
+          "analyze_animation",
+          "analyze animation",
+          "foot contacts",
+          "foot sliding",
+          "root motion speed",
+          "loop seam",
+          "animation pops",
+          "footstep timing"
+        ],
+        "summary": "Analyze an Animation Sequence's motion from its own frames: how far and fast the root travels and turns, when each foot is planted and how fast a planted foot still moves, how closely the last frame meets the first, and the bones with the sharpest rotation spikes.",
+        "whenToUse": [
+          "Footstep notifies must go where the feet land (feet[].contacts are the planted intervals in seconds).",
+          "A walk or run must match the character's movement speed: an in-place clip's plantedSpeed is the ground speed it implies; a root-motion clip's should be near 0.",
+          "A clip must be checked for a clean loop or for pops before it is used."
+        ],
+        "whenNotToUse": [
+          "Only the length, notifies or curves are needed (use get_animation_info).",
+          "A character playing in a running game must be measured (use control_actor get_transform motion)."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "assetPath": {
+              "type": "string",
+              "description": "Animation Sequence asset path, e.g. /Game/Anims/A_Run (a montage or blend space is refused: analyze the sequences it plays)."
+            },
+            "feet": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Foot bones to check (default every bone whose name holds foot but not ik, e.g. foot_l and foot_r)."
+            },
+            "contactHeight": {
+              "type": "number",
+              "description": "cm above a foot's lowest point that still counts as planted (default 5)."
+            },
+            "maxSamples": {
+              "type": "number",
+              "description": "Frames sampled, spread evenly with the first and last always in (default 300, at most 2000; a shorter clip samples every frame)."
+            }
+          },
+          "required": [
+            "assetPath"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "length": {
+              "type": "number",
+              "description": "Length in seconds."
+            },
+            "frames": {
+              "type": "number",
+              "description": "Frames (sampled keys) in the sequence."
+            },
+            "frameRate": {
+              "type": "number",
+              "description": "Frames per second."
+            },
+            "samples": {
+              "type": "number",
+              "description": "Frames sampled."
+            },
+            "rootMotion": {
+              "type": "object",
+              "additionalProperties": false,
+              "description": "The root bone's path in component space (in-place clips stay at 0).",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Whether the sequence has root motion enabled."
+                },
+                "displacement": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  },
+                  "description": "From the first to the last frame, [x, y, z] in cm."
+                },
+                "distance": {
+                  "type": "number",
+                  "description": "Path length in cm."
+                },
+                "averageSpeed": {
+                  "type": "number",
+                  "description": "cm/s over the clip."
+                },
+                "peakSpeed": {
+                  "type": "number",
+                  "description": "Fastest frame-to-frame speed in cm/s."
+                },
+                "turn": {
+                  "type": "number",
+                  "description": "Yaw change in degrees."
+                }
+              }
+            },
+            "loop": {
+              "type": "object",
+              "additionalProperties": false,
+              "description": "Last frame against the first, every bone but the root in its parent's space: near 0 is a clean loop.",
+              "properties": {
+                "positionError": {
+                  "type": "number",
+                  "description": "Largest bone offset in cm."
+                },
+                "rotationError": {
+                  "type": "number",
+                  "description": "Largest bone rotation in degrees."
+                },
+                "worstBone": {
+                  "type": "string",
+                  "description": "The bone with the largest rotation."
+                }
+              }
+            },
+            "feet": {
+              "type": "array",
+              "description": "One entry per foot bone.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "bone": {
+                    "type": "string",
+                    "description": "Foot bone."
+                  },
+                  "lowest": {
+                    "type": "number",
+                    "description": "Its lowest height in cm."
+                  },
+                  "contacts": {
+                    "type": "array",
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "number"
+                      }
+                    },
+                    "description": "Planted intervals as [start, end] in seconds (at most 32)."
+                  },
+                  "plantedRatio": {
+                    "type": "number",
+                    "description": "Share of sampled frames the foot is planted (0-1)."
+                  },
+                  "plantedSpeed": {
+                    "type": "number",
+                    "description": "Average horizontal speed of the planted foot in cm/s: the ground speed an in-place clip implies, or foot slide on a root-motion clip."
+                  }
+                }
+              }
+            },
+            "pops": {
+              "type": "array",
+              "description": "The three bones whose rotation spikes fastest: a pop shows as one far above the rest.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "bone": {
+                    "type": "string",
+                    "description": "Bone."
+                  },
+                  "time": {
+                    "type": "number",
+                    "description": "When, in seconds."
+                  },
+                  "degreesPerSecond": {
+                    "type": "number",
+                    "description": "Its rotation speed there."
+                  }
+                }
+              }
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Analyze an Animation Sequence's motion from its own frames: how far and fast the root travels and turns, when each foot is planted and how fast a planted foot still moves, how closely the last frame meets the first, and the bones with the sharpest rotation spikes.",
+          "input": {
+            "action": "analyze_animation",
+            "assetPath": "/Game/Anims/A_Run"
+          },
+          "output": {
+            "success": true,
+            "message": "A_Run: 0.70 s, 22 frames; the root travels 0.0 cm (0.0 cm/s); 2 foot bone(s); loop seam 0.05 cm, 0.4 deg.",
+            "length": 0.7,
+            "frames": 22,
+            "frameRate": 30,
+            "samples": 22,
+            "rootMotion": {
+              "enabled": false,
+              "displacement": [
+                0,
+                0,
+                0
+              ],
+              "distance": 0,
+              "averageSpeed": 0,
+              "peakSpeed": 0,
+              "turn": 0
+            },
+            "loop": {
+              "positionError": 0.05,
+              "rotationError": 0.4,
+              "worstBone": "hand_r"
+            },
+            "feet": [
+              {
+                "bone": "foot_l",
+                "lowest": 2.1,
+                "contacts": [
+                  [
+                    0,
+                    0.27
+                  ]
+                ],
+                "plantedRatio": 0.41,
+                "plantedSpeed": 381.5
+              },
+              {
+                "bone": "foot_r",
+                "lowest": 2.1,
+                "contacts": [
+                  [
+                    0.33,
+                    0.6
+                  ]
+                ],
+                "plantedRatio": 0.41,
+                "plantedSpeed": 379.9
+              }
+            ],
+            "pops": [
+              {
+                "bone": "foot_l",
+                "time": 0.3,
+                "degreesPerSecond": 912
+              }
+            ]
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [
+          "EditorScriptingUtilities"
+        ],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "read",
+        "idempotency": "idempotent",
+        "longRunning": false,
+        "safeToRetry": true
+      },
+      "policy": {
+        "requiredScope": "read",
+        "consent": "none",
+        "dataAccess": "project-read"
+      },
+      "cost": {
+        "latency": "interactive",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "animation_physics",
+        "dispatchAction": "analyze_animation"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "62dbc61a78eaceb7302ab0a6dd353d584e6799190301f7099b6010895a6ae20a",
+        "content": "a64655369c7d428ac83c262b9162245b1eb9d919571b567dd077e20b190dbc7e"
+      }
+    },
     {
       "id": "animation_physics.bind_cloth_to_skeletal_mesh",
       "aliases": [

@@ -93,5 +93,6 @@ export const corpus: readonly CorpusCase[] = [
   { id: 'plain.depth_pass', kind: 'exact', intent: 'write a depth map of the view', expected: { tool: 'inspect', action: 'capture_passes' }, allowedAlternatives: [] },
   { id: 'plain.control_rig_node', kind: 'exact', intent: 'add a node to the control rig', expected: { tool: 'animation_physics', action: 'edit_control_rig' }, allowedAlternatives: [] },
   { id: 'plain.anim_ik_node', kind: 'exact', intent: 'add a two bone ik node to the animation blueprint', expected: { tool: 'manage_blueprint', action: 'create_node' }, allowedAlternatives: [{ tool: 'manage_blueprint', action: 'add_node' }] },
+  { id: 'plain.foot_contacts', kind: 'exact', intent: 'when do the feet touch the ground in this run animation', expected: { tool: 'animation_physics', action: 'analyze_animation' }, allowedAlternatives: [] },
   { id: 'n.near_tie_del', kind: 'near_tie_destructive', intent: 'delete the selected object', expected: { tool: 'control_actor', action: 'delete' }, allowedAlternatives: [{ tool: 'manage_level', action: 'delete_level' }, { tool: 'manage_asset', action: 'delete_asset' }] },
 ];

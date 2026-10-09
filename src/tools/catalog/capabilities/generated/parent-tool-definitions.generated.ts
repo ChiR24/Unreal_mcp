@@ -70,7 +70,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "assetPath": {
           "type": "string",
-          "description": "Canonical /Game asset path."
+          "description": "Animation Sequence asset path, e.g. /Game/Anims/A_Run (a montage or blend space is refused: analyze the sequences it plays)."
         },
         "assetType": {
           "type": "string",
@@ -254,6 +254,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Name of the created physics constraint."
         },
+        "contactHeight": {
+          "type": "number",
+          "description": "cm above a foot's lowest point that still counts as planted (default 5)."
+        },
         "controlType": {
           "type": "string",
           "enum": [
@@ -406,6 +410,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             }
           },
           "description": "Engine settings: maxRPM, maxTorque, gears (forward gear count)."
+        },
+        "feet": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Foot bones to check (default every bone whose name holds foot but not ik, e.g. foot_l and foot_r)."
         },
         "forceRootLock": {
           "type": "boolean",
@@ -603,6 +614,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "mass": {
           "type": "number",
           "description": "Mass value."
+        },
+        "maxSamples": {
+          "type": "number",
+          "description": "Frames sampled, spread evenly with the first and last always in (default 300, at most 2000; a shorter clip samples every frame)."
         },
         "maxValue": {
           "type": "number",
@@ -1222,6 +1237,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "skin_mesh_to_skeleton",
             "configure_anim_graph_node",
             "get_animation_info",
+            "analyze_animation",
             "cleanup",
             "create_skeleton",
             "edit_skeleton",
@@ -1481,9 +1497,49 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "steps: the step that failed (0-based); the ones before it were applied, compiled and saved."
         },
+        "feet": {
+          "type": "array",
+          "description": "One entry per foot bone.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "bone": {
+                "type": "string",
+                "description": "Foot bone."
+              },
+              "lowest": {
+                "type": "number",
+                "description": "Its lowest height in cm."
+              },
+              "contacts": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  }
+                },
+                "description": "Planted intervals as [start, end] in seconds (at most 32)."
+              },
+              "plantedRatio": {
+                "type": "number",
+                "description": "Share of sampled frames the foot is planted (0-1)."
+              },
+              "plantedSpeed": {
+                "type": "number",
+                "description": "Average horizontal speed of the planted foot in cm/s: the ground speed an in-place clip implies, or foot slide on a root-motion clip."
+              }
+            }
+          }
+        },
         "frameRate": {
           "type": "number",
-          "description": "Numeric parameter."
+          "description": "Frames per second."
+        },
+        "frames": {
+          "type": "number",
+          "description": "Frames (sampled keys) in the sequence."
         },
         "hasPhysicsAsset": {
           "type": "boolean",
@@ -1513,7 +1569,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "length": {
           "type": "number",
-          "description": "Numeric parameter."
+          "description": "Length in seconds."
         },
         "links": {
           "type": "array",
@@ -1537,6 +1593,25 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             },
             "z": {
               "type": "number"
+            }
+          }
+        },
+        "loop": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Last frame against the first, every bone but the root in its parent's space: near 0 is a clean loop.",
+          "properties": {
+            "positionError": {
+              "type": "number",
+              "description": "Largest bone offset in cm."
+            },
+            "rotationError": {
+              "type": "number",
+              "description": "Largest bone rotation in degrees."
+            },
+            "worstBone": {
+              "type": "string",
+              "description": "The bone with the largest rotation."
             }
           }
         },
@@ -1678,6 +1753,28 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Canonical /Game PhysicsAsset path."
         },
+        "pops": {
+          "type": "array",
+          "description": "The three bones whose rotation spikes fastest: a pop shows as one far above the rest.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "bone": {
+                "type": "string",
+                "description": "Bone."
+              },
+              "time": {
+                "type": "number",
+                "description": "When, in seconds."
+              },
+              "degreesPerSecond": {
+                "type": "number",
+                "description": "Its rotation speed there."
+              }
+            }
+          }
+        },
         "poseCount": {
           "type": "number",
           "description": "Poses in the asset."
@@ -1720,6 +1817,40 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Morph targets the mesh already had and were replaced."
         },
+        "rootMotion": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "The root bone's path in component space (in-place clips stay at 0).",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Whether the sequence has root motion enabled."
+            },
+            "displacement": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "description": "From the first to the last frame, [x, y, z] in cm."
+            },
+            "distance": {
+              "type": "number",
+              "description": "Path length in cm."
+            },
+            "averageSpeed": {
+              "type": "number",
+              "description": "cm/s over the clip."
+            },
+            "peakSpeed": {
+              "type": "number",
+              "description": "Fastest frame-to-frame speed in cm/s."
+            },
+            "turn": {
+              "type": "number",
+              "description": "Yaw change in degrees."
+            }
+          }
+        },
         "rotation": {
           "type": "object",
           "additionalProperties": false,
@@ -1735,6 +1866,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "type": "number"
             }
           }
+        },
+        "samples": {
+          "type": "number",
+          "description": "Frames sampled."
         },
         "saved": {
           "type": "boolean",

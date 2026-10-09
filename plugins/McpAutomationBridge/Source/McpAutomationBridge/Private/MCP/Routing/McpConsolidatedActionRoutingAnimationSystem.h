@@ -29,7 +29,7 @@ inline const TArray<FString>& AnimationAuthoring()
 		TEXT("set_anim_graph_node_value"), TEXT("create_control_rig"),
 		TEXT("edit_control_rig"), TEXT("get_control_rig"), TEXT("list_rig_units"),
 		TEXT("create_ik_rig"), TEXT("create_ik_retargeter"), TEXT("set_retarget_chain_mapping"),
-		TEXT("get_animation_info")
+		TEXT("get_animation_info"), TEXT("analyze_animation")
 	};
 	return Actions;
 }

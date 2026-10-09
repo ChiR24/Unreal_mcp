@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <summary><b>✨ Added</b></summary>
 
 - **Animation graph nodes by class**: `create_node` and `add_node` take an animation node's short class name (`TwoBoneIK`, `Two Bone IK`) in an AnimGraph or a state's graph, and `inspect_graph` `info: node_types` takes `filter` (`IK` lists the IK nodes).
+- **`animation_physics` `analyze_animation`**: an Animation Sequence's motion read from its own frames: how far and fast the root travels and turns, each foot's planted intervals and planted speed, the loop seam, and the sharpest rotation spikes.
 
 </details>
 

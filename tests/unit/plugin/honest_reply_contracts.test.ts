@@ -1149,6 +1149,20 @@ describe('Make and Break nodes of structs with native functions', () => {
   });
 });
 
+describe('analyze_animation reads a sequence from its own frames', () => {
+  // get_animation_info gave length, notifies and curves only; how a clip moves could not be read without playing it.
+  it('samples every frame up to the cap, the first and last always in, with the root motion left on the root', () => {
+    const analysis = code('AnimationAuthoring', 'Analysis', 'McpAutomationBridge_AnimationAnalysis.cpp');
+    expect(analysis).toContain('const int32 Frame = FMath::RoundToInt(double(Sample) * (Keys - 1) / (Count - 1));');
+    expect(analysis).toContain('Options.bExtractRootMotion = false;');
+    expect(analysis).toContain('UAnimPoseExtensions::GetAnimPoseAtFrame(Sequence, Frame, Options, Pose);');
+    // A foot is planted within contactHeight of its lowest point; a montage is refused, not half-read.
+    expect(analysis).toContain('Path[Index].Z <= Lowest + ContactHeight');
+    expect(analysis).toContain('TEXT("NOT_A_SEQUENCE")');
+    expect(analysis).toContain('McpHandlerUtils::MarkNoAssetsChanged(Response);');
+  });
+});
+
 describe('animation graph nodes by class', () => {
   // create_node took only a full AnimGraphNode_ class name, and put a Sequence Player in an EventGraph, where it
   // compiled clean and never ran.

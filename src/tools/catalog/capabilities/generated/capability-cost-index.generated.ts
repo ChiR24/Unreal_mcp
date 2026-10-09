@@ -32,6 +32,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "animation_physics::add_state_machine": "interactive|low",
   "animation_physics::add_sync_marker": "interactive|low",
   "animation_physics::add_transition": "interactive|low",
+  "animation_physics::analyze_animation": "interactive|low",
   "animation_physics::assign_cloth_asset_to_mesh": "long-running|high",
   "animation_physics::auto_skin_weights": "long-running|high",
   "animation_physics::bind_cloth_to_skeletal_mesh": "long-running|high",
@@ -1556,4 +1557,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1543;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1544;

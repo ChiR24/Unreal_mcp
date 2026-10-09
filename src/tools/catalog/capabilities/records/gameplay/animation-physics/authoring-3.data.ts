@@ -128,6 +128,43 @@ export const ANIM_AUTHORED_3: readonly CapabilityRecordSource[] = [
     effect: 'read', latency: 'instant', resources: 'low', plugins: ESU,
     outputProps: { length: P.num_, frameRate: P.num_ }, outputRequired: [],
     exampleInput: { action: 'get_animation_info', assetPath: '/Game/A_Run' }, exampleOutput: { success: true, message: 'Animation info', length: 1.0, frameRate: 30 } }),
+  // get_animation_info gave an animation's length, notifies and curves, never how it moves.
+  buildRecord({ parentTool: T, id: `${T}.analyze_animation`, action: 'analyze_animation', family: F,
+    topics: ['analyze animation', 'foot contacts', 'foot sliding', 'root motion speed', 'loop seam', 'animation pops', 'footstep timing'],
+    summary: 'Analyze an Animation Sequence\'s motion from its own frames: how far and fast the root travels and turns, when each foot is planted and how fast a planted foot still moves, how closely the last frame meets the first, and the bones with the sharpest rotation spikes.',
+    whenToUse: ['Footstep notifies must go where the feet land (feet[].contacts are the planted intervals in seconds).', 'A walk or run must match the character\'s movement speed: an in-place clip\'s plantedSpeed is the ground speed it implies; a root-motion clip\'s should be near 0.', 'A clip must be checked for a clean loop or for pops before it is used.'],
+    whenNotToUse: ['Only the length, notifies or curves are needed (use get_animation_info).', 'A character playing in a running game must be measured (use control_actor get_transform motion).'],
+    inputProps: {
+      assetPath: str('Animation Sequence asset path, e.g. /Game/Anims/A_Run (a montage or blend space is refused: analyze the sequences it plays).'),
+      feet: { type: 'array', items: { type: 'string' }, description: 'Foot bones to check (default every bone whose name holds foot but not ik, e.g. foot_l and foot_r).' },
+      contactHeight: num('cm above a foot\'s lowest point that still counts as planted (default 5).'),
+      maxSamples: num('Frames sampled, spread evenly with the first and last always in (default 300, at most 2000; a shorter clip samples every frame).'),
+    },
+    required: ['assetPath'],
+    outputProps: {
+      length: num('Length in seconds.'), frames: num('Frames (sampled keys) in the sequence.'), frameRate: num('Frames per second.'), samples: num('Frames sampled.'),
+      rootMotion: { type: 'object', additionalProperties: false, description: 'The root bone\'s path in component space (in-place clips stay at 0).', properties: {
+        enabled: { type: 'boolean', description: 'Whether the sequence has root motion enabled.' },
+        displacement: { type: 'array', items: { type: 'number' }, description: 'From the first to the last frame, [x, y, z] in cm.' },
+        distance: num('Path length in cm.'), averageSpeed: num('cm/s over the clip.'), peakSpeed: num('Fastest frame-to-frame speed in cm/s.'), turn: num('Yaw change in degrees.') } },
+      loop: { type: 'object', additionalProperties: false, description: 'Last frame against the first, every bone but the root in its parent\'s space: near 0 is a clean loop.', properties: {
+        positionError: num('Largest bone offset in cm.'), rotationError: num('Largest bone rotation in degrees.'), worstBone: { type: 'string', description: 'The bone with the largest rotation.' } } },
+      feet: { type: 'array', description: 'One entry per foot bone.', items: { type: 'object', additionalProperties: false, properties: {
+        bone: { type: 'string', description: 'Foot bone.' }, lowest: num('Its lowest height in cm.'),
+        contacts: { type: 'array', items: { type: 'array', items: { type: 'number' } }, description: 'Planted intervals as [start, end] in seconds (at most 32).' },
+        plantedRatio: num('Share of sampled frames the foot is planted (0-1).'),
+        plantedSpeed: num('Average horizontal speed of the planted foot in cm/s: the ground speed an in-place clip implies, or foot slide on a root-motion clip.') } } },
+      pops: { type: 'array', description: 'The three bones whose rotation spikes fastest: a pop shows as one far above the rest.', items: { type: 'object', additionalProperties: false, properties: {
+        bone: { type: 'string', description: 'Bone.' }, time: num('When, in seconds.'), degreesPerSecond: num('Its rotation speed there.') } } },
+    },
+    outputRequired: [],
+    effect: 'read', latency: 'interactive', resources: 'low', plugins: ESU,
+    exampleInput: { action: 'analyze_animation', assetPath: '/Game/Anims/A_Run' },
+    exampleOutput: { success: true, message: 'A_Run: 0.70 s, 22 frames; the root travels 0.0 cm (0.0 cm/s); 2 foot bone(s); loop seam 0.05 cm, 0.4 deg.', length: 0.7, frames: 22, frameRate: 30, samples: 22,
+      rootMotion: { enabled: false, displacement: [0, 0, 0], distance: 0, averageSpeed: 0, peakSpeed: 0, turn: 0 },
+      loop: { positionError: 0.05, rotationError: 0.4, worstBone: 'hand_r' },
+      feet: [{ bone: 'foot_l', lowest: 2.1, contacts: [[0, 0.27]], plantedRatio: 0.41, plantedSpeed: 381.5 }, { bone: 'foot_r', lowest: 2.1, contacts: [[0.33, 0.6]], plantedRatio: 0.41, plantedSpeed: 379.9 }],
+      pops: [{ bone: 'foot_l', time: 0.3, degreesPerSecond: 912 }] } }),
   buildRecord({ parentTool: T, id: `${T}.cleanup`, action: 'cleanup', topics: ['clean up test animation assets'], family: F,
     summary: 'Delete the listed transient animation authoring assets.', whenToUse: ['Reset authoring session.'], whenNotToUse: ['Persist work.'],
     inputProps: { artifacts: A.artifacts }, required: ['artifacts'],

@@ -114,6 +114,10 @@ void AddBlendSpaceInfo(const UBlendSpace* BlendSpace, bool bIs1D, const TSharedP
 
 TSharedPtr<FJsonObject> HandleAnimationInfoActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response)
 {
+    if (SubAction == TEXT("analyze_animation"))
+    {
+        return HandleAnalyzeAnimation(Params, Response);
+    }
     if (SubAction != TEXT("get_animation_info"))
     {
         return nullptr;
