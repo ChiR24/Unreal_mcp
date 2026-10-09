@@ -22,6 +22,8 @@ const INPUT_ACTION_PATH = `${TEST_FOLDER}/${INPUT_ACTION_NAME}`;
 const ENGINE_CUBE_MESH = '/Engine/BasicShapes/Cube.Cube';
 const ENGINE_BASIC_MATERIAL = '/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial';
 const ENGINE_DEFAULT_TEXTURE = '/Engine/EngineResources/DefaultTexture.DefaultTexture';
+const ENGINE_SOUND = '/Engine/EditorSounds/Notifications/CompileSuccess.CompileSuccess';
+const SOUND_BP_NAME = `BP_SoundProbe_${ts}`;
 
 const testCases = [
   // === SETUP ===
@@ -288,6 +290,12 @@ const testCases = [
     { edit: 'create_node', id: 'first', nodeType: 'CallFunction', memberName: 'PrintString', posX: 4000, posY: 4000 },
     { edit: 'create_node', id: 'second', nodeType: 'CallFunction', memberName: 'PrintString', posX: 4000, posY: 4000 },
   ] }, expected: 'success', assertions: [{ path: 'structuredContent.result.succeeded', equals: 2, label: 'both steps ran' }, { path: 'structuredContent.result.results.1.placementWarning', includes: 'was placed at', label: 'the second step names where it went' }] },
+
+  // === BATCH: a compile names a sound played at a location with no attenuation, heard at any distance ===
+  { scenario: 'Setup: create a sound probe blueprint', toolName: 'manage_blueprint', arguments: { action: 'create_blueprint', name: SOUND_BP_NAME, path: TEST_FOLDER, parentClass: 'Actor' }, expected: 'success|already exists' },
+  { scenario: 'BATCH: a compile warns about a sound played at a location with no attenuation', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: `${TEST_FOLDER}/${SOUND_BP_NAME}`, graphName: 'EventGraph', operations: [
+    { edit: 'create_node', id: 'sound', nodeType: 'CallFunction', memberName: 'PlaySoundAtLocation', pinDefaults: { Sound: ENGINE_SOUND } },
+  ] }, expected: 'success', assertions: [{ path: 'structuredContent.result.diagnostics.0.message', includes: 'no attenuation', label: 'the compile names the sound heard everywhere' }] },
 
   // === QUERY: find_text reads what the assets contain (search_assets matches names only) ===
   { scenario: 'QUERY: find_text finds a graph literal', toolName: 'manage_asset', arguments: { action: 'find_text', searchText: 'CONSTRUCTED', packagePaths: [TEST_FOLDER], includeLevel: false, limit: 5 }, expected: 'success', assertions: [{ path: 'structuredContent.result.matches', includesObject: { field: 'InString', text: 'constructed' }, label: 'PrintString literal found' }] },

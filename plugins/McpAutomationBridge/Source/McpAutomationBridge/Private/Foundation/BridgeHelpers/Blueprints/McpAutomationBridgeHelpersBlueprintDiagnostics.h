@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintSoundCheck.h"
 
 #include "Engine/Blueprint.h"
 #include "Engine/BlueprintGeneratedClass.h"
@@ -139,6 +140,7 @@ inline bool McpCompileBlueprintWithDiagnostics(
                         McpBlueprintStatusName(Blueprint->Status));
     Out->SetNumberField(TEXT("errorCount"), Results.NumErrors);
     Out->SetNumberField(TEXT("warningCount"), Results.NumWarnings);
+    McpAddUnattenuatedSoundWarnings(Blueprint, Diagnostics, MaxDiagnostics);
     if (Diagnostics.Num() > 0) {
       Out->SetArrayField(TEXT("diagnostics"), Diagnostics);
     }
