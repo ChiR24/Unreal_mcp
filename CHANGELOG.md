@@ -114,6 +114,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **A graph batch step with an unknown edit says so.** `edit_graph` answered "each step needs `edit`" to a step whose `edit` it did not know (`set_pin_default`); it now names the edit it refused.
 - **A spline read names both point spaces.** `get_splines_info` with `actorName` gave each point relative to the actor while its listing gave world points, and the spline edits' `position` did not say which space it takes; each point now carries `worldLocation` beside its local `location`, and `position` is described as relative to the actor.
 - **The running game's role names reach every actor lookup.** `raycast_world` `ignoreActors` refused `PlayerPawn`, which `control_actor` and `set_property` take while Play In Editor runs; a name no actor has now falls back to `PlayerPawn`, `PlayerController`, `GameMode` and the other roles there too.
+- **A custom expression update does not repeat its code.** `update_custom_expression` answered with the whole HLSL it was sent.
 
 </details>
 

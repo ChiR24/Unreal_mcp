@@ -52,7 +52,6 @@ bool HandleUpdateCustomExpression(UMcpAutomationBridgeSubsystem* Bridge, const F
 
     TSharedPtr<FJsonObject> Result = McpMaterialHostResult(HostOuter);
     Result->SetStringField(TEXT("nodeId"), NodeId);
-    Result->SetStringField(TEXT("code"), CustomExpr->Code);
     Result->SetNumberField(TEXT("inputCount"), CustomExpr->Inputs.Num());
     Result->SetNumberField(TEXT("additionalOutputCount"), CustomExpr->AdditionalOutputs.Num());
     FString Message = TEXT("Custom expression updated.");

@@ -1543,6 +1543,13 @@ describe('the shared actor lookup takes the running game\'s role names', () => {
   });
 });
 
+// update_custom_expression answered with the whole HLSL it was sent.
+describe('a custom expression update does not echo its code', () => {
+  it('leaves code out of the reply', () => {
+    expect(code('MaterialAuthoring', 'Nodes', 'McpAutomationBridge_MaterialAuthoringHandlersUpdateCustomExpression.cpp')).not.toContain('SetStringField(TEXT("code")');
+  });
+});
+
 // get_splines_info with actorName gave local points while its listing gave world ones; an ocean shoreline read as world
 // was off by the actor's location.
 describe('a spline read names both point spaces', () => {
