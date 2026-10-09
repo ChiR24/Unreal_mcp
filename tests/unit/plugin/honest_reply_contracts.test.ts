@@ -1695,3 +1695,26 @@ describe('a Material Parameter Collection can be made and read', () => {
     expect(node).toMatch(/CastChecked<UMaterialExpressionCollectionParameter>\(NewExpr\)->Collection = NodeCollection;\s*NewExpr->PostEditChange\(\);/u);
   });
 });
+
+// A merged mesh (a library pack imported as one asset) could only be placed whole.
+describe('split_mesh makes one static mesh per part', () => {
+  it('groups the triangles itself, checks every name and the object count before it creates anything, and keeps each part to the slots it uses', () => {
+    const split = code('Geometry', 'Support', 'McpAutomationBridge_GeometrySplitMesh.cpp');
+    // An imported mesh came apart into ten thousand loose faces, and the pooled Geometry Script split raised an ensure
+    // past a thousand pieces and let them all go.
+    expect(split).not.toContain('UDynamicMeshPool');
+    expect(split).not.toContain('SplitMeshByComponents');
+    expect(split).toContain('Components.FindConnectedTriangles();');
+    expect(split, 'swept along X').toContain('for (int32 J = I + 1; J < Order.Num() && Pieces[Order[J]].Box.Min.X <= Reach.Max.X; ++J)');
+    expect(split).toContain('UE::Geometry::FDynamicSubmesh3 Submesh(&Mesh, Group.Triangles);');
+    expect(split.indexOf('McpAssetExists(Path)')).toBeLessThan(split.indexOf('CreateNewStaticMeshAssetFromMesh('));
+    expect(split.indexOf('Kept.Num() > MaxParts')).toBeLessThan(split.indexOf('CreateNewStaticMeshAssetFromMesh('));
+    // dryRun answers the meshes and creates none, so a split can be tuned first.
+    expect(split.indexOf('if (bDryRun)')).toBeLessThan(split.indexOf('CreateNewStaticMeshAssetFromMesh('));
+    expect(split).toContain('UGeometryScriptLibrary_MeshMaterialFunctions::CompactMaterialIDs(Part, SourceMaterials, PartMaterials);');
+    expect(split, 'small objects go after grouping, and the largest first, so a repeat of a larger one is the one dropped')
+      .toContain('Groups.Sort([](const FMcpTriangleGroup& A, const FMcpTriangleGroup& B) { return A.Triangles.Num() > B.Triangles.Num(); });');
+    const handlers = code('Geometry', 'McpAutomationBridge_GeometryHandlers.cpp');
+    expect(handlers).toContain('if (SubAction == TEXT("split_mesh")) return HandleSplitMesh(this, RequestId, Payload, RequestingSocket);');
+  });
+});

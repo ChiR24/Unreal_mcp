@@ -1134,6 +1134,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_geometry::simplify_mesh": "long-running|high",
   "manage_geometry::smooth": "interactive|medium",
   "manage_geometry::spherify": "interactive|medium",
+  "manage_geometry::split_mesh": "interactive|medium",
   "manage_geometry::split_normals": "interactive|medium",
   "manage_geometry::stretch": "interactive|medium",
   "manage_geometry::subdivide": "long-running|high",
@@ -1547,4 +1548,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1534;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1535;

@@ -10,7 +10,7 @@
  * pure-ASCII JSON payload carrying the COMPLETE CapabilityRecord for native
  * discovery (aliases, legacyIds, discovery, schemas.input/output, examples,
  * availability, behavior/policy, normalization, deprecation, hashes).
- * 23 shards, 396 records total.
+ * 23 shards, 397 records total.
  *
  * Chunks are bounded so no single string literal approaches the MSVC 65,535-byte
  * ceiling; concatenating a shard's chunks in order yields its exact JSON.
@@ -32,7 +32,7 @@ namespace Detail
 	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_COMBAT_CHUNKS[];	// manage_combat (5)
 	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_EFFECT_CHUNKS[];	// manage_effect (13)
 	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_GAS_CHUNKS[];	// manage_gas (6)
-	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_GEOMETRY_CHUNKS[];	// manage_geometry (15)
+	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_GEOMETRY_CHUNKS[];	// manage_geometry (16)
 	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_INTERACTION_CHUNKS[];	// manage_interaction (3)
 	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_INVENTORY_CHUNKS[];	// manage_inventory (6)
 	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_LEVEL_CHUNKS[];	// manage_level (17)
@@ -70,7 +70,7 @@ inline const FMcpCapabilityShard& At(int32 Index)
 		{ TEXT("manage_combat"), Detail::MCP_CAP_SHARD_MANAGE_COMBAT_CHUNKS, 6, 5 },
 		{ TEXT("manage_effect"), Detail::MCP_CAP_SHARD_MANAGE_EFFECT_CHUNKS, 15, 13 },
 		{ TEXT("manage_gas"), Detail::MCP_CAP_SHARD_MANAGE_GAS_CHUNKS, 7, 6 },
-		{ TEXT("manage_geometry"), Detail::MCP_CAP_SHARD_MANAGE_GEOMETRY_CHUNKS, 27, 15 },
+		{ TEXT("manage_geometry"), Detail::MCP_CAP_SHARD_MANAGE_GEOMETRY_CHUNKS, 28, 16 },
 		{ TEXT("manage_interaction"), Detail::MCP_CAP_SHARD_MANAGE_INTERACTION_CHUNKS, 5, 3 },
 		{ TEXT("manage_inventory"), Detail::MCP_CAP_SHARD_MANAGE_INVENTORY_CHUNKS, 8, 6 },
 		{ TEXT("manage_level"), Detail::MCP_CAP_SHARD_MANAGE_LEVEL_CHUNKS, 13, 17 },
@@ -85,7 +85,7 @@ inline const FMcpCapabilityShard& At(int32 Index)
 	return Table[Index];
 }
 
-inline int32 TotalRecordCount() { return 396; }
+inline int32 TotalRecordCount() { return 397; }
 
-inline const TCHAR* CatalogRevision() { return TEXT("2beadb1437b61a5a"); }
+inline const TCHAR* CatalogRevision() { return TEXT("ab107fa7bc9682f4"); }
 }

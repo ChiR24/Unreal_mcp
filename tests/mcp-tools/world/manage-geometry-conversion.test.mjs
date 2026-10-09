@@ -16,6 +16,8 @@ const SETUP = `DM_ConvSetup_${ts}`;
 const CAGE = `DM_ConvCage_${ts}`;
 const SECOND = `DM_ConvSecond_${ts}`;
 const SINGLE = `DM_ConvSingle_${ts}`;
+const PAIR = `DM_ConvPair_${ts}`;
+const SPLIT_FOLDER = `/Game/GeneratedMeshes/Split_${ts}`;
 const MATERIAL = '/Engine/BasicShapes/BasicShapeMaterial';
 const GRID_MATERIAL = '/Engine/EngineMaterials/WorldGridMaterial';
 
@@ -37,6 +39,9 @@ const testCases = [
   { scenario: 'Setup: a cube cage with material ids 0 to 3', toolName: 'manage_geometry', arguments: cage(CAGE, [0, 1, 2, 3, 0, 1]), expected: 'success' },
   { scenario: 'Setup: a second cube cage with material ids 0 to 2', toolName: 'manage_geometry', arguments: cage(SECOND, [0, 0, 1, 1, 2, 2]), expected: 'success' },
   { scenario: 'Setup: a cube cage with only the default material id', toolName: 'manage_geometry', arguments: { action: 'append_polygons', actorName: SINGLE, vertices: CUBE_VERTICES, faces: CUBE_FACES }, expected: 'success' },
+  { scenario: 'Setup: create the actor holding two cubes apart', toolName: 'manage_geometry', arguments: create(PAIR), expected: 'success' },
+  { scenario: 'Setup: the first cube of the pair', toolName: 'manage_geometry', arguments: { action: 'append_polygons', actorName: PAIR, vertices: CUBE_VERTICES, faces: CUBE_FACES }, expected: 'success' },
+  { scenario: 'Setup: the second cube of the pair, 300 along X', toolName: 'manage_geometry', arguments: { action: 'append_polygons', actorName: PAIR, vertices: CUBE_VERTICES.map((v) => ({ ...v, x: v.x + 300 })), faces: CUBE_FACES }, expected: 'success' },
 
   // === CONVERT: a material per slot and a collision choice ===
   {
@@ -64,6 +69,33 @@ const testCases = [
     assertions: [{ path: 'structuredContent.result.collision', equals: 'box', label: 'box collision' }],
   },
 
+  { scenario: 'Setup: bake the pair into one static mesh', toolName: 'manage_geometry', arguments: { action: 'convert_to_static_mesh', actorName: PAIR, outputPath: `Game/GeneratedMeshes/DM_ConvPair_${ts}` }, expected: 'success', timeoutMs: 30000 },
+
+  // === SPLIT: one static mesh per connected part or per material slot ===
+  {
+    scenario: 'SPLIT: split_mesh dryRun answers the two meshes and creates nothing', toolName: 'manage_geometry',
+    arguments: { action: 'split_mesh', meshPath: `/Game/GeneratedMeshes/DM_ConvPair_${ts}`, outputPath: SPLIT_FOLDER, namePrefix: 'SM_Piece', dryRun: true },
+    expected: 'success', timeoutMs: 30000,
+    assertions: [{ path: 'structuredContent.result.meshes', length: 2, label: 'two meshes would be made' }, { path: 'structuredContent.result.meshes.0.exists', equals: false, label: 'and none exists yet' }],
+  },
+  {
+    scenario: 'SPLIT: split_mesh gives one mesh per cube, each standing on its own bottom centre', toolName: 'manage_geometry',
+    arguments: { action: 'split_mesh', meshPath: `/Game/GeneratedMeshes/DM_ConvPair_${ts}`, outputPath: SPLIT_FOLDER, namePrefix: 'SM_Piece', by: 'parts', gap: 2, pivot: 'bottom', maxParts: 8, collision: 'box' },
+    expected: 'success', timeoutMs: 30000,
+    assertions: [
+      { path: 'structuredContent.result.meshes', length: 2, label: 'two cubes, two meshes' },
+      { path: 'structuredContent.result.meshes.0.offset.2', equals: -50, label: 'the pivot is the bottom of the cube' },
+    ],
+  },
+  {
+    scenario: 'SPLIT: split_mesh by material gives one mesh per material slot', toolName: 'manage_geometry',
+    arguments: { action: 'split_mesh', meshPath: `/Game/GeneratedMeshes/DM_ConvCage_${ts}`, outputPath: SPLIT_FOLDER, namePrefix: 'SM_Slot', by: 'material', pivot: 'center', minTriangles: 1, dropRepeats: false, collision: 'none' },
+    expected: 'success', timeoutMs: 30000,
+    assertions: [{ path: 'structuredContent.result.meshes', length: 4, label: 'material ids 0 to 3' }],
+  },
+  { scenario: 'SPLIT: a name already taken refuses the split before anything is made', toolName: 'manage_geometry', arguments: { action: 'split_mesh', meshPath: `/Game/GeneratedMeshes/DM_ConvPair_${ts}`, outputPath: SPLIT_FOLDER, namePrefix: 'SM_Piece' }, expected: 'error|ASSET_EXISTS' },
+  { scenario: 'SPLIT: more parts than maxParts refuses the split', toolName: 'manage_geometry', arguments: { action: 'split_mesh', meshPath: `/Game/GeneratedMeshes/DM_ConvPair_${ts}`, outputPath: SPLIT_FOLDER, namePrefix: 'SM_Many', maxParts: 1 }, expected: 'error|INVALID_ARGUMENT' },
+
   // === REFUSALS: before anything is created ===
   { scenario: 'CONVERT: a material path that does not load is refused', toolName: 'manage_geometry', arguments: { action: 'convert_to_static_mesh', actorName: CAGE, outputPath: `Game/GeneratedMeshes/DM_ConvBad_${ts}`, materials: ['/Game/DoesNotExist/M_Nope'] }, expected: 'error|INVALID_MATERIALS' },
   { scenario: 'CONVERT: a materials list longer than the slot count is refused', toolName: 'manage_geometry', arguments: { action: 'convert_to_nanite', actorName: SINGLE, outputPath: `Game/GeneratedMeshes/DM_ConvLong_${ts}`, materials: [MATERIAL, GRID_MATERIAL] }, expected: 'error|INVALID_MATERIALS' },
@@ -72,7 +104,7 @@ const testCases = [
   // === CLEANUP ===
   // The first edit_dynamic_mesh case's fold twin created a second actor under the SETUP label, so it is deleted twice.
   { scenario: 'Cleanup: delete the fold twin copy of the setup mesh', toolName: 'control_actor', arguments: { action: 'delete', actorName: SETUP }, expected: 'success|not found' },
-  ...[SETUP, CAGE, SECOND, SINGLE].map((actorName) => (
+  ...[SETUP, CAGE, SECOND, SINGLE, PAIR].map((actorName) => (
     { scenario: `Cleanup: delete ${actorName}`, toolName: 'control_actor', arguments: { action: 'delete', actorName }, expected: 'success|not found' }
   )),
 ];

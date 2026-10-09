@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `2beadb1437b61a5a`
+Catalog revision: `ab107fa7bc9682f4`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 396 capabilities across
+The catalog declares 397 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -49,7 +49,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_combat` | 5 | 1 | 4 | 0 | manage combat |
 | `manage_effect` | 13 | 2 | 10 | 1 | manage effect |
 | `manage_gas` | 6 | 1 | 5 | 0 | manage gas |
-| `manage_geometry` | 15 | 2 | 13 | 0 | world |
+| `manage_geometry` | 16 | 2 | 14 | 0 | world |
 | `manage_interaction` | 3 | 1 | 2 | 0 | manage interaction |
 | `manage_inventory` | 6 | 1 | 5 | 0 | manage inventory |
 | `manage_level` | 17 | 4 | 12 | 1 | level |
@@ -62,7 +62,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-64 of 396 capabilities require consent.
+64 of 397 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -398,6 +398,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_geometry.mirror` | `manage_geometry` | `mirror` | write | write | none | `manage_geometry.mirror` |
 | `manage_geometry.model_mesh` | `manage_geometry` | `extrude` | write | write | none | `manage_geometry.model_mesh` `manage_geometry.extrude` `manage_geometry.inset` `manage_geometry.outset` `manage_geometry.offset_faces` `manage_geometry.bevel` `manage_geometry.chamfer` `manage_geometry.bridge` `manage_geometry.loft` `manage_geometry.sweep` `manage_geometry.revolve` `manage_geometry.shell` `manage_geometry.loop_cut` `manage_geometry.edge_split` `manage_geometry.poke` `manage_geometry.quadrangulate` `manage_geometry.extrude_along_spline` `manage_geometry.duplicate_along_spline` |
 | `manage_geometry.optimize_mesh` | `manage_geometry` | `simplify_mesh` | write | write | none | `manage_geometry.optimize_mesh` `manage_geometry.simplify_mesh` `manage_geometry.remesh_uniform` `manage_geometry.remesh_voxel` `manage_geometry.subdivide` `manage_geometry.morphology` `manage_geometry.merge_vertices` `manage_geometry.weld_vertices` `manage_geometry.remove_degenerates` `manage_geometry.fill_holes` `manage_geometry.flip_normals` `manage_geometry.recalculate_normals` `manage_geometry.recompute_tangents` |
+| `manage_geometry.split_mesh` | `manage_geometry` | `split_mesh` | write | write | none | `manage_geometry.split_mesh` |
 | `manage_interaction.configure_interactable` | `manage_interaction` | `configure_door_properties` | write | write | none | `manage_interaction.configure_interactable` `manage_interaction.configure_door_properties` `manage_interaction.configure_chest_properties` `manage_interaction.configure_switch_properties` `manage_interaction.configure_interaction_trace` |
 | `manage_interaction.create_interactable` | `manage_interaction` | `create_door_actor` | write | write | none | `manage_interaction.create_interactable` `manage_interaction.create_door_actor` `manage_interaction.create_chest_actor` `manage_interaction.create_switch_actor` `manage_interaction.create_lever_actor` `manage_interaction.create_trigger_actor` `manage_interaction.create_interactable_interface` `manage_interaction.create_interaction_component` |
 | `manage_interaction.get_interaction_info` | `manage_interaction` | `get_interaction_info` | read | read | none | `manage_interaction.get_interaction_info` |

@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "2beadb1437b61a5a",
-  "recordCount": 396,
+  "catalogRevision": "ab107fa7bc9682f4",
+  "recordCount": 397,
   "records": [
     {
       "id": "animation_physics.bind_cloth_to_skeletal_mesh",
@@ -64542,6 +64542,201 @@
         "algorithm": "sha256",
         "schema": "abd8c5e3e5e593a48de5332a4bec4cca69e49d44c6485fce0d671300d0eded54",
         "content": "e24d1410863557a3258c140dfda4a5a4cda4d749fc37d53c6be6337c69201547"
+      }
+    },
+    {
+      "id": "manage_geometry.split_mesh",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "manage_geometry",
+          "action": "split_mesh"
+        }
+      ],
+      "discovery": {
+        "domain": "world",
+        "family": "optimize",
+        "topics": [
+          "split_mesh",
+          "split mesh",
+          "separate mesh parts",
+          "break a mesh apart",
+          "mesh pack into separate props",
+          "split mesh by material"
+        ],
+        "summary": "Split a static mesh asset into one static mesh per connected part (or per material slot), each with its own pivot, the materials it uses and a collision choice.",
+        "whenToUse": [
+          "A library pack or kit came in as one static mesh and its props must be placed one by one: split it, then place each new mesh (offset says where its pivot stood in the source, so the original layout can be rebuilt).",
+          "A mesh must be separated by material slot (by material)."
+        ],
+        "whenNotToUse": [
+          "A dynamic mesh actor being modelled must become an asset (use convert_to_static_mesh)."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "meshPath": {
+              "type": "string",
+              "description": "The static mesh asset to split; it is not changed."
+            },
+            "by": {
+              "type": "string",
+              "enum": [
+                "parts",
+                "material"
+              ],
+              "description": "parts (default): one mesh per separate object, where connected pieces whose bounds touch or come within gap cm are one object (a crate's planks stay one crate); material: one per material slot."
+            },
+            "gap": {
+              "type": "number",
+              "description": "With by parts: pieces whose bounds come within this many cm of each other are one object (default 2)."
+            },
+            "outputPath": {
+              "type": "string",
+              "description": "Folder for the new meshes (default: the folder of the source mesh)."
+            },
+            "namePrefix": {
+              "type": "string",
+              "description": "Names are <namePrefix>01, <namePrefix>02 ..., largest part first (default <source name>_Part); a name already taken refuses the split before anything is made."
+            },
+            "pivot": {
+              "type": "string",
+              "enum": [
+                "bottom",
+                "center",
+                "source"
+              ],
+              "description": "Each new mesh's pivot: bottom (default), the bottom centre of its bounds, so it stands on what it is placed on; center; or source, the source's own origin."
+            },
+            "minTriangles": {
+              "type": "number",
+              "description": "Objects with fewer triangles are left out (default 12): loose bits, decal cards."
+            },
+            "maxParts": {
+              "type": "number",
+              "description": "More parts than this (default 64) refuses the split with nothing made."
+            },
+            "dropRepeats": {
+              "type": "boolean",
+              "description": "Leave out an object that only repeats a larger one where it stands, such as an LOD copy an importer merged into the mesh (default true)."
+            },
+            "dryRun": {
+              "type": "boolean",
+              "description": "Answer the meshes the split would make (size, triangles, offset, and exists when the name is taken) and create nothing, to tune gap and minTriangles first. A large pack can take longer than one call waits."
+            },
+            "collision": {
+              "type": "string",
+              "enum": [
+                "box",
+                "complex",
+                "none"
+              ],
+              "description": "Collision for the baked asset: box (default) is one box the size of the bounds, which pawns can stand on (on a converted-over asset too); complex uses the render triangles as simple collision too, exact but costly; none gives the asset no collision at all."
+            }
+          },
+          "required": [
+            "action",
+            "meshPath"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "meshPath": {
+              "type": "string",
+              "description": "The source mesh."
+            },
+            "meshes": {
+              "type": "array",
+              "description": "One entry per new mesh, largest first: assetPath, triangles, size [x, y, z], offset [x, y, z] (its pivot in the source's space), slots; saved: false when it could not be written to disk.",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              }
+            },
+            "skippedSmall": {
+              "type": "number",
+              "description": "Objects left out for having fewer than minTriangles triangles."
+            },
+            "droppedRepeats": {
+              "type": "number",
+              "description": "Objects left out as repeats of a larger one."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Split a static mesh asset into one static mesh per connected part (or per material slot), each with its own pivot, the materials it uses and a collision choice.",
+          "input": {
+            "action": "split_mesh",
+            "meshPath": "/Game/Imports/SM_CratePack",
+            "outputPath": "/Game/Props/Crates",
+            "namePrefix": "SM_Crate"
+          },
+          "output": {
+            "success": true
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [
+          "GeometryScripting"
+        ],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "write",
+        "idempotency": "non-idempotent",
+        "longRunning": false,
+        "safeToRetry": false
+      },
+      "policy": {
+        "requiredScope": "write",
+        "consent": "none",
+        "dataAccess": "project-write"
+      },
+      "cost": {
+        "latency": "interactive",
+        "resources": "medium"
+      },
+      "routing": {
+        "parentTool": "manage_geometry",
+        "dispatchAction": "split_mesh"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "ad035081ce63651736e55f4ecd356877edfb702e43f4bbf36c792deeaa8dd79e",
+        "content": "dc13faeced6fe9e650d50aec7965c1a88b926ffb223dde3b950cfe4c18fbab9f"
       }
     },
     {

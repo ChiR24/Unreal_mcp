@@ -15895,6 +15895,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Which boolean mesh variant to run."
         },
+        "by": {
+          "type": "string",
+          "enum": [
+            "parts",
+            "material"
+          ],
+          "description": "parts (default): one mesh per separate object, where connected pieces whose bounds touch or come within gap cm are one object (a crate's planks stay one crate); material: one per material slot."
+        },
         "cap": {
           "type": "boolean",
           "description": "Close open ends: the tube ends of a loft, sweep or extrude along a spline, or for a revolve flat discs from the first and last profile points to the axis (revolve default true)."
@@ -16007,6 +16015,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Distance for offset-style operations."
         },
+        "dropRepeats": {
+          "type": "boolean",
+          "description": "Leave out an object that only repeats a larger one where it stands, such as an LOD copy an importer merged into the mesh (default true)."
+        },
+        "dryRun": {
+          "type": "boolean",
+          "description": "Answer the meshes the split would make (size, triangles, offset, and exists when the name is taken) and create nothing, to tune gap and minTriangles first. A large pack can take longer than one call waits."
+        },
         "edges": {
           "type": "array",
           "items": {
@@ -16081,6 +16097,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "g": {
           "type": "number",
           "description": "Green channel, 0-1."
+        },
+        "gap": {
+          "type": "number",
+          "description": "With by parts: pieces whose bounds come within this many cm of each other are one object (default 2)."
         },
         "groupID": {
           "type": "integer",
@@ -16183,9 +16203,21 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "integer",
           "description": "Hull budget (1 to 64, default 8) when collisionType is convex_decomposition."
         },
+        "maxParts": {
+          "type": "number",
+          "description": "More parts than this (default 64) refuses the split with nothing made."
+        },
+        "meshPath": {
+          "type": "string",
+          "description": "The static mesh asset to split; it is not changed."
+        },
         "midpoint": {
           "type": "number",
           "description": "Texture luminance midpoint for displacement."
+        },
+        "minTriangles": {
+          "type": "number",
+          "description": "Objects with fewer triangles are left out (default 12): loose bits, decal cards."
         },
         "modeling": {
           "type": "string",
@@ -16213,6 +16245,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "name": {
           "type": "string",
           "description": "Name for the new asset or node."
+        },
+        "namePrefix": {
+          "type": "string",
+          "description": "Names are <namePrefix>01, <namePrefix>02 ..., largest part first (default <source name>_Part); a name already taken refuses the split before anything is made."
         },
         "numCuts": {
           "type": "integer",
@@ -16288,6 +16324,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "outputPath": {
           "type": "string",
           "description": "Canonical /Game output asset path."
+        },
+        "pivot": {
+          "type": "string",
+          "enum": [
+            "bottom",
+            "center",
+            "source"
+          ],
+          "description": "Each new mesh's pivot: bottom (default), the bottom centre of its bounds, so it stands on what it is placed on; center; or source, the source's own origin."
         },
         "position": {
           "type": "object",
@@ -17055,6 +17100,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "configure_mesh_lods",
             "convert_to_nanite",
             "convert_to_static_mesh",
+            "split_mesh",
             "get_mesh_info",
             "edit_dynamic_mesh",
             "get_vertex_position"
@@ -17150,6 +17196,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Offset distance used, in cm."
         },
+        "droppedRepeats": {
+          "type": "number",
+          "description": "Objects left out as repeats of a larger one."
+        },
         "elementsModified": {
           "type": "integer",
           "description": "Number of UV elements written."
@@ -17188,6 +17238,19 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "integer"
           },
           "description": "Every material id the mesh carries now, ascending."
+        },
+        "meshPath": {
+          "type": "string",
+          "description": "The source mesh."
+        },
+        "meshes": {
+          "type": "array",
+          "description": "One entry per new mesh, largest first: assetPath, triangles, size [x, y, z], offset [x, y, z] (its pivot in the source's space), slots; saved: false when it could not be written to disk.",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          }
         },
         "message": {
           "type": "string",
@@ -17295,6 +17358,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "skipped": {
           "type": "number",
           "description": "Degenerate or missing triangles that were left alone."
+        },
+        "skippedSmall": {
+          "type": "number",
+          "description": "Objects left out for having fewer than minTriangles triangles."
         },
         "slots": {
           "type": "array",

@@ -11839,6 +11839,7 @@
         "configure_mesh_lods",
         "convert_to_nanite",
         "convert_to_static_mesh",
+        "split_mesh",
         "get_mesh_info",
         "edit_dynamic_mesh",
         "get_vertex_position"
@@ -11856,6 +11857,7 @@
         "baseRadius",
         "blurIterations",
         "booleanOp",
+        "by",
         "cap",
         "center",
         "collision",
@@ -11869,6 +11871,8 @@
         "depthSegments",
         "dimensions",
         "distance",
+        "dropRepeats",
+        "dryRun",
         "edges",
         "edit",
         "enableCollision",
@@ -11878,6 +11882,7 @@
         "floating",
         "frequency",
         "g",
+        "gap",
         "groupID",
         "hardEdgeAngle",
         "height",
@@ -11897,9 +11902,13 @@
         "materialId",
         "materials",
         "maxHullCount",
+        "maxParts",
+        "meshPath",
         "midpoint",
+        "minTriangles",
         "modeling",
         "name",
+        "namePrefix",
         "numCuts",
         "numRings",
         "numSides",
@@ -11910,6 +11919,7 @@
         "optimization",
         "outerRadius",
         "outputPath",
+        "pivot",
         "position",
         "primitive",
         "profile",
@@ -12029,6 +12039,14 @@
             ],
             "description": "Which boolean mesh variant to run."
           },
+          "by": {
+            "type": "string",
+            "enum": [
+              "parts",
+              "material"
+            ],
+            "description": "parts (default): one mesh per separate object, where connected pieces whose bounds touch or come within gap cm are one object (a crate's planks stay one crate); material: one per material slot."
+          },
           "cap": {
             "type": "boolean",
             "description": "Close open ends: the tube ends of a loft, sweep or extrude along a spline, or for a revolve flat discs from the first and last profile points to the axis (revolve default true)."
@@ -12141,6 +12159,14 @@
             "type": "number",
             "description": "Distance for offset-style operations."
           },
+          "dropRepeats": {
+            "type": "boolean",
+            "description": "Leave out an object that only repeats a larger one where it stands, such as an LOD copy an importer merged into the mesh (default true)."
+          },
+          "dryRun": {
+            "type": "boolean",
+            "description": "Answer the meshes the split would make (size, triangles, offset, and exists when the name is taken) and create nothing, to tune gap and minTriangles first. A large pack can take longer than one call waits."
+          },
           "edges": {
             "type": "array",
             "items": {
@@ -12215,6 +12241,10 @@
           "g": {
             "type": "number",
             "description": "Green channel, 0-1."
+          },
+          "gap": {
+            "type": "number",
+            "description": "With by parts: pieces whose bounds come within this many cm of each other are one object (default 2)."
           },
           "groupID": {
             "type": "integer",
@@ -12317,9 +12347,21 @@
             "type": "integer",
             "description": "Hull budget (1 to 64, default 8) when collisionType is convex_decomposition."
           },
+          "maxParts": {
+            "type": "number",
+            "description": "More parts than this (default 64) refuses the split with nothing made."
+          },
+          "meshPath": {
+            "type": "string",
+            "description": "The static mesh asset to split; it is not changed."
+          },
           "midpoint": {
             "type": "number",
             "description": "Texture luminance midpoint for displacement."
+          },
+          "minTriangles": {
+            "type": "number",
+            "description": "Objects with fewer triangles are left out (default 12): loose bits, decal cards."
           },
           "modeling": {
             "type": "string",
@@ -12347,6 +12389,10 @@
           "name": {
             "type": "string",
             "description": "Name for the new asset or node."
+          },
+          "namePrefix": {
+            "type": "string",
+            "description": "Names are <namePrefix>01, <namePrefix>02 ..., largest part first (default <source name>_Part); a name already taken refuses the split before anything is made."
           },
           "numCuts": {
             "type": "integer",
@@ -12422,6 +12468,15 @@
           "outputPath": {
             "type": "string",
             "description": "Canonical /Game output asset path."
+          },
+          "pivot": {
+            "type": "string",
+            "enum": [
+              "bottom",
+              "center",
+              "source"
+            ],
+            "description": "Each new mesh's pivot: bottom (default), the bottom centre of its bounds, so it stands on what it is placed on; center; or source, the source's own origin."
           },
           "position": {
             "type": "object",
@@ -13189,6 +13244,7 @@
               "configure_mesh_lods",
               "convert_to_nanite",
               "convert_to_static_mesh",
+              "split_mesh",
               "get_mesh_info",
               "edit_dynamic_mesh",
               "get_vertex_position"

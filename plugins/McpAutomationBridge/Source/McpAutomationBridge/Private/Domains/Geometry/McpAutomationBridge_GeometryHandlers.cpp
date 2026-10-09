@@ -80,6 +80,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGeometryAction(
     if (SubAction == TEXT("subdivide")) return HandleSubdivide(this, RequestId, Payload, RequestingSocket);
     if (SubAction == TEXT("auto_uv")) return HandleAutoUV(this, RequestId, Payload, RequestingSocket);
     if (SubAction == TEXT("convert_to_static_mesh")) return HandleConvertToStaticMesh(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("split_mesh")) return HandleSplitMesh(this, RequestId, Payload, RequestingSocket);
 
     // Modeling Operations
     if (SubAction == TEXT("extrude")) return HandleExtrude(this, RequestId, Payload, RequestingSocket);
