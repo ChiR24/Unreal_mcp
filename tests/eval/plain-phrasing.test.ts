@@ -9,7 +9,7 @@ describe('plain-phrasing retrieval', () => {
   const cases = retrievalCases().filter((entry) => entry.id.startsWith('plain.'));
 
   it('covers the plain-phrasing corpus section', () => {
-    expect(cases.length).toBe(24);
+    expect(cases.length).toBe(25);
   });
 
   it.each(cases.map((entry) => [entry.id, entry] as const))('%s ranks an accepted capability first', (_id, entry) => {

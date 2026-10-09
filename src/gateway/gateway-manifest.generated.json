@@ -9050,6 +9050,7 @@
         "bind_widget",
         "edit_widget_animation",
         "delete_animation",
+        "get_widget_animation",
         "get_widget_info",
         "add_game_widget",
         "create_widget_template"
@@ -9298,7 +9299,7 @@
           },
           "animationName": {
             "type": "string",
-            "description": "Widget animation name."
+            "description": "The animation to read in full; omitted, every animation is listed with its timing."
           },
           "applyAndSave": {
             "type": "boolean",
@@ -10508,6 +10509,7 @@
               "bind_widget",
               "edit_widget_animation",
               "delete_animation",
+              "get_widget_animation",
               "get_widget_info",
               "add_game_widget",
               "create_widget_template"

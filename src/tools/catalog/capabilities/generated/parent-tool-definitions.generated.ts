@@ -12489,7 +12489,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "animationName": {
           "type": "string",
-          "description": "Widget animation name."
+          "description": "The animation to read in full; omitted, every animation is listed with its timing."
         },
         "applyAndSave": {
           "type": "boolean",
@@ -13699,6 +13699,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "bind_widget",
             "edit_widget_animation",
             "delete_animation",
+            "get_widget_animation",
             "get_widget_info",
             "add_game_widget",
             "create_widget_template"
@@ -13729,6 +13730,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "animationName": {
           "type": "string",
           "description": "Animation created with the piece (the damage indicator's <slot>_Flash); play it on a hit."
+        },
+        "animations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Without animationName: each animation with name, durationSeconds and trackCount."
         },
         "applied": {
           "type": "object",
@@ -14008,6 +14018,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "duration": {
           "type": "number",
           "description": "Length of the new animation in seconds."
+        },
+        "durationSeconds": {
+          "type": "number",
+          "description": "With animationName: the animation's length in seconds."
         },
         "editorOpened": {
           "type": "boolean",
@@ -14547,6 +14561,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "MovieScene track class that owns the section."
         },
+        "trackCount": {
+          "type": "number",
+          "description": "With animationName: tracks in the animation, those on its widgets included."
+        },
         "trackType": {
           "type": "string",
           "description": "Normalised track type."
@@ -14689,6 +14707,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "widgets": {
           "oneOf": [
+            {
+              "type": "array",
+              "description": "With animationName: each widget it drives, by its name in the widget tree.",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true,
+                "description": "{widget, tracks: [{property (RenderTransform, RenderOpacity, ColorAndOpacity ...), kind (transform, float, color, or the track class), channels: {name: [[seconds, value], ...]}}]}; at most 100 keys a channel."
+              }
+            },
             {
               "type": "array",
               "items": {

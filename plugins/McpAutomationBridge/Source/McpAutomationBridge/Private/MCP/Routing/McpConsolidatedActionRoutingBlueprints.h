@@ -30,7 +30,7 @@ inline const TArray<FString>& WidgetAuthoring()
 		TEXT("preview_widget"), TEXT("add_safe_zone"), TEXT("add_spacer"),
 		TEXT("add_widget_component"), TEXT("add_widget_switcher"), TEXT("add_widget_tree"),
 		TEXT("bind_localized_text"),
-		TEXT("delete_animation"), TEXT("get_widget_slot_info"),
+		TEXT("delete_animation"), TEXT("get_widget_animation"), TEXT("get_widget_slot_info"),
 		TEXT("remove_widget"), TEXT("rename_widget"),
 		TEXT("reparent_widget"), TEXT("duplicate_widget"), TEXT("set_font"),
 		TEXT("set_localization_key"), TEXT("set_margin"),

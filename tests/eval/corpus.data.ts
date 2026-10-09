@@ -96,5 +96,6 @@ export const corpus: readonly CorpusCase[] = [
   { id: 'plain.foot_contacts', kind: 'exact', intent: 'when do the feet touch the ground in this run animation', expected: { tool: 'animation_physics', action: 'analyze_animation' }, allowedAlternatives: [] },
   { id: 'plain.import_on_skeleton', kind: 'exact', intent: 'import a character fbx onto an existing skeleton', expected: { tool: 'manage_asset', action: 'import' }, allowedAlternatives: [] },
   { id: 'plain.render_methods', kind: 'exact', intent: 'switch the project to lumen and virtual shadow maps', expected: { tool: 'system_control', action: 'configure_rendering' }, allowedAlternatives: [] },
+  { id: 'plain.read_ui_animation', kind: 'exact', intent: 'read the keys of the menu fade in animation', expected: { tool: 'manage_blueprint', action: 'get_widget_animation' }, allowedAlternatives: [] },
   { id: 'n.near_tie_del', kind: 'near_tie_destructive', intent: 'delete the selected object', expected: { tool: 'control_actor', action: 'delete' }, allowedAlternatives: [{ tool: 'manage_level', action: 'delete_level' }, { tool: 'manage_asset', action: 'delete_asset' }] },
 ];

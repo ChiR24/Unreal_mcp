@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "5ed23703dc6e0577",
-  "recordCount": 407,
+  "catalogRevision": "b459681cfc8e53e5",
+  "recordCount": 408,
   "records": [
     {
       "id": "animation_physics.analyze_animation",
@@ -18729,6 +18729,181 @@
         "algorithm": "sha256",
         "schema": "957dfa5820eb56db1439248cd8baefd3985a3e8a712c9678388db328466f7803",
         "content": "f0db85bd721fe531afb91bcf92dc5e7d7583dff827954aa80e060ad1cf8a4fe0"
+      }
+    },
+    {
+      "id": "blueprint.get_widget_animation",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "manage_blueprint",
+          "action": "get_widget_animation"
+        }
+      ],
+      "discovery": {
+        "domain": "widget",
+        "family": "widget-animation",
+        "topics": [
+          "get_widget_animation",
+          "read widget animation",
+          "widget animation keys",
+          "check ui animation",
+          "animation tracks of a widget"
+        ],
+        "summary": "Read a Widget Blueprint's animations: without animationName, each one's length and track count; with it, every widget the animation drives and each track's keys per channel (translation.x, angle, scale.x, r, value ...) as [seconds, value] pairs, the names add_animation_keyframe takes.",
+        "whenToUse": [
+          "An animation built with add_animation_keyframe must be checked: which widgets it moves, when, and to what values.",
+          "An existing menu or HUD animation must be understood before it is changed."
+        ],
+        "whenNotToUse": [
+          "Only the animation names or the widget tree are needed (use get_widget_info)."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "widgetPath": {
+              "type": "string",
+              "description": "Canonical /Game Widget Blueprint asset path."
+            },
+            "animationName": {
+              "type": "string",
+              "description": "The animation to read in full; omitted, every animation is listed with its timing."
+            }
+          },
+          "required": [
+            "action",
+            "widgetPath"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "animations": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Without animationName: each animation with name, durationSeconds and trackCount."
+            },
+            "durationSeconds": {
+              "type": "number",
+              "description": "With animationName: the animation's length in seconds."
+            },
+            "trackCount": {
+              "type": "number",
+              "description": "With animationName: tracks in the animation, those on its widgets included."
+            },
+            "widgets": {
+              "type": "array",
+              "description": "With animationName: each widget it drives, by its name in the widget tree.",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true,
+                "description": "{widget, tracks: [{property (RenderTransform, RenderOpacity, ColorAndOpacity ...), kind (transform, float, color, or the track class), channels: {name: [[seconds, value], ...]}}]}; at most 100 keys a channel."
+              }
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Read a Widget Blueprint's animations: without animationName, each one's length and track count; with it, every widget the animation drives and each track's keys per channel (translation.x, angle, scale.x, r, value ...) as [seconds, value] pairs, the names add_animation_keyframe takes.",
+          "input": {
+            "action": "get_widget_animation",
+            "widgetPath": "/Game/UI/WBP_MainUI",
+            "animationName": "FadeIn"
+          },
+          "output": {
+            "success": true,
+            "durationSeconds": 0.5,
+            "trackCount": 1,
+            "widgets": [
+              {
+                "widget": "Title",
+                "tracks": [
+                  {
+                    "property": "RenderOpacity",
+                    "kind": "float",
+                    "channels": {
+                      "value": [
+                        [
+                          0,
+                          0
+                        ],
+                        [
+                          0.5,
+                          1
+                        ]
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [
+          "EditorScriptingUtilities",
+          "UMG"
+        ],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "read",
+        "idempotency": "idempotent",
+        "longRunning": false,
+        "safeToRetry": true
+      },
+      "policy": {
+        "requiredScope": "read",
+        "consent": "none",
+        "dataAccess": "project-read"
+      },
+      "cost": {
+        "latency": "interactive",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "manage_blueprint",
+        "dispatchAction": "get_widget_animation"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "78d855475660167237e62c258ad5385b9f56bdcfb4567b41602a7e51c0030b67",
+        "content": "cb11f637a34ef89e81c749c7bec25ea47d436f3aa291c39e3ac9ea79f36d7139"
       }
     },
     {

@@ -1149,6 +1149,18 @@ describe('Make and Break nodes of structs with native functions', () => {
   });
 });
 
+describe('get_widget_animation reads what an animation does', () => {
+  // A widget animation could be built key by key but read back by name only, and its track count read 0: the
+  // tracks live on the widgets the animation binds, not in its unbound list.
+  it('walks the bindings for the widget, its tracks and every channel key', () => {
+    const queries = code('WidgetAuthoring', 'Animation', 'McpAutomationBridge_WidgetAuthoringAnimationQueries.cpp');
+    expect(queries).toContain('for (const FMovieSceneBinding& Binding : Anim->MovieScene->GetBindings())');
+    expect(queries).toContain('TrackCount += Binding.GetTracks().Num();');
+    expect(queries).toContain('Section->GetChannelProxy().GetChannel<FMovieSceneFloatChannel>(Index)');
+    expect(queries).toContain('TEXT("translation.x"), TEXT("translation.y"), TEXT("angle"), TEXT("scale.x")');
+  });
+});
+
 describe('configure_rendering', () => {
   // set_project_setting took raw property names and enum spellings and never said a change waited for a restart.
   it('checks every value before writing any, applies the console variable live and names restart-only changes', () => {

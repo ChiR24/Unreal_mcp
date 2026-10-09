@@ -592,6 +592,8 @@ const testCases = [
 
     // === INFO ===
     { scenario: 'INFO: get_widget_info', toolName: 'manage_blueprint', arguments: widgetArgs('get_widget_info'), expected: 'success' },
+    { scenario: 'INFO: get_widget_animation lists the animations with their timing', toolName: 'manage_blueprint', arguments: widgetArgs('get_widget_animation'), expected: 'success' },
+    { scenario: 'INFO: get_widget_animation reads the keys each widget got', toolName: 'manage_blueprint', arguments: widgetArgs('get_widget_animation', { animationName: ANIMATION_NAME }), expected: 'success', assertions: [{ path: 'structuredContent.result.widgets', minLength: 2, label: 'TitleText and PlayButton are both driven' }] },
     { scenario: 'INFO: get_widget_info by name + folder', toolName: 'manage_blueprint', arguments: { action: 'get_widget_info', name: WIDGET_NAME, folder: TEST_FOLDER }, expected: 'success' },
     { scenario: 'ACTION: preview_widget', toolName: 'manage_blueprint', arguments: widgetArgs('preview_widget'), expected: 'success' },
     { scenario: 'ACTION: preview_widget drawn for a small screen, editor opened', toolName: 'manage_blueprint', arguments: widgetArgs('preview_widget', { resolution: '640x360', openEditor: true }), expected: 'success', assertions: [{ path: 'structuredContent.result.width', equals: 640, label: 'drawn at the asked width' }] },

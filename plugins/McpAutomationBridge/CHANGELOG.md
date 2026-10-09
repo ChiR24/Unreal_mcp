@@ -11,6 +11,7 @@ All notable changes to the MCP Automation Bridge plugin will be documented in th
 - **`analyze_animation`**: samples a sequence through the AnimPose API, root motion left on the root, for its root travel, foot contacts, loop seam and rotation spikes.
 - **Skeletal mesh import options**: the FBX factory binds the mesh to a named skeleton with `importMesh`, and takes the physics-asset and morph-target choices.
 - **`configure_rendering`**: renderer settings by plain name through reflection, so a setting an engine lacks reads as unavailable; each value is checked before any is written, the console variable named in the property's metadata is set live, and `ConfigRestartRequired` properties are reported.
+- **`get_widget_animation`**: walks the animation's bindings for each driven widget's tracks and float-channel keys; the track count includes binding tracks (it read 0).
 
 ### Fixed
 - **`create_node` and `add_node` check the graph's schema** (`CanCreateUnderSpecifiedSchema`) and refuse a node it cannot hold with `NODE_NOT_ALLOWED_IN_GRAPH`.
