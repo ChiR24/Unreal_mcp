@@ -3,7 +3,7 @@
  * execute_command, console_command, set_cvar, set_resolution, set_fullscreen.
  */
 import type { CapabilityRecordSource } from '../../model.js';
-import { buildCoreRecord } from '../core/builder.js';
+import { ANY_EDITOR_STATE, buildCoreRecord } from '../core/builder.js';
 
 const PT = 'system_control';
 
@@ -59,6 +59,7 @@ export const CONSOLE_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: PT,
     action: 'execute_command',
+    editorStates: ANY_EDITOR_STATE,
     domain: 'console',
     family: 'console',
     summary: 'Execute a single validated console command string on the engine.',
@@ -76,6 +77,7 @@ export const CONSOLE_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: PT,
     action: 'console_command',
+    editorStates: ANY_EDITOR_STATE,
     domain: 'console',
     family: 'console',
     summary: 'Execute a validated, non-empty console command (empty input is rejected).',

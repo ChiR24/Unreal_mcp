@@ -2,7 +2,7 @@
  * Object, property, and class introspection records (12 actions).
  */
 import type { CapabilityRecordSource } from '../../model.js';
-import { buildCoreRecord } from '../core/builder.js';
+import { ANY_EDITOR_STATE, buildCoreRecord } from '../core/builder.js';
 import { P } from './properties.js';
 
 const D = 'inspect';
@@ -159,6 +159,7 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
   // shared by three faces or faces turned inside out passed every other check.
   buildCoreRecord({
     parentTool: 'inspect', action: 'check_mesh', dispatchAction: 'check_mesh', domain: D, family: 'object',
+    editorStates: ANY_EDITOR_STATE,
     summary: 'Check whether a static mesh\'s geometry is sound, from its source triangles: closed (watertight) or open with how many holes, edges shared by three or more faces, faces turned inside out, faces with no area, seams where faces do not share their corners, and how many separate parts it is made of, with its size, surface area and (when closed) volume.',
     topics: ['check mesh', 'mesh holes', 'mesh has holes', 'watertight', 'non manifold edges', 'flipped normals', 'inside out faces', 'mesh parts', 'broken mesh', 'mesh volume'],
     whenToUse: ['An imported, downloaded or generated mesh must be proven sound before it is placed, merged, used for collision or booleans, or shipped.', 'A mesh shows see-through gaps, black or inside-out faces, or splits into loose pieces.'],
@@ -197,6 +198,7 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'inspect', action: 'raycast_world', dispatchAction: 'raycast_world', domain: D, family: 'object',
+    editorStates: ANY_EDITOR_STATE,
     summary: 'Trace lines through the level against collision and read what each one hits first: the point, the surface normal, the distance, the actor and the component. Finds the ground under a point, checks a line of sight, and proves a wall, floor or volume really blocks. Traces the running game while Play In Editor runs.',
     topics: ['line trace', 'raycast world', 'what is below', 'ground height', 'line of sight', 'does it block', 'collision test', 'trace channel'],
     whenToUse: [
@@ -281,6 +283,7 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'inspect', action: 'get_property', dispatchAction: 'get_property', domain: D, family: 'property',
+    editorStates: ANY_EDITOR_STATE,
     topics: ['read property', 'property value', 'get value', 'read field', 'actor property', 'object property', 'game instance variable', 'read live widget property', 'widget value during play'],
     summary: 'Read a property value from a world actor, asset, or Blueprint class defaults (blueprintPath, or the Blueprint asset\'s own path), or several at once (propertyNames).',
     whenToUse: ['A single property value must be read.', 'Several properties of one target must be read in one call (propertyNames).'],
@@ -305,6 +308,7 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'inspect', action: 'set_property', dispatchAction: 'set_property', domain: D, family: 'property',
+    editorStates: ANY_EDITOR_STATE,
     topics: ['write property', 'set value', 'change property', 'modify property', 'edit property', 'set field', 'set property on actor', 'set game instance variable'],
     summary: 'Write a property value on a world actor, asset, or Blueprint CDO; several at once (properties), or the same on several objects (objectPaths).',
     whenToUse: [

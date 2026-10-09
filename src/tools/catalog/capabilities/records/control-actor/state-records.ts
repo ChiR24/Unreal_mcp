@@ -3,7 +3,7 @@
  * get_components/get_actor_components, get_actor_bounds, list.
  */
 import type { CapabilityRecordSource } from '../../model.js';
-import { buildCoreRecord } from '../core/builder.js';
+import { ANY_EDITOR_STATE, buildCoreRecord } from '../core/builder.js';
 import { DOMAIN, P } from './properties.js';
 
 const FAMILY_VISIBILITY = 'visibility';
@@ -108,6 +108,7 @@ export const STATE_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_actor',
     action: 'list',
+    editorStates: ANY_EDITOR_STATE,
     domain: DOMAIN,
     family: FAMILY_QUERY,
     topics: ['list actors', 'all actors in level', 'actors in scene', 'enumerate actors', 'world outliner', 'actors in level', 'level actors', 'actor positions', 'actor locations', 'actor transforms', 'level layout', 'variable values of many actors', 'how many actors', 'count actors', 'actors in the level', 'actors near point', 'count enemies'],

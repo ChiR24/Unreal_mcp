@@ -5,7 +5,7 @@
  * and apply_force.
  */
 import type { CapabilityRecordSource } from '../../model.js';
-import { buildCoreRecord } from '../core/builder.js';
+import { ANY_EDITOR_STATE, buildCoreRecord } from '../core/builder.js';
 import { DOMAIN, P } from './properties.js';
 
 const FAMILY_TRANSFORM = 'transform';
@@ -82,6 +82,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_actor',
     action: 'set_transform',
+    editorStates: ANY_EDITOR_STATE,
     domain: DOMAIN,
     family: FAMILY_TRANSFORM,
     topics: ['move actor', 'set actor location', 'set position', 'rotate actor', 'set rotation', 'scale actor', 'teleport actor', 'translate'],
@@ -101,6 +102,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_actor',
     action: 'teleport_actor',
+    editorStates: ANY_EDITOR_STATE,
     domain: DOMAIN,
     family: FAMILY_TRANSFORM,
     summary: 'Alias of set_transform. The bridge dispatches both names to the same handler.',
@@ -118,6 +120,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_actor',
     action: 'set_actor_location',
+    editorStates: ANY_EDITOR_STATE,
     domain: DOMAIN,
     family: FAMILY_TRANSFORM,
     summary: 'Alias of set_transform (location-only intent); normalizes to set_transform.',
@@ -135,6 +138,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_actor',
     action: 'set_actor_rotation',
+    editorStates: ANY_EDITOR_STATE,
     domain: DOMAIN,
     family: FAMILY_TRANSFORM,
     summary: 'Alias of set_transform (rotation-only intent); normalizes to set_transform.',
@@ -152,6 +156,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_actor',
     action: 'set_actor_scale',
+    editorStates: ANY_EDITOR_STATE,
     domain: DOMAIN,
     family: FAMILY_TRANSFORM,
     summary: 'Alias of set_transform (scale-only intent); normalizes to set_transform.',
@@ -169,6 +174,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_actor',
     action: 'get_transform',
+    editorStates: ANY_EDITOR_STATE,
     domain: DOMAIN,
     family: FAMILY_TRANSFORM,
     topics: ['actor location', 'actor position', 'actor rotation', 'where is the actor'],
@@ -191,6 +197,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
     ...buildCoreRecord({
       parentTool: 'control_actor',
       action: 'sample_motion',
+      editorStates: ANY_EDITOR_STATE,
       domain: DOMAIN,
       family: FAMILY_TRANSFORM,
       topics: ['sample motion', 'record trajectory', 'track actor over time', 'watch actor move', 'jump height', 'foot sliding', 'bone position over time'],

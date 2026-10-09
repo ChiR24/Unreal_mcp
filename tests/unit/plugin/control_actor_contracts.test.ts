@@ -678,6 +678,14 @@ describe('delete removes an actor from the running game too', () => {
     expect(lifecycle).toContain('const bool bGameWorld = Actor->GetWorld() && Actor->GetWorld()->IsGameWorld();');
     expect(lifecycle).toContain('if (bGameWorld ? Actor->Destroy() : ActorSS->DestroyActor(Actor))');
   });
+
+  it('deletes tagged actors from the running game\'s world, listed without the editor-only actor list', () => {
+    const lifecycle = read('McpAutomationBridge_ControlActorLifecycle.cpp');
+    expect(lifecycle).toContain('UWorld *PlayWorld = GEditor->PlayWorld.Get();');
+    expect(lifecycle).toMatch(/if \(PlayWorld\) \{\s*for \(TActorIterator<AActor> It\(PlayWorld\); It; \+\+It\)/u);
+    expect(lifecycle).toContain('for (AActor *Actor : PlayWorld ? Candidates : ActorSS->GetAllLevelActors()) {');
+    expect(lifecycle).toContain('if (PlayWorld ? CastChecked<AActor>(Tagged[Index])->Destroy() : ActorSS->DestroyActor(CastChecked<AActor>(Tagged[Index])))');
+  });
 });
 
 describe('every spawn is one undo step, "Spawn Actors", and the reply says so', () => {

@@ -2,13 +2,14 @@
  * Statistics inspection records (3 actions): scene, performance, memory.
  */
 import type { CapabilityRecordSource } from '../../model.js';
-import { buildCoreRecord } from '../core/builder.js';
+import { ANY_EDITOR_STATE, buildCoreRecord } from '../core/builder.js';
 
 const D = 'inspect';
 
 export const STATS_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'inspect', action: 'get_scene_stats', dispatchAction: 'get_scene_stats', domain: D, family: 'stats',
+    editorStates: ANY_EDITOR_STATE,
     summary: 'Return scene statistics (actor counts, component counts, etc.).',
     whenToUse: ['Scene-level statistics must be inspected.'],
     whenNotToUse: ['Runtime performance is needed; use get_performance_stats.'],
@@ -21,6 +22,7 @@ export const STATS_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'inspect', action: 'get_performance_stats', dispatchAction: 'get_performance_stats', domain: D, family: 'stats',
+    editorStates: ANY_EDITOR_STATE,
     summary: 'Return performance statistics (frame rate, frame time, game, render and GPU thread times, actor count).',
     whenToUse: ['Performance metrics must be inspected.'],
     whenNotToUse: ['Scene composition is needed; use get_scene_stats.'],
@@ -57,6 +59,7 @@ export const STATS_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'inspect', action: 'get_memory_stats', dispatchAction: 'get_memory_stats', domain: D, family: 'stats',
+    editorStates: ANY_EDITOR_STATE,
     summary: 'Return memory statistics (allocated, virtual, resource counts).',
     whenToUse: ['Memory usage must be inspected.'],
     whenNotToUse: ['Performance timing is needed; use get_performance_stats.'],

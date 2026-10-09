@@ -4,7 +4,7 @@
  * call_actor_function.
  */
 import type { CapabilityRecordSource } from '../../model.js';
-import { buildCoreRecord } from '../core/builder.js';
+import { ANY_EDITOR_STATE, buildCoreRecord } from '../core/builder.js';
 import { DOMAIN, P } from './properties.js';
 import { bool, str, vec3 } from '../shared/schema-props.js';
 
@@ -111,6 +111,7 @@ export const ADVANCED_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_actor',
     action: 'call_actor_function',
+    editorStates: ANY_EDITOR_STATE,
     domain: DOMAIN,
     family: FAMILY_FUNCTION,
     summary:

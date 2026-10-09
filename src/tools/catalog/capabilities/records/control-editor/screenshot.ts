@@ -2,7 +2,7 @@
  * Screenshot records: screenshot, take_screenshot.
  */
 import type { CapabilityRecordSource } from '../../model.js';
-import { buildCoreRecord } from '../core/builder.js';
+import { ANY_EDITOR_STATE, buildCoreRecord } from '../core/builder.js';
 import { P } from './properties.js';
 
 const F = 'screenshot';
@@ -79,6 +79,7 @@ const SCREENSHOT_OUTPUT = {
 export const SCREENSHOT_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_editor', action: 'screenshot', domain: D, family: F,
+    editorStates: ANY_EDITOR_STATE,
     summary: 'Capture a screenshot from the editor viewport, game viewport, or full editor window.',
     whenToUse: ['A visual snapshot of the editor or game viewport is needed.'],
     whenNotToUse: ['A real-time capture stream is needed.'],

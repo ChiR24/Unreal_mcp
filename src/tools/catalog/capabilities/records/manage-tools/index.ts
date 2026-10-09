@@ -1,6 +1,6 @@
 // manage_tools capability records, authored in the parent's action enum order.
 import type { CapabilityRecordSource, JsonObject } from '../../model.js';
-import { buildCoreRecord, type CoreRecordSpec } from '../core/builder.js';
+import { ANY_EDITOR_STATE, buildCoreRecord, type CoreRecordSpec } from '../core/builder.js';
 
 const CATEGORY_ENUM: JsonObject = {
   type: 'string',
@@ -248,8 +248,6 @@ const SPECS: readonly Omit<CoreRecordSpec, 'parentTool' | 'domain'>[] = [
     },
     outputRequired: ['taskId', 'state'],
     effect: 'read',
-    // It reads the server's own store, so it answers whatever the editor is doing.
-    editorStates: ['edit', 'pie', 'simulate'],
     exampleInput: { action: 'get_task_result', taskId: 'num:12' },
     exampleOutput: {
       success: true,
@@ -282,5 +280,6 @@ const SPECS: readonly Omit<CoreRecordSpec, 'parentTool' | 'domain'>[] = [
   },
 ];
 
+// manage_tools runs in the server itself and never touches the editor, so it answers whatever the editor is doing.
 export const MANAGE_TOOLS_SOURCES: readonly CapabilityRecordSource[] =
-  SPECS.map((spec) => buildCoreRecord({ parentTool: 'manage_tools', domain: 'tools', ...spec }));
+  SPECS.map((spec) => buildCoreRecord({ parentTool: 'manage_tools', domain: 'tools', editorStates: ANY_EDITOR_STATE, ...spec }));

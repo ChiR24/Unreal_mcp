@@ -6,7 +6,7 @@
  * re-dispatches the original pie_report action, so the record keeps pie_report.
  */
 import type { CapabilityRecordSource, JsonObject } from '../../model.js';
-import { buildCoreRecord } from '../core/builder.js';
+import { ANY_EDITOR_STATE, buildCoreRecord } from '../core/builder.js';
 import { P } from './properties.js';
 
 const D = 'inspect';
@@ -33,6 +33,7 @@ const RUNTIME_REPORT_OUTPUT = {
 export const RUNTIME_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'inspect', action: 'runtime_report', dispatchAction: 'runtime_report', domain: D, family: 'runtime',
+    editorStates: ANY_EDITOR_STATE,
     summary: 'Return a runtime report for the current PIE/simulate session.',
     whenToUse: ['Runtime state of actors/components/properties must be inspected during PIE.', 'PIE-only runtime state must be inspected.'],
     whenNotToUse: ['The editor is not in PIE; the report will be empty.'],

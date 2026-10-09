@@ -3,7 +3,7 @@
  * delete/destroy_actor/delete_by_tag.
  */
 import type { CapabilityRecordSource } from '../../model.js';
-import { buildCoreRecord } from '../core/builder.js';
+import { ANY_EDITOR_STATE, buildCoreRecord } from '../core/builder.js';
 import { bool, num, str } from '../shared/schema-props.js';
 import { DOMAIN, P } from './properties.js';
 
@@ -43,6 +43,7 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_actor',
     action: 'spawn',
+    editorStates: ANY_EDITOR_STATE,
     domain: DOMAIN,
     family: FAMILY_SPAWN,
     topics: ['spawn actor', 'place actor', 'add actor to level', 'create actor', 'spawn cube', 'spawn static mesh', 'instantiate class'],
@@ -84,6 +85,7 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_actor',
     action: 'spawn_blueprint',
+    editorStates: ANY_EDITOR_STATE,
     domain: DOMAIN,
     family: FAMILY_SPAWN,
     topics: ['spawn blueprint actor', 'place blueprint in level', 'instantiate blueprint'],
@@ -128,6 +130,7 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_actor',
     action: 'spawn_batch',
+    editorStates: ANY_EDITOR_STATE,
     domain: DOMAIN,
     family: FAMILY_SPAWN,
     topics: ['spawn many actors', 'batch spawn', 'place many actors', 'lay out level', 'build level layout'],
@@ -270,6 +273,7 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_actor',
     action: 'delete',
+    editorStates: ANY_EDITOR_STATE,
     domain: DOMAIN,
     family: FAMILY_LIFECYCLE,
     topics: ['delete actor', 'destroy actor', 'remove actor from level', 'delete selected actor', 'delete spawned actor', 'delete object'],
@@ -288,6 +292,7 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_actor',
     action: 'destroy_actor',
+    editorStates: ANY_EDITOR_STATE,
     domain: DOMAIN,
     family: FAMILY_LIFECYCLE,
     summary:
@@ -305,6 +310,7 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_actor',
     action: 'delete_by_tag',
+    editorStates: ANY_EDITOR_STATE,
     domain: DOMAIN,
     family: FAMILY_LIFECYCLE,
     summary: 'Permanently delete every actor matching a gameplay tag, or any of several tags in one call.',

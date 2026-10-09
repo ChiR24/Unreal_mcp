@@ -237,8 +237,16 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDeleteByTag(
 
   UEditorActorSubsystem *ActorSS =
       GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
+  // While a game runs, its world is the one tagged actors leave, as a named delete does; the editor actor subsystem
+  // lists only the editor world and refuses during play.
+  UWorld *PlayWorld = GEditor->PlayWorld.Get();
+  TArray<AActor *> Candidates;
+  if (PlayWorld) {
+    for (TActorIterator<AActor> It(PlayWorld); It; ++It)
+      Candidates.Add(*It);
+  }
   TArray<UObject *> Tagged;
-  for (AActor *Actor : ActorSS->GetAllLevelActors()) {
+  for (AActor *Actor : PlayWorld ? Candidates : ActorSS->GetAllLevelActors()) {
     if (Actor && TagNames.ContainsByPredicate([Actor](const FName &Tag) { return Actor->ActorHasTag(Tag); }))
       Tagged.Add(Actor);
   }
@@ -252,7 +260,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDeleteByTag(
     Refs.Add(McpActorRef(CastChecked<AActor>(Object)));
   TArray<FString> Deleted;
   for (int32 Index = 0; Index < Tagged.Num(); ++Index) {
-    if (ActorSS->DestroyActor(CastChecked<AActor>(Tagged[Index])))
+    if (PlayWorld ? CastChecked<AActor>(Tagged[Index])->Destroy() : ActorSS->DestroyActor(CastChecked<AActor>(Tagged[Index])))
       Deleted.Add(Refs[Index]);
   }
 

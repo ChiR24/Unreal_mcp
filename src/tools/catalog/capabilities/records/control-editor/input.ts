@@ -2,7 +2,7 @@
  * Input simulation record: simulate_input.
  */
 import type { CapabilityRecordSource } from '../../model.js';
-import { buildCoreRecord } from '../core/builder.js';
+import { ANY_EDITOR_STATE, buildCoreRecord } from '../core/builder.js';
 import { P } from './properties.js';
 
 const F = 'input';
@@ -11,6 +11,7 @@ const D = 'editor';
 export const INPUT_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_editor', action: 'simulate_input', domain: D, family: F,
+    editorStates: ANY_EDITOR_STATE,
     // The widget verbs are not in the action name, and topics cannot outrank a
     // widget-authoring record that carries them: "click widget button" landed on
     // add_content_widget, which edits a Widget Blueprint instead of pressing one.
