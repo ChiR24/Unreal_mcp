@@ -15,6 +15,12 @@ FString ToastName(const FOperation& Op)
 	return Op.Result.VersionName.IsEmpty() ? Op.ListingId : Op.Result.VersionName;
 }
 
+bool IsDownloadShowing(const FString& OperationId)
+{
+	const FOperation* Op = FindById(OperationId);
+	return Op != nullptr && McpFabDownloadProgress::Read(ToastName(*Op)).bFound;
+}
+
 ECancelRoute RouteFor(const FOperation& Op, const McpFabDownloadProgress::FNotification& Toast)
 {
 	if (Op.State == EState::Queued)

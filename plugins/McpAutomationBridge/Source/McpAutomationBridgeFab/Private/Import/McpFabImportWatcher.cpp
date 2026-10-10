@@ -3,6 +3,7 @@
 #include "McpFabImportWatcher.h"
 
 #include "McpFabImportOperations.h"
+#include "McpFabImportScope.h"
 #include "McpFabInterchange.h"
 #include "McpFabLogCapture.h"
 
@@ -56,48 +57,6 @@ struct FUnattendedDuringImport
 	~FUnattendedDuringImport() { GIsRunningUnattendedScript = bPrevious; }
 	bool bPrevious;
 };
-
-/** Longest shared /Game/<folder> prefix of everything that appeared. */
-FString CommonRoot(const TArray<FString>& Paths)
-{
-	FString Root;
-	for (const FString& Path : Paths)
-	{
-		FString Remainder = Path;
-		if (!Remainder.RemoveFromStart(TEXT("/Game/")))
-		{
-			continue;
-		}
-		FString Folder;
-		if (!Remainder.Split(TEXT("/"), &Folder, nullptr))
-		{
-			continue;
-		}
-		const FString Candidate = TEXT("/Game/") + Folder;
-		if (Root.IsEmpty()) { Root = Candidate; }
-		else if (Root != Candidate) { return TEXT("/Game"); }
-	}
-	return Root.IsEmpty() ? TEXT("/Game") : Root;
-}
-
-/** Up to ten paths, the static and skeletal meshes first: they are what a caller came for. */
-TArray<FString> PickSamples(TArray<FString> Meshes, TArray<FString> Others)
-{
-	Meshes.Sort();
-	Others.Sort();
-	TArray<FString> Samples;
-	for (const TArray<FString>* Group : {&Meshes, &Others})
-	{
-		for (const FString& Path : *Group)
-		{
-			if (Samples.Num() < 10)
-			{
-				Samples.Add(Path);
-			}
-		}
-	}
-	return Samples;
-}
 
 /**
  * Saves again at each of LateSaveDelays, counted from now, and stores the result after every run. The
@@ -156,8 +115,9 @@ void WatchForImport(
 
 	IAssetRegistry& Registry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(
 		TEXT("AssetRegistry")).Get();
+	const TSet<FString> OldTops = McpFabImportScope::TopFolders(Before);
 	Watch->AddedHandle = Registry.OnAssetAdded().AddLambda(
-		[Before, Watch](const FAssetData& AssetData)
+		[Before, OldTops, Watch](const FAssetData& AssetData)
 		{
 #if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 1
 			const FString Path = AssetData.GetObjectPathString();
@@ -166,10 +126,10 @@ void WatchForImport(
 			const FString Path = AssetData.ObjectPath.ToString();
 			const FName ClassName = AssetData.AssetClass;
 #endif
-			// Skip the baseline and sub-objects: a map contributes entries like
-			// Map.Map:PersistentLevel.ActorFolder_UID_..., which are parts of
-			// one asset rather than assets.
-			if (Before.Contains(Path) || Path.Contains(TEXT(":")))
+			// Skip the baseline, sub-objects (a map contributes entries like
+			// Map.Map:PersistentLevel.ActorFolder_UID_..., parts of one asset)
+			// and what other calls create meanwhile (McpFabImportScope).
+			if (Before.Contains(Path) || Path.Contains(TEXT(":")) || !McpFabImportScope::Counts(Path, OldTops))
 			{
 				return;
 			}
@@ -181,7 +141,7 @@ void WatchForImport(
 			}
 		});
 
-	const double Ceiling = CeilingSeconds(Accepted.DownloadBytes);
+	double Ceiling = CeilingSeconds(Accepted.DownloadBytes);
 	FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda(
 		[Accepted, OperationId, Ceiling, PostImport, SaveAgain, Watch](float Delta) mutable
 		{
@@ -202,6 +162,13 @@ void WatchForImport(
 			{
 				Watch->QuietFor = 0.0;
 				Watch->InterchangeWaited += Delta;
+			}
+			// A pack publishes no size, so its ceiling was the bare ten minutes however many gigabytes it was; while
+			// Fab still shows the download it is not over, so it neither settles nor runs out (up to the longest ceiling).
+			if (McpFabImportOperations::IsDownloadShowing(OperationId))
+			{
+				Watch->QuietFor = 0.0;
+				Ceiling = FMath::Max(Ceiling, FMath::Min(Watch->Elapsed + BaseCeilingSeconds, LongestCeilingSeconds));
 			}
 			McpFabImportOperations::SetAssetsSoFar(OperationId, Count);
 
@@ -248,8 +215,8 @@ void WatchForImport(
 			TArray<FString> Others = Added.FilterByPredicate(
 				[&Meshes](const FString& Path) { return !Meshes.Contains(Path); });
 			Accepted.AssetCount = Count;
-			Accepted.RootPath = CommonRoot(Added);
-			Accepted.SamplePaths = PickSamples(Meshes, Others);
+			Accepted.RootPath = McpFabImportScope::CommonRoot(Added);
+			Accepted.SamplePaths = McpFabImportScope::PickSamples(Meshes, Others);
 			if (bCancelled)
 			{
 				// What had landed stays where it is, unsaved and unmoved: the caller stopped this import, so

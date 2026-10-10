@@ -61,6 +61,9 @@ bool RequestCancel(const FString& OperationId, FString& OutMessage, FString& Out
 /** True when a cancel was accepted for this import; the watcher reads it to end the import as CANCELLED. */
 bool IsCancelRequested(const FString& OperationId);
 
+/** True while Fab's own "Downloading ..." notification for this import is on screen: its download is not over. */
+bool IsDownloadShowing(const FString& OperationId);
+
 /** The operation running now (resolving, downloading or importing), if any. There is at most one. */
 bool FindRunning(const FString& CacheLocation, FMcpFabImportStatus& OutStatus);
 
