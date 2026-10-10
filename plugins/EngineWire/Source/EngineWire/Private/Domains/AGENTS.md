@@ -63,7 +63,6 @@ Enforced by Vitest source-contract tests that read C++ text and fail CI (`tests/
 - **No split artifacts**: never name files `Common*`, `Part\d+`, `\d+.cpp`, or `.incl`.
 - **Every local `Mcp*` include must resolve on disk** — dangling includes fail CI.
 - **Short file names**: `Mcp<Tag><Topic>.cpp` (`McpMatSetScalarParamValue.cpp`; tags such as `Anim`, `Mat`, `BP`, `BPGraph`, `Seq`, `Env`, `Actor`). Fab refuses a package path over 170 characters, and `source_structure.test.ts` holds every path to 150.
-- **Short file names**: `Mcp<Tag><Topic>.cpp` (`McpMatSetScalarParamValue.cpp`, tags such as `Anim`, `Mat`, `BP`, `BPGraph`, `Seq`, `Env`, `Actor`). Fab refuses a package path over 170 characters; `source_structure.test.ts` holds every path to 150.
 
 ## CONVENTIONS
 
