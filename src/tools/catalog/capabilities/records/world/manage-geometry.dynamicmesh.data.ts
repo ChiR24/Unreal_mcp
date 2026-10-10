@@ -41,7 +41,7 @@ const POLYGON_FACES = {
   items: { type: 'array', items: { type: 'integer', minimum: 0 }, minItems: 3, maxItems: 256 },
   minItems: 1,
   maxItems: 20000,
-  description: 'Faces, each a list of three or more vertex indices into vertices (at most 20000 faces). List a face\'s corners so that (v1 - v0) x (v2 - v0) points outward, and let two faces that share an edge run along it in opposite directions; the call refuses a face wound the other way, or an edge shared by more than two faces, and names the face. A face with more than three corners is triangulated (it may be concave) and all its triangles keep the face\'s polygroup.',
+  description: 'Faces, each a list of three or more vertex indices into vertices (at most 20000 faces). List a face\'s corners so that (v1 - v0) x (v2 - v0) points outward, and let two faces that share an edge run along it in opposite directions; the call refuses a face wound the other way, or an edge shared by more than two faces, and names the face. A face with more than three corners is triangulated (it may be concave) and all its triangles keep the face\'s polygroup. The new faces get smooth normals, shared where they meet; split_normals creases the hard edges.',
 };
 const FACE_GROUPS = {
   type: 'array',

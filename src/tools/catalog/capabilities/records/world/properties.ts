@@ -203,7 +203,7 @@ export const P = {
   vertexIndex: int('Index of the vertex the operation targets.'),
   triangleIndex: int('Index of the triangle the operation targets.'),
   groupID: int('Polygroup id assigned to the appended triangle.'),
-  v0: vec3('First corner {x, y, z} of the appended triangle.'),
+  v0: vec3('First corner {x, y, z} of the appended triangle. The triangle faces the side (v1 - v0) x (v2 - v0) points to, as append_polygons faces do; the other side is culled.'),
   v1: vec3('Second corner {x, y, z} of the appended triangle.'),
   v2: vec3('Third corner {x, y, z} of the appended triangle.'),
   translation: vec3('Translation {x, y, z} applied to every mesh vertex.'),

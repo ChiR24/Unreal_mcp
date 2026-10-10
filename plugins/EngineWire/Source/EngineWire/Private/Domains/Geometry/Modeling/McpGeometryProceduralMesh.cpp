@@ -68,7 +68,9 @@ bool HandleAppendTriangle(UEngineWireSubsystem* Self, const FString& RequestId,
     int32 Idx1 = EditMesh.AppendVertex(UE::Geometry::FVertexInfo(V1));
     int32 Idx2 = EditMesh.AppendVertex(UE::Geometry::FVertexInfo(V2));
 
-    int32 TriIdx = EditMesh.AppendTriangle(Idx0, Idx1, Idx2, GroupID);
+    // v0, v1, v2 face the side (v1 - v0) x (v2 - v0) points to, as append_polygons faces do; Unreal's
+    // left-handed triangles face (v2 - v0) x (v1 - v0), so the last two corners swap.
+    int32 TriIdx = EditMesh.AppendTriangle(Idx0, Idx2, Idx1, GroupID);
 
     DMC->NotifyMeshUpdated();
 

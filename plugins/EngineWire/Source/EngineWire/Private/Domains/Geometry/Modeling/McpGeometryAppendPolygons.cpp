@@ -74,7 +74,9 @@ bool HandleAppendPolygons(UEngineWireSubsystem* Self, const FString& RequestId,
         {
             const UE::Geometry::FIndex3i& Triangle = Input.Triangles[TriangleIndex];
             const int32 Face = Input.TriangleFace[TriangleIndex];
-            const int32 TriangleId = EditMesh.AppendTriangle(VertexIds[Triangle.A], VertexIds[Triangle.B], VertexIds[Triangle.C], GroupOfFace[Face]);
+            // Faces arrive with (v1 - v0) x (v2 - v0) pointing outward; Unreal's left-handed triangles face
+            // (v2 - v0) x (v1 - v0) (VectorUtil::Normal), so B and C swap or the cage is built inside out.
+            const int32 TriangleId = EditMesh.AppendTriangle(VertexIds[Triangle.A], VertexIds[Triangle.C], VertexIds[Triangle.B], GroupOfFace[Face]);
             if (TriangleId < 0)
             {
                 bAppended = false;
@@ -84,6 +86,24 @@ bool HandleAppendPolygons(UEngineWireSubsystem* Self, const FString& RequestId,
             {
                 MaterialIds->SetValue(TriangleId, Input.FaceMaterials[Face]);
             }
+        }
+        // A normal overlay leaves new triangles unset, so faces appended to a mesh that had normals shaded as
+        // garbage, and RecomputeNormals only fills a wholly empty overlay (with a warning). Every unset triangle
+        // gets one element per corner vertex, shared around it; the recompute below sets their directions.
+        EditMesh.EnableAttributes();
+        UE::Geometry::FDynamicMeshNormalOverlay* Normals = EditMesh.Attributes()->PrimaryNormals();
+        TMap<int32, int32> ElementOfVertex;
+        for (const int32 TriangleId : EditMesh.TriangleIndicesItr())
+        {
+            if (!bAppended || !Normals || Normals->IsSetTriangle(TriangleId)) continue;
+            const UE::Geometry::FIndex3i Corners = EditMesh.GetTriangle(TriangleId);
+            UE::Geometry::FIndex3i Elements;
+            for (int32 Corner = 0; Corner < 3; ++Corner)
+            {
+                const int32* Found = ElementOfVertex.Find(Corners[Corner]);
+                Elements[Corner] = Found ? *Found : ElementOfVertex.Add(Corners[Corner], Normals->AppendElement(FVector3f(0.0f, 0.0f, 1.0f)));
+            }
+            Normals->SetTriangle(TriangleId, Elements);
         }
     });
     if (!bAppended)

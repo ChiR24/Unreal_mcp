@@ -34,6 +34,20 @@ describe('append_polygons validates everything before it touches the mesh', () =
     expect(input()).toContain('Local.Num() != Face.Num() - 2');
   });
 
+  // Unreal's triangles face (v2 - v0) x (v1 - v0); appended in the given order, an outward-wound cage came out inside out.
+  it('appends each triangle in Unreal winding, so (v1 - v0) x (v2 - v0) is the side it faces', () => {
+    expect(handler()).toContain('EditMesh.AppendTriangle(VertexIds[Triangle.A], VertexIds[Triangle.C], VertexIds[Triangle.B], GroupOfFace[Face]);');
+    expect(read('Modeling', 'McpGeometryProceduralMesh.cpp')).toContain('EditMesh.AppendTriangle(Idx0, Idx2, Idx1, GroupID);');
+  });
+
+  // Appended onto a mesh that had normals, the new faces had none and rendered as streaks until a split_normals.
+  it('gives every triangle the normal overlay left unset an element per corner before the recompute', () => {
+    const source = handler();
+    expect(source).toContain('Normals->IsSetTriangle(TriangleId)');
+    expect(source).toContain('Normals->SetTriangle(TriangleId, Elements);');
+    expect(source.indexOf('Normals->SetTriangle(TriangleId, Elements);')).toBeLessThan(source.indexOf('RecomputeMeshNormals(Mesh);'));
+  });
+
   it('refuses inconsistent winding and edges shared by more than two faces', () => {
     const source = input();
     expect(source).toContain('both run from vertex %u to vertex %u');

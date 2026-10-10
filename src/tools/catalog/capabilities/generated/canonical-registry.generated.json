@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "0586b176b23980d5",
+  "catalogRevision": "67d4de1631ce8cad",
   "recordCount": 408,
   "records": [
     {
@@ -64279,7 +64279,7 @@
             },
             "v0": {
               "type": "object",
-              "description": "First corner {x, y, z} of the appended triangle.",
+              "description": "First corner {x, y, z} of the appended triangle. The triangle faces the side (v1 - v0) x (v2 - v0) points to, as append_polygons faces do; the other side is culled.",
               "properties": {
                 "x": {
                   "type": "number",
@@ -64380,7 +64380,7 @@
               },
               "minItems": 1,
               "maxItems": 20000,
-              "description": "Faces, each a list of three or more vertex indices into vertices (at most 20000 faces). List a face's corners so that (v1 - v0) x (v2 - v0) points outward, and let two faces that share an edge run along it in opposite directions; the call refuses a face wound the other way, or an edge shared by more than two faces, and names the face. A face with more than three corners is triangulated (it may be concave) and all its triangles keep the face's polygroup."
+              "description": "Faces, each a list of three or more vertex indices into vertices (at most 20000 faces). List a face's corners so that (v1 - v0) x (v2 - v0) points outward, and let two faces that share an edge run along it in opposite directions; the call refuses a face wound the other way, or an edge shared by more than two faces, and names the face. A face with more than three corners is triangulated (it may be concave) and all its triangles keep the face's polygroup. The new faces get smooth normals, shared where they meet; split_normals creases the hard edges."
             },
             "faceGroups": {
               "type": "array",
@@ -65012,8 +65012,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "16958ede4d9c777af586e354f7c75897392fef752fcefa2b0763503dab8f4604",
-        "content": "513691b2a65d88ff7521b71d31442c8f6e61461d2a71e1458c5e47f8aa109f88"
+        "schema": "7924d26cdcd30fa03065b603be26b82c25c47998c90ab46522d09754df2db567",
+        "content": "aa5223919c28f31dd73595d7d9324bf724320d14753c832f7bc3502178d9d4e3"
       }
     },
     {

@@ -20,6 +20,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **`create_node` and `add_node` check the graph's schema** (`CanCreateUnderSpecifiedSchema`) and refuse a node it cannot hold with `NODE_NOT_ALLOWED_IN_GRAPH`.
 - **`import` picks the mesh as the asset it answers with and renames**, before animations, materials and textures.
 - **`open_level` and `manage_level` `load` reply after the level settles** (ten frames and texture streaming quiet, eight seconds at most) and restore the game view the load switched off.
+- **`append_polygons` and `append_triangle` append in Unreal's winding**, (v0, v2, v1), since `VectorUtil::Normal` faces (v2 - v0) × (v1 - v0). Every triangle a normal overlay left unset gets one element per corner vertex before the normals are recomputed.
 
 ## [0.6.0-beta-e] - 2026-10-09
 
