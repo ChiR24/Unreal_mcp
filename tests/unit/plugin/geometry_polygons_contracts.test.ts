@@ -81,3 +81,14 @@ describe('append_polygons validates everything before it touches the mesh', () =
     expect(read('McpGeometryHandlers.cpp')).toContain('if (SubAction == TEXT("append_polygons")) return HandleAppendPolygons(this, RequestId, Payload, RequestingSocket);');
   });
 });
+
+// An existing static mesh asset could not be edited: a dynamic mesh only ever started empty.
+describe('create starts a dynamic mesh from a static mesh asset when meshPath names one', () => {
+  it('copies the asset before any actor is spawned, and refuses a path that is no static mesh', () => {
+    const source = read('Modeling', 'McpGeometryProceduralMesh.cpp');
+    expect(source).toContain('UGeometryScriptLibrary_StaticMeshFunctions::CopyMeshFromStaticMesh(Source, DynMesh,');
+    expect(source.indexOf('CopyMeshFromStaticMesh(')).toBeLessThan(source.indexOf('SpawnDynamicMeshActorWithMesh('));
+    expect(source).toContain('TEXT("ASSET_NOT_FOUND")');
+    expect(source).toContain('Result->SetNumberField(TEXT("triangleCount"), CopiedTriangles);');
+  });
+});

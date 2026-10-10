@@ -14,6 +14,34 @@ bool HandleCreateProceduralMesh(UEngineWireSubsystem* Self, const FString& Reque
     bool bEnableCollision = GetJsonBoolField(Payload, TEXT("enableCollision"), false);
 
     UDynamicMesh* DynMesh = NewObject<UDynamicMesh>(GetTransientPackage());
+    // meshPath starts the mesh as a copy of a static mesh asset, so an existing asset can be cut, trimmed or edited and
+    // baked again; before, only geometry built here could be.
+    const FString MeshPath = GetJsonStringField(Payload, TEXT("meshPath"));
+    int32 CopiedTriangles = 0;
+    if (!MeshPath.IsEmpty())
+    {
+        UStaticMesh* Source = Cast<UStaticMesh>(McpLoadAsset(SanitizeProjectRelativePath(MeshPath)));
+        EGeometryScriptOutcomePins Outcome = EGeometryScriptOutcomePins::Failure;
+        if (Source)
+        {
+            UGeometryScriptLibrary_StaticMeshFunctions::CopyMeshFromStaticMesh(Source, DynMesh, FGeometryScriptCopyMeshFromAssetOptions(),
+                                                                               FGeometryScriptMeshReadLOD(), Outcome);
+        }
+        if (Outcome != EGeometryScriptOutcomePins::Success)
+        {
+            DynMesh->MarkAsGarbage();
+            if (Source)
+            {
+                Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Could not read geometry from %s"), *MeshPath), TEXT("MESH_READ_FAILED"));
+            }
+            else
+            {
+                Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Static mesh not found: %s"), *MeshPath), TEXT("ASSET_NOT_FOUND"));
+            }
+            return true;
+        }
+        DynMesh->ProcessMesh([&CopiedTriangles](const UE::Geometry::FDynamicMesh3& Mesh) { CopiedTriangles = Mesh.TriangleCount(); });
+    }
     FString SpawnError;
     AActor* NewActor = SpawnDynamicMeshActorWithMesh(Transform, Name, DynMesh,
                                                      SpawnError);
@@ -37,6 +65,10 @@ bool HandleCreateProceduralMesh(UEngineWireSubsystem* Self, const FString& Reque
     Result->SetStringField(TEXT("name"), McpActorRef(NewActor));
     Result->SetStringField(TEXT("class"), TEXT("DynamicMeshActor"));
     Result->SetBoolField(TEXT("enableCollision"), bEnableCollision);
+    if (!MeshPath.IsEmpty())
+    {
+        Result->SetNumberField(TEXT("triangleCount"), CopiedTriangles);
+    }
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Procedural mesh actor created"), Result);
     return true;
 }

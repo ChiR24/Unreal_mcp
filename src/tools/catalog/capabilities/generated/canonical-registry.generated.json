@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "93816845ac97be8c",
+  "catalogRevision": "fc8618c8010c53ff",
   "recordCount": 408,
   "records": [
     {
@@ -64210,6 +64210,7 @@
         "summary": "Edit a procedural/dynamic mesh: create one, append vertices, triangles or a whole polygon cage in one call (append_polygons), give triangles material ids by region (set_material_id), bake AO, edge, cavity and height masks for materials to read (bake_vertex_colors), set vertex positions, colors or UVs, split normals, translate, or subtract another mesh.",
         "whenToUse": [
           "edit=create: A mesh must be built vertex by vertex rather than from a primitive.",
+          "edit=create: An existing static mesh asset must be cut, trimmed or edited: create with meshPath, edit, then bake it with convert_to_static_mesh.",
           "edit=append_vertex: A mesh is being authored point by point.",
           "edit=append_triangle: A face must be added to an authored mesh in one call.",
           "edit=append_polygons: A smooth, rounded model starts as a coarse cage: append its vertices and faces here (one polygroup per face), then optimize_mesh subdivide with scheme catmull_clark and iterations 2 or 3.",
@@ -64257,6 +64258,10 @@
             "enableCollision": {
               "type": "boolean",
               "description": "Enable simple collision on the created DynamicMesh actor."
+            },
+            "meshPath": {
+              "type": "string",
+              "description": "Static mesh asset to start from: its geometry is copied in, each section as the material id of its slot, in the mesh's own local space. Omitted, the mesh starts empty."
             },
             "position": {
               "type": "object",
@@ -64648,6 +64653,10 @@
               "type": "boolean",
               "description": "Enable simple collision on the created DynamicMesh actor."
             },
+            "triangleCount": {
+              "type": "integer",
+              "description": "With meshPath: triangles copied from the asset."
+            },
             "actorName": {
               "type": "string",
               "description": "Actor name in the level."
@@ -64675,10 +64684,6 @@
             "vertexIndex2": {
               "type": "integer",
               "description": "Index of the third appended corner."
-            },
-            "triangleCount": {
-              "type": "integer",
-              "description": "Triangle count of the mesh after the call."
             },
             "verticesAdded": {
               "type": "integer",
@@ -64914,6 +64919,9 @@
             "enableCollision": [
               "create"
             ],
+            "meshPath": [
+              "create"
+            ],
             "position": [
               "append_vertex",
               "set_vertex_position"
@@ -65012,8 +65020,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "7924d26cdcd30fa03065b603be26b82c25c47998c90ab46522d09754df2db567",
-        "content": "aa5223919c28f31dd73595d7d9324bf724320d14753c832f7bc3502178d9d4e3"
+        "schema": "06782d0cfd48aaaa1b3300747dcb45009aa6d2b50f47b0e9cb37ccd54c9f2781",
+        "content": "24469896fdc2d76168e97f17f06a3ac777dafc4ad11d8e77a41966505d851a01"
       }
     },
     {

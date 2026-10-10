@@ -16982,7 +16982,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "meshPath": {
           "type": "string",
-          "description": "The static mesh asset to split; it is not changed."
+          "description": "Static mesh asset to start from: its geometry is copied in, each section as the material id of its slot, in the mesh's own local space. Omitted, the mesh starts empty."
         },
         "midpoint": {
           "type": "number",
@@ -18214,7 +18214,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "integer",
             "number"
           ],
-          "description": "Triangle count of the mesh after the call."
+          "description": "Triangle count."
         },
         "triangleIndex": {
           "type": "integer",
