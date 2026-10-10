@@ -146,34 +146,43 @@ bool UEngineWireSubsystem::HandleControlActorSetBlueprintVariables(
     if (!Property)
       continue;
 
+    // An actor variable takes the actor by label or name, as every other call names actors; only a path loaded.
+    TSharedPtr<FJsonValue> Value = Pair.Value;
+    const FObjectProperty *Reference = CastField<FObjectProperty>(Property);
+    AActor *Referenced = Reference && Reference->PropertyClass && Reference->PropertyClass->IsChildOf(AActor::StaticClass()) &&
+        Value.IsValid() && Value->Type == EJson::String && !Value->AsString().IsEmpty() &&
+        !Value->AsString().Contains(TEXT("/")) ? FindActorByName(Value->AsString()) : nullptr;
+    if (Referenced) Value = MakeShared<FJsonValueString>(Referenced->GetPathName());
     FString ApplyError;
-    if (ApplyJsonValueToProperty(Found, Property, Pair.Value, ApplyError))
+    if (ApplyJsonValueToProperty(Found, Property, Value, ApplyError))
       Applied.Add(VariableName);
     else
-      Warnings.Add(FString::Printf(TEXT("Failed to set %s: %s"), *VariableName,
-                                   *ApplyError));
+      Warnings.Add(FString::Printf(TEXT("Failed to set %s: %s"), *VariableName, *ApplyError));
   }
 
   // A Details-panel edit reruns the construction script; without this an
   // instance kept the look its old values built until something else moved it.
-  if (Applied.Num() > 0) {
-    Found->PostEditChange();
-  }
+  if (Applied.Num() > 0) Found->PostEditChange();
   Found->MarkComponentsRenderStateDirty();
   Found->MarkPackageDirty();
 
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   if (Applied.Num() > 0) {
-    TArray<TSharedPtr<FJsonValue>> AppliedArray;
-    for (const FString &Name : Applied)
-      AppliedArray.Add(MakeShared<FJsonValueString>(Name));
-    Data->SetArrayField(TEXT("updated"), AppliedArray);
+    Data->SetArrayField(TEXT("updated"), McpHandlerUtils::ToJsonStringArray(Applied));
     // The instance whose variables changed (the Blueprint asset itself did not), so the receipt names it.
     Data->SetStringField(TEXT("actorName"), McpActorRef(Found));
   }
+  // A value that did not take (a reference that resolves to nothing) answered "Variables updated" with the miss
+  // only in a warning.
+  if (Warnings.Num() > 0) {
+    SendAutomationResponse(Socket, RequestId, false, FString::Printf(TEXT("Set %d of %d variables on %s; %s"),
+        Applied.Num(), (*VariablesPtr)->Values.Num(), *TargetName, *FString::Join(Warnings, TEXT("; "))),
+        Data, TEXT("VARIABLE_NOT_SET"));
+    return true;
+  }
 
   SendStandardSuccessResponse(this, Socket, RequestId,
-                              TEXT("Variables updated"), Data, Warnings);
+                              TEXT("Variables updated"), Data);
   return true;
 }
 

@@ -65,7 +65,7 @@ export const ADVANCED_RECORDS: readonly CapabilityRecordSource[] = [
       actorName: P.actorName,
       variables: {
         ...P.variables,
-        description: 'Blueprint variable name to value map. A name the actor does not have refuses the whole call before anything is set; the error lists the variables it does have.',
+        description: 'Blueprint variable name to value map. A name the actor does not have refuses the whole call before anything is set; the error lists the variables it does have. An actor variable takes the other actor by label, name or path. A value that does not take (an object path that loads nothing) fails the call, naming it; the variables that did take are listed under updated.',
       },
       actors: {
         type: 'array',

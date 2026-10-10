@@ -341,6 +341,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "control_actor::set_blueprint_variables": "interactive|low",
   "control_actor::set_component_properties": "interactive|low",
   "control_actor::set_component_property": "interactive|low",
+  "control_actor::set_folder": "instant|low",
   "control_actor::set_material": "instant|low",
   "control_actor::set_transform": "instant|low",
   "control_actor::set_visibility": "instant|low",
@@ -1495,6 +1496,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::configure_world_partition": "interactive|medium",
   "system_control::console_command": "instant|low",
   "system_control::control_editor": "interactive|low",
+  "system_control::create_cpp_class": "long-running|high",
   "system_control::create_widget": "interactive|low",
   "system_control::delete_output_file": "instant|low",
   "system_control::disable_plugin": "interactive|low",
@@ -1559,4 +1561,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1546;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1548;

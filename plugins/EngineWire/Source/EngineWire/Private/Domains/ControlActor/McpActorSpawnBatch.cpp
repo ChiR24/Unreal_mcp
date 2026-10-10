@@ -32,15 +32,16 @@ TSharedPtr<FJsonObject> MergeSpawnItem(const TSharedPtr<FJsonObject> &Defaults,
   }
   return Out;
 }
+} // namespace
 
 // Outliner folder and tags need no handler of their own.
-void ApplySpawnOrganisation(AActor *Actor, const TSharedPtr<FJsonObject> &Item) {
+void McpApplySpawnOrganisation(AActor *Actor, const TSharedPtr<FJsonObject> &Payload) {
   FString Folder;
-  if (Item->TryGetStringField(TEXT("folder"), Folder) && !Folder.IsEmpty()) {
+  if (Actor && Payload->TryGetStringField(TEXT("folder"), Folder) && !Folder.IsEmpty()) {
     Actor->SetFolderPath(FName(*Folder));
   }
   const TArray<TSharedPtr<FJsonValue>> *Tags = nullptr;
-  if (Item->TryGetArrayField(TEXT("tags"), Tags)) {
+  if (Actor && Payload->TryGetArrayField(TEXT("tags"), Tags)) {
     for (const TSharedPtr<FJsonValue> &Tag : *Tags) {
       const FString TagName = Tag.IsValid() ? Tag->AsString() : FString();
       if (!TagName.IsEmpty()) {
@@ -49,7 +50,6 @@ void ApplySpawnOrganisation(AActor *Actor, const TSharedPtr<FJsonObject> &Item) 
     }
   }
 }
-} // namespace
 
 bool UEngineWireSubsystem::HandleControlActorSpawnBatch(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
@@ -140,8 +140,8 @@ bool UEngineWireSubsystem::HandleControlActorSpawnBatch(
     const FString Shown = Actor ? (bNamed ? Actor->GetActorLabel() : Actor->GetName()) : ActorPath;
     Affected.Add(Shown);
     if (Actor) {
+      // Its folder and tags were applied by the spawn itself (McpApplySpawnOrganisation).
       Entry->SetStringField(TEXT("name"), Shown);
-      ApplySpawnOrganisation(Actor, Item);
     }
 
     // Per-instance Blueprint variables (e.g. a block's Kind), same handler as

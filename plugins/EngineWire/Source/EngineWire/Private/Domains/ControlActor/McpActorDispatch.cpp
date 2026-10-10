@@ -97,6 +97,8 @@ bool UEngineWireSubsystem::HandleControlActorAction(
     return HandleControlActorAddTag(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("remove_tag"))
     return HandleControlActorRemoveTag(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("set_folder"))
+    return HandleControlActorSetFolder(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("find_by_name") || LowerSub == TEXT("find_actors_by_name"))
     return HandleControlActorFindByName(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("delete_by_tag"))

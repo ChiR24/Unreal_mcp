@@ -122,13 +122,15 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
       rays: {
         type: 'array', minItems: 1, maxItems: 256,
         items: {
-          type: 'object', additionalProperties: false, required: ['origin', 'direction'],
+          type: 'object', additionalProperties: false,
           properties: {
             origin: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Ray start {x, y, z} in the mesh\'s local space, in cm; start outside the mesh to find its outer surface.' },
             direction: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Ray direction {x, y, z}; any length, it is normalized.' },
+            start: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Line start {x, y, z} in local space, with end in place of origin and direction (the form raycast_world takes).' },
+            end: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Line end {x, y, z} in local space; nothing past it is reported.' },
           },
         },
-        description: 'Rays in the mesh\'s local space; each answers in hits at the same index.',
+        description: 'Rays in the mesh\'s local space, each {origin, direction} or {start, end}; each answers in hits at the same index.',
       },
     },
     required: ['meshPath', 'rays'],

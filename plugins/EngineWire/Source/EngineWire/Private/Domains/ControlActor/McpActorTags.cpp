@@ -183,3 +183,57 @@ bool UEngineWireSubsystem::HandleControlActorRemoveTag(
 	SendAutomationResponse(Socket, RequestId, true, TEXT("Tag removed from actor"), Data);
   return true;
 }
+
+// Files placed actors under an outliner folder ("" or "None" is the root): only a spawn could file one, so a level
+// built call by call stayed one flat list.
+bool UEngineWireSubsystem::HandleControlActorSetFolder(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+  FString Folder;
+  if (!Payload->TryGetStringField(TEXT("folder"), Folder)) {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("folder required: an outliner folder path (Level/Signs), or \"\" for the root"), nullptr);
+    return true;
+  }
+  TArray<AActor *> Actors;
+  TArray<FString> Missing;
+  FString Single;
+  if (!McpResolveActorNames(Payload, [this](const FString &Name) { return FindActorByName(Name); }, Actors, Missing) &&
+      Payload->TryGetStringField(TEXT("actorName"), Single) && !Single.IsEmpty()) {
+    if (AActor *Found = FindActorByName(Single)) Actors.Add(Found); else Missing.Add(Single);
+  }
+  if (Actors.Num() == 0) {
+    if (Missing.Num() > 0) {
+      McpSendNoActorNamesFound(this, Socket, RequestId, Missing);
+    } else {
+      SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                                TEXT("actorName (or actorNames) required"), nullptr);
+    }
+    return true;
+  }
+  TArray<UObject *> Targets;
+  for (AActor *Actor : Actors) {
+    Targets.Add(Actor);
+  }
+  FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Set Actor Folder")),
+                                          EMcpMutationDurability::EditorStateOnly, Targets);
+  // FName("") and FName("None") are both NAME_None: the root.
+  const FName FolderPath(*Folder);
+  TArray<FString> Affected;
+  for (AActor *Actor : Actors) {
+    Actor->SetFolderPath(FolderPath);
+    Actor->MarkPackageDirty();
+    Affected.Add(McpActorRef(Actor));
+  }
+  TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
+  Data->SetStringField(TEXT("folder"), FolderPath.IsNone() ? FString() : FolderPath.ToString());
+  Data->SetNumberField(TEXT("movedCount"), Actors.Num());
+  Data->SetArrayField(TEXT("affectedActors"), McpHandlerUtils::ToJsonStringArray(Affected));
+  Data->SetArrayField(TEXT("missing"), McpHandlerUtils::ToJsonStringArray(Missing));
+  Transaction.DescribeInto(Data);
+  SendAutomationResponse(Socket, RequestId, true,
+                         FString::Printf(TEXT("%d actor(s) moved to %s; %d not found"), Actors.Num(),
+                                         FolderPath.IsNone() ? TEXT("the root") : *Folder, Missing.Num()),
+                         Data);
+  return true;
+}

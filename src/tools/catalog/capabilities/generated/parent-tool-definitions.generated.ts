@@ -3873,6 +3873,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "items": {
                 "type": "string"
               },
+              "description": "Several actors to move in one call and one undo step, in place of actorName; names not found are listed back under missing, and the actors moved under affectedActors."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
               "description": "Several actors to show or hide in one call and one undo step, in place of actorName; names not found are listed back under missing, and the actors changed under affectedActors (which the receipt lists as changes, with an actor handle each)."
             },
             {
@@ -4450,11 +4457,23 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "default": "add"
         },
         "tags": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Several actor tags at once, in place of tag: every actor carrying any of them is deleted under one consent."
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Actor tags for the new actor: delete_by_tag removes them again, and mcp.placement.ok marks a deliberate overlap before the placement is judged."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Several actor tags at once, in place of tag: every actor carrying any of them is deleted under one consent."
+            }
+          ],
+          "description": "Actor tags for the new actor: delete_by_tag removes them again, and mcp.placement.ok marks a deliberate overlap before the placement is judged."
         },
         "transformMode": {
           "type": "string",
@@ -4473,7 +4492,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "variables": {
           "type": "object",
-          "description": "Blueprint variable name to value map. A name the actor does not have refuses the whole call before anything is set; the error lists the variables it does have.",
+          "description": "Blueprint variable name to value map. A name the actor does not have refuses the whole call before anything is set; the error lists the variables it does have. An actor variable takes the other actor by label, name or path. A value that does not take (an object path that loads nothing) fails the call, naming it; the variables that did take are listed under updated.",
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true
         },
@@ -4498,6 +4517,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "get_components",
             "list",
             "add_tag",
+            "set_folder",
             "find_by_tag",
             "find",
             "audit_placement",
@@ -4628,6 +4648,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "items": {
                 "type": "string"
               },
+              "description": "The actors moved; the receipt lists them as changes, with an actor handle each."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
               "description": "The actors that spawned, by the name each result carries, in batch order and under either report mode; the receipt lists them as changes, with an actor handle each (the first 20)."
             },
             {
@@ -4638,7 +4665,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "description": "actors: the actors that took their transform, each by name and once; the receipt lists them as changes, with an actor handle each."
             }
           ],
-          "description": "The actors that spawned, by the name each result carries, in batch order and under either report mode; the receipt lists them as changes, with an actor handle each (the first 20)."
+          "description": "The actors moved; the receipt lists them as changes, with an actor handle each."
         },
         "blueprintPath": {
           "type": "string",
@@ -4833,6 +4860,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Actors with a placement problem (part findings, with blueprintPath), before the limit."
         },
+        "folder": {
+          "type": "string",
+          "description": "The folder the actors are in now (\"\" for the root)."
+        },
         "gameSeconds": {
           "type": "number",
           "description": "Game time covered."
@@ -4905,6 +4936,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Smallest x, y and z sampled (the lowest point is min[2])."
         },
+        "missing": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Names that matched no actor."
+        },
         "missingComponents": {
           "type": "array",
           "items": {
@@ -4936,6 +4974,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "movedActors": {
           "type": "number",
           "description": "actors: how many actors took their transform."
+        },
+        "movedCount": {
+          "type": "number",
+          "description": "How many actors were moved."
         },
         "name": {
           "type": "string",
@@ -5155,10 +5197,21 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Present when the limit cut the list short; says how to reach the rest."
         },
         "undo": {
-          "type": "object",
-          "additionalProperties": true,
-          "x-unreal-reflection-boundary": true,
-          "description": "Whether editor undo takes the spawn back: {undoable: true, transactionScope: \"Spawn Actors\"} (control_editor undo removes every actor the call made), or {undoable: false, reasonCode, reason}."
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "Whether editor undo takes the move back: {undoable, transactionScope}."
+            },
+            {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "Whether editor undo takes the spawn back: {undoable: true, transactionScope: \"Spawn Actors\"} (control_editor undo removes every actor the call made), or {undoable: false, reasonCode, reason}."
+            }
+          ],
+          "description": "Whether editor undo takes the move back: {undoable, transactionScope}."
         },
         "unnamedActors": {
           "type": "array",
@@ -6437,10 +6490,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "items": {
                 "type": "object",
                 "additionalProperties": false,
-                "required": [
-                  "origin",
-                  "direction"
-                ],
                 "properties": {
                   "origin": {
                     "type": "object",
@@ -6453,10 +6502,22 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                     "additionalProperties": true,
                     "x-unreal-reflection-boundary": true,
                     "description": "Ray direction {x, y, z}; any length, it is normalized."
+                  },
+                  "start": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "x-unreal-reflection-boundary": true,
+                    "description": "Line start {x, y, z} in local space, with end in place of origin and direction (the form raycast_world takes)."
+                  },
+                  "end": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "x-unreal-reflection-boundary": true,
+                    "description": "Line end {x, y, z} in local space; nothing past it is reported."
                   }
                 }
               },
-              "description": "Rays in the mesh's local space; each answers in hits at the same index."
+              "description": "Rays in the mesh's local space, each {origin, direction} or {start, end}; each answers in hits at the same index."
             },
             {
               "type": "array",
@@ -22806,6 +22867,18 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Child component class (required)."
         },
+        "classLocation": {
+          "type": "string",
+          "enum": [
+            "public",
+            "private"
+          ],
+          "description": "public (default): header in Public, .cpp in Private; private: both in Private. A module without those folders takes both files in its own folder."
+        },
+        "className": {
+          "type": "string",
+          "description": "The class name without its prefix: MyActor makes AMyActor (an Actor parent), MyThing makes UMyThing (an Object parent). Letters, digits and _."
+        },
         "code": {
           "type": "string",
           "description": "Python code to execute inline (1 MB max).",
@@ -23037,6 +23110,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Optimization mode."
         },
+        "moduleName": {
+          "type": "string",
+          "description": "The project module that gets the files; default the module named after the project, else its first runtime module. A wrong name lists the modules."
+        },
         "motionBlur": {
           "type": "boolean",
           "description": "Motion blur on by default."
@@ -23065,6 +23142,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "pak": {
           "type": "boolean",
           "description": "Pak the staged content (default true)."
+        },
+        "parentClass": {
+          "type": "string",
+          "description": "The C++ class to derive from, by name or path (Actor, Character, Pawn, ActorComponent, SceneComponent, Object, BlueprintFunctionLibrary, /Script/Engine.GameModeBase), or None for a plain C++ class. A Blueprint class is refused: derive from its C++ parent."
         },
         "parentName": {
           "type": "string",
@@ -23271,6 +23352,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Loading/streaming range."
         },
+        "subfolder": {
+          "type": "string",
+          "description": "Folder under the module's Public (or Private) folder, such as Gameplay/Pickups; default none. A module without Public and Private folders refuses one: its own folder is no include path, so the class would not compile there."
+        },
         "target": {
           "type": "string",
           "description": "UBT target name (required)."
@@ -23349,6 +23434,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "profile_performance",
             "configure_performance",
             "merge_actors",
+            "create_cpp_class",
             "run_build",
             "package_project",
             "package_status",
@@ -23416,6 +23502,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Paths checked."
         },
+        "className": {
+          "type": "string",
+          "description": "The C++ class name with its prefix (AMyActor)."
+        },
+        "classPath": {
+          "type": "string",
+          "description": "The class's path once compiled (/Script/<Module>.<Name>), for a class with a UObject parent."
+        },
         "codeSha256": {
           "type": "string",
           "description": "SHA-256 of the executed code, as logged."
@@ -23427,6 +23521,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "commandLine": {
           "type": "string",
           "description": "The UAT command line this job launched."
+        },
+        "compiled": {
+          "type": "boolean",
+          "description": "Whether the editor compiled the module after adding the files (Live Coding or hot reload, as its settings say); a Live Coding compile has only started when this answers, and read_log category LogLiveCoding says whether it succeeded."
         },
         "componentName": {
           "type": "string",
@@ -23451,6 +23549,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "count": {
           "type": "number",
           "description": "Without slotName: how many slots there are."
+        },
+        "cppPath": {
+          "type": "string",
+          "description": "Absolute path of the new .cpp."
         },
         "created": {
           "type": "boolean",
@@ -23530,6 +23632,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "True when more matching files follow this page."
         },
+        "headerPath": {
+          "type": "string",
+          "description": "Absolute path of the new header."
+        },
         "hint": {
           "type": "string",
           "description": "How to get a full section dump."
@@ -23594,6 +23700,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "message": {
           "type": "string",
           "description": "Human-readable result message."
+        },
+        "moduleName": {
+          "type": "string",
+          "description": "The module the class went into."
         },
         "nextOffset": {
           "type": "number",

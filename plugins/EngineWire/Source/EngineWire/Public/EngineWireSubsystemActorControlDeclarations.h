@@ -20,6 +20,7 @@ MCP_DECLARE_PAYLOAD_HANDLER(HandleControlActorDetach); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleControlActorFindByTag); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleControlActorAddTag); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleControlActorRemoveTag); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleControlActorSetFolder); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleControlActorFindByName); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleControlActorDeleteByTag); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleControlActorSetBlueprintVariables); \

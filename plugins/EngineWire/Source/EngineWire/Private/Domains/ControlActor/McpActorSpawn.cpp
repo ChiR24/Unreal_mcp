@@ -292,16 +292,14 @@ bool UEngineWireSubsystem::HandleControlActorSpawn(
     }
     Spawned->SetActorLabel(BaseName);
   }
+  McpApplySpawnOrganisation(Spawned, Payload);
 
   // actorPath, actorName and actorClass come from AddVerification below; an actor { id, name, path }
   // object used to repeat them, with the path twice.
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
 
   // Provide the resolved class path useful for referencing
-  if (ResolvedClass)
-    Data->SetStringField(TEXT("classPath"), ResolvedClass->GetPathName());
-  else
-    Data->SetStringField(TEXT("classPath"), ClassPath);
+  Data->SetStringField(TEXT("classPath"), ResolvedClass ? ResolvedClass->GetPathName() : ClassPath);
 
   if (ResolvedStaticMesh)
     Data->SetStringField(TEXT("meshPath"), ResolvedStaticMesh->GetPathName());

@@ -142,6 +142,49 @@ describe('handlers answer what they did', () => {
     expect(source).not.toContain('Property not found');
   });
 
+  // A cart corral spawned around its carts read "sunk 97 units": the carts' tops were taken for the ground under it.
+  it('the placement ground probe skips what the actor encloses', () => {
+    const source = code('ControlActor', 'McpActorPlacementCheck.cpp');
+    const enclosed = source.indexOf('SelfBox.ExpandBy(1.0).IsInside(FBox::BuildAABB(HitOrigin, HitExtent))');
+    expect(enclosed).toBeGreaterThan(-1);
+    expect(enclosed).toBeLessThan(source.indexOf('bHasGround = true;'));
+  });
+
+  // A single spawn refused folder, which only a batch item took, and no action could file an existing actor.
+  it('a single spawn takes folder and tags before its placement is judged, and set_folder files placed actors', () => {
+    for (const file of ['McpActorSpawn.cpp', 'McpActorBPSpawn.cpp']) {
+      const source = code('ControlActor', file);
+      const organise = source.indexOf('McpApplySpawnOrganisation(Spawned, Payload);');
+      expect(organise, file).toBeGreaterThan(-1);
+      expect(organise, file).toBeLessThan(source.indexOf('McpDescribeSpawnPlacement(RequestId, Spawned,'));
+    }
+    expect(code('ControlActor', 'McpActorSpawnBatch.cpp')).toContain('void McpApplySpawnOrganisation(AActor *Actor, const TSharedPtr<FJsonObject> &Payload) {');
+    const tags = code('ControlActor', 'McpActorTags.cpp');
+    expect(tags).toContain('bool UEngineWireSubsystem::HandleControlActorSetFolder(');
+    expect(tags).toContain('Actor->SetFolderPath(FolderPath);');
+    expect(code('ControlActor', 'McpActorDispatch.cpp')).toContain('if (LowerSub == TEXT("set_folder"))');
+  });
+
+  // A spawn node's Class pin default added its ExposeOnSpawn pins, but the create step listed the pins from before.
+  it('a create step lists the node\'s pins as they are after its pinDefaults', () => {
+    const steps = code('BlueprintGraph', 'McpBPGraphBatchSteps.cpp');
+    const refresh = steps.indexOf('Entry->SetStringField(TEXT("pins"), DescribeNodePins(FindBatchNode(Context.Blueprint, Guid)));');
+    expect(refresh).toBeGreaterThan(steps.indexOf('ApplyPinDefaults(Context, Payload, Step, Guid, StepId, Entry)'));
+  });
+
+  // GateL = "S6_GateL" (a label, as every other call names actors) failed to load as a path, and the call still
+  // answered "Variables updated" with the miss only in a warning.
+  it('set_blueprint_variables takes an actor variable by label and fails the call when a value does not take', () => {
+    const source = code('ControlActor', 'McpActorAdvanced.cpp');
+    expect(source).toContain('Reference->PropertyClass->IsChildOf(AActor::StaticClass())');
+    expect(source).toContain('if (Referenced) Value = MakeShared<FJsonValueString>(Referenced->GetPathName());');
+    expect(source).toContain('ApplyJsonValueToProperty(Found, Property, Value, ApplyError)');
+    const refusal = source.indexOf('TEXT("VARIABLE_NOT_SET")');
+    expect(refusal).toBeGreaterThan(-1);
+    expect(refusal).toBeLessThan(source.indexOf('TEXT("Variables updated")'));
+    expect(source, 'no success reply carries the failures as warnings').not.toContain('TEXT("Variables updated"), Data, Warnings');
+  });
+
   it('get_blueprint with a property that misses names the variables the Blueprint has', () => {
     expect(code('Blueprint', 'Queries', 'McpBPGet.cpp'))
       .toMatch(/Its variables: %s\."\), \*PropertyName, \*McpBlueprintVariableList\(Generated\)\),\s*Resp, TEXT\("PROPERTY_NOT_FOUND"\)\);/u);
@@ -1516,6 +1559,48 @@ describe('a graph batch checks its expressions before any step runs', () => {
     expect(types, 'the literals true and false are bools').toContain('Name.Equals(TEXT("true"), ESearchCase::IgnoreCase)');
     const mutations = code('BlueprintGraph', 'McpBPGraphNodeMutations.cpp');
     expect(mutations).toContain('A name that is not a variable is a number input, never true/false.');
+  });
+
+  // Every caller wrote vec(-170, 10, z) or 0.5 * -x first and got a refusal: the node has no unary minus.
+  it('writes a unary minus as a subtraction from zero before the node parses it, in the single set and the batch', () => {
+    const minus = code('BlueprintGraph', 'Expression', 'McpBPGraphMathExprMinus.cpp');
+    expect(minus).toContain('FString RewriteUnaryMinus(const FString& Expression)');
+    expect(minus).toContain('TEXT("(0 - %s)")');
+    expect(minus, 'only after a bracket, a comma or an operator').toContain('FCString::Strchr(TEXT("(,+-*/%<>=!&|"), Prev)');
+    expect(minus, '1e-5 keeps its exponent').toContain("FChar::ToLower(Text[End - 1]) == TEXT('e')");
+    const mutations = code('BlueprintGraph', 'McpBPGraphNodeMutations.cpp');
+    const rewrite = mutations.indexOf('Value = McpBlueprintMathExpression::RewriteUnaryMinus(Value);');
+    expect(rewrite).toBeGreaterThan(-1);
+    expect(rewrite).toBeLessThan(mutations.indexOf('McpBlueprintMathExpression::DescribeBoolArithmetic(Context.Blueprint, Value)'));
+    const steps = code('BlueprintGraph', 'McpBPGraphBatchSteps.cpp');
+    const stepRewrite = steps.indexOf('Expression = McpBlueprintMathExpression::RewriteUnaryMinus(Expression);');
+    expect(stepRewrite).toBeGreaterThan(-1);
+    expect(stepRewrite).toBeLessThan(steps.indexOf('DescribeProblems(Blueprint, Expression, DeclaredBools)'));
+  });
+});
+
+// No capability added code to a project: a C++ class meant leaving the tool for the editor's wizard or an IDE.
+describe('create_cpp_class adds a class the way the editor\'s New C++ Class does, without its dialogs', () => {
+  it('drives GameProjectUtils::AddCodeToProject unattended, after refusing unsafe input', () => {
+    const source = code('SystemControl', 'McpSystemCppClass.cpp');
+    const guard = source.indexOf('TGuardValue<bool> Unattended(GIsRunningUnattendedScript, true);');
+    expect(guard, 'a wizard message box would block the game thread').toBeGreaterThan(-1);
+    expect(guard).toBeLessThan(source.indexOf('GameProjectUtils::AddCodeToProject('));
+    // A subfolder of a module without Public/Private got #include "Sub/X.h" from the engine, which did not compile.
+    for (const check of ['if (!IsCppIdentifier(ClassName))', 'if (!IsSafeSubfolder(Subfolder))', 'GameProjectUtils::IsValidBaseClassForCreation(ParentClass, Module)', '!ParentClass->HasAnyClassFlags(CLASS_Native)', 'if (!bSplit && !Subfolder.IsEmpty())']) {
+      expect(source.indexOf(check), check).toBeGreaterThan(-1);
+      expect(source.indexOf(check), check).toBeLessThan(guard);
+    }
+    expect(source, 'the files written but not compiled is a failure, not a success').toContain('TEXT("COMPILE_FAILED")');
+    // Adding the class can reload the project file and empty the engine's module list: a pointer into it read freed
+    // strings ("All source code for '<garbage>' must exist within ...").
+    const copy = source.indexOf('const FModuleContextInfo Module = *Found;');
+    expect(copy).toBeGreaterThan(-1);
+    expect(copy).toBeLessThan(guard);
+    expect(source).toContain('GameProjectUtils::AddCodeToProject(ClassName, ClassPath, Module, Parent,');
+    const handlers = code('SystemControl', 'McpSystemHandlers.cpp');
+    expect(handlers).toContain('McpSystemControlHandlers::HandleCreateCppClass(this, RequestId, Payload,');
+    expect(handlers).toContain('Lower != TEXT("create_cpp_class")');
   });
 });
 

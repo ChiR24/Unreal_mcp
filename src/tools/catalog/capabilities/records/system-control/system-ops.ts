@@ -1,8 +1,9 @@
 /**
- * System operations records (18): run_ubt, package_project, package_status,
+ * System operations records (19): run_ubt, package_project, package_status,
  * launch_build, run_tests, subscribe, unsubscribe, read_log, list_output_files,
  * delete_output_file, list_save_games, edit_save_game, spawn_category, execute_python,
- * set_project_setting, get_project_settings, validate_assets, lumen_update_scene.
+ * set_project_setting, get_project_settings, validate_assets, lumen_update_scene,
+ * create_cpp_class.
  */
 import type { CapabilityRecordSource } from '../../model.js';
 import { buildCoreRecord } from '../core/builder.js';
@@ -10,6 +11,43 @@ import { buildCoreRecord } from '../core/builder.js';
 const PT = 'system_control';
 
 export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
+  // Adding code to a project had no capability: every C++ class meant leaving the tool for the editor's wizard or an
+  // IDE. The handler drives the wizard's own GameProjectUtils::AddCodeToProject, unattended.
+  buildCoreRecord({
+    parentTool: PT,
+    action: 'create_cpp_class',
+    domain: 'build',
+    family: 'build',
+    // No "add code to project": it took "add file to project" from asset import on the TS door.
+    topics: ['create c++ class', 'new c++ class', 'add c++ class', 'create cpp file', 'c++ source file', 'c++ header file', 'native class', 'c++ actor class', 'c++ component'],
+    summary: 'Create a new C++ class in a project module, as the editor\'s New C++ Class does: a header and a .cpp from a parent class (Actor, Character, ActorComponent, Object ..., or None for a plain class), then the editor\'s own compile.',
+    whenToUse: ['Gameplay logic or a base class belongs in C++: a new class file pair must be added to the project source.'],
+    whenNotToUse: ['A Blueprint class is enough (use manage_blueprint create).', 'Existing C++ only needs compiling (use run_ubt, or console_command LiveCoding.Compile).'],
+    inputProps: {
+      className: { type: 'string', description: 'The class name without its prefix: MyActor makes AMyActor (an Actor parent), MyThing makes UMyThing (an Object parent). Letters, digits and _.' },
+      parentClass: { type: 'string', description: 'The C++ class to derive from, by name or path (Actor, Character, Pawn, ActorComponent, SceneComponent, Object, BlueprintFunctionLibrary, /Script/Engine.GameModeBase), or None for a plain C++ class. A Blueprint class is refused: derive from its C++ parent.' },
+      moduleName: { type: 'string', description: 'The project module that gets the files; default the module named after the project, else its first runtime module. A wrong name lists the modules.' },
+      subfolder: { type: 'string', description: 'Folder under the module\'s Public (or Private) folder, such as Gameplay/Pickups; default none. A module without Public and Private folders refuses one: its own folder is no include path, so the class would not compile there.' },
+      classLocation: { type: 'string', enum: ['public', 'private'], description: 'public (default): header in Public, .cpp in Private; private: both in Private. A module without those folders takes both files in its own folder.' },
+    },
+    required: ['className', 'parentClass'],
+    outputProps: {
+      className: { type: 'string', description: 'The C++ class name with its prefix (AMyActor).' },
+      headerPath: { type: 'string', description: 'Absolute path of the new header.' },
+      cppPath: { type: 'string', description: 'Absolute path of the new .cpp.' },
+      moduleName: { type: 'string', description: 'The module the class went into.' },
+      classPath: { type: 'string', description: 'The class\'s path once compiled (/Script/<Module>.<Name>), for a class with a UObject parent.' },
+      compiled: { type: 'boolean', description: 'Whether the editor compiled the module after adding the files (Live Coding or hot reload, as its settings say); a Live Coding compile has only started when this answers, and read_log category LogLiveCoding says whether it succeeded.' },
+      note: { type: 'string', description: 'What the class needs before it can be used: a build, a restart, or nothing.' },
+    },
+    outputRequired: [],
+    effect: 'write',
+    behavior: { longRunning: true },
+    costLatency: 'long-running',
+    costResources: 'high',
+    exampleInput: { action: 'create_cpp_class', className: 'PickupBase', parentClass: 'Actor', subfolder: 'Gameplay' },
+    exampleOutput: { success: true, message: 'Created APickupBase in MyGame', className: 'APickupBase', moduleName: 'MyGame', headerPath: 'C:/Projects/MyGame/Source/MyGame/Public/Gameplay/PickupBase.h', cppPath: 'C:/Projects/MyGame/Source/MyGame/Private/Gameplay/PickupBase.cpp', classPath: '/Script/MyGame.PickupBase', compiled: true },
+  }),
   buildCoreRecord({
     parentTool: PT,
     action: 'run_ubt',

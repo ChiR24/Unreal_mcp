@@ -197,6 +197,11 @@ FString RunBatchStep(const FActionContext& Context, FBatchState& State,
         Entry->RemoveField(TEXT("pins"));
         return DefaultsError;
     }
+    // A pin default can rebuild the node (a spawn node's Class adds its ExposeOnSpawn pins): list the pins it has now.
+    if (Step->HasField(TEXT("pinDefaults")))
+    {
+        Entry->SetStringField(TEXT("pins"), DescribeNodePins(FindBatchNode(Context.Blueprint, Guid)));
+    }
     if (!Alias.IsEmpty())
     {
         State.Aliases.Add(Alias, Guid);
@@ -228,6 +233,8 @@ FString DescribeExpressionStep(const UBlueprint* Blueprint, const FJsonObject& S
     {
         return FString();
     }
+    // The step itself writes a unary minus as 0 - x, so the pre-check judges that text.
+    Expression = McpBlueprintMathExpression::RewriteUnaryMinus(Expression);
     const FString Problems = McpBlueprintMathExpression::DescribeProblems(Blueprint, Expression, DeclaredBools);
     return Problems.IsEmpty() ? FString()
                               : FString::Printf(TEXT("The expression '%s' would not compile: %s"), *Expression, *Problems);

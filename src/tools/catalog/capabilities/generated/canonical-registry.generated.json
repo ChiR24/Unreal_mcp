@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "fc8618c8010c53ff",
-  "recordCount": 408,
+  "catalogRevision": "0692536dbeee1f61",
+  "recordCount": 410,
   "records": [
     {
       "id": "animation_physics.analyze_animation",
@@ -15796,13 +15796,21 @@
         "domain": "blueprint",
         "family": "graph",
         "topics": [
-          "delete_node"
+          "delete_node",
+          "delete node",
+          "remove node",
+          "disconnect pins",
+          "unlink pins",
+          "break pin links",
+          "remove wire",
+          "disconnect wire",
+          "unwire pin"
         ],
-        "summary": "Delete a graph node, or break the links of one of its pins.",
+        "summary": "Delete a graph node, or break (disconnect) the links of one of its pins.",
         "whenToUse": [
           "deleteScope=node: A graph node must be permanently removed.",
           "deleteScope=node: A whole dead chain of nodes must be removed in one call.",
-          "deleteScope=pin_links: All links from a specific pin must be removed."
+          "deleteScope=pin_links: All links from a specific pin must be removed (disconnect or unlink a wire)."
         ],
         "whenNotToUse": [
           "deleteScope=node: The node should be moved rather than deleted.",
@@ -15905,7 +15913,7 @@
       },
       "examples": [
         {
-          "title": "Delete a graph node, or break the links of one of its pins.",
+          "title": "Delete a graph node, or break (disconnect) the links of one of its pins.",
           "input": {
             "action": "delete_node",
             "blueprintPath": "/Game/Blueprints/BP_Test",
@@ -15963,7 +15971,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "f712852d4f1423e3bbe408a6d3122533b45ecb472cc5e3462c69fc68387a3e63",
-        "content": "6d6e614b2fa705d45bdd2f91118acb75fce2b5be26c73a5f8f21919357951bab"
+        "content": "3b56646861d99570fcef7007a40da263def941d25194cf9712404db69749bb47"
       }
     },
     {
@@ -34904,7 +34912,7 @@
             },
             "variables": {
               "type": "object",
-              "description": "Blueprint variable name to value map. A name the actor does not have refuses the whole call before anything is set; the error lists the variables it does have.",
+              "description": "Blueprint variable name to value map. A name the actor does not have refuses the whole call before anything is set; the error lists the variables it does have. An actor variable takes the other actor by label, name or path. A value that does not take (an object path that loads nothing) fails the call, naming it; the variables that did take are listed under updated.",
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true
             },
@@ -35008,8 +35016,180 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "2ce3e14a2be5ecf04a32c1c8447f34231981556a52c8c0accec19adf26578e60",
-        "content": "0d2cc030d855021073938b9a62a934dd8f1038fdc2a9379c178c3674f5c37ec2"
+        "schema": "5855f5c291009b73d179c417c0e5672856373def15830a45f51296cfc8cf8e31",
+        "content": "457efc580c860f1bdf2f442244969dfa311ce64cd8cc62f8579cf14b2cf7cab2"
+      }
+    },
+    {
+      "id": "control_actor.set_folder",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "control_actor",
+          "action": "set_folder"
+        }
+      ],
+      "discovery": {
+        "domain": "actor",
+        "family": "tags",
+        "topics": [
+          "set_folder",
+          "move actor to folder",
+          "outliner folder",
+          "organize actors",
+          "organise outliner",
+          "put actors in a folder",
+          "group actors in outliner",
+          "actor folder"
+        ],
+        "summary": "Move placed actors into an outliner folder (one actor, or many with actorNames), or back to the root.",
+        "whenToUse": [
+          "Actors already in the level must be filed under an outliner folder; a spawn takes folder only when it places the actor."
+        ],
+        "whenNotToUse": [
+          "Actors must be grouped for lookup or deletion (use add_tag; delete_by_tag removes them)."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "actorName": {
+              "type": "string",
+              "description": "Target actor name in the current level."
+            },
+            "actorNames": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Several actors to move in one call and one undo step, in place of actorName; names not found are listed back under missing, and the actors moved under affectedActors."
+            },
+            "folder": {
+              "type": "string",
+              "description": "Outliner folder path (Level/Signs), made when missing; \"\" or \"None\" moves the actors to the root."
+            }
+          },
+          "required": [
+            "action",
+            "folder"
+          ],
+          "additionalProperties": false,
+          "requiredOneOf": [
+            "actorName",
+            "actorNames"
+          ]
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "folder": {
+              "type": "string",
+              "description": "The folder the actors are in now (\"\" for the root)."
+            },
+            "movedCount": {
+              "type": "number",
+              "description": "How many actors were moved."
+            },
+            "affectedActors": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "The actors moved; the receipt lists them as changes, with an actor handle each."
+            },
+            "missing": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Names that matched no actor."
+            },
+            "undo": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "Whether editor undo takes the move back: {undoable, transactionScope}."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Move placed actors into an outliner folder (one actor, or many with actorNames), or back to the root.",
+          "input": {
+            "action": "set_folder",
+            "actorNames": [
+              "Sign_1",
+              "Sign_2"
+            ],
+            "folder": "Level/Signs"
+          },
+          "output": {
+            "success": true,
+            "message": "2 actor(s) moved to Level/Signs; 0 not found",
+            "folder": "Level/Signs",
+            "movedCount": 2,
+            "affectedActors": [
+              "Sign_1",
+              "Sign_2"
+            ],
+            "missing": []
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "write",
+        "idempotency": "idempotent",
+        "longRunning": false,
+        "safeToRetry": true
+      },
+      "policy": {
+        "requiredScope": "write",
+        "consent": "none",
+        "dataAccess": "project-write"
+      },
+      "cost": {
+        "latency": "instant",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "control_actor",
+        "dispatchAction": "set_folder"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "56c7c8858975e45221645aa1139521fa7c6e45e2a6077702ff1bc2dc369961eb",
+        "content": "08ea5710769e7c8119aee54fe1dd96d8f511e769b7591a42bebbd3b77530ccfa"
       }
     },
     {
@@ -35808,6 +35988,17 @@
               "maxItems": 3,
               "description": "Scale as [x, y, z]."
             },
+            "folder": {
+              "type": "string",
+              "description": "Outliner folder path for the new actor (Level/Signs), made when missing."
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Actor tags for the new actor: delete_by_tag removes them again, and mcp.placement.ok marks a deliberate overlap before the placement is judged."
+            },
             "blueprintPath": {
               "type": "string",
               "description": "Canonical /Game Blueprint asset path to spawn from."
@@ -36050,6 +36241,14 @@
               "class",
               "blueprint"
             ],
+            "folder": [
+              "class",
+              "blueprint"
+            ],
+            "tags": [
+              "class",
+              "blueprint"
+            ],
             "blueprintPath": [
               "blueprint"
             ],
@@ -36067,8 +36266,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "c5096df4b16d643466b040556b9d888538e4f36ba07fe2586707d4c64affef8b",
-        "content": "ca8f76ee139299a96a48637f31d6375acb99fde083aad519c989e493c204e446"
+        "schema": "1048850761aff2ed628f2c683916b5b0f6ea227c644c4a104409aab8e7b65437",
+        "content": "8f746aa93c9c11cfa16a75518fa7c46c2b74908ece6d591c73ccc9cc4a7641b3"
       }
     },
     {
@@ -45162,10 +45361,6 @@
               "items": {
                 "type": "object",
                 "additionalProperties": false,
-                "required": [
-                  "origin",
-                  "direction"
-                ],
                 "properties": {
                   "origin": {
                     "type": "object",
@@ -45178,10 +45373,22 @@
                     "additionalProperties": true,
                     "x-unreal-reflection-boundary": true,
                     "description": "Ray direction {x, y, z}; any length, it is normalized."
+                  },
+                  "start": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "x-unreal-reflection-boundary": true,
+                    "description": "Line start {x, y, z} in local space, with end in place of origin and direction (the form raycast_world takes)."
+                  },
+                  "end": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "x-unreal-reflection-boundary": true,
+                    "description": "Line end {x, y, z} in local space; nothing past it is reported."
                   }
                 }
               },
-              "description": "Rays in the mesh's local space; each answers in hits at the same index."
+              "description": "Rays in the mesh's local space, each {origin, direction} or {start, end}; each answers in hits at the same index."
             }
           },
           "required": [
@@ -45335,8 +45542,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "6249f9b721e9b7e84df44f745061cbc13e3ff2a35fef6ddd511f1462d0188f0f",
-        "content": "607b608496d85ddabb0f54ef8b53235cf8da2467546225fdf009b396bda523e3"
+        "schema": "76513aa0d39ce5d37297a82a3268a540310d278c77136cba12fe538d471c3d73",
+        "content": "52874496f24a99d5452426de004653741a10b41ee1899269a01a21762a8b696d"
       }
     },
     {
@@ -92051,6 +92258,184 @@
         "algorithm": "sha256",
         "schema": "60f83cf067f4f83dc8a574e8e06158c13fab777b793f916986a18de69d179b39",
         "content": "c044a15eaa08fad4d7511f6259de2750e0f04cfb47f14eb0e94d27618b91a509"
+      }
+    },
+    {
+      "id": "system_control.create_cpp_class",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "system_control",
+          "action": "create_cpp_class"
+        }
+      ],
+      "discovery": {
+        "domain": "build",
+        "family": "build",
+        "topics": [
+          "create_cpp_class",
+          "create c++ class",
+          "new c++ class",
+          "add c++ class",
+          "create cpp file",
+          "c++ source file",
+          "c++ header file",
+          "native class",
+          "c++ actor class",
+          "c++ component"
+        ],
+        "summary": "Create a new C++ class in a project module, as the editor's New C++ Class does: a header and a .cpp from a parent class (Actor, Character, ActorComponent, Object ..., or None for a plain class), then the editor's own compile.",
+        "whenToUse": [
+          "Gameplay logic or a base class belongs in C++: a new class file pair must be added to the project source."
+        ],
+        "whenNotToUse": [
+          "A Blueprint class is enough (use manage_blueprint create).",
+          "Existing C++ only needs compiling (use run_ubt, or console_command LiveCoding.Compile)."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "className": {
+              "type": "string",
+              "description": "The class name without its prefix: MyActor makes AMyActor (an Actor parent), MyThing makes UMyThing (an Object parent). Letters, digits and _."
+            },
+            "parentClass": {
+              "type": "string",
+              "description": "The C++ class to derive from, by name or path (Actor, Character, Pawn, ActorComponent, SceneComponent, Object, BlueprintFunctionLibrary, /Script/Engine.GameModeBase), or None for a plain C++ class. A Blueprint class is refused: derive from its C++ parent."
+            },
+            "moduleName": {
+              "type": "string",
+              "description": "The project module that gets the files; default the module named after the project, else its first runtime module. A wrong name lists the modules."
+            },
+            "subfolder": {
+              "type": "string",
+              "description": "Folder under the module's Public (or Private) folder, such as Gameplay/Pickups; default none. A module without Public and Private folders refuses one: its own folder is no include path, so the class would not compile there."
+            },
+            "classLocation": {
+              "type": "string",
+              "enum": [
+                "public",
+                "private"
+              ],
+              "description": "public (default): header in Public, .cpp in Private; private: both in Private. A module without those folders takes both files in its own folder."
+            }
+          },
+          "required": [
+            "action",
+            "className",
+            "parentClass"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "className": {
+              "type": "string",
+              "description": "The C++ class name with its prefix (AMyActor)."
+            },
+            "headerPath": {
+              "type": "string",
+              "description": "Absolute path of the new header."
+            },
+            "cppPath": {
+              "type": "string",
+              "description": "Absolute path of the new .cpp."
+            },
+            "moduleName": {
+              "type": "string",
+              "description": "The module the class went into."
+            },
+            "classPath": {
+              "type": "string",
+              "description": "The class's path once compiled (/Script/<Module>.<Name>), for a class with a UObject parent."
+            },
+            "compiled": {
+              "type": "boolean",
+              "description": "Whether the editor compiled the module after adding the files (Live Coding or hot reload, as its settings say); a Live Coding compile has only started when this answers, and read_log category LogLiveCoding says whether it succeeded."
+            },
+            "note": {
+              "type": "string",
+              "description": "What the class needs before it can be used: a build, a restart, or nothing."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Create a new C++ class in a project module, as the editor's New C++ Class does: a header and a .cpp from a parent class (Actor, Character, ActorComponent, Object ..., or None for a plain class), then the editor's own compile.",
+          "input": {
+            "action": "create_cpp_class",
+            "className": "PickupBase",
+            "parentClass": "Actor",
+            "subfolder": "Gameplay"
+          },
+          "output": {
+            "success": true,
+            "message": "Created APickupBase in MyGame",
+            "className": "APickupBase",
+            "moduleName": "MyGame",
+            "headerPath": "C:/Projects/MyGame/Source/MyGame/Public/Gameplay/PickupBase.h",
+            "cppPath": "C:/Projects/MyGame/Source/MyGame/Private/Gameplay/PickupBase.cpp",
+            "classPath": "/Script/MyGame.PickupBase",
+            "compiled": true
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "write",
+        "idempotency": "non-idempotent",
+        "longRunning": true,
+        "safeToRetry": false
+      },
+      "policy": {
+        "requiredScope": "write",
+        "consent": "none",
+        "dataAccess": "project-write"
+      },
+      "cost": {
+        "latency": "long-running",
+        "resources": "high"
+      },
+      "routing": {
+        "parentTool": "system_control",
+        "dispatchAction": "create_cpp_class"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "600314501a4aeca82e644a36a6505a13ce12de4ddf1473f9377d56b252b7e521",
+        "content": "fba3e964397f4c231daff4ca5d4459b5558f2c6b6229816bffb4720d2c7b5a7b"
       }
     },
     {

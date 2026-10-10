@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `fc8618c8010c53ff`
+Catalog revision: `0692536dbeee1f61`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 408 capabilities across
+The catalog declares 410 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -38,7 +38,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | --- | --- | --- | --- | --- | --- |
 | `animation_physics` | 30 | 5 | 23 | 2 | animation physics |
 | `build_environment` | 40 | 5 | 32 | 3 | environment |
-| `control_actor` | 24 | 8 | 14 | 2 | actor |
+| `control_actor` | 25 | 8 | 15 | 2 | actor |
 | `control_editor` | 24 | 9 | 12 | 3 | editor |
 | `inspect` | 21 | 16 | 4 | 1 | inspect |
 | `manage_ai` | 16 | 2 | 14 | 0 | manage ai |
@@ -58,11 +58,11 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_pcg` | 3 | 0 | 3 | 0 | world |
 | `manage_sequence` | 19 | 2 | 16 | 1 | cinematics, media, movie_render, replay, sequence, take_recorder |
 | `manage_tools` | 9 | 4 | 5 | 0 | tools |
-| `system_control` | 28 | 9 | 17 | 2 | audio, build, console, insights, logs, performance, project, python, render, viewport, widget |
+| `system_control` | 29 | 9 | 18 | 2 | audio, build, console, insights, logs, performance, project, python, render, viewport, widget |
 
 ## Capabilities requiring consent
 
-64 of 408 capabilities require consent.
+64 of 410 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -274,6 +274,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `control_actor.rename` | `control_actor` | `rename` | write | write | none | `control_actor.rename` |
 | `control_actor.set_actor_collision` | `control_actor` | `set_actor_collision` | write | write | none | `control_actor.set_actor_collision` |
 | `control_actor.set_blueprint_variables` | `control_actor` | `set_blueprint_variables` | write | write | none | `control_actor.set_blueprint_variables` |
+| `control_actor.set_folder` | `control_actor` | `set_folder` | write | write | none | `control_actor.set_folder` |
 | `control_actor.set_material` | `control_actor` | `set_material` | write | write | none | `control_actor.set_material` `control_actor.apply_material` `control_actor.set_actor_material` |
 | `control_actor.set_transform` | `control_actor` | `set_transform` | write | write | none | `control_actor.set_transform` `control_actor.set_actor_location` `control_actor.set_actor_rotation` `control_actor.set_actor_scale` `control_actor.teleport_actor` `control_actor.set_actor_transform` |
 | `control_actor.set_visibility` | `control_actor` | `set_visibility` | write | write | none | `control_actor.set_visibility` `control_actor.set_actor_visible` |
@@ -515,6 +516,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `system_control.configure_performance` | `system_control` | `set_scalability` | write | write | none | `system_control.configure_performance` `system_control.set_scalability` `system_control.set_frame_rate_limit` `system_control.set_resolution_scale` `system_control.set_vsync` `system_control.configure_lod` `system_control.configure_nanite` `system_control.configure_occlusion_culling` `system_control.configure_texture_streaming` `system_control.configure_world_partition` `system_control.enable_gpu_timing` `system_control.optimize_draw_calls` `system_control.optimize_shaders` `system_control.apply_baseline_settings` |
 | `system_control.configure_rendering` | `system_control` | `system_control` | write | write | none | `system_control.configure_rendering` |
 | `system_control.console_command` | `system_control` | `console_command` | write | write | none | `system_control.console_command` `system_control.execute_command` |
+| `system_control.create_cpp_class` | `system_control` | `create_cpp_class` | write | write | none | `system_control.create_cpp_class` |
 | `system_control.create_widget` | `system_control` | `manage_widget_authoring` | write | write | none | `system_control.create_widget` `system_control.add_widget_child` `system_control.show_widget` |
 | `system_control.delete_output_file` | `system_control` | `delete_output_file` | destructive | destructive | explicit | `system_control.delete_output_file` |
 | `system_control.edit_save_game` | `system_control` | `edit_save_game` | destructive | destructive | explicit | `system_control.edit_save_game` |

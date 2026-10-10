@@ -39,6 +39,16 @@ const SPAWN_PLACEMENT = {
   },
 } as const;
 
+// Outliner folder and actor tags, as a spawn_batch item takes them; a single spawn refused folder.
+const SPAWN_ORGANISATION = {
+  folder: str('Outliner folder path for the new actor (Level/Signs), made when missing.'),
+  tags: {
+    type: 'array',
+    items: { type: 'string' },
+    description: 'Actor tags for the new actor: delete_by_tag removes them again, and mcp.placement.ok marks a deliberate overlap before the placement is judged.',
+  },
+} as const;
+
 export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_actor',
@@ -62,6 +72,7 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
       location: P.location,
       rotation: P.rotation,
       scale: P.scale,
+      ...SPAWN_ORGANISATION,
     },
     required: [],
     // The handler places a mesh actor for a bare meshPath; the schema refused that call before it got there.
@@ -105,6 +116,7 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
       location: P.location,
       rotation: P.rotation,
       scale: P.scale,
+      ...SPAWN_ORGANISATION,
     },
     required: ['blueprintPath'],
     // `required` already demands blueprintPath; declaring it as the variant's

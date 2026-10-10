@@ -170,6 +170,12 @@ const testCases = [
   { scenario: 'ACTION: validate_assets assetPath', toolName: 'system_control', arguments: { action: 'validate_assets', assetPath: VALIDATION_MATERIAL }, expected: 'success' },
   { scenario: 'ACTION: validate_assets path recursive', toolName: 'system_control', arguments: { action: 'validate_assets', path: TEST_FOLDER, recursive: false }, expected: 'success' },
   // Data Validation runs the project's and the engine's validators, which loading alone never did.
+  // create_cpp_class writes into the project's Source, so the suite runs only its refusals: each is refused before a
+  // file is written.
+  { scenario: 'ERROR: create_cpp_class refuses a class name that is no C++ identifier', toolName: 'system_control', arguments: { action: 'create_cpp_class', className: 'Bad Name', parentClass: 'Actor', moduleName: 'NoSuchModule_MCP', subfolder: 'MCPTest', classLocation: 'public' }, expected: 'error|INVALID_ARGUMENT' },
+  { scenario: 'ERROR: create_cpp_class refuses a subfolder that climbs out of the module', toolName: 'system_control', arguments: { action: 'create_cpp_class', className: 'McpProbeActor', parentClass: 'Actor', subfolder: '../Escape' }, expected: 'error|INVALID_ARGUMENT' },
+  { scenario: 'ERROR: create_cpp_class names the modules when the one asked for does not exist', toolName: 'system_control', arguments: { action: 'create_cpp_class', className: 'McpProbeActor', parentClass: 'Actor', moduleName: 'NoSuchModule_MCP', classLocation: 'private' }, expected: 'error|MODULE_NOT_FOUND' },
+  { scenario: 'ERROR: create_cpp_class refuses a parent that names no class', toolName: 'system_control', arguments: { action: 'create_cpp_class', className: 'McpProbeActor', parentClass: 'NoSuchClass_MCP' }, expected: 'error|CLASS_NOT_FOUND' },
   { scenario: 'ACTION: validate_assets dataValidation', toolName: 'system_control', arguments: { action: 'validate_assets', assetPath: VALIDATION_MATERIAL, dataValidation: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.results', includesObject: { kind: 'asset', isValid: true }, label: 'the material loads and passes its validators' }] },
   { scenario: 'ACTION: validate_assets dataValidation folder', toolName: 'system_control', arguments: { action: 'validate_assets', path: TEST_FOLDER, recursive: false, dataValidation: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.results', includesObject: { kind: 'directory' }, label: 'the folder row carries the verdict counts' }] },
   // === CONFIG ===

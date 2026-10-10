@@ -102,6 +102,7 @@ bool UEngineWireSubsystem::HandleControlActorSpawnBlueprint(
 
   if (!ActorName.IsEmpty())
     Spawned->SetActorLabel(ActorName);
+  McpApplySpawnOrganisation(Spawned, Payload);
 
   // actorPath, actorName and actorClass come from AddVerification below; an actor { id, name, path }
   // object used to repeat them, with the path twice.

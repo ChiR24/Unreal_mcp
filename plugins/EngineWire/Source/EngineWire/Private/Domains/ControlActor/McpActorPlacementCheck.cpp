@@ -237,6 +237,11 @@ void DescribePlacement(AActor *Actor, const TSharedPtr<FJsonObject> &Data) {
     if (HitBottomZ >= Origin.Z) {
       continue;
     }
+    // Nor is what the actor encloses: a cart corral spawned around its carts read "sunk 97 units" below the carts'
+    // tops. A floor under the actor is never inside its box; a crate under a crate lies below it.
+    if (SelfBox.ExpandBy(1.0).IsInside(FBox::BuildAABB(HitOrigin, HitExtent))) {
+      continue;
+    }
     // A floor is floor-shaped, or it reaches down past the actor's base to hold
     // it up: a side-scroller's ground strip, a stair block, a crate. The slab
     // shape alone left nearly every actor in a platformer "nothing below it".

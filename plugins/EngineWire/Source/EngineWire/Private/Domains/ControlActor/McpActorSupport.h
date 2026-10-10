@@ -239,6 +239,10 @@ void DescribePlacement(AActor *Actor, const TSharedPtr<FJsonObject> &Data);
 bool McpPlacementAccepted(const AActor *Actor);
 } // namespace McpPlacement
 
+// A spawn's outliner folder and actor tags (folder, tags), for a single spawn and a spawn_batch item alike; applied before
+// the placement is judged, so a tag of mcp.placement.ok counts.
+void McpApplySpawnOrganisation(AActor *Actor, const TSharedPtr<FJsonObject> &Payload);
+
 // A spawn answers where the actor ended up, as set_transform does. A spawn run as an item of spawn_batch (captured) leaves
 // it to the batch: it checks after it has tagged the actor (mcp.placement.ok), and the check walks every actor in the level.
 inline void McpDescribeSpawnPlacement(const FString &RequestId, AActor *Spawned, const TSharedPtr<FJsonObject> &Data) {

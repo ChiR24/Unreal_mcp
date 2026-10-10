@@ -189,6 +189,8 @@ static bool SetNodeProperty(FActionContext& Context)
     // no output and answered success; the caller only found out when a later connect failed.
     const bool bMathExpression = PropertyName.Equals(TEXT("Expression"), ESearchCase::IgnoreCase) &&
         TargetNode->GetClass()->GetName() == TEXT("K2Node_MathExpression");
+    // The node has no unary minus, and every caller writes -150 first: it becomes (0 - 150), the same value.
+    if (bMathExpression) Value = McpBlueprintMathExpression::RewriteUnaryMinus(Value);
     const FStrProperty* ExpressionProp = bMathExpression ? FindFProperty<FStrProperty>(TargetNode->GetClass(), TEXT("Expression")) : nullptr;
     const FString OldExpression = ExpressionProp ? ExpressionProp->GetPropertyValue_InContainer(TargetNode) : FString();
     // A bool used as a number parses, and only the Blueprint compile refuses it: refused here, the node untouched.

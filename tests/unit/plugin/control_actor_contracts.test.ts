@@ -420,7 +420,8 @@ describe('the many forms of set_visibility, set_actor_collision, add_tag and set
     expect(source).toMatch(/TArray<FString> Affected;\s*for \(AActor \*Actor : Actors\) \{\s*Actor->Tags\.AddUnique\(TagName\);\s*Actor->MarkPackageDirty\(\);\s*Affected\.Add\(McpActorRef\(Actor\)\);\s*\}/u);
     expect(source).toContain('Data->SetArrayField(TEXT("affectedActors"), McpHandlerUtils::ToJsonStringArray(Affected));');
     expect(single, 'the single form returns after the many branch').not.toContain('affectedActors');
-    expect(read('McpActorTags.cpp').match(/TEXT\("affectedActors"\)/gu)).toHaveLength(1);
+    // add_tag's many form and set_folder name the actors they changed; nothing else in the file does.
+    expect(read('McpActorTags.cpp').match(/TEXT\("affectedActors"\)/gu)).toHaveLength(2);
   });
 
   // set_material's many form runs the one-actor handler per name under a captured reply and answered only
@@ -487,7 +488,7 @@ describe('the batch forms of spawn_batch, set_transform and set_blueprint_variab
 
     expect(many).toMatch(/if \(Updated && Updated->Num\(\) > 0\) \{\s*FString Changed;\s*if \(!ReplyData \|\| !\(\*ReplyData\)->TryGetStringField\(TEXT\("actorName"\), Changed\) \|\| Changed\.IsEmpty\(\)\)\s*Changed = Name;\s*Affected\.AddUnique\(Changed\);\s*\}/u);
     expect(many).toContain('Data->SetArrayField(TEXT("affectedActors"), McpHandlerUtils::ToJsonStringArray(Affected));');
-    expect(single).toMatch(/if \(Applied\.Num\(\) > 0\) \{[\s\S]*?Data->SetArrayField\(TEXT\("updated"\), AppliedArray\);\s*Data->SetStringField\(TEXT\("actorName"\), McpActorRef\(Found\)\);\s*\}/u);
+    expect(single).toMatch(/if \(Applied\.Num\(\) > 0\) \{\s*Data->SetArrayField\(TEXT\("updated"\), McpHandlerUtils::ToJsonStringArray\(Applied\)\);\s*Data->SetStringField\(TEXT\("actorName"\), McpActorRef\(Found\)\);\s*\}/u);
     expect(single.match(/TEXT\("actorName"\), McpActorRef/gu), 'the actor is named only when a variable was set').toHaveLength(1);
   });
 

@@ -39,6 +39,10 @@ FString DescribeProblems(const UBlueprint* Blueprint, const FString& Expression,
 // Expression as tokens: names, numbers, two-character operators (&& || == != <= >=) and single characters.
 TArray<FString> TokenizeExpression(const FString& Expression);
 
+// Expression with each unary minus written as a subtraction from zero, which the node parses and means the same:
+// -150 -> (0 - 150), a * -b -> a * (0 - b), -max(a, b) -> (0 - max(a, b)). A minus with no operand is left as is.
+FString RewriteUnaryMinus(const FString& Expression);
+
 // After a parse: inputPins, the pins the node made, and boundToMembers, the names it reads from the Blueprint's
 // own variables instead (no pin to wire).
 void DescribeInputs(const UBlueprint* Blueprint, const UEdGraphNode& Node, const FString& Expression,

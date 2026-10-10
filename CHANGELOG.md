@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`system_control` `configure_rendering`**: the project's rendering methods by plain name (Lumen or screen-space GI and reflections, virtual or classic shadows, TSR, TAA, FXAA or MSAA, hardware ray tracing, distance fields, MegaLights, default bloom, auto exposure and motion blur), saved to DefaultEngine.ini, applied live where the console variable allows, read back, with the restart-only ones named.
 - **`manage_blueprint` `get_widget_animation`**: a Widget Blueprint's animations with their timing, or one animation's driven widgets, tracks and keys per channel, named as `add_animation_keyframe` takes them.
 - **`edit_dynamic_mesh` `create` starts from a static mesh** (`meshPath`): its geometry is copied in, each section as its slot's material id, so an existing asset can be cut, trimmed or edited and baked again.
+- **`system_control` `create_cpp_class`**: a new C++ class in a project module, as the editor's New C++ Class makes it: a header and a .cpp from a parent class (or a plain class), in a subfolder, public or private, then the editor's own compile. It answers with the file paths, the prefixed class name and what the class still needs (a compile, or a build and restart for a project's first module).
+- **`control_actor` `set_folder`** moves placed actors into an outliner folder, or back to the root; `spawn` and `spawn_blueprint` take `folder` and `tags` as batch items do.
 
 </details>
 
@@ -39,7 +41,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`create_primitive` `sdf` meshes at the resolution asked for**: one tall thin shape widened the grid by its diagonal and coarsened every cell (an 870 cm model came out at 6.3 cm cells instead of 3.4).
 - **Fab adds a pack as its Unreal Engine build** however late the listing names that format; a pack naming it tenth was added as its glb.
 - **Clearer geometry descriptions**: `innerRadius` of a torus or arch is its tube radius, not a hole; arch and revolve orientation; `mirror` keeps the original; array offsets, centre and angle are in the mesh's local space, and `count` includes the original.
-- **`set_blueprint_variables` refuses a call that names a variable the actor lacks** (`PROPERTY_NOT_FOUND`, listing the ones it has) before setting anything: it set the names it knew and still answered "Variables updated".
+- **`set_blueprint_variables` refuses a call that names a variable the actor lacks** (`PROPERTY_NOT_FOUND`, listing the ones it has) before setting anything: it set the names it knew and still answered "Variables updated". A value that does not take now fails the call too, and an actor variable takes the other actor by label or name, not only by path.
+- **Math Expressions take a unary minus**: `-150` and `a * -b` are written as `0 - x`, which the node parses; they were refused.
+- **A placed enclosure is no longer measured against what it holds**: a cart corral spawned around its carts read "sunk 97 units" below the carts' tops.
+- **`raycast_mesh` takes `{start, end}` lines** as `raycast_world` does, stopping each at its end; a ray with neither form is refused instead of answering no hit.
+- **A graph batch's create step lists the node's pins after its `pinDefaults`**: a spawn node's Class default adds its exposed pins, which the reply left out.
+- **Search finds the pin-unlinking action** for "disconnect" and "unlink" requests.
 - **Placement warnings check the real collision of meshes that collide on their own triangles**, as store packs and baked meshes do: a lamp post between parked cars read as intersecting four of them, and a barrier under an entrance canopy as intersecting the building.
 - **A duplicated Blueprint's Math Expression nodes read its own variables.** They kept the source's variable ids and failed to compile until each expression was set again.
 - **A Math Expression that compares an input name with a true/false value is refused before it is applied**, saying the name is a number input; an expression that does not parse says that every input is a number.

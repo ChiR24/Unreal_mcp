@@ -15,6 +15,8 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **Skeletal mesh import options**: the FBX factory binds the mesh to a named skeleton with `importMesh`, and takes the physics-asset and morph-target choices.
 - **`configure_rendering`**: renderer settings by plain name through reflection, so a setting an engine lacks reads as unavailable; each value is checked before any is written, the console variable named in the property's metadata is set live, and `ConfigRestartRequired` properties are reported.
 - **`get_widget_animation`**: walks the animation's bindings for each driven widget's tracks and float-channel keys; the track count includes binding tracks (it read 0).
+- **`create_cpp_class`**: `GameProjectUtils::AddCodeToProject` with `GIsRunningUnattendedScript` held, so the wizard's message boxes never block the game thread; the module comes from `GetCurrentProjectModules`, the parent must be native and pass `IsValidBaseClassForCreation`, and the subfolder is a relative path of names. The plugin now depends on `GameProjectGeneration`.
+- **`set_folder`**: `AActor::SetFolderPath` on one actor or an `actorNames` list, as one undo step.
 
 ### Fixed
 - **`create_node` and `add_node` check the graph's schema** (`CanCreateUnderSpecifiedSchema`) and refuse a node it cannot hold with `NODE_NOT_ALLOWED_IN_GRAPH`.
@@ -24,9 +26,13 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **`array_mesh` linear passes `bApplyTransformToFirstInstance`**, so the first copy is offset instead of landing on the original.
 - **`create_sdf` bounds the grid by each union's own box turned by its frame**, not a cube of its bounding-sphere radius round its centre.
 - **The Fab add chooses its format from the listing's full format list**; only the reported `formatCodes` are cut to eight.
-- **`set_blueprint_variables` resolves every name before touching the actor** and refuses on the first miss, as it did only when every name missed.
+- **`set_blueprint_variables` resolves every name before touching the actor** and refuses on the first miss, as it did only when every name missed. A value `ApplyJsonValueToProperty` refuses fails the call (`VARIABLE_NOT_SET`), and a string for an actor-typed variable resolves through `FindActorByName` (label or name) before it is loaded as a path.
 - **The placement shape test queries with either side's convex shapes against the other's convex shapes or complex-as-simple triangles** (which the engine flags simple), and tests two triangle meshes by one mesh's turned box. It had required convex shapes on both sides, so a pair with a complex-as-simple mesh kept the box verdict. The helpers moved to `Placement/McpPlacementShapes`.
-
+- **The placement ground probe skips a hit whose actor bounds lie inside the actor's own**, so what an enclosure holds is not its ground.
+- **Math Expressions**: `set_node_property` and the batch pre-check write a unary minus as `(0 - x)` (`RewriteUnaryMinus`) before the node parses it.
+- **`raycast_mesh` takes `{start, end}` rays** (a ray from start that reports nothing past end) and refuses a ray with neither form.
+- **A graph batch's create step re-lists the node's pins after its `pinDefaults`**, which can rebuild it.
+- **`spawn` and `spawn_blueprint` apply `folder` and `tags`** (`McpApplySpawnOrganisation`, shared with `spawn_batch` items) before the placement is judged.
 ## [0.6.0-beta-e] - 2026-10-09
 
 Plugin-side changes since the `v0.6.0-beta-d` tag, from the code diff. The server-side view is in the root `CHANGELOG.md`.

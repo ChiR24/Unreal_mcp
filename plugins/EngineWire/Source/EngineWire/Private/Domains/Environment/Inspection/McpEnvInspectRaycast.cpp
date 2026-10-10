@@ -32,8 +32,22 @@ bool HandleInspectRaycastMeshAction(
     if (!Payload->TryGetArrayField(TEXT("rays"), Rays) || !Rays || Rays->Num() == 0 || Rays->Num() > 256)
     {
         Bridge.SendAutomationError(RequestingSocket, RequestId,
-            TEXT("rays is required: 1-256 entries of {origin, direction} in the mesh's local space."), TEXT("INVALID_ARGUMENT"));
+            TEXT("rays is required: 1-256 entries of {origin, direction} or {start, end} in the mesh's local space."), TEXT("INVALID_ARGUMENT"));
         return true;
+    }
+    // A ray with neither form used to answer hit false, as if the mesh were not there.
+    for (int32 Index = 0; Index < Rays->Num(); ++Index)
+    {
+        const TSharedPtr<FJsonObject> *Ray = nullptr;
+        if (!(*Rays)[Index].IsValid() || !(*Rays)[Index]->TryGetObject(Ray) || !Ray ||
+            !(((*Ray)->HasField(TEXT("origin")) && (*Ray)->HasField(TEXT("direction"))) ||
+              ((*Ray)->HasField(TEXT("start")) && (*Ray)->HasField(TEXT("end")))))
+        {
+            Bridge.SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("rays[%d] needs {origin, direction} or {start, end} in the mesh's local space."), Index),
+                TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
     }
 
     UE::Geometry::FDynamicMesh3 Shape;
@@ -50,12 +64,17 @@ bool HandleInspectRaycastMeshAction(
     for (const TSharedPtr<FJsonValue> &Value : *Rays)
     {
         const TSharedPtr<FJsonObject> *Ray = nullptr;
-        const bool bRay = Value.IsValid() && Value->TryGetObject(Ray) && Ray;
-        const FVector Origin = bRay ? ExtractVectorField(*Ray, TEXT("origin"), FVector::ZeroVector) : FVector::ZeroVector;
-        const FVector Direction = bRay ? ExtractVectorField(*Ray, TEXT("direction"), FVector::ZeroVector).GetSafeNormal() : FVector::ZeroVector;
+        Value->TryGetObject(Ray);
+        // {start, end}, the form raycast_world takes, is a ray from start that stops at end.
+        const bool bSegment = (*Ray)->HasField(TEXT("start")) && (*Ray)->HasField(TEXT("end"));
+        const FVector Origin = ExtractVectorField(*Ray, bSegment ? TEXT("start") : TEXT("origin"), FVector::ZeroVector);
+        const FVector Toward = bSegment ? ExtractVectorField(*Ray, TEXT("end"), FVector::ZeroVector) - Origin
+                                        : ExtractVectorField(*Ray, TEXT("direction"), FVector::ZeroVector);
+        const FVector Direction = Toward.GetSafeNormal();
         double Distance = 0.0;
         int TriangleId = -1;
-        const bool bHit = !Direction.IsZero() && Tree.FindNearestHitTriangle(FRay3d(Origin, Direction), Distance, TriangleId);
+        const bool bHit = !Direction.IsZero() && Tree.FindNearestHitTriangle(FRay3d(Origin, Direction), Distance, TriangleId) &&
+                          (!bSegment || Distance <= Toward.Size());
         const TSharedPtr<FJsonObject> Hit = MakeShared<FJsonObject>();
         Hit->SetBoolField(TEXT("hit"), bHit);
         if (bHit)

@@ -57,6 +57,7 @@ bool UEngineWireSubsystem::HandleSystemControlAction(
       !bInsightsAction &&
       !bLogSubscriptionAction &&
       Lower != TEXT("validate_assets") &&
+      Lower != TEXT("create_cpp_class") &&
       Lower != TEXT("execute_python")) {
     return false;
   }
@@ -104,6 +105,10 @@ bool UEngineWireSubsystem::HandleSystemControlAction(
   if (Lower == TEXT("validate_assets")) {
     return McpSystemControlHandlers::HandleValidateAssets(
         this, RequestId, Payload, RequestingSocket);
+  }
+  if (Lower == TEXT("create_cpp_class")) {
+    return McpSystemControlHandlers::HandleCreateCppClass(this, RequestId, Payload,
+                                                          RequestingSocket);
   }
   if (Lower == TEXT("run_ubt")) {
     return McpSystemControlHandlers::HandleRunUbt(this, RequestId, Payload,

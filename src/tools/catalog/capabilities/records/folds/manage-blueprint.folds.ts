@@ -41,7 +41,8 @@ export const MANAGE_BLUEPRINT_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'delete_node', selector: 'deleteScope',
-    summary: 'Delete a graph node, or break the links of one of its pins.',
+    summary: 'Delete a graph node, or break (disconnect) the links of one of its pins.',
+    topics: ['delete node', 'remove node', 'disconnect pins', 'unlink pins', 'break pin links', 'remove wire', 'disconnect wire', 'unwire pin'],
     members: { node: 'delete_node', pin_links: 'break_pin_links' },
   },
   {

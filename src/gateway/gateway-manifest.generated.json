@@ -3471,6 +3471,7 @@
         "get_components",
         "list",
         "add_tag",
+        "set_folder",
         "find_by_tag",
         "find",
         "audit_placement",
@@ -3585,6 +3586,13 @@
                   "type": "string"
                 },
                 "description": "Several actors to give the same material in one call and one undo step, in place of actorName; each is reported under results, and the actors changed under affectedActors (which the receipt lists as changes, with an actor handle each); the call fails naming any that did not take it."
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Several actors to move in one call and one undo step, in place of actorName; names not found are listed back under missing, and the actors moved under affectedActors."
               },
               {
                 "type": "array",
@@ -4168,11 +4176,23 @@
             "default": "add"
           },
           "tags": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "Several actor tags at once, in place of tag: every actor carrying any of them is deleted under one consent."
+            "oneOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Actor tags for the new actor: delete_by_tag removes them again, and mcp.placement.ok marks a deliberate overlap before the placement is judged."
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Several actor tags at once, in place of tag: every actor carrying any of them is deleted under one consent."
+              }
+            ],
+            "description": "Actor tags for the new actor: delete_by_tag removes them again, and mcp.placement.ok marks a deliberate overlap before the placement is judged."
           },
           "transformMode": {
             "type": "string",
@@ -4191,7 +4211,7 @@
           },
           "variables": {
             "type": "object",
-            "description": "Blueprint variable name to value map. A name the actor does not have refuses the whole call before anything is set; the error lists the variables it does have.",
+            "description": "Blueprint variable name to value map. A name the actor does not have refuses the whole call before anything is set; the error lists the variables it does have. An actor variable takes the other actor by label, name or path. A value that does not take (an object path that loads nothing) fails the call, naming it; the variables that did take are listed under updated.",
             "additionalProperties": true,
             "x-unreal-reflection-boundary": true
           },
@@ -4216,6 +4236,7 @@
               "get_components",
               "list",
               "add_tag",
+              "set_folder",
               "find_by_tag",
               "find",
               "audit_placement",
@@ -5108,10 +5129,6 @@
                 "items": {
                   "type": "object",
                   "additionalProperties": false,
-                  "required": [
-                    "origin",
-                    "direction"
-                  ],
                   "properties": {
                     "origin": {
                       "type": "object",
@@ -5124,10 +5141,22 @@
                       "additionalProperties": true,
                       "x-unreal-reflection-boundary": true,
                       "description": "Ray direction {x, y, z}; any length, it is normalized."
+                    },
+                    "start": {
+                      "type": "object",
+                      "additionalProperties": true,
+                      "x-unreal-reflection-boundary": true,
+                      "description": "Line start {x, y, z} in local space, with end in place of origin and direction (the form raycast_world takes)."
+                    },
+                    "end": {
+                      "type": "object",
+                      "additionalProperties": true,
+                      "x-unreal-reflection-boundary": true,
+                      "description": "Line end {x, y, z} in local space; nothing past it is reported."
                     }
                   }
                 },
-                "description": "Rays in the mesh's local space; each answers in hits at the same index."
+                "description": "Rays in the mesh's local space, each {origin, direction} or {start, end}; each answers in hits at the same index."
               },
               {
                 "type": "array",
@@ -17242,6 +17271,7 @@
         "profile_performance",
         "configure_performance",
         "merge_actors",
+        "create_cpp_class",
         "run_build",
         "package_project",
         "package_status",
@@ -17281,6 +17311,8 @@
         "cellSize",
         "channels",
         "childClass",
+        "classLocation",
+        "className",
         "code",
         "command",
         "configuration",
@@ -17326,6 +17358,7 @@
         "minScreenRadius",
         "minVerbosity",
         "mode",
+        "moduleName",
         "motionBlur",
         "name",
         "offset",
@@ -17333,6 +17366,7 @@
         "overwrite",
         "packageName",
         "pak",
+        "parentClass",
         "parentName",
         "path",
         "paths",
@@ -17366,6 +17400,7 @@
         "source",
         "startTime",
         "streamingDistance",
+        "subfolder",
         "target",
         "text",
         "timeoutSeconds",
@@ -17450,6 +17485,18 @@
           "childClass": {
             "type": "string",
             "description": "Child component class (required)."
+          },
+          "classLocation": {
+            "type": "string",
+            "enum": [
+              "public",
+              "private"
+            ],
+            "description": "public (default): header in Public, .cpp in Private; private: both in Private. A module without those folders takes both files in its own folder."
+          },
+          "className": {
+            "type": "string",
+            "description": "The class name without its prefix: MyActor makes AMyActor (an Actor parent), MyThing makes UMyThing (an Object parent). Letters, digits and _."
           },
           "code": {
             "type": "string",
@@ -17682,6 +17729,10 @@
             "type": "string",
             "description": "Optimization mode."
           },
+          "moduleName": {
+            "type": "string",
+            "description": "The project module that gets the files; default the module named after the project, else its first runtime module. A wrong name lists the modules."
+          },
           "motionBlur": {
             "type": "boolean",
             "description": "Motion blur on by default."
@@ -17710,6 +17761,10 @@
           "pak": {
             "type": "boolean",
             "description": "Pak the staged content (default true)."
+          },
+          "parentClass": {
+            "type": "string",
+            "description": "The C++ class to derive from, by name or path (Actor, Character, Pawn, ActorComponent, SceneComponent, Object, BlueprintFunctionLibrary, /Script/Engine.GameModeBase), or None for a plain C++ class. A Blueprint class is refused: derive from its C++ parent."
           },
           "parentName": {
             "type": "string",
@@ -17916,6 +17971,10 @@
             "type": "number",
             "description": "Loading/streaming range."
           },
+          "subfolder": {
+            "type": "string",
+            "description": "Folder under the module's Public (or Private) folder, such as Gameplay/Pickups; default none. A module without Public and Private folders refuses one: its own folder is no include path, so the class would not compile there."
+          },
           "target": {
             "type": "string",
             "description": "UBT target name (required)."
@@ -17994,6 +18053,7 @@
               "profile_performance",
               "configure_performance",
               "merge_actors",
+              "create_cpp_class",
               "run_build",
               "package_project",
               "package_status",
