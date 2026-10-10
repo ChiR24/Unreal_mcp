@@ -13,6 +13,20 @@ using McpJsonRpcImage::AddImageContentIfPresent;
 using McpJsonRpcImage::MakeToolTextData;
 using McpJsonRpcReply::MakeCompactReply;
 
+namespace
+{
+// -0 is valid JSON, but a client that reads numbers as JavaScript doubles cannot round-trip it and may reject the
+// whole reply (rotators come out of quaternions as -0). Every zero is written as 0, as JSON.stringify does over stdio.
+struct FMcpReplyPrintPolicy : TCondensedJsonPrintPolicy<TCHAR>
+{
+	static void WriteDouble(FArchive* Stream, double Value)
+	{
+		if (Value == 0.0) WriteChar(Stream, TEXT('0'));
+		else TCondensedJsonPrintPolicy<TCHAR>::WriteDouble(Stream, Value);
+	}
+};
+}
+
 FMcpJsonRpcRequest FMcpJsonRpc::ParseRequest(const FString& Body)
 {
 	FMcpJsonRpcRequest Result;
@@ -199,8 +213,8 @@ FString FMcpJsonRpc::BuildNotification(
 FString FMcpJsonRpc::JsonToString(const TSharedPtr<FJsonObject>& Obj)
 {
 	FString Output;
-	TSharedRef<TJsonWriter<TCHAR, TCondensedJsonPrintPolicy<TCHAR>>> Writer =
-		TJsonWriterFactory<TCHAR, TCondensedJsonPrintPolicy<TCHAR>>::Create(&Output);
+	TSharedRef<TJsonWriter<TCHAR, FMcpReplyPrintPolicy>> Writer =
+		TJsonWriterFactory<TCHAR, FMcpReplyPrintPolicy>::Create(&Output);
 	FJsonSerializer::Serialize(Obj.ToSharedRef(), Writer);
 	return Output;
 }
