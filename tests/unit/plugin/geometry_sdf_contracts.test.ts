@@ -38,9 +38,19 @@ describe('create_sdf meshes one field', () => {
   });
 
   it('bounds the grid by the unions only, so a cutter never widens it', () => {
+    expect(handler).toMatch(/if \(S\.Op != EOp::Union\) continue;\s*const FVector3d Half = McpGeometrySdf::LocalHalfSize\(S\) \+ FVector3d\(S\.Blend\);/u);
     // Reach is BoundRadius, computed once per shape when the shapes are read (repeat and mirror copies keep it).
-    expect(handler).toMatch(/if \(S\.Op == EOp::Union\)\s*\{\s*const double R = S\.Reach \+ S\.Blend;/u);
     expect(handler).toContain('S.Reach = McpGeometrySdf::BoundRadius(S);');
+  });
+
+  // A cube of the bounding-sphere radius round each centre made a 400 cm post widen an 870 cm model's grid by
+  // 800 cm, so every cell came out nearly twice as coarse as the resolution asked for.
+  it('bounds each union by its own box turned by its frame, not by a ball of its reach', () => {
+    expect(handler).toContain('Bounds.Contain(S.Frame.TransformPosition(Local));');
+    expect(handler).not.toContain('Bounds.Contain(S.Frame.GetLocation()');
+    expect(field).toContain('case EShape::Box: return S.Extent;');
+    expect(field).toContain('case EShape::Cylinder: return FVector3d(S.Radius, S.Radius, S.Length * 0.5);');
+    expect(field).toContain('case EShape::Torus: return FVector3d(S.Radius + S.Thickness, S.Radius + S.Thickness, S.Thickness);');
   });
 
   it('gives each triangle to the shape whose field decides the surface there: polygroup index+1 and that slot', () => {

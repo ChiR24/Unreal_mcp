@@ -94,9 +94,12 @@ FString BuildAddScript(const FString& RequestId, const FString& ListingId, const
       var formats = (listingJson && listingJson.assetFormats) || [];
       out.title = String((listingJson && listingJson.title) || "").slice(0, 120);
       out.formatShape = formats.length ? shape(formats[0], 2) : "none";
-      out.formatCodes = formats.map(function (f) {
+      // The format is chosen from the full list: a listing can name unreal-engine tenth, after its
+      // source formats. Only the report is cut to eight.
+      var codes = formats.map(function (f) {
         return f.assetFormatType ? f.assetFormatType.code : (f.code || f.type || "?");
-      }).slice(0, 8);
+      });
+      out.formatCodes = codes.slice(0, 8);
 
       // The publisher decides which importer runs: FabBrowserApi::AddToProject
       // tests IsQuixel BEFORE it looks at gltf/fbx, routing Megascans content
@@ -115,15 +118,15 @@ FString BuildAddScript(const FString& RequestId, const FString& ListingId, const
       var preferred = ["unreal-engine", "gltf", "glb", "fbx", "obj", "usdz"];
       var code = null;
       for (var p = 0; p < preferred.length && !code; p++) {
-        for (var i = 0; i < out.formatCodes.length; i++) {
-          if (out.formatCodes[i] === preferred[p]) { code = preferred[p]; break; }
+        for (var i = 0; i < codes.length; i++) {
+          if (codes[i] === preferred[p]) { code = preferred[p]; break; }
         }
       }
       if (!code) {
         // A MetaHuman listing has its own workflow inside Fab, which this add does not drive: that is a
         // different refusal from a listing that ships nothing Fab can import, and it says so.
         var mh = /metahuman/i;
-        var isMetaHuman = out.formatCodes.some(function (c) { return mh.test(c); }) || mh.test(String(listingJson.listingType || ""));
+        var isMetaHuman = codes.some(function (c) { return mh.test(c); }) || mh.test(String(listingJson.listingType || ""));
         out.error = isMetaHuman ? "METAHUMAN_FORMAT" : "NO_IMPORTABLE_FORMAT";
         send(out); return null;
       }

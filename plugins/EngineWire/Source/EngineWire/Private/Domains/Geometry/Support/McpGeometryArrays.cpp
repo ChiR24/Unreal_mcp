@@ -42,7 +42,7 @@ bool HandleArrayLinear(UEngineWireSubsystem* Self, const FString& RequestId,
 
     const FTransform RepeatTransform(ExtractVectorField(Payload, TEXT("offset"), FVector(100, 0, 0)));
     UGeometryScriptLibrary_MeshBasicEditFunctions::AppendMeshRepeated(
-        Target->Mesh, SourceMesh, RepeatTransform, Count - 1, false, false, FGeometryScriptAppendMeshOptions(), nullptr);
+        Target->Mesh, SourceMesh, RepeatTransform, Count - 1, true, false, FGeometryScriptAppendMeshOptions(), nullptr);
     return SendArrayResult(Self, RequestId, Socket, Payload, *Target, Count, TEXT("Linear array applied"));
 }
 

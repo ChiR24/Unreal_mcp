@@ -151,6 +151,26 @@ inline double BoundRadius(const FShape& S)
     }
 }
 
+// Half the size of the box that holds the shape in its own frame (the grid bounds turn it by the
+// frame). Box rounding stays inside Extent; the round cone ends in spheres.
+inline FVector3d LocalHalfSize(const FShape& S)
+{
+    switch (S.Type)
+    {
+    case EShape::Sphere: return FVector3d(S.Radius);
+    case EShape::Ellipsoid: return S.Radii;
+    case EShape::Box: return S.Extent;
+    case EShape::Capsule: return FVector3d(S.Radius, S.Radius, S.Length * 0.5 + S.Radius);
+    case EShape::Cylinder: return FVector3d(S.Radius, S.Radius, S.Length * 0.5);
+    case EShape::Torus: return FVector3d(S.Radius + S.Thickness, S.Radius + S.Thickness, S.Thickness);
+    default:
+    {
+        const double R = FMath::Max(S.Radius, S.TopRadius);
+        return FVector3d(R, R, S.Length * 0.5 + R);
+    }
+    }
+}
+
 // The shape's thinnest full size across. Under about two grid cells a part meshes to slivers or
 // nothing (a 9 cm-radius cable at a 21 cm cell came out as one triangle), so the reply warns.
 inline double ThinnestSize(const FShape& S)

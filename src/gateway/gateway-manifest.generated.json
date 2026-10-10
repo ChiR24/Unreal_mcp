@@ -12290,7 +12290,7 @@
           },
           "angle": {
             "type": "number",
-            "description": "Angle in degrees."
+            "description": "Degrees to turn the profile about local Z, 1 to 360 (default 360), starting on local +X and turning toward +Y; less leaves an open wedge whose two cut faces are not closed."
           },
           "aoDistance": {
             "type": "number",
@@ -12348,23 +12348,47 @@
             "description": "Close open ends: the tube ends of a loft, sweep or extrude along a spline, or for a revolve flat discs from the first and last profile points to the axis (revolve default true)."
           },
           "center": {
-            "type": "object",
-            "description": "Center of operation.",
-            "properties": {
-              "x": {
-                "type": "number",
-                "description": "X"
+            "oneOf": [
+              {
+                "type": "object",
+                "description": "A point on the mirror plane in the mesh's local space, cm (default 0,0,0).",
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "description": "X"
+                  },
+                  "y": {
+                    "type": "number",
+                    "description": "Y"
+                  },
+                  "z": {
+                    "type": "number",
+                    "description": "Z"
+                  }
+                },
+                "additionalProperties": false
               },
-              "y": {
-                "type": "number",
-                "description": "Y"
-              },
-              "z": {
-                "type": "number",
-                "description": "Z"
+              {
+                "type": "object",
+                "description": "Ring: a point on the turning axis in the mesh's local space, cm (default 0,0,0); the copies turn about the mesh's local Z through it.",
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "description": "X"
+                  },
+                  "y": {
+                    "type": "number",
+                    "description": "Y"
+                  },
+                  "z": {
+                    "type": "number",
+                    "description": "Z"
+                  }
+                },
+                "additionalProperties": false
               }
-            },
-            "additionalProperties": false
+            ],
+            "description": "A point on the mirror plane in the mesh's local space, cm (default 0,0,0)."
           },
           "collision": {
             "type": "string",
@@ -12401,7 +12425,7 @@
           },
           "count": {
             "type": "integer",
-            "description": "Count of repeated elements."
+            "description": "Copies in all, the original included (1 to 100): count 3 is the original and two copies."
           },
           "curvatureScale": {
             "type": "number",
@@ -12568,7 +12592,7 @@
           },
           "innerRadius": {
             "type": "number",
-            "description": "Radius of a centred hole (default 0, a solid disc)."
+            "description": "In cm, per variant. Disc and ring: the centred hole (disc default 0, solid; ring 25). Pipe: the inner wall (default 40). Torus and arch: the TUBE radius, its round cross-section, not a hole (default 20 torus, 25 arch); the opening under an arch is radius - innerRadius. Spiral stairs: the radius of the central well."
           },
           "iterations": {
             "type": "integer",
@@ -12711,23 +12735,47 @@
             "description": "Number of turns for spiral stairs (converted to a curve angle)."
           },
           "offset": {
-            "type": "object",
-            "description": "Offset vector.",
-            "properties": {
-              "x": {
-                "type": "number",
-                "description": "X"
+            "oneOf": [
+              {
+                "type": "object",
+                "description": "Offset vector.",
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "description": "X"
+                  },
+                  "y": {
+                    "type": "number",
+                    "description": "Y"
+                  },
+                  "z": {
+                    "type": "number",
+                    "description": "Z"
+                  }
+                },
+                "additionalProperties": false
               },
-              "y": {
-                "type": "number",
-                "description": "Y"
-              },
-              "z": {
-                "type": "number",
-                "description": "Z"
+              {
+                "type": "object",
+                "description": "Row: the step from one copy to the next in the mesh's local space, cm (default 100 along x); copy k sits k steps from the original.",
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "description": "X"
+                  },
+                  "y": {
+                    "type": "number",
+                    "description": "Y"
+                  },
+                  "z": {
+                    "type": "number",
+                    "description": "Z"
+                  }
+                },
+                "additionalProperties": false
               }
-            },
-            "additionalProperties": false
+            ],
+            "description": "Offset vector."
           },
           "operation": {
             "type": "string",
@@ -12834,7 +12882,7 @@
               ],
               "additionalProperties": false
             },
-            "description": "Points from bottom to top, at least 2. For a hollow shape with walls, go up the outside and back down the inside. Omit for a small built-in vase."
+            "description": "Points from bottom to top, at least 2. For a hollow shape with walls, go up the outside and back down the inside. A closed loop (end on the first point) with cap false turns a solid ring section, such as a moulding or a tyre. Omit for a small built-in vase."
           },
           "r": {
             "type": "number",
@@ -12846,7 +12894,7 @@
           },
           "radius": {
             "type": "number",
-            "description": "Primitive radius."
+            "description": "Radius in cm (default 50). Torus and arch: from the centre to the middle of the tube (arch default 100). Pipe: the outer wall, as outerRadius. Spiral stairs: the inner radius when innerRadius is not given (default 150)."
           },
           "recomputeNormals": {
             "type": "boolean",

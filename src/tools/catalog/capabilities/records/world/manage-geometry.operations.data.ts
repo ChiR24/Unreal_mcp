@@ -106,9 +106,10 @@ export const GEOMETRY_OPERATIONS_RECORDS: readonly CapabilityRecordSource[] = [
           properties: { radius: { type: 'number', description: 'Distance from the axis in cm, 0 or more.' }, height: { type: 'number', description: 'Height above the base in cm.' } },
           required: ['radius', 'height'], additionalProperties: false,
         },
-        description: 'Points from bottom to top, at least 2. For a hollow shape with walls, go up the outside and back down the inside. Omit for a small built-in vase.',
+        description: 'Points from bottom to top, at least 2. For a hollow shape with walls, go up the outside and back down the inside. ' +
+          'A closed loop (end on the first point) with cap false turns a solid ring section, such as a moulding or a tyre. Omit for a small built-in vase.',
       },
-      angle: { type: 'number', description: 'Degrees to turn the profile, 1 to 360 (default 360); less leaves an open wedge.' },
+      angle: { type: 'number', description: 'Degrees to turn the profile about local Z, 1 to 360 (default 360), starting on local +X and turning toward +Y; less leaves an open wedge whose two cut faces are not closed.' },
       steps: STEPS, cap: CAP,
     },
     required: [], effect: 'write', costLatency: 'interactive', costResources: 'low',

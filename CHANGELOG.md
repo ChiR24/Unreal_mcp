@@ -34,6 +34,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`import` answers with the mesh it brought in**, not whichever asset the importer listed first (a material or texture could take the destination name).
 - **Opening a level answers once it has settled** (`settledSeconds`), its textures streamed in and the viewport's game view kept: a screenshot right after showed placeholder textures and editor icons. The screenshot contract says water and texture detail follow a far camera jump over the next frames.
 - **`append_polygons` and `append_triangle` built faces inside out.** A face now faces the side `(v1 - v0) × (v2 - v0)` points to, as documented, and faces appended to a mesh that already had normals get smooth normals instead of shading as streaks.
+- **`array_mesh` linear laid its first copy over the original**, so every row came out one copy short.
+- **`create_primitive` `sdf` meshes at the resolution asked for**: one tall thin shape widened the grid by its diagonal and coarsened every cell (an 870 cm model came out at 6.3 cm cells instead of 3.4).
+- **Fab adds a pack as its Unreal Engine build** however late the listing names that format; a pack naming it tenth was added as its glb.
+- **Clearer geometry descriptions**: `innerRadius` of a torus or arch is its tube radius, not a hole; arch and revolve orientation; `mirror` keeps the original; array offsets, centre and angle are in the mesh's local space, and `count` includes the original.
 
 </details>
 

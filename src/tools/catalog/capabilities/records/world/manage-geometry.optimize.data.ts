@@ -40,25 +40,37 @@ const SLOT = {
 // A mesh replaced in place reshapes every Blueprint part that draws it: a body grown 4 cm buries the parts that sit on it.
 const MESH_USER_WARNINGS = { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, 'x-unreal-reflection-boundary': true, description: 'When outputPath replaced a mesh that loaded Blueprints already draw: the parts drawing it that now sink, worst first (at most 8, each also a warnings[] sentence): blueprintPath, componentName, kind (buried: inside otherComponent; sunk: below a Character\'s capsule bottom), depth in cm, insideShare and issue. Measured like edit_scs partWarnings; a part tagged mcp.placement.ok is left out, and mcp.placement.ok:<component> accepts the embed in that one part only.' };
 const CONVERT_COLLISION ={ type: 'string', enum: ['box', 'complex', 'none'], description: 'Collision for the baked asset: box (default) is one box the size of the bounds, which pawns can stand on (on a converted-over asset too); complex uses the render triangles as simple collision too, exact but costly; none gives the asset no collision at all.' };
-const COLLISION_TYPE = { type: 'string', enum: ['box', 'sphere', 'capsule', 'convex', 'convex_decomposition'], description: 'Collision shapes to generate (default convex).' };
+const ARRAY_COUNT = { type: 'integer', description: 'Copies in all, the original included (1 to 100): count 3 is the original and two copies.' };
+const COLLISION_TYPE ={ type: 'string', enum: ['box', 'sphere', 'capsule', 'convex', 'convex_decomposition'], description: 'Collision shapes to generate (default convex).' };
 
 export const GEOMETRY_OPTIMIZE_RECORDS: readonly CapabilityRecordSource[] = [
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'mirror', topics: ['mirror a mesh'], plugins: PLUGIN,
-    family: F, summary: 'Mirror a dynamic mesh across an axis.', whenToUse: ['A mesh must be mirrored.'], whenNotToUse: ['Instances must be arrayed; use array_linear.'],
-    inputProps: { actorName: P.actorName, targetActor: P.targetActor, axis: P.axis, center: P.center }, required: ['axis'], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'low',
+    family: F, summary: 'Mirror a dynamic mesh across a plane: the original stays and a reflected copy is added to the same mesh, welded where the two meet.', whenToUse: ['A mesh must be mirrored.'], whenNotToUse: ['Instances must be arrayed; use array_linear.'],
+    inputProps: {
+      actorName: P.actorName, targetActor: P.targetActor,
+      axis: { ...P.axis, description: 'The mirror plane\'s normal: X, Y or Z ("X" reflects x to -x about center).' },
+      center: { ...P.center, description: 'A point on the mirror plane in the mesh\'s local space, cm (default 0,0,0).' },
+    }, required: ['axis'], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'mirror', targetActor: 'DM_A', axis: 'X' },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'array_linear', plugins: PLUGIN,
-    family: F, summary: 'Create a linear array of a dynamic mesh.', whenToUse: ['Instances must be arrayed linearly.'], whenNotToUse: ['A radial array is needed; use array_radial.'],
-    inputProps: { actorName: P.actorName, targetActor: P.targetActor, count: P.count, offset: P.offset }, required: ['count'], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'medium',
+    family: F, summary: 'Repeat a dynamic mesh in a row inside the same mesh: count copies in all, each one offset further from the last.', whenToUse: ['Instances must be arrayed linearly.'], whenNotToUse: ['A radial array is needed; use array_radial.'],
+    inputProps: {
+      actorName: P.actorName, targetActor: P.targetActor, count: ARRAY_COUNT,
+      offset: { ...P.offset, description: 'Row: the step from one copy to the next in the mesh\'s local space, cm (default 100 along x); copy k sits k steps from the original.' },
+    }, required: ['count'], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'medium',
     exampleInput: { action: 'array_linear', targetActor: 'DM_A', count: 5, offset: { x: 200, y: 0, z: 0 } },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'array_radial', plugins: PLUGIN,
-    family: F, summary: 'Create a radial array of a dynamic mesh.', whenToUse: ['Instances must be arrayed radially.'], whenNotToUse: ['A linear array is needed; use array_linear.'],
-    inputProps: { actorName: P.actorName, angle: P.angle, targetActor: P.targetActor, count: P.count, center: P.center }, required: ['count'], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'medium',
+    family: F, summary: 'Repeat a dynamic mesh round its local Z axis inside the same mesh: count copies in all, angle / count apart.', whenToUse: ['Instances must be arrayed radially.'], whenNotToUse: ['A linear array is needed; use array_linear.'],
+    inputProps: {
+      actorName: P.actorName, targetActor: P.targetActor, count: ARRAY_COUNT,
+      angle: { ...P.angle, description: 'Ring: the total sweep in degrees (default 360). Copies sit angle / count apart, so 360 closes a ring of count; an open arc of N copies 22.5 degrees apart takes angle 22.5 * N.' },
+      center: { ...P.center, description: 'Ring: a point on the turning axis in the mesh\'s local space, cm (default 0,0,0); the copies turn about the mesh\'s local Z through it.' },
+    }, required: ['count'], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'medium',
     exampleInput: { action: 'array_radial', actorName: 'DM_A', count: 8, center: { x: 0, y: 0, z: 0 } },
   }),
   buildWorldRecord({

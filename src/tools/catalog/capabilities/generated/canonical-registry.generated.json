@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "67d4de1631ce8cad",
+  "catalogRevision": "1beee2ab578f0f3a",
   "recordCount": 408,
   "records": [
     {
@@ -61583,7 +61583,7 @@
           "radial array",
           "array duplicate"
         ],
-        "summary": "Duplicate a mesh in a linear or radial array.",
+        "summary": "Repeat a mesh inside the same mesh: a row (linear, one offset per copy) or a ring round its local Z (radial). count includes the original.",
         "whenToUse": [
           "arrayMode=linear: Instances must be arrayed linearly.",
           "arrayMode=radial: Instances must be arrayed radially."
@@ -61609,11 +61609,11 @@
             },
             "count": {
               "type": "integer",
-              "description": "Count of repeated elements."
+              "description": "Copies in all, the original included (1 to 100): count 3 is the original and two copies."
             },
             "offset": {
               "type": "object",
-              "description": "Offset vector.",
+              "description": "Row: the step from one copy to the next in the mesh's local space, cm (default 100 along x); copy k sits k steps from the original.",
               "properties": {
                 "x": {
                   "type": "number",
@@ -61632,11 +61632,11 @@
             },
             "angle": {
               "type": "number",
-              "description": "Angle in degrees."
+              "description": "Ring: the total sweep in degrees (default 360). Copies sit angle / count apart, so 360 closes a ring of count; an open arc of N copies 22.5 degrees apart takes angle 22.5 * N."
             },
             "center": {
               "type": "object",
-              "description": "Center of operation.",
+              "description": "Ring: a point on the turning axis in the mesh's local space, cm (default 0,0,0); the copies turn about the mesh's local Z through it.",
               "properties": {
                 "x": {
                   "type": "number",
@@ -61699,7 +61699,7 @@
       },
       "examples": [
         {
-          "title": "Duplicate a mesh in a linear or radial array.",
+          "title": "Repeat a mesh inside the same mesh: a row (linear, one offset per copy) or a ring round its local Z (radial). count includes the original.",
           "input": {
             "action": "array_mesh",
             "targetActor": "DM_A",
@@ -61763,8 +61763,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "e2b66453fc1870ae88de3b12fac38deae2d5954ff698b2cbc64b644a820b373a",
-        "content": "352fb299bd1e79f1d535397fa05fa5743e8f4bfcd9b897704f3e2d103c9a5fa8"
+        "schema": "9cc3e8d687e02399273066c01bb05eff5f7da1a2cd9a2da3dc175746c4e9ff1a",
+        "content": "41c65b13ddb82ef08aec7114e0455a99f34425c0c45c441ddff2d2bcf3ff0a3c"
       }
     },
     {
@@ -63113,7 +63113,7 @@
             },
             "radius": {
               "type": "number",
-              "description": "Primitive radius."
+              "description": "Radius in cm (default 50). Torus and arch: from the centre to the middle of the tube (arch default 100). Pipe: the outer wall, as outerRadius. Spiral stairs: the inner radius when innerRadius is not given (default 150)."
             },
             "radialSegments": {
               "type": "integer",
@@ -63141,7 +63141,7 @@
             },
             "innerRadius": {
               "type": "number",
-              "description": "Radius of a centred hole (default 0, a solid disc)."
+              "description": "In cm, per variant. Disc and ring: the centred hole (disc default 0, solid; ring 25). Pipe: the inner wall (default 40). Torus and arch: the TUBE radius, its round cross-section, not a hole (default 20 torus, 25 arch); the opening under an arch is radius - innerRadius. Spiral stairs: the radius of the central well."
             },
             "outerRadius": {
               "type": "number",
@@ -63149,7 +63149,7 @@
             },
             "angle": {
               "type": "number",
-              "description": "Sweep angle in degrees (default 360, a full torus; less makes an open segment)."
+              "description": "Sweep in degrees: torus default 360 (less leaves an open segment), arch default 180, a half ring. Both lie flat in the local XY plane, starting on local +X and turning toward +Y; give a rotation to stand an arch up."
             },
             "steps": {
               "type": "integer",
@@ -63702,8 +63702,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "fb457e4a0410128fc75363f6dc0548531c89bfc988581cdf6fffea30824d9de1",
-        "content": "14a8fb3a9a57ba2072e78307abb71f01fa9148f0fc3795a583c4d4598bae7781"
+        "schema": "f65aa7f925de49adf0d86016c8215a14d24b32361db87312c1b1024e91f620fe",
+        "content": "f4641454df4457c9ef542f4d6b267c9159e380e3f493c9fa67a2f1d2b8c85120"
       }
     },
     {
@@ -65561,7 +65561,7 @@
           "mirror",
           "mirror a mesh"
         ],
-        "summary": "Mirror a dynamic mesh across an axis.",
+        "summary": "Mirror a dynamic mesh across a plane: the original stays and a reflected copy is added to the same mesh, welded where the two meet.",
         "whenToUse": [
           "A mesh must be mirrored."
         ],
@@ -65588,11 +65588,11 @@
             },
             "axis": {
               "type": "string",
-              "description": "Axis: X, Y, or Z."
+              "description": "The mirror plane's normal: X, Y or Z (\"X\" reflects x to -x about center)."
             },
             "center": {
               "type": "object",
-              "description": "Center of operation.",
+              "description": "A point on the mirror plane in the mesh's local space, cm (default 0,0,0).",
               "properties": {
                 "x": {
                   "type": "number",
@@ -65646,7 +65646,7 @@
       },
       "examples": [
         {
-          "title": "Mirror a dynamic mesh across an axis.",
+          "title": "Mirror a dynamic mesh across a plane: the original stays and a reflected copy is added to the same mesh, welded where the two meet.",
           "input": {
             "action": "mirror",
             "targetActor": "DM_A",
@@ -65686,8 +65686,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "9960635addde9e0e03a57f717502763383b9113e847b1e22e65c707e161199dd",
-        "content": "64f1dae76f70131c06a961de380fb3e06c67b0fae5b4da51e94010a6238deac7"
+        "schema": "6286c02e0a776d0631309e57233789535497b4f97f70b4acb6ae0ae82e97f740",
+        "content": "e45feceb4382dd1d7526c8d014cd549328c33da4745874ecfbb8fc94359defd6"
       }
     },
     {
@@ -66120,11 +66120,11 @@
                 ],
                 "additionalProperties": false
               },
-              "description": "Points from bottom to top, at least 2. For a hollow shape with walls, go up the outside and back down the inside. Omit for a small built-in vase."
+              "description": "Points from bottom to top, at least 2. For a hollow shape with walls, go up the outside and back down the inside. A closed loop (end on the first point) with cap false turns a solid ring section, such as a moulding or a tyre. Omit for a small built-in vase."
             },
             "angle": {
               "type": "number",
-              "description": "Degrees to turn the profile, 1 to 360 (default 360); less leaves an open wedge."
+              "description": "Degrees to turn the profile about local Z, 1 to 360 (default 360), starting on local +X and turning toward +Y; less leaves an open wedge whose two cut faces are not closed."
             },
             "thickness": {
               "type": "number",
@@ -66451,8 +66451,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "711b71b3485ed83ce1d03b45607cc9df763fa51acc3ca879c4ad25e114d4c954",
-        "content": "2687bc5f755deae327894bc4689f7fd6e47e098e3f6354d275751999e9861990"
+        "schema": "9c038de08de72a7a6d92266127b7ad71103a03713d7bd7b57b4996888ed131fa",
+        "content": "20691dff6d8d9e18699a8ad855583bf228b4cc495ec03e09f2e88313e5fbfe0f"
       }
     },
     {

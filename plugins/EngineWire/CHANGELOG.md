@@ -21,6 +21,9 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **`import` picks the mesh as the asset it answers with and renames**, before animations, materials and textures.
 - **`open_level` and `manage_level` `load` reply after the level settles** (ten frames and texture streaming quiet, eight seconds at most) and restore the game view the load switched off.
 - **`append_polygons` and `append_triangle` append in Unreal's winding**, (v0, v2, v1), since `VectorUtil::Normal` faces (v2 - v0) × (v1 - v0). Every triangle a normal overlay left unset gets one element per corner vertex before the normals are recomputed.
+- **`array_mesh` linear passes `bApplyTransformToFirstInstance`**, so the first copy is offset instead of landing on the original.
+- **`create_sdf` bounds the grid by each union's own box turned by its frame**, not a cube of its bounding-sphere radius round its centre.
+- **The Fab add chooses its format from the listing's full format list**; only the reported `formatCodes` are cut to eight.
 
 ## [0.6.0-beta-e] - 2026-10-09
 

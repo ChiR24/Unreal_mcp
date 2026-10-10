@@ -181,15 +181,18 @@ bool HandleCreateSdf(UEngineWireSubsystem* Self, const FString& RequestId,
     // Memory now; the triangle count is only known once the surface is meshed.
     if (!GuardMeshBudget(Self, RequestId, Socket, 0, TEXT("SDF meshing"))) return true;
 
-    // Only unions add volume; subtract and intersect shapes stay inside these bounds.
+    // Only unions add volume; subtract and intersect shapes stay inside these bounds. Each union adds the
+    // corners of its own box, grown by its blend and turned by its frame: a cube of its reach round the
+    // centre made one tall thin part (a 400 cm post) widen the grid by 800 cm and coarsen every cell.
     UE::Geometry::FAxisAlignedBox3d Bounds = UE::Geometry::FAxisAlignedBox3d::Empty();
     for (const FShape& S : Shapes)
     {
-        if (S.Op == EOp::Union)
+        if (S.Op != EOp::Union) continue;
+        const FVector3d Half = McpGeometrySdf::LocalHalfSize(S) + FVector3d(S.Blend);
+        for (int32 Corner = 0; Corner < 8; ++Corner)
         {
-            const double R = S.Reach + S.Blend;
-            Bounds.Contain(S.Frame.GetLocation() - FVector3d(R));
-            Bounds.Contain(S.Frame.GetLocation() + FVector3d(R));
+            const FVector3d Local((Corner & 1) ? Half.X : -Half.X, (Corner & 2) ? Half.Y : -Half.Y, (Corner & 4) ? Half.Z : -Half.Z);
+            Bounds.Contain(S.Frame.TransformPosition(Local));
         }
     }
     if (!FMath::IsFinite(Bounds.MaxDim()) || Bounds.MaxDim() > MAX_DIMENSION)
