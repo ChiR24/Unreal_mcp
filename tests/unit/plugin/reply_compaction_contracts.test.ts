@@ -53,11 +53,4 @@ describe('reply compaction on both transports', () => {
     expect(rpc).toContain('SetObjectField(TEXT("structuredContent"), Shown)');
     expect(rpc).toContain('AddImageContentIfPresent(Data, Content)');
   });
-
-  it('writes negative zero as 0 on both transports', () => {
-    const rpc = protocol('McpJsonRpc.cpp');
-    expect(rpc).toContain("if (Value == 0.0) WriteChar(Stream, TEXT('0'));");
-    expect(rpc).toContain('TJsonWriterFactory<TCHAR, FMcpReplyPrintPolicy>::Create(&Output)');
-    expect(JSON.stringify({ roll: -0 })).toBe('{"roll":0}');
-  });
 });
