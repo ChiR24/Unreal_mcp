@@ -131,13 +131,15 @@ describe('handlers answer what they did', () => {
   });
 
   // {Direction: 0} on an enemy whose variable is Dir answered success "Variables updated", set
-  // nothing, and dirtied the level.
-  it('set_blueprint_variables fails when no name is a variable, and names the real ones', () => {
+  // nothing, and dirtied the level. {Text, Size} on a sign with Label and Size set Size alone and
+  // still answered "Variables updated", the miss only in a warning.
+  it('set_blueprint_variables refuses the whole call when any name is not a variable, and names the real ones', () => {
     const source = code('ControlActor', 'McpActorAdvanced.cpp');
-    expect(source).toMatch(/if \(Missing\.Num\(\) > 0 && Missing\.Num\(\) == \(\*VariablesPtr\)->Values\.Num\(\)\) \{/u);
+    expect(source).toContain('if (Missing.Num() > 0) {');
     expect(source).toContain('TEXT("PROPERTY_NOT_FOUND")');
     expect(source.indexOf('TEXT("PROPERTY_NOT_FOUND")')).toBeLessThan(source.indexOf('Found->Modify();'));
     expect(source).toContain('*McpBlueprintVariableList(ActorClass)');
+    expect(source).not.toContain('Property not found');
   });
 
   it('get_blueprint with a property that misses names the variables the Blueprint has', () => {
@@ -797,9 +799,9 @@ describe('graph batches, PIE spawns and trigger volumes', () => {
 
   it('the placement check leaves trigger and pickup volumes out of what an actor intersects', () => {
     // A pawn standing in a trigger box read as intersecting the trigger's actor.
-    const placement = code('ControlActor', 'McpActorPlacementCheck.cpp');
-    expect(placement).toContain('GetCollisionResponseToChannel(Channel) == ECR_Block');
-    expect(placement).toContain('!McpBlocksSolids(A) || !McpBlocksSolids(B)');
+    const shapes = code('ControlActor', 'Placement', 'McpPlacementShapes.cpp');
+    expect(shapes).toContain('GetCollisionResponseToChannel(Channel) == ECR_Block');
+    expect(shapes).toContain('!McpBlocksSolids(A) || !McpBlocksSolids(B)');
   });
 });
 

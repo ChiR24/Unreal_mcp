@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "1beee2ab578f0f3a",
+  "catalogRevision": "9aa55e36f86545b9",
   "recordCount": 408,
   "records": [
     {
@@ -34904,7 +34904,7 @@
             },
             "variables": {
               "type": "object",
-              "description": "Blueprint variable name to value map.",
+              "description": "Blueprint variable name to value map. A name the actor does not have refuses the whole call before anything is set; the error lists the variables it does have.",
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true
             },
@@ -35008,8 +35008,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "8af5c45577e70371af2c0d4b07ac1752c1e9d4037e2cd7bb7f1d65efb458b2e8",
-        "content": "531d37b11de7769989c49ef1adf18e81a54438a2bb2c2cc4a048e9844556fc3a"
+        "schema": "2ce3e14a2be5ecf04a32c1c8447f34231981556a52c8c0accec19adf26578e60",
+        "content": "0d2cc030d855021073938b9a62a934dd8f1038fdc2a9379c178c3674f5c37ec2"
       }
     },
     {

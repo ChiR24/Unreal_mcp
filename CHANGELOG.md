@@ -38,6 +38,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`create_primitive` `sdf` meshes at the resolution asked for**: one tall thin shape widened the grid by its diagonal and coarsened every cell (an 870 cm model came out at 6.3 cm cells instead of 3.4).
 - **Fab adds a pack as its Unreal Engine build** however late the listing names that format; a pack naming it tenth was added as its glb.
 - **Clearer geometry descriptions**: `innerRadius` of a torus or arch is its tube radius, not a hole; arch and revolve orientation; `mirror` keeps the original; array offsets, centre and angle are in the mesh's local space, and `count` includes the original.
+- **`set_blueprint_variables` refuses a call that names a variable the actor lacks** (`PROPERTY_NOT_FOUND`, listing the ones it has) before setting anything: it set the names it knew and still answered "Variables updated".
+- **Placement warnings check the real collision of meshes that collide on their own triangles**, as store packs and baked meshes do: a lamp post between parked cars read as intersecting four of them, and a barrier under an entrance canopy as intersecting the building.
 
 </details>
 

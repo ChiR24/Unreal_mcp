@@ -4473,7 +4473,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "variables": {
           "type": "object",
-          "description": "Blueprint variable name to value map.",
+          "description": "Blueprint variable name to value map. A name the actor does not have refuses the whole call before anything is set; the error lists the variables it does have.",
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true
         },

@@ -24,6 +24,8 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **`array_mesh` linear passes `bApplyTransformToFirstInstance`**, so the first copy is offset instead of landing on the original.
 - **`create_sdf` bounds the grid by each union's own box turned by its frame**, not a cube of its bounding-sphere radius round its centre.
 - **The Fab add chooses its format from the listing's full format list**; only the reported `formatCodes` are cut to eight.
+- **`set_blueprint_variables` resolves every name before touching the actor** and refuses on the first miss, as it did only when every name missed.
+- **The placement shape test queries with either side's convex shapes against the other's convex shapes or complex-as-simple triangles** (which the engine flags simple), and tests two triangle meshes by one mesh's turned box. It had required convex shapes on both sides, so a pair with a complex-as-simple mesh kept the box verdict. The helpers moved to `Placement/McpPlacementShapes`.
 
 ## [0.6.0-beta-e] - 2026-10-09
 

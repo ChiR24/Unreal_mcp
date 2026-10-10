@@ -2,10 +2,9 @@
 
 #include "Domains/ControlActor/McpActorSupport.h"
 #include "Domains/ControlActor/Placement/McpPlacementMount.h"
+#include "Domains/ControlActor/Placement/McpPlacementShapes.h"
 
-#include "Components/InstancedStaticMeshComponent.h"
 #include "GameFramework/Volume.h"
-#include "PhysicsEngine/BodySetup.h"
 
 // A spawn or a transform write used to answer nothing but "success" and the
 // coordinates it was handed back, so an actor buried to the waist in the floor,
@@ -66,45 +65,6 @@ double McpPenetrationDepth(const FBox &A, const FBox &B) {
   return FMath::Min3(Size.X, Size.Y, Size.Z);
 }
 
-// Only a plain static mesh with convex simple collision can be checked shape to
-// shape: the engine's overlap test skips trimesh pieces, so a complex-as-simple
-// mesh would always read "apart", and instanced or skeletal bodies need other paths.
-bool McpHasConvexBody(UPrimitiveComponent *Comp) {
-  const UStaticMeshComponent *Mesh = Cast<UStaticMeshComponent>(Comp);
-  if (!Mesh || Mesh->IsA<UInstancedStaticMeshComponent>() || !Mesh->GetStaticMesh() ||
-      !Comp->GetBodyInstance() || !Comp->GetBodyInstance()->IsValidBodyInstance()) {
-    return false;
-  }
-  const UBodySetup *Setup = Mesh->GetStaticMesh()->GetBodySetup();
-  return Setup && Setup->GetCollisionTraceFlag() != CTF_UseComplexAsSimple &&
-         Setup->AggGeom.GetElementCount() > 0;
-}
-
-// A trigger or pickup volume overlaps what enters it and blocks nothing, so it
-// cannot interpenetrate anything: a pawn standing in a trigger box read as
-// intersecting the trigger's actor.
-bool McpBlocksSolids(const UPrimitiveComponent *Comp) {
-  for (const ECollisionChannel Channel : {ECC_WorldStatic, ECC_WorldDynamic, ECC_Pawn}) {
-    if (Comp->GetCollisionResponseToChannel(Channel) == ECR_Block) {
-      return true;
-    }
-  }
-  return false;
-}
-
-// Collision switched on is not a body. A water mesh, a text render or a mesh
-// converted with no collision has nothing in the physics scene to strike or
-// stand on, so it cannot interpenetrate anything: a pawn standing in a water
-// zone read "intersects WaterZone by 68 units" on every move. An instanced mesh
-// keeps a body per instance instead, so it still counts.
-bool McpHasBody(const UPrimitiveComponent *Comp) {
-  if (Comp->IsA<UInstancedStaticMeshComponent>()) {
-    return static_cast<const UInstancedStaticMeshComponent *>(Comp)->GetInstanceCount() > 0;
-  }
-  const FBodyInstance *Body = Comp->GetBodyInstance();
-  return Body && Body->IsValidBodyInstance();
-}
-
 // A water body is a surface, not a solid: a buoy, a hull or a wading pawn sits partly under it on purpose, and
 // "intersects the ocean by 47; sunk 47 below the surface; z=-3 would rest it" lifted a buoy on top of the sea.
 // Matched by class name so the plugin needs no link to the Water module.
@@ -134,28 +94,6 @@ bool McpIsOverlapOnly(const AActor *Actor) {
     bAnyBody = true;
   }
   return bAnyBody;
-}
-
-// Boxes only say where an actor could be. A cone's box is mostly air, so a blimp
-// flying past a mountain peak read "intersects by 340 units". Apart only when
-// every colliding component pair was checked on its real shapes and none touch;
-// a pair that cannot be checked keeps the box verdict.
-bool McpShapesApart(AActor *Actor, AActor *Other) {
-  TInlineComponentArray<UPrimitiveComponent *> Mine(Actor), Theirs(Other);
-  const FCollisionQueryParams Params(SCENE_QUERY_STAT(McpPlacementShapes), false);
-  for (UPrimitiveComponent *A : Mine) {
-    for (UPrimitiveComponent *B : Theirs) {
-      if (!A->IsCollisionEnabled() || !B->IsCollisionEnabled() || !McpBlocksSolids(A) || !McpBlocksSolids(B) ||
-          !McpHasBody(A) || !McpHasBody(B) || !A->Bounds.GetBox().Intersect(B->Bounds.GetBox())) {
-        continue;
-      }
-      if (!McpHasConvexBody(A) || !McpHasConvexBody(B) ||
-          B->ComponentOverlapComponent(A, A->GetComponentLocation(), A->GetComponentQuat(), Params)) {
-        return false;
-      }
-    }
-  }
-  return true;
 }
 
 } // namespace

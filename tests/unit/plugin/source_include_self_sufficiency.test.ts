@@ -54,6 +54,10 @@ const PATH_REFUSAL_HEADERS: readonly string[] = [
   'Foundation/BridgeHelpers/Security/McpProjectPathsRefusal.h',
 ];
 
+/** The response and result helpers: adding one placement file left a renderer-settings handler without them. */
+const HANDLER_UTILS = /\bMcpHandlerUtils::/u;
+const withoutComments = (body: string): string => body.replace(/\/\*[\s\S]*?\*\//gu, '').replace(/\/\/.*$/gmu, '');
+
 const INCLUDE = /#include\s+"([^"]+)"/gu;
 
 const collectSources = (directory: string, out: Map<string, string>): void => {
@@ -115,6 +119,14 @@ describe('plugin translation units do not borrow declarations from unity-blob ne
     const users = [...sources].filter(([path, body]) => path.endsWith('.cpp') && ASSET_HELPERS.test(body));
     expect(users.length).toBeGreaterThan(50);
     expect(users.map(([path]) => path).filter((path) => !reachesDeclaringHeader(path, ASSET_HEADERS)).sort()).toEqual([]);
+  });
+
+  it('every user of the handler utils includes a header that declares them', () => {
+    const headers = [...sources].filter(([path, body]) => path.endsWith('.h') && /\bnamespace McpHandlerUtils\b/u.test(body)).map(([path]) => path);
+    const users = [...sources].filter(([path, body]) => path.endsWith('.cpp') && HANDLER_UTILS.test(withoutComments(body)));
+    expect(headers.length).toBeGreaterThan(4);
+    expect(users.length).toBeGreaterThan(50);
+    expect(users.map(([path]) => path).filter((path) => !reachesDeclaringHeader(path, headers)).sort()).toEqual([]);
   });
 
   it('every user of the path refusal wording includes the header that declares it', () => {

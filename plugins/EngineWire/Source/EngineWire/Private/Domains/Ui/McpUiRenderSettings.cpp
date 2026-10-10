@@ -1,4 +1,5 @@
 #include "Domains/Ui/McpUiPrivate.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsResponses.h"
 
 #include "Engine/RendererSettings.h"
 #include "HAL/IConsoleManager.h"

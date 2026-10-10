@@ -121,14 +121,15 @@ bool UEngineWireSubsystem::HandleControlActorSetBlueprintVariables(
   }
 
   UClass *ActorClass = Found->GetClass();
-  // Names are resolved before the actor is touched: a call whose every name missed wrote nothing,
-  // yet answered "Variables updated" (and dirtied the level). The error names the real variables.
+  // Names are resolved before the actor is touched, and one unknown name refuses the whole call: a
+  // partial write answered "Variables updated" with the miss only in a warning. The error names the
+  // real variables.
   TArray<FString> Missing;
   for (const auto &Pair : (*VariablesPtr)->Values) {
     if (!ActorClass->FindPropertyByName(*Pair.Key))
       Missing.Emplace(*Pair.Key);
   }
-  if (Missing.Num() > 0 && Missing.Num() == (*VariablesPtr)->Values.Num()) {
+  if (Missing.Num() > 0) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("PROPERTY_NOT_FOUND"),
         FString::Printf(TEXT("%s has no variable named %s; nothing was set. Its Blueprint variables: %s."),
                         *TargetName, *FString::Join(Missing, TEXT(", ")),
@@ -142,10 +143,8 @@ bool UEngineWireSubsystem::HandleControlActorSetBlueprintVariables(
   for (const auto &Pair : (*VariablesPtr)->Values) {
     const FString VariableName(*Pair.Key);
     FProperty *Property = ActorClass->FindPropertyByName(*VariableName);
-    if (!Property) {
-      Warnings.Add(FString::Printf(TEXT("Property not found: %s"), *VariableName));
+    if (!Property)
       continue;
-    }
 
     FString ApplyError;
     if (ApplyJsonValueToProperty(Found, Property, Pair.Value, ApplyError))

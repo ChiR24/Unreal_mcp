@@ -62,7 +62,11 @@ export const ADVANCED_RECORDS: readonly CapabilityRecordSource[] = [
     whenToUse: ['Instance variables on a Blueprint actor must be configured.', 'Several actors each need their own variable values (actors).'],
     whenNotToUse: ['The actor is not a Blueprint instance (variables are undefined).'],
     inputProps: {
-      actorName: P.actorName, variables: P.variables,
+      actorName: P.actorName,
+      variables: {
+        ...P.variables,
+        description: 'Blueprint variable name to value map. A name the actor does not have refuses the whole call before anything is set; the error lists the variables it does have.',
+      },
       actors: {
         type: 'array',
         items: { type: 'object', properties: { actorName: P.actorName, variables: P.variables }, required: ['actorName', 'variables'], additionalProperties: false },

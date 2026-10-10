@@ -30,17 +30,37 @@ describe('audit_placement finds the floor under an actor, not what it holds up',
 });
 
 // Stage 9's blimps "intersected" the mountain peak by 270 and 340 units: the cone's box is mostly
-// air. The engine's shape overlap skips trimesh pieces, so a complex-as-simple mesh must keep the
-// box verdict instead of always reading "apart".
+// air. The engine queries with convex shapes only, but it can strike a complex-as-simple mesh's
+// triangles; asking for convex shapes on both sides left a lamp post between parked cars
+// "intersecting" four of them and a barrier under an entrance canopy "intersecting" the building.
 describe('audit_placement confirms a box overlap on the real shapes', () => {
+  const shapes = (): string =>
+    readFileSync(
+      resolve(
+        process.cwd(),
+        'plugins/EngineWire/Source/EngineWire/Private/Domains/ControlActor/Placement/McpPlacementShapes.cpp',
+      ),
+      'utf8',
+    );
+
   it('drops a pair whose collision shapes do not touch', () => {
     const source = placementCheck();
+    expect(source).toContain('#include "Domains/ControlActor/Placement/McpPlacementShapes.h"');
     expect(source).toContain('if (McpShapesApart(Actor, Other)) {');
-    expect(source).toContain('B->ComponentOverlapComponent(A, A->GetComponentLocation(), A->GetComponentQuat(), Params)');
+    expect(shapes()).toContain('return !B->ComponentOverlapComponent(A, A->GetComponentLocation(), A->GetComponentQuat(), Params);');
   });
 
-  it('only trusts shapes the engine test can move', () => {
-    expect(placementCheck()).toContain('Setup->GetCollisionTraceFlag() != CTF_UseComplexAsSimple');
+  it('queries with convex shapes and strikes convex shapes or complex-as-simple triangles, either way round', () => {
+    const source = shapes();
+    expect(source).toContain('return Setup && Setup->GetCollisionTraceFlag() != CTF_UseComplexAsSimple && Setup->AggGeom.GetElementCount() > 0;');
+    expect(source).toContain('return Setup && (Setup->GetCollisionTraceFlag() == CTF_UseComplexAsSimple || Setup->AggGeom.GetElementCount() > 0);');
+    expect(source).toContain('return !A->ComponentOverlapComponent(B, B->GetComponentLocation(), B->GetComponentQuat(), Params);');
+  });
+
+  it('tests two triangle meshes by one mesh\'s turned box against the other', () => {
+    const source = shapes();
+    expect(source).toContain('return McpBoxApartFrom(A, B) || McpBoxApartFrom(B, A);');
+    expect(source).toContain('return !Struck->GetBodyInstance()->OverlapTest(Xf.TransformPosition(Local.Origin), Xf.GetRotation(), Box);');
   });
 });
 
