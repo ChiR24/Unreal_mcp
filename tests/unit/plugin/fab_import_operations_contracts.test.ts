@@ -334,3 +334,23 @@ describe('a quality tier named by the caller', () => {
     expect(reply).toMatch(/Nothing was downloaded\./u);
   });
 });
+
+describe('an import is only what it brought, and a pack is not done while it downloads', () => {
+  const watcher = code(fab('Import/McpFabImportWatcher.cpp'));
+  const scope = code(fab('Import/McpFabImportScope.cpp'));
+
+  it('counts no asset another call made meanwhile in a folder the project already had', () => {
+    expect(watcher).toContain('const TSet<FString> OldTops = McpFabImportScope::TopFolders(Before);');
+    expect(watcher).toMatch(/Before\.Contains\(Path\) \|\| Path\.Contains\(TEXT\(":"\)\) \|\| !McpFabImportScope::Counts\(Path, OldTops\)/u);
+    expect(scope).toContain('return Top == TEXT("/Game/Fab") || (!Top.IsEmpty() && !OldTops.Contains(Top));');
+  });
+
+  it('neither settles nor runs out while Fab still shows the download', () => {
+    const hold = watcher.indexOf('if (McpFabImportOperations::IsDownloadShowing(OperationId))');
+    expect(hold, 'the ticker must ask whether the download is still on screen').toBeGreaterThan(-1);
+    const body = watcher.slice(hold, watcher.indexOf('}', hold));
+    expect(body).toContain('Watch->QuietFor = 0.0;');
+    expect(body).toContain('Ceiling = FMath::Max(Ceiling, FMath::Min(Watch->Elapsed + BaseCeilingSeconds, LongestCeilingSeconds));');
+    expect(code(fab('Import/McpFabImportCancel.cpp'))).toMatch(/IsDownloadShowing[\s\S]*?McpFabDownloadProgress::Read\(ToastName\(\*Op\)\)\.bFound/u);
+  });
+});
