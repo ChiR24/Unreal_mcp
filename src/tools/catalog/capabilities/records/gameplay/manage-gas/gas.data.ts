@@ -126,7 +126,7 @@ export const GAS_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: { assetPath: P.assetPath }, required: ['assetPath'],
     effect: 'read', latency: 'instant', resources: 'low', plugins: GAS_PLUGIN,
     // `abilityCount` was declared but is never set by the handler
-    // (McpAutomationBridge_GASHandlersInfo.cpp), so output projection produced
+    // (McpGASInfo.cpp), so output projection produced
     // an empty payload and get_gas_info reported success carrying nothing.
     // Declared below is exactly what the handler emits.
     outputProps: {

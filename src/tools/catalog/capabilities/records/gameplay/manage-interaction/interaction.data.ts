@@ -2,9 +2,6 @@
  * manage_interaction records. Action order is the canonical record sequence the
  * generated parent action enum is assembled from.
  *
- * The destruction actions target an editor-world actor by name rather than an
- * asset path, so they declare `actorName` and nothing else — that is the only
- * field McpAutomationBridge_InteractionHandlersDestruction.cpp reads for them.
  * The create_* actions place their asset with `folder`, not `path`, matching
  * the GetJsonStringField(Payload, TEXT("folder"), ...) reads in the native shards.
  */

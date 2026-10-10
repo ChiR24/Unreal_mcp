@@ -1,0 +1,186 @@
+#include "Core/Compatibility/McpVersionCompatibility.h"
+
+#include "Domains/Landscape/McpLandscapeLookup.h"
+
+#include "Dom/JsonObject.h"
+#include "Landscape.h"
+#include "LandscapeEdit.h"
+#include "LandscapeInfo.h"
+#include "Foundation/BridgeHelpers/McpHelpers.h"
+#include "EngineWireSubsystem.h"
+#include "Foundation/HandlerUtils/McpHandlerUtils.h"
+
+bool UEngineWireSubsystem::HandleSculptLandscape(
+    const FString &RequestId, const FString &Action,
+    const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+  double LocX = 0, LocY = 0, LocZ = 0;
+  const TSharedPtr<FJsonObject> *LocObj = nullptr;
+  if (Payload->TryGetObjectField(TEXT("location"), LocObj) && LocObj) {
+    (*LocObj)->TryGetNumberField(TEXT("x"), LocX);
+    (*LocObj)->TryGetNumberField(TEXT("y"), LocY);
+    (*LocObj)->TryGetNumberField(TEXT("z"), LocZ);
+  } else if (Payload->TryGetObjectField(TEXT("position"), LocObj) && LocObj) {
+    (*LocObj)->TryGetNumberField(TEXT("x"), LocX);
+    (*LocObj)->TryGetNumberField(TEXT("y"), LocY);
+    (*LocObj)->TryGetNumberField(TEXT("z"), LocZ);
+  } else {
+    SendAutomationError(
+        RequestingSocket, RequestId,
+        TEXT("location or position required. Example: {\"location\": {\"x\": 0, \"y\": 0, \"z\": 100}}"),
+        TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  // The declared tool, radius and falloff win over their older spellings.
+  FString ToolMode = McpGetFirstStringField(Payload, {TEXT("tool"), TEXT("toolMode")});
+  ToolMode = ToolMode.IsEmpty() ? FString(TEXT("Raise")) : ToolMode;
+  // Any other tool (Smooth, Noise) left every vertex untouched and still reported success.
+  if (!ToolMode.Equals(TEXT("Raise"), ESearchCase::IgnoreCase) && !ToolMode.Equals(TEXT("Lower"), ESearchCase::IgnoreCase) &&
+      !ToolMode.Equals(TEXT("Flatten"), ESearchCase::IgnoreCase)) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        FString::Printf(TEXT("Unsupported sculpt tool '%s': use Raise, Lower or Flatten"), *ToolMode),
+                        TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+  double BrushRadius = 1000.0;
+  if (!Payload->TryGetNumberField(TEXT("radius"), BrushRadius)) {
+    Payload->TryGetNumberField(TEXT("brushRadius"), BrushRadius);
+  }
+  double BrushFalloff = 0.5;
+  if (!Payload->TryGetNumberField(TEXT("falloff"), BrushFalloff)) {
+    Payload->TryGetNumberField(TEXT("brushFalloff"), BrushFalloff);
+  }
+  double Strength = 0.1;
+  Payload->TryGetNumberField(TEXT("strength"), Strength);
+  bool bSkipFlush = false;
+  Payload->TryGetBoolField(TEXT("skipFlush"), bSkipFlush);
+
+  const FVector TargetLocation(LocX, LocY, LocZ);
+  ULandscapeInfo *LandscapeInfo = nullptr;
+  ALandscape *Landscape = McpLandscapeHandlers::ResolveLandscapeOrReply(
+      *this, RequestId, Payload, RequestingSocket, &LandscapeInfo);
+  if (!Landscape) {
+    return true;
+  }
+
+  FVector LocalPos = Landscape->GetActorTransform()
+                         .InverseTransformPosition(TargetLocation);
+  int32 CenterX = FMath::RoundToInt(LocalPos.X);
+  int32 CenterY = FMath::RoundToInt(LocalPos.Y);
+  const FVector LandscapeScale = Landscape->GetActorScale3D();
+  const float ScaleX = LandscapeScale.X;
+  const float ScaleZ = LandscapeScale.Z;
+  if (FMath::IsNearlyZero(ScaleX) ||
+      FMath::IsNearlyZero(ScaleZ)) {
+    SendAutomationError(
+        RequestingSocket, RequestId,
+        TEXT("Landscape has zero scale. Cannot perform brush operation."),
+        TEXT("INVALID_SCALE"));
+    return true;
+  }
+
+  int32 RadiusVerts =
+      FMath::Max(1, FMath::RoundToInt(BrushRadius / ScaleX));
+  int32 FalloffVerts = FMath::RoundToInt(RadiusVerts * BrushFalloff);
+  int32 MinX = CenterX - RadiusVerts;
+  int32 MaxX = CenterX + RadiusVerts;
+  int32 MinY = CenterY - RadiusVerts;
+  int32 MaxY = CenterY + RadiusVerts;
+  int32 LMinX, LMinY, LMaxX, LMaxY;
+  if (LandscapeInfo->GetLandscapeExtent(LMinX, LMinY, LMaxX,
+                                        LMaxY)) {
+    MinX = FMath::Max(MinX, LMinX);
+    MinY = FMath::Max(MinY, LMinY);
+    MaxX = FMath::Min(MaxX, LMaxX);
+    MaxY = FMath::Min(MaxY, LMaxY);
+  }
+  if (MinX > MaxX || MinY > MaxY) {
+    SendAutomationResponse(
+        RequestingSocket, RequestId, false,
+        TEXT("Brush outside landscape bounds"), nullptr,
+        TEXT("OUT_OF_BOUNDS"));
+    return true;
+  }
+
+  int32 SizeX = MaxX - MinX + 1;
+  int32 SizeY = MaxY - MinY + 1;
+  TArray<uint16> HeightData;
+  HeightData.SetNumZeroed(SizeX * SizeY);
+  FLandscapeEditDataInterface LandscapeEdit(LandscapeInfo, false);
+  LandscapeEdit.GetHeightData(MinX, MinY, MaxX, MaxY,
+                              HeightData.GetData(), 0);
+
+  // modifiedVertices used to report the whole brush bounding box
+  // whenever ANY vertex moved, so a brush that nudged three
+  // vertices claimed thousands and a fully clamped brush was
+  // indistinguishable from a real edit. Count the writes.
+  int32 ModifiedVertices = 0;
+  for (int32 Y = MinY; Y <= MaxY; ++Y) {
+    for (int32 X = MinX; X <= MaxX; ++X) {
+      float Dist = FMath::Sqrt(
+          FMath::Square((float)(X - CenterX)) +
+          FMath::Square((float)(Y - CenterY)));
+      if (Dist > RadiusVerts)
+        continue;
+      float Alpha = 1.0f;
+      if (Dist > (RadiusVerts - FalloffVerts)) {
+        Alpha =
+            1.0f -
+            ((Dist - (RadiusVerts - FalloffVerts)) /
+             (float)FalloffVerts);
+      }
+      Alpha = FMath::Clamp(Alpha, 0.0f, 1.0f);
+      int32 Index = (Y - MinY) * SizeX + (X - MinX);
+      if (Index < 0 || Index >= HeightData.Num())
+        continue;
+
+      uint16 CurrentHeight = HeightData[Index];
+      float HeightScale = 128.0f / ScaleZ;
+      float Delta = 0.0f;
+      if (ToolMode.Equals(TEXT("Raise"),
+                          ESearchCase::IgnoreCase)) {
+        Delta = Strength * Alpha * 100.0f * HeightScale;
+      } else if (ToolMode.Equals(TEXT("Lower"),
+                                 ESearchCase::IgnoreCase)) {
+        Delta = -Strength * Alpha * 100.0f * HeightScale;
+      } else if (ToolMode.Equals(TEXT("Flatten"),
+                                 ESearchCase::IgnoreCase)) {
+        float Target = (TargetLocation.Z -
+                        Landscape->GetActorLocation().Z) /
+                           ScaleZ * 128.0f +
+                       32768.0f;
+        Delta =
+            (Target - (float)CurrentHeight) * Strength * Alpha;
+      }
+
+      int32 NewHeight =
+          FMath::Clamp((int32)(CurrentHeight + Delta), 0, 65535);
+      if (NewHeight != CurrentHeight) {
+        HeightData[Index] = (uint16)NewHeight;
+        ++ModifiedVertices;
+      }
+    }
+  }
+
+  if (ModifiedVertices > 0) {
+    LandscapeEdit.SetHeightData(MinX, MinY, MaxX, MaxY,
+                                HeightData.GetData(), 0, true);
+    if (!bSkipFlush) {
+      LandscapeEdit.Flush();
+    }
+    Landscape->MarkPackageDirty();
+  }
+
+  TSharedPtr<FJsonObject> Resp =
+      McpHandlerUtils::CreateResultObject();
+  Resp->SetBoolField(TEXT("success"), true);
+  Resp->SetStringField(TEXT("toolMode"), ToolMode);
+  Resp->SetNumberField(TEXT("modifiedVertices"), ModifiedVertices);
+  Resp->SetNumberField(TEXT("brushVertices"), HeightData.Num());
+  SendAutomationResponse(RequestingSocket, RequestId,
+                                    true,
+                                    TEXT("Landscape sculpted"),
+                                    Resp, FString());
+  return true;
+}

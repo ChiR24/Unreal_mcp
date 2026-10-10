@@ -1,0 +1,275 @@
+#include "Core/Compatibility/McpVersionCompatibility.h"
+
+#if MCP_HAS_MOVIE_RENDER_PIPELINE
+
+#include "Domains/Sequence/McpSeqPathSecurity.h"
+#include "Domains/Sequence/McpSeqFrameRate.h"
+#include "Domains/Sequence/MovieRender/McpSeqMRQInternal.h"
+#include "Domains/Sequence/MovieRender/McpSeqMRQResourceLimits.h"
+
+#include "Foundation/BridgeHelpers/Reflection/McpClassResolve.h"
+#include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "GameFramework/GameModeBase.h"
+#include "EngineWireSubsystem.h"
+#include "LevelSequence.h"
+#include "Misc/FrameRate.h"
+#include "MovieScene.h"
+#include "MoviePipelineGameOverrideSetting.h"
+#include "MoviePipelineOutputSetting.h"
+#include MCP_MOVIE_PIPELINE_CONFIG_HEADER
+#include "MoviePipelineQueue.h"
+#include "MoviePipelineQueueSubsystem.h"
+#include "MoviePipelineWaveOutput.h"
+
+namespace McpSequenceMovieRender {
+namespace {
+/**
+ * The sequence's first frame, in DISPLAY frames.
+ *
+ * MRQ warms up by evaluating frames BEFORE the first rendered one ("state to
+ * WarmingUp due to having N warm up frames" in the log). A custom range that
+ * begins on the sequence's own first frame leaves no runway for that, and MRQ
+ * then emits exactly ONE image and reports the job finished -- verified live:
+ * 0..120 produced 1 frame, 0..110 produced 1 frame, 100..110 produced 10.
+ */
+int32 SequencePlaybackStartDisplayFrame(const UMoviePipelineExecutorJob *Job) {
+  if (!Job) return 0;
+  const ULevelSequence *Sequence = Cast<ULevelSequence>(Job->Sequence.TryLoad());
+  if (!Sequence) return 0;
+  const UMovieScene *MovieScene = Sequence->GetMovieScene();
+  if (!MovieScene) return 0;
+  const FFrameNumber StartTick = MovieScene->GetPlaybackRange().GetLowerBoundValue();
+  return FFrameRate::TransformTime(FFrameTime(StartTick),
+                                   MovieScene->GetTickResolution(),
+                                   MovieScene->GetDisplayRate())
+      .FloorToFrame()
+      .Value;
+}
+
+struct FOutputSettingsSnapshot {
+  FString OutputDirectoryPath;
+  FString FileNameFormat;
+  FIntPoint OutputResolution;
+  bool bUseCustomFrameRate;
+  FFrameRate OutputFrameRate;
+  bool bUseCustomPlaybackRange;
+  int32 CustomStartFrame;
+  int32 CustomEndFrame;
+  int32 HandleFrameCount;
+  int32 ZeroPadFrameNumbers;
+
+  explicit FOutputSettingsSnapshot(const UMoviePipelineOutputSetting *Output)
+      : OutputDirectoryPath(Output->OutputDirectory.Path),
+        FileNameFormat(Output->FileNameFormat),
+        OutputResolution(Output->OutputResolution),
+        bUseCustomFrameRate(Output->bUseCustomFrameRate),
+        OutputFrameRate(Output->OutputFrameRate),
+        bUseCustomPlaybackRange(Output->bUseCustomPlaybackRange),
+        CustomStartFrame(Output->CustomStartFrame),
+        CustomEndFrame(Output->CustomEndFrame),
+        HandleFrameCount(Output->HandleFrameCount),
+        ZeroPadFrameNumbers(Output->ZeroPadFrameNumbers) {}
+
+  void Restore(UMoviePipelineOutputSetting *Output) const {
+    Output->OutputDirectory.Path = OutputDirectoryPath;
+    Output->FileNameFormat = FileNameFormat;
+    Output->OutputResolution = OutputResolution;
+    Output->bUseCustomFrameRate = bUseCustomFrameRate;
+    Output->OutputFrameRate = OutputFrameRate;
+    Output->bUseCustomPlaybackRange = bUseCustomPlaybackRange;
+    Output->CustomStartFrame = CustomStartFrame;
+    Output->CustomEndFrame = CustomEndFrame;
+    Output->HandleFrameCount = HandleFrameCount;
+    Output->ZeroPadFrameNumbers = ZeroPadFrameNumbers;
+  }
+};
+
+// Without an override MRQ renders with its cinematic game mode, which spawns no player pawn and
+// no HUD. "level" plays the level's own game mode; a class path plays that one.
+bool ResolveGameModeOverride(const TSharedPtr<FJsonObject> &Payload, bool &bOutSet,
+                             UClass *&OutClass, FString &OutMessage, FString &OutCode) {
+  FString Path;
+  bOutSet = Payload.IsValid() && Payload->TryGetStringField(TEXT("gameModeOverride"), Path) &&
+            !Path.IsEmpty();
+  OutClass = nullptr;
+  if (!bOutSet || Path.Equals(TEXT("level"), ESearchCase::IgnoreCase))
+    return true;
+  OutClass = ResolveClassByName(Path);
+  if (OutClass && OutClass->IsChildOf(AGameModeBase::StaticClass()))
+    return true;
+  OutMessage = FString::Printf(
+      TEXT("gameModeOverride must be \"level\" or a game mode class: %s"), *Path);
+  OutCode = TEXT("INVALID_GAME_MODE");
+  return false;
+}
+
+void ApplyGameModeOverride(MCP_MOVIE_PIPELINE_CONFIG_CLASS *Config, UClass *GameMode) {
+  UMoviePipelineGameOverrideSetting *Overrides = Cast<UMoviePipelineGameOverrideSetting>(
+      Config->FindOrAddSettingByClass(UMoviePipelineGameOverrideSetting::StaticClass(), true));
+  if (!Overrides)
+    return;
+#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 5
+  Overrides->SoftGameModeOverride = TSoftClassPtr<AGameModeBase>(FSoftObjectPath(GameMode));
+#else
+  Overrides->GameModeOverride = GameMode;
+#endif
+}
+
+}
+
+UMoviePipelineOutputSetting *ApplyOutputSettings(
+    UMoviePipelineExecutorJob *Job, const TSharedPtr<FJsonObject> &Payload,
+    FString &OutMessage, FString &OutCode) {
+  if (!ValidateOutputSettingsPayload(Payload, OutMessage, OutCode))
+    return nullptr;
+  bool bGameMode = false;
+  UClass *GameMode = nullptr;
+  if (!ResolveGameModeOverride(Payload, bGameMode, GameMode, OutMessage, OutCode))
+    return nullptr;
+  MCP_MOVIE_PIPELINE_CONFIG_CLASS *Config = ResolveConfig(Job, OutMessage, OutCode);
+  if (!Config)
+    return nullptr;
+  UMoviePipelineOutputSetting *Output = Cast<UMoviePipelineOutputSetting>(
+      Config->FindOrAddSettingByClass(UMoviePipelineOutputSetting::StaticClass(),
+                                      true));
+  if (!Output) {
+    OutMessage = TEXT("Movie Render Queue output setting is unavailable.");
+    OutCode = TEXT("MRQ_OUTPUT_UNAVAILABLE");
+    return nullptr;
+  }
+  const FOutputSettingsSnapshot Snapshot(Output);
+
+  FString TextValue;
+  if (Payload.IsValid() &&
+      Payload->TryGetStringField(TEXT("outputDirectory"), TextValue) &&
+      !TextValue.IsEmpty()) {
+    FString ResolvedDirectory;
+    FString ValidationError;
+    if (!ValidateRenderOutputDirectory(TextValue, ResolvedDirectory,
+                                       ValidationError)) {
+      OutMessage = ValidationError;
+      OutCode = TEXT("MRQ_OUTPUT_PATH_NOT_ALLOWED");
+      return nullptr;
+    }
+    Output->OutputDirectory.Path = ResolvedDirectory;
+  }
+  if (Payload.IsValid() &&
+      Payload->TryGetStringField(TEXT("fileNameFormat"), TextValue) &&
+      !TextValue.IsEmpty())
+    Output->FileNameFormat = TextValue;
+
+  FIntPoint Resolution = Output->OutputResolution;
+  if (Payload.IsValid() &&
+      Payload->TryGetStringField(TEXT("resolution"), TextValue) &&
+      !TextValue.IsEmpty()) {
+    if (!TryParseResolution(TextValue, Resolution)) {
+      OutMessage = TEXT("resolution must use WIDTHxHEIGHT format.");
+      OutCode = TEXT("INVALID_RESOLUTION");
+      return nullptr;
+    }
+    Output->OutputResolution = Resolution;
+  }
+  int32 Width = 0, Height = 0;
+  if (Payload.IsValid() && Payload->TryGetNumberField(TEXT("width"), Width) &&
+      Payload->TryGetNumberField(TEXT("height"), Height)) {
+    if (Width <= 0 || Height <= 0) {
+      OutMessage = TEXT("width and height must be positive.");
+      OutCode = TEXT("INVALID_RESOLUTION");
+      return nullptr;
+    }
+    Output->OutputResolution = FIntPoint(Width, Height);
+  }
+
+  FFrameRate FrameRate;
+  FString FrameRateError;
+  if (Payload.IsValid() && Payload->HasField(TEXT("frameRate")) &&
+      McpSequenceFrameRate::TryParse(
+          Payload, TEXT("frameRate"), FrameRate, FrameRateError)) {
+    Output->bUseCustomFrameRate = true;
+    Output->OutputFrameRate = FrameRate;
+  }
+
+  int32 StartFrame = 0, EndFrame = 0;
+  if (Payload.IsValid() && Payload->TryGetNumberField(TEXT("startFrame"), StartFrame) &&
+      Payload->TryGetNumberField(TEXT("endFrame"), EndFrame)) {
+    // The MRQ playback range is END-EXCLUSIVE, so endFrame == startFrame is an
+    // empty render, not a one-frame render. Accepting it queued a job that
+    // produced no frames and reported success.
+    if (EndFrame <= StartFrame) {
+      OutMessage = TEXT("endFrame must be greater than startFrame. The range is "
+                        "end-exclusive, so one frame is startFrame..startFrame+1.");
+      OutCode = TEXT("INVALID_FRAME_RANGE");
+      return nullptr;
+    }
+    // Inset off the sequence's first frame so MRQ has warm-up runway. Without
+    // this the job renders a single image and still reports success, which is
+    // indistinguishable from a correct one-frame render.
+    const int32 PlaybackStart = SequencePlaybackStartDisplayFrame(Job);
+    if (StartFrame <= PlaybackStart) {
+      const int32 Requested = StartFrame;
+      StartFrame = PlaybackStart + 1;
+      EndFrame = FMath::Max(EndFrame, StartFrame + 1);
+      // Said in the receipt itself: a moved start is still a dropped frame,
+      // and the caller must not have to read customStartFrame back to learn it.
+      OutMessage = FString::Printf(
+          TEXT("Movie Render Queue output settings configured; startFrame moved from %d to %d "
+               "because MRQ renders a single image when a custom range begins on the sequence's "
+               "first frame, so frame %d will not be rendered."),
+          Requested, StartFrame, Requested);
+    }
+    Output->bUseCustomPlaybackRange = true;
+    Output->CustomStartFrame = StartFrame;
+    Output->CustomEndFrame = EndFrame;
+  }
+
+  int32 Value = 0;
+  if (TryGetSettingsInt(Payload, TEXT("handleFrameCount"), Value))
+    Output->HandleFrameCount = FMath::Max(0, Value);
+  if (TryGetSettingsInt(Payload, TEXT("zeroPadFrameNumbers"), Value))
+    Output->ZeroPadFrameNumbers = Value;
+  if (!ValidateJobResourceLimits(Job, OutMessage, OutCode)) {
+    Snapshot.Restore(Output);
+    return nullptr;
+  }
+  // A .wav of what the world played during the render, beside the frames.
+  bool bAudio = false;
+  if (Payload.IsValid() && Payload->TryGetBoolField(TEXT("audioOutput"), bAudio)) {
+    if (bAudio)
+      Config->FindOrAddSettingByClass(UMoviePipelineWaveOutput::StaticClass(), true);
+    else if (UMoviePipelineSetting *Wave =
+                 Config->FindSettingByClass(UMoviePipelineWaveOutput::StaticClass(), true))
+      Config->RemoveSetting(Wave);
+  }
+  if (bGameMode)
+    ApplyGameModeOverride(Config, GameMode);
+  Job->Modify();
+  Config->Modify();
+  return Output;
+}
+
+bool HandleConfigureOutputSettings(UEngineWireSubsystem *Subsystem,
+                                   const FString &RequestId,
+                                   const TSharedPtr<FJsonObject> &Payload,
+                                   TSharedPtr<FMcpBridgeWebSocket> Socket) {
+  FString Message, Code;
+  UMoviePipelineQueue *Queue = nullptr;
+  UMoviePipelineExecutorJob *Job =
+      ResolveRequestJob(Subsystem, RequestId, Socket, Payload, Queue);
+  if (!Job)
+    return true;
+  Message.Reset();
+  if (!ApplyOutputSettings(Job, Payload, Message, Code))
+    return SendError(Subsystem, RequestId, Socket, Message, Code), true;
+  MCP_SET_MOVIE_PIPELINE_QUEUE_DIRTY(Queue, true);
+  // ApplyOutputSettings leaves a note in Message when it had to move the
+  // start frame; otherwise it is empty and the plain receipt is used.
+  Subsystem->SendAutomationResponse(
+      Socket, RequestId, true,
+      Message.IsEmpty() ? FString(TEXT("Movie Render Queue output settings configured."))
+                        : Message,
+      BuildJobResult(Job, Queue));
+  return true;
+}
+}
+
+#endif

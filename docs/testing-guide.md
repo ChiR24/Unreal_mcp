@@ -27,7 +27,7 @@ The public surface is the single `unreal` gateway tool. Integration cases still 
 
 ### Prerequisites
 
-1. An Unreal Editor (5.0 to 5.8) running with the MCP Automation Bridge plugin loaded. The runner waits for its WebSocket listener on `127.0.0.1` port `8090` or `8091`, the default **Listen Ports**.
+1. An Unreal Editor (5.0 to 5.8) running with the EngineWire plugin loaded. The runner waits for its WebSocket listener on `127.0.0.1` port `8090` or `8091`, the default **Listen Ports**.
 2. `UE_PROJECT_PATH` set to that project's folder or `.uproject`. The runner launches the stdio server with its own environment, and the server needs the path to read the capability token (on by default). Alternatively, set `MCP_AUTOMATION_CAPABILITY_TOKEN`.
 3. A built server. The runner runs `npm run build` itself when `dist/cli.js` is missing or older than the source; `UNREAL_MCP_NO_AUTO_BUILD=1` turns that off.
 

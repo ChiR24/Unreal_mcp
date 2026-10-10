@@ -5,7 +5,7 @@
 // `Private/Foundation/McpCompensationReceipt.h` states the block is emitted on
 // "EVERY path including the all-succeeded path", and `DescribeInto()` genuinely
 // does emit it unconditionally. The native test
-// `McpAutomationBridge.Foundation.CompensationReceipt.PartialCompletionIsHonest`
+// `EngineWire.Foundation.CompensationReceipt.PartialCompletionIsHonest`
 // genuinely passes. Every one of those statements is true, and every one of them
 // is IN-PROCESS: none of them observes what a client receives.
 //

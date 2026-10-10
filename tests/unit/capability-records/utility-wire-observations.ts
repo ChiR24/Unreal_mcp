@@ -77,16 +77,16 @@ export interface WireObservation {
   readonly fields: readonly WireField[];
 }
 
-const PLUGIN = 'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private';
-const NETWORKING = `${PLUGIN}/Domains/Networking/McpAutomationBridge_NetworkingHandlersInfo.cpp`;
-const NETWORKING_ROUTING = `${PLUGIN}/Domains/Networking/McpAutomationBridge_NetworkingHandlers.cpp`;
-const GAME_FRAMEWORK = `${PLUGIN}/Domains/GameFramework/McpAutomationBridge_GameFrameworkHandlersInfo.cpp`;
-const SESSIONS = `${PLUGIN}/Domains/Sessions/McpAutomationBridge_SessionsHandlersInfo.cpp`;
-const SESSIONS_ROUTING = `${PLUGIN}/Domains/Sessions/McpAutomationBridge_SessionsHandlers.cpp`;
-const AUDIO = `${PLUGIN}/Domains/AudioAuthoring/McpAutomationBridge_AudioAuthoringHandlersInfo.cpp`;
-const INPUT = `${PLUGIN}/Domains/Input/McpAutomationBridge_InputHandlersRuntimeQueries.cpp`;
-const INPUT_ROUTING = `${PLUGIN}/Domains/Input/McpAutomationBridge_InputHandlers.cpp`;
-const VERIFICATION = `${PLUGIN}/Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersResponseVerification.h`;
+const PLUGIN = 'plugins/EngineWire/Source/EngineWire/Private';
+const NETWORKING = `${PLUGIN}/Domains/Networking/McpNetInfo.cpp`;
+const NETWORKING_ROUTING = `${PLUGIN}/Domains/Networking/McpNetHandlers.cpp`;
+const GAME_FRAMEWORK = `${PLUGIN}/Domains/GameFramework/McpGameFrameworkInfo.cpp`;
+const SESSIONS = `${PLUGIN}/Domains/Sessions/McpSessionsInfo.cpp`;
+const SESSIONS_ROUTING = `${PLUGIN}/Domains/Sessions/McpSessionsHandlers.cpp`;
+const AUDIO = `${PLUGIN}/Domains/AudioAuthoring/McpAudioInfo.cpp`;
+const INPUT = `${PLUGIN}/Domains/Input/McpInputRuntimeQueries.cpp`;
+const INPUT_ROUTING = `${PLUGIN}/Domains/Input/McpInputHandlers.cpp`;
+const VERIFICATION = `${PLUGIN}/Foundation/BridgeHelpers/Responses/McpResponseVerify.h`;
 
 const field = (
   key: string,

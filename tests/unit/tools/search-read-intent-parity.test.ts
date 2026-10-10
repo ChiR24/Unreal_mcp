@@ -16,7 +16,7 @@ import {
 } from '../../../src/tools/catalog/capabilities/retrieval/constants.js';
 import { searchGatewayCapabilities } from '../../../src/server/gateway/gateway-search.js';
 
-const GATEWAY = join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private', 'MCP', 'Gateway');
+const GATEWAY = join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'MCP', 'Gateway');
 const nativeMatch = readFileSync(join(GATEWAY, 'McpNativeGatewaySearchMatch.cpp'), 'utf8');
 const nativeHeader = readFileSync(join(GATEWAY, 'McpNativeGatewaySearch.h'), 'utf8');
 

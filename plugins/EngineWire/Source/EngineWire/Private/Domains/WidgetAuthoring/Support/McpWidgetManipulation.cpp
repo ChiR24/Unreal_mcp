@@ -1,0 +1,304 @@
+#include "Domains/WidgetAuthoring/McpWidgetActions.h"
+#include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Domains/WidgetAuthoring/Support/McpWidgetBPLoading.h"
+#include "Domains/WidgetAuthoring/Support/McpWidgetTreeMutation.h"
+
+#include "Blueprint/WidgetTree.h"
+#include "Components/CanvasPanelSlot.h"
+#include "Components/PanelSlot.h"
+#include "Components/PanelWidget.h"
+#include "Components/Widget.h"
+#include "Kismet2/BlueprintEditorUtils.h"
+#include "Foundation/BridgeHelpers/McpHelpers.h"
+#include "EngineWireSubsystem.h"
+#include "Transport/WebSocket/McpBridgeWebSocket.h"
+#include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "WidgetBlueprint.h"
+
+namespace WidgetAuthoringHandlers
+{
+using namespace WidgetAuthoringHelpers;
+
+bool HandleWidgetAuthoringManipulation(
+    UEngineWireSubsystem& Subsystem,
+    const FString& RequestId,
+    const FString& SubAction,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
+    TSharedPtr<FJsonObject> ResultJson)
+{
+    if (SubAction.Equals(TEXT("remove_widget"), ESearchCase::IgnoreCase))
+    {
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
+        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"));
+
+        if (WidgetPath.IsEmpty() || SlotName.IsEmpty())
+        {
+            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameters: widgetPath, slotName"), TEXT("MISSING_PARAMETER"));
+            return true;
+        }
+
+        UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
+        if (!WidgetBP || !WidgetBP->WidgetTree)
+        {
+            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Widget blueprint not found"), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        UWidget* TargetWidget = WidgetBP->WidgetTree->FindWidget(FName(*SlotName));
+        if (!TargetWidget)
+        {
+            Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Widget '%s' not found"), *SlotName), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        // RemoveWidget only detaches from the parent slot -- the widget stays
+        // outered to the WidgetTree, so the compiler still walks it. That is
+        // what made removal trip BOTH paired ensures: it found a widget whose
+        // GUID we had just dropped ("was added but did not get a GUID"),
+        // assigned a fresh one, and the widget then really went -- leaving an
+        // orphan that ensured "was deleted but still has a GUID" on every
+        // later load. Detach, drop the GUIDs, then move the widget out to the
+        // transient package so the recompile below cannot see it at all.
+        // Every widget is outered to the WidgetTree, not to its parent panel, so the whole
+        // subtree moves out: moving only the removed widget left its descendants holding their
+        // names, and an add of those names afterwards was refused "Name is already in use."
+        TArray<UWidget*> Removed{TargetWidget};
+        UWidgetTree::GetChildWidgets(TargetWidget, Removed);
+        if (!WidgetBP->WidgetTree->RemoveWidget(TargetWidget))
+        {
+            Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Widget '%s' could not be detached from its parent"), *SlotName), TEXT("REMOVE_FAILED"));
+            return true;
+        }
+        WidgetAuthoringHelpers::UnregisterWidgetAndChildren(WidgetBP, TargetWidget);
+        for (UWidget* Widget : Removed)
+        {
+            Widget->Rename(nullptr, GetTransientPackage(), REN_DontCreateRedirectors | REN_DoNotDirty);
+            Widget->MarkAsGarbage();
+        }
+        WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
+        // The class still carried the removed widgets' variables, which kept their names taken too.
+        WidgetAuthoringHelpers::RefreshWidgetBlueprintClass(WidgetBP);
+
+        ResultJson->SetBoolField(TEXT("success"), true);
+        ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
+        ResultJson->SetStringField(TEXT("removedWidget"), SlotName);
+
+        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Removed widget"), ResultJson);
+        return true;
+    }
+
+    if (SubAction.Equals(TEXT("rename_widget"), ESearchCase::IgnoreCase))
+    {
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
+        FString OldName = GetJsonStringField(Payload, TEXT("slotName"));
+        FString NewName = GetJsonStringField(Payload, TEXT("newName"));
+
+        if (WidgetPath.IsEmpty() || OldName.IsEmpty() || NewName.IsEmpty())
+        {
+            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameters: widgetPath, slotName, newName"), TEXT("MISSING_PARAMETER"));
+            return true;
+        }
+
+        UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
+        if (!WidgetBP || !WidgetBP->WidgetTree)
+        {
+            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Widget blueprint not found"), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        UWidget* TargetWidget = WidgetBP->WidgetTree->FindWidget(FName(*OldName));
+        if (!TargetWidget)
+        {
+            Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Widget '%s' not found"), *OldName), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        // Dogfood #192: a bare UObject::Rename left WidgetVariableNameToGuidMap keyed by the old
+        // name, so the next compile ensured twice ("was added but did not get a GUID" / "was
+        // deleted but still has a GUID"). Mirror FWidgetBlueprintEditorUtils::RenameWidget.
+        // The map only exists from UE 5.6; before that there is nothing keyed to fix up.
+        if (WidgetBP->WidgetTree->FindWidget(FName(*NewName)) != nullptr)
+        {
+            Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("A widget named '%s' already exists"), *NewName), TEXT("ALREADY_EXISTS"));
+            return true;
+        }
+        const FName OldFName(*OldName);
+        const FName NewFName(*NewName);
+        WidgetBP->Modify();
+        TargetWidget->Modify();
+        TargetWidget->Rename(*NewName, nullptr, REN_DontCreateRedirectors);
+        TargetWidget->SetDisplayLabel(NewName);
+#if MCP_HAS_WIDGET_VARIABLE_GUID_MAP
+        FGuid WidgetGuid;
+        if (WidgetBP->WidgetVariableNameToGuidMap.RemoveAndCopyValue(OldFName, WidgetGuid))
+        {
+            WidgetBP->WidgetVariableNameToGuidMap.Add(NewFName, WidgetGuid);
+        }
+#endif
+        if (TargetWidget->bIsVariable)
+        {
+            FBlueprintEditorUtils::ReplaceVariableReferences(WidgetBP, OldFName, NewFName);
+        }
+        WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
+        // The renamed variable widget has no property under its new name until a compile.
+        WidgetAuthoringHelpers::RefreshWidgetBlueprintClass(WidgetBP);
+
+        ResultJson->SetBoolField(TEXT("success"), true);
+        ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
+        ResultJson->SetStringField(TEXT("oldName"), OldName);
+        ResultJson->SetStringField(TEXT("newName"), NewName);
+
+        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Renamed widget"), ResultJson);
+        return true;
+    }
+
+    if (SubAction.Equals(TEXT("reparent_widget"), ESearchCase::IgnoreCase))
+    {
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
+        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"));
+        FString NewParent = GetJsonStringField(Payload, TEXT("newParent"));
+
+        if (WidgetPath.IsEmpty() || SlotName.IsEmpty() || NewParent.IsEmpty())
+        {
+            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameters: widgetPath, slotName, newParent"), TEXT("MISSING_PARAMETER"));
+            return true;
+        }
+
+        UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
+        if (!WidgetBP || !WidgetBP->WidgetTree)
+        {
+            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Widget blueprint not found"), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        UWidget* TargetWidget = WidgetBP->WidgetTree->FindWidget(FName(*SlotName));
+        if (!TargetWidget)
+        {
+            Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Widget '%s' not found"), *SlotName), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        UPanelWidget* NewParentWidget = Cast<UPanelWidget>(WidgetBP->WidgetTree->FindWidget(FName(*NewParent)));
+        if (!NewParentWidget)
+        {
+            Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("New parent '%s' not found or not a panel"), *NewParent), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        // The add funnel keeps the slot layout (padding and alignment used to reset to 0) and refuses a
+        // parent inside the widget's own subtree, a cycle UMG recursed through until the editor died.
+        // The move is intended, so the funnel does not warn that the widget was already in the tree.
+        if (!SafeAddWidgetToTree(WidgetBP, TargetWidget, NewParentWidget->GetName(), TSharedPtr<FJsonObject>(), /*bMove=*/true))
+        {
+            Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(
+                TEXT("'%s' cannot move under '%s', which sits inside it. Nothing was changed."), *SlotName, *NewParent), TEXT("INVALID_PARENT"));
+            return true;
+        }
+        // index: where it lands among the new parent's children (0 = first); the same parent reorders.
+        if (Payload->HasField(TEXT("index")))
+        {
+            const int32 Index = static_cast<int32>(GetJsonNumberField(Payload, TEXT("index"), 0));
+            NewParentWidget->ShiftChild(FMath::Clamp(Index, 0, NewParentWidget->GetChildrenCount() - 1), TargetWidget);
+        }
+        ResultJson->SetStringField(TEXT("newParent"), NewParentWidget->GetName());
+        ResultJson->SetNumberField(TEXT("index"), NewParentWidget->GetChildIndex(TargetWidget));
+        ReplyWidgetLayout(Subsystem, RequestId, RequestingSocket, ResultJson, WidgetBP, TargetWidget, TEXT("Reparented widget"));
+        return true;
+    }
+
+    if (SubAction.Equals(TEXT("get_widget_slot_info"), ESearchCase::IgnoreCase))
+    {
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
+        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"));
+
+        if (WidgetPath.IsEmpty() || SlotName.IsEmpty())
+        {
+            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameters: widgetPath, slotName"), TEXT("MISSING_PARAMETER"));
+            return true;
+        }
+
+        UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
+        if (!WidgetBP || !WidgetBP->WidgetTree)
+        {
+            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Widget blueprint not found"), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        UWidget* TargetWidget = WidgetBP->WidgetTree->FindWidget(FName(*SlotName));
+        if (!TargetWidget)
+        {
+            Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Widget '%s' not found"), *SlotName), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        ResultJson->SetBoolField(TEXT("success"), true);
+        ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
+        ResultJson->SetStringField(TEXT("slotName"), SlotName);
+        ResultJson->SetStringField(TEXT("widgetClass"), TargetWidget->GetClass()->GetName());
+        // UWidget::IsVisible() asks the LIVE Slate widget, which a design-time
+        // template in a Widget Blueprint does not have -- so this answered
+        // false for every widget in the tree, including ones plainly on screen
+        // at runtime, and reading it back after set_visibility never agreed
+        // with what was written. Report the Visibility enum that set_visibility
+        // actually writes and that the designer shows, and derive isVisible
+        // from it so the boolean means what a reader assumes.
+        const ESlateVisibility SlotVisibility = TargetWidget->GetVisibility();
+        auto VisibilityName = [SlotVisibility]() -> const TCHAR * {
+            switch (SlotVisibility)
+            {
+            case ESlateVisibility::Collapsed: return TEXT("Collapsed");
+            case ESlateVisibility::Hidden: return TEXT("Hidden");
+            case ESlateVisibility::HitTestInvisible: return TEXT("HitTestInvisible");
+            case ESlateVisibility::SelfHitTestInvisible: return TEXT("SelfHitTestInvisible");
+            default: return TEXT("Visible");
+            }
+        };
+        ResultJson->SetStringField(TEXT("visibility"), VisibilityName());
+        ResultJson->SetBoolField(TEXT("isVisible"),
+                                 SlotVisibility != ESlateVisibility::Collapsed &&
+                                     SlotVisibility != ESlateVisibility::Hidden);
+
+        if (UPanelSlot* Slot = TargetWidget->Slot)
+        {
+            ResultJson->SetStringField(TEXT("slotClass"), Slot->GetClass()->GetName());
+
+            if (UCanvasPanelSlot* CanvasSlot = Cast<UCanvasPanelSlot>(Slot))
+            {
+                TSharedPtr<FJsonObject> SlotInfo = McpHandlerUtils::CreateResultObject();
+                FAnchors Anchors = CanvasSlot->GetAnchors();
+                SlotInfo->SetNumberField(TEXT("anchorMinX"), Anchors.Minimum.X);
+                SlotInfo->SetNumberField(TEXT("anchorMinY"), Anchors.Minimum.Y);
+                SlotInfo->SetNumberField(TEXT("anchorMaxX"), Anchors.Maximum.X);
+                SlotInfo->SetNumberField(TEXT("anchorMaxY"), Anchors.Maximum.Y);
+                FVector2D Alignment = CanvasSlot->GetAlignment();
+                SlotInfo->SetNumberField(TEXT("alignmentX"), Alignment.X);
+                SlotInfo->SetNumberField(TEXT("alignmentY"), Alignment.Y);
+                FVector2D Position = CanvasSlot->GetPosition();
+                SlotInfo->SetNumberField(TEXT("positionX"), Position.X);
+                SlotInfo->SetNumberField(TEXT("positionY"), Position.Y);
+                FVector2D Size = CanvasSlot->GetSize();
+                SlotInfo->SetNumberField(TEXT("sizeX"), Size.X);
+                SlotInfo->SetNumberField(TEXT("sizeY"), Size.Y);
+                SlotInfo->SetNumberField(TEXT("zOrder"), CanvasSlot->GetZOrder());
+                ResultJson->SetObjectField(TEXT("canvasSlotInfo"), SlotInfo);
+            }
+        }
+
+        // Every slot kind read back the same way the layout setters report it; canvasSlotInfo
+        // alone left box, overlay and border children with no padding, alignment or size rule.
+        ResultJson->SetObjectField(TEXT("layout"), McpDescribeWidgetLayout(TargetWidget));
+
+        if (UPanelWidget* Parent = TargetWidget->GetParent())
+        {
+            ResultJson->SetStringField(TEXT("parentName"), Parent->GetName());
+            ResultJson->SetStringField(TEXT("parentClass"), Parent->GetClass()->GetName());
+        }
+
+        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Retrieved widget slot info"), ResultJson);
+        return true;
+    }
+
+    return false;
+}
+}

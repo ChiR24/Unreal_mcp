@@ -35,7 +35,7 @@ const sourceRoots = [
 const repositoryRoot = resolve(process.cwd());
 const activeCodeRoots = [
   resolve(repositoryRoot, 'src'),
-  resolve(repositoryRoot, 'plugins/McpAutomationBridge/Source'),
+  resolve(repositoryRoot, 'plugins/EngineWire/Source'),
   resolve(repositoryRoot, 'scripts'),
   resolve(repositoryRoot, 'tests'),
 ] as const;

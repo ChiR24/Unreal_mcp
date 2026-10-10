@@ -4,7 +4,7 @@
 // every canonical parent tool's name, description and category with
 // FMcpToolRegistry at static-init time. Parameter schemas are not emitted: the
 // native gateway validates against the capability records themselves
-// (McpGeneratedCapabilityShards_*), so a parent needs only its identity here.
+// (McpCapShard*.cpp), so a parent needs only its identity here.
 
 import { compareAscii } from '../../src/utils/serialization/ordering.js';
 import { cppStringLiteral } from './types.js';

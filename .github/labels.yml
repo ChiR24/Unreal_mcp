@@ -3,7 +3,7 @@
 
 # Area labels (for issue triage)
 - name: "area/plugin"
-  description: "C++ McpAutomationBridge plugin issues"
+  description: "C++ EngineWire plugin issues"
   color: "1d76db"
 
 - name: "area/server"

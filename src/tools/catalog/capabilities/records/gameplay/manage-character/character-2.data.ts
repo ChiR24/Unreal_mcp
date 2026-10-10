@@ -37,7 +37,7 @@ export const CHARACTER_2: readonly CapabilityRecordSource[] = [
       hasCamera: P.bool_,
       playerViewState: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Player camera/view state.' },
       // Additional fields the handler
-      // (McpAutomationBridge_CharacterHandlersInfo.cpp) already emits. Anything
+      // (McpCharacterInfo.cpp) already emits. Anything
       // undeclared is discarded by output projection before the caller sees it.
       customMovementSpeed: P.num_,
       targetArmLength: P.num_,

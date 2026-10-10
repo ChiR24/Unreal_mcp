@@ -27,7 +27,7 @@ Generators: `scripts/generate-canonical-registry.ts` (+ `scripts/canonical-regis
 - `src/gateway/gateway-manifest.generated.{ts,json}`
 - `docs/action-reference.generated.md`
 - plugin `Private/MCP/Tools/McpGeneratedParentRegistry.cpp`
-- plugin `Private/MCP/Generated/McpGeneratedCapabilityShards.h` + one `_MCP_CAP_SHARD_<PARENT>.cpp` per parent (24 files; MSVC-chunked at 4,000-char literals)
+- plugin `Private/MCP/Generated/McpGeneratedCapabilityShards.h` + one `McpCapShard<Parent>.cpp` per parent (24 files; MSVC-chunked at 4,000-char literals)
 
 ## THE RECORD
 `CapabilityRecord = CapabilityRecordSource & { hashes }`. Source fields: `id`, `aliases`, `legacyIds`, `discovery` (domain/family/topics/summary/whenToUse/whenNotToUse), `schemas` (input + output, Draft 2020-12), `examples`, `availability` (requiredPlugins, editorStates), `behavior` (effect, idempotency, longRunning, safeToRetry, compensation?), `policy` (requiredScope, consent, dataAccess), `cost` (latency, resources), `routing` (parentTool, dispatchAction, dispatchBy?).

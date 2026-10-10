@@ -7,7 +7,7 @@ import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-const MODULE = join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge');
+const MODULE = join('plugins', 'EngineWire', 'Source', 'EngineWire');
 const GEOMETRY = join(MODULE, 'Private', 'Domains', 'Geometry');
 
 /** Block and line comments removed, so no assertion can be satisfied by prose. */
@@ -15,8 +15,8 @@ const strip = (source: string): string => source.replace(/\/\*[\s\S]*?\*\//gu, '
 const read = (...segments: readonly string[]): string => strip(readFileSync(join(GEOMETRY, ...segments), 'utf8'));
 
 describe('convert_to_static_mesh and convert_to_nanite give the asset its materials and collision', () => {
-  const convert = (): string => read('Support', 'McpAutomationBridge_GeometryAssetConversion.cpp');
-  const slots = (): string => read('Support', 'McpAutomationBridge_GeometryConversionSlots.cpp');
+  const convert = (): string => read('Support', 'McpGeometryAssetConversion.cpp');
+  const slots = (): string => read('Support', 'McpGeometryConversionSlots.cpp');
 
   it('loads each material through the path sanitizer and refuses what is not a material', () => {
     const source = slots();

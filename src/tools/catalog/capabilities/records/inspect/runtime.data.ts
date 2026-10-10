@@ -12,7 +12,7 @@ import { P } from './properties.js';
 const D = 'inspect';
 
 // Output of the shared runtime-report handler
-// (McpAutomationBridge_EnvironmentHandlersInspectRuntime.cpp), read by both actions.
+// (McpEnvInspectRuntime.cpp), read by both actions.
 const RUNTIME_REPORT_OUTPUT = {
   // Four McpDescribeRuntimeActor() results: full describes rendered as object
   // paths, not nested objects. Declaring them as objects made every pie_report

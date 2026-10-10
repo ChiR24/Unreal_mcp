@@ -16,6 +16,6 @@ scripts/*.bat text eol=crlf
 # manifest:check, headers:check) compare bytes: a native-EOL (CRLF) checkout on
 # Windows failed every gate on content that had not changed.
 *.generated.* text eol=lf
-plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Generated/** text eol=lf
-plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Tools/McpGeneratedParentRegistry.cpp text eol=lf
-plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Foundation/McpTelemetrySchema.h text eol=lf
+plugins/EngineWire/Source/EngineWire/Private/MCP/Generated/** text eol=lf
+plugins/EngineWire/Source/EngineWire/Private/MCP/Tools/McpGeneratedParentRegistry.cpp text eol=lf
+plugins/EngineWire/Source/EngineWire/Private/Foundation/McpTelemetrySchema.h text eol=lf

@@ -1,0 +1,266 @@
+#include "MCP/Transport/McpNativeTransportPrivate.h"
+#include "Foundation/Diagnostics/McpDiagnosticsSnapshot.h"
+
+FMcpNativeTransport::ESessionValidationResult FMcpNativeTransport::ValidateSession(
+	const FString& SessionId, const FString& PresentedToken, FString& OutError)
+{
+	if (SessionId.IsEmpty())
+	{
+		OutError = TEXT("Missing Mcp-Session-Id header");
+		return ESessionValidationResult::Missing;
+	}
+
+	{
+		FScopeLock Lock(&SessionMutex);
+		double* LastActivity = ActiveSessions.Find(SessionId);
+		if (!LastActivity)
+		{
+			OutError = TEXT("Invalid or expired session ID");
+			return RehydrateColdBootSessionLocked(SessionId, PresentedToken) ? ESessionValidationResult::Valid : ESessionValidationResult::Invalid;
+		}
+
+		const double Now = FPlatformTime::Seconds();
+		if (Now - *LastActivity <= SessionTimeoutSeconds)
+		{
+			*LastActivity = Now;
+			if (FSessionRateState* State = SessionRateStates.Find(SessionId))
+			{
+				State->bHasClientActivity = true;
+			}
+			return ESessionValidationResult::Valid;
+		}
+
+		ForgetSessionLocked(SessionId);
+	}
+	CloseSessionConnections(SessionId);
+	OutError = TEXT("Invalid or expired session ID");
+	return ESessionValidationResult::Invalid;
+}
+
+int32 FMcpNativeTransport::GetSessionValidationStatusCode(ESessionValidationResult Result)
+{
+	switch (Result)
+	{
+	case ESessionValidationResult::Missing:
+		return 400;
+	case ESessionValidationResult::Invalid:
+		return 404;
+	case ESessionValidationResult::Valid:
+	default:
+		return 200;
+	}
+}
+
+void FMcpNativeTransport::TouchSession(const FString& SessionId)
+{
+	if (SessionId.IsEmpty())
+	{
+		return;
+	}
+	FScopeLock Lock(&SessionMutex);
+	double* LastActivity = ActiveSessions.Find(SessionId);
+	if (LastActivity)
+	{
+		*LastActivity = FPlatformTime::Seconds();
+	}
+}
+
+void FMcpNativeTransport::MarkSessionInitializationComplete(
+	const FString& SessionId)
+{
+	FScopeLock Lock(&SessionMutex);
+	if (FSessionRateState* State = SessionRateStates.Find(SessionId))
+	{
+		State->InitializationCompletedAt = FPlatformTime::Seconds();
+	}
+}
+
+bool FMcpNativeTransport::ConsumeSessionRequestBudget(
+	const FString& SessionId, bool bToolCall, FString& OutError)
+{
+	FScopeLock Lock(&SessionMutex);
+	FSessionRateState* State = SessionRateStates.Find(SessionId);
+	if (!State)
+	{
+		OutError = TEXT("Invalid or expired session ID");
+		return false;
+	}
+	return ConsumeClientRequestBudgetLocked(
+		State->ClientRateKey, bToolCall, OutError);
+}
+
+bool FMcpNativeTransport::ConsumeClientRequestBudgetLocked(
+	const FString& ClientRateKey, bool bToolCall, FString& OutError)
+{
+	const double Now = FPlatformTime::Seconds();
+	FClientRateState& State = ClientRateStates.FindOrAdd(ClientRateKey);
+	if (State.WindowStart <= 0.0 ||
+		Now - State.WindowStart >= SessionRateWindowSeconds)
+	{
+		State.WindowStart = Now;
+		State.RequestCount = 0;
+		State.ToolCallCount = 0;
+	}
+	State.LastActivity = Now;
+	// Read the rate limit caps from project settings so they are user-tunable
+	// via Edit > Project Settings > Plugins > EngineWire. A value
+	// of 0 disables that cap (per-cap), so users can opt out of either limit
+	// independently. Falls back to the hardcoded constants if settings are
+	// unavailable (e.g. in a unit test environment).
+	const UEngineWireSettings* RateSettings =
+		GetDefault<UEngineWireSettings>();
+	const int32 RequestsCap = RateSettings
+		? RateSettings->MaxClientRequestsPerMinute
+		: MaxClientRequestsPerMinute;
+	const int32 ToolCallsCap = RateSettings
+		? RateSettings->MaxClientToolCallsPerMinute
+		: MaxClientToolCallsPerMinute;
+	if ((RequestsCap > 0 && State.RequestCount >= RequestsCap) ||
+		(bToolCall && ToolCallsCap > 0 &&
+		 State.ToolCallCount >= ToolCallsCap))
+	{
+		OutError = TEXT("Native MCP client rate limit reached");
+		return false;
+	}
+	++State.RequestCount;
+	if (bToolCall)
+	{
+		++State.ToolCallCount;
+	}
+	return true;
+}
+
+bool FMcpNativeTransport::QueueAutomationRequestForSession(
+	const FString& SessionId, const FString& RequestId,
+	const FString& DispatchAction,
+	const TSharedPtr<FJsonObject>& Arguments,
+	bool& bOutSessionActive,
+	EAutomationQueueRejection& OutRejection,
+	const TMap<EMcpStateKind, int64>& ExpectedRevisions)
+{
+	OutRejection = EAutomationQueueRejection::None;
+	bOutSessionActive = false;
+	if (!Subsystem)
+	{
+		return false;
+	}
+
+	FScopeLock SessionLock(&SessionMutex);
+	if (bStopping.load())
+	{
+		return false;
+	}
+	bOutSessionActive = ActiveSessions.Contains(SessionId);
+	if (!bOutSessionActive)
+	{
+		return false;
+	}
+	// A blocked GameThread (modal dialog, blocking import) would hold the request until the client
+	// gave up; refuse with a typed code instead (dogfood #79).
+	const double Heartbeat = LastGameThreadHeartbeat.load(); if (Heartbeat > 0.0 && FPlatformTime::Seconds() - Heartbeat > 15.0) { OutRejection = EAutomationQueueRejection::GameThreadStalled; return false; }
+	// A native request carries no socket, so the MCP session id is the
+	// only thing that keeps its queue fairness lane and per-session cap distinct
+	// from every other session's. The rejection is surfaced so the /mcp surface
+	// can answer each refusal with its precise typed code.
+	const EAutomationQueueRejection Rejection =
+		Subsystem->QueueAutomationRequest(
+			RequestId, DispatchAction, Arguments, nullptr,
+			ERequestOrigin::NativeHTTP,
+			ExpectedRevisions,
+			FString(TEXT("native:")) + SessionId);
+	OutRejection = Rejection;
+	return Rejection == EAutomationQueueRejection::None;
+}
+
+// H8: bounded first-close-wins dedupe set, file-local (compressed form
+// keeps this file inside the 250 pure-line ceiling). ClaimSessionClose returns
+// true at most once per session WHILE the id is retained in the 128-close
+// window; a re-close of an EVICTED id double-counts by design (documented
+// bounded approximation - never a global closed<=created claim). No
+// ActiveSessions.Contains gate: every caller pre-removes under SessionMutex.
+namespace { FCriticalSection SessionCloseLock; TArray<FString> ClosedSessionIds;
+bool ClaimSessionClose(const FString& Id) { FScopeLock Lock(&SessionCloseLock);
+if (ClosedSessionIds.Contains(Id)) { return false; }
+ClosedSessionIds.Add(Id); if (ClosedSessionIds.Num() > 128) { ClosedSessionIds.RemoveAt(0); } return true; } }
+
+void FMcpNativeTransport::CloseSessionConnections(const FString& SessionId)
+{
+	if (SessionId.IsEmpty())
+	{
+		return;
+	}
+
+	// H8: dedupe the RECORD with the bounded first-close-wins set (claim once
+	// while retained); the teardown below still runs on every call - it is
+	// idempotent. The record is memory-only here; the disk write is deferred.
+	if (ClaimSessionClose(SessionId)) { FMcpDiagnosticsSnapshot::Get().RecordSessionClosed();
+	FMcpDiagnosticsSnapshot::PersistCurrentAsync(); }
+
+	{
+		FScopeLock Lock(&LogEventSubscriptionsMutex);
+		LogEventSubscribedSessions.Remove(SessionId);
+	}
+
+	TArray<TSharedPtr<FNotificationStream>> NotificationStreamsToClose;
+	{
+		FScopeLock Lock(&NotificationStreamsMutex);
+		for (auto It = NotificationStreams.CreateIterator(); It; ++It)
+		{
+			const TSharedPtr<FNotificationStream>& Stream = It.Value();
+			if (Stream.IsValid() && Stream->SessionId == SessionId)
+			{
+				NotificationStreamsToClose.Add(Stream);
+				It.RemoveCurrent();
+			}
+		}
+	}
+	for (const TSharedPtr<FNotificationStream>& Stream :
+		NotificationStreamsToClose)
+	{
+		Stream->bMarkedForRemoval.store(true);
+		CloseNotificationStream(Stream);
+	}
+
+	TArray<TPair<FString, TSharedPtr<FSSEConnection>>> PendingCallsToClose;
+	{
+		FScopeLock Lock(&SSEConnectionsMutex);
+		for (auto It = SSEConnections.CreateIterator(); It; ++It)
+		{
+			const TSharedPtr<FSSEConnection>& Connection = It.Value();
+			if (Connection.IsValid() && Connection->SessionId == SessionId)
+			{
+				PendingCallsToClose.Emplace(It.Key(), Connection);
+				It.RemoveCurrent();
+			}
+		}
+	}
+
+	TArray<FString> RequestIds;
+	RequestIds.Reserve(PendingCallsToClose.Num());
+	for (const TPair<FString, TSharedPtr<FSSEConnection>>& Entry :
+		PendingCallsToClose)
+	{
+		RequestIds.Add(Entry.Key);
+	}
+	if (Subsystem && !RequestIds.IsEmpty())
+	{
+		Subsystem->CancelAutomationRequests(RequestIds);
+	}
+
+	for (const TPair<FString, TSharedPtr<FSSEConnection>>& Entry :
+		PendingCallsToClose)
+	{
+		const TSharedPtr<FSSEConnection>& Connection = Entry.Value;
+		Connection->bMarkedForRemoval.store(true);
+		FScopeLock WriteLock(&Connection->WriteMutex);
+		CloseSocket(Connection->Socket);
+	}
+}
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+int32 FMcpNativeTransport::GetActiveSessionCount() const
+{
+	FScopeLock Lock(&SessionMutex);
+	return ActiveSessions.Num();
+}

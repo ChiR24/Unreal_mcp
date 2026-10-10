@@ -96,7 +96,7 @@ export const OPERATIONS_POWER_RECORDS: readonly CapabilityRecordSource[] = [
     exampleInput: { action: 'set_metadata', levelPath: '/Game/Maps/Demo', metadata: { author: 'MCP' } },
   }),
   // The native Level dispatch has always routed `set_level_world_settings`
-  // (McpAutomationBridge_LevelHandlers.cpp), but no record published it, so the
+  // (McpLevelHandlers.cpp), but no record published it, so the
   // only way to set a level's GameMode override through the gateway was to fall
   // back to system_control.execute_python. Published here against the same
   // native action; the handler re-validates and reports what it applied.

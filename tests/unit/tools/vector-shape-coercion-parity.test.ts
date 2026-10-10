@@ -2,7 +2,7 @@
 //
 // coerceVectorShapes in src/server/gateway/gateway-schema-validate.ts and
 // McpCoerceCanonicalVectorShapes in
-// plugins/McpAutomationBridge/.../Private/MCP/Gateway/McpNativeGatewayVectorCoercion.cpp
+// plugins/EngineWire/.../Private/MCP/Gateway/McpNativeGatewayVectorCoercion.cpp
 // must accept exactly the same payloads. The native side has no unit harness,
 // so this test reads the C++ source as text (the repo's established
 // source-contract approach) and pins: the key sets and their order, the
@@ -21,15 +21,15 @@ const repoRoot = resolve(here, '../../..');
 const TS_EXECUTE = resolve(repoRoot, 'src/server/gateway/gateway-execute-static-check.ts');
 const CPP_COERCION = resolve(
   repoRoot,
-  'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Gateway/McpNativeGatewayVectorCoercion.cpp'
+  'plugins/EngineWire/Source/EngineWire/Private/MCP/Gateway/McpNativeGatewayVectorCoercion.cpp'
 );
 const CPP_VALIDATION = resolve(
   repoRoot,
-  'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Execute/McpNativeGatewayValidation.cpp'
+  'plugins/EngineWire/Source/EngineWire/Private/MCP/Execute/McpNativeGatewayValidation.cpp'
 );
 const CPP_DESCRIBE_OVERVIEW = resolve(
   repoRoot,
-  'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Gateway/McpNativeGatewayDescribeOverview.cpp'
+  'plugins/EngineWire/Source/EngineWire/Private/MCP/Gateway/McpNativeGatewayDescribeOverview.cpp'
 );
 
 // Source-contract reads normalize CRLF so the pins hold on Windows checkouts

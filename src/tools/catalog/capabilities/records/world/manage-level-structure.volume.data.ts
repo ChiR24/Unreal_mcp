@@ -1,6 +1,6 @@
 /**
  * Level-structure volume records, grounded in HandleManageVolumesAction
- * (Domains/Volume/McpAutomationBridge_VolumeHandlers.cpp).
+ * (Domains/Volume/McpVolumeHandlers.cpp).
  *
  * Creation is ONE record, `create_volume`, standing for the 17 volume classes
  * the native Volume domain spawns, which used to be 23 actions (17 create_* plus

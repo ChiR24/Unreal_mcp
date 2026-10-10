@@ -3,7 +3,7 @@
  * operations of manage_level_structure.
  *
  * Grounded in the native LevelStructure domain dispatch (Private/Domains/LevelStructure/
- * McpAutomationBridge_LevelStructureActions.h). World Partition / data layer /
+ * McpLevelStructureActions.h). World Partition / data layer /
  * HLOD / level instance / packed level actor routes are editor-only and require
  * the editor state 'edit'.
  */

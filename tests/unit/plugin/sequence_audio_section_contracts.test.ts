@@ -10,10 +10,10 @@ import { describe, expect, it } from 'vitest';
 import { capabilityIndex } from '../../../src/server/gateway/gateway-capability-index.js';
 import { isRecord } from '../../../src/utils/validation/type-guards.js';
 
-const PRIVATE = join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private');
+const PRIVATE = join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private');
 const SEQUENCE_DIR = join(PRIVATE, 'Domains', 'Sequence');
-const SECTIONS = join(SEQUENCE_DIR, 'McpAutomationBridge_SequenceHandlersSections.cpp');
-const TRACK_CREATION = join(SEQUENCE_DIR, 'McpAutomationBridge_SequenceHandlersTrackCreation.cpp');
+const SECTIONS = join(SEQUENCE_DIR, 'McpSeqSections.cpp');
+const TRACK_CREATION = join(SEQUENCE_DIR, 'McpSeqTrackCreation.cpp');
 
 /** Block and line comments removed, so no assertion can be satisfied by prose. */
 function stripComments(source: string): string {

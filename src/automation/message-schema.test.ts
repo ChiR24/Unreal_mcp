@@ -131,7 +131,7 @@ describe('pluginVersionMismatch', () => {
     it('names both versions, the matching plugin release and the server pin', () => {
         const text = pluginVersionMismatch({ pluginVersion: '0.0.1' }) ?? '';
         expect(text).toContain(`${PACKAGE.name} ${PACKAGE.version}`);
-        expect(text).toContain('McpAutomationBridge 0.0.1');
+        expect(text).toContain('EngineWire 0.0.1');
         expect(text).toContain(`https://github.com/ChiR24/Unreal_mcp/releases/tag/v${PACKAGE.version}`);
         expect(text).toContain(`npx -y ${PACKAGE.name}@0.0.1`);
     });

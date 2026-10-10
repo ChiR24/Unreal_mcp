@@ -1,0 +1,234 @@
+#include "Domains/GAS/McpGASPayloadFields.h"
+#include "Domains/GAS/McpGASRequestContext.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpBPCompileHelpers.h"
+#include "Safety/McpSafeOperations.h"
+#include "EngineWireSubsystem.h"
+#include "Foundation/HandlerUtils/McpHandlerUtils.h"
+
+#include "Engine/Blueprint.h"
+#include "AttributeSet.h"
+#include "GameplayEffect.h"
+#include "UObject/UObjectIterator.h"
+#include "Kismet2/BlueprintEditorUtils.h"
+
+namespace McpGASHandlers
+{
+bool HandleGASEffectModifiers(const FGASRequestContext& Context, const FString& SubAction)
+{
+    UEngineWireSubsystem* Bridge = Context.Subsystem;
+    const FString& RequestId = Context.RequestId;
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket = Context.RequestingSocket;
+    const TSharedPtr<FJsonObject>& Payload = Context.Payload;
+    const FString& BlueprintPath = Context.BlueprintPath;
+
+    // add_effect_modifier
+    if (SubAction == TEXT("add_effect_modifier"))
+    {
+        if (BlueprintPath.IsEmpty())
+        {
+            Bridge->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blueprintPath."), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        UBlueprint* Blueprint = nullptr;
+        UGameplayEffect* EffectCDO = LoadGASBlueprintCDO<UGameplayEffect>(Context, Blueprint, TEXT("GameplayEffect"));
+        if (!EffectCDO)
+        {
+            return true;
+        }
+
+        FString Operation = GetGASStringFieldWithFallback(Payload, TEXT("modifierOperation"), TEXT("operation"), TEXT("Add"));
+        float Magnitude = static_cast<float>(GetGASNumberFieldWithFallback(Payload, TEXT("modifierMagnitude"), TEXT("magnitude"), 0.0));
+
+        FGameplayModifierInfo Modifier;
+
+        // The op by its enumerator name (Additive, Multiplicitive, Division, Override, and the newer ops),
+        // or the verbs callers use; Additive when nothing matches.
+        static const TMap<FString, FString> OpVerbs = {
+            {TEXT("add"), TEXT("Additive")}, {TEXT("multiply"), TEXT("Multiplicitive")},
+            {TEXT("multiplicative"), TEXT("Multiplicitive")}, {TEXT("divide"), TEXT("Division")}};
+        const FString* OpVerb = OpVerbs.Find(NormalizeGASToken(Operation));
+        EGameplayModOp::Type ModOp = EGameplayModOp::Additive;
+        TryParseGASEnum(OpVerb ? *OpVerb : Operation, ModOp);
+        Modifier.ModifierOp = ModOp;
+
+        // Note: SetValue doesn't exist in UE 5.6. Use FScalableFloat constructor.
+        Modifier.ModifierMagnitude = FGameplayEffectModifierMagnitude(FScalableFloat(Magnitude));
+
+        // ---- Bind the modifier to the attribute it is supposed to modify. -------------------------
+        // This was the whole defect: FGameplayModifierInfo was default-constructed, given an op and a
+        // magnitude, and pushed onto Modifiers with its Attribute left null. The effect then carried a
+        // modifier that modified nothing, while the handler answered success:true with modifierCount:1 --
+        // a real read-back of the wrong thing. Both spellings are accepted because both are advertised:
+        // the native schema documents `targetAttribute` and the TS route lists `attributeName`.
+        const FString TargetAttribute =
+            GetGASStringFieldWithFallback(Payload, TEXT("targetAttribute"), TEXT("attributeName"), TEXT("")).TrimStartAndEnd();
+        if (TargetAttribute.IsEmpty())
+        {
+            Bridge->SendAutomationError(RequestingSocket, RequestId,
+                TEXT("Missing targetAttribute (alias: attributeName) - a modifier with no attribute modifies nothing."),
+                TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        // Accept both "Health" and "AS_Foo.Health". The part after the last dot is the property name;
+        // the part before it, when present, names the owning AttributeSet class and IS HONORED below --
+        // an accepted-but-ignored qualifier would bind a same-named attribute from the wrong set and
+        // report success, which is this defect class with extra steps.
+        FString AttributeShortName = TargetAttribute;
+        FString ClassQualifier;
+        int32 DotIdx = INDEX_NONE;
+        if (AttributeShortName.FindLastChar(TEXT('.'), DotIdx))
+        {
+            ClassQualifier = AttributeShortName.Left(DotIdx);
+            AttributeShortName = AttributeShortName.Mid(DotIdx + 1);
+        }
+
+        // Resolve against every UAttributeSet subclass, native or Blueprint-generated: the caller's
+        // attribute usually lives in a Blueprint AttributeSet authored moments earlier by add_attribute.
+        FProperty* AttributeProperty = nullptr;
+        UClass* OwningAttributeSetClass = nullptr;
+        TArray<FString> AmbiguousOwners;
+        for (TObjectIterator<UClass> ClassIt; ClassIt; ++ClassIt)
+        {
+            UClass* Candidate = *ClassIt;
+            if (!Candidate || !Candidate->IsChildOf(UAttributeSet::StaticClass()))
+            {
+                continue;
+            }
+
+            // Skip compilation debris. Recompiling a Blueprint leaves REINST_*/SKEL_*/TRASHCLASS_*
+            // classes alive in memory, and they carry the same property names as the real generated
+            // class. Binding an attribute to one of those produces an FGameplayAttribute that looks
+            // valid -- IsValid() is true and GetName() returns the right string -- while pointing at a
+            // class the game never loads. Measured: without this filter, an attribute on a freshly
+            // recompiled Blueprint AttributeSet resolved to its REINST_SKEL_* debris class and the
+            // handler reported success while binding to a class the game never loads.
+            if (IsCompileDebrisClass(Candidate))
+            {
+                continue;
+            }
+            if (FProperty* Found = Candidate->FindPropertyByName(FName(*AttributeShortName)))
+            {
+                // A gameplay attribute is an FGameplayAttributeData struct property; anything else with a
+                // matching name is a different member and must not be silently accepted.
+                if (const FStructProperty* AsStruct = CastField<FStructProperty>(Found))
+                {
+                    if (AsStruct->Struct == FGameplayAttributeData::StaticStruct())
+                    {
+                        // Honor the qualifier: "AS_Foo.Health" matches the class named AS_Foo (or its
+                        // Blueprint generated form AS_Foo_C) and nothing else.
+                        if (!ClassQualifier.IsEmpty())
+                        {
+                            const FString CandidateName = Candidate->GetName();
+                            if (CandidateName != ClassQualifier && CandidateName != ClassQualifier + TEXT("_C"))
+                            {
+                                continue;
+                            }
+                            AttributeProperty = Found;
+                            OwningAttributeSetClass = Candidate;
+                            break;
+                        }
+                        // Unqualified: collect every match. One match binds; several is an ERROR the
+                        // caller resolves with the qualified form -- first-match-wins would bind an
+                        // arbitrary same-named attribute (native classes load first, so the wrong winner
+                        // is even deterministic) and report success.
+                        // FindPropertyByName walks the super chain, so one property declared on a base
+                        // AttributeSet is found again through every subclass. Count its DECLARING class
+                        // once; two genuinely different properties still yield two owners.
+                        const UClass* DeclaringClass = Found->GetOwnerClass();
+                        AmbiguousOwners.AddUnique(DeclaringClass ? DeclaringClass->GetName() : Candidate->GetName());
+                        if (!AttributeProperty)
+                        {
+                            AttributeProperty = Found;
+                            OwningAttributeSetClass = Candidate;
+                        }
+                    }
+                }
+            }
+        }
+
+        if (!AttributeProperty)
+        {
+            Bridge->SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Attribute '%s' not found on any loaded AttributeSet. If it was just authored, make sure its Blueprint compiled."), *TargetAttribute),
+                TEXT("ATTRIBUTE_NOT_FOUND"));
+            return true;
+        }
+        if (ClassQualifier.IsEmpty() && AmbiguousOwners.Num() > 1)
+        {
+            Bridge->SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Attribute '%s' exists on %d different AttributeSet classes (%s). Disambiguate with the qualified form, e.g. '%s.%s'."),
+                    *AttributeShortName, AmbiguousOwners.Num(), *FString::Join(AmbiguousOwners, TEXT(", ")),
+                    *AmbiguousOwners[0], *AttributeShortName),
+                TEXT("AMBIGUOUS_ATTRIBUTE"));
+            return true;
+        }
+
+        Modifier.Attribute.SetUProperty(AttributeProperty);
+        EffectCDO->Modifiers.Add(Modifier);
+
+        FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+        const bool bCompiled = McpSafeCompileBlueprint(Blueprint);
+
+        // Read back from the recompiled CDO. Compilation reinstances, so re-fetch rather than trusting
+        // the pointer we mutated: the question being answered is "is the modifier bound on the asset the
+        // engine will load", not "did we write to some object". The save comes AFTER verification --
+        // persisting a state we are about to report as failed would leave a broken asset on disk under
+        // an error message that denies it exists.
+        bool bBindingVerified = false;
+        FString VerifiedAttributeName;
+        int32 VerifiedModifierCount = 0;
+        if (UClass* CompiledClass = Blueprint->GeneratedClass)
+        {
+            if (UGameplayEffect* CompiledCDO = Cast<UGameplayEffect>(CompiledClass->GetDefaultObject()))
+            {
+                VerifiedModifierCount = CompiledCDO->Modifiers.Num();
+                if (CompiledCDO->Modifiers.Num() > 0)
+                {
+                    const FGameplayModifierInfo& Last = CompiledCDO->Modifiers.Last();
+                    VerifiedAttributeName = Last.Attribute.GetName();
+                    // IsValid() alone is NOT enough: it stays true for a property owned by a
+                    // reinstanced/skeleton class, which is exactly the failure this handler used to
+                    // ship. Require a live owner class as well.
+                    const FProperty* BoundProp = Last.Attribute.GetUProperty();
+                    const UClass* BoundOwner = BoundProp ? BoundProp->GetOwner<UClass>() : nullptr;
+                    bBindingVerified = Last.Attribute.IsValid() && BoundOwner && !IsCompileDebrisClass(BoundOwner);
+                }
+            }
+        }
+
+        if (!bCompiled || !bBindingVerified)
+        {
+            Bridge->SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Modifier was added but its attribute binding could not be verified on the compiled class (attribute '%s')%s - the effect would modify nothing. The asset was NOT saved."),
+                    *TargetAttribute,
+                    GASCompileFailureNote(bCompiled)),
+                TEXT("MODIFIER_NOT_BOUND"));
+            return true;
+        }
+
+        if (!SaveVerifiedGASBlueprint(Context, Blueprint, TEXT("Modifier")))
+        {
+            return true;
+        }
+
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+        Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+        Result->SetStringField(TEXT("operation"), Operation);
+        Result->SetNumberField(TEXT("magnitude"), Magnitude);
+        // EffectCDO is the pre-compile object; the compile above reinstanced it.
+        Result->SetNumberField(TEXT("modifierCount"), VerifiedModifierCount);
+        Result->SetStringField(TEXT("targetAttribute"), TargetAttribute);
+        // Read back from the compiled CDO, not echoed from the request.
+        Result->SetStringField(TEXT("boundAttribute"), VerifiedAttributeName);
+        Result->SetStringField(TEXT("attributeSetClass"), OwningAttributeSetClass ? OwningAttributeSetClass->GetName() : FString());
+        Result->SetBoolField(TEXT("verifiedOnCompiledClass"), true);
+        Result->SetBoolField(TEXT("savedToDisk"), true);
+        Bridge->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Modifier added"), Result);
+        return true;
+    }
+
+    return false;
+}
+}

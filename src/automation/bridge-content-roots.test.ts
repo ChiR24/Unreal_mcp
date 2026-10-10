@@ -137,7 +137,7 @@ describe('AutomationBridge plugin version', () => {
     try {
       expect(bridge.getVersionMismatch()).toBeUndefined();
       expect(await bridge.connect()).toBe(true);
-      expect(bridge.getVersionMismatch()).toContain('McpAutomationBridge 0.0.1');
+      expect(bridge.getVersionMismatch()).toContain('EngineWire 0.0.1');
       bridge.stop();
       expect(bridge.getVersionMismatch()).toBeUndefined();
     } finally {

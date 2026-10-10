@@ -13,7 +13,7 @@ import { describe, expect, it } from 'vitest';
 type Json = string | number | boolean | null | Json[] | { [key: string]: Json };
 type JsonObject = { [key: string]: Json };
 
-const pluginRoot = resolve(process.cwd(), 'plugins/McpAutomationBridge');
+const pluginRoot = resolve(process.cwd(), 'plugins/EngineWire');
 const recipeRoot = join(pluginRoot, 'Resources', 'Recipes');
 
 // The fields the plugin accepts: BuildPlan (Recipe.cpp), PlanMembers (Members.cpp),

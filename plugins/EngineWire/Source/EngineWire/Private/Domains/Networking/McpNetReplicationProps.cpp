@@ -1,0 +1,179 @@
+#include "Domains/Networking/McpNetPrivate.h"
+
+namespace McpNetworkingHandlers
+{
+bool HandleSetPropertyReplicated(FNetworkingActionContext& Context)
+{
+    const TSharedPtr<FJsonObject>& Payload = Context.Payload;
+    TSharedPtr<FJsonObject>& ResultJson = Context.ResultJson;
+    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
+    FString PropertyName = GetJsonStringField(Payload, TEXT("propertyName"));
+    bool bReplicated = GetJsonBoolField(Payload, TEXT("replicated"), true);
+    const FString Condition = GetJsonStringField(Payload, TEXT("condition"));
+
+    if (BlueprintPath.IsEmpty() || PropertyName.IsEmpty())
+    {
+        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Missing blueprintPath or propertyName"), TEXT("INVALID_PARAMS"));
+        return true;
+    }
+    // condition is the replication condition to replicate under; it has no meaning on a variable
+    // that stops replicating, so that combination is refused rather than half applied.
+    ELifetimeCondition LifetimeCondition = COND_None;
+    FString ValidConditions;
+    if (!Condition.IsEmpty() && !TryParseNetEnum(Condition, LifetimeCondition, ValidConditions))
+    {
+        ReplyInvalidEnum(Context, TEXT("condition"), Condition, ValidConditions);
+        return true;
+    }
+    if (!Condition.IsEmpty() && !bReplicated)
+    {
+        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("condition only applies with replicated: true."), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    UBlueprint* Blueprint = LoadBlueprintFromPath(BlueprintPath);
+    if (!Blueprint)
+    {
+        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Blueprint not found"), TEXT("NOT_FOUND"));
+        return true;
+    }
+
+    // Setting CPF_Net on the GeneratedClass FProperty does not survive: the
+    // class is regenerated from NewVariables on the next compile, so the flag
+    // was written, saved, reported as done, and then silently dropped. The
+    // authoritative home is FBPVariableDescription::PropertyFlags -- which
+    // set_replication_condition in this same domain already writes. A name that
+    // is not a Blueprint variable cannot carry the flag here at all, so say so
+    // rather than writing something that evaporates.
+    const FName PropertyFName(*PropertyName);
+    FBPVariableDescription* VarDesc = Blueprint->NewVariables.FindByPredicate(
+        [PropertyFName](const FBPVariableDescription& Desc) { return Desc.VarName == PropertyFName; });
+    if (!VarDesc)
+    {
+        const bool bExistsOnClass = Blueprint->GeneratedClass &&
+            Blueprint->GeneratedClass->FindPropertyByName(PropertyFName) != nullptr;
+        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId,
+            bExistsOnClass
+                ? FString::Printf(TEXT("'%s' is an inherited or native property, not a Blueprint variable; its replication is declared in C++ and cannot be changed from here."), *PropertyName)
+                : FString::Printf(TEXT("Blueprint variable '%s' not found."), *PropertyName),
+            TEXT("NOT_FOUND"));
+        return true;
+    }
+
+    if (bReplicated)
+    {
+        VarDesc->PropertyFlags |= CPF_Net;
+        if (!Condition.IsEmpty())
+        {
+            VarDesc->ReplicationCondition = LifetimeCondition;
+        }
+    }
+    else
+    {
+        VarDesc->PropertyFlags &= ~static_cast<uint64>(CPF_Net);
+    }
+
+    Blueprint->Modify();
+    FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+    McpSafeCompileBlueprint(Blueprint);
+    McpSafeAssetSave(Blueprint);
+
+    ResultJson->SetBoolField(TEXT("success"), true);
+    ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Property %s replication set to %s"), *PropertyName, bReplicated ? TEXT("true") : TEXT("false")));
+    McpHandlerUtils::AddVerification(ResultJson, Blueprint);
+    Context.Bridge.SendAutomationResponse(Context.RequestingSocket, Context.RequestId, true, TEXT("Property replication configured"), ResultJson);
+    return true;
+}
+
+bool HandleSetReplicationCondition(FNetworkingActionContext& Context)
+{
+    const TSharedPtr<FJsonObject>& Payload = Context.Payload;
+    TSharedPtr<FJsonObject>& ResultJson = Context.ResultJson;
+    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
+    FString PropertyName = GetJsonStringField(Payload, TEXT("propertyName"));
+    FString Condition = GetJsonStringField(Payload, TEXT("condition"));
+
+    if (BlueprintPath.IsEmpty() || PropertyName.IsEmpty() || Condition.IsEmpty())
+    {
+        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Missing required parameters"), TEXT("INVALID_PARAMS"));
+        return true;
+    }
+
+    UBlueprint* Blueprint = LoadBlueprintFromPath(BlueprintPath);
+    if (!Blueprint)
+    {
+        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Blueprint not found"), TEXT("NOT_FOUND"));
+        return true;
+    }
+
+    ELifetimeCondition LifetimeCondition = COND_None;
+    FString ValidConditions;
+    if (!TryParseNetEnum(Condition, LifetimeCondition, ValidConditions))
+    {
+        ReplyInvalidEnum(Context, TEXT("condition"), Condition, ValidConditions);
+        return true;
+    }
+    bool bFound = false;
+    for (FBPVariableDescription& VarDesc : Blueprint->NewVariables)
+    {
+        if (VarDesc.VarName == FName(*PropertyName))
+        {
+            VarDesc.PropertyFlags |= CPF_Net;
+            VarDesc.ReplicationCondition = LifetimeCondition;
+            bFound = true;
+            break;
+        }
+    }
+
+    if (!bFound)
+    {
+        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, FString::Printf(TEXT("Property '%s' not found"), *PropertyName), TEXT("NOT_FOUND"));
+        return true;
+    }
+
+    Blueprint->Modify();
+    FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+    McpSafeCompileBlueprint(Blueprint);
+    McpSafeAssetSave(Blueprint);
+
+    ResultJson->SetBoolField(TEXT("success"), true);
+    ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Replication condition set to %s"), *Condition));
+    McpHandlerUtils::AddVerification(ResultJson, Blueprint);
+    Context.Bridge.SendAutomationResponse(Context.RequestingSocket, Context.RequestId, true, TEXT("Replication condition configured"), ResultJson);
+    return true;
+}
+
+bool HandleConfigureNetUpdateFrequency(FNetworkingActionContext& Context)
+{
+    const TSharedPtr<FJsonObject>& Payload = Context.Payload;
+    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
+    double NetUpdateFrequency = GetJsonNumberField(Payload, TEXT("netUpdateFrequency"), 100.0);
+    double MinNetUpdateFrequency = GetJsonNumberField(Payload, TEXT("minNetUpdateFrequency"), 2.0);
+
+    UBlueprint* Blueprint = LoadBlueprintOrReply(Context, BlueprintPath);
+    if (!Blueprint)
+    {
+        return true;
+    }
+
+    // A Blueprint whose class never compiled has no defaults to write; the edit used to be skipped and reported.
+    AActor* CDO = Blueprint->GeneratedClass ? Cast<AActor>(Blueprint->GeneratedClass->GetDefaultObject()) : nullptr;
+    if (!CDO)
+    {
+        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("The Blueprint has no compiled Actor class to configure; compile it first."), TEXT("NOT_SUPPORTED"));
+        return true;
+    }
+    if (CDO)
+    {
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
+        CDO->SetNetUpdateFrequency(static_cast<float>(NetUpdateFrequency));
+        CDO->SetMinNetUpdateFrequency(static_cast<float>(MinNetUpdateFrequency));
+#else
+        CDO->NetUpdateFrequency = static_cast<float>(NetUpdateFrequency);
+        CDO->MinNetUpdateFrequency = static_cast<float>(MinNetUpdateFrequency);
+#endif
+    }
+
+    return SaveBlueprintAndReply(Context, Blueprint, FString::Printf(TEXT("Net update frequency set to %.1f (min: %.1f)"), NetUpdateFrequency, MinNetUpdateFrequency), TEXT("Net update frequency configured"));
+}
+}

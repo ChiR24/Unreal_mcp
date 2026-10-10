@@ -1,0 +1,145 @@
+#include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Domains/BehaviorTree/McpBTPrivate.h"
+#include "Domains/BehaviorTree/McpBTSerializers.h"
+
+#include "Foundation/BridgeHelpers/McpHelpers.h"
+#include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "AssetRegistry/AssetRegistryModule.h"
+#include "BehaviorTree/BehaviorTree.h"
+#include "EditorAssetLibrary.h"
+
+#if MCP_HAS_BEHAVIOR_TREE_GRAPH
+#include "BehaviorTreeGraph.h"
+#include "EdGraphSchema_BehaviorTree.h"
+#endif
+
+namespace McpBehaviorTreeHandlers {
+
+bool HandleCreate(UEngineWireSubsystem* Subsystem,
+                  const FRequestContext& Context)
+{
+  FString Name;
+  if (!Context.Payload->TryGetStringField(TEXT("name"), Name) ||
+      Name.IsEmpty()) {
+    Subsystem->SendAutomationError(Context.RequestingSocket, Context.RequestId,
+                                   TEXT("name required for create"),
+                                   TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  FString SavePath;
+  if (!Context.Payload->TryGetStringField(TEXT("savePath"), SavePath) ||
+      SavePath.IsEmpty()) {
+    SavePath = TEXT("/Game");
+  }
+  if (!SavePath.StartsWith(TEXT("/"))) {
+    SavePath = TEXT("/Game/") + SavePath;
+  }
+
+  const FString PackagePath = SavePath / Name;
+  if (!IsValidAssetPath(PackagePath)) {
+    Subsystem->SendAutomationError(
+        Context.RequestingSocket,
+        Context.RequestId,
+        FString::Printf(TEXT("Invalid asset path: '%s'. Path must start with '/', cannot contain '..' or '//'."),
+                        *PackagePath),
+        TEXT("INVALID_PATH"));
+    return true;
+  }
+
+  if (McpAssetExists(PackagePath)) {
+    Subsystem->SendAutomationError(
+        Context.RequestingSocket,
+        Context.RequestId,
+        FString::Printf(TEXT("Behavior Tree already exists at %s"),
+                        *PackagePath),
+        TEXT("ASSET_EXISTS"));
+    return true;
+  }
+
+  UPackage* Package = CreatePackage(*PackagePath);
+  if (!Package) {
+    Subsystem->SendAutomationError(Context.RequestingSocket, Context.RequestId,
+                                   TEXT("Failed to create package"),
+                                   TEXT("PACKAGE_FAILED"));
+    return true;
+  }
+
+  UBehaviorTree* NewBT = NewObject<UBehaviorTree>(
+      Package, UBehaviorTree::StaticClass(), FName(*Name),
+      RF_Public | RF_Standalone);
+  if (!NewBT) {
+    Subsystem->SendAutomationError(Context.RequestingSocket, Context.RequestId,
+                                   TEXT("Failed to create Behavior Tree"),
+                                   TEXT("CREATE_FAILED"));
+    return true;
+  }
+
+#if MCP_HAS_BEHAVIOR_TREE_GRAPH
+  CreateBehaviorTreeGraph(NewBT);
+#else
+  NewBT->BTGraph = nullptr;
+#endif
+
+  FAssetRegistryModule::AssetCreated(NewBT);
+  Package->MarkPackageDirty();
+  const bool bSaved = McpSafeAssetSave(NewBT);
+
+  TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+  Result->SetStringField(TEXT("assetPath"), NewBT->GetPathName());
+  Result->SetStringField(TEXT("name"), Name);
+  Result->SetBoolField(TEXT("saved"), bSaved);
+  McpHandlerUtils::AddVerification(Result, NewBT);
+
+  Subsystem->SendAutomationResponse(Context.RequestingSocket,
+                                    Context.RequestId, true,
+                                    TEXT("Behavior Tree created."), Result);
+  return true;
+}
+
+bool HandleGetTree(UEngineWireSubsystem* Subsystem,
+                   const FRequestContext& Context)
+{
+  const FString AssetPath = ReadBehaviorTreePath(Context.Payload);
+  if (AssetPath.IsEmpty()) {
+    Subsystem->SendAutomationError(
+        Context.RequestingSocket, Context.RequestId,
+        TEXT("get_tree requires 'assetPath' (or 'behaviorTreePath')."),
+        TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  const FString NormalizedPath =
+      SanitizeProjectRelativePath(AssetPath.TrimStartAndEnd());
+  if (NormalizedPath.IsEmpty()) {
+    Subsystem->SendAutomationError(
+        Context.RequestingSocket,
+        Context.RequestId,
+        McpPathRefusalMessage(TEXT("asset path"), AssetPath.TrimStartAndEnd()),
+        TEXT("INVALID_PATH"));
+    return true;
+  }
+
+  UBehaviorTree* BehaviorTree =
+      LoadObject<UBehaviorTree>(nullptr, *NormalizedPath);
+  if (!BehaviorTree) {
+    Subsystem->SendAutomationError(
+        Context.RequestingSocket,
+        Context.RequestId,
+        FString::Printf(TEXT("Could not load Behavior Tree at '%s'."),
+                        *AssetPath),
+        TEXT("ASSET_NOT_FOUND"));
+    return true;
+  }
+
+  TSharedRef<FJsonObject> TreeData = MakeShared<FJsonObject>();
+  McpBehaviorTreeSerializers::SerializeBehaviorTree(BehaviorTree, TreeData);
+  TSharedRef<FJsonObject> Result = MakeShared<FJsonObject>();
+  Result->SetObjectField(TEXT("tree"), TreeData);
+  Subsystem->SendAutomationResponse(Context.RequestingSocket,
+                                    Context.RequestId, true,
+                                    TEXT("Behavior tree retrieved."), Result);
+  return true;
+}
+
+}

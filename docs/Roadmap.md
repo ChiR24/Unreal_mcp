@@ -1306,7 +1306,7 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 **Tool**: `build_environment` exposes the rendering actions, with seeded `manage_asset` and `manage_level_structure` support for render targets and volumes. The native bridge routes the public `build_environment` actions through the internal `manage_render` domain.
 
-**Status**: The listed actions are documented and catalog-backed (the `manage_render` C++ dispatch is split into per-concern files under `Render/McpAutomationBridge_Render*.cpp`). **What the checks here do and do not establish**: `npm run test:params` is a *static and schema* audit of the capability records — it compares declared parameters against the catalog and integration cases and reports 0 mismatches. It is **not** native runtime parity, not a native `/mcp` execution test, and **not** live proof that a handler does what it says. The live-acceptance verification record is **pending** — a headless Editor run and a sha256 evidence archive are not captured. Treat this section as "Code complete; verification record pending" rather than "live-tested".
+**Status**: The listed actions are documented and catalog-backed (the `manage_render` C++ dispatch is split into per-concern files under `Render/McpRender*.cpp`). **What the checks here do and do not establish**: `npm run test:params` is a *static and schema* audit of the capability records — it compares declared parameters against the catalog and integration cases and reports 0 mismatches. It is **not** native runtime parity, not a native `/mcp` execution test, and **not** live proof that a handler does what it says. The live-acceptance verification record is **pending** — a headless Editor run and a sha256 evidence archive are not captured. Treat this section as "Code complete; verification record pending" rather than "live-tested".
 
 ### 29.1 Ray Tracing
 - [x] `configure_ray_traced_shadows`
@@ -2488,5 +2488,5 @@ This roadmap represents a massive undertaking. Contributions are welcome for any
 
 Each new action requires:
 1. A capability record under `src/tools/catalog/capabilities/records/` (then `npm run registry:generate`)
-2. C++ handler in `plugins/McpAutomationBridge/Source/.../Private/`
+2. C++ handler in `plugins/EngineWire/Source/.../Private/`
 3. Integration test

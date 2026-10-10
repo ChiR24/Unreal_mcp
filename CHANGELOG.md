@@ -10,6 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## 🏷️ [Unreleased]
 
 <details>
+<summary><b>🔄 Changed</b></summary>
+
+- **The editor plugin is now EngineWire** (was McpAutomationBridge), with short source file names so every path in the Fab package fits Fab's 170-character limit. Settings saved under the old name still load, in the plugin and in the server's port lookup, until they are saved once under the new one. To upgrade, replace `Plugins/McpAutomationBridge` with `Plugins/EngineWire` and rename the plugin entry in the `.uproject` if it lists one.
+
+</details>
+
+<details>
 <summary><b>✨ Added</b></summary>
 
 - **Animation graph nodes by class**: `create_node` and `add_node` take an animation node's short class name (`TwoBoneIK`, `Two Bone IK`) in an AnimGraph or a state's graph, and `inspect_graph` `info: node_types` takes `filter` (`IK` lists the IK nodes).

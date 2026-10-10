@@ -10,19 +10,19 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-const source = resolve(process.cwd(), 'plugins/McpAutomationBridge/Source/McpAutomationBridge');
+const source = resolve(process.cwd(), 'plugins/EngineWire/Source/EngineWire');
 const read = (file: string): string => readFileSync(resolve(source, file), 'utf8');
 const code = (file: string): string => read(file).replace(/\/\*[\s\S]*?\*\//gu, '').replace(/^[ \t]*\/\/.*$/gmu, '');
 
 describe('Epic editor toolsets behind this plugin\'s gateway', () => {
-  const list = code('Private/Domains/ControlEditor/Toolsets/McpAutomationBridge_EditorToolsets.cpp');
-  const call = code('Private/Domains/ControlEditor/Toolsets/McpAutomationBridge_EditorToolsetsCall.cpp');
+  const list = code('Private/Domains/ControlEditor/Toolsets/McpEditorToolsets.cpp');
+  const call = code('Private/Domains/ControlEditor/Toolsets/McpEditorToolsetsCall.cpp');
 
   it('reaches the registry through reflection only, never by linking it', () => {
     expect(list).toContain('FindObject<UClass>(nullptr, TEXT("/Script/ToolsetRegistry.ToolsetRegistry"))');
     expect(call).toContain('FindFunctionByName(TEXT("ExecuteTool"))');
-    expect(read('McpAutomationBridge.Build.cs')).not.toContain('"ToolsetRegistry"');
-    expect(read('../../McpAutomationBridge.uplugin')).not.toContain('"ToolsetRegistry"');
+    expect(read('EngineWire.Build.cs')).not.toContain('"ToolsetRegistry"');
+    expect(read('../../EngineWire.uplugin')).not.toContain('"ToolsetRegistry"');
   });
 
   it('never calls a tool that would run scripts or console code', () => {
@@ -37,7 +37,7 @@ describe('Epic editor toolsets behind this plugin\'s gateway', () => {
   it('refuses a destructive tool on the write door before it starts', () => {
     expect(call).toContain('if (Class == EToolClass::Destructive && !bDestructiveAllowed)');
     expect(call.indexOf('TEXT("DESTRUCTIVE_EDITOR_TOOL")')).toBeLessThan(call.indexOf('StartCall(Toolset, Tool, InputJson, Error)'));
-    const dispatch = code('Private/Domains/ControlEditor/McpAutomationBridge_ControlEditorDispatch.cpp');
+    const dispatch = code('Private/Domains/ControlEditor/McpEditorDispatch.cpp');
     expect(dispatch).toContain('LowerSub == TEXT("call_editor_tool_destructive"));');
   });
 

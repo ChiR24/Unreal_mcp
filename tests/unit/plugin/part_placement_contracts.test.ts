@@ -9,13 +9,13 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-const bridge = resolve(process.cwd(), 'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private');
+const bridge = resolve(process.cwd(), 'plugins/EngineWire/Source/EngineWire/Private');
 /** Comment bodies explain the rules, so rule checks ignore them. */
 const code = (file: string): string =>
   readFileSync(resolve(bridge, file), 'utf8').replace(/\/\*[\s\S]*?\*\//gu, '').replace(/^[ \t]*\/\/.*$/gmu, '');
 
 describe('Blueprint parts that sink are named', () => {
-  const audit = code('Domains/ControlActor/Placement/McpAutomationBridge_PartPlacement.cpp');
+  const audit = code('Domains/ControlActor/Placement/McpPartPlacement.cpp');
 
   it('measures a preview instance on the source mesh, not bounds or the Nanite fallback', () => {
     expect(audit).toContain('FPreviewScene Scene;');
@@ -38,19 +38,19 @@ describe('Blueprint parts that sink are named', () => {
   });
 
   it('reports from every SCS edit path, for the components it touched', () => {
-    const finalize = code('Domains/Blueprint/Components/McpAutomationBridge_BlueprintHandlersModifyScsFinalize.cpp');
+    const finalize = code('Domains/Blueprint/Components/McpBPModifyScsFinalize.cpp');
     expect(finalize).toContain('McpPartPlacement::AuditBlueprintParts(LocalBP, Touched)');
     expect(finalize).toContain('ResultPayload->SetArrayField(TEXT("partWarnings"), PartWarnings);');
-    const add = code('Domains/Blueprint/Components/McpAutomationBridge_BlueprintHandlersScsAddComponent.cpp');
+    const add = code('Domains/Blueprint/Components/McpBPScsAddComponent.cpp');
     expect(add).toContain('McpPartPlacement::AppendPartWarnings(BlueprintPath, {ComponentName}, Result);');
-    const wrappers = code('Domains/Blueprint/Components/McpAutomationBridge_BlueprintHandlersScsWrappers.cpp');
+    const wrappers = code('Domains/Blueprint/Components/McpBPScsWrappers.cpp');
     expect(wrappers.match(/McpPartPlacement::AppendPartWarnings\(BPPath, \{CompName\}, Result\);/gu)).toHaveLength(3);
   });
 
   it('names what a mesh replaced in place did to the loaded Blueprints that draw it, without loading any', () => {
-    const convert = code('Domains/Geometry/Support/McpAutomationBridge_GeometryAssetConversion.cpp');
+    const convert = code('Domains/Geometry/Support/McpGeometryAssetConversion.cpp');
     expect(convert).toContain('McpPartPlacement::AppendMeshUserWarnings(CreatedMesh, Result);');
-    const reply = code('Domains/ControlActor/Placement/McpAutomationBridge_PartPlacementReply.cpp');
+    const reply = code('Domains/ControlActor/Placement/McpPartPlacementReply.cpp');
     expect(reply).toContain('GetReferencers(');
     expect(reply).toContain('FindObject<UBlueprint>(');
     expect(reply).not.toContain('LoadObject<UBlueprint>(');
@@ -58,7 +58,7 @@ describe('Blueprint parts that sink are named', () => {
   });
 
   it('answers audit_placement with blueprintPath before sweeping the level', () => {
-    const handler = code('Domains/ControlActor/McpAutomationBridge_ControlActorPlacementAudit.cpp');
+    const handler = code('Domains/ControlActor/McpActorPlacementAudit.cpp');
     const branch = handler.indexOf('McpPartPlacement::BuildBlueprintAuditReply(');
     expect(branch).toBeGreaterThan(-1);
     expect(branch).toBeLessThan(handler.indexOf('for (TActorIterator<AActor> It(World); It; ++It)'));
@@ -66,9 +66,9 @@ describe('Blueprint parts that sink are named', () => {
 });
 
 describe('an SDF shape can stand for its copies', () => {
-  const read = code('Domains/Geometry/Primitives/McpAutomationBridge_GeometryPrimitivesImplicit.cpp');
-  const copies = code('Domains/Geometry/Primitives/McpAutomationBridge_GeometrySdfCopies.h');
-  const field = code('Domains/Geometry/Primitives/McpAutomationBridge_GeometrySdfField.h');
+  const read = code('Domains/Geometry/Primitives/McpGeometryPrimitivesImplicit.cpp');
+  const copies = code('Domains/Geometry/Primitives/McpGeometrySdfCopies.h');
+  const field = code('Domains/Geometry/Primitives/McpGeometrySdfField.h');
 
   it('expands repeat, then mirror, keeping the authoring index on every copy', () => {
     expect(read).toContain('McpGeometrySdf::ExpandRepeat(*Obj, S, Copies, CopyError) || !McpGeometrySdf::ExpandMirror(*Obj, Copies, CopyError)');

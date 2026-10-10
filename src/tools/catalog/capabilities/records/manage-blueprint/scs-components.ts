@@ -5,7 +5,7 @@
  * Blueprint without SCS node ownership (no template). The SCS actions
  * construct component templates through SCS->CreateNode()/AddNode() so the
  * template is owned by the SCS node, per the UE 5.7 safety rules in
- * plugins/McpAutomationBridge/AGENTS.md.
+ * plugins/EngineWire/AGENTS.md.
  *
  * set_default applies property values to the CDO (Class Default Object) as a
  * fallback when SCS-owned template properties are not the right target.

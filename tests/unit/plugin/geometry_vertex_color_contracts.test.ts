@@ -7,7 +7,7 @@ import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-const MODULE = join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge');
+const MODULE = join('plugins', 'EngineWire', 'Source', 'EngineWire');
 const GEOMETRY = join(MODULE, 'Private', 'Domains', 'Geometry');
 
 /** Block and line comments removed, so no assertion can be satisfied by prose. */
@@ -15,7 +15,7 @@ const strip = (source: string): string => source.replace(/\/\*[\s\S]*?\*\//gu, '
 const read = (...segments: readonly string[]): string => strip(readFileSync(join(GEOMETRY, ...segments), 'utf8'));
 
 describe('bake_vertex_colors writes masks the material reads, white meaning no effect', () => {
-  const bake = (): string => read('Mesh', 'McpAutomationBridge_GeometryVertexColorBake.cpp');
+  const bake = (): string => read('Mesh', 'McpGeometryVertexColorBake.cpp');
 
   it('writes the primary colour overlay, the store the static-mesh conversion reads', () => {
     const source = bake();
@@ -69,6 +69,6 @@ describe('bake_vertex_colors writes masks the material reads, white meaning no e
   });
 
   it('the dispatcher routes bake_vertex_colors to HandleBakeVertexColors', () => {
-    expect(read('McpAutomationBridge_GeometryHandlers.cpp')).toContain('if (SubAction == TEXT("bake_vertex_colors")) return HandleBakeVertexColors(this, RequestId, Payload, RequestingSocket);');
+    expect(read('McpGeometryHandlers.cpp')).toContain('if (SubAction == TEXT("bake_vertex_colors")) return HandleBakeVertexColors(this, RequestId, Payload, RequestingSocket);');
   });
 });

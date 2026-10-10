@@ -144,7 +144,7 @@ jobs:
           jq --arg v "$VERSION" '.version = $v | .packages[] |= if .registryType == "npm" then .version = $v else . end' server.json > tmp && mv tmp server.json
           echo "✅ Updated server.json to $VERSION"
 
-      - name: Update McpAutomationBridge.uplugin
+      - name: Update EngineWire.uplugin
         env:
           FINAL_VERSION: ${{ steps.final_version.outputs.version }}
         run: |
@@ -161,8 +161,8 @@ jobs:
           MINOR="${REST%%.*}"
           PATCH="${REST#*.}"
           NUMERIC=$(( MAJOR * 10000 + MINOR * 100 + PATCH ))
-          jq --arg v "$VERSION" --argjson n "$NUMERIC"             '.VersionName = $v | .Version = $n'             plugins/McpAutomationBridge/McpAutomationBridge.uplugin > tmp             && mv tmp plugins/McpAutomationBridge/McpAutomationBridge.uplugin
-          echo "✅ Updated McpAutomationBridge.uplugin to $VERSION (Version $NUMERIC)"
+          jq --arg v "$VERSION" --argjson n "$NUMERIC"             '.VersionName = $v | .Version = $n'             plugins/EngineWire/EngineWire.uplugin > tmp             && mv tmp plugins/EngineWire/EngineWire.uplugin
+          echo "✅ Updated EngineWire.uplugin to $VERSION (Version $NUMERIC)"
 
       - name: Verify no hardcoded npm versions remain
         env:
@@ -280,7 +280,7 @@ jobs:
           fi
 
           git add package.json package-lock.json server.json \
-            plugins/McpAutomationBridge/McpAutomationBridge.uplugin
+            plugins/EngineWire/EngineWire.uplugin
 
           if [ "$CREATE_CHANGELOG" == "true" ]; then
             git add CHANGELOG.md
@@ -315,7 +315,7 @@ jobs:
           echo "### 📦 Files Updated:" >> $GITHUB_STEP_SUMMARY
           echo "- \`package.json\`" >> $GITHUB_STEP_SUMMARY
           echo "- \`server.json\` (2 occurrences)" >> $GITHUB_STEP_SUMMARY
-          echo "- \`plugins/McpAutomationBridge/McpAutomationBridge.uplugin\` (VersionName)" >> $GITHUB_STEP_SUMMARY
+          echo "- \`plugins/EngineWire/EngineWire.uplugin\` (VersionName)" >> $GITHUB_STEP_SUMMARY
 
           if [ "$CREATE_CHANGELOG" == "true" ]; then
             echo "- \`CHANGELOG.md\`" >> $GITHUB_STEP_SUMMARY

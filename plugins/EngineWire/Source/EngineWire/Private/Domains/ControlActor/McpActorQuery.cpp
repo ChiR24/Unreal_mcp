@@ -1,0 +1,241 @@
+#include "Domains/ControlActor/McpActorSupport.h"
+
+bool UEngineWireSubsystem::HandleControlActorFindByName(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+  FString Query;
+  Payload->TryGetStringField(TEXT("name"), Query);
+  if (Query.IsEmpty()) {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("name required"), nullptr);
+    return true;
+  }
+
+  // Security: Validate query format - reject path traversal attempts
+  if (Query.Contains(TEXT("..")) || Query.Contains(TEXT("\\"))) {
+    SendStandardErrorResponse(
+        this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+        FString::Printf(
+            TEXT("Invalid name query: '%s'. '..' and backslashes are not accepted. Pass an actor "
+                 "name (e.g. 'BP_Shelf_C_1') or a full object path ending in one "
+                 "(e.g. '/Game/Maps/Lvl.Lvl:PersistentLevel.BP_Shelf_C_1')."),
+            *Query),
+        nullptr);
+    return true;
+  }
+
+  // A caller that already holds an actor's FULL OBJECT PATH (handed out by find_by_property, inspect, and the
+  // outliner) naturally passes it here. Rejecting every '/' turned that into a bare "Invalid name query" with
+  // no hint about what this action actually wants, so reduce a well-formed object path to its leaf actor name
+  // instead: "/Game/Maps/Lvl.Lvl:PersistentLevel.BP_Shelf_C_1" -> "BP_Shelf_C_1". Traversal and backslashes
+  // are already rejected above, and the leaf can no longer contain a separator.
+  if (Query.Contains(TEXT("/"))) {
+    // Take the LAST separator of any kind. A short-circuiting || chain stops at the first character it
+    // finds, so '/Game/My.Folder/Actors' would cut at the '.' and yield 'Folder/Actors' -- still a path,
+    // contradicting the guarantee below. Compare all three and use the rightmost.
+    FString Leaf = Query;
+    int32 DotIndex = INDEX_NONE, ColonIndex = INDEX_NONE, SlashIndex = INDEX_NONE;
+    Leaf.FindLastChar(TEXT('.'), DotIndex);
+    Leaf.FindLastChar(TEXT(':'), ColonIndex);
+    Leaf.FindLastChar(TEXT('/'), SlashIndex);
+    const int32 SeparatorIndex = FMath::Max3(DotIndex, ColonIndex, SlashIndex);
+    if (SeparatorIndex != INDEX_NONE) {
+      Leaf = Leaf.RightChop(SeparatorIndex + 1);
+    }
+    Leaf.TrimStartAndEndInline();
+    if (Leaf.IsEmpty() || Leaf.Contains(TEXT("/"))) {
+      SendStandardErrorResponse(
+          this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+          FString::Printf(
+              TEXT("Invalid name query: '%s'. Pass an actor name (e.g. 'BP_Shelf_C_1') or a full object "
+                   "path ending in one (e.g. '/Game/Maps/Lvl.Lvl:PersistentLevel.BP_Shelf_C_1')."),
+              *Query),
+          nullptr);
+      return true;
+    }
+    Query = Leaf;
+  }
+
+  // UEditorActorSubsystem::GetAllLevelActors() refuses to run during PIE - it
+  // logs "The Editor is currently in a play mode." and returns an empty array -
+  // so this answered success with count:0 while the actors plainly existed, and
+  // a caller verifying its own play session was told its pawn was not there.
+  // Iterate the world directly, preferring the PIE world exactly as
+  // find_by_class, list, spawn and the lookup helpers already do.
+  UWorld *QueryWorld = GEditor->PlayWorld
+                           ? GEditor->PlayWorld.Get()
+                           : GEditor->GetEditorWorldContext().World();
+  TArray<AActor *> AllActors;
+  if (QueryWorld) {
+    for (TActorIterator<AActor> It(QueryWorld); It; ++It) {
+      AllActors.Add(*It);
+    }
+  }
+  TArray<TSharedPtr<FJsonValue>> Matches;
+  for (AActor *Actor : AllActors) {
+    if (!Actor)
+      continue;
+    const FString Label = Actor->GetActorLabel();
+    const FString Name = Actor->GetName();
+    const FString Path = Actor->GetPathName();
+    const bool bMatches = Label.Contains(Query, ESearchCase::IgnoreCase) ||
+                          Name.Contains(Query, ESearchCase::IgnoreCase) ||
+                          Path.Contains(Query, ESearchCase::IgnoreCase);
+    if (bMatches) {
+      TSharedPtr<FJsonObject> Entry = McpHandlerUtils::CreateResultObject();
+      Entry->SetStringField(TEXT("label"), Label);
+      Entry->SetStringField(TEXT("name"), Name);
+      Entry->SetStringField(TEXT("path"), Path);
+      Entry->SetStringField(TEXT("class"),
+                            Actor->GetClass() ? Actor->GetClass()->GetPathName()
+                                              : TEXT(""));
+      Matches.Add(MakeShared<FJsonValueObject>(Entry));
+    }
+  }
+
+  TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
+  Data->SetNumberField(TEXT("count"), Matches.Num());
+  Data->SetArrayField(TEXT("actors"), Matches);
+  Data->SetStringField(TEXT("query"), Query);
+  Data->SetStringField(TEXT("worldSearched"),
+                       QueryWorld ? QueryWorld->GetName() : TEXT(""));
+  // "Bug1" found nothing among Bug_01..Bug_10, and the empty list read as "there are no bugs".
+  // With no match, names equal to the query once case, separators and leading zeros are
+  // ignored ("bug1" in "Bug_01") are offered under similar.
+  FString Message = TEXT("Actor query executed");
+  if (Matches.Num() == 0) {
+    const auto Loose = [](const FString &In) {
+      FString Out;
+      for (int32 I = 0; I < In.Len(); ++I) {
+        const bool bLeadingZero = In[I] == TEXT('0') && I + 1 < In.Len() && FChar::IsDigit(In[I + 1]) &&
+                                  (I == 0 || !FChar::IsDigit(In[I - 1]));
+        if (FChar::IsAlnum(In[I]) && !bLeadingZero)
+          Out.AppendChar(FChar::ToLower(In[I]));
+      }
+      return Out;
+    };
+    const FString Want = Loose(Query);
+    TArray<FString> Similar;
+    for (AActor *Actor : AllActors) {
+      if (Actor && Similar.Num() < 10 && !Want.IsEmpty() &&
+          (Loose(Actor->GetActorLabel()).Contains(Want) || Loose(Actor->GetName()).Contains(Want)))
+        Similar.Add(Actor->GetActorLabel());
+    }
+    if (Similar.Num() > 0) {
+      TArray<TSharedPtr<FJsonValue>> SimilarValues;
+      for (const FString &Label : Similar)
+        SimilarValues.Add(MakeShared<FJsonValueString>(Label));
+      Data->SetArrayField(TEXT("similar"), SimilarValues);
+      Message = FString::Printf(TEXT("No actor name, label or path contains '%s'; similar: %s"), *Query,
+                                *FString::Join(Similar, TEXT(", ")));
+    }
+  }
+  SendStandardSuccessResponse(this, Socket, RequestId, Message, Data);
+  return true;
+}
+
+bool UEngineWireSubsystem::HandleControlActorGetBoundingBox(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+  FString TargetName;
+  Payload->TryGetStringField(TEXT("actorName"), TargetName);
+  if (TargetName.IsEmpty()) {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("actorName required"), nullptr);
+    return true;
+  }
+
+  AActor *Found = FindActorByName(TargetName);
+  if (!Found) {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
+                              TEXT("Actor not found"), nullptr);
+    return true;
+  }
+
+  FVector Origin, BoxExtent;
+  Found->GetActorBounds(false, Origin, BoxExtent);
+
+  auto BuildLandscapeBox = [](const FTransform& Transform, double MinX,
+                              double MinY, double MaxX, double MaxY,
+                              double MinZ, double MaxZ) {
+    FBox LandscapeBox(EForceInit::ForceInit);
+    const FVector Corners[] = {
+        FVector(MinX, MinY, MinZ), FVector(MinX, MaxY, MinZ),
+        FVector(MaxX, MinY, MinZ), FVector(MaxX, MaxY, MinZ),
+        FVector(MinX, MinY, MaxZ), FVector(MinX, MaxY, MaxZ),
+        FVector(MaxX, MinY, MaxZ), FVector(MaxX, MaxY, MaxZ),
+    };
+    for (const FVector& Corner : Corners) {
+      LandscapeBox += Transform.TransformPosition(Corner);
+    }
+    return LandscapeBox;
+  };
+
+  if (ALandscape* Landscape = Cast<ALandscape>(Found);
+      Landscape && BoxExtent.IsNearlyZero()) {
+    ULandscapeInfo* LandscapeInfo = Landscape->GetLandscapeInfo();
+    int32 MinX = 0, MinY = 0, MaxX = 0, MaxY = 0;
+    if (LandscapeInfo && LandscapeInfo->GetLandscapeExtent(MinX, MinY, MaxX, MaxY)) {
+      const FBox LandscapeBox = BuildLandscapeBox(
+          Landscape->GetTransform(), MinX, MinY, MaxX, MaxY, -256.0, 256.0);
+      Origin = LandscapeBox.GetCenter();
+      BoxExtent = LandscapeBox.GetExtent();
+    }
+
+    if (BoxExtent.IsNearlyZero()) {
+      const FBox CompleteBounds = Landscape->GetCompleteBounds();
+      if (CompleteBounds.IsValid) {
+        Origin = CompleteBounds.GetCenter();
+        BoxExtent = CompleteBounds.GetExtent();
+      }
+    }
+  }
+
+  TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
+
+  Data->SetArrayField(TEXT("origin"), McpHandlerUtils::VectorToJsonArray(Origin));
+  Data->SetArrayField(TEXT("extent"), McpHandlerUtils::VectorToJsonArray(BoxExtent));
+  SendStandardSuccessResponse(this, Socket, RequestId,
+                              TEXT("Bounding box retrieved"), Data);
+  return true;
+}
+
+bool UEngineWireSubsystem::HandleControlActorGetMetadata(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+  FString TargetName;
+  Payload->TryGetStringField(TEXT("actorName"), TargetName);
+  if (TargetName.IsEmpty()) {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("actorName required"), nullptr);
+    return true;
+  }
+
+  AActor *Found = FindActorByName(TargetName);
+  if (!Found) {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
+                              TEXT("Actor not found"), nullptr);
+    return true;
+  }
+
+  TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
+  Data->SetStringField(TEXT("name"), Found->GetName());
+  Data->SetStringField(TEXT("label"), Found->GetActorLabel());
+  Data->SetStringField(TEXT("path"), Found->GetPathName());
+  Data->SetStringField(TEXT("class"), Found->GetClass()
+                                          ? Found->GetClass()->GetPathName()
+                                          : TEXT(""));
+
+  TArray<TSharedPtr<FJsonValue>> TagsArray;
+  for (const FName &Tag : Found->Tags) {
+    TagsArray.Add(MakeShared<FJsonValueString>(Tag.ToString()));
+  }
+  Data->SetArrayField(TEXT("tags"), TagsArray);
+
+  const FTransform Current = Found->GetActorTransform();
+  Data->SetArrayField(TEXT("location"), McpHandlerUtils::VectorToJsonArray(Current.GetLocation()));
+
+  SendStandardSuccessResponse(this, Socket, RequestId,
+                              TEXT("Metadata retrieved"), Data);
+  return true;
+}

@@ -11,17 +11,17 @@ import { describe, expect, it } from 'vitest';
 
 import { capabilityIndex } from '../../../src/server/gateway/gateway-capability-index.js';
 
-const geometry = resolve(process.cwd(), 'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Domains/Geometry');
+const geometry = resolve(process.cwd(), 'plugins/EngineWire/Source/EngineWire/Private/Domains/Geometry');
 /** Comment bodies explain the rules, so rule checks ignore them. */
 const code = (file: string): string =>
   readFileSync(resolve(geometry, file), 'utf8').replace(/\/\*[\s\S]*?\*\//gu, '').replace(/^[ \t]*\/\/.*$/gmu, '');
 
 describe('create_sdf meshes one field', () => {
-  const handler = code('Primitives/McpAutomationBridge_GeometryPrimitivesImplicit.cpp');
-  const field = code('Primitives/McpAutomationBridge_GeometrySdfField.h');
+  const handler = code('Primitives/McpGeometryPrimitivesImplicit.cpp');
+  const field = code('Primitives/McpGeometrySdfField.h');
 
   it('is dispatched from the geometry handler table', () => {
-    expect(code('McpAutomationBridge_GeometryHandlers.cpp')).toContain('SubAction == TEXT("create_sdf")) return HandleCreateSdf(');
+    expect(code('McpGeometryHandlers.cpp')).toContain('SubAction == TEXT("create_sdf")) return HandleCreateSdf(');
   });
 
   it('hands marching cubes the negated field at iso 0, the sign Implicit/Morphology.h uses', () => {

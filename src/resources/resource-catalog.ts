@@ -2,7 +2,7 @@
 // Task 31: the normalized catalog of NEW version-aware read-only resources and
 // templates. This is the TypeScript half of the TS/native normalized fixture;
 // the native mirror is
-// `plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Resources/McpResourceCatalog.h`.
+// `plugins/EngineWire/Source/EngineWire/Private/MCP/Resources/McpResourceCatalog.h`.
 // The plugin source-contract test asserts the two halves agree. The six
 // pre-existing resources stay registered in src/handlers/resource-handlers.ts; these entries
 // are strictly additive so existing clients remain compatible.

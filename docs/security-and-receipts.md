@@ -105,7 +105,7 @@ in-prefix target from a scan that **ran to completion**.
 ## Scoped tokens and quota
 
 `FMcpScopedCapabilityToken` (`Public/McpCapabilityScopes.h`, configured through
-`McpAutomationBridgeSettings.h#ScopedCapabilityTokens`) carries a profile,
+`EngineWireSettings.h#ScopedCapabilityTokens`) carries a profile,
 scopes, allowed path prefixes, allowed projects, and per-minute request and
 tool-call quotas.
 

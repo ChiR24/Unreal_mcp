@@ -3,7 +3,7 @@
  * types, damage execution, hitboxes, attachments and introspection.
  *
  * Parameters mirror the field literals read by
- * McpAutomationBridge_CombatHandlersInfo.cpp, DamageTypes.cpp,
+ * McpCombatInfo.cpp, DamageTypes.cpp,
  * DamageExecution.cpp, HealthRuntime.cpp and DefenseRuntime.cpp.
  *
  * apply_damage / heal / create_shield / modify_armor are Blueprint AUTHORING

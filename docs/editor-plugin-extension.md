@@ -1,13 +1,13 @@
-# Extending the MCP Automation Bridge plugin
+# Extending the EngineWire plugin
 
-How to add editor behaviour to the plugin in `plugins/McpAutomationBridge/`. Every capability a client sees is generated from the TypeScript capability records; the plugin implements them. The [Development](https://github.com/ChiR24/Unreal_mcp/wiki/Development) wiki page covers the TypeScript side, and the `AGENTS.md` file in each plugin folder holds that area's detailed rules.
+How to add editor behaviour to the plugin in `plugins/EngineWire/`. Every capability a client sees is generated from the TypeScript capability records; the plugin implements them. The [Development](https://github.com/ChiR24/Unreal_mcp/wiki/Development) wiki page covers the TypeScript side, and the `AGENTS.md` file in each plugin folder holds that area's detailed rules.
 
 ## How a request reaches a handler
 
 1. **Transport.** The WebSocket listener (`Private/Transport/`, used by the stdio server) or the native MCP server (`Private/MCP/`, whose gateway validates calls against the generated records in `Private/MCP/Generated/`).
 2. **Pre-queue gate.** `Private/Core/Security/McpPrequeueGate` checks scope, consent, paths and quota on both transports before anything is queued. The plugin is the security authority; the TypeScript side only fails fast.
 3. **Queue.** `QueueAutomationRequest()` appends the request, and the game thread drains up to 16 per tick in `ProcessPendingAutomationRequests()`. There is exactly one dequeuer.
-4. **Handler table.** `InitializeHandlers()` in `Private/Core/Subsystem/McpAutomationBridgeSubsystemHandlerRegistration.cpp` maps each of the 23 parent tools, plus `console_command`, to a domain handler. `Route(Parent, Fallback, { FSubRoute... })` sends the sub-actions a sibling domain claims to that domain.
+4. **Handler table.** `InitializeHandlers()` in `Private/Core/Subsystem/EngineWireSubsystemHandlerRegistration.cpp` maps each of the 23 parent tools, plus `console_command`, to a domain handler. `Route(Parent, Fallback, { FSubRoute... })` sends the sub-actions a sibling domain claims to that domain.
 5. **Domain dispatcher.** `Handle<Domain>Action` in `Private/Domains/<Domain>/…Dispatch.cpp` reads `subAction` first, then `action`, and calls the leaf handler through a compare chain.
 6. **Leaf handler.** It does the work and replies with `SendAutomationResponse` or `SendAutomationError`. The gateway projects the reply onto the record's declared output schema and returns it with a receipt.
 
@@ -29,20 +29,20 @@ This rewrites the TypeScript definitions, the gateway manifest, the native regis
 
 ### 2. Declare the handler
 
-Add it to the matching `MCP_SUBSYSTEM_*_DECLARATIONS` list in `Public/McpAutomationBridgeSubsystem<Area>Declarations.h`:
+Add it to the matching `MCP_SUBSYSTEM_*_DECLARATIONS` list in `Public/EngineWireSubsystem<Area>Declarations.h`:
 
 ```cpp
 MCP_DECLARE_PAYLOAD_HANDLER(HandleControlActorAddTag); \
 ```
 
-The macro declares `bool Name(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)` on `UMcpAutomationBridgeSubsystem`.
+The macro declares `bool Name(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)` on `UEngineWireSubsystem`.
 
 ### 3. Implement it
 
-Put the body in a responsibility `.cpp` in `Private/Domains/<Domain>/`, next to related handlers. Adapted from `ControlActor/McpAutomationBridge_ControlActorTags.cpp`:
+Put the body in a responsibility `.cpp` in `Private/Domains/<Domain>/`, next to related handlers. Adapted from `ControlActor/McpActorTags.cpp`:
 
 ```cpp
-bool UMcpAutomationBridgeSubsystem::HandleControlActorAddTag(
+bool UEngineWireSubsystem::HandleControlActorAddTag(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
   FString TargetName;
@@ -98,14 +98,14 @@ If the action belongs to a domain other than its parent tool's default one, add 
 | **Promised behaviour is authored** | An action that promises gameplay logic writes it into the Blueprint with `McpBlueprintBehaviour::Author` and a recipe under `Resources/Recipes/<Domain>/`. See `Private/Domains/BlueprintGraph/Behaviour/AGENTS.md`. |
 | **Thin dispatchers** | The dispatcher owns the unknown-action error. A leaf handler returns `false` instead of reporting one itself. |
 | **Every engine from 5.0 to 5.8** | Guard version-specific APIs with `ENGINE_MAJOR_VERSION` / `ENGINE_MINOR_VERSION` checks or the macros in `Private/Core/Compatibility/McpVersionCompatibility.h`. No `ANY_PACKAGE`. |
-| **Optional engine plugins** | Code that needs one compiles away through the `MCP_HAS_*` defines from `McpAutomationBridge.Build.cs` (`MCP_HAS_PCG`, `MCP_HAS_MOVIE_RENDER_PIPELINE`, `MCP_HAS_TAKE_RECORDER`, ...). A missing module must never break the build. |
+| **Optional engine plugins** | Code that needs one compiles away through the `MCP_HAS_*` defines from `EngineWire.Build.cs` (`MCP_HAS_PCG`, `MCP_HAS_MOVIE_RENDER_PIPELINE`, `MCP_HAS_TAKE_RECORDER`, ...). A missing module must never break the build. |
 | **Include what you use** | Non-unity and no-PCH builds compile each file alone, so each file includes what it uses, and every local `Mcp*` include must resolve |
 | **Size ceilings** | At most 250 lines of code per file and 25 files per folder, with no `Common*` or `Part<N>` split files. Split by responsibility into a subfolder instead. |
 | **Reuse Foundation** | Reflection, path, Blueprint, JSON, response and object-resolution helpers live in `Private/Foundation/`. Don't grow domain-local copies. |
 
 ## Where things live
 
-All paths are under `plugins/McpAutomationBridge/Source/McpAutomationBridge/`.
+All paths are under `plugins/EngineWire/Source/EngineWire/`.
 
 | Folder | Holds |
 |--------|-------|
@@ -118,7 +118,7 @@ All paths are under `plugins/McpAutomationBridge/Source/McpAutomationBridge/`.
 | `Private/Transport/` | WebSocket listener, TLS, token auth, rate limits |
 | `Private/Tests/` | Native automation tests |
 
-The optional Fab adapter is a separate, delay-loaded module in `Source/McpAutomationBridgeFab/`.
+The optional Fab adapter is a separate, delay-loaded module in `Source/EngineWireFab/`.
 
 ## Related documents
 

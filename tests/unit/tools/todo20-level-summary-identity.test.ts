@@ -18,7 +18,7 @@ import { ALL_UNFOLDED_CAPABILITY_RECORDS } from '../../../src/tools/catalog/capa
 
 const PRIVATE_ROOT = resolve(
   process.cwd(),
-  'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private'
+  'plugins/EngineWire/Source/EngineWire/Private'
 );
 
 function read(path: string): string {
@@ -32,7 +32,7 @@ function code(source: string): string {
 }
 
 const levelHandlersInfo = () =>
-  read(resolve(PRIVATE_ROOT, 'Domains', 'Level', 'World', 'McpAutomationBridge_LevelHandlersInfo.cpp'));
+  read(resolve(PRIVATE_ROOT, 'Domains', 'Level', 'World', 'McpLevelInfo.cpp'));
 
 describe('Todo 20 BB-018 loaded-branch get_summary emits full map-asset identity', () => {
   it('the loaded branch emits packageName, assetName, objectPath, assetClass and tagsAndValues', () => {
@@ -105,13 +105,13 @@ describe('both level readers report unsaved state', () => {
     const info = code(levelHandlersInfo());
     const loadedStart = info.indexOf('if (TargetLevel)');
     expect(info.slice(loadedStart, info.indexOf('SendAutomationResponse', loadedStart))).toContain('AddUnsavedState(Result, TargetLevel);');
-    expect(lifecycle('McpAutomationBridge_LevelHandlersGetCurrent.cpp')).toContain('AddUnsavedState(Result, CurrentLevel);');
+    expect(lifecycle('McpLevelGetCurrent.cpp')).toContain('AddUnsavedState(Result, CurrentLevel);');
   });
 
   // A World Partition level keeps its actors in external packages: moving one dirties that
   // package and not the level's, and unsaved said false while unsavedPackages listed it.
   it('the helper answers unsaved, counting the level\'s dirty external actor packages', () => {
-    const source = lifecycle('McpAutomationBridge_LevelHandlersDirtyPackages.cpp');
+    const source = lifecycle('McpLevelDirtyPackages.cpp');
     expect(source).toContain('bool bUnsaved = Level && Level->GetOutermost()->IsDirty();');
     expect(source).toContain('Level->GetLoadedExternalObjectPackages()');
     expect(source).toContain('SetBoolField(TEXT("unsaved"), bUnsaved)');

@@ -9,7 +9,7 @@ const D = 'inspect';
 
 /**
  * What HandleInspectObjectAction actually returns
- * (Private/Domains/Environment/Inspection/McpAutomationBridge_EnvironmentHandlersInspectObject.cpp).
+ * (Private/Domains/Environment/Inspection/McpEnvInspectObject.cpp).
  *
  * These MUST be declared. McpProjectCanonicalOutput keeps only the properties a
  * record declares, so while this set was missing the native gateway stripped the
@@ -43,7 +43,7 @@ const INSPECT_OBJECT_OUTPUT = {
 
 /**
  * What a static or skeletal mesh asset adds
- * (Private/Domains/Environment/Inspection/McpAutomationBridge_EnvironmentHandlersInspectAssetMesh.cpp):
+ * (Private/Domains/Environment/Inspection/McpEnvInspectAssetMesh.cpp):
  * the slot table, with what LOD0 draws in each slot.
  */
 const MESH_DETAILS_OUTPUT = {
@@ -485,7 +485,7 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
     },
     required: ['blueprintPath'],
     effect: 'read',
-    // The handler (McpAutomationBridge_PropertyHandlersCdoInspection.cpp) emits
+    // The handler (McpPropCdoInspection.cpp) emits
     // every field below. With NO outputProps declared, output projection kept
     // only {success, message} and the capability answered "CDO inspection
     // completed" carrying nothing — leaving Blueprint defaults unreadable.
@@ -512,7 +512,7 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: { structPath: P.structPath },
     required: ['structPath'],
     effect: 'read',
-    // The native handler (McpAutomationBridge_InspectStruct.cpp) returns its
+    // The native handler (McpInspectStruct.cpp) returns its
     // findings nested under `result`; with no outputProps declared the output
     // projection stripped the entire nested object and the capability answered
     // bare success — a layout reader that returned nothing.

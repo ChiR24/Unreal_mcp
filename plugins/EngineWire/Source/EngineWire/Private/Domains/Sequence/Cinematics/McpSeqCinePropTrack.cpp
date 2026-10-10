@@ -1,0 +1,224 @@
+#include "Domains/Sequence/Cinematics/McpSeqCine.h"
+
+#include "Domains/Sequence/McpSeqEditorSupport.h"
+
+#include "Components/SceneComponent.h"
+#include "Foundation/BridgeHelpers/Properties/McpNestedPropPath.h"
+#include "GameFramework/Actor.h"
+#include "MovieScene.h"
+#include "MovieScenePossessable.h"
+#include "MovieSceneSpawnable.h"
+#include "Sections/MovieScene3DTransformSection.h"
+#include "Tracks/MovieScene3DTransformTrack.h"
+#include "Tracks/MovieSceneBoolTrack.h"
+#include "Tracks/MovieSceneDoubleTrack.h"
+#include "Tracks/MovieSceneFloatTrack.h"
+#include "Tracks/MovieSceneIntegerTrack.h"
+#include "Tracks/MovieScenePropertyTrack.h"
+#include "UObject/UnrealType.h"
+
+namespace McpSequenceCinematics {
+namespace {
+FProperty *ResolveBoundPropertyPath(UMovieScene *MovieScene, const FGuid &Guid,
+                                    FString &InOutPath, FString &OutError) {
+  UObject *DefaultObject = GetBindingTemplate(MovieScene, Guid);
+  if (!DefaultObject) {
+    OutError = TEXT("Binding has no resolvable object template");
+    return nullptr;
+  }
+  void *Container = nullptr;
+  if (FProperty *Property =
+          ResolveNestedPropertyPath(DefaultObject, InOutPath, Container, OutError)) {
+    return Property;
+  }
+  // Component-owned properties (RelativeScale3D, bVisible, ...) live on the root
+  // component, not the actor; re-root the path there so the track can bind it.
+  const AActor *DefaultActor = Cast<AActor>(DefaultObject);
+  USceneComponent *Root = DefaultActor ? DefaultActor->GetRootComponent() : nullptr;
+  FString RootError;
+  FProperty *RootProperty =
+      Root ? ResolveNestedPropertyPath(Root, InOutPath, Container, RootError)
+           : nullptr;
+  if (RootProperty) {
+    InOutPath = TEXT("RootComponent.") + InOutPath;
+  }
+  return RootProperty;
+}
+
+bool IsTransformPropertyName(const FString &Name,
+                             EMovieSceneTransformChannel &OutChannels) {
+  auto Is = [&Name](const TCHAR *Candidate) {
+    return Name.Equals(Candidate, ESearchCase::IgnoreCase);
+  };
+  if (Is(TEXT("Transform")) || Is(TEXT("RelativeTransform")) || Is(TEXT("ActorTransform"))) {
+    OutChannels = EMovieSceneTransformChannel::AllTransform;
+  } else if (Is(TEXT("Location")) || Is(TEXT("Translation")) ||
+             Is(TEXT("RelativeLocation")) || Is(TEXT("ActorLocation"))) {
+    OutChannels = EMovieSceneTransformChannel::Translation;
+  } else if (Is(TEXT("Rotation")) || Is(TEXT("RelativeRotation")) ||
+             Is(TEXT("ActorRotation"))) {
+    OutChannels = EMovieSceneTransformChannel::Rotation;
+  } else if (Is(TEXT("Scale")) || Is(TEXT("Scale3D")) ||
+             Is(TEXT("RelativeScale3D")) || Is(TEXT("ActorScale3D"))) {
+    OutChannels = EMovieSceneTransformChannel::Scale;
+  } else {
+    return false;
+  }
+  return true;
+}
+
+// Transform/Location/Rotation/Scale are not reflected FProperties on an actor; they
+// are the 3D transform track with a channel mask (dogfood #121). An existing transform
+// track on the binding gains a new section rather than a duplicate track.
+bool AddTransformPropertyTrack(ULevelSequence *Sequence, const FGuid &Guid,
+                               const TSharedPtr<FJsonObject> &Params,
+                               const FString &RequestedName,
+                               EMovieSceneTransformChannel Channels,
+                               TSharedPtr<FJsonObject> &OutResult) {
+  UMovieScene *MovieScene = Sequence->GetMovieScene();
+  UMovieSceneTrack *Track =
+      MovieScene->FindTrack(UMovieScene3DTransformTrack::StaticClass(), Guid);
+  const bool bCreatedTrack = !Track;
+  if (!Track) {
+    Track = AddTrackForBinding(MovieScene, UMovieScene3DTransformTrack::StaticClass(), Guid);
+  }
+  UMovieScene3DTransformSection *Section =
+      Cast<UMovieScene3DTransformSection>(AddTrackSection(MovieScene, Track, bCreatedTrack));
+  if (!Section) {
+    OutResult = MakeResult(false, TEXT("add_property_track"),
+                           TEXT("Failed to create transform section"),
+                           TEXT("SECTION_CREATION_FAILED"));
+    return true;
+  }
+  Section->SetMask(FMovieSceneTransformMask(Channels));
+  SetSectionRange(MovieScene, Section, Params, 100);
+  MovieScene->Modify();
+  Sequence->MarkPackageDirty();
+  if (!MaybeSaveSequence(Sequence, Params, OutResult)) return true;
+  const TCHAR *MaskName =
+      Channels == EMovieSceneTransformChannel::AllTransform ? TEXT("Transform")
+      : Channels == EMovieSceneTransformChannel::Translation ? TEXT("Location")
+      : Channels == EMovieSceneTransformChannel::Rotation   ? TEXT("Rotation")
+                                                             : TEXT("Scale");
+  OutResult = MakeResult(true, TEXT("add_property_track"),
+                         TEXT("Transform property track added"));
+  OutResult->SetStringField(TEXT("bindingGuid"), Guid.ToString());
+  OutResult->SetStringField(TEXT("propertyName"), RequestedName);
+  OutResult->SetStringField(TEXT("requestedPropertyName"), RequestedName);
+  OutResult->SetStringField(TEXT("trackType"), TEXT("Transform"));
+  OutResult->SetStringField(TEXT("channelMask"), MaskName);
+  OutResult->SetBoolField(TEXT("trackCreated"), bCreatedTrack);
+  return true;
+}
+
+UClass *ResolvePropertyTrackClass(const FString &Requested,
+                                  const FProperty *Property,
+                                  FString &OutResolved) {
+  UClass *TrackClass = nullptr;
+  if (Property && Property->IsA<FBoolProperty>()) {
+    OutResolved = TEXT("bool");
+    TrackClass = UMovieSceneBoolTrack::StaticClass();
+  } else if (Property && Property->IsA<FDoubleProperty>()) {
+    OutResolved = TEXT("double");
+    TrackClass = UMovieSceneDoubleTrack::StaticClass();
+  } else if (Property && Property->IsA<FFloatProperty>()) {
+    OutResolved = TEXT("float");
+    TrackClass = UMovieSceneFloatTrack::StaticClass();
+  } else if (const FNumericProperty *Numeric =
+                 CastField<FNumericProperty>(Property);
+             Numeric && Numeric->IsInteger()) {
+    OutResolved = TEXT("integer");
+    TrackClass = UMovieSceneIntegerTrack::StaticClass();
+  }
+  if (!TrackClass || Requested.IsEmpty()) return TrackClass;
+  const bool bIntegerAlias =
+      OutResolved == TEXT("integer") &&
+      Requested.Equals(TEXT("int"), ESearchCase::IgnoreCase);
+  return bIntegerAlias ||
+                 Requested.Equals(OutResolved, ESearchCase::IgnoreCase)
+             ? TrackClass
+             : nullptr;
+}
+}
+
+bool HandleAddPropertyTrack(const TSharedPtr<FJsonObject> &Params,
+                            TSharedPtr<FJsonObject> &OutResult) {
+  ULevelSequence *Sequence = nullptr;
+  FGuid Guid;
+  if (!LoadSequenceAndBinding(Params, TEXT("add_property_track"), Sequence, Guid, OutResult))
+    return true;
+  const FString RequestedName =
+      GetString(Params, TEXT("propertyName"), TEXT("property"));
+  if (RequestedName.IsEmpty()) {
+    OutResult = MakeResult(false, TEXT("add_property_track"),
+                           TEXT("propertyName is required"),
+                           TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+  // The record requires only `property`, so the documented single-field call
+  // died on PROPERTY_PATH_REQUIRED. A bare property name IS its own one-segment
+  // path; ResolveBoundPropertyPath below still rejects one that does not exist,
+  // so an unresolvable name fails as a real lookup error, not a contract gap.
+  FString PropertyPath = GetString(Params, TEXT("propertyPath"));
+  if (PropertyPath.IsEmpty()) {
+    PropertyPath = RequestedName;
+  }
+  EMovieSceneTransformChannel TransformChannels = EMovieSceneTransformChannel::None;
+  if (IsTransformPropertyName(PropertyPath, TransformChannels)) {
+    return AddTransformPropertyTrack(Sequence, Guid, Params, RequestedName,
+                                     TransformChannels, OutResult);
+  }
+  FString PathError;
+  FProperty *Property = ResolveBoundPropertyPath(
+      Sequence->GetMovieScene(), Guid, PropertyPath, PathError);
+  if (!Property) {
+    OutResult = MakeResult(
+        false, TEXT("add_property_track"),
+        FString::Printf(TEXT("Invalid propertyPath '%s': %s"), *PropertyPath,
+                        *PathError),
+        TEXT("PROPERTY_NOT_FOUND"));
+    return true;
+  }
+  const FString RequestedType =
+      GetString(Params, TEXT("propertyType"), TEXT("type"));
+  FString ResolvedType;
+  UClass *TrackClass =
+      ResolvePropertyTrackClass(RequestedType, Property, ResolvedType);
+  if (!TrackClass) {
+    OutResult = MakeResult(
+        false, TEXT("add_property_track"),
+        FString::Printf(TEXT("propertyType '%s' is incompatible with '%s'"),
+                        *RequestedType, *PropertyPath),
+        TEXT("PROPERTY_TYPE_MISMATCH"));
+    return true;
+  }
+  UMovieScenePropertyTrack *Track = Cast<UMovieScenePropertyTrack>(
+      AddTrackForBinding(Sequence->GetMovieScene(), TrackClass, Guid));
+  if (!Track) {
+    OutResult = MakeResult(false, TEXT("add_property_track"),
+                           TEXT("Failed to create property track"),
+                           TEXT("TRACK_CREATION_FAILED"));
+    return true;
+  }
+  Track->SetPropertyNameAndPath(Property->GetFName(), PropertyPath);
+  UMovieSceneSection *Section = AddTrackSection(Sequence->GetMovieScene(), Track, true);
+  if (!Section) {
+    OutResult = MakeResult(false, TEXT("add_property_track"),
+                           TEXT("Failed to create property section"),
+                           TEXT("SECTION_CREATION_FAILED"));
+    return true;
+  }
+  SetSectionRange(Sequence->GetMovieScene(), Section, Params, 100);
+  Sequence->GetMovieScene()->Modify();
+  Sequence->MarkPackageDirty();
+  if (!MaybeSaveSequence(Sequence, Params, OutResult)) return true;
+  OutResult = MakeResult(true, TEXT("add_property_track"),
+                         TEXT("Property track added"));
+  OutResult->SetStringField(TEXT("bindingGuid"), Guid.ToString());
+  OutResult->SetStringField(TEXT("propertyName"), Property->GetName());
+  OutResult->SetStringField(TEXT("requestedPropertyName"), RequestedName);
+  OutResult->SetStringField(TEXT("propertyPath"), PropertyPath);
+  OutResult->SetStringField(TEXT("propertyType"), ResolvedType);
+  return true;
+}
+}

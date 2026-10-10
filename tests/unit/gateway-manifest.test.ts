@@ -11,7 +11,7 @@ import { searchGatewayCapabilities as searchGatewayCatalog } from '../../src/ser
 import { describeGatewayCapability } from '../../src/server/gateway/gateway-describe.js';
 import { unrealGatewayToolDefinition } from '../../src/tools/catalog/unreal-gateway-definition.js';
 
-const nativeGatewayDefinitionPath = resolve(process.cwd(), 'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Gateway/McpNativeGatewayDefinition.cpp');
+const nativeGatewayDefinitionPath = resolve(process.cwd(), 'plugins/EngineWire/Source/EngineWire/Private/MCP/Gateway/McpNativeGatewayDefinition.cpp');
 
 const defActions = (def: (typeof generatedParentToolDefinitions)[number]): string[] => {
   const props = (def.inputSchema.properties ?? {}) as Record<string, unknown>;

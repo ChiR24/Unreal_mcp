@@ -1,0 +1,96 @@
+#include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Domains/AnimationAuthoring/McpAnimSupport.h"
+
+namespace McpAnimationAuthoring {
+
+TSharedPtr<FJsonObject> HandleBlueprintStateMachineActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response)
+{
+    if (SubAction == TEXT("add_state_machine"))
+    {
+        FString BlueprintPath = NormalizeAnimPath(GetJsonStringField(Params, TEXT("blueprintPath"), TEXT("")));
+        FString StateMachineName = GetJsonStringField(Params, TEXT("stateMachineName"), TEXT(""));
+        if (StateMachineName.IsEmpty())
+        {
+            // Sibling create_state_machine takes machineName; accept both.
+            StateMachineName = GetJsonStringField(Params, TEXT("machineName"), GetJsonStringField(Params, TEXT("name"), TEXT("")));
+        }
+        int32 NodePosX = static_cast<int32>(GetJsonNumberField(Params, TEXT("positionX"), 0));
+        int32 NodePosY = static_cast<int32>(GetJsonNumberField(Params, TEXT("positionY"), 0));
+        bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
+
+        if (StateMachineName.IsEmpty())
+        {
+            ANIM_ERROR_RESPONSE(TEXT("stateMachineName is required"), TEXT("MISSING_STATE_MACHINE_NAME"));
+        }
+
+        // Try to find in-memory version first (may have unsaved changes from create_anim_blueprint)
+        UAnimBlueprint* AnimBP = FindObject<UAnimBlueprint>(nullptr, *BlueprintPath);
+        if (!AnimBP)
+        {
+            // Fall back to loading from disk
+            AnimBP = Cast<UAnimBlueprint>(StaticLoadObject(UAnimBlueprint::StaticClass(), nullptr, *BlueprintPath));
+        }
+        if (!AnimBP)
+        {
+            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation blueprint: %s"), *BlueprintPath), TEXT("ANIM_BP_NOT_FOUND"));
+        }
+
+        // Get the main AnimGraph
+        UEdGraph* AnimGraph = GetAnimGraphFromBlueprint(AnimBP);
+        if (!AnimGraph)
+        {
+            ANIM_ERROR_RESPONSE(TEXT("Could not find AnimGraph in blueprint"), TEXT("GRAPH_NOT_FOUND"));
+        }
+
+        if (UAnimGraphNode_StateMachine* ExistingSMNode = FindStateMachineNode(AnimGraph, StateMachineName))
+        {
+            Response->SetStringField(TEXT("nodeName"), ExistingSMNode->GetStateMachineName());
+            Response->SetBoolField(TEXT("existingAsset"), true);
+            ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("State machine '%s' already exists in %s"), *StateMachineName, *BlueprintPath));
+            return Response;
+        }
+
+        // Create the State Machine Node using FGraphNodeCreator
+        FGraphNodeCreator<UAnimGraphNode_StateMachine> NodeCreator(*AnimGraph);
+        UAnimGraphNode_StateMachine* SMNode = NodeCreator.CreateNode();
+        SMNode->NodePosX = NodePosX;
+        SMNode->NodePosY = NodePosY;
+        NodeCreator.Finalize();
+
+        // Create the internal State Machine Graph using FBlueprintEditorUtils
+        UAnimationStateMachineGraph* InnerGraph = Cast<UAnimationStateMachineGraph>(
+            FBlueprintEditorUtils::CreateNewGraph(
+                AnimBP,
+                FName(*StateMachineName),
+                UAnimationStateMachineGraph::StaticClass(),
+                UAnimationStateMachineSchema::StaticClass()
+            )
+        );
+        if (!InnerGraph)
+        {
+            ANIM_ERROR_RESPONSE(TEXT("Failed to create animation state machine graph"), TEXT("CREATE_GRAPH_FAILED"));
+        }
+
+        // Link the State Machine Node to its internal graph
+        SMNode->EditorStateMachineGraph = InnerGraph;
+        InnerGraph->OwnerAnimGraphNode = SMNode;
+
+        // Initialize Entry Node (required for State Machines)
+        const UAnimationStateMachineSchema* Schema = Cast<UAnimationStateMachineSchema>(InnerGraph->GetSchema());
+        if (!Schema)
+        {
+            ANIM_ERROR_RESPONSE(TEXT("Animation state machine graph has an invalid schema"), TEXT("INVALID_SCHEMA"));
+        }
+        Schema->CreateDefaultNodesForGraph(*InnerGraph);
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(AnimBP);
+        SaveAnimAsset(AnimBP, bSave);
+
+        Response->SetStringField(TEXT("nodeName"), StateMachineName);
+        ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("State machine '%s' created with entry node"), *StateMachineName));
+        return Response;
+    }
+    return nullptr;
+}
+
+} // namespace McpAnimationAuthoring

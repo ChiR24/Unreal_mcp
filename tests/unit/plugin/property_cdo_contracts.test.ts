@@ -14,7 +14,7 @@ import { isRecord } from '../../../src/utils/validation/type-guards.js';
 
 import { sliceBetween } from './plugin-contract-fixtures.js';
 
-const PROPERTY = join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private', 'Domains', 'Property');
+const PROPERTY = join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'Domains', 'Property');
 
 /** Block and line comments removed, so no assertion can be satisfied by prose. */
 const code = (file: string): string =>
@@ -22,8 +22,8 @@ const code = (file: string): string =>
 /** One spaced line, with the string literals C++ concatenates joined, so a message split over lines is one string. */
 const compact = (source: string): string => source.split(/\s+/u).join(' ').split('" "').join('');
 
-const setter = (): string => code('McpAutomationBridge_PropertyHandlersObjectSet.cpp');
-const target = (): string => code('McpAutomationBridge_PropertyHandlersTarget.cpp');
+const setter = (): string => code('McpPropObjectSet.cpp');
+const target = (): string => code('McpPropTarget.cpp');
 
 describe('set_property on a Blueprint CDO reaches the Blueprint\'s current default object', () => {
   it('a Default__ objectPath of a class a compile replaced resolves to the Blueprint\'s current default object', () => {

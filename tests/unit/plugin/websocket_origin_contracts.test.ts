@@ -8,7 +8,7 @@ describe('WebSocket server origin contract', () => {
     const source = readFileSync(
       resolve(
         process.cwd(),
-        'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Transport/WebSocket/McpBridgeWebSocketServerHandshake.cpp',
+        'plugins/EngineWire/Source/EngineWire/Private/Transport/WebSocket/McpBridgeWebSocketServerHandshake.cpp',
       ),
       'utf8',
     );

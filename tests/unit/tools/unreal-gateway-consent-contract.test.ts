@@ -22,7 +22,7 @@ import { EXECUTION_OPTION_KEYS } from '../../../src/tools/catalog/capabilities/s
 
 const nativeGatewayDefinitionPath = resolve(
   process.cwd(),
-  'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Gateway/McpNativeGatewayDefinition.cpp'
+  'plugins/EngineWire/Source/EngineWire/Private/MCP/Gateway/McpNativeGatewayDefinition.cpp'
 );
 
 // A real destructive capability whose policy is `consent: 'elevated'`.

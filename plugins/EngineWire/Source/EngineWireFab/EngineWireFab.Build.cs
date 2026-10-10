@@ -1,0 +1,152 @@
+// Copyright (c) 2024 EngineWire Contributors
+
+using System;
+using System.IO;
+using UnrealBuildTool;
+
+/**
+ * The only module allowed to import Fab.dll or MegascansPlugin.dll.
+ *
+ * The core module used to take those dependencies directly. Because
+ * PrivateDependencyModuleNames emits real DLL imports, an engine that shipped
+ * Fab at build time but left it unmounted at runtime failed the entire plugin
+ * with ERROR_MOD_NOT_FOUND, taking every unrelated MCP tool down with it. The
+ * blast radius of a Fab problem is now this module alone.
+ *
+ * The plugin advertises UE 5.0-5.8 and Fab does not exist across that whole
+ * range, so the dependencies stay probed rather than assumed: on an engine
+ * without them this still compiles, still loads, and reports the capability as
+ * unavailable instead of refusing to start.
+ */
+public class EngineWireFab : ModuleRules
+{
+    public EngineWireFab(ReadOnlyTargetRules Target) : base(Target)
+    {
+        PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
+        // Load-bearing, not an oversight: several files here define their own
+        // EnsureCallback in an anonymous namespace, which a merged unity blob
+        // rejects as a redefinition. At eight files unity would save nothing.
+        bUseUnity = false;
+
+        PublicDependencyModuleNames.AddRange(new string[] {
+            "Core", "CoreUObject", "Engine", "Json", "Projects", "EngineWire"
+        });
+
+        // Slate for walking the live tab hierarchy, WebBrowser for the public
+        // ExecuteJavascript/BindUObject surface on the widget Fab already built.
+        // All three are engine Runtime modules present across the advertised
+        // 5.0-5.8 range, so unlike Fab itself they need no probing.
+        PrivateDependencyModuleNames.AddRange(new string[] {
+            "Slate", "SlateCore", "WebBrowser"
+        });
+
+        if (Target.bBuildEditor)
+        {
+            // ToolMenus is how the Fab tab gets opened without a human: Fab
+            // registers no invokable tab spawner, only a menu entry whose action
+            // calls its private CreateNewFabTab. Always present in an editor
+            // build, so this needs no probing.
+            PrivateDependencyModuleNames.Add("ToolMenus");
+
+            string EngineDir = Path.GetFullPath(Target.RelativeEnginePath);
+
+            bool bHasFab = AddOptionalModuleGroup(Target, EngineDir, "Fab", new string[] { "Fab" });
+            PublicDefinitions.Add(bHasFab ? "MCP_FAB_ADAPTER_HAS_FAB=1" : "MCP_FAB_ADAPTER_HAS_FAB=0");
+
+            bool bHasMegascans = AddOptionalModuleGroup(Target, EngineDir, "MegascansPlugin", new string[] { "MegascansPlugin" });
+            PublicDefinitions.Add(bHasMegascans ? "MCP_FAB_ADAPTER_HAS_MEGASCANS=1" : "MCP_FAB_ADAPTER_HAS_MEGASCANS=0");
+        }
+        else
+        {
+            PublicDefinitions.AddRange(new string[] {
+                "MCP_FAB_ADAPTER_HAS_FAB=0", "MCP_FAB_ADAPTER_HAS_MEGASCANS=0"
+            });
+        }
+    }
+
+    private bool ModuleExists(string EngineDir, string SearchName)
+    {
+        try
+        {
+            string PluginsDir = Path.Combine(EngineDir, "Plugins");
+            if (!Directory.Exists(PluginsDir)) return false;
+            // Probe for the module's rules file, not just a folder of that name.
+            // UE 5.8 ships Engine/Plugins/MegascansPlugin as a content-only folder
+            // (material presets, no Source/, no .Build.cs). Matching on the folder
+            // name alone reported the module present, and UBT then failed the
+            // whole build with "Could not find definition for module
+            // 'MegascansPlugin'". A module exists only if its .Build.cs does.
+            return FindFileBounded(PluginsDir, SearchName + ".Build.cs", 5);
+        }
+        catch { return false; }
+    }
+
+    private bool FindFileBounded(string rootDir, string fileName, int maxDepth)
+    {
+        if (maxDepth < 0 || !Directory.Exists(rootDir)) return false;
+        try
+        {
+            if (File.Exists(Path.Combine(rootDir, fileName))) return true;
+            foreach (string subDir in Directory.GetDirectories(rootDir))
+            {
+                if (FindFileBounded(subDir, fileName, maxDepth - 1)) return true;
+            }
+        }
+        catch { }
+        return false;
+    }
+
+    private bool SearchDirectoryBounded(string rootDir, string targetName, int maxDepth)
+    {
+        if (maxDepth < 0 || !Directory.Exists(rootDir)) return false;
+        try
+        {
+            foreach (string subDir in Directory.GetDirectories(rootDir))
+            {
+                if (string.Equals(Path.GetFileName(subDir), targetName, StringComparison.OrdinalIgnoreCase)) return true;
+                if (maxDepth > 0 && SearchDirectoryBounded(subDir, targetName, maxDepth - 1)) return true;
+            }
+        }
+        catch { }
+        return false;
+    }
+
+    private bool AddOptionalModuleGroup(ReadOnlyTargetRules Target, string EngineDir, string FeatureName, string[] ModuleNames)
+    {
+        foreach (string ModuleName in ModuleNames)
+        {
+            if (!ModuleExists(EngineDir, ModuleName))
+            {
+                Console.WriteLine(string.Format("EngineWireFab: '{0}' disabled; no module '{1}'", FeatureName, ModuleName));
+                return false;
+            }
+        }
+        PrivateDependencyModuleNames.AddRange(ModuleNames);
+
+        // Delay-loaded on purpose. A static import makes the loader resolve
+        // Fab.dll before this module can run a single line, so an engine that
+        // ships Fab but leaves it unmounted would fail the module and, with it,
+        // the plugin. Delay-loading defers that to the first actual call, which
+        // IsFabAvailable() gates behind a live IsModuleLoaded check.
+        //
+        // PLATFORM SCOPE: PublicDelayLoadDLLs is Win64-only because UE's
+        // packaging system emits per-platform DLL names (UnrealEditor-*.dll)
+        // only on Windows. On Mac/Linux the equivalent shared libraries
+        // (libUnrealEditor-*.dylib / .so) are resolved at module load time by
+        // the OS dynamic linker — there is no delay-load equivalent. This
+        // means the "unmounted Fab fails the module" protection is Windows-only.
+        // In practice, engines that ship Fab on Mac/Linux also ship the dylib,
+        // so the failure mode (built-against-Fab-but-unmounted) is largely
+        // Windows-specific. If Fab is not present at build time, the module
+        // compiles with MCP_FAB_ADAPTER_HAS_FAB=0 and no DLL imports occur.
+        if (Target.Platform == UnrealTargetPlatform.Win64)
+        {
+            foreach (string ModuleName in ModuleNames)
+            {
+                PublicDelayLoadDLLs.Add(string.Format("UnrealEditor-{0}.dll", ModuleName));
+            }
+        }
+        Console.WriteLine(string.Format("EngineWireFab: '{0}' enabled (delay-loaded)", FeatureName));
+        return true;
+    }
+}

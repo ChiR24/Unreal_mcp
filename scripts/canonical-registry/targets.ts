@@ -24,6 +24,7 @@ import {
   buildNativeCapabilityShards,
   buildNativeCapabilityIndexHeader,
   buildNativeCapabilityShardSource,
+  shardFileStem,
   type NativeCapabilityShard,
 } from './native-shards.js';
 import { deriveParents } from './parent-derivation.js';
@@ -40,10 +41,10 @@ export interface BuildTargetsInput {
 const ROOT = resolve(process.cwd());
 
 const nativeCapabilityDir = (): string =>
-  resolve(ROOT, 'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Generated');
+  resolve(ROOT, 'plugins/EngineWire/Source/EngineWire/Private/MCP/Generated');
 
 const nativeToolsDir = (): string =>
-  resolve(ROOT, 'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Tools');
+  resolve(ROOT, 'plugins/EngineWire/Source/EngineWire/Private/MCP/Tools');
 
 const genDir = (): string =>
   resolve(ROOT, 'src/tools/catalog/capabilities/generated');
@@ -87,7 +88,7 @@ export const buildTargets = (input: BuildTargetsInput): GeneratedTarget[] => {
       buildNativeCapabilityIndexHeader(nativeShards, catalogRevision),
     ],
     ...nativeShards.map(
-      (s) => [resolve(capDir, `McpGeneratedCapabilityShards_${s.symbol}.cpp`), buildNativeCapabilityShardSource(s)] as GeneratedTarget,
+      (s) => [resolve(capDir, `${shardFileStem(s.parent)}.cpp`), buildNativeCapabilityShardSource(s)] as GeneratedTarget,
     ),
   ];
 

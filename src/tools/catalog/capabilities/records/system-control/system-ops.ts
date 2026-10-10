@@ -402,7 +402,7 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
     exampleInput: { action: 'spawn_category', categoryName: 'AI', enabled: true },
   }),
   // execute_python XOR contract: the native handler
-  // (plugins/McpAutomationBridge/.../Private/Domains/SystemControl/McpAutomationBridge_SystemControlHandlersPython.cpp)
+  // (plugins/EngineWire/.../Private/Domains/SystemControl/McpSystemPython.cpp)
   // rejects supplying BOTH code and file ("Provide either 'code' or 'file', not both").
   // The schema keyword is at-least-one, the handler is XOR, so a both-supplied
   // request passes gateway validation and fails at the handler with INVALID_ARGUMENT.

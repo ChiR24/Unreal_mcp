@@ -25,7 +25,7 @@ import {
 } from '../../../src/tools/catalog/capabilities/semantic/receipt-outcome.js';
 import { sliceBetween } from '../plugin/plugin-contract-fixtures.js';
 
-const PRIVATE = join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private');
+const PRIVATE = join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private');
 
 /** Block and line comments removed, so no assertion can be satisfied by prose. */
 function stripComments(source: string): string {
@@ -106,18 +106,18 @@ describe('the handlers that only look at an asset state that they changed none',
   });
 
   it('preview_widget marks the widget it draws as unchanged before it replies', () => {
-    const source = nativeSource('Domains', 'WidgetAuthoring', 'Support', 'McpAutomationBridge_WidgetAuthoringPreview.cpp');
+    const source = nativeSource('Domains', 'WidgetAuthoring', 'Support', 'McpWidgetPreview.cpp');
     const mark = source.indexOf('McpHandlerUtils::MarkNoAssetsChanged(ResultJson)');
     expect(mark).toBeGreaterThan(-1);
     expect(mark).toBeLessThan(source.indexOf('SendAutomationResponse('));
   });
 
   const playback: ReadonlyArray<readonly [string, readonly string[], string, string]> = [
-    ['play_sound_at_location', ['Domains', 'Audio', 'McpAutomationBridge_AudioHandlersPlayback.cpp'], 'Lower == TEXT("play_sound_at_location")', 'Lower == TEXT('],
-    ['play_sound_2d', ['Domains', 'Audio', 'McpAutomationBridge_AudioHandlersPlayback.cpp'], 'Lower == TEXT("play_sound_2d")', 'Lower == TEXT('],
-    ['play_sound_attached', ['Domains', 'Audio', 'McpAutomationBridge_AudioHandlersPlayback.cpp'], 'Lower == TEXT("play_sound_attached")', 'return false;'],
-    ['spawn_sound_at_location', ['Domains', 'Audio', 'McpAutomationBridge_AudioHandlersAmbient.cpp'], 'Lower == TEXT("spawn_sound_at_location")', 'return false;'],
-    ['prime_sound', ['Domains', 'Audio', 'McpAutomationBridge_AudioHandlersComponentsAndFades.cpp'], 'Lower == TEXT("prime_sound")', 'create_audio_component']
+    ['play_sound_at_location', ['Domains', 'Audio', 'McpAudioPlayback.cpp'], 'Lower == TEXT("play_sound_at_location")', 'Lower == TEXT('],
+    ['play_sound_2d', ['Domains', 'Audio', 'McpAudioPlayback.cpp'], 'Lower == TEXT("play_sound_2d")', 'Lower == TEXT('],
+    ['play_sound_attached', ['Domains', 'Audio', 'McpAudioPlayback.cpp'], 'Lower == TEXT("play_sound_attached")', 'return false;'],
+    ['spawn_sound_at_location', ['Domains', 'Audio', 'McpAudioAmbient.cpp'], 'Lower == TEXT("spawn_sound_at_location")', 'return false;'],
+    ['prime_sound', ['Domains', 'Audio', 'McpAudioComponentsAndFades.cpp'], 'Lower == TEXT("prime_sound")', 'create_audio_component']
   ];
 
   it.each(playback)('%s marks the sound it plays as unchanged before it replies', (_action, file, start, end) => {
@@ -190,9 +190,9 @@ describe('a level save names the level it saved', () => {
 
   it('save and save-as both answer savedAssetPath', () => {
     const lifecycle = ['Domains', 'Level', 'Lifecycle'];
-    expect(nativeSource(...lifecycle, 'McpAutomationBridge_LevelHandlersSaveCurrent.cpp'))
+    expect(nativeSource(...lifecycle, 'McpLevelSaveCurrent.cpp'))
       .toMatch(/Resp->SetStringField\(TEXT\("savedAssetPath"\), LevelPath\);/u);
-    expect(nativeSource(...lifecycle, 'McpAutomationBridge_LevelHandlersSaveAs.cpp'))
+    expect(nativeSource(...lifecycle, 'McpLevelSaveAs.cpp'))
       .toMatch(/Resp->SetStringField\(TEXT\("savedAssetPath"\), SavePath\);/u);
   });
 });
@@ -206,7 +206,7 @@ describe('an output-file delete names the files it deleted', () => {
   });
 
   it('the single and the list form both answer changedEntities', () => {
-    const source = nativeSource('Domains', 'SystemControl', 'McpAutomationBridge_SystemControlHandlersOutputFiles.cpp');
+    const source = nativeSource('Domains', 'SystemControl', 'McpSystemOutputFiles.cpp');
     expect(source).toMatch(/SetArrayField\(TEXT\("changedEntities"\),\s*TArray<TSharedPtr<FJsonValue>>\{MakeShared<FJsonValueString>/u);
     expect(source).toMatch(/SetArrayField\(TEXT\("changedEntities"\), DeletedPaths\);/u);
   });

@@ -9,9 +9,9 @@ import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-const AUDIO = join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private', 'Domains', 'AudioAuthoring');
-const DISPATCHER = join(AUDIO, 'McpAutomationBridge_AudioAuthoringHandlers.cpp');
-const PRIVATE_HEADER = join(AUDIO, 'McpAutomationBridge_AudioAuthoringHandlersPrivate.h');
+const AUDIO = join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'Domains', 'AudioAuthoring');
+const DISPATCHER = join(AUDIO, 'McpAudioAuthoringHandlers.cpp');
+const PRIVATE_HEADER = join(AUDIO, 'McpAudioAuthoringPrivate.h');
 
 /** Block and line comments removed, so no assertion can be satisfied by prose. */
 const source = (): string =>
@@ -23,13 +23,13 @@ describe('build_metasound checks the pins it names on its own nodes before runni
     readFileSync(join(AUDIO, file), 'utf8').replace(/\/\*[\s\S]*?\*\//gu, ' ').replace(/\/\/[^\n]*/gu, ' ');
 
   it('reads the registry class pins once the add_node class resolves', () => {
-    expect(strip('McpAutomationBridge_AudioAuthoringHandlersMetaSoundNodes.cpp')).toContain('FindMetaSoundClassPins(Resolved, Request.Inputs, Request.Outputs);');
-    const search = strip(join('MetaSound', 'McpAutomationBridge_AudioAuthoringHandlersMetaSoundNodeSearch.cpp'));
+    expect(strip('McpAudioMetaSoundNodes.cpp')).toContain('FindMetaSoundClassPins(Resolved, Request.Inputs, Request.Outputs);');
+    const search = strip(join('MetaSound', 'McpAudioMetaSoundNodeSearch.cpp'));
     expect(search).toMatch(/#if ENGINE_MAJOR_VERSION > 5 \|\| ENGINE_MINOR_VERSION >= 6\s*const FMetasoundFrontendClassInterface& Interface = Class\.GetDefaultInterface\(\);\s*#else\s*const FMetasoundFrontendClassInterface& Interface = Class\.Interface;/u);
   });
 
   it('refuses a connect or set_default pin missing on a node the batch adds, with nothing applied', () => {
-    const batch = strip(join('MetaSound', 'McpAutomationBridge_AudioAuthoringHandlersMetaSoundBatch.cpp'));
+    const batch = strip(join('MetaSound', 'McpAudioMetaSoundBatch.cpp'));
     const precheck = batch.slice(batch.indexOf('TMap<FString, FMcpMetaSoundNodeClassRequest> Added;'), batch.indexOf('TMap<FString, FString> Aliases;'));
     expect(precheck).toContain('MissingMetaSoundPin(Added, Step, TEXT("targetNodeId"), TEXT("targetInputName"), false, Pins);');
     expect(precheck).toContain('bDefault ? TEXT("inputName") : TEXT("sourceOutputName"), !bDefault, Pins);');
@@ -40,7 +40,7 @@ describe('build_metasound checks the pins it names on its own nodes before runni
 
   // Every step ran the single-edit handler with the batch's save, so a 63-step voice wrote its package 65 times.
   it('saves the MetaSound once, after the steps, not after each one', () => {
-    const batch = strip(join('MetaSound', 'McpAutomationBridge_AudioAuthoringHandlersMetaSoundBatch.cpp'));
+    const batch = strip(join('MetaSound', 'McpAudioMetaSoundBatch.cpp'));
     const steps = batch.indexOf('Step->SetBoolField(TEXT("save"), false);');
     expect(steps).toBeGreaterThan(-1);
     expect(steps).toBeLessThan(batch.indexOf('HandleMetaSoundNodeActions(StepSubAction'));
@@ -54,7 +54,7 @@ describe('build_metasound checks the pins it names on its own nodes before runni
 // silent for good, IsPlaying false even after Play.
 describe('create_metasound can make a continuous source', () => {
   it('removes the One-Shot interface when oneShot is false, inside the builder gate, and says which it made', () => {
-    const create = readFileSync(join(AUDIO, 'McpAutomationBridge_AudioAuthoringHandlersMetaSoundAssets.cpp'), 'utf8')
+    const create = readFileSync(join(AUDIO, 'McpAudioMetaSoundAssets.cpp'), 'utf8')
       .replace(/\/\*[\s\S]*?\*\//gu, ' ').replace(/\/\/[^\n]*/gu, ' ');
     const gated = create.slice(create.indexOf('TScriptInterface<IMetaSoundDocumentInterface> DocInterface(MetaSound);'), create.indexOf('MetaSound->MarkPackageDirty();'));
     expect(create.lastIndexOf('#if MCP_HAS_METASOUND_FRONTEND', create.indexOf('TScriptInterface<IMetaSoundDocumentInterface>'))).toBeGreaterThan(-1);

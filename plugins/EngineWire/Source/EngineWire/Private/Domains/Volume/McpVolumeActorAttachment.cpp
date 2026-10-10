@@ -1,0 +1,158 @@
+#include "Domains/Volume/McpVolumeActionDecls.h"
+
+#include "Dom/JsonObject.h"
+#include "Engine/BlockingVolume.h"
+#include "Engine/CullDistanceVolume.h"
+#include "Engine/TriggerVolume.h"
+#include "GameFramework/KillZVolume.h"
+#include "GameFramework/PhysicsVolume.h"
+#include "Foundation/BridgeHelpers/McpHelpers.h"
+#include "EngineWireSubsystem.h"
+#include "Domains/Volume/McpVolumeAttachment.h"
+#include "Domains/Volume/McpVolumeCullDistances.h"
+#include "Domains/Volume/McpVolumeGeometry.h"
+#include "Domains/Volume/McpVolumeResponses.h"
+#include "Transport/WebSocket/McpBridgeWebSocket.h"
+
+#if MCP_HAS_POSTPROCESS_VOLUME
+#include "Engine/PostProcessVolume.h"
+#endif
+
+namespace McpVolumeHandlers
+{
+template<typename TVolumeClass, typename ConfigureFunc>
+static bool AddVolumeToActor(
+    UEngineWireSubsystem* Subsystem,
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket,
+    const FVector& DefaultExtent,
+    const FString& NameSuffix,
+    const FString& ClassText,
+    const FString& DisplayName,
+    const FString& FailureText,
+    ConfigureFunc Configure)
+{
+    using namespace VolumeHelpers;
+    FVolumeAttachmentArgs Args;
+    if (!ResolveAttachmentTarget(Subsystem, RequestId, Payload, Socket, DefaultExtent, Args))
+    {
+        return true;
+    }
+    Configure(Args);
+    const FString VolumeName = Args.TargetActor->GetActorLabel() + NameSuffix;
+    TVolumeClass* Volume = SpawnVolumeActor<TVolumeClass>(Args.World, VolumeName, Args.Location, Args.Rotation, Args.Extent);
+    if (!Volume)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false, FailureText, nullptr);
+        return true;
+    }
+    TSharedPtr<FJsonObject> ResponseJson = CreateVolumeResponse(Volume, ClassText);
+    Configure(Volume, ResponseJson);
+    const bool bAttachmentSucceeded = AttachVolumeToTarget(Volume, Args.TargetActor);
+    SendAttachedVolumeResponse(Subsystem, RequestId, Socket, Payload, Args.TargetActor, Volume, ResponseJson, DisplayName, bAttachmentSucceeded);
+    return true;
+}
+
+struct FNoAttachConfig
+{
+    void operator()(VolumeHelpers::FVolumeAttachmentArgs&) const {}
+    template<typename TVolumeClass>
+    void operator()(TVolumeClass*, const TSharedPtr<FJsonObject>&) const {}
+};
+
+bool HandleAddTriggerVolume(UEngineWireSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+    return AddVolumeToActor<ATriggerVolume>(Subsystem, RequestId, Payload, Socket,
+        FVector(100.0f, 100.0f, 100.0f), TEXT("_TriggerVolume"), TEXT("ATriggerVolume"),
+        TEXT("TriggerVolume"), TEXT("Failed to spawn TriggerVolume"), FNoAttachConfig());
+}
+
+bool HandleAddBlockingVolume(UEngineWireSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+    return AddVolumeToActor<ABlockingVolume>(Subsystem, RequestId, Payload, Socket,
+        FVector(200.0f, 200.0f, 200.0f), TEXT("_BlockingVolume"), TEXT("ABlockingVolume"),
+        TEXT("BlockingVolume"), TEXT("Failed to spawn BlockingVolume"), FNoAttachConfig());
+}
+
+bool HandleAddKillZVolume(UEngineWireSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+    struct FKillZConfig
+    {
+        float KillZHeight;
+        void operator()(VolumeHelpers::FVolumeAttachmentArgs& Args) const { if (KillZHeight != 0.0f) { Args.Location.Z = KillZHeight; } }
+        void operator()(AKillZVolume* Volume, const TSharedPtr<FJsonObject>& ResponseJson) const { ResponseJson->SetNumberField(TEXT("killZHeight"), Volume->GetActorLocation().Z); }
+    };
+    const float KillZHeight = static_cast<float>(GetJsonNumberField(Payload, TEXT("killZHeight"), 0.0));
+    return AddVolumeToActor<AKillZVolume>(Subsystem, RequestId, Payload, Socket,
+        FVector(1000.0f, 1000.0f, 100.0f), TEXT("_KillZVolume"), TEXT("AKillZVolume"),
+        TEXT("KillZVolume"), TEXT("Failed to spawn KillZVolume"), FKillZConfig{KillZHeight});
+}
+
+bool HandleAddPhysicsVolume(UEngineWireSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+    struct FPhysicsConfig
+    {
+        bool bWaterVolume;
+        int32 Priority;
+        float FluidFriction;
+        float TerminalVelocity;
+        void operator()(VolumeHelpers::FVolumeAttachmentArgs&) const {}
+        void operator()(APhysicsVolume* Volume, const TSharedPtr<FJsonObject>& ResponseJson) const
+        {
+            Volume->bWaterVolume = bWaterVolume;
+            Volume->FluidFriction = FluidFriction;
+            Volume->TerminalVelocity = TerminalVelocity;
+            Volume->Priority = Priority;
+            ResponseJson->SetBoolField(TEXT("bWaterVolume"), bWaterVolume);
+        }
+    };
+    return AddVolumeToActor<APhysicsVolume>(Subsystem, RequestId, Payload, Socket,
+        FVector(300.0f, 300.0f, 300.0f), TEXT("_PhysicsVolume"), TEXT("APhysicsVolume"),
+        TEXT("PhysicsVolume"), TEXT("Failed to spawn PhysicsVolume"),
+        FPhysicsConfig{GetJsonBoolField(Payload, TEXT("bWaterVolume"), false), GetJsonIntField(Payload, TEXT("priority"), 0), static_cast<float>(GetJsonNumberField(Payload, TEXT("fluidFriction"), 0.3)), static_cast<float>(GetJsonNumberField(Payload, TEXT("terminalVelocity"), 4000.0))});
+}
+
+bool HandleAddCullDistanceVolume(UEngineWireSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+    struct FCullConfig
+    {
+        const TSharedPtr<FJsonObject>& Payload;
+        void operator()(VolumeHelpers::FVolumeAttachmentArgs&) const {}
+        void operator()(ACullDistanceVolume* Volume, const TSharedPtr<FJsonObject>&) const { VolumeHelpers::SetCullDistancesFromPayload(Volume, Payload); }
+    };
+    return AddVolumeToActor<ACullDistanceVolume>(Subsystem, RequestId, Payload, Socket,
+        FVector(1000.0f, 1000.0f, 500.0f), TEXT("_CullDistanceVolume"), TEXT("ACullDistanceVolume"),
+        TEXT("CullDistanceVolume"), TEXT("Failed to spawn CullDistanceVolume"), FCullConfig{Payload});
+}
+
+#if MCP_HAS_POSTPROCESS_VOLUME
+bool HandleAddPostProcessVolume(UEngineWireSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+    struct FPostProcessConfig
+    {
+        float Priority;
+        float BlendRadius;
+        float BlendWeight;
+        bool bEnabled;
+        bool bUnbound;
+        TSharedPtr<FJsonObject> Payload;
+        void operator()(VolumeHelpers::FVolumeAttachmentArgs&) const {}
+        void operator()(APostProcessVolume* Volume, const TSharedPtr<FJsonObject>& ResponseJson) const
+        {
+            Volume->Priority = Priority;
+            Volume->BlendRadius = BlendRadius;
+            Volume->BlendWeight = BlendWeight;
+            Volume->bEnabled = bEnabled;
+            Volume->bUnbound = bUnbound;
+            ApplyPostProcessSettings(Volume, Payload);
+            ResponseJson->SetNumberField(TEXT("priority"), Priority);
+        }
+    };
+    return AddVolumeToActor<APostProcessVolume>(Subsystem, RequestId, Payload, Socket,
+        FVector(500.0f, 500.0f, 500.0f), TEXT("_PostProcessVolume"), TEXT("APostProcessVolume"),
+        TEXT("PostProcessVolume"), TEXT("Failed to spawn PostProcessVolume"),
+        FPostProcessConfig{static_cast<float>(GetJsonNumberField(Payload, TEXT("priority"), 0.0)), static_cast<float>(GetJsonNumberField(Payload, TEXT("blendRadius"), 100.0)), static_cast<float>(GetJsonNumberField(Payload, TEXT("blendWeight"), 1.0)), GetJsonBoolField(Payload, TEXT("bEnabled"), GetJsonBoolField(Payload, TEXT("enabled"), true)), GetJsonBoolField(Payload, TEXT("bUnbound"), false), Payload});
+}
+#endif
+}

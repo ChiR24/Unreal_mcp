@@ -11,8 +11,8 @@ import { describe, expect, it } from 'vitest';
 import { ALL_CAPABILITY_RECORDS } from '../../../src/tools/catalog/capabilities/records/aggregate.js';
 import { validateAgainstCapabilitySchema } from '../../../src/server/gateway/gateway-schema-validate.js';
 
-const HANDLER = join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private',
-  'Domains', 'Environment', 'Inspection', 'McpAutomationBridge_EnvironmentHandlersInspectClass.cpp');
+const HANDLER = join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private',
+  'Domains', 'Environment', 'Inspection', 'McpEnvInspectClass.cpp');
 // Deliberately left undeclared: a hex dump of the flags (flags carries them as booleans) and the
 // package path (module or generatedBy name it).
 const UNDECLARED = new Set(['classFlags', 'package']);

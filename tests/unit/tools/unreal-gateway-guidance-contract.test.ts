@@ -24,9 +24,9 @@ import { gatewayContext } from './support/gateway-context-fixture.js';
 // caller with nothing to copy (an empty search page, a bare action-name list).
 // Both transports must say the same thing, so the native mirrors are diffed here.
 
-const pluginRoot = resolve(process.cwd(), 'plugins/McpAutomationBridge');
+const pluginRoot = resolve(process.cwd(), 'plugins/EngineWire');
 const nativeDefinition = readFileSync(
-  resolve(pluginRoot, 'Source/McpAutomationBridge/Private/MCP/Gateway/McpNativeGatewayDefinition.cpp'),
+  resolve(pluginRoot, 'Source/EngineWire/Private/MCP/Gateway/McpNativeGatewayDefinition.cpp'),
   'utf8'
 );
 const serverInfo = JSON.parse(readFileSync(resolve(pluginRoot, 'Resources/MCP/server-info.json'), 'utf8')) as {

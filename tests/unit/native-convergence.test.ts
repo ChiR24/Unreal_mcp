@@ -21,7 +21,7 @@ import { capabilityIndex } from '../../src/server/gateway/gateway-capability-ind
 
 const pluginPrivate = resolve(
   process.cwd(),
-  'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private',
+  'plugins/EngineWire/Source/EngineWire/Private',
 );
 
 function sourceFilesUnder(...relativeDirs: readonly string[]): readonly string[] {
@@ -54,7 +54,7 @@ describe('Task 27 / Task 21: the residual native handler divergence stays visibl
   // not own Private/Domains, so this is pinned, not silently repaired.
   it('records that get_component_details now has a distinct native handler branch (dogfood #146)', () => {
     expect(filesMentioning('get_component_details')).toContain(
-      'Domains/Environment/Inspection/McpAutomationBridge_EnvironmentHandlersInspectComponent.cpp',
+      'Domains/Environment/Inspection/McpEnvInspectComponent.cpp',
     );
   }, 60_000);
 
@@ -62,7 +62,7 @@ describe('Task 27 / Task 21: the residual native handler divergence stays visibl
   // A file that only NAMES it, in a nextCall sending the caller there, owns nothing:
   // McpBlueprintBehaviour points at it when a project's input classes are not Enhanced Input.
   const namesOnly = new Set([
-    'Domains/BlueprintGraph/Behaviour/McpAutomationBridge_BlueprintBehaviourInputAssets.cpp',
+    'Domains/BlueprintGraph/Behaviour/McpBPBehaviourInputAssets.cpp',
   ]);
   it('records that set_project_setting is still owned solely by the Ui domain shim', () => {
     const owners = filesMentioning('set_project_setting').filter((file) => !namesOnly.has(file));
@@ -74,9 +74,9 @@ describe('Task 27 / Task 21: the residual native handler divergence stays visibl
 
   it('records the exact native owners of get_project_settings', () => {
     expect(filesMentioning('get_project_settings')).toEqual([
-      'Domains/Environment/Inspection/McpAutomationBridge_EnvironmentHandlersInspect.cpp',
-      'Domains/Environment/Inspection/McpAutomationBridge_EnvironmentHandlersInspectSettings.cpp',
-      'Domains/Ui/McpAutomationBridge_UiHandlersProjectSettings.cpp',
+      'Domains/Environment/Inspection/McpEnvInspect.cpp',
+      'Domains/Environment/Inspection/McpEnvInspectSettings.cpp',
+      'Domains/Ui/McpUiProjectSettings.cpp',
     ]);
   });
 

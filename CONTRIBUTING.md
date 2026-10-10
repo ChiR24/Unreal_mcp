@@ -128,7 +128,7 @@ src/
 └── services/        # Background services
 
 plugins/
-└── McpAutomationBridge/  # C++ Unreal plugin
+└── EngineWire/  # C++ Unreal plugin
 ```
 
 ## Questions?

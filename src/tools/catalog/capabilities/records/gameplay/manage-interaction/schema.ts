@@ -2,11 +2,11 @@
  * Exact per-action schema vocabulary for manage_interaction.
  *
  * Every parameter name below is read by a handler under
- * plugins/McpAutomationBridge/.../Private/Domains/Interaction/: the
- * McpAutomationBridge_InteractionHandlers{Components,Interface,Door,Switch,
- * Chest,Lever,Triggers}.cpp files author Blueprint assets, and ...Info.cpp
- * reads one back (or a placed actor, by actorName). McpAutomationBridge_
- * InteractionHandlers.cpp calls each in turn. No handler changes a placed world
+ * plugins/EngineWire/.../Private/Domains/Interaction/: the
+ * McpInteraction{Components,Interface,Door,Switch,Chest,Lever,Triggers}.cpp
+ * files author Blueprint assets, and McpInteractionInfo.cpp reads one back (or a
+ * placed actor, by actorName). McpInteractionHandlers.cpp calls each in turn.
+ * No handler changes a placed world
  * actor, so the world-actor fields (doorName, switchName, chestName, isLocked,
  * requiredKey, maxItems, location, interactionDistance, traceChannel,
  * widgetText, offsetZ, ...) are deliberately NOT declared: declaring them would

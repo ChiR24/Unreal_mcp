@@ -11,7 +11,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-const fabPrivate = resolve(process.cwd(), 'plugins/McpAutomationBridge/Source/McpAutomationBridgeFab/Private');
+const fabPrivate = resolve(process.cwd(), 'plugins/EngineWire/Source/EngineWireFab/Private');
 const fab = (file: string): string => readFileSync(resolve(fabPrivate, file), 'utf8');
 const code = (text: string): string => text.replace(/\/\*[\s\S]*?\*\//gu, '').replace(/^[ \t]*\/\/.*$/gmu, '');
 
@@ -76,7 +76,7 @@ describe('failures the dispatcher words itself reach the caller', () => {
     expect(code(fab('McpFabSearchOperation.cpp'))).toContain('TryGetStringField(TEXT("message"), PageMessage)');
     expect(code(fab('McpFabAddReply.cpp'))).toContain('TryGetStringField(TEXT("message"), PageMessage)');
     expect(code(readFileSync(resolve(process.cwd(),
-      'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Domains/AssetWorkflow/Operations/McpAutomationBridge_AssetWorkflowFabDetails.cpp'), 'utf8')))
+      'plugins/EngineWire/Source/EngineWire/Private/Domains/AssetWorkflow/Operations/McpAssetFabDetails.cpp'), 'utf8')))
       .toContain('TryGetStringField(TEXT("message"), PageMessage)');
   });
 });

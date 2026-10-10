@@ -5,6 +5,7 @@ import {
 } from 'node:fs';
 import {
   extname,
+  relative,
   resolve,
 } from 'node:path';
 
@@ -16,7 +17,7 @@ import {
 
 const privateRoot = resolve(
   process.cwd(),
-  'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private',
+  'plugins/EngineWire/Source/EngineWire/Private',
 );
 const sourceExtensions = new Set(['.cpp', '.h']);
 const privateIncludePrefixes = [
@@ -98,4 +99,25 @@ describe('plugin source structure', () => {
 
     expect(unresolvedIncludes).toEqual([]);
   }, 60_000);
+
+  // Fab refuses an upload whose file paths pass 170 characters, counted from the plugin
+  // folder with the 23-character prefix it adds (`MCPAutomf131ab04359dV9\`). 20 spare.
+  it('keeps every packaged path short enough for Fab', () => {
+    const pluginRoot = resolve(process.cwd(), 'plugins/EngineWire');
+    const buildOutput = new Set(['Binaries', 'Intermediate', 'Saved', 'DerivedDataCache']);
+    const listPackaged = (directory: string): readonly string[] =>
+      readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+        const entryPath = resolve(directory, entry.name);
+        if (!entry.isDirectory()) {
+          return [entryPath];
+        }
+        return buildOutput.has(entry.name) ? [] : listPackaged(entryPath);
+      });
+    const tooLong = listPackaged(pluginRoot)
+      .map((file) => relative(pluginRoot, file))
+      .filter((path) => 23 + path.length > 150)
+      .map((path) => `${23 + path.length}: ${path}`);
+
+    expect(tooLong).toEqual([]);
+  });
 });

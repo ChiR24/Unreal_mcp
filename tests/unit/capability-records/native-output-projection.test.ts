@@ -21,7 +21,7 @@ import { validateAgainstCapabilitySchema } from '../../../src/server/gateway/gat
 import { isRecord } from '../../../src/utils/validation/type-guards.js';
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
-const PLUGIN = 'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private';
+const PLUGIN = 'plugins/EngineWire/Source/EngineWire/Private';
 const read = (relativePath: string): string => readFileSync(resolve(REPO_ROOT, relativePath), 'utf8');
 
 function outputSchemaOf(id: string): Draft202012ObjectSchema {

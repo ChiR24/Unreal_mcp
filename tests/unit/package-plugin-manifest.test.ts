@@ -23,7 +23,7 @@ describe('plugin package manifest', () => {
     const pluginDescriptor = pluginDescriptorSchema.parse(
       JSON.parse(
         readFileSync(
-          resolve(process.cwd(), 'plugins/McpAutomationBridge/McpAutomationBridge.uplugin'),
+          resolve(process.cwd(), 'plugins/EngineWire/EngineWire.uplugin'),
           'utf8',
         ),
       ),
@@ -33,13 +33,13 @@ describe('plugin package manifest', () => {
     const manifest = buildManifest({
       archives: [
         {
-          filename: 'McpAutomationBridge-v0.5.30-UE5.7-Linux.zip',
+          filename: 'EngineWire-v0.5.30-UE5.7-Linux.zip',
           sha256: 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad',
         },
       ],
       engineTarget: 'UE5.7-Linux',
       generatedAt: '2026-07-14T12:34:56.000Z',
-      pluginName: 'McpAutomationBridge',
+      pluginName: 'EngineWire',
       ueRoot: '/opt/UnrealEngine/UE_5.7',
       version: pluginDescriptor.VersionName,
     });
@@ -50,7 +50,7 @@ describe('plugin package manifest', () => {
     expect(Object.keys(manifest.archives[0] ?? {})).toEqual(['filename', 'sha256']);
     expect(manifest.archives).toEqual([
       {
-        filename: 'McpAutomationBridge-v0.5.30-UE5.7-Linux.zip',
+        filename: 'EngineWire-v0.5.30-UE5.7-Linux.zip',
         sha256: 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad',
       },
     ]);

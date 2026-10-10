@@ -90,7 +90,7 @@ export const STATE_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['The actor has no renderable components (bounds are undefined).'],
     inputProps: { actorName: P.actorName },
     required: ['actorName'],
-    // The handler (McpAutomationBridge_ControlActorQuery.cpp,
+    // The handler (McpActorQuery.cpp,
     // HandleControlActorGetBoundingBox) emits `origin` and `extent`. This record
     // declared `location`/`scale`, which the handler never sets, so output
     // projection dropped BOTH and the capability answered "Bounding box

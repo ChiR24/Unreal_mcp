@@ -10,16 +10,16 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-const plugin = resolve(process.cwd(), 'plugins/McpAutomationBridge/Source');
-const fab = (file: string): string => readFileSync(resolve(plugin, 'McpAutomationBridgeFab/Private', file), 'utf8');
-const core = (file: string): string => readFileSync(resolve(plugin, 'McpAutomationBridge', file), 'utf8');
+const plugin = resolve(process.cwd(), 'plugins/EngineWire/Source');
+const fab = (file: string): string => readFileSync(resolve(plugin, 'EngineWireFab/Private', file), 'utf8');
+const core = (file: string): string => readFileSync(resolve(plugin, 'EngineWire', file), 'utf8');
 
 /** Comment bodies explain the rules, so rule checks ignore them. */
 const code = (text: string): string =>
   text.replace(/\/\*[\s\S]*?\*\//gu, '').replace(/^[ \t]*\/\/.*$/gmu, '');
 
 describe('the details handler', () => {
-  const handler = code(core('Private/Domains/AssetWorkflow/Operations/McpAutomationBridge_AssetWorkflowFabDetails.cpp'));
+  const handler = code(core('Private/Domains/AssetWorkflow/Operations/McpAssetFabDetails.cpp'));
 
   it('passes on only the fields it names, so nothing else the page returns reaches a reply', () => {
     for (const field of [
@@ -43,7 +43,7 @@ describe('the details handler', () => {
 });
 
 describe('the adapter tells the details page which engine is running', () => {
-  const module = code(fab('McpAutomationBridgeFabModule.cpp'));
+  const module = code(fab('EngineWireFabModule.cpp'));
 
   it('formats it as major.minor for both the add and the details', () => {
     expect(module).toContain('McpFabDetailsOperation::Start(ListingId,');
@@ -71,7 +71,7 @@ describe('the refusals the details predict', () => {
   it('carry the engine the add took, into the add reply and the status read alike', () => {
     expect(reply).toContain('TEXT("engineMatch")');
     expect(reply).toContain('TEXT("engineVersion")');
-    const json = code(core('Private/Domains/AssetWorkflow/Fab/McpAutomationBridge_FabImportJson.h'));
+    const json = code(core('Private/Domains/AssetWorkflow/Fab/McpFabImportJson.h'));
     expect(json).toContain('TEXT("engineMatch")');
     expect(json).toContain('TEXT("engineVersion")');
     const provider = code(core('Public/McpFabTypes.h'));
@@ -82,7 +82,7 @@ describe('the refusals the details predict', () => {
 
 describe('the catalog search request', () => {
   const op = code(fab('McpFabSearchOperation.cpp'));
-  const handler = code(core('Private/Domains/AssetWorkflow/Operations/McpAutomationBridge_AssetWorkflowFabSearch.cpp'));
+  const handler = code(core('Private/Domains/AssetWorkflow/Operations/McpAssetFabSearch.cpp'));
 
   it('refuses a publisher or a content kind that could break out of the script or ride along in the query', () => {
     expect(op).toContain('TEXT("INVALID_SELLER")');

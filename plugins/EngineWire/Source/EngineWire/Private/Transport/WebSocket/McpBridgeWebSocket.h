@@ -1,0 +1,153 @@
+#pragma once
+
+#include "CoreMinimal.h"
+#include "HAL/Runnable.h"
+
+class FSocket;
+class FInternetAddr;
+class FRunnableThread;
+class FEvent;
+
+#if WITH_SSL
+struct ssl_ctx_st;
+typedef struct ssl_ctx_st SSL_CTX;
+struct ssl_st;
+typedef struct ssl_st SSL;
+#endif
+
+class FMcpBridgeWebSocket;
+
+DECLARE_MULTICAST_DELEGATE_OneParam(FMcpBridgeWebSocketConnectedEvent, TSharedPtr<FMcpBridgeWebSocket>);
+DECLARE_MULTICAST_DELEGATE_OneParam(FMcpBridgeWebSocketConnectionErrorEvent, const FString& /*Error*/);
+DECLARE_MULTICAST_DELEGATE_FourParams(FMcpBridgeWebSocketClosedEvent, TSharedPtr<FMcpBridgeWebSocket>, int32, const FString&, bool);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FMcpBridgeWebSocketMessageEvent, TSharedPtr<FMcpBridgeWebSocket>, const FString& /*Message*/);
+DECLARE_MULTICAST_DELEGATE_OneParam(FMcpBridgeWebSocketHeartbeatEvent, TSharedPtr<FMcpBridgeWebSocket>);
+DECLARE_MULTICAST_DELEGATE_OneParam(FMcpBridgeWebSocketClientConnectedEvent, TSharedPtr<FMcpBridgeWebSocket>);
+
+/**
+ * Minimal WebSocket server used by the EngineWire subsystem.
+ * Supports text frames over ws:// and optional wss:// transports for local automation traffic.
+ */
+class FMcpBridgeWebSocket final : public TSharedFromThis<FMcpBridgeWebSocket>, public FRunnable
+{
+public:
+    FMcpBridgeWebSocket(int32 InPort, const FString& InHost = FString(), int32 InListenBacklog = 10, float InAcceptSleepSeconds = 0.01f, bool bInEnableTls = false, const FString& InTlsCertificatePath = FString(), const FString& InTlsPrivateKeyPath = FString());
+    FMcpBridgeWebSocket(FSocket* InClientSocket, bool bInEnableTls = false, const FString& InTlsCertificatePath = FString(), const FString& InTlsPrivateKeyPath = FString());
+    virtual ~FMcpBridgeWebSocket() override;
+
+    void Connect();
+    void Listen();
+    void Close(int32 StatusCode = 1000, const FString& Reason = FString());
+    bool Send(const FString& Data);
+    bool Send(const void* Data, SIZE_T Length);
+    bool IsConnected() const;
+    bool IsListening() const;
+
+    int32 GetPort() const { return Port; }
+
+    // Delegates
+    FMcpBridgeWebSocketConnectedEvent ConnectedDelegate;
+    FMcpBridgeWebSocketConnectionErrorEvent ConnectionErrorDelegate;
+    FMcpBridgeWebSocketClosedEvent ClosedDelegate;
+    FMcpBridgeWebSocketMessageEvent MessageDelegate;
+    FMcpBridgeWebSocketHeartbeatEvent HeartbeatDelegate;
+    FMcpBridgeWebSocketClientConnectedEvent ClientConnectedDelegate;
+
+    // Threading
+    FCriticalSection SendMutex;
+    FCriticalSection ReceiveMutex;
+
+    // Notify the socket implementation that the message handler has been
+    // registered on the game thread. This is used to avoid a race where the
+    // client may send the initial application-level handshake immediately
+    // after the WebSocket upgrade completes and before game-thread handlers
+    // are attached. The server thread will wait briefly for this signal
+    // before it begins draining frames.
+    void NotifyMessageHandlerRegistered();
+
+    // FRunnable
+    virtual bool Init() override;
+    virtual uint32 Run() override;
+    virtual void Stop() override;
+
+private:
+    uint32 RunClient();
+    uint32 RunServer();
+    void HandleAcceptedClient(FSocket* ClientSocket);
+    void TearDown(const FString& Reason, bool bWasClean, int32 StatusCode);
+    bool PerformServerHandshake();
+    bool SendFrame(const TArray<uint8>& Frame);
+    bool SendTextFrame(const void* Data, SIZE_T Length);
+    bool SendControlFrame(uint8 ControlOpCode, const TArray<uint8>& Payload);
+    void SendCloseFrame(int32 StatusCode, const FString& Reason);
+    void HandleTextPayload(const TArray<uint8>& Payload);
+    void ResetFragmentState();
+    bool ReceiveFrame();
+    bool ReceiveExact(uint8* Buffer, SIZE_T Length);
+    bool SendRaw(const uint8* Data, int32 Length, int32& OutBytesSent);
+    bool RecvRaw(uint8* Data, int32 Length, int32& OutBytesRead);
+    bool InitializeTlsContext(bool bServer);
+    bool EstablishTls(bool bServer);
+    void ShutdownTls();
+    void CloseNativeSocket();
+    FSocket* DetachSocket();
+    void CloseListenSocket();
+    void DestroyListenSocket();
+
+    FSocket* Socket = nullptr;
+    int32 Port = 0;
+    FString Protocols = TEXT("mcp-automation");
+    FString ListenHost;
+
+    TArray<uint8> PendingReceived;
+    TArray<uint8> FragmentAccumulator;
+    bool bFragmentMessageActive = false;
+
+
+    // Server mode members
+    bool bServerMode = false;
+    bool bServerAcceptedConnection = false;
+    FSocket* ListenSocket = nullptr;
+    FRunnableThread* Thread = nullptr;
+    FEvent* StopEvent = nullptr;
+    FCriticalSection ListenSocketMutex;
+    FCriticalSection ClientSocketsMutex;
+    TArray<TSharedPtr<FMcpBridgeWebSocket>> ClientSockets;
+
+    // Server tuning
+    int32 ListenBacklog = 10;
+    float AcceptSleepSeconds = 0.01f;
+
+    // Connection state
+    bool bConnected = false;
+    bool bListening = false;
+    bool bStopping = false;
+    TAtomic<bool> bCloseStarted{false};
+    TAtomic<bool> bCloseFrameSent{false};
+
+    bool bUseTls = false;
+    bool bTlsServer = true;
+    bool bSslInitialized = false;
+    bool bOwnsSslContext = false;
+#if WITH_SSL
+    SSL_CTX* SslContext = nullptr;
+    SSL* SslHandle = nullptr;
+#else
+    void* SslContext = nullptr;
+    void* SslHandle = nullptr;
+#endif
+    UPTRINT NativeSocketHandle = 0;
+    bool bNativeSocketReleased = false;
+    FString TlsCertificatePath;
+    FString TlsPrivateKeyPath;
+
+    // Synchronization event used to coordinate between the server socket
+    // worker thread and the game thread. When a server-accepted connection
+    // completes the HTTP/WebSocket upgrade the worker thread will wait for
+    // the game thread to attach message handlers (OnMessage) so that the
+    // initial application-level handshake (bridge_hello) is not lost.
+    FEvent* HandlerReadyEvent = nullptr;
+    // Set to true by the game thread when it has registered the message
+    // handler for this client connection.
+    TAtomic<bool> bHandlerRegistered{false};
+};

@@ -33,7 +33,7 @@ function makeProject(options: { defaultGameIni?: string; savedGameIni?: string }
 }
 
 function bridgeSettings(ports: string): string {
-    return `[/Script/McpAutomationBridge.McpAutomationBridgeSettings]\nListenPorts=${ports}\n`;
+    return `[/Script/EngineWire.EngineWireSettings]\nListenPorts=${ports}\n`;
 }
 
 beforeEach(() => {
@@ -105,6 +105,22 @@ describe('bridge port resolution', () => {
         vi.stubEnv('MCP_AUTOMATION_CLIENT_PORT', 'not-a-port');
 
         expect(resolveAutomationBridgeConfig({}, logger).port).toBe(8092);
+    });
+
+    it('reads the section a project saved before the plugin was renamed EngineWire', () => {
+        vi.stubEnv('UE_PROJECT_PATH', makeProject({
+            defaultGameIni: '[/Script/McpAutomationBridge.McpAutomationBridgeSettings]\nListenPorts=8095\n'
+        }));
+
+        expect(resolveAutomationBridgeConfig({}, logger).port).toBe(8095);
+    });
+
+    it('prefers the current section over the old one', () => {
+        vi.stubEnv('UE_PROJECT_PATH', makeProject({
+            defaultGameIni: `[/Script/McpAutomationBridge.McpAutomationBridgeSettings]\nListenPorts=8095\n${bridgeSettings('8096')}`
+        }));
+
+        expect(resolveAutomationBridgeConfig({}, logger).port).toBe(8096);
     });
 
     it('falls back to the default when the project ListenPorts value is unusable', () => {

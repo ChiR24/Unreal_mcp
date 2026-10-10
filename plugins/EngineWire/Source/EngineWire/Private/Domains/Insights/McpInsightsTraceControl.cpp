@@ -1,0 +1,197 @@
+#include "Core/Compatibility/McpVersionCompatibility.h"
+
+#include "Domains/Insights/McpInsightsRequests.h"
+
+#include "Dom/JsonObject.h"
+#include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
+#include "HAL/PlatformProcess.h"
+#include "Misc/Paths.h"
+#include "EngineWireSubsystem.h"
+#include "ProfilingDebugging/TraceAuxiliary.h"
+
+namespace McpInsights
+{
+namespace
+{
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION <= 1
+using FMcpTraceOptions = FTraceAuxiliary::Options;
+#else
+using FMcpTraceOptions = FTraceAuxiliary::FOptions;
+#endif
+
+FString BuildNetworkTarget(const FString& Host, int32 Port)
+{
+    return Port > 0 ? FString::Printf(TEXT("%s:%d"), *Host, Port) : Host;
+}
+
+// Opens the Unreal Insights application, on the trace file when there is one.
+bool LaunchInsightsViewer(const FString& TraceFile, TSharedPtr<FJsonObject>& Result)
+{
+    const FString ViewerPath = FPlatformProcess::GenerateApplicationPath(TEXT("UnrealInsights"), EBuildConfiguration::Development);
+    const FString ViewerArgs = TraceFile.IsEmpty() ? FString() : FString::Printf(TEXT("-OpenTraceFile=\"%s\""), *TraceFile);
+    FProcHandle ViewerHandle = FPlatformProcess::CreateProc(*ViewerPath, *ViewerArgs, true, false, false, nullptr, 0, nullptr, nullptr);
+    Result->SetBoolField(TEXT("viewerLaunched"), ViewerHandle.IsValid());
+    Result->SetStringField(TEXT("viewerPath"), ViewerPath);
+    return ViewerHandle.IsValid();
+}
+
+void AddStartFields(
+    const FTraceStartRequest& Request,
+    TSharedPtr<FJsonObject>& Result)
+{
+    Result->SetStringField(TEXT("connectionType"), StartModeToString(Request.Mode));
+    Result->SetStringField(TEXT("channels"), Request.Channels);
+    if (Request.Mode == ETraceStartMode::File)
+    {
+        Result->SetStringField(TEXT("traceFilePath"), Request.OutputPath);
+    }
+    if (Request.Mode == ETraceStartMode::Network)
+    {
+        Result->SetStringField(TEXT("host"), Request.Host);
+        Result->SetNumberField(TEXT("port"), Request.Port);
+    }
+}
+}
+
+bool TryBuildStartRequest(
+    const TSharedPtr<FJsonObject>& Payload,
+    bool bForceFileMode,
+    FTraceStartRequest& OutRequest,
+    FString& OutError,
+    FString& OutErrorCode)
+{
+    FString Mode;
+    Payload->TryGetStringField(TEXT("connectionType"), Mode);
+    Mode.TrimStartAndEndInline();
+    Mode.ToLowerInline();
+    // capture_insights_trace only writes a file; a network request used to be silently turned into one.
+    if (bForceFileMode && !Mode.IsEmpty() && Mode != TEXT("file"))
+    {
+        OutError = TEXT("capture_insights_trace always writes a trace file; use start_session for a network trace.");
+        OutErrorCode = TEXT("INVALID_CONNECTION_TYPE");
+        return false;
+    }
+    if (Mode.IsEmpty() || Mode == TEXT("file"))
+    {
+        OutRequest.Mode = ETraceStartMode::File;
+    }
+    else if (Mode == TEXT("network") || Mode == TEXT("server"))
+    {
+        OutRequest.Mode = ETraceStartMode::Network;
+    }
+    else if (Mode == TEXT("relay") || Mode == TEXT("none") || Mode == TEXT("memory"))
+    {
+        OutError = TEXT("Trace connectionType is not supported by the live bridge.");
+        OutErrorCode = TEXT("NOT_SUPPORTED");
+        return false;
+    }
+    else
+    {
+        OutError = TEXT("Unsupported trace connectionType.");
+        OutErrorCode = TEXT("INVALID_CONNECTION_TYPE");
+        return false;
+    }
+
+    FString ChannelsError;
+    if (!TryReadChannels(Payload, OutRequest.Channels, ChannelsError))
+    {
+        OutError = ChannelsError;
+        OutErrorCode = TEXT("INVALID_CHANNELS");
+        return false;
+    }
+    OutRequest.bOverwrite = GetJsonBoolField(Payload, TEXT("overwrite"), false);
+
+    if (OutRequest.Mode == ETraceStartMode::File)
+    {
+        return TryResolveTracePath(Payload, false, true, true,
+            OutRequest.OutputPath, OutError, OutErrorCode);
+    }
+    if (OutRequest.Mode == ETraceStartMode::Network)
+    {
+        return TryReadHostAndPort(Payload, true, OutRequest.Host,
+            OutRequest.Port, OutError, OutErrorCode);
+    }
+    return true;
+}
+
+bool HandleStartSession(
+    UEngineWireSubsystem* Bridge,
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
+{
+    FTraceStartRequest Request;
+    FString Error;
+    FString ErrorCode;
+    // capture_insights_trace always writes a file.
+    const bool bForceFile = McpGetFirstStringField(Payload, {TEXT("subAction"), TEXT("action")})
+        .Equals(TEXT("capture_insights_trace"), ESearchCase::IgnoreCase);
+    if (!TryBuildStartRequest(Payload, bForceFile, Request, Error, ErrorCode))
+    {
+        Bridge->SendAutomationError(RequestingSocket, RequestId, Error, ErrorCode);
+        return true;
+    }
+    // start_unreal_insights is the viewer launch: it opens Insights unless told not to. It used to open
+    // it only with launchViewer: true, and never when a trace was already running.
+    bool bLaunchViewer = McpGetFirstStringField(Payload, {TEXT("subAction"), TEXT("action")})
+        .Equals(TEXT("start_unreal_insights"), ESearchCase::IgnoreCase);
+    Payload->TryGetBoolField(TEXT("launchViewer"), bLaunchViewer);
+
+    if (HasActiveTrace())
+    {
+        TSharedPtr<FJsonObject> Result =
+            CreateInsightsResult(TEXT("start_session"), TEXT("start_trace"));
+        Result->SetStringField(TEXT("status"), TEXT("already_started"));
+        AddStartFields(Request, Result);
+        AddTraceStatus(Result);
+        const bool bViewerFailed = bLaunchViewer && !LaunchInsightsViewer(FString(), Result);
+        Bridge->SendAutomationResponse(RequestingSocket, RequestId, !bViewerFailed,
+            bViewerFailed ? TEXT("Trace session already active, but Unreal Insights could not be started.") : TEXT("Trace session already active."),
+            Result, bViewerFailed ? TEXT("VIEWER_LAUNCH_FAILED") : TEXT(""));
+        return true;
+    }
+
+    FMcpTraceOptions Options;
+    Options.bTruncateFile = Request.bOverwrite;
+    FTraceAuxiliary::EConnectionType Type = FTraceAuxiliary::EConnectionType::File;
+    FString Target;
+    if (Request.Mode == ETraceStartMode::Network)
+    {
+        Type = FTraceAuxiliary::EConnectionType::Network;
+        Target = BuildNetworkTarget(Request.Host, Request.Port);
+    }
+    else
+    {
+        Target = Request.OutputPath;
+    }
+
+    const TCHAR* TargetArg = Target.IsEmpty() ? nullptr : *Target;
+    const TCHAR* ChannelsArg = Request.Channels.IsEmpty() ? nullptr : *Request.Channels;
+    const bool bStarted = FTraceAuxiliary::Start(
+        Type, TargetArg, ChannelsArg, &Options);
+    if (!bStarted)
+    {
+        Bridge->SendAutomationError(RequestingSocket, RequestId,
+            TEXT("Failed to start trace session."), TEXT("TRACE_START_FAILED"));
+        return true;
+    }
+
+    TSharedPtr<FJsonObject> Result =
+        CreateInsightsResult(TEXT("start_session"), TEXT("start_trace"));
+    Result->SetStringField(TEXT("status"), TEXT("started"));
+    AddStartFields(Request, Result);
+    AddTraceStatus(Result);
+    // Optionally open the Unreal Insights viewer on the new trace (dogfood #173).
+    const bool bViewerFailed = bLaunchViewer &&
+        !LaunchInsightsViewer(Request.Mode == ETraceStartMode::Network ? FString() : Target, Result);
+    if (!bLaunchViewer)
+    {
+        Result->SetStringField(TEXT("hint"), TEXT("Pass launchViewer:true to open Unreal Insights on this trace"));
+    }
+    Bridge->SendAutomationResponse(RequestingSocket, RequestId, !bViewerFailed,
+        bViewerFailed ? TEXT("Trace session started, but Unreal Insights could not be started.") : TEXT("Trace session started."),
+        Result, bViewerFailed ? TEXT("VIEWER_LAUNCH_FAILED") : TEXT(""));
+    return true;
+}
+
+}

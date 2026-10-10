@@ -27,7 +27,7 @@ export const BOOLEAN_FIELDS = new Set([
   'canRespawn', 'systemWide', 'makeDefault',
   'indefinite', 'bypass', 'applyToChildren', 'applyEQ', 'spatialize', 'replace',
   // Legacy input-mapping modifier flags. The native handler reads these with
-  // TryGetBoolField (McpAutomationBridge_InputHandlersLegacyMappings.cpp), so
+  // TryGetBoolField (McpInputLegacyMappings.cpp), so
   // publishing them as strings made a schema-valid boolean unrepresentable.
   'shift', 'ctrl', 'alt', 'cmd',
   'smoothing', 'all', 'oneShot',

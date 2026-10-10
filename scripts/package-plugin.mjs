@@ -1,4 +1,4 @@
-// Package McpAutomationBridge as pre-built binaries for Blueprint-only projects.
+// Package EngineWire as pre-built binaries for Blueprint-only projects.
 //
 //   node scripts/package-plugin.mjs <UnrealEngineDir> [OutputDir] [extra RunUAT args...]
 //
@@ -19,7 +19,7 @@ import { basename, dirname, join, resolve } from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { fileURLToPath } from 'node:url';
 
-const PLUGIN = 'McpAutomationBridge';
+const PLUGIN = 'EngineWire';
 const SYMBOL_FILE = /\.(pdb|debug|sym)$/i;
 // NOT "reproducible": the zip stores each entry's build-time mtime, so the same
 // sources packaged twice produce different bytes and a different digest.

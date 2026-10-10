@@ -12,10 +12,10 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-const plugin = resolve(process.cwd(), 'plugins/McpAutomationBridge/Source');
+const plugin = resolve(process.cwd(), 'plugins/EngineWire/Source');
 const fab = (file: string): string =>
-  readFileSync(resolve(plugin, 'McpAutomationBridgeFab/Private', file), 'utf8');
-const core = (file: string): string => readFileSync(resolve(plugin, 'McpAutomationBridge', file), 'utf8');
+  readFileSync(resolve(plugin, 'EngineWireFab/Private', file), 'utf8');
+const core = (file: string): string => readFileSync(resolve(plugin, 'EngineWire', file), 'utf8');
 
 /** Comment bodies explain the rules, so rule checks ignore them. */
 const code = (text: string): string =>
@@ -111,7 +111,7 @@ describe('Interchange is cancelled by reflection', () => {
     expect(guard).toContain('TEXT("CancelAllTasks")');
     expect(guard).toContain('TEXT("IsInterchangeActive")');
     expect(guard).not.toMatch(/#include\s+"Interchange/u);
-    expect(readFileSync(resolve(plugin, 'McpAutomationBridgeFab/McpAutomationBridgeFab.Build.cs'), 'utf8'))
+    expect(readFileSync(resolve(plugin, 'EngineWireFab/EngineWireFab.Build.cs'), 'utf8'))
       .not.toMatch(/Interchange/u);
   });
 
@@ -142,7 +142,7 @@ describe('a cancelled import ends through the watcher that ends every import', (
 
 describe('what the status read says about downloads and cancels', () => {
   const describeSrc = code(fab('Import/McpFabImportDescribe.cpp'));
-  const status = code(core('Private/Domains/AssetWorkflow/Fab/McpAutomationBridge_AssetWorkflowFabImportStatus.cpp'));
+  const status = code(core('Private/Domains/AssetWorkflow/Fab/McpAssetFabImportStatus.cpp'));
 
   it('reads the percent only while the import is still downloading', () => {
     expect(describeSrc).toMatch(/Op\.State == EState::Active && Out\.Phase == TEXT\("downloading"\)/u);
@@ -164,7 +164,7 @@ describe('what the status read says about downloads and cancels', () => {
   });
 
   it('keeps the plain-id check in one place both handlers share', () => {
-    const json = code(core('Private/Domains/AssetWorkflow/Fab/McpAutomationBridge_FabImportJson.h'));
+    const json = code(core('Private/Domains/AssetWorkflow/Fab/McpFabImportJson.h'));
     expect(json).toContain('inline bool IsPlainKey(const FString& Key)');
     expect(json).toMatch(/FChar::IsAlnum\(Ch\)/u);
     expect(status).not.toContain('FChar::IsAlnum');
@@ -172,7 +172,7 @@ describe('what the status read says about downloads and cancels', () => {
 });
 
 describe('the cancel handler', () => {
-  const handler = code(core('Private/Domains/AssetWorkflow/Fab/McpAutomationBridge_AssetWorkflowFabCancel.cpp'));
+  const handler = code(core('Private/Domains/AssetWorkflow/Fab/McpAssetFabCancel.cpp'));
 
   it('looks up only a plain operation id, through the provider, and never touches Fab itself', () => {
     expect(handler).toContain('McpFabImportJson::IsPlainKey(OperationId)');
@@ -185,9 +185,9 @@ describe('the cancel handler', () => {
   });
 
   it('is dispatched, declared and implemented by the adapter like the other Fab actions', () => {
-    expect(code(core('Private/Domains/AssetWorkflow/McpAutomationBridge_AssetWorkflowHandlers.cpp'))).toContain('cancel_fab_import');
-    expect(core('Public/McpAutomationBridgeSubsystemAssetWorkflowDeclarations.h')).toContain('HandleCancelFabImport');
-    expect(code(fab('McpAutomationBridgeFabModule.cpp'))).toContain('McpFabImportOperations::RequestCancel(OperationId, OutMessage, OutErrorCode)');
+    expect(code(core('Private/Domains/AssetWorkflow/McpAssetHandlers.cpp'))).toContain('cancel_fab_import');
+    expect(core('Public/EngineWireSubsystemAssetWorkflowDeclarations.h')).toContain('HandleCancelFabImport');
+    expect(code(fab('EngineWireFabModule.cpp'))).toContain('McpFabImportOperations::RequestCancel(OperationId, OutMessage, OutErrorCode)');
     expect(code(core('Public/McpFabProvider.h'))).toContain('virtual bool CancelImport(const FString& OperationId, FString& OutMessage, FString& OutErrorCode) = 0;');
   });
 });

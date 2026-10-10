@@ -1,6 +1,8 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/wiki/ChiR24/Unreal_mcp/assets/banner.svg" alt="Unreal Engine MCP Server: let any AI assistant work inside the Unreal Editor" width="100%">
+  <img src="https://raw.githubusercontent.com/wiki/ChiR24/Unreal_mcp/assets/banner.svg" alt="EngineWire: let any AI assistant work inside the Unreal Editor" width="100%">
 </p>
+
+<h1 align="center">EngineWire</h1>
 
 <p align="center">
   <a href="https://opensource.org/licenses/MIT"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-yellow.svg"></a>
@@ -15,7 +17,7 @@
 </p>
 
 <p align="center">
-  <b>Connect Claude, Cursor, VS Code or any other MCP client to a running Unreal Editor,</b><br>
+  <b>EngineWire connects Claude, Cursor, VS Code or any other MCP client to a running Unreal Editor,</b><br>
   and let it build levels, Blueprints, UI, materials, effects and more, through a native C++ editor plugin.
 </p>
 
@@ -91,10 +93,10 @@ Nearly 400 capabilities in all, behind a single MCP tool. The assistant finds th
 ## How it works
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/wiki/ChiR24/Unreal_mcp/assets/diagrams/architecture.svg" alt="Architecture: an AI client reaches the MCP Automation Bridge plugin inside the Unreal Editor either over Streamable HTTP on port 3000 (Route A) or through the Node.js server over stdio and a WebSocket on port 8090 (Route B); the plugin drives the editor APIs on the game thread" width="100%">
+  <img src="https://raw.githubusercontent.com/wiki/ChiR24/Unreal_mcp/assets/diagrams/architecture.svg" alt="Architecture: an AI client reaches the EngineWire plugin inside the Unreal Editor either over Streamable HTTP on port 3000 (Route A) or through the Node.js server over stdio and a WebSocket on port 8090 (Route B); the plugin drives the editor APIs on the game thread" width="100%">
 </p>
 
-The **MCP Automation Bridge** plugin runs inside the editor and does all the work, on the editor's game thread. Clients reach it in one of two ways, and both expose the same single tool, `unreal`:
+The **EngineWire** plugin runs inside the editor and does all the work, on the editor's game thread. Clients reach it in one of two ways, and both expose the same single tool, `unreal`:
 
 | | 🌐 Route A · Native HTTP | 🧩 Route B · stdio |
 | --- | --- | --- |
@@ -111,13 +113,13 @@ The [Quick Start](https://github.com/ChiR24/Unreal_mcp/wiki/Quick-Start) page wa
 
 ### 1. Add the plugin
 
-Download `McpAutomationBridge-plugin-<version>.zip` from the newest `v0.6` pre-release on the [Releases page](https://github.com/ChiR24/Unreal_mcp/releases), and copy the `McpAutomationBridge` folder it contains into your project:
+Download `EngineWire-plugin-<version>.zip` from the newest `v0.6` pre-release on the [Releases page](https://github.com/ChiR24/Unreal_mcp/releases), and copy the `EngineWire` folder it contains into your project:
 
 ```text
-MyGame/Plugins/McpAutomationBridge/
+MyGame/Plugins/EngineWire/
 ```
 
-Or use a clone of this repository: copy `plugins/McpAutomationBridge/`, or reference the folder from your `.uproject` with `"AdditionalPluginDirectories": ["C:/Path/To/Unreal_mcp/plugins"]`.
+Or use a clone of this repository: copy `plugins/EngineWire/`, or reference the folder from your `.uproject` with `"AdditionalPluginDirectories": ["C:/Path/To/Unreal_mcp/plugins"]`.
 
 Open the project and let Unreal rebuild the plugin. When it's loaded, the status bar shows **`MCP off`**. If you see *"Engine modules cannot be compiled at runtime"*, build the project once in Visual Studio, Rider or Xcode. More in [Installation](https://github.com/ChiR24/Unreal_mcp/wiki/Installation).
 
@@ -134,7 +136,7 @@ Build the plugin once on a machine with the engine and a compiler, then hand out
 node scripts/package-plugin.mjs "C:/Program Files/Epic Games/UE_5.7"
 ```
 
-This writes `build/McpAutomationBridge-v<version>-UE5.7-<Platform>.zip`, where `<version>` is the `package.json` version (currently `0.6.0-beta-e`). Unzip it into `YourProject/Plugins/`. Binaries only work with the engine minor and platform they were built for: a 5.6 build won't load in 5.5, 5.7 or 5.8.
+This writes `build/EngineWire-v<version>-UE5.7-<Platform>.zip`, where `<version>` is the `package.json` version (currently `0.6.0-beta-e`). Unzip it into `YourProject/Plugins/`. Binaries only work with the engine minor and platform they were built for: a 5.6 build won't load in 5.5, 5.7 or 5.8.
 
 </details>
 
@@ -142,7 +144,7 @@ This writes `build/McpAutomationBridge-v<version>-UE5.7-<Platform>.zip`, where `
 
 **Route A · Native HTTP (no Node.js)**
 
-1. In **Edit › Project Settings › Plugins › MCP Automation Bridge**, tick **Enable Native MCP Server** (port `3000` by default), then restart the editor. The status bar now reads **`MCP :3000 (0)`**.
+1. In **Edit › Project Settings › Plugins › EngineWire**, tick **Enable Native MCP Server** (port `3000` by default), then restart the editor. The status bar now reads **`MCP :3000 (0)`**.
 
    <img src="https://raw.githubusercontent.com/wiki/ChiR24/Unreal_mcp/assets/screenshots/settings-native-mcp.png" alt="The Native MCP section of the plugin settings, with Enable Native MCP Server ticked" width="520">
 
@@ -307,7 +309,7 @@ These route requests inside the gateway; clients never list them. More in the [T
 
 Most setups touch one setting: **Enable Native MCP Server** for Route A, or `UE_PROJECT_PATH` for Route B. Everything is listed on the [Configuration](https://github.com/ChiR24/Unreal_mcp/wiki/Configuration) page.
 
-**Plugin settings** (Project Settings › Plugins › MCP Automation Bridge, saved in `Config/DefaultGame.ini`):
+**Plugin settings** (Project Settings › Plugins › EngineWire, saved in `Config/DefaultGame.ini`):
 
 | Setting | Default | |
 | --- | --- | --- |
@@ -373,7 +375,7 @@ The bridge declares its engine-plugin dependencies, so Unreal enables them toget
 | **MetaSound**, **Synthesis** | `manage_audio`: MetaSound authoring |
 | **Enhanced Input**, **Online Subsystem**, **Online Subsystem Utils** | `manage_networking`: input mappings, sessions |
 | **Interchange**, **Interchange OpenUSD**, **Data Validation**, **StructUtils** | Import/export, validation, struct helpers |
-| **Fab**, **Bridge** | Fab asset library access (optional `McpAutomationBridgeFab` module) |
+| **Fab**, **Bridge** | Fab asset library access (optional `EngineWireFab` module) |
 
 </details>
 

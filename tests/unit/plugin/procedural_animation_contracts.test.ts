@@ -13,7 +13,7 @@ import { describe, expect, it } from 'vitest';
 const source = readFileSync(
   resolve(
     process.cwd(),
-    'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Domains/Animation/Assets/McpAutomationBridge_AnimationHandlersProceduralTracks.cpp',
+    'plugins/EngineWire/Source/EngineWire/Private/Domains/Animation/Assets/McpAnimProceduralTracks.cpp',
   ),
   'utf8',
 );
@@ -48,7 +48,7 @@ describe('procedural bone tracks', () => {
     const helper = readFileSync(
       resolve(
         process.cwd(),
-        'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Foundation/BridgeHelpers/Properties/McpAutomationBridgeHelpersComponentLookup.h',
+        'plugins/EngineWire/Source/EngineWire/Private/Foundation/BridgeHelpers/Properties/McpComponentLookup.h',
       ),
       'utf8',
     );
@@ -60,7 +60,7 @@ describe('procedural bone tracks', () => {
     const create = readFileSync(
       resolve(
         process.cwd(),
-        'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Domains/Animation/Assets/McpAutomationBridge_AnimationHandlersCreateProceduralAnim.cpp',
+        'plugins/EngineWire/Source/EngineWire/Private/Domains/Animation/Assets/McpAnimCreateProceduralAnim.cpp',
       ),
       'utf8',
     );
@@ -72,7 +72,7 @@ describe('procedural bone tracks', () => {
     const settings = readFileSync(
       resolve(
         process.cwd(),
-        'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Domains/AnimationAuthoring/McpAutomationBridge_AnimationAuthoringHandlersSequenceSettings.cpp',
+        'plugins/EngineWire/Source/EngineWire/Private/Domains/AnimationAuthoring/McpAnimSequenceSettings.cpp',
       ),
       'utf8',
     );

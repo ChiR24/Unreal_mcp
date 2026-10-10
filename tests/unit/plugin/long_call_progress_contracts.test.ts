@@ -10,7 +10,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-const bridge = resolve(process.cwd(), 'plugins/McpAutomationBridge/Source/McpAutomationBridge');
+const bridge = resolve(process.cwd(), 'plugins/EngineWire/Source/EngineWire');
 /** Comment bodies explain the rules, so rule checks ignore them. */
 const code = (file: string): string =>
   readFileSync(resolve(bridge, file), 'utf8').replace(/\/\*[\s\S]*?\*\//gu, '').replace(/^[ \t]*\/\/.*$/gmu, '');
@@ -39,7 +39,7 @@ describe('an open call hears from the editor even while the game thread is held'
 
   it('pings with what the editor is doing, and answers with it as a running or queued task', () => {
     const sweep = body(keepalive, 'void FMcpNativeTransport::SweepRequestProgress()');
-    expect(sweep).toContain('McpAutomationBridge::DescribeEditorWork(RequestId)');
+    expect(sweep).toContain('EngineWire::DescribeEditorWork(RequestId)');
     const answer = body(keepalive, 'void FMcpNativeTransport::AnswerStillRunning(');
     expect(answer).toContain('bAnsweredRunning.exchange(true)');
     expect(answer).toContain('Subsystem->IsAutomationRequestWaiting(RequestId)');
@@ -71,7 +71,7 @@ describe('an open call hears from the editor even while the game thread is held'
   });
 
   it('never takes the execution lock a running handler holds', () => {
-    const header = code('Public/McpAutomationBridgeSubsystem.h');
+    const header = code('Public/EngineWireSubsystem.h');
     const waiting = header.slice(header.indexOf('bool IsAutomationRequestWaiting('));
     expect(waiting.slice(0, waiting.indexOf('}'))).not.toContain('AutomationRequestExecutionMutex');
     expect(keepalive).not.toContain('CancelAutomationRequest');
@@ -79,25 +79,25 @@ describe('an open call hears from the editor even while the game thread is held'
 });
 
 describe('every call says what the editor is busy with', () => {
-  const responses = code('Private/Core/Subsystem/McpAutomationBridgeSubsystemResponses.cpp');
+  const responses = code('Private/Core/Subsystem/EngineWireSubsystemResponses.cpp');
 
   it('names the work and its progress when a call is refused for a held game thread', () => {
     const stalled = responses.slice(responses.indexOf('case EAutomationQueueRejection::GameThreadStalled:'));
-    expect(stalled.slice(0, stalled.indexOf('break;'))).toContain('McpAutomationBridge::DescribeEditorWork()');
+    expect(stalled.slice(0, stalled.indexOf('break;'))).toContain('EngineWire::DescribeEditorWork()');
   });
 
   it('records progress for the work in flight and sends it to whichever transport holds the call', () => {
-    const send = responses.slice(responses.indexOf('void UMcpAutomationBridgeSubsystem::SendProgressUpdate('));
-    expect(send).toContain('McpAutomationBridge::ReportInFlightProgress(RequestId, Percent, Message);');
+    const send = responses.slice(responses.indexOf('void UEngineWireSubsystem::SendProgressUpdate('));
+    expect(send).toContain('EngineWire::ReportInFlightProgress(RequestId, Percent, Message);');
     expect(send).toContain('NativeTransport->SendSSEProgressUpdate(RequestId, Percent, Message);');
     expect(send).not.toContain('Origin == ERequestOrigin::NativeHTTP');
   });
 
   it('describes the action in flight, how long it has run, its last progress and the shader queue', () => {
-    const process = code('Private/Core/Requests/McpAutomationBridge_ProcessRequest.cpp');
+    const process = code('Private/Core/Requests/McpProcessRequest.cpp');
     expect(process).toContain('if (GInFlightAction.IsEmpty() || RequestId != GInFlightRequestId) return;');
     expect(process).toContain('const int32 Shaders = McpShaderJobsRemaining();');
-    expect(process).toContain('McpAutomationBridge::SetInFlightAction(RequestId,');
+    expect(process).toContain('EngineWire::SetInFlightAction(RequestId,');
   });
 });
 
@@ -118,7 +118,7 @@ describe('a folder delete reports as it goes', () => {
   });
 
   it('passes the progress and the rest of the request from the delete handler', () => {
-    const handler = code('Private/Domains/AssetWorkflow/Operations/McpAutomationBridge_AssetWorkflowAssetMutation.cpp');
+    const handler = code('Private/Domains/AssetWorkflow/Operations/McpAssetAssetMutation.cpp');
     expect(handler).toContain('McpSafeOperations::McpSafeDeleteFolder(SafePath, &Remaining, Report, DeleteSet)');
     expect(handler).toMatch(/SendProgressUpdate\(RequestId, \(PathIndex \+ Percent \/ 100\.0f\) \* 100\.0f \/ Total,/u);
   });

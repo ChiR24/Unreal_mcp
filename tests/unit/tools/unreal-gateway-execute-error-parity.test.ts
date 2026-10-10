@@ -16,15 +16,15 @@ const handleConsolidatedToolCall = vi.fn(async (_tool: string, _payload: Record<
 
 const NATIVE_CATALOG_HEADER_PATH = path.resolve(
   __dirname,
-  '../../../plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Gateway/McpNativeGatewayCatalog.h'
+  '../../../plugins/EngineWire/Source/EngineWire/Private/MCP/Gateway/McpNativeGatewayCatalog.h'
 );
 const NATIVE_GUIDANCE_PATH = path.resolve(
   __dirname,
-  '../../../plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Gateway/McpNativeGatewayGuidance.cpp'
+  '../../../plugins/EngineWire/Source/EngineWire/Private/MCP/Gateway/McpNativeGatewayGuidance.cpp'
 );
 const NATIVE_GUIDANCE_HEADER_PATH = path.resolve(
   __dirname,
-  '../../../plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Gateway/McpNativeGatewayGuidance.h'
+  '../../../plugins/EngineWire/Source/EngineWire/Private/MCP/Gateway/McpNativeGatewayGuidance.h'
 );
 // Task 27 split the single pre-split validation file into a staged pipeline
 // (parse/resolve -> orchestrate -> schema). Guided-error parity is a property of
@@ -42,7 +42,7 @@ const NATIVE_EXECUTE_PIPELINE = [
     readFileSync(
       path.resolve(
         __dirname,
-        `../../../plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/${module}`,
+        `../../../plugins/EngineWire/Source/EngineWire/Private/${module}`,
       ),
       'utf8',
     ),

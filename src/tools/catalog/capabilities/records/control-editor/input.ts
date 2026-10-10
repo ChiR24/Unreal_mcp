@@ -40,7 +40,7 @@ export const INPUT_RECORDS: readonly CapabilityRecordSource[] = [
     },
     required: [],
     // The handler already computes all three of these
-    // (Private/Domains/ControlEditor/McpAutomationBridge_ControlEditorInput.cpp),
+    // (Private/Domains/ControlEditor/McpEditorInput.cpp),
     // but the record declared no outputs at all, so the gateway stripped them and
     // left only "delivered to PIE" -- which means ROUTED, not consumed. An
     // Enhanced Input game silently ignores a raw Slate key, and with these fields

@@ -10,7 +10,7 @@ import { describe, expect, it } from 'vitest';
 import { ALL_CAPABILITY_RECORDS } from '../../../src/tools/catalog/capabilities/records/aggregate.js';
 
 const PRIVATE = join(
-  'plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private'
+  'plugins', 'EngineWire', 'Source', 'EngineWire', 'Private'
 );
 
 function nativeSource(...segments: readonly string[]): string {
@@ -31,7 +31,7 @@ function record(id: string) {
 
 describe('todo19 BB-013: create_render_target honors the canonical packagePath', () => {
   const handler = (): string =>
-    code(nativeSource('Domains', 'Texture', 'McpAutomationBridge_TextureHandlersRenderTarget.cpp'));
+    code(nativeSource('Domains', 'Texture', 'McpTextureRenderTarget.cpp'));
 
   it('reads packagePath as the primary source for the destination folder', () => {
     expect(handler()).toContain('TEXT("packagePath")');
@@ -70,7 +70,7 @@ describe('todo19 BB-015: create_material_function declares its save control', ()
 describe('todo19 BB-016: material graph reads advertise the result node', () => {
   it('get_material_stats also advertises resultNode (the always-reachable read)', () => {
     const source = code(nativeSource(
-      'Domains', 'AssetWorkflow', 'Materials', 'McpAutomationBridge_AssetWorkflowMaterialStats.cpp'
+      'Domains', 'AssetWorkflow', 'Materials', 'McpAssetMatStats.cpp'
     ));
     expect(source).toContain('TEXT("resultNode")');
     expect(source).toContain('TEXT("Main")');

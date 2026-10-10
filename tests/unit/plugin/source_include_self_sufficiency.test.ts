@@ -10,7 +10,7 @@
 // declaration disappears.
 //
 // That is not hypothetical. Adding one file under Domains/ControlEditor broke
-// Domains/Misc/McpAutomationBridge_MiscHandlersWorldObjects.cpp with twelve
+// a world-objects handler in the former Misc domain with twelve
 // "identifier not found" errors for helpers it had always used and never
 // included; the Misc domain prelude included only CoreMinimal.h. The failure
 // points at a file nobody touched, which makes it expensive to read.
@@ -26,7 +26,7 @@ import { describe, expect, it } from 'vitest';
 
 const privateRoot = resolve(
   process.cwd(),
-  'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private',
+  'plugins/EngineWire/Source/EngineWire/Private',
 );
 
 /** Helpers declared in one shared header and used across many domains. */
@@ -35,23 +35,23 @@ const SHARED_HELPERS =
 
 /** Either the umbrella or the specific header satisfies the requirement. */
 const DECLARING_HEADERS: readonly string[] = [
-  'Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h',
-  'Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersJsonFields.h',
+  'Foundation/BridgeHelpers/McpHelpers.h',
+  'Foundation/BridgeHelpers/Responses/McpJsonFields.h',
 ];
 
 /** The asset registry reads that replaced UEditorAssetLibrary's, which refuse every call during Play. */
 const ASSET_HELPERS = /\b(?:McpAssetExists|McpLoadAsset)\s*\(/u;
 const ASSET_HEADERS: readonly string[] = [
-  'Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h',
-  'Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h',
+  'Foundation/BridgeHelpers/McpHelpers.h',
+  'Foundation/BridgeHelpers/Blueprints/McpBPPaths.h',
 ];
 
 /** The wording of a refused path, declared where SanitizeProjectRelativePath is: every caller of one needs the other. */
 const PATH_REFUSAL_HELPERS = /\bMcpPathRefusalMessage\s*\(/u;
 const PATH_REFUSAL_HEADERS: readonly string[] = [
-  'Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h',
-  'Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersProjectPaths.h',
-  'Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersProjectPathsRefusal.h',
+  'Foundation/BridgeHelpers/McpHelpers.h',
+  'Foundation/BridgeHelpers/Security/McpProjectPaths.h',
+  'Foundation/BridgeHelpers/Security/McpProjectPathsRefusal.h',
 ];
 
 const INCLUDE = /#include\s+"([^"]+)"/gu;

@@ -30,7 +30,7 @@ const getTransform = async (handlerResult: unknown): Promise<Record<string, unkn
 
 const transport = (file: string): string =>
   readFileSync(
-    join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private', 'MCP', 'Transport', file),
+    join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'MCP', 'Transport', file),
     'utf8'
   ).replace(/\/\/[^\n]*/gu, ' ');
 

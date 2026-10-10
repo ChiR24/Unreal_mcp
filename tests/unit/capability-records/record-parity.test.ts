@@ -16,7 +16,7 @@
  * across the three shipped surfaces:
  *   TS canonical records  (src/tools/catalog/capabilities/records/aggregate.ts)
  *   neutral JSON          (generated/canonical-registry.generated.json)
- *   native shards         (Private/MCP/Generated/McpGeneratedCapabilityShards_*.cpp)
+ *   native shards         (Private/MCP/Generated/McpCapShard*.cpp)
  *
  * The default-scope widening makes this gate strictly stronger: even when
  * every per-parent schema check passes, a single record drift on either

@@ -7,7 +7,7 @@ const placementCheck = (): string =>
   readFileSync(
     resolve(
       process.cwd(),
-      'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Domains/ControlActor/McpAutomationBridge_ControlActorPlacementCheck.cpp',
+      'plugins/EngineWire/Source/EngineWire/Private/Domains/ControlActor/McpActorPlacementCheck.cpp',
     ),
     'utf8',
   );
@@ -67,7 +67,7 @@ describe('audit_placement rows list every actor a finding intersects', () => {
     const audit = readFileSync(
       resolve(
         process.cwd(),
-        'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Domains/ControlActor/McpAutomationBridge_ControlActorPlacementAudit.cpp',
+        'plugins/EngineWire/Source/EngineWire/Private/Domains/ControlActor/McpActorPlacementAudit.cpp',
       ),
       'utf8',
     );
@@ -79,7 +79,7 @@ describe('audit_placement rows list every actor a finding intersects', () => {
     const audit = readFileSync(
       resolve(
         process.cwd(),
-        'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Domains/ControlActor/McpAutomationBridge_ControlActorPlacementAudit.cpp',
+        'plugins/EngineWire/Source/EngineWire/Private/Domains/ControlActor/McpActorPlacementAudit.cpp',
       ),
       'utf8',
     );
@@ -91,14 +91,14 @@ describe('audit_placement rows list every actor a finding intersects', () => {
 // 20 window bands flush on a hall (1 unit into its face) and 96 awnings on a facade, "floating 139 / 521 units". The reply
 // came from set_transform, and spawn and audit_placement share the check.
 describe('the placement check does not call a wall-mounted actor floating', () => {
-  const root = 'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Domains/ControlActor';
+  const root = 'plugins/EngineWire/Source/EngineWire/Private/Domains/ControlActor';
   const read = (...segments: string[]): string => readFileSync(resolve(process.cwd(), root, ...segments), 'utf8');
   const flat = (source: string): string => source.split(/\s+/u).join(' ');
 
   it('an actor held from the side says what it is mounted on, and is neither floating nor without a surface below', () => {
     const source = flat(placementCheck());
 
-    expect(source).toContain('#include "Domains/ControlActor/Placement/McpAutomationBridge_PlacementMount.h"');
+    expect(source).toContain('#include "Domains/ControlActor/Placement/McpPlacementMount.h"');
     expect(source).toContain('} else if (Clearance > 50.0) {');
     expect(source).toContain('if (AActor *Mount = FindMount(World, Actor, SelfBox, IgnoreBelow)) { Data->SetStringField(TEXT("mountedOn"), McpActorRef(Mount)); } else { Notes.Add(FString::Printf( TEXT("floating %.0f units above the surface under it"), Clearance)); }');
     expect(source).toContain('} else if (AActor *Mount = FindMount(World, Actor, SelfBox, IgnoreBelow)) { Data->SetStringField(TEXT("mountedOn"), McpActorRef(Mount)); } else { Notes.Add(TEXT("nothing below it - it may be outside the playable area")); }');
@@ -106,7 +106,7 @@ describe('the placement check does not call a wall-mounted actor floating', () =
   });
 
   it('touching or overlapping a vertical face within the graze distance is mounted; a floor, a roof edge or the inside of a big box is not', () => {
-    const source = flat(read('Placement', 'McpAutomationBridge_PlacementMount.cpp'));
+    const source = flat(read('Placement', 'McpPlacementMount.cpp'));
 
     expect(source).toContain('if (!Other || Other == Actor || Other->IsHidden() || IsBoundsOnlyActor(Other)) { continue; }');
     expect(source).toContain('const FBox Reach = ActorBox.ExpandBy(Touch);');
@@ -148,6 +148,6 @@ describe('the placement check does not call a wall-mounted actor floating', () =
   });
 
   it('audit_placement does not count the floor under a mounted actor as its error', () => {
-    expect(read('McpAutomationBridge_ControlActorPlacementAudit.cpp')).toContain('if (!Entry->HasField(TEXT("mountedOn")) && Entry->TryGetNumberField(TEXT("groundClearance"), Clearance)) {');
+    expect(read('McpActorPlacementAudit.cpp')).toContain('if (!Entry->HasField(TEXT("mountedOn")) && Entry->TryGetNumberField(TEXT("groundClearance"), Clearance)) {');
   });
 });

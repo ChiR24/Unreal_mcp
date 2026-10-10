@@ -203,7 +203,7 @@ asserts these sources agree:
 
 - `package.json` (`version`) and `package-lock.json` (`version`)
 - `server.json` (`version` and the npm package `version`)
-- `plugins/McpAutomationBridge/McpAutomationBridge.uplugin` (`VersionName`)
+- `plugins/EngineWire/EngineWire.uplugin` (`VersionName`)
 
 The TypeScript server reads its version from `package.json` at runtime and the
 native server from the `.uplugin` `VersionName`, so neither carries a copy.
