@@ -11,8 +11,21 @@
 #include "AssetToolsModule.h"
 #include "AutomatedAssetImportData.h"
 #include "Domains/AssetWorkflow/Operations/McpAssetFbxImportOptions.h"
+#include "Domains/BlueprintGraph/Expression/McpBPGraphMathExpr.h"
 #include "EditorAssetLibrary.h"
+#include "Engine/Blueprint.h"
 #include "IAssetTools.h"
+
+namespace {
+// A Blueprint copy's variables get new GUIDs, and its Math Expressions still named the source's (they failed to
+// compile until each expression was set again by name).
+void RebindCopiedExpressions(const FString &SourcePath, UObject *Copy) {
+  UBlueprint *CopyBlueprint = Cast<UBlueprint>(Copy);
+  if (UBlueprint *Source = CopyBlueprint ? Cast<UBlueprint>(McpLoadAsset(SourcePath)) : nullptr) {
+    McpBlueprintMathExpression::RebindDuplicatedExpressions(*Source, *CopyBlueprint);
+  }
+}
+} // namespace
 
 bool UEngineWireSubsystem::HandleImportAsset(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
@@ -269,6 +282,7 @@ bool UEngineWireSubsystem::HandleDuplicateAsset(
 
       // A duplicate lives only in memory until saved; unsaved, it was gone after the next editor start.
       if (UObject *Copy = UEditorAssetLibrary::DuplicateAsset(SourceAssetPath, TargetAssetPath)) {
+        RebindCopiedExpressions(SourceAssetPath, Copy);
         ++DuplicatedCount;
         SavedCount += McpSafeAssetSave(Copy) ? 1 : 0;
       }
@@ -312,6 +326,7 @@ bool UEngineWireSubsystem::HandleDuplicateAsset(
   }
 
   if (UObject *NewAsset = UEditorAssetLibrary::DuplicateAsset(SourcePath, DestinationPath)) {
+    RebindCopiedExpressions(SourcePath, NewAsset);
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("assetPath"), DestinationPath);

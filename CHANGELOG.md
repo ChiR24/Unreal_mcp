@@ -40,6 +40,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Clearer geometry descriptions**: `innerRadius` of a torus or arch is its tube radius, not a hole; arch and revolve orientation; `mirror` keeps the original; array offsets, centre and angle are in the mesh's local space, and `count` includes the original.
 - **`set_blueprint_variables` refuses a call that names a variable the actor lacks** (`PROPERTY_NOT_FOUND`, listing the ones it has) before setting anything: it set the names it knew and still answered "Variables updated".
 - **Placement warnings check the real collision of meshes that collide on their own triangles**, as store packs and baked meshes do: a lamp post between parked cars read as intersecting four of them, and a barrier under an entrance canopy as intersecting the building.
+- **A duplicated Blueprint's Math Expression nodes read its own variables.** They kept the source's variable ids and failed to compile until each expression was set again.
+- **A Math Expression that compares an input name with a true/false value is refused before it is applied**, saying the name is a number input; an expression that does not parse says that every input is a number.
+- **`create_primitive` `sdf` refuses a size its shape type does not read**, naming the sizes it does: `extent` on a cylinder was dropped and the cylinder came out at the default radius.
 
 </details>
 

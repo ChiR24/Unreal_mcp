@@ -1507,6 +1507,30 @@ describe('a graph batch checks its expressions before any step runs', () => {
     expect(mutations.indexOf('McpBlueprintMathExpression::DescribeBoolArithmetic(Context.Blueprint, Value)'))
       .toBeLessThan(mutations.indexOf('bHandled = McpTrySetNodeAssetPropertyForMcp(TargetNode, PropertyName, Value);'));
   });
+
+  // "A != (B > 0 && C)" with A no bool variable failed as a bare "does not parse": A had become a number input.
+  it('names a lone number input compared by == or != with a true/false value, and says what an input is', () => {
+    const types = code('BlueprintGraph', 'Expression', 'McpBPGraphMathExprTypes.cpp');
+    expect(types).toContain('const bool bEquality = Parts[Index] == TEXT("==") || Parts[Index] == TEXT("!=");');
+    expect(types, 'only a name that is the whole operand under C precedence').toContain('IsEqualityEdge(Parts, RightLast + 1)');
+    expect(types, 'the literals true and false are bools').toContain('Name.Equals(TEXT("true"), ESearchCase::IgnoreCase)');
+    const mutations = code('BlueprintGraph', 'McpBPGraphNodeMutations.cpp');
+    expect(mutations).toContain('A name that is not a variable is a number input, never true/false.');
+  });
+});
+
+// A duplicated Blueprint's variables got new GUIDs, and its Math Expressions, which store member references as the
+// source's {GUID}, failed to compile until each expression was set again by name.
+describe('a duplicated Blueprint keeps its Math Expressions bound to its own variables', () => {
+  it('rewrites each source GUID to the variable name and rebuilds the node, before the copy is saved', () => {
+    const copy = code('BlueprintGraph', 'Expression', 'McpBPGraphMathExprCopy.cpp');
+    expect(copy).toContain('FBlueprintEditorUtils::FindMemberVariableNameByGuid(&Source, Guid)');
+    expect(copy).toContain('Node->ReconstructNode();');
+    const handler = code('AssetWorkflow', 'Operations', 'McpAssetImportDuplicate.cpp');
+    expect(handler.indexOf('RebindCopiedExpressions(SourcePath, NewAsset);')).toBeGreaterThan(-1);
+    expect(handler.indexOf('RebindCopiedExpressions(SourcePath, NewAsset);')).toBeLessThan(handler.indexOf('McpSafeAssetSave(NewAsset)'));
+    expect(handler.indexOf('RebindCopiedExpressions(SourceAssetPath, Copy);')).toBeLessThan(handler.indexOf('McpSafeAssetSave(Copy)'));
+  });
 });
 
 // set_default answered instancesUpdated 2 for a class with no placed copies: it counted editor preview actors.

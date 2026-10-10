@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "9aa55e36f86545b9",
+  "catalogRevision": "93816845ac97be8c",
   "recordCount": 408,
   "records": [
     {
@@ -16440,7 +16440,7 @@
               "description": "Node GUID accepted in place of nodeId."
             },
             "propertyValue": {
-              "description": "set_node_property: text for NodeComment, a number for NodePosX or NodePosY, true or false for bCommentBubbleVisible or bDisabled, Enabled, Disabled or DevelopmentOnly for EnabledState, the text of a Math Expression node's Expression (each other name becomes an input pin, except one the Blueprint has a variable of, which reads that variable; a comparison used as a number is refused: write SelectFloat(1, 0, A > B)), an asset path for a reflected field. set_pin_default_value: the pin's new default as text: a number, true or false, an enum value name, a vector as X,Y,Z (0,150,110), a rotator as P,Y,R, or an asset path."
+              "description": "set_node_property: text for NodeComment, a number for NodePosX or NodePosY, true or false for bCommentBubbleVisible or bDisabled, Enabled, Disabled or DevelopmentOnly for EnabledState, the text of a Math Expression node's Expression (each other name becomes a number input pin, except one the Blueprint has a variable of, which reads that variable; a comparison used as a number is refused: write SelectFloat(1, 0, A > B); an input pin is never true/false, so join true/false values from other nodes with BooleanAND, BooleanOR or BooleanXOR nodes), an asset path for a reflected field. set_pin_default_value: the pin's new default as text: a number, true or false, an enum value name, a vector as X,Y,Z (0,150,110), a rotator as P,Y,R, or an asset path."
             },
             "pinName": {
               "type": "string",
@@ -16916,8 +16916,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "7fbcd82d1e69e6b6a03457ba90c4d353a3106d06e9374840203c823de7dc75bc",
-        "content": "b77662575c3a62ad9cef55ca583ad613afdee3fe057f5822e2ae848ffba7469c"
+        "schema": "041641bcf8d66bd83b1829cf3972c8e6883f32b5ebb46d53dee3cf5c3977dc8e",
+        "content": "d8c9055a6cffc967938bd4efdb017333b5b83771df5efb9c872c673886224abb"
       }
     },
     {
@@ -63202,7 +63202,7 @@
                       "torus",
                       "cone"
                     ],
-                    "description": "sphere (radius), ellipsoid (radii), box (extent = half size, rounding), capsule (radius, length of the straight part, along local Z), cylinder (radius, length, rounding, along local Z), torus (radius to the tube centre, thickness = tube radius, in local XY), cone (radius at the bottom, topRadius, length, along local Z, rounded ends)."
+                    "description": "sphere (radius), ellipsoid (radii), box (extent = half size, rounding), capsule (radius, length of the straight part, along local Z), cylinder (radius, length, rounding, along local Z), torus (radius to the tube centre, thickness = tube radius, in local XY), cone (radius at the bottom, topRadius, length, along local Z, rounded ends). radius also sets an ellipsoid's radii and a box's extent when those are left out; any other size a type does not read is refused."
                   },
                   "operation": {
                     "type": "string",
@@ -63702,8 +63702,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "f65aa7f925de49adf0d86016c8215a14d24b32361db87312c1b1024e91f620fe",
-        "content": "f4641454df4457c9ef542f4d6b267c9159e380e3f493c9fa67a2f1d2b8c85120"
+        "schema": "5e33520d58c50a0f4d857b7b93e85616d3753331254f7a32555f22f00e3f80c8",
+        "content": "025bb7a0c6e28910820bda8c84601bffc43c9c78e7098b04cf7d28c3a064162e"
       }
     },
     {

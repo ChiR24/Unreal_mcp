@@ -30,16 +30,23 @@ int32 MatchingBracket(const TArray<FString>& Parts, int32 Index, int32 Step)
   return INDEX_NONE;
 }
 
+// Whether Parts[At] bounds an operand of == or !=: the expression's edge, a bracket, a comma, or an operator that binds
+// looser (the node parses with C precedence). A lone name between two such bounds is the whole operand.
+bool IsEqualityEdge(const TArray<FString>& Parts, int32 At)
+{
+  static const TArray<FString> Looser = {TEXT("("), TEXT(")"), TEXT(","), TEXT("&&"), TEXT("||"), TEXT("&"), TEXT("|"),
+                                         TEXT("^")};
+  return !Parts.IsValidIndex(At) || Looser.Contains(Parts[At]);
+}
+
 // Whether Parts[First..Last] is true/false: a bool variable, or a bracket whose own level compares or joins. A call's
 // result is never judged; its type is not known here.
-bool IsTrueFalseOperand(const TArray<FString>& Parts, int32 First, int32 Last, const UClass* Members,
+bool IsTrueFalseOperand(const TArray<FString>& Parts, int32 First, int32 Last, const UBlueprint* Blueprint,
                         const TSet<FName>& ExtraBools)
 {
   if (First == Last)
   {
-    const FName Name(*Parts[First]);
-    return CastField<FBoolProperty>(Members ? Members->FindPropertyByName(Name) : nullptr) != nullptr ||
-           ExtraBools.Contains(Name);
+    return IsBoolName(Blueprint, Parts[First], ExtraBools);
   }
   static const TArray<FString> TrueFalse = {TEXT("=="), TEXT("!="), TEXT("<"), TEXT(">"), TEXT("<="), TEXT(">="),
                                             TEXT("&&"), TEXT("||")};
@@ -56,16 +63,24 @@ bool IsTrueFalseOperand(const TArray<FString>& Parts, int32 First, int32 Last, c
 }
 }
 
+bool IsBoolName(const UBlueprint* Blueprint, const FString& Name, const TSet<FName>& ExtraBools)
+{
+  const UClass* Members = Blueprint ? Blueprint->SkeletonGeneratedClass.Get() : nullptr;
+  return Name.Equals(TEXT("true"), ESearchCase::IgnoreCase) || Name.Equals(TEXT("false"), ESearchCase::IgnoreCase) ||
+         ExtraBools.Contains(FName(*Name)) ||
+         CastField<FBoolProperty>(Members ? Members->FindPropertyByName(FName(*Name)) : nullptr) != nullptr;
+}
+
 FString DescribeBoolArithmetic(const UBlueprint* Blueprint, const FString& Expression, const TSet<FName>& ExtraBools)
 {
   const TArray<FString> Parts = TokenizeExpression(Expression);
-  const UClass* Members = Blueprint ? Blueprint->SkeletonGeneratedClass.Get() : nullptr;
   static const TArray<FString> Arithmetic = {TEXT("+"), TEXT("-"), TEXT("*"), TEXT("/"), TEXT("%")};
   TArray<FString> Notes;
   TArray<FString> Named; // an operand is named once, at its first operator
   for (int32 Index = 1; Index + 1 < Parts.Num(); ++Index)
   {
-    if (!Arithmetic.Contains(Parts[Index]))
+    const bool bEquality = Parts[Index] == TEXT("==") || Parts[Index] == TEXT("!=");
+    if (!bEquality && !Arithmetic.Contains(Parts[Index]))
     {
       continue;
     }
@@ -86,10 +101,31 @@ FString DescribeBoolArithmetic(const UBlueprint* Blueprint, const FString& Expre
     {
       RightLast = Index + 1;
     }
+    // == and != take two numbers or two bools: a lone name that is no bool variable is a number input, and comparing it
+    // with a true/false value does not parse. The bare "does not parse" hid that the name had become a number.
+    if (bEquality)
+    {
+      const bool bWhole = LeftFirst != INDEX_NONE && RightLast != INDEX_NONE && IsEqualityEdge(Parts, LeftFirst - 1) &&
+                          IsEqualityEdge(Parts, RightLast + 1);
+      const bool bLeft = bWhole && IsTrueFalseOperand(Parts, LeftFirst, Index - 1, Blueprint, ExtraBools);
+      const bool bRight = bWhole && IsTrueFalseOperand(Parts, Index + 1, RightLast, Blueprint, ExtraBools);
+      const int32 Number = bRight && !bLeft && LeftFirst == Index - 1   ? Index - 1
+                           : bLeft && !bRight && RightLast == Index + 1 ? Index + 1
+                                                                        : INDEX_NONE;
+      if (Number != INDEX_NONE)
+      {
+        Notes.AddUnique(FString::Printf(TEXT("'%s' is a number here (a name that is not a bool variable becomes a "
+                                             "number input), but %s compares it with a true/false value: add a bool "
+                                             "variable %s, compare it (%s > 0), or join true/false values from other "
+                                             "nodes with BooleanAND, BooleanOR or BooleanXOR nodes."),
+                                        *Parts[Number], *Parts[Index], *Parts[Number], *Parts[Number]));
+      }
+      continue;
+    }
     for (const TPair<int32, int32>& Operand : {TPair<int32, int32>(LeftFirst, Index - 1), TPair<int32, int32>(Index + 1, RightLast)})
     {
       if (Operand.Key == INDEX_NONE || Operand.Value == INDEX_NONE ||
-          !IsTrueFalseOperand(Parts, Operand.Key, Operand.Value, Members, ExtraBools))
+          !IsTrueFalseOperand(Parts, Operand.Key, Operand.Value, Blueprint, ExtraBools))
       {
         continue;
       }

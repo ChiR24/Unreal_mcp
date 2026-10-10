@@ -23,9 +23,14 @@ FString DescribeOperatorMisuse(const UBlueprint* Blueprint, const FString& Expre
                                const TSet<FName>& ExtraBools = TSet<FName>());
 
 // A true/false value used as a number: a bracketed comparison or && / ||, or a bool variable, as an operand of + - * /
-// or %. The node turns no bool into a number, so the parse succeeds and only the Blueprint compile fails. Empty when none.
+// or %. The node turns no bool into a number, so the parse succeeds and only the Blueprint compile fails. Also a lone
+// name that is no bool variable (a number input) compared by == or != with a true/false value, which does not parse.
+// Empty when none.
 FString DescribeBoolArithmetic(const UBlueprint* Blueprint, const FString& Expression,
                                const TSet<FName>& ExtraBools = TSet<FName>());
+
+// Whether Name reads true/false: a bool variable of the Blueprint, one of ExtraBools, or the literal true or false.
+bool IsBoolName(const UBlueprint* Blueprint, const FString& Name, const TSet<FName>& ExtraBools);
 
 // All of the above in one text; empty when Expression shows none of those problems.
 FString DescribeProblems(const UBlueprint* Blueprint, const FString& Expression,
@@ -38,4 +43,8 @@ TArray<FString> TokenizeExpression(const FString& Expression);
 // own variables instead (no pin to wire).
 void DescribeInputs(const UBlueprint* Blueprint, const UEdGraphNode& Node, const FString& Expression,
                     const TSharedPtr<FJsonObject>& Result);
+
+// After Copy was duplicated from Source: rewrites each Math Expression's member references from Source's variable
+// GUIDs to their names and rebuilds the node, so it binds the copy's variables. Returns how many nodes it rewrote.
+int32 RebindDuplicatedExpressions(UBlueprint& Source, UBlueprint& Copy);
 }

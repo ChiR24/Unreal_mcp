@@ -52,6 +52,11 @@ FString ReadShapes(const TSharedPtr<FJsonObject>& Payload, TArray<FShape>& Out)
         {TEXT("box"), EShape::Box}, {TEXT("capsule"), EShape::Capsule}, {TEXT("cylinder"), EShape::Cylinder},
         {TEXT("torus"), EShape::Torus}, {TEXT("cone"), EShape::Cone}};
     static const TMap<FString, EOp> Ops = {{TEXT("union"), EOp::Union}, {TEXT("subtract"), EOp::Subtract}, {TEXT("intersect"), EOp::Intersect}};
+    // The sizes each type reads (radius is the ellipsoid's and the box's default). Any other size was dropped
+    // silently: extent on a cylinder made the default radius-50 one.
+    static const TMap<FString, FString> Reads = {{TEXT("sphere"), TEXT("radius")}, {TEXT("ellipsoid"), TEXT("radii, radius")}, {TEXT("box"), TEXT("extent, rounding, radius")},
+        {TEXT("capsule"), TEXT("radius, length")}, {TEXT("cylinder"), TEXT("radius, length, rounding")}, {TEXT("torus"), TEXT("radius, thickness")}, {TEXT("cone"), TEXT("radius, topRadius, length")}};
+    static const TArray<FString> Sizes = {TEXT("radius"), TEXT("radii"), TEXT("extent"), TEXT("rounding"), TEXT("length"), TEXT("topRadius"), TEXT("thickness")};
     const TArray<TSharedPtr<FJsonValue>>* Items = nullptr;
     if (!Payload->TryGetArrayField(TEXT("shapes"), Items) || !Items || Items->Num() == 0 || Items->Num() > 64)
     {
@@ -64,11 +69,18 @@ FString ReadShapes(const TSharedPtr<FJsonObject>& Payload, TArray<FShape>& Out)
         {
             return FString::Printf(TEXT("shapes[%d] is not an object."), Index);
         }
-        const EShape* Type = Types.Find(GetJsonStringField(*Obj, TEXT("type")).ToLower());
+        const FString TypeName = GetJsonStringField(*Obj, TEXT("type")).ToLower();
+        const EShape* Type = Types.Find(TypeName);
         const EOp* Op = Ops.Find(GetJsonStringField(*Obj, TEXT("operation"), TEXT("union")).ToLower());
         if (!Type || !Op)
         {
             return FString::Printf(TEXT("shapes[%d] needs type sphere, ellipsoid, box, capsule, cylinder, torus or cone, and operation union, subtract or intersect."), Index);
+        }
+        TArray<FString> Read;
+        Reads[TypeName].ParseIntoArray(Read, TEXT(", "));
+        if (const FString* Unread = Sizes.FindByPredicate([&](const FString& Size) { return (*Obj)->HasField(Size) && !Read.Contains(Size); }))
+        {
+            return FString::Printf(TEXT("shapes[%d] is a %s, which does not read %s; a %s reads %s."), Index, *TypeName, **Unread, *TypeName, *Reads[TypeName]);
         }
         if (Index == 0 && *Op != EOp::Union)
         {

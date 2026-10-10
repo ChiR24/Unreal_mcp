@@ -146,8 +146,7 @@ TArray<FString> TokenizeExpression(const FString& Expression)
 FString DescribeOperatorMisuse(const UBlueprint* Blueprint, const FString& Expression, const TSet<FName>& ExtraBools)
 {
   const TArray<FString> Parts = TokenizeExpression(Expression);
-  const UClass* Members = Blueprint ? Blueprint->SkeletonGeneratedClass.Get() : nullptr;
-  const TArray<FString> Comparisons = {TEXT("=="), TEXT("!="), TEXT("<"), TEXT(">"), TEXT("<="), TEXT(">=")};
+  const TArray<FString> Comparisons ={TEXT("=="), TEXT("!="), TEXT("<"), TEXT(">"), TEXT("<="), TEXT(">=")};
   TArray<FString> Notes;
   for (int32 Index = 0; Index < Parts.Num(); ++Index)
   {
@@ -170,12 +169,12 @@ FString DescribeOperatorMisuse(const UBlueprint* Blueprint, const FString& Expre
     {
       continue;
     }
-    const FProperty* Member = Members ? Members->FindPropertyByName(FName(*Parts[Index])) : nullptr;
-    if (!CastField<FBoolProperty>(Member) && !ExtraBools.Contains(FName(*Parts[Index])))
+    if (!IsBoolName(Blueprint, Parts[Index], ExtraBools))
     {
       Notes.AddUnique(FString::Printf(TEXT("'%s' is a number here (a name that is not a bool variable becomes a "
                                            "number input), but && and || take true/false: compare it (%s > 0), "
-                                           "name a bool variable, or wire a BooleanAND node."),
+                                           "name a bool variable, or join true/false values from other nodes with "
+                                           "BooleanAND or BooleanOR nodes."),
                                       *Parts[Index], *Parts[Index]));
     }
   }

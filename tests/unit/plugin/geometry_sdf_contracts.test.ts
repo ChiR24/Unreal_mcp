@@ -78,6 +78,13 @@ describe('create_sdf meshes one field', () => {
     expect(handler).toContain('TEXT("SDF_EMPTY")');
   });
 
+  // extent on a cylinder was dropped silently and the cylinder came out with the default radius 50.
+  it('refuses a size its shape type does not read, naming the sizes that type reads', () => {
+    expect(handler).toContain('{TEXT("cylinder"), TEXT("radius, length, rounding")}');
+    expect(handler).toContain('return (*Obj)->HasField(Size) && !Read.Contains(Size);');
+    expect(handler).toContain('which does not read %s; a %s reads %s.');
+  });
+
   it('holds the mesh it made to the triangle cap, so the documented 256 is reachable', () => {
     // 8 * N^2 refused every resolution-256 call (524,288 > 500,000) whatever the shapes were.
     expect(handler).toContain('GuardMeshBudget(Self, RequestId, Socket, Mesh.TriangleCount(), TEXT("SDF meshing at this resolution"))');
