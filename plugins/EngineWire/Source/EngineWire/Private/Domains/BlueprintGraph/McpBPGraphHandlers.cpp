@@ -37,11 +37,19 @@ static UFunction* FindUniqueLibraryFunction(const FString& Name)
 }
 
 // The editor shows K2_AddLocalRotation as AddLocalRotation, and a caller writes the name it sees: AddLocalRotation
-// failed FUNCTION_NOT_FOUND on SceneComponent.
+// failed FUNCTION_NOT_FOUND on SceneComponent. The plain name can also be a native function Blueprints cannot call
+// (TextRenderComponent's SetText beside the K2_SetText the editor shows as Set Text): the node was made and the
+// Blueprint then failed to compile, so a name that is not Blueprint-callable gives way to its K2_ twin.
 static UFunction* FindCallableNamed(UClass* Class, const FString& Name)
 {
     UFunction* Function = Class->FindFunctionByName(*Name);
-    return Function || Name.StartsWith(TEXT("K2_")) ? Function : Class->FindFunctionByName(*(TEXT("K2_") + Name));
+    if (Name.StartsWith(TEXT("K2_")) ||
+        (Function && Function->HasAnyFunctionFlags(FUNC_BlueprintCallable | FUNC_BlueprintPure)))
+    {
+        return Function;
+    }
+    UFunction* Twin = Class->FindFunctionByName(*(TEXT("K2_") + Name));
+    return Twin ? Twin : Function;
 }
 
 UFunction* ResolveGraphCallFunction(UBlueprint* Blueprint, const FString& MemberName,

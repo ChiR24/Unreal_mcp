@@ -631,4 +631,14 @@ describe('a call node takes a function by the name the editor shows', () => {
     expect(resolve).toContain('FindCallableNamed(Candidate, MemberName)');
     expect(resolve).not.toMatch(/->FindFunctionByName\(\*MemberName\)/u);
   });
+
+  // TextRenderComponent's SetText is native only: a node made from it failed the Blueprint's compile, while the
+  // editor's Set Text is K2_SetText.
+  it('prefers the K2_ twin when the plain name is not Blueprint-callable', () => {
+    const source = read('Domains', 'BlueprintGraph', 'McpBPGraphHandlers.cpp');
+    const helper = sliceBetween(source, 'static UFunction* FindCallableNamed(', 'UFunction* ResolveGraphCallFunction(');
+
+    expect(helper).toContain('Function->HasAnyFunctionFlags(FUNC_BlueprintCallable | FUNC_BlueprintPure)');
+    expect(helper).toContain('return Twin ? Twin : Function;');
+  });
 });
