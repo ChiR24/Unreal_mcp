@@ -61,7 +61,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`save_all` with `assetPaths` writes a named asset the editor holds even when it is not marked dirty**: it answered "Saved 0" for a material whose usage flag the editor set while loading.
 - **A link the engine makes through a conversion node reads `connected: true`** (`connect_pins` and graph batches): an int wired into a float pin answered `connected: false` beside `conversionInserted`, as if the link had failed.
 - **`get_stats` says when the editor window is minimized** (`windowMinimized`, with a warning): nothing is drawn then, so its render and GPU times were stale (the same on every read, the GPU time up to 750 ms).
-- **`resume` says when the game paused itself**: it answered "PIE session resumed" while the game's own pause (an intro card, a pause menu) held the world still. It now fails with `GAME_PAUSED`, and `unpauseGame` lifts that pause too.
+- **`resume` says when the game paused itself**: it answered "PIE session resumed" while the game's own pause (an intro card, a pause menu) held the world still. It now fails with `GAME_PAUSED`, and `unpauseGame` lifts that pause too; `play` warns when the editor window is minimized, which freezes such a card.
 
 </details>
 

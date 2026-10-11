@@ -43,7 +43,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **A duplicated Blueprint's Math Expressions are rebound to its own variables** (`RebindDuplicatedExpressions`: each source `{GUID}` rewritten to the variable name, then `ReconstructNode`), and the copy is compiled after its captured lines are dropped (`ForgetCapturedMessages`), so the reply shows only what still fails.
 - **`connect_pins` counts a link through the inserted conversion node as connected**: both pins linked to that node, not only a direct link.
 - **`get_stats` performance reports `windowMinimized`** (the `FGlobalTabmanager` root window) with a warning: a minimized editor draws no frame, so the render, RHI and GPU times are left from the last one.
-- **`resume` checks the game's own pause** (`AWorldSettings::GetPauserPlayerState`) after clearing `bDebugPauseExecution`: it fails `GAME_PAUSED` with `pausedBy`, and `unpauseGame` calls `UGameplayStatics::SetGamePaused(false)` first.
+- **`resume` checks the game's own pause** (`AWorldSettings::GetPauserPlayerState`) after clearing `bDebugPauseExecution`: it fails `GAME_PAUSED` with `pausedBy`, and `unpauseGame` calls `UGameplayStatics::SetGamePaused(false)` first. `play` warns when the root window is minimized (no widget is painted, so a card on a timer never clears).
 ## [0.6.0-beta-e] - 2026-10-09
 
 Plugin-side changes since the `v0.6.0-beta-d` tag, from the code diff. The server-side view is in the root `CHANGELOG.md`.

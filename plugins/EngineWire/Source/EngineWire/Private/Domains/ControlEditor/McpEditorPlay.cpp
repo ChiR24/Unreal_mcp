@@ -1,5 +1,6 @@
 #include "Domains/ControlEditor/McpEditorSupport.h"
 
+#include "Framework/Docking/TabManager.h"
 #include "GameFramework/PlayerState.h"
 #include "GameFramework/WorldSettings.h"
 #include "Kismet/GameplayStatics.h"
@@ -43,6 +44,17 @@ bool UEngineWireSubsystem::HandleControlEditorPlay(
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), bStarted);
     if (World) { Resp->SetStringField(TEXT("pieWorld"), World->GetOutermost()->GetName()); }
+    // A minimized editor paints no widget, so a title or intro card that clears itself on a timer stood still and
+    // the game it paused looked hung.
+    const TSharedPtr<SWindow> Root = FGlobalTabmanager::Get()->GetRootWindow();
+    if (bStarted && Root.IsValid() && Root->IsWindowMinimized()) {
+      TArray<TSharedPtr<FJsonValue>> Warnings;
+      Warnings.Add(MakeShared<FJsonValueString>(TEXT(
+          "The editor window is minimized: the game runs at about 3 fps and its widgets are not painted, so a title "
+          "or intro card that clears itself on a timer stands still, and a game it paused stays paused. Restore it "
+          "(control_editor configure_editor setting window), or lift such a pause with resume unpauseGame.")));
+      Resp->SetArrayField(TEXT("warnings"), Warnings);
+    }
     WeakThis->SendAutomationResponse(Socket, RequestId, bStarted,
         bStarted ? TEXT("Play in Editor started") : TEXT("Play in Editor was requested but no play world began within 20 s"),
         Resp, bStarted ? FString() : TEXT("PIE_START_TIMEOUT"));

@@ -1776,6 +1776,8 @@ describe('save_all names the packages it left unsaved', () => {
     expect(play).toContain('if (Settings && Settings->GetPauserPlayerState() && GetJsonBoolField(Payload, TEXT("unpauseGame"))) {');
     expect(play).toContain('UGameplayStatics::SetGamePaused(GEditor->PlayWorld, false);');
     expect(play).toMatch(/Paused->SetStringField\(TEXT\("pausedBy"\), Pauser->GetName\(\)\);\s*SendStandardErrorResponse\(this, Socket, RequestId, TEXT\("GAME_PAUSED"\)/u);
+    // play answered "started" while the minimized editor froze the game's intro card, which held the game paused.
+    expect(play).toContain('if (bStarted && Root.IsValid() && Root->IsWindowMinimized()) {');
   });
 
   // A material given a usage flag while a mesh was loading was never marked dirty: assetPaths naming it saved 0.
