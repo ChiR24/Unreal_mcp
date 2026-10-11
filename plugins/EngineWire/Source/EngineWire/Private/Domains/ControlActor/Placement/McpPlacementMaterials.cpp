@@ -22,7 +22,7 @@ FMcpPreviewMaterialSaver::~FMcpPreviewMaterialSaver()
         UMaterialInterface* Material = Row->TryGetBoolField(TEXT("unsaved"), bUnsaved) && bUnsaved
             ? FindObject<UMaterialInterface>(nullptr, *Row->GetStringField(TEXT("material")))
             : nullptr;
-        if (Material && Material->GetOutermost()->GetName().StartsWith(TEXT("/Game/")) && McpSafeAssetSave(Material))
+        if (Material && Material->GetOutermost()->GetName().StartsWith(TEXT("/Game/")) && McpSafeOperations::McpSafeAssetSave(Material))
         {
             UE_LOG(LogTemp, Log, TEXT("EngineWire: saved %s, which needs the %s usage flag it was given"),
                    *Material->GetPathName(), *Row->GetStringField(TEXT("usage")));

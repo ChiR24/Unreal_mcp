@@ -2221,7 +2221,7 @@ describe('validate_assets materialUsage lists the usage flags a cooked game woul
     const saver = code('ControlActor', 'Placement', 'McpPlacementMaterials.cpp');
     // The compile can set the flag before the preview: the saver asks which needed flags are set but unsaved.
     expect(saver).toContain('McpSystemControlHandlers::McpMissingMaterialUsage(Blueprint.Get())');
-    expect(saver, 'project content only').toContain('Material->GetOutermost()->GetName().StartsWith(TEXT("/Game/")) && McpSafeAssetSave(Material)');
+    expect(saver, 'project content only').toContain('Material->GetOutermost()->GetName().StartsWith(TEXT("/Game/")) && McpSafeOperations::McpSafeAssetSave(Material)');
   });
 });
 

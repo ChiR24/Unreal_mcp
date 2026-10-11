@@ -129,6 +129,20 @@ describe('plugin translation units do not borrow declarations from unity-blob ne
     expect(users.map(([path]) => path).filter((path) => !reachesDeclaringHeader(path, headers)).sort()).toEqual([]);
   });
 
+  // The save and load wrappers live in namespace McpSafeOperations; Safety/McpSafeOperations.h (and a few domain
+  // preludes) bring them out with a using. A placement file that included only the inner header compiled while a blob
+  // neighbour supplied the using, then failed when adding a materials file reshuffled the blobs.
+  it('every unqualified call of a safe save or load wrapper sees a using that names it', () => {
+    for (const helper of ['McpSafeAssetSave', 'McpSafeLevelSave', 'McpSafeLoadMap']) {
+      const using = new RegExp(`using\\s+McpSafeOperations::${helper}\\s*;|using\\s+namespace\\s+McpSafeOperations\\b`, 'u');
+      const call = new RegExp(`(?<!::)\\b${helper}\\s*\\(`, 'u');
+      const providers = [...sources].filter(([, body]) => using.test(withoutComments(body))).map(([path]) => path);
+      const users = [...sources].filter(([path, body]) => path.endsWith('.cpp') && !path.startsWith('Safety/') && call.test(withoutComments(body)));
+      expect(users.length, helper).toBeGreaterThan(0);
+      expect(users.map(([path]) => path).filter((path) => !providers.includes(path) && !reachesDeclaringHeader(path, providers)).sort(), helper).toEqual([]);
+    }
+  });
+
   it('every user of the path refusal wording includes the header that declares it', () => {
     const users = [...sources].filter(([path, body]) => /\.(?:cpp|h)$/u.test(path) && PATH_REFUSAL_HELPERS.test(body));
     expect(users.length).toBeGreaterThan(50);
