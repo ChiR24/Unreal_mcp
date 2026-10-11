@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "9835c71c7b7817e5",
+  "catalogRevision": "770cbefebacfb59a",
   "recordCount": 410,
   "records": [
     {
@@ -96470,7 +96470,12 @@
           "find broken assets",
           "verify assets",
           "data validation",
-          "run validators"
+          "run validators",
+          "material usage flags",
+          "missing usage flag",
+          "default material in packaged game",
+          "check materials before packaging",
+          "nanite material usage"
         ],
         "summary": "Check that assets load without error, and with dataValidation that they pass the project's and the engine's Data Validation (the editor's Validate Assets): each asset path, or every asset under a folder (recursive by default); returns isValid, per-path results and the checked and invalid counts.",
         "whenToUse": [
@@ -96516,7 +96521,7 @@
             },
             "materialUsage": {
               "type": "boolean",
-              "description": "Also list the material usage flags the assets' meshes need and their base materials lack (default false): a Nanite static mesh's slots, a skeletal mesh's, and a Blueprint's mesh components (Nanite, instanced, spline or skeletal), as materialUsage [{material, usage, property, unsaved, component, asset}] (a folder: at most 40, with materialUsageCount). The editor sets such a flag only while it draws the mesh outside play, so a mesh that only appears in play draws the default material there and in a cooked game; set property true on the material (inspect set_property) to fix one. unsaved true: the editor set the flag (drawing a preview or loading a mesh sets it) but it is not on disk yet; save that material (control_editor save_all with assetPaths). On UE 5.8 a material instance holds its own flags, so material can name the instance. A missing flag makes its row invalid."
+              "description": "Also list the material usage flags the assets' meshes need and their materials lack (default false): a Nanite static mesh's slots, a skeletal mesh's, and a Blueprint's mesh components (Nanite, instanced, spline or skeletal), as materialUsage [{material, usage, property, unsaved, component, asset}] (a folder: at most 40, with materialUsageCount). The editor sets such a flag only while it draws the mesh outside play, so a mesh that only appears in play draws the default material there and in a cooked game; set property true on the material (inspect set_property) to fix one. unsaved true: the editor set the flag (drawing a preview or loading a mesh sets it) but it is not on disk yet; save that material (control_editor save_all with assetPaths). On UE 5.8 a material instance holds its own flags, so material can name the instance. A missing flag makes its row invalid."
             }
           },
           "required": [
@@ -96626,8 +96631,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "b3577a27f7cf97894a29b41ca170dc4a12a8b0de042cdf73875b4971f9d206fb",
-        "content": "06076d98d26969ac846a312dea1619a036bf3a23c95900cc74b8cb558cb8c5c2"
+        "schema": "1a4c8a9c7a840611c9ceb3d828ecc414f3929426fb5538234d6a451fd04c8acc",
+        "content": "16521da19d16bd1b28757c0879b29c0f91ee7284eaf55c3b747b16ec134b8ff6"
       }
     },
     {

@@ -403,4 +403,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'game fps', accepted: ['inspect.get_stats'] },
   { query: 'how fast does the game run', accepted: ['inspect.get_stats'] },
   { query: 'frame time of the game', accepted: ['inspect.get_stats'] },
+  { query: 'material usage flags', accepted: ['system_control.validate_assets'] },
+  { query: 'default material in packaged game', accepted: ['system_control.validate_assets'] },
+  { query: 'check nanite materials before packaging', accepted: ['system_control.validate_assets'] },
 ];
