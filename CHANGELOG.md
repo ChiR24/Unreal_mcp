@@ -45,6 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details>
 <summary><b>🔧 Fixed</b></summary>
 
+- **A child Blueprint can restyle its parent Blueprint's parts**: `edit_scs` `modify_component` and `attachTo` reached only the Blueprint's own and native components, so a part `get_scs` listed as inherited answered that it was neither.
 - **`create_node` and `add_node` refuse a node the graph cannot hold** (`NODE_NOT_ALLOWED_IN_GRAPH`): an animation node placed in an EventGraph compiled clean and never ran.
 - **`import` answers with the mesh it brought in**, not whichever asset the importer listed first (a material or texture could take the destination name).
 - **Opening a level answers once it has settled** (`settledSeconds`), its textures streamed in and the viewport's game view kept: a screenshot right after showed placeholder textures and editor icons. The screenshot contract says water and texture detail follow a far camera jump over the next frames.

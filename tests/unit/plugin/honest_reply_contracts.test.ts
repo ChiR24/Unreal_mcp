@@ -958,6 +958,11 @@ describe('one read on several objects', () => {
     expect(source).toMatch(/if \(Reply\.bSuccess\) \+\+Read;\s*else Row->SetStringField\(TEXT\("error"\), Reply\.Message\);/u);
     expect(source).toContain('Data->SetArrayField(TEXT("targets"), Targets);');
   });
+  // A missing object answered "Unable to find object" once per property name, each under missingProperties.
+  it('an object that is not there is named once, before any property is read', () => {
+    const source = code('Property', 'McpPropObjectGet.cpp');
+    expect(source).toMatch(/if \(!McpHandlerUtils::ResolveObjectFromPath\(Path\)\) \{\s*Row->SetStringField\(TEXT\("error"\), McpHandlerUtils::DescribeObjectNotFound\(Path\)\);\s*Targets\.Add\(MakeShared<FJsonValueObject>\(Row\)\);\s*continue;\s*\}/u);
+  });
 });
 
 describe('list reads struct members of an actor', () => {
@@ -1694,6 +1699,21 @@ describe('a batch-added component says where it was attached', () => {
     expect(resolve).toContain('OpSummary->SetStringField(TEXT("attachedTo"), Where);');
     const ops = code('Blueprint', 'Components', 'McpBPModifyScsComponentOps.cpp');
     expect(ops.match(/McpScsParent::ReportParent\(/gu)?.length).toBe(2);
+  });
+});
+
+// A child Blueprint's edit_scs could not touch a part of its parent Blueprint: get_scs listed it as inherited, while
+// modify and attachTo answered that it was neither the Blueprint's own component nor one it inherits.
+describe('a child Blueprint edits and attaches to its parent Blueprint parts', () => {
+  it('modify edits the child override of a parent part, undone when nothing lands', () => {
+    const ops = code('Blueprint', 'Components', 'McpBPModifyScsComponentOps.cpp');
+    expect(ops).toContain('Template = McpPropertyCdoComponents::FindCdoComponent(LocalBP, LocalBP->GeneratedClass->GetDefaultObject(), ComponentName, true, &Created.Handler, &Created.Key);');
+    expect(ops).toMatch(/if \(!bAnySuccess\) \{\s*Created\.Rollback\(\);/u);
+  });
+  it('attachTo names a parent Blueprint part by variable, as the Components panel does', () => {
+    const resolve = code('Blueprint', 'Components', 'McpBPScsParentResolve.h');
+    expect(resolve).toMatch(/if \(bInherited && Node->GetVariableName\(\)\.ToString\(\)\.Equals\(Trimmed, ESearchCase::IgnoreCase\)\) InheritedNode = Node;/u);
+    expect(resolve).toContain('Child->SetParent(InheritedNode);');
   });
 });
 

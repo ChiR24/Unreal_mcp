@@ -11,6 +11,7 @@
 #include "Domains/Blueprint/Components/McpBPScsPropagate.h"
 #include "Domains/Blueprint/Components/McpBPScsPropBag.h"
 #include "Domains/Blueprint/Components/McpBPScsTransform.h"
+#include "Domains/Property/McpPropCdoComponents.h"
 
 #include "Components/ActorComponent.h"
 #include "Components/SceneComponent.h"
@@ -41,6 +42,12 @@ USCS_Node *Node = FindScsNodeByName(LocalSCS, ComponentName);
 // through the CDO for a while; the batch path had not.
 UActorComponent *Template = Node ? Node->ComponentTemplate : nullptr;
 if (!Template) { Template = McpScsParent::FindInheritedComponent(LocalBP, ComponentName); }
+// A parent Blueprint's component is edited through this Blueprint's override of it, as the Details panel does: get_scs
+// listed it as inherited while every edit here called it unknown. An override nothing landed on is undone below.
+McpPropertyCdoComponents::FCreatedInheritedOverride Created;
+if (!Template && LocalBP && LocalBP->GeneratedClass) {
+  Template = McpPropertyCdoComponents::FindCdoComponent(LocalBP, LocalBP->GeneratedClass->GetDefaultObject(), ComponentName, true, &Created.Handler, &Created.Key);
+}
 if (!Template) {
   OpSummary->SetBoolField(TEXT("success"), false);
   OpSummary->SetStringField(TEXT("warning"), FString::Printf(
@@ -70,6 +77,7 @@ McpScsPropagate::Pending().Emplace(Template, Defaults);
 OpSummary->SetBoolField(TEXT("success"), bAnySuccess);
 OpSummary->SetStringField(TEXT("componentName"), ComponentName);
 if (!bAnySuccess) {
+  Created.Rollback();
   OpSummary->SetStringField(TEXT("warning"), TEXT("No transform, properties, mesh or material applied"));
 }
 }

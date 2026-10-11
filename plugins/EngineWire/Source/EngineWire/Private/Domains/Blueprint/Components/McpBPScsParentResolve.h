@@ -9,6 +9,7 @@
 #include "Engine/SCS_Node.h"
 #include "Engine/SimpleConstructionScript.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpScsLookup.h"
+#include "Domains/Property/McpPropCdoComponents.h"
 
 namespace McpScsParent {
 
@@ -100,6 +101,24 @@ inline bool AttachNodeToNamedParent(UBlueprint *Blueprint,
     }
     ParentNode->AddChildNode(Child);
     OutResolvedAs = TEXT("scs");
+    return true;
+  }
+
+  // A scene component from a parent Blueprint's construction script: the node names it as its parent (variable and
+  // owner class), as the Components panel does. Only native parents were looked up, so attachTo a parent Blueprint's
+  // part failed while get_scs listed it as inherited.
+  USCS_Node *InheritedNode = nullptr;
+  McpPropertyCdoComponents::ForEachScsNode(Blueprint, [&](USCS_Node *Node, bool bInherited) {
+    if (bInherited && Node->GetVariableName().ToString().Equals(Trimmed, ESearchCase::IgnoreCase)) InheritedNode = Node;
+    return InheritedNode == nullptr;
+  });
+  if (InheritedNode && InheritedNode->ComponentTemplate && InheritedNode->ComponentTemplate->IsA<USceneComponent>()) {
+    if (USCS_Node *OldParent = SCS->FindParentNode(Child)) {
+      OldParent->RemoveChildNode(Child, /*bRemoveFromAllNodes=*/true);
+      SCS->AddNode(Child);
+    }
+    Child->SetParent(InheritedNode);
+    OutResolvedAs = TEXT("inherited");
     return true;
   }
 

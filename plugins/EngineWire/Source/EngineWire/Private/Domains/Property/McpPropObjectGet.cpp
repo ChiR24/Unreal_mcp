@@ -35,16 +35,23 @@ bool UEngineWireSubsystem::HandleGetObjectProperty(
     for (const TSharedPtr<FJsonValue> &Entry : *Paths) {
       FString Path;
       if (Entry.IsValid()) Entry->TryGetString(Path);
+      Path.TrimStartAndEndInline();
+      TSharedPtr<FJsonObject> Row = McpHandlerUtils::CreateResultObject();
+      Row->SetStringField(TEXT("objectPath"), Path);
+      // An object that is not there says so once, not once per property under propertyNames.
+      if (!McpHandlerUtils::ResolveObjectFromPath(Path)) {
+        Row->SetStringField(TEXT("error"), McpHandlerUtils::DescribeObjectNotFound(Path));
+        Targets.Add(MakeShared<FJsonValueObject>(Row));
+        continue;
+      }
       TSharedPtr<FJsonObject> One = MakeShared<FJsonObject>();
       One->Values = Payload->Values;
       for (const TCHAR *Field : {TEXT("objectPaths"), TEXT("actorName"), TEXT("name"), TEXT("blueprintPath")}) One->RemoveField(Field);
-      One->SetStringField(TEXT("objectPath"), Path.TrimStartAndEnd());
+      One->SetStringField(TEXT("objectPath"), Path);
       const FString ItemId = FString::Printf(TEXT("%s#target%d"), *RequestId, Targets.Num());
       FMcpResponseCaptureRegistry::Get().Begin(ItemId);
       HandleGetObjectProperty(ItemId, Action, One, RequestingSocket);
       const FMcpCapturedResponse Reply = FMcpResponseCaptureRegistry::Get().End(ItemId);
-      TSharedPtr<FJsonObject> Row = McpHandlerUtils::CreateResultObject();
-      Row->SetStringField(TEXT("objectPath"), Path.TrimStartAndEnd());
       // propertyName rides along: the receipt redactor judges a value by that sibling name.
       for (const TCHAR *Field : {TEXT("propertyName"), TEXT("value"), TEXT("properties"), TEXT("missingProperties")}) {
         const TSharedPtr<FJsonValue> Value = Reply.Result.IsValid() ? Reply.Result->TryGetField(Field) : nullptr;
