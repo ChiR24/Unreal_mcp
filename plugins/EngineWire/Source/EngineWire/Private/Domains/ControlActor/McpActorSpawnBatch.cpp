@@ -20,7 +20,7 @@ bool IsSpawnItemKey(const FString &Key) {
       TEXT("classPath"), TEXT("actorClass"), TEXT("blueprintPath"), TEXT("meshPath"), TEXT("actorName"),
       TEXT("location"), TEXT("rotation"), TEXT("scale"), TEXT("variables"), TEXT("materialPath"),
       TEXT("componentName"), TEXT("materialSlot"), TEXT("allComponents"), TEXT("folder"), TEXT("tags"),
-      TEXT("spawnKind")};
+      TEXT("spawnKind"), TEXT("properties")};
   return Keys.Contains(Key);
 }
 
@@ -222,6 +222,11 @@ bool UEngineWireSubsystem::HandleControlActorSpawnBatch(
         Failures.Add(FString::Printf(TEXT("#%d material: %s"), Index, *MaterialReply.Message));
       }
     }
+    const FString PropertiesError = McpApplySpawnItemProperties(Actor, Item);
+    if (!PropertiesError.IsEmpty()) {
+      Entry->SetStringField(TEXT("propertiesError"), PropertiesError);
+      Failures.Add(FString::Printf(TEXT("#%d properties: %s"), Index, *PropertiesError));
+    }
 
     if (Actor) {
       Placed.Emplace(Actor, Entry);
@@ -251,8 +256,8 @@ bool UEngineWireSubsystem::HandleControlActorSpawnBatch(
     Results.RemoveAll([](const TSharedPtr<FJsonValue> &Value) {
       const TSharedPtr<FJsonObject> Entry = Value->AsObject();
       return Entry->GetBoolField(TEXT("success")) && !Entry->HasField(TEXT("materialError")) &&
-             !Entry->HasField(TEXT("variablesError")) && !Entry->HasField(TEXT("placementWarning")) &&
-             !Entry->HasField(TEXT("ignoredKeys"));
+             !Entry->HasField(TEXT("variablesError")) && !Entry->HasField(TEXT("propertiesError")) &&
+             !Entry->HasField(TEXT("placementWarning")) && !Entry->HasField(TEXT("ignoredKeys"));
     });
     Data->SetStringField(TEXT("report"), Report);
   }

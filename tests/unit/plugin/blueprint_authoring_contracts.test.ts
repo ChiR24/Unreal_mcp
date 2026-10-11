@@ -619,3 +619,16 @@ describe('graph edits that used to answer success while doing nothing useful', (
     expect(utilities).toContain('if (!ClassPath.Contains(TEXT("/"))) return ResolveClassByName(ClassPath);');
   });
 });
+
+// The editor shows K2_AddLocalRotation as AddLocalRotation; that name failed FUNCTION_NOT_FOUND on SceneComponent.
+describe('a call node takes a function by the name the editor shows', () => {
+  it('tries K2_<name> when the name itself is not found, on the memberClass and on the default classes alike', () => {
+    const source = read('Domains', 'BlueprintGraph', 'McpBPGraphHandlers.cpp');
+    const resolve = sliceBetween(source, 'UFunction* ResolveGraphCallFunction(', 'UFunction* ResolveCallNodeFunction(');
+
+    expect(source).toMatch(/Class->FindFunctionByName\(\*\(TEXT\("K2_"\) \+ Name\)\)/u);
+    expect(resolve).toContain('FindCallableNamed(OutResolvedClass, MemberName)');
+    expect(resolve).toContain('FindCallableNamed(Candidate, MemberName)');
+    expect(resolve).not.toMatch(/->FindFunctionByName\(\*MemberName\)/u);
+  });
+});

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "bdc5eb14b46334a8",
+  "catalogRevision": "8eed4c88a2183c17",
   "recordCount": 410,
   "records": [
     {
@@ -36026,7 +36026,7 @@
                 "x-unreal-reflection-boundary": true
               },
               "x-unreal-reflection-boundary": true,
-              "description": "Actors to spawn, 1-500. Each is a spawn payload: classPath, blueprintPath or meshPath, plus actorName, location, rotation, scale ([x, y, z] arrays). Optional per item: materialPath (applied like set_material; componentName/materialSlot/allComponents narrow it), variables ({name: value} Blueprint variables set on the new instance, like set_blueprint_variables; in a running game they are set before its BeginPlay, so it starts with them), folder (outliner folder path), tags (actor tags; delete_by_tag removes the batch again), repeat ({count, offset [x, y, z], rows, rowOffset [x, y, z]}: count x rows copies of the item, each moved from its location by offset per copy and rowOffset per row, actorName numbered _1, _2, ...; a row of racks, a grid of lights; at most 1000 actors once unrolled). Items that fail are reported; the rest still spawn."
+              "description": "Actors to spawn, 1-500. Each is a spawn payload: classPath, blueprintPath or meshPath, plus actorName, location, rotation, scale ([x, y, z] arrays). Optional per item: materialPath (applied like set_material; componentName/materialSlot/allComponents narrow it), variables ({name: value} Blueprint variables set on the new instance, like set_blueprint_variables; in a running game they are set before its BeginPlay, so it starts with them), properties ({name: value} set on the root component, or on componentName's, as edit_component sets them: a light's Intensity, LightColor and AttenuationRadius), folder (outliner folder path), tags (actor tags; delete_by_tag removes the batch again), repeat ({count, offset [x, y, z], rows, rowOffset [x, y, z]}: count x rows copies of the item, each moved from its location by offset per copy and rowOffset per row, actorName numbered _1, _2, ...; a row of racks, a grid of lights; at most 1000 actors once unrolled). Items that fail are reported; the rest still spawn."
             },
             "defaults": {
               "type": "object",
@@ -36130,7 +36130,7 @@
             },
             "failed": {
               "type": "number",
-              "description": "Items that failed to spawn or to take their material."
+              "description": "Items that failed to spawn or to take their material, variables or properties."
             },
             "placementWarnings": {
               "type": "number",
@@ -36144,7 +36144,7 @@
                 "x-unreal-reflection-boundary": true
               },
               "x-unreal-reflection-boundary": true,
-              "description": "Per item (only the failed ones and those with a placementWarning or ignoredKeys under report: failures): index (its place in the batch once repeats are unrolled), success, name, path, error, errorCode, variablesSet, variablesError, materialApplied, materialError, ignoredKeys (the item's keys no spawn reads, such as a \"label\" meant as actorName), and the placement facts set_transform reports (groundZ, groundClearance, placementWarning, overlappingActors, suggestedLocation), measured after the item took its tags, variables and material, so an item tagged mcp.placement.ok is never reported. name is the label the item asked for, or the unique actor name when it gave no actorName."
+              "description": "Per item (only the failed ones and those with a placementWarning or ignoredKeys under report: failures): index (its place in the batch once repeats are unrolled), success, name, path, error, errorCode, variablesSet, variablesError, materialApplied, materialError, propertiesError, ignoredKeys (the item's keys no spawn reads, such as a \"label\" meant as actorName), and the placement facts set_transform reports (groundZ, groundClearance, placementWarning, overlappingActors, suggestedLocation), measured after the item took its tags, variables and material, so an item tagged mcp.placement.ok is never reported. name is the label the item asked for, or the unique actor name when it gave no actorName."
             },
             "unnamedActors": {
               "type": "array",
@@ -36281,8 +36281,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "7c8998ea624545182638e264324d346757092816cd5721620bb49b2069e52483",
-        "content": "2620da6d9b06b2a80853721e57898cc4fb5f4187c4f497b3347eba2550356405"
+        "schema": "7c582160c7eabc6245392ca028d2ca1b605b784f91bd1c61ea9ae74c6a8c2fa2",
+        "content": "c12df6e261f708a2684ec92beb774a5217678e788bf2c3241f5c757d4c4d99c1"
       }
     },
     {

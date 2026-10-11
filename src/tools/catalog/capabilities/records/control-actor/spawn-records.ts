@@ -165,7 +165,8 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
           + 'actorName, location, rotation, scale ([x, y, z] arrays). Optional per item: materialPath (applied like '
           + 'set_material; componentName/materialSlot/allComponents narrow it), variables ({name: value} Blueprint '
           + 'variables set on the new instance, like set_blueprint_variables; in a running game they are set before its '
-          + 'BeginPlay, so it starts with them), folder (outliner folder path), tags '
+          + 'BeginPlay, so it starts with them), properties ({name: value} set on the root component, or on componentName\'s, '
+          + 'as edit_component sets them: a light\'s Intensity, LightColor and AttenuationRadius), folder (outliner folder path), tags '
           + '(actor tags; delete_by_tag removes the batch again), repeat ({count, offset [x, y, z], rows, rowOffset '
           + '[x, y, z]}: count x rows copies of the item, each moved from its location by offset per copy and rowOffset '
           + 'per row, actorName numbered _1, _2, ...; a row of racks, a grid of lights; at most 1000 actors once '
@@ -189,14 +190,14 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
     requiredOneOf: ['actors'],
     outputProps: {
       spawned: num('Actors spawned.'),
-      failed: num('Items that failed to spawn or to take their material.'),
+      failed: num('Items that failed to spawn or to take their material, variables or properties.'),
       placementWarnings: num('Items that spawned but look misplaced (sunk into the surface under them, floating, intersecting other actors or with nothing below); each carries its placementWarning in results. A warning is not a failure: it changes neither failed nor success.'),
       results: {
         type: 'array',
         items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
         'x-unreal-reflection-boundary': true,
         description: 'Per item (only the failed ones and those with a placementWarning or ignoredKeys under report: failures): '
-          + 'index (its place in the batch once repeats are unrolled), success, name, path, error, errorCode, variablesSet, variablesError, materialApplied, materialError, '
+          + 'index (its place in the batch once repeats are unrolled), success, name, path, error, errorCode, variablesSet, variablesError, materialApplied, materialError, propertiesError, '
           + 'ignoredKeys (the item\'s keys no spawn reads, such as a "label" meant as actorName), and the placement '
           + 'facts set_transform reports (groundZ, groundClearance, placementWarning, overlappingActors, suggestedLocation), '
           + 'measured after the item took its tags, variables and material, so an item tagged mcp.placement.ok is never '

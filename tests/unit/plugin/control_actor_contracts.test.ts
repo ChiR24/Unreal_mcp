@@ -764,7 +764,7 @@ describe('every spawn says where the actor ended up, as set_transform does', () 
     expect(measured, 'after the tags and folder').toBeGreaterThan(source.indexOf('ApplySpawnOrganisation(Actor, Item);'));
     expect(measured, 'after the variables').toBeGreaterThan(source.indexOf('HandleControlActorSetBlueprintVariables('));
     expect(measured, 'after the material').toBeGreaterThan(source.indexOf('HandleControlActorSetMaterial('));
-    expect(flat(source)).toContain('!Entry->HasField(TEXT("variablesError")) && !Entry->HasField(TEXT("placementWarning")) && !Entry->HasField(TEXT("ignoredKeys"));');
+    expect(flat(source)).toContain('!Entry->HasField(TEXT("variablesError")) && !Entry->HasField(TEXT("propertiesError")) && !Entry->HasField(TEXT("placementWarning")) && !Entry->HasField(TEXT("ignoredKeys"));');
     expect(source).toContain('Data->SetNumberField(TEXT("placementWarnings"), PlacementWarnings);');
     expect(source, 'a warning is not a failure').not.toMatch(/Failures\.Add\([^;]*placement/iu);
     expect(source).toContain('"; %d with a placement warning (results[].placementWarning)"');
@@ -870,5 +870,21 @@ describe('spawn_batch judges a stacked item against what the batch itself placed
     expect(flush).toBeGreaterThan(-1);
     expect(source).toContain('if (SpawnWorld && !SpawnWorld->IsGameWorld() && SpawnWorld->GetPhysicsScene())');
     expect(flush, 'before the first item is judged').toBeLessThan(source.indexOf('McpPlacement::DescribePlacement(Item.Key, Item.Value);'));
+  });
+});
+
+// A row of lights spawned in one batch took an edit_component call per light for its colour and intensity.
+describe('a spawn_batch item\'s properties go on the component it spawned', () => {
+  it('applies them with the edit_component writer to the root component or componentName, and reports what failed', () => {
+    const props = read('McpActorComponentProps.cpp');
+    const helper = sliceBetween(props, 'FString McpApplySpawnItemProperties(', 'bool McpSendComponentPropertyShortfall(');
+    const batch = read('McpActorSpawnBatch.cpp');
+
+    expect(helper).toMatch(/ComponentName\.IsEmpty\(\) \? Actor->GetRootComponent\(\) : FindComponentByName\(Actor, ComponentName\)/u);
+    expect(helper).toContain('McpApplyComponentProperties(Component, *Properties, Applied, Warnings);');
+    expect(helper).toContain('McpRefreshComponentAfterEdit(Component);');
+    expect(batch).toContain('TEXT("spawnKind"), TEXT("properties")};');
+    expect(batch).toContain('const FString PropertiesError = McpApplySpawnItemProperties(Actor, Item);');
+    expect(batch).toContain('!Entry->HasField(TEXT("propertiesError"))');
   });
 });

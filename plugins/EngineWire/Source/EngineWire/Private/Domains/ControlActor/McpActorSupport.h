@@ -50,6 +50,9 @@ void McpAppendComponentDetailFields(UActorComponent *Component,
 // engine setters for physics, mesh and collision, then McpResolvePropertyPath.
 void McpApplyComponentProperties(UActorComponent *Component, const TSharedPtr<FJsonObject> &Properties,
                                  TArray<FString> &OutApplied, TArray<FString> &OutWarnings);
+// A spawn_batch item's properties on the actor it spawned (its root component, or componentName); "" when every one
+// applied or none was given, else what did not.
+FString McpApplySpawnItemProperties(AActor *Actor, const TSharedPtr<FJsonObject> &Item);
 // True for a key McpApplyComponentProperties writes through the component's own setter (Mobility, SimulatePhysics, a
 // StaticMeshComponent's StaticMesh, collision): a raw reflected write of one skips what the setter keeps in step.
 bool McpIsComponentSetterKey(const UActorComponent *Component, const FString &Name);

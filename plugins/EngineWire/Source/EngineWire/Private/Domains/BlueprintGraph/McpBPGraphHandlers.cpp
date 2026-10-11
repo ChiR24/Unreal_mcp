@@ -36,6 +36,14 @@ static UFunction* FindUniqueLibraryFunction(const FString& Name)
     return Found;
 }
 
+// The editor shows K2_AddLocalRotation as AddLocalRotation, and a caller writes the name it sees: AddLocalRotation
+// failed FUNCTION_NOT_FOUND on SceneComponent.
+static UFunction* FindCallableNamed(UClass* Class, const FString& Name)
+{
+    UFunction* Function = Class->FindFunctionByName(*Name);
+    return Function || Name.StartsWith(TEXT("K2_")) ? Function : Class->FindFunctionByName(*(TEXT("K2_") + Name));
+}
+
 UFunction* ResolveGraphCallFunction(UBlueprint* Blueprint, const FString& MemberName,
                                     const FString& MemberClass, UClass*& OutResolvedClass)
 {
@@ -53,7 +61,7 @@ UFunction* ResolveGraphCallFunction(UBlueprint* Blueprint, const FString& Member
         {
             return nullptr;
         }
-        UFunction* Function = OutResolvedClass->FindFunctionByName(*MemberName);
+        UFunction* Function = FindCallableNamed(OutResolvedClass, MemberName);
         if (!Function && OutResolvedClass->IsChildOf(UBlueprintFunctionLibrary::StaticClass()))
         {
             Function = FindUniqueLibraryFunction(MemberName);
@@ -70,7 +78,7 @@ UFunction* ResolveGraphCallFunction(UBlueprint* Blueprint, const FString& Member
         UKismetTextLibrary::StaticClass()};
     for (UClass* Candidate : Defaults)
     {
-        if (UFunction* Function = Candidate ? Candidate->FindFunctionByName(*MemberName) : nullptr)
+        if (UFunction* Function = Candidate ? FindCallableNamed(Candidate, MemberName) : nullptr)
         {
             return Function;
         }

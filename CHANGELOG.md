@@ -32,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`validate_assets` `materialUsage`**: the material usage flags an asset's meshes need and their materials lack (a Nanite mesh's slots, a skeletal mesh's, and a Blueprint's Nanite, instanced, spline or skeletal parts), each with `unsaved` when the editor set the flag but it is not on disk yet. A mesh only ever spawned in play draws the default material there and in a cooked game, with nothing but a log warning. On UE 5.8 a material instance holds its own flags and is named itself.
 - **`process_asset` `mesh_materials` takes `assetPaths`**: one slot-name map on every mesh of an imported pack in a single call, passing over a slot a mesh lacks; an entry that no mesh has fails the call. A 32-mesh Fab pack took a call and a consent per mesh.
 - **Rows and grids from one spawn batch item**: `repeat` ({count, offset, rows, rowOffset}) places the item's copies stepped from its location, named `_1`, `_2`, ...; a batch places up to 1000 actors once unrolled. A row of racks was one hand-written item per actor.
+- **Spawn batch items take `properties`**, set on the spawned actor's root component (or `componentName`'s) as `edit_component` sets them, so a row of lights gets its colour and intensity in the same call.
 - **A game screenshot says the field of view the frame shows** (`horizontalFov`, `verticalFov`): `activeCameraFov` is the camera's setting, which holds only at the camera's own aspect ratio, so a wider viewport that keeps the vertical angle shows more across than it says.
 
 </details>
@@ -52,6 +53,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Math Expressions take unbracketed comparisons of arithmetic around `&&` and `||`**: `T - Next < 0 || T - Next >= 0.07` was refused as "'T' is a number". Arithmetic with no comparison there (`Gain + 1 && Ready`) is refused as a number.
 - **A placed enclosure is no longer measured against what it holds**: a cart corral spawned around its carts read "sunk 97 units" below the carts' tops.
 - **A spawn batch measures an actor stacked on another it placed against that actor**: a monitor on a desk from the same batch read "floating 91 units" over the floor.
+- **Call nodes take a function by the name the editor shows**: `AddLocalRotation` finds `K2_AddLocalRotation`; it failed `FUNCTION_NOT_FOUND`.
 - **The fog's `density` says it is fog density** (`create_fog_volume`, `configure_exponential_height_fog`); it read "Foliage density."
 - **`raycast_mesh` takes `{start, end}` lines** as `raycast_world` does, stopping each at its end; a ray with neither form is refused instead of answering no hit.
 - **A graph batch refuses a step it does not run before running any**: an `arrange_nodes` at the end stopped the batch after the 69 steps before it were applied. The refusal says the batch already arranges the nodes it places.

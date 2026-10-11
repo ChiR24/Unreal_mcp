@@ -127,6 +127,29 @@ void McpApplyComponentProperties(UActorComponent *Component, const TSharedPtr<FJ
   }
 }
 
+// A spawn_batch item's properties, on the actor the item spawned: its root component, or the one componentName names.
+// A row of lights placed in one batch then took an edit_component call per light for its colour and intensity.
+FString McpApplySpawnItemProperties(AActor *Actor, const TSharedPtr<FJsonObject> &Item) {
+  const TSharedPtr<FJsonObject> *Properties = nullptr;
+  if (!Actor || !Item->TryGetObjectField(TEXT("properties"), Properties) || !Properties || !(*Properties).IsValid() ||
+      (*Properties)->Values.Num() == 0) {
+    return FString();
+  }
+  FString ComponentName;
+  Item->TryGetStringField(TEXT("componentName"), ComponentName);
+  UActorComponent *Component =
+      ComponentName.IsEmpty() ? Actor->GetRootComponent() : FindComponentByName(Actor, ComponentName);
+  if (!Component) {
+    return ComponentName.IsEmpty() ? FString(TEXT("the actor has no root component to take properties"))
+                                   : FString::Printf(TEXT("no component %s to take properties"), *ComponentName);
+  }
+  TArray<FString> Applied, Warnings;
+  Component->Modify();
+  McpApplyComponentProperties(Component, *Properties, Applied, Warnings);
+  McpRefreshComponentAfterEdit(Component);
+  return FString::Join(Warnings, TEXT("; "));
+}
+
 bool McpSendComponentPropertyShortfall(UEngineWireSubsystem &Bridge,
                                        TSharedPtr<FMcpBridgeWebSocket> Socket, const FString &RequestId,
                                        const TArray<FString> &Applied, const TArray<FString> &Warnings,
