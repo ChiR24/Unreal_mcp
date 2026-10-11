@@ -33,6 +33,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **`raycast_mesh` takes `{start, end}` rays** (a ray from start that reports nothing past end) and refuses a ray with neither form.
 - **A graph batch's create step re-lists the node's pins after its `pinDefaults`**, which can rebuild it.
 - **`spawn` and `spawn_blueprint` apply `folder` and `tags`** (`McpApplySpawnOrganisation`, shared with `spawn_batch` items) before the placement is judged.
+- **The JSON property writer sets a `UStaticMeshComponent`'s `StaticMesh` through `SetStaticMesh`** (`McpStaticMeshOwner`, by the property's owner class), and so does the `edit_scs` push to placed copies: the raw writes left `KnownStaticMesh` stale and the engine ensured on the next `GetStaticMesh`. A static component that keeps its mesh once play has begun fails the write.
 ## [0.6.0-beta-e] - 2026-10-09
 
 Plugin-side changes since the `v0.6.0-beta-d` tag, from the code diff. The server-side view is in the root `CHANGELOG.md`.

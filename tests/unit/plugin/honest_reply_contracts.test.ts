@@ -795,7 +795,8 @@ describe('object and class references in a property bag', () => {
 
   it('null, "" and "None" clear a hard or soft reference (edit_scs ChildActorClass "None" was refused)', () => {
     expect(objects).toContain('ValueField->AsString().Equals(TEXT("None"), ESearchCase::IgnoreCase)');
-    expect(objects).toMatch(/if \(bClearReference\) \{\s*OP->SetObjectPropertyValue_InContainer\(TargetContainer, nullptr\);/u);
+    expect(objects).toMatch(/if \(bClearReference\) \{\s*return Assign\(nullptr\);/u);
+    expect(objects).toMatch(/if \(!MeshOwner\) \{\s*OP->SetObjectPropertyValue_InContainer\(TargetContainer, Value\);/u);
     expect(objects).toMatch(/if \(bClearReference\) \{\s*\*SoftPtr = FSoftObjectPtr\(\);/u);
   });
 
@@ -1846,6 +1847,20 @@ describe('a component key with a setter is written through the setter', () => {
       .toContain('bool McpIsComponentSetterKey(const UActorComponent *Component, const FString &Name) {');
     expect(code('Property', 'McpPropCdoPropagation.cpp'), 'placed copies take it the same way')
       .toContain('McpPropertyTarget::WriteValue(Instance, Path, Property, Container, Value, Error)');
+  });
+});
+
+// edit_scs set_property StaticMesh wrote the template's raw property (and the push to placed copies copied it raw), so
+// the engine's KnownStaticMesh ensure fired on the template.
+describe('a component mesh goes through SetStaticMesh', () => {
+  it('the shared JSON writer and the push to placed copies set a StaticMeshComponent mesh through its setter', () => {
+    const writer = readFileSync(join(DOMAINS, '..', 'Foundation', 'BridgeHelpers', 'Properties', 'McpPropApplyObjects.h'), 'utf8');
+    expect(writer, 'a struct member named StaticMesh has no owner class').toContain('Owner->IsChildOf(UStaticMeshComponent::StaticClass())');
+    expect(writer).toContain('MeshOwner->SetStaticMesh(Cast<UStaticMesh>(Value));');
+    expect(writer, 'set and clear alike').toContain('return Assign(Res);');
+    expect(writer).toContain('return Assign(nullptr);');
+    expect(code('Blueprint', 'Components', 'McpBPScsPropagate.h'))
+      .toContain('Mesh->SetStaticMesh(McpStaticMeshOwner(TemplateProp, TemplateContainer)->GetStaticMesh());');
   });
 });
 

@@ -11,6 +11,7 @@
 #include "UObject/UObjectHash.h"
 #include "Foundation/BridgeHelpers/Properties/McpComponentLookup.h"
 #include "Foundation/BridgeHelpers/Properties/McpNestedPropPath.h"
+#include "Foundation/BridgeHelpers/Properties/McpPropApply.h"
 
 // A component template edit only rewrote the class default: placed actors copy
 // their old component values across the recompile, so the change never reached
@@ -110,9 +111,12 @@ struct FDefaults
           continue;
         if (Written.Num() == 0)
           Component->Modify();
+        // A mesh through SetStaticMesh, as the JSON writer sets the template's: a raw copy left KnownStaticMesh stale.
+        if (UStaticMeshComponent *Mesh = McpStaticMeshOwner(Prop, Container))
+          Mesh->SetStaticMesh(McpStaticMeshOwner(TemplateProp, TemplateContainer)->GetStaticMesh());
         // An instanced subobject must not be shared with the template, so those
         // still go through text (which resolves to a reference, as before).
-        if (Prop->HasAnyPropertyFlags(CPF_InstancedReference | CPF_ContainsInstancedReference))
+        else if (Prop->HasAnyPropertyFlags(CPF_InstancedReference | CPF_ContainsInstancedReference))
 #if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 1
           Prop->ImportText_Direct(*NewText, Prop->ContainerPtrToValuePtr<void>(Container), Component, PPF_None);
 #else

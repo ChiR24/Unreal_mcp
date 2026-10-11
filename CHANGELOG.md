@@ -51,6 +51,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **A duplicated Blueprint's Math Expression nodes read its own variables.** They kept the source's variable ids and failed to compile until each expression was set again.
 - **A Math Expression that compares an input name with a true/false value is refused before it is applied**, saying the name is a number input; an expression that does not parse says that every input is a number.
 - **`create_primitive` `sdf` refuses a size its shape type does not read**, naming the sizes it does: `extent` on a cylinder was dropped and the cylinder came out at the default radius.
+- **A mesh component's `StaticMesh` set as a property** (`edit_scs` `set_property` or an operation's `properties`, a new Blueprint's `properties`) goes through the engine's mesh setter, and so do the placed copies `edit_scs` updates: the raw write tripped an engine ensure on the component's next mesh read.
 
 </details>
 

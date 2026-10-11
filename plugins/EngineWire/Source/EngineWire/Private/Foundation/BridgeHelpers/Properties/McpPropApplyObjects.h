@@ -2,11 +2,27 @@
 
 #include "CoreMinimal.h"
 #include "Misc/ScopeExit.h"
+#include "Components/StaticMeshComponent.h"
 #include "Dom/JsonObject.h"
+#include "Engine/StaticMesh.h"
 #include "JsonObjectConverter.h"
 #include "Foundation/Reflection/McpPropertyReflectionPrivate.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
+
+/**
+ * The component whose StaticMesh this property is, or null for any other property. That mesh goes through
+ * SetStaticMesh: a raw write leaves KnownStaticMesh stale and the engine ensures on the next GetStaticMesh, and it
+ * skips the render state an empty component needs and the physics, navigation, streaming and bounds updates. The
+ * property is a member of the component class (a struct member has no owner class), so its container is the component.
+ */
+static inline UStaticMeshComponent *McpStaticMeshOwner(const FProperty *Property, void *Container) {
+  const UClass *Owner = Property ? Property->GetOwnerClass() : nullptr;
+  return Owner && Owner->IsChildOf(UStaticMeshComponent::StaticClass()) &&
+                 Property->GetFName() == FName(TEXT("StaticMesh"))
+             ? static_cast<UStaticMeshComponent *>(Container)
+             : nullptr;
+}
 
 /**
  * Import a UE export-text value into an already-resolved property value slot.
@@ -74,9 +90,22 @@ static inline bool ApplyJsonObjectValueToProperty(void *TargetContainer, FProper
 
   // Object reference (a class reference is one too)
   if (FObjectProperty *OP = CastField<FObjectProperty>(Property)) {
+    UStaticMeshComponent *MeshOwner = McpStaticMeshOwner(OP, TargetContainer);
+    const auto Assign = [OP, TargetContainer, MeshOwner, &OutError](UObject *Value) {
+      if (!MeshOwner) {
+        OP->SetObjectPropertyValue_InContainer(TargetContainer, Value);
+        return true;
+      }
+      MeshOwner->SetStaticMesh(Cast<UStaticMesh>(Value));
+      const UStaticMesh *Now = MeshOwner->GetStaticMesh();
+      if (Now == Value) {
+        return true;
+      }
+      OutError = TEXT("The component kept its mesh: a static component's mesh cannot change once play has begun");
+      return false;
+    };
     if (bClearReference) {
-      OP->SetObjectPropertyValue_InContainer(TargetContainer, nullptr);
-      return true;
+      return Assign(nullptr);
     }
     if (ValueField->Type == EJson::String) {
       const FString Path = ValueField->AsString();
@@ -102,8 +131,7 @@ static inline bool ApplyJsonObjectValueToProperty(void *TargetContainer, FProper
             CP && !AsClass ? TEXT(" (a Blueprint's class path ends in _C)") : TEXT(""));
         return false;
       }
-      OP->SetObjectPropertyValue_InContainer(TargetContainer, Res);
-      return true;
+      return Assign(Res);
     }
     OutError = TEXT("Object property requires a path string, or null / \"None\" to clear it");
     return false;
