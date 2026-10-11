@@ -1,8 +1,11 @@
 #include "Domains/BlueprintGraph/Expression/McpBPGraphMathExpr.h"
 
+#include "Editor.h"
 #include "Engine/Blueprint.h"
+#include "EngineWireSubsystem.h"
 #include "K2Node_MathExpression.h"
 #include "Kismet2/BlueprintEditorUtils.h"
+#include "Kismet2/KismetEditorUtilities.h"
 
 // A Math Expression stores each member variable it reads as that variable's {GUID}. Duplicating a Blueprint gives
 // the copy's variables new GUIDs and updates its variable nodes (PostDuplicateBlueprint), but not this text, so every
@@ -42,6 +45,17 @@ int32 RebindDuplicatedExpressions(UBlueprint& Source, UBlueprint& Copy)
       Node->ReconstructNode();
       ++Rebound;
     }
+  }
+  if (Rebound > 0)
+  {
+    // The engine compiled the copy inside the duplicate, before this rebind, and the reply showed those errors as
+    // current while the copy stayed uncompiled. Forget the copy's lines and compile it again: that logs what still fails.
+    if (UEngineWireSubsystem *Bridge = GEditor ? GEditor->GetEditorSubsystem<UEngineWireSubsystem>() : nullptr)
+    {
+      const FString CopyPath = Copy.GetPathName();
+      Bridge->ForgetCapturedMessages([&CopyPath](const FString &Line) { return Line.Contains(CopyPath); });
+    }
+    FKismetEditorUtilities::CompileBlueprint(&Copy);
   }
   return Rebound;
 }

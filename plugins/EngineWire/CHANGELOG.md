@@ -40,6 +40,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **The JSON property writer sets a `UStaticMeshComponent`'s `StaticMesh` through `SetStaticMesh`** (`McpStaticMeshOwner`: the component class must own the property directly, so a struct member or function parameter of that name is left alone), and so does the `edit_scs` push to placed copies: the raw writes left `KnownStaticMesh` stale and the engine ensured on the next `GetStaticMesh`. A static component that keeps its mesh once play has begun fails the write.
 - **The `edit_scs` placement audit saves the `/Game` materials its preview gave a usage flag** (`FMcpPreviewMaterialSaver`, declared before the preview scene so it runs once the preview world is gone).
 - **`save_all` `assetPaths` also writes a named loaded package that is not dirty** (`FindPackage` after the dirty lists).
+- **A duplicated Blueprint's Math Expressions are rebound to its own variables** (`RebindDuplicatedExpressions`: each source `{GUID}` rewritten to the variable name, then `ReconstructNode`), and the copy is compiled after its captured lines are dropped (`ForgetCapturedMessages`), so the reply shows only what still fails.
 - **`resume` checks the game's own pause** (`AWorldSettings::GetPauserPlayerState`) after clearing `bDebugPauseExecution`: it fails `GAME_PAUSED` with `pausedBy`, and `unpauseGame` calls `UGameplayStatics::SetGamePaused(false)` first.
 ## [0.6.0-beta-e] - 2026-10-09
 

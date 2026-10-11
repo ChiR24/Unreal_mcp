@@ -1632,6 +1632,9 @@ describe('a duplicated Blueprint keeps its Math Expressions bound to its own var
     const copy = code('BlueprintGraph', 'Expression', 'McpBPGraphMathExprCopy.cpp');
     expect(copy).toContain('FBlueprintEditorUtils::FindMemberVariableNameByGuid(&Source, Guid)');
     expect(copy).toContain('Node->ReconstructNode();');
+    // The engine compiled the copy before the rebind; those 20 errors stayed on the reply and the copy stayed dirty.
+    expect(copy).toContain('Bridge->ForgetCapturedMessages([&CopyPath](const FString &Line) { return Line.Contains(CopyPath); });');
+    expect(copy).toContain('FKismetEditorUtilities::CompileBlueprint(&Copy);');
     const handler = code('AssetWorkflow', 'Operations', 'McpAssetImportDuplicate.cpp');
     expect(handler.indexOf('RebindCopiedExpressions(SourcePath, NewAsset);')).toBeGreaterThan(-1);
     expect(handler.indexOf('RebindCopiedExpressions(SourcePath, NewAsset);')).toBeLessThan(handler.indexOf('McpSafeAssetSave(NewAsset)'));
