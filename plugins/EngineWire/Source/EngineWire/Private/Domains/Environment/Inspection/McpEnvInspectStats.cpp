@@ -8,6 +8,7 @@
 #include "Engine/StaticMeshActor.h"
 #include "Framework/Docking/TabManager.h"
 #include "GameFramework/Volume.h"
+#include "RHI.h"
 
 namespace McpEnvironmentHandlers {
 
@@ -219,6 +220,10 @@ bool HandleInspectStatsAction(
             Resp->SetNumberField(TEXT("rhiThreadMs"), RHIThreadMs);
             Resp->SetNumberField(TEXT("gpuMs"), GPUFrameMs);
             Resp->SetNumberField(TEXT("actorCount"), ActorCount);
+            // The renderer's over-budget figure: a game holding most of the GPU slowed every frame, and only the
+            // viewport's "Video memory has been exhausted" line said so.
+            const double VideoOverMB = double(GDemotedLocalMemorySize) / (1024.0 * 1024.0);
+            if (VideoOverMB >= 1.0) Resp->SetNumberField(TEXT("videoMemoryOverBudgetMB"), FMath::RoundToDouble(VideoOverMB));
             // A minimized editor draws no frame: the render, RHI and GPU times stay those of the last frame it drew
             // (identical on every read, the GPU time 150-750 ms) and the frame delta is the background throttle.
             const TSharedPtr<SWindow> Root = FGlobalTabmanager::Get()->GetRootWindow();

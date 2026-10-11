@@ -28,6 +28,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **`set_transform` `actorNames` and `report`** (`Placement/McpTransformItems.h`): the many forms become one payload per actor before any runs; `actorNames` items take the call's `location`, `offset`, `rotation` and `scale`, an `actors` item takes the ones it lacks (its own `location` or `offset` replaces the call's either), and `report: "failures"` drops the clean items from `results` after the layout re-check. `movedActors` counts from the items, not the narrowed list.
 - **`sample_motion` `overlaps`** (`McpTrackMotionOverlaps`, `Motion/McpMotionPoints.cpp`): a transient `UMcpMotionOverlapProbe` bound to the actor's `OnActorBeginOverlap` for the run hears each touch as it begins, so one that ends within the same frame (a pawn killed by the overlap switches its collision off) still counts; `GetOverlappingActors` every frame finds the touches that ended. Both are written into the next sample (`overlapsBegan`, `overlapsEnded`) and every actor touched into `overlapped`; an actor is named (`McpActorRef`, which walks the level) only when its touch begins.
 - **Game screenshot `horizontalFov` and `verticalFov`**: `2 atan(1 / M)` of the diagonal of the projection matrix `ULocalPlayer::GetProjectionData` builds for the viewport (perspective only), beside `activeCameraFov`, the camera's setting.
+- **`get_property` `objectPaths`**: `HandleGetObjectProperty` runs once per path under a captured `#target<n>` id, with the path as `objectPath` and the other targets removed, so each answers as a single read would (`propertyNames` included); each row keeps the resolved `propertyName` for the redactor.
 
 ### Fixed
 - **`create_node` and `add_node` check the graph's schema** (`CanCreateUnderSpecifiedSchema`) and refuse a node it cannot hold with `NODE_NOT_ALLOWED_IN_GRAPH`.
@@ -57,6 +58,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **`EstimateMaterialNodeExtent` takes the width from `UMaterialExpression::GetCaption`** (the drawn title lines), not `GetName()` (`MaterialExpressionTextureSampleParameter2D_0` gave 408 px).
 - **`stop` replies from a ticker once `GEditor->PlayWorld` is gone** (`RequestEndPlayMap` only queues the end), or with `PIE_STOP_TIMEOUT` after 20 s.
 - **`sample_motion` ends with `levelChanged`** when its world is gone while `GEditor->PlayWorld` is set (a level reload or travel in PIE); `worldEnded` now means play stopped.
+- **`McpSlowFrameWarning` and `get_stats` read `GDemotedLocalMemorySize`** (an `RHI.h` extern on 5.0-5.2, `GRHIGlobals.DemotedLocalMemorySize` from 5.3), the figure the viewport's "Video memory has been exhausted" line prints: the warning names it as the cause, and `get_stats` reports it as `videoMemoryOverBudgetMB`.
 ## [0.6.0-beta-e] - 2026-10-09
 
 Plugin-side changes since the `v0.6.0-beta-d` tag, from the code diff. The server-side view is in the root `CHANGELOG.md`.

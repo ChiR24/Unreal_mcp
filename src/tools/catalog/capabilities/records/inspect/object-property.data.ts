@@ -368,8 +368,8 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
     parentTool: 'inspect', action: 'get_property', dispatchAction: 'get_property', domain: D, family: 'property',
     editorStates: ANY_EDITOR_STATE,
     topics: ['read property', 'property value', 'get value', 'read field', 'actor property', 'object property', 'game instance variable', 'read live widget property', 'widget value during play'],
-    summary: 'Read a property value from a world actor, asset, or Blueprint class defaults (blueprintPath, or the Blueprint asset\'s own path), or several at once (propertyNames).',
-    whenToUse: ['A single property value must be read.', 'Several properties of one target must be read in one call (propertyNames).'],
+    summary: 'Read a property value from a world actor, asset, or Blueprint class defaults (blueprintPath, or the Blueprint asset\'s own path), several at once (propertyNames), or the same ones from several objects (objectPaths).',
+    whenToUse: ['A single property value must be read.', 'Several properties of one target must be read in one call (propertyNames).', 'The same properties must be read from several objects in one call (objectPaths), e.g. the state of every moving platform.'],
     whenNotToUse: ['All properties are needed; use inspect_object or inspect_cdo.'],
     // One requiredOneOf group only: the property name is the one the schema
     // enforces (propertyPath alone used to be refused by a required propertyName);
@@ -377,6 +377,7 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: {
       objectPath: P.runtimeObjectPath, actorName: P.actorName, name: P.name, blueprintPath: P.blueprintPath, propertyName: P.propertyName, propertyPath: P.propertyPath,
       propertyNames: { type: 'array', items: { type: 'string' }, minItems: 1, maxItems: 64, description: 'Several properties of the same target in one call, in place of propertyName: each read as a single call would (dotted paths too, such as CharacterMovement.MaxWalkSpeed). Answered under properties; a name that does not resolve is listed under missingProperties with the reason, and the others still answer.' },
+      objectPaths: { type: 'array', items: { type: 'string' }, minItems: 1, maxItems: 64, description: 'The same read on several objects in one call, in place of objectPath: each entry is a target as objectPath takes it (an actor by name or label, an asset, a class default, PlayerPawn), read as a single call would be, propertyNames included. Answered under targets; a target that cannot be read carries its error and the others still answer.' },
     },
     required: [],
     requiredOneOf: ['propertyName', 'propertyPath', 'propertyNames'],
@@ -385,6 +386,7 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
     exampleOutput: { success: true, message: 'Property read', value: 'PlayerStart_1' },
     outputProps: {
       value: P.valueRead,
+      targets: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, 'x-unreal-reflection-boundary': true, description: 'With objectPaths: each target as {objectPath as given, propertyName and value, or properties and missingProperties with propertyNames, error when it could not be read}.' },
       properties: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, 'x-unreal-reflection-boundary': true, description: 'With propertyNames: each property that resolved, as {propertyName (its own spelling), value}, plus propertyPath (the path as asked) when that differs, so two .Text reads stay apart.' },
       missingProperties: { type: 'array', items: { type: 'string' }, description: 'With propertyNames: each name that did not resolve, as "Name: reason".' },
     },

@@ -44,7 +44,7 @@ export const P = {
   oldName: S('Current variable name before renaming.'),
   category: S('Category folder for the variable.'),
   isReplicated: B('Whether the variable is replicated.'),
-  isPublic: B('Whether the variable is exposed to the editor/BP graph.'),
+  isPublic: B('Instance Editable (the editor\'s eye toggle): true, the default when left out, shows the variable on placed instances in the Details panel; false keeps it to the Blueprint itself.'),
   // Metadata
   propertyName: S('Property name to set on the CDO or component.'),
   propertyValue: { description: 'Value to assign to the property. An object or class reference takes a path (a Blueprint class path ends in _C); null or "None" clears it.' },

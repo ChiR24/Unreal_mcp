@@ -4,6 +4,7 @@
 #include "Foundation/Reflection/McpPropertyReflection.h"
 #include "GameFramework/Pawn.h"
 #include "InputCoreTypes.h"
+#include "RHI.h"
 
 // sample_motion's inputs and startWhen (FMcpMotionInput / FMcpMotionTrigger in
 // ControlActorSupport.h). The run's ticker calls these on game time, so a jump
@@ -171,12 +172,19 @@ FString McpSlowFrameWarning(double GameSeconds, int32 Frames) {
   if (PerFrame < 0.1) {
     return FString();
   }
+  // The renderer's own over-budget figure, the one its viewport prints: a game holding most of the GPU made a run crawl
+  // at 5 fps, and only a screenshot showed why.
+  const double OverMB = double(GDemotedLocalMemorySize) / (1024.0 * 1024.0);
+  const FString Cause = OverMB >= 1.0
+      ? FString::Printf(TEXT("video memory is %.0f MB over budget, so another application holds the GPU (a game?) or "
+                             "the scene does not fit; free the GPU before timing anything"), OverMB)
+      : FString(TEXT("a heavy scene"));
   return FString::Printf(TEXT("the game advanced %.2f s per frame (about %.0f fps), so inputs and samples landed "
                               "up to that late and holds ran long. The run had the editor window up and its "
-                              "background throttle off, so the editor renders that slowly: a heavy scene, or video "
-                              "memory exhausted (the viewport says so). set_game_speed fixed_delta_time makes "
-                              "timing exact; the console command r.ScreenPercentage 50 lowers the render cost."),
-                         PerFrame, 1.0 / PerFrame);
+                              "background throttle off, so the editor renders that slowly: %s. set_game_speed "
+                              "fixed_delta_time makes timing exact; the console command r.ScreenPercentage 50 lowers "
+                              "the render cost."),
+                         PerFrame, 1.0 / PerFrame, *Cause);
 }
 
 // Presses and releases what is due at Elapsed game seconds into the run; when

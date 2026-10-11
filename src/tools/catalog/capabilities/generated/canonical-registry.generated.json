@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "ea3c066cc8d40e12",
+  "catalogRevision": "bb41c8baeb956454",
   "recordCount": 410,
   "records": [
     {
@@ -17489,7 +17489,7 @@
             },
             "isPublic": {
               "type": "boolean",
-              "description": "Whether the variable is exposed to the editor/BP graph."
+              "description": "Instance Editable (the editor's eye toggle): true, the default when left out, shows the variable on placed instances in the Details panel; false keeps it to the Blueprint itself."
             },
             "exposeOnSpawn": {
               "type": "boolean",
@@ -17687,8 +17687,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "c7ce59125b9b319139a7446f649f0aaa88553aacc50cb64ee865c9df67640637",
-        "content": "3d8b95e6195320fb2c02bb85274e0af6d4bc4761829c29fad59851437ac54638"
+        "schema": "882b07cf20a79c1eaf88c8d41cfc2972827a6261e6fcf1c8f9feda5f64e77d7f",
+        "content": "8ba136cf5078e0c39b80fc0496d02277c4c6c6f6dcaacb0142a53fb5f86c067f"
       }
     },
     {
@@ -43965,10 +43965,11 @@
           "read live widget property",
           "widget value during play"
         ],
-        "summary": "Read a property value from a world actor, asset, or Blueprint class defaults (blueprintPath, or the Blueprint asset's own path), or several at once (propertyNames).",
+        "summary": "Read a property value from a world actor, asset, or Blueprint class defaults (blueprintPath, or the Blueprint asset's own path), several at once (propertyNames), or the same ones from several objects (objectPaths).",
         "whenToUse": [
           "A single property value must be read.",
-          "Several properties of one target must be read in one call (propertyNames)."
+          "Several properties of one target must be read in one call (propertyNames).",
+          "The same properties must be read from several objects in one call (objectPaths), e.g. the state of every moving platform."
         ],
         "whenNotToUse": [
           "All properties are needed; use inspect_object or inspect_cdo."
@@ -44015,6 +44016,15 @@
               "minItems": 1,
               "maxItems": 64,
               "description": "Several properties of the same target in one call, in place of propertyName: each read as a single call would (dotted paths too, such as CharacterMovement.MaxWalkSpeed). Answered under properties; a name that does not resolve is listed under missingProperties with the reason, and the others still answer."
+            },
+            "objectPaths": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "maxItems": 64,
+              "description": "The same read on several objects in one call, in place of objectPath: each entry is a target as objectPath takes it (an actor by name or label, an asset, a class default, PlayerPawn), read as a single call would be, propertyNames included. Answered under targets; a target that cannot be read carries its error and the others still answer."
             }
           },
           "required": [
@@ -44047,6 +44057,16 @@
             "value": {
               "description": "The value read; its type follows the property."
             },
+            "targets": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "x-unreal-reflection-boundary": true,
+              "description": "With objectPaths: each target as {objectPath as given, propertyName and value, or properties and missingProperties with propertyNames, error when it could not be read}."
+            },
             "properties": {
               "type": "array",
               "items": {
@@ -44073,7 +44093,7 @@
       },
       "examples": [
         {
-          "title": "Read a property value from a world actor, asset, or Blueprint class defaults (blueprintPath, or the Blueprint asset's own path), or several at once (propertyNames).",
+          "title": "Read a property value from a world actor, asset, or Blueprint class defaults (blueprintPath, or the Blueprint asset's own path), several at once (propertyNames), or the same ones from several objects (objectPaths).",
           "input": {
             "action": "get_property",
             "objectPath": "/Game/Maps/Demo.Demo_PersistentLevel.PlayerStart_1",
@@ -44115,8 +44135,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "3d115538b6221a9970fffa1e1e79ed9a0f7fd272ba3cb7279c70b0293d410350",
-        "content": "637f5b1c9e2b16bd4fd4a6a1020860d492c2ef890943896bcd7bc3397d5b9d87"
+        "schema": "cf57c3785275a469432ab65fef4be3efa8b51e3cc88f3c9144ad7c3fd13e569d",
+        "content": "4248f1660bab7e5744bbdea16aa8fa05afbccbb417db6aad7706458096b935b9"
       }
     },
     {
@@ -44284,6 +44304,10 @@
               "type": "boolean",
               "description": "True when the editor window is minimized: no frame is drawn, so renderThreadMs, rhiThreadMs and gpuMs are left from the last drawn frame and the frame delta is the background throttle. Restore it (control_editor configure_editor setting window) before measuring. Absent otherwise."
             },
+            "videoMemoryOverBudgetMB": {
+              "type": "number",
+              "description": "How far video memory is over budget, the figure the viewport's \"Video memory has been exhausted\" line prints: another application holding the GPU (a game) or a scene that does not fit, which slows every frame. Absent when it fits."
+            },
             "isBenchmarking": {
               "type": "boolean",
               "description": "Whether the engine is in benchmarking mode."
@@ -44430,8 +44454,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "3440babb753d1fdd7a0c37c13124d1787a93dba827f9e65c4ad5a3dda7caf156",
-        "content": "6ea39aaabc2c6630efbb40fa21386a6e4cd38f4ea25ad46d0a015b7015ed271c"
+        "schema": "079862c2327a65992c17e703636fe4fd3dc2c3260d0867cc65ccc35cd4e9f883",
+        "content": "94b7d64796dc6ee4703688cb911cdf175731c7d3db8cc1d29154191e036447f7"
       }
     },
     {

@@ -54,6 +54,7 @@ export const STATS_RECORDS: readonly CapabilityRecordSource[] = [
       gpuMs: { type: 'number', description: 'GPU frame time in milliseconds.' },
       actorCount: { type: 'number', description: 'Actor count of the measured world.' },
       windowMinimized: { type: 'boolean', description: 'True when the editor window is minimized: no frame is drawn, so renderThreadMs, rhiThreadMs and gpuMs are left from the last drawn frame and the frame delta is the background throttle. Restore it (control_editor configure_editor setting window) before measuring. Absent otherwise.' },
+      videoMemoryOverBudgetMB: { type: 'number', description: 'How far video memory is over budget, the figure the viewport\'s "Video memory has been exhausted" line prints: another application holding the GPU (a game) or a scene that does not fit, which slows every frame. Absent when it fits.' },
       isBenchmarking: { type: 'boolean', description: 'Whether the engine is in benchmarking mode.' },
       useFixedTimeStep: { type: 'boolean', description: 'Whether a fixed time step is active.' },
     },

@@ -38,6 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`set_transform` gives many actors one change**: `actorNames` with an `offset`, `rotation`, `scale` or `location`, and an `actors` item takes any of those it leaves out from the call. `report: "failures"` keeps only the failed and misplaced items in `results`. Rescaling forty props took forty items that all said the same scale.
 - **A motion read names what touches the actor** (`overlaps`): each sample lists the actors that began or stopped overlapping it since the one before, checked every frame, and `overlapped` lists every one it touched. A pawn that died as it respawned took a long hunt to pin on the enemy walking into it.
 - **A game screenshot says the field of view the frame shows** (`horizontalFov`, `verticalFov`): `activeCameraFov` is the camera's setting, which holds only at the camera's own aspect ratio, so a wider viewport that keeps the vertical angle shows more across than it says.
+- **`get_property` reads the same properties from several objects** (`objectPaths`): one row per object under `targets`, and an object that cannot be read says why while the others still answer. Eight platforms' state took eight calls.
 
 </details>
 
@@ -76,6 +77,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Material node overlap warnings measure the title the editor draws**: a material batch's auto-placed nodes, 400 apart, were reported as overlapping because the width was read from the internal object name.
 - **`stop` answers once play has ended**: it said "stopped" as it asked, and a minimized editor ran the session on for seconds, so the next edit could land in the play world and be thrown away.
 - **A motion read ended by a level the game loaded says `levelChanged`**: a death that reloaded the level ended it as `worldEnded`, the answer for play that stopped, while PIE ran on.
+- **A slow motion read and `get_stats` say how far video memory is over budget** (`videoMemoryOverBudgetMB`): a game holding most of the GPU made a run crawl at 5 fps, and the warning only guessed at a heavy scene while the viewport printed the figure.
 
 </details>
 

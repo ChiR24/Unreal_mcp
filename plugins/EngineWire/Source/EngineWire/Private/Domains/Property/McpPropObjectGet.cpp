@@ -26,6 +26,42 @@ bool UEngineWireSubsystem::HandleGetObjectProperty(
       !LowerAction.Contains(TEXT("get_object_property")))
     return false;
 
+  // objectPaths: the same read on several targets in one call, as set_property writes them (eight platforms' state
+  // took eight calls, or a list filtered by a shared name). Each runs through this handler, propertyNames included.
+  const TArray<TSharedPtr<FJsonValue>> *Paths = nullptr;
+  if (Payload->TryGetArrayField(TEXT("objectPaths"), Paths) && Paths->Num() > 0) {
+    TArray<TSharedPtr<FJsonValue>> Targets;
+    int32 Read = 0;
+    for (const TSharedPtr<FJsonValue> &Entry : *Paths) {
+      FString Path;
+      if (Entry.IsValid()) Entry->TryGetString(Path);
+      TSharedPtr<FJsonObject> One = MakeShared<FJsonObject>();
+      One->Values = Payload->Values;
+      for (const TCHAR *Field : {TEXT("objectPaths"), TEXT("actorName"), TEXT("name"), TEXT("blueprintPath")}) One->RemoveField(Field);
+      One->SetStringField(TEXT("objectPath"), Path.TrimStartAndEnd());
+      const FString ItemId = FString::Printf(TEXT("%s#target%d"), *RequestId, Targets.Num());
+      FMcpResponseCaptureRegistry::Get().Begin(ItemId);
+      HandleGetObjectProperty(ItemId, Action, One, RequestingSocket);
+      const FMcpCapturedResponse Reply = FMcpResponseCaptureRegistry::Get().End(ItemId);
+      TSharedPtr<FJsonObject> Row = McpHandlerUtils::CreateResultObject();
+      Row->SetStringField(TEXT("objectPath"), Path.TrimStartAndEnd());
+      // propertyName rides along: the receipt redactor judges a value by that sibling name.
+      for (const TCHAR *Field : {TEXT("propertyName"), TEXT("value"), TEXT("properties"), TEXT("missingProperties")}) {
+        const TSharedPtr<FJsonValue> Value = Reply.Result.IsValid() ? Reply.Result->TryGetField(Field) : nullptr;
+        if (Value.IsValid()) Row->SetField(Field, Value);
+      }
+      if (Reply.bSuccess) ++Read;
+      else Row->SetStringField(TEXT("error"), Reply.Message);
+      Targets.Add(MakeShared<FJsonValueObject>(Row));
+    }
+    TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
+    Data->SetArrayField(TEXT("targets"), Targets);
+    SendAutomationResponse(RequestingSocket, RequestId, Read > 0,
+        FString::Printf(TEXT("Read %d of %d objects."), Read, Paths->Num()), Data,
+        Read > 0 ? FString() : FString(TEXT("PROPERTY_NOT_FOUND")));
+    return true;
+  }
+
   // propertyNames: several reads of one target in one call, each through this handler under a captured id. A name that
   // does not resolve is listed under missingProperties with its reason; the others still answer.
   const TArray<TSharedPtr<FJsonValue>> *Names = nullptr;

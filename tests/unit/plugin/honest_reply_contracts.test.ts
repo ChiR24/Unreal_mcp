@@ -948,6 +948,18 @@ describe('multi-property reads of dotted paths', () => {
   });
 });
 
+describe('one read on several objects', () => {
+  // Eight platforms' state took eight get_property calls, or a list filtered by a shared name.
+  it('objectPaths runs the read on each object under a captured id and answers every one, misses included', () => {
+    const source = code('Property', 'McpPropObjectGet.cpp');
+    expect(source).toContain('for (const TCHAR *Field : {TEXT("objectPaths"), TEXT("actorName"), TEXT("name"), TEXT("blueprintPath")}) One->RemoveField(Field);');
+    expect(source).toContain('FString::Printf(TEXT("%s#target%d"), *RequestId, Targets.Num())');
+    expect(source).toContain('{TEXT("propertyName"), TEXT("value"), TEXT("properties"), TEXT("missingProperties")}');
+    expect(source).toMatch(/if \(Reply\.bSuccess\) \+\+Read;\s*else Row->SetStringField\(TEXT\("error"\), Reply\.Message\);/u);
+    expect(source).toContain('Data->SetArrayField(TEXT("targets"), Targets);');
+  });
+});
+
 describe('list reads struct members of an actor', () => {
   // list propertyNames reported Settings.BloomIntensity "missing" on a post process volume while get_property read it:
   // list only followed Component.Property, never a struct member of the actor itself.
@@ -2014,6 +2026,13 @@ describe('performance stats give the game\'s own share of the frame', () => {
   it('says when the editor window is minimized, so the render times are stale', () => {
     const stats = code('Environment', 'Inspection', 'McpEnvInspectStats.cpp');
     expect(stats).toMatch(/if \(Root\.IsValid\(\) && Root->IsWindowMinimized\(\)\)\s*\{\s*Resp->SetBoolField\(TEXT\("windowMinimized"\), true\);/u);
+  });
+
+  // A game holding most of the GPU slowed every frame; only the viewport's "Video memory has been exhausted" line said so.
+  it('says how far video memory is over budget, from the renderer\'s own figure', () => {
+    const stats = code('Environment', 'Inspection', 'McpEnvInspectStats.cpp');
+    expect(stats).toContain('const double VideoOverMB = double(GDemotedLocalMemorySize) / (1024.0 * 1024.0);');
+    expect(stats).toContain('if (VideoOverMB >= 1.0) Resp->SetNumberField(TEXT("videoMemoryOverBudgetMB"), FMath::RoundToDouble(VideoOverMB));');
   });
 });
 

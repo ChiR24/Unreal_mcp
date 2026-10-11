@@ -186,6 +186,13 @@ describe('sample_motion runs at full rate or says it did not', () => {
     expect(source).toContain('McpSlowFrameWarning(Run->LastGame - Run->StartGame, Run->Frames)');
   });
 
+  // A game holding most of the GPU made a run crawl at 5 fps; only a screenshot's viewport text said video memory ran out.
+  it('names video memory over budget, from the renderer\'s own figure, as the cause of a slow run', () => {
+    const inputs = read('McpActorMotionInputs.cpp');
+    expect(inputs).toContain('const double OverMB = double(GDemotedLocalMemorySize) / (1024.0 * 1024.0);');
+    expect(inputs).toContain('#include "RHI.h"');
+  });
+
   // A foot that slid, sank or floated was invisible in the actor's own location.
   it('follows points on the actor and measures each one against the ground below it', () => {
     const points = read('Motion', 'McpMotionPoints.cpp');

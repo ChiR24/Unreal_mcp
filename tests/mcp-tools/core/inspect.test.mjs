@@ -98,6 +98,11 @@ const testCases = [
     { path: 'structuredContent.result.properties', length: 2, label: 'both real properties answer' },
     { path: 'structuredContent.result.missingProperties.0', includes: 'NoSuchProperty', label: 'the miss is named, not dropped' },
   ] },
+  { scenario: 'INFO: get_property objectPaths reads the same property from several objects', toolName: 'inspect', arguments: { action: 'get_property', objectPaths: [ACTOR, BP_PATH, `MCP_NoSuchActor_${ts}`], propertyName: 'InitialLifeSpan' }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.targets', length: 3, label: 'one row per object asked' },
+    { path: 'structuredContent.result.targets.1.objectPath', equals: BP_PATH, label: 'in the order given' },
+    { path: 'structuredContent.result.targets.2.error', exists: true, label: 'an object that cannot be read says why, the others still answer' },
+  ] },
   { scenario: 'INFO: list_objects', toolName: 'inspect', arguments: { action: 'list_objects' }, expected: 'success' },
   { scenario: 'INFO: list_objects second page', toolName: 'inspect', arguments: { action: 'list_objects', limit: 5, offset: 5 }, expected: 'success', assertions: [{ path: 'structuredContent.result.offset', equals: 5, label: 'offset is honoured' }] },
   { scenario: 'INFO: get_metadata', toolName: 'inspect', arguments: inspectActor('get_metadata'), expected: 'success' },
