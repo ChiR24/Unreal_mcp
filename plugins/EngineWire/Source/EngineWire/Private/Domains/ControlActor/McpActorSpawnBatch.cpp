@@ -1,5 +1,7 @@
 #include "Domains/ControlActor/McpActorSupport.h"
 #include "Core/Requests/McpResponseCaptureRegistry.h"
+#include "Domains/ControlActor/Placement/McpSpawnRepeat.h"
+#include "Physics/Experimental/PhysInterface_Chaos.h"
 
 // spawn_batch: place many actors in one request. Each item runs through the
 // ordinary spawn handler under a synthetic request id whose reply is captured
@@ -8,6 +10,8 @@
 
 namespace {
 constexpr int32 MaxSpawnBatchItems = 500;
+// Actors once each item's repeat is unrolled (McpSpawnRepeat).
+constexpr int32 MaxSpawnBatchActors = 1000;
 
 // Every key a batch item is read for: the spawn's own, then the material, organisation and variables steps.
 // Anything else (a "label" meant as actorName) was dropped without a word.
@@ -62,7 +66,7 @@ bool UEngineWireSubsystem::HandleControlActorSpawnBatch(
         FString::Printf(TEXT("spawn_batch needs an `actors` array of 1-%d items, each "
                              "a spawn payload ({classPath|blueprintPath|meshPath, "
                              "actorName, location, rotation, scale, materialPath, "
-                             "folder, tags})."),
+                             "folder, tags, repeat})."),
                         MaxSpawnBatchItems),
         nullptr);
     return true;
@@ -70,6 +74,19 @@ bool UEngineWireSubsystem::HandleControlActorSpawnBatch(
   const TSharedPtr<FJsonObject> *DefaultsPtr = nullptr;
   Payload->TryGetObjectField(TEXT("defaults"), DefaultsPtr);
   const TSharedPtr<FJsonObject> Defaults = DefaultsPtr ? *DefaultsPtr : nullptr;
+  // Each item over the defaults with its repeat unrolled, before anything spawns; null marks an item that is not an object.
+  TArray<TSharedPtr<FJsonObject>> Expanded;
+  for (const TSharedPtr<FJsonValue> &Value : *Items) {
+    const TSharedPtr<FJsonObject> *ItemObj = nullptr;
+    FString RepeatError;
+    if (!Value.IsValid() || !Value->TryGetObject(ItemObj)) {
+      Expanded.Add(nullptr);
+    } else if (!McpSpawnRepeat::Expand(MergeSpawnItem(Defaults, *ItemObj), MaxSpawnBatchActors, Expanded,
+                                       RepeatError)) {
+      SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"), RepeatError, nullptr);
+      return true;
+    }
+  }
 
   // One undo step for the whole batch: each item's spawn, material and variables below run captured, and leave
   // the step to this one.
@@ -87,19 +104,18 @@ bool UEngineWireSubsystem::HandleControlActorSpawnBatch(
   int32 PlacementWarnings = 0;
   int32 IgnoredItems = 0;
   TArray<TPair<AActor *, TSharedPtr<FJsonObject>>> Placed;
-  for (int32 Index = 0; Index < Items->Num(); ++Index) {
+  for (int32 Index = 0; Index < Expanded.Num(); ++Index) {
     TSharedPtr<FJsonObject> Entry = McpHandlerUtils::CreateResultObject();
     Entry->SetNumberField(TEXT("index"), Index);
     Results.Add(MakeShared<FJsonValueObject>(Entry));
 
-    const TSharedPtr<FJsonObject> *ItemObj = nullptr;
-    if (!(*Items)[Index].IsValid() || !(*Items)[Index]->TryGetObject(ItemObj)) {
+    const TSharedPtr<FJsonObject> Item = Expanded[Index];
+    if (!Item.IsValid()) {
       Entry->SetBoolField(TEXT("success"), false);
       Entry->SetStringField(TEXT("error"), TEXT("item is not an object"));
       Failures.Add(FString::Printf(TEXT("#%d: item is not an object"), Index));
       continue;
     }
-    const TSharedPtr<FJsonObject> Item = MergeSpawnItem(Defaults, *ItemObj);
     const bool bNamed = Item->HasField(TEXT("actorName"));
     TArray<FString> Ignored;
     for (const TPair<FString, TSharedPtr<FJsonValue>> &Pair : Item->Values) {
@@ -214,6 +230,13 @@ bool UEngineWireSubsystem::HandleControlActorSpawnBatch(
   // Where each ended up (set_transform's placement facts), tagged (mcp.placement.ok), furnished and coloured: a spawn
   // run inside the batch leaves the check to here. Judged once the whole batch stands, since a pipe measured before
   // the supports later in the batch existed was reported floating over the deck.
+  // A body spawned above reaches the physics scene's queries only on the scene's next update, so the ground trace went
+  // through a desk this batch placed and the monitor on it read "floating 91 units". The editor world's scene is not
+  // running, so it is flushed here; a running game's scene is left to its own tick.
+  UWorld *SpawnWorld = Placed.Num() > 0 ? Placed[0].Key->GetWorld() : nullptr;
+  if (SpawnWorld && !SpawnWorld->IsGameWorld() && SpawnWorld->GetPhysicsScene()) {
+    FPhysInterface_Chaos::FlushScene(SpawnWorld->GetPhysicsScene());
+  }
   for (const TPair<AActor *, TSharedPtr<FJsonObject>> &Item : Placed) {
     McpPlacement::DescribePlacement(Item.Key, Item.Value);
     PlacementWarnings += Item.Value->HasField(TEXT("placementWarning")) ? 1 : 0;
@@ -249,7 +272,7 @@ bool UEngineWireSubsystem::HandleControlActorSpawnBatch(
     SendAutomationResponse(
         Socket, RequestId, false,
         FString::Printf(TEXT("Spawned %d of %d actors; %d problem(s): %s"), SpawnedCount,
-                        Items->Num(), Failures.Num(), *FString::Join(Failures, TEXT("; "))),
+                        Expanded.Num(), Failures.Num(), *FString::Join(Failures, TEXT("; "))),
         Data, TEXT("SPAWN_BATCH_INCOMPLETE"));
     return true;
   }

@@ -831,3 +831,44 @@ describe('call_actor_function reaches a component and answers lean', () => {
     }
   });
 });
+
+// A row of racks or a grid of ceiling lights was one hand-written batch item per actor.
+describe('a spawn_batch item\'s repeat unrolls into numbered copies before anything spawns', () => {
+  it('unrolls every item before the undo step opens, and refuses a malformed or oversized repeat with nothing placed', () => {
+    const source = read('McpActorSpawnBatch.cpp');
+
+    expect(source).toContain('McpSpawnRepeat::Expand(MergeSpawnItem(Defaults, *ItemObj), MaxSpawnBatchActors, Expanded,');
+    expect(source.indexOf('McpSpawnRepeat::Expand('), 'refused before the undo step and the first spawn').toBeLessThan(source.indexOf('McpBeginSpawnTransaction(RequestId)'));
+    expect(source).toMatch(/for \(int32 Index = 0; Index < Expanded\.Num\(\); \+\+Index\)/u);
+    expect(source).not.toContain('(*Items)[Index]');
+  });
+
+  it('steps each copy from the item\'s location by offset and rowOffset, numbers its actorName and caps the batch', () => {
+    const source = read('Placement', 'McpSpawnRepeat.cpp');
+
+    expect(source).toContain('Base + Offset * Column + RowOffset * Row');
+    expect(source).toContain('Copy->RemoveField(TEXT("repeat"));');
+    expect(source).toContain('FString::Printf(TEXT("%s_%d"), *Name, ++Number)');
+    expect(source).toMatch(/if \(Out\.Num\(\) \+ double\(Columns\) \* RowCount > MaxActors\)/u);
+  });
+
+  it('the record says what repeat takes', () => {
+    const properties = capabilityIndex().byId.get('control_actor.spawn')?.schemas.input.properties;
+    const actors = isRecord(properties) ? properties.actors : undefined;
+
+    expect(isRecord(actors) ? actors.description : '').toMatch(/repeat \(\{count, offset \[x, y, z\], rows, rowOffset/u);
+  });
+});
+
+// A desk spawned in a batch was not yet in the physics scene's query structure when the batch judged the monitor
+// placed on it, so the ground trace went through the desk and the monitor read "floating 91 units".
+describe('spawn_batch judges a stacked item against what the batch itself placed', () => {
+  it('flushes the editor world\'s physics scene before the placement pass, and leaves a running game\'s scene alone', () => {
+    const source = read('McpActorSpawnBatch.cpp');
+    const flush = source.indexOf('FPhysInterface_Chaos::FlushScene(SpawnWorld->GetPhysicsScene());');
+
+    expect(flush).toBeGreaterThan(-1);
+    expect(source).toContain('if (SpawnWorld && !SpawnWorld->IsGameWorld() && SpawnWorld->GetPhysicsScene())');
+    expect(flush, 'before the first item is judged').toBeLessThan(source.indexOf('McpPlacement::DescribePlacement(Item.Key, Item.Value);'));
+  });
+});

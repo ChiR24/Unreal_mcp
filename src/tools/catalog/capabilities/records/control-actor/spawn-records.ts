@@ -145,10 +145,14 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
     editorStates: ANY_EDITOR_STATE,
     domain: DOMAIN,
     family: FAMILY_SPAWN,
-    topics: ['spawn many actors', 'batch spawn', 'place many actors', 'lay out level', 'build level layout'],
+    topics: ['spawn many actors', 'batch spawn', 'place many actors', 'lay out level', 'build level layout',
+      'row of actors', 'grid of actors'],
     summary:
       'Spawn many actors in one call; each item is a spawn payload, optionally with a material, Blueprint variables, outliner folder and tags.',
-    whenToUse: ['More than a couple of actors must be placed, such as laying out a level.'],
+    whenToUse: [
+      'More than a couple of actors must be placed, such as laying out a level.',
+      'A row or grid of the same actor must be placed (an item\'s repeat).',
+    ],
     whenNotToUse: ['A single actor is needed (use spawn).'],
     // Each item runs through the single-spawn handler in-process (native
     // HandleControlActorSpawnBatch), so an item takes exactly spawn's fields.
@@ -162,7 +166,10 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
           + 'set_material; componentName/materialSlot/allComponents narrow it), variables ({name: value} Blueprint '
           + 'variables set on the new instance, like set_blueprint_variables; in a running game they are set before its '
           + 'BeginPlay, so it starts with them), folder (outliner folder path), tags '
-          + '(actor tags; delete_by_tag removes the batch again). Items that fail are reported; the rest still spawn.',
+          + '(actor tags; delete_by_tag removes the batch again), repeat ({count, offset [x, y, z], rows, rowOffset '
+          + '[x, y, z]}: count x rows copies of the item, each moved from its location by offset per copy and rowOffset '
+          + 'per row, actorName numbered _1, _2, ...; a row of racks, a grid of lights; at most 1000 actors once '
+          + 'unrolled). Items that fail are reported; the rest still spawn.',
       },
       defaults: {
         type: 'object',
@@ -189,7 +196,7 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
         items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
         'x-unreal-reflection-boundary': true,
         description: 'Per item (only the failed ones and those with a placementWarning or ignoredKeys under report: failures): '
-          + 'index, success, name, path, error, errorCode, variablesSet, variablesError, materialApplied, materialError, '
+          + 'index (its place in the batch once repeats are unrolled), success, name, path, error, errorCode, variablesSet, variablesError, materialApplied, materialError, '
           + 'ignoredKeys (the item\'s keys no spawn reads, such as a "label" meant as actorName), and the placement '
           + 'facts set_transform reports (groundZ, groundClearance, placementWarning, overlappingActors, suggestedLocation), '
           + 'measured after the item took its tags, variables and material, so an item tagged mcp.placement.ok is never '

@@ -16,6 +16,8 @@ import { num } from '../shared/schema-props.js';
 
 const F = 'atmosphere';
 const WU = ['Atmosphere, sky, fog, or time-of-day must be configured.'];
+// The fog records read density as the height fog's FogDensity; the shared property said "Foliage density."
+const FOG_DENSITY = { ...P.density, description: 'Fog density, the height fog\'s FogDensity (0.02 a light haze, 0.05 and up a thick fog).' };
 // The configure variants find their actor by actorName, else the level's first
 // actor of that kind, and spawn one only when the level has none.
 const TARGET = {
@@ -69,7 +71,7 @@ export const ATMOSPHERE_RECORDS: readonly CapabilityRecordSource[] = [
     id: 'build_environment.create_fog_volume', action: 'create_fog_volume', family: F,
     summary: 'Create (or find by name) an exponential height fog actor.',
     whenToUse: WU, whenNotToUse: ['Exponential height fog is sufficient.'],
-    inputProps: { name: P.name, location: P.location, rotation: P.rotation, density: P.density, settings: P.actorSettings },
+    inputProps: { name: P.name, location: P.location, rotation: P.rotation, density: FOG_DENSITY, settings: P.actorSettings },
     required: [], effect: 'write', latency: 'interactive', resources: 'low',
     exampleInput: { action: 'create_fog_volume', name: 'FogVol_1', location: { x: 0, y: 0, z: 0 } },
   }),
@@ -103,7 +105,7 @@ export const ATMOSPHERE_RECORDS: readonly CapabilityRecordSource[] = [
     id: 'build_environment.configure_exponential_height_fog', action: 'configure_exponential_height_fog', family: F,
     summary: 'Configure exponential height fog settings.',
     whenToUse: WU, whenNotToUse: ['Volumetric fog should be used instead.'],
-    inputProps: { settings: P.actorSettings, density: P.density, ...ROTATED },
+    inputProps: { settings: P.actorSettings, density: FOG_DENSITY, ...ROTATED },
     required: [], effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'interactive', resources: 'low',
     exampleInput: { action: 'configure_exponential_height_fog', density: 0.05 },
   }),
