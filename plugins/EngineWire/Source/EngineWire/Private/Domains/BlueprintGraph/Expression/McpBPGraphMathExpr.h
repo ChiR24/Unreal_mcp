@@ -29,6 +29,12 @@ FString DescribeOperatorMisuse(const UBlueprint* Blueprint, const FString& Expre
 FString DescribeBoolArithmetic(const UBlueprint* Blueprint, const FString& Expression,
                                const TSet<FName>& ExtraBools = TSet<FName>());
 
+// Each operand of && or || (Parts as TokenizeExpression gives them) that is a number: a name that is no bool variable,
+// a number, or arithmetic with no comparison on its own bracket level. An operand holding a call or a comparison is
+// not judged. One note per operand; empty when none.
+TArray<FString> DescribeNumberLogic(const UBlueprint* Blueprint, const TArray<FString>& Parts,
+                                    const TSet<FName>& ExtraBools);
+
 // Whether Name reads true/false: a bool variable of the Blueprint, one of ExtraBools, or the literal true or false.
 bool IsBoolName(const UBlueprint* Blueprint, const FString& Name, const TSet<FName>& ExtraBools);
 

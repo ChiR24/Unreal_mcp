@@ -44,6 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Clearer geometry descriptions**: `innerRadius` of a torus or arch is its tube radius, not a hole; arch and revolve orientation; `mirror` keeps the original; array offsets, centre and angle are in the mesh's local space, and `count` includes the original.
 - **`set_blueprint_variables` refuses a call that names a variable the actor lacks** (`PROPERTY_NOT_FOUND`, listing the ones it has) before setting anything: it set the names it knew and still answered "Variables updated". A value that does not take now fails the call too, and an actor variable takes the other actor by label or name, not only by path.
 - **Math Expressions take a unary minus**: `-150` and `a * -b` are written as `0 - x`, which the node parses; they were refused.
+- **Math Expressions take unbracketed comparisons of arithmetic around `&&` and `||`**: `T - Next < 0 || T - Next >= 0.07` was refused as "'T' is a number". Arithmetic with no comparison there (`Gain + 1 && Ready`) is refused as a number.
 - **A placed enclosure is no longer measured against what it holds**: a cart corral spawned around its carts read "sunk 97 units" below the carts' tops.
 - **`raycast_mesh` takes `{start, end}` lines** as `raycast_world` does, stopping each at its end; a ray with neither form is refused instead of answering no hit.
 - **A graph batch's create step lists the node's pins after its `pinDefaults`**: a spawn node's Class default adds its exposed pins, which the reply left out.

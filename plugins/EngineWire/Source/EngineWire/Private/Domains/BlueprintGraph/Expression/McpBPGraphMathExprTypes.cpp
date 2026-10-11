@@ -61,6 +61,35 @@ bool IsTrueFalseOperand(const TArray<FString>& Parts, int32 First, int32 Last, c
   }
   return false;
 }
+
+// Parts[First..Last] as the caller wrote it, a space between tokens except inside brackets.
+FString JoinTokens(const TArray<FString>& Parts, int32 First, int32 Last)
+{
+  FString Text;
+  for (int32 At = First; At <= Last; ++At)
+  {
+    Text += (At > First && Parts[At] != TEXT(")") && Parts[At - 1] != TEXT("(") ? TEXT(" ") : TEXT("")) + Parts[At];
+  }
+  return Text;
+}
+
+// The operand of the && or || at Index on the side Step points to (-1 left, 1 right): up to the next && || or comma on
+// the same bracket level, or the bracket around it. Both operators take true/false, so every such operand must be one,
+// whatever their precedence: T - Next < 0 || Ready is a comparison and a name, not the name T.
+TPair<int32, int32> LogicalOperand(const TArray<FString>& Parts, int32 Index, int32 Step)
+{
+  int32 Depth = 0;
+  int32 At = Index + Step;
+  for (; Parts.IsValidIndex(At); At += Step)
+  {
+    Depth += Parts[At] == TEXT("(") ? Step : Parts[At] == TEXT(")") ? -Step : 0;
+    if (Depth < 0 || (Depth == 0 && (Parts[At] == TEXT("&&") || Parts[At] == TEXT("||") || Parts[At] == TEXT(","))))
+    {
+      break;
+    }
+  }
+  return Step > 0 ? TPair<int32, int32>(Index + 1, At - 1) : TPair<int32, int32>(At + 1, Index - 1);
+}
 }
 
 bool IsBoolName(const UBlueprint* Blueprint, const FString& Name, const TSet<FName>& ExtraBools)
@@ -69,6 +98,58 @@ bool IsBoolName(const UBlueprint* Blueprint, const FString& Name, const TSet<FNa
   return Name.Equals(TEXT("true"), ESearchCase::IgnoreCase) || Name.Equals(TEXT("false"), ESearchCase::IgnoreCase) ||
          ExtraBools.Contains(FName(*Name)) ||
          CastField<FBoolProperty>(Members ? Members->FindPropertyByName(FName(*Name)) : nullptr) != nullptr;
+}
+
+TArray<FString> DescribeNumberLogic(const UBlueprint* Blueprint, const TArray<FString>& Parts,
+                                    const TSet<FName>& ExtraBools)
+{
+  // On the operand's own level these make it true/false, or a value not typed here (! has a note of its own).
+  static const TArray<FString> NotJudged = {TEXT("=="), TEXT("!="), TEXT("<"), TEXT(">"), TEXT("<="), TEXT(">="),
+                                            TEXT("&&"), TEXT("||"), TEXT("&"), TEXT("|"), TEXT("^"), TEXT("!")};
+  TArray<FString> Notes;
+  for (int32 Index = 0; Index < Parts.Num(); ++Index)
+  {
+    if (Parts[Index] != TEXT("&&") && Parts[Index] != TEXT("||"))
+    {
+      continue;
+    }
+    for (const int32 Step : {-1, 1})
+    {
+      const TPair<int32, int32> Operand = LogicalOperand(Parts, Index, Step);
+      int32 First = Operand.Key;
+      int32 Last = Operand.Value;
+      while (First < Last && Parts[First] == TEXT("(") && MatchingBracket(Parts, First, 1) == Last)
+      {
+        ++First;
+        --Last;
+      }
+      bool bNumber = First <= Last && !(First == Last && IsBoolName(Blueprint, Parts[First], ExtraBools));
+      int32 Depth = 0;
+      for (int32 At = First; At <= Last && bNumber; ++At)
+      {
+        Depth += Parts[At] == TEXT("(") ? 1 : Parts[At] == TEXT(")") ? -1 : 0;
+        // A call's result is never judged, wherever it sits: its type is not known here.
+        const bool bCall = IsNameToken(Parts[At]) && Parts.IsValidIndex(At + 1) && Parts[At + 1] == TEXT("(");
+        bNumber = !bCall && !(Depth == 0 && NotJudged.Contains(Parts[At]));
+      }
+      if (!bNumber)
+      {
+        continue;
+      }
+      const FString Text = JoinTokens(Parts, First, Last);
+      Notes.AddUnique(First == Last && IsNameToken(Text)
+                          ? FString::Printf(TEXT("'%s' is a number here (a name that is not a bool variable becomes a "
+                                                 "number input), but && and || take true/false: compare it (%s > 0), "
+                                                 "name a bool variable, or join true/false values from other nodes "
+                                                 "with BooleanAND or BooleanOR nodes."),
+                                            *Text, *Text)
+                          : FString::Printf(TEXT("'%s' is a number, but && and || take true/false: compare it (%s > 0) "
+                                                 "or join true/false values from other nodes with BooleanAND or "
+                                                 "BooleanOR nodes."),
+                                            *Text, *Text));
+    }
+  }
+  return Notes;
 }
 
 FString DescribeBoolArithmetic(const UBlueprint* Blueprint, const FString& Expression, const TSet<FName>& ExtraBools)
@@ -129,11 +210,7 @@ FString DescribeBoolArithmetic(const UBlueprint* Blueprint, const FString& Expre
       {
         continue;
       }
-      FString Text;
-      for (int32 At = Operand.Key; At <= Operand.Value; ++At)
-      {
-        Text += (At > Operand.Key && Parts[At] != TEXT(")") && Parts[At - 1] != TEXT("(") ? TEXT(" ") : TEXT("")) + Parts[At];
-      }
+      const FString Text = JoinTokens(Parts, Operand.Key, Operand.Value);
       if (Named.Contains(Text))
       {
         continue;

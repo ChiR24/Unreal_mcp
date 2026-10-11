@@ -1552,6 +1552,17 @@ describe('a graph batch checks its expressions before any step runs', () => {
       .toBeLessThan(mutations.indexOf('bHandled = McpTrySetNodeAssetPropertyForMcp(TargetNode, PropertyName, Value);'));
   });
 
+  // "T - Next < 0 || T - Next >= 0.07" was refused as "'T' is a number": the check read the token beside || alone.
+  it('judges each whole operand of && and ||, up to the next && || comma or enclosing bracket', () => {
+    const math = code('BlueprintGraph', 'Expression', 'McpBPGraphMathExpr.cpp');
+    expect(math).toContain('Notes.Append(DescribeNumberLogic(Blueprint, Parts, ExtraBools));');
+    expect(math, 'no verdict from the neighbouring token').not.toContain('Comparisons.Contains(Prev)');
+    const types = code('BlueprintGraph', 'Expression', 'McpBPGraphMathExprTypes.cpp');
+    expect(types).toContain('if (Depth < 0 || (Depth == 0 && (Parts[At] == TEXT("&&") || Parts[At] == TEXT("||") || Parts[At] == TEXT(","))))');
+    expect(types).toContain('const TPair<int32, int32> Operand = LogicalOperand(Parts, Index, Step);');
+    expect(types, 'a comparison on the operand level makes it true/false').toContain('bNumber = !bCall && !(Depth == 0 && NotJudged.Contains(Parts[At]));');
+  });
+
   // "A != (B > 0 && C)" with A no bool variable failed as a bare "does not parse": A had become a number input.
   it('names a lone number input compared by == or != with a true/false value, and says what an input is', () => {
     const types = code('BlueprintGraph', 'Expression', 'McpBPGraphMathExprTypes.cpp');
