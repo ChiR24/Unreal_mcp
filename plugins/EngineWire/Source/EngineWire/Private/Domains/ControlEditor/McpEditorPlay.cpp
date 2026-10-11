@@ -76,10 +76,22 @@ bool UEngineWireSubsystem::HandleControlEditorStop(
   }
 
   GEditor->RequestEndPlayMap();
-  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  Resp->SetBoolField(TEXT("success"), true);
-  SendAutomationResponse(Socket, RequestId, true,
-                         TEXT("Play in Editor stopped"), Resp, FString());
+  // The session ends on a later editor tick, seconds later in a minimized editor, so "stopped" came back while the
+  // play world still ran and the next edit could land in it and be thrown away. Reply once it has gone.
+  TWeakObjectPtr<UEngineWireSubsystem> WeakThis(this);
+  const double Deadline = FPlatformTime::Seconds() + 20.0;
+  FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda([WeakThis, Socket, RequestId, Deadline](float) {
+    const bool bStopped = !GEditor || !GEditor->PlayWorld;
+    if (!WeakThis.IsValid() || (!bStopped && FPlatformTime::Seconds() < Deadline)) {
+      return WeakThis.IsValid();
+    }
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+    Resp->SetBoolField(TEXT("success"), bStopped);
+    WeakThis->SendAutomationResponse(Socket, RequestId, bStopped,
+        bStopped ? TEXT("Play in Editor stopped") : TEXT("Play in Editor was asked to stop but still ran after 20 s"),
+        Resp, bStopped ? FString() : TEXT("PIE_STOP_TIMEOUT"));
+    return false;
+  }), 0.0f);
   return true;
 }
 

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "f306c57789a2e1e9",
+  "catalogRevision": "cff272199169db8e",
   "recordCount": 410,
   "records": [
     {
@@ -38434,7 +38434,7 @@
           "end play",
           "exit pie"
         ],
-        "summary": "Control Play In Editor with control: play (starts it), pause, resume, stop, eject (leave the pawn for a free camera) or possess (take it back).",
+        "summary": "Control Play In Editor with control: play (starts it, answering once play has begun), pause, resume, stop (answers once play has ended), eject (leave the pawn for a free camera) or possess (take it back).",
         "whenToUse": [
           "control=play: A PIE session must be started to test gameplay.",
           "control=pause: PIE must be paused without stopping.",
@@ -38552,7 +38552,7 @@
       },
       "examples": [
         {
-          "title": "Control Play In Editor with control: play (starts it), pause, resume, stop, eject (leave the pawn for a free camera) or possess (take it back).",
+          "title": "Control Play In Editor with control: play (starts it, answering once play has begun), pause, resume, stop (answers once play has ended), eject (leave the pawn for a free camera) or possess (take it back).",
           "input": {
             "action": "play",
             "control": "play"
@@ -38611,7 +38611,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "912dc2c19caf2455e7514ea063eb80c98387a8bc5039b125a0d15d537605ff10",
-        "content": "d21bc76c491643858c2e9c6a4d31aa2859792ff2f07660f53d97a3276c9649e8"
+        "content": "90dbf4290c006e60d9e24c65e80744415e2379679b2b5b8b1124834d56521be3"
       }
     },
     {

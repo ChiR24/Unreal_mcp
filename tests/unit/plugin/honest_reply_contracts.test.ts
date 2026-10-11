@@ -2320,3 +2320,16 @@ describe('a game screenshot says the field of view the frame was drawn with', ()
     expect(support).toContain('Resp->SetNumberField(TEXT("verticalFov")');
   });
 });
+
+// stop answered "Play in Editor stopped" as it queued the request; the session ended on a later editor tick (10 s later
+// in a minimized editor), so the next call could still land in the play world.
+describe('stop answers once the play session has ended', () => {
+  it('waits on a ticker for the play world to go, and says when it did not within 20 s', () => {
+    const play = code('ControlEditor', 'McpEditorPlay.cpp');
+    const stop = play.slice(play.indexOf('HandleControlEditorStop('), play.indexOf('HandleControlEditorSetGameSpeed('));
+    expect(stop).toContain('GEditor->RequestEndPlayMap();');
+    expect(stop).toContain('const bool bStopped = !GEditor || !GEditor->PlayWorld;');
+    expect(stop).toContain('TEXT("PIE_STOP_TIMEOUT")');
+    expect(stop.indexOf('RequestEndPlayMap'), 'no reply before the ticker').toBeLessThan(stop.indexOf('SendAutomationResponse(Socket, RequestId, bStopped'));
+  });
+});
