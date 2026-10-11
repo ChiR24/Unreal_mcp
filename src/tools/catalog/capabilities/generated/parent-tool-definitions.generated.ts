@@ -5610,6 +5610,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Input event type (key_down, key_up, key_tap = press then release, mouse_click, mouse_move), or widget_list / widget_click to operate the live UMG of a PIE session."
         },
+        "unpauseGame": {
+          "type": "boolean",
+          "description": "Also lift a pause the game holds itself (SetGamePaused from its pause menu or an intro card), as its own unpause does. Without it, a game that paused itself fails the call with GAME_PAUSED and pausedBy: the editor pause is off, but nothing ticks."
+        },
         "unthrottle": {
           "type": "boolean",
           "description": "Also turn off Use Less CPU when in Background (EditorPerformanceSettings.bThrottleCPUWhenNotForeground) for this editor session; it is not saved, so the next launch throttles again. Default true; ignored with minimize."

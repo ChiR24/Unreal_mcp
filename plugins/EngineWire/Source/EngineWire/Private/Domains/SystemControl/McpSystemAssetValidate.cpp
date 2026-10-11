@@ -193,12 +193,13 @@ bool HandleValidateAssets(UEngineWireSubsystem* Self,
           FailRow(Row);
         }
       }
+      // The count says the folder was checked; the list only when it holds something.
       if (bUsage) {
-        Row->SetArrayField(TEXT("materialUsage"), Usage);
         Row->SetNumberField(TEXT("materialUsageCount"), UsageCount);
-        if (UsageCount > 0) {
-          FailRow(Row);
-        }
+      }
+      if (UsageCount > 0) {
+        Row->SetArrayField(TEXT("materialUsage"), Usage);
+        FailRow(Row);
       }
       continue;
     }

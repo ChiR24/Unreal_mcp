@@ -41,6 +41,7 @@ const testCases = [
   { scenario: 'PLAYBACK: stop_recording after optional capture', toolName: 'control_editor', arguments: { action: 'stop_recording' }, expected: 'success' },
   { scenario: 'PLAYBACK: pause', toolName: 'control_editor', arguments: { action: 'pause' }, expected: 'success' },
   { scenario: 'PLAYBACK: resume', toolName: 'control_editor', arguments: { action: 'resume' }, expected: 'success' },
+  { scenario: 'PLAYBACK: resume with unpauseGame', toolName: 'control_editor', arguments: { action: 'resume', unpauseGame: true }, expected: 'success' },
   { scenario: 'CONFIG: set_game_speed', toolName: 'control_editor', arguments: { action: 'set_game_speed', speed: 0.5 }, expected: 'success' },
   { scenario: 'CONFIG: set_fixed_delta_time', toolName: 'control_editor', arguments: { action: 'set_fixed_delta_time', deltaTime: 0.01667 }, expected: 'success' },
   { scenario: 'CONFIG: set_fixed_delta_time off', toolName: 'control_editor', arguments: { action: 'set_fixed_delta_time', deltaTime: 0 }, expected: 'success' },

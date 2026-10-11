@@ -59,6 +59,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **A mesh component's `StaticMesh` set as a property** (`edit_scs` `set_property` or an operation's `properties`, a new Blueprint's `properties`) goes through the engine's mesh setter, and so do the placed copies `edit_scs` updates: the raw write tripped an engine ensure on the component's next mesh read.
 - **`edit_scs` saves the project materials its placement check gave a usage flag.** Drawing a Nanite part set the flag in memory only (while the mesh was still loading, without even marking the material unsaved), so the Blueprint saved cleanly and a cooked game drew the part with the default material.
 - **`save_all` with `assetPaths` writes a named asset the editor holds even when it is not marked dirty**: it answered "Saved 0" for a material whose usage flag the editor set while loading.
+- **`resume` says when the game paused itself**: it answered "PIE session resumed" while the game's own pause (an intro card, a pause menu) held the world still. It now fails with `GAME_PAUSED`, and `unpauseGame` lifts that pause too.
 
 </details>
 

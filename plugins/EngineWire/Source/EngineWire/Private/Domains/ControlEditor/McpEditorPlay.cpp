@@ -1,6 +1,8 @@
 #include "Domains/ControlEditor/McpEditorSupport.h"
 
+#include "GameFramework/PlayerState.h"
 #include "GameFramework/WorldSettings.h"
+#include "Kismet/GameplayStatics.h"
 
 bool UEngineWireSubsystem::HandleControlEditorPlay(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
@@ -144,6 +146,22 @@ bool UEngineWireSubsystem::HandleControlEditorResume(
   }
 
   GEditor->PlayWorld->bDebugPauseExecution = false;
+  // The game can hold a pause of its own (SetGamePaused, from a pause menu or an intro card): the world then stays still
+  // with the editor's pause off, and "resumed" was untrue. unpauseGame lifts it as the game's own unpause would.
+  const AWorldSettings *Settings = GEditor->PlayWorld->GetWorldSettings();
+  if (Settings && Settings->GetPauserPlayerState() && GetJsonBoolField(Payload, TEXT("unpauseGame"))) {
+    UGameplayStatics::SetGamePaused(GEditor->PlayWorld, false);
+  }
+  if (const APlayerState *Pauser = Settings ? Settings->GetPauserPlayerState() : nullptr) {
+    TSharedPtr<FJsonObject> Paused = McpHandlerUtils::CreateResultObject();
+    Paused->SetStringField(TEXT("pausedBy"), Pauser->GetName());
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("GAME_PAUSED"),
+                              TEXT("The editor's pause is off, but the game paused itself (a pause menu or an intro card), so "
+                                   "nothing ticks. Pass unpauseGame true to lift it, or let the game unpause: a widget's own "
+                                   "timer runs only while the editor window is on screen."),
+                              Paused);
+    return true;
+  }
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);

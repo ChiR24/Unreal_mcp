@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "4f667d610b8f37a1",
+  "catalogRevision": "3023fd215c8fcac3",
   "recordCount": 410,
   "records": [
     {
@@ -38439,6 +38439,7 @@
           "control=play: A PIE session must be started to test gameplay.",
           "control=pause: PIE must be paused without stopping.",
           "control=resume: A paused PIE session must resume.",
+          "control=resume: The running game paused itself (an intro card or a pause menu) and must run again for a test: pass unpauseGame.",
           "control=stop: The PIE session must be terminated.",
           "control=eject: The player must detach from the possessed pawn.",
           "control=eject: The view of a running game must be placed for a screenshot: eject, then set_camera.",
@@ -38465,6 +38466,10 @@
             "action": {
               "type": "string",
               "description": "The action to execute on the parent tool."
+            },
+            "unpauseGame": {
+              "type": "boolean",
+              "description": "Also lift a pause the game holds itself (SetGamePaused from its pause menu or an intro card), as its own unpause does. Without it, a game that paused itself fails the call with GAME_PAUSED and pausedBy: the editor pause is off, but nothing ticks."
             },
             "actorName": {
               "type": "string",
@@ -38594,6 +38599,9 @@
             "possess": "possess"
           },
           "declaredBy": {
+            "unpauseGame": [
+              "resume"
+            ],
             "actorName": [
               "possess"
             ]
@@ -38602,8 +38610,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "040bda4df71df7d9cdfb38b17b9e3051309169741a0a1d4548787ad80c1dfe4b",
-        "content": "19e935b666946f4931dd0a456a02f8d1be9f219df823bc65bee723ea83d563d3"
+        "schema": "912dc2c19caf2455e7514ea063eb80c98387a8bc5039b125a0d15d537605ff10",
+        "content": "d21bc76c491643858c2e9c6a4d31aa2859792ff2f07660f53d97a3276c9649e8"
       }
     },
     {

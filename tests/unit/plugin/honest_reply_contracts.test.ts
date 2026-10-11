@@ -1761,6 +1761,14 @@ describe('save_all names the packages it left unsaved', () => {
     expect(source).toContain('Resp->SetArrayField(TEXT("leftDirtyPackages"), MakeStringArray(LeftDirtyPackages));');
   });
 
+  // resume answered "PIE session resumed" while the game held its own pause (an intro card): nothing ticked.
+  it('resume fails GAME_PAUSED naming the pauser unless unpauseGame lifts the game pause', () => {
+    const play = code('ControlEditor', 'McpEditorPlay.cpp');
+    expect(play).toContain('if (Settings && Settings->GetPauserPlayerState() && GetJsonBoolField(Payload, TEXT("unpauseGame"))) {');
+    expect(play).toContain('UGameplayStatics::SetGamePaused(GEditor->PlayWorld, false);');
+    expect(play).toMatch(/Paused->SetStringField\(TEXT\("pausedBy"\), Pauser->GetName\(\)\);\s*SendStandardErrorResponse\(this, Socket, RequestId, TEXT\("GAME_PAUSED"\)/u);
+  });
+
   // A material given a usage flag while a mesh was loading was never marked dirty: assetPaths naming it saved 0.
   it('writes a named package the editor holds even when it is not marked dirty', () => {
     const source = code('ControlEditor', 'McpEditorAssets.cpp');
