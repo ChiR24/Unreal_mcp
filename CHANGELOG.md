@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <summary><b>🔄 Changed</b></summary>
 
 - **The editor plugin is now EngineWire** (was McpAutomationBridge), with short source file names so every path in the Fab package fits Fab's 170-character limit. Settings saved under the old name still load, in the plugin and in the server's port lookup, until they are saved once under the new one. To upgrade, replace `Plugins/McpAutomationBridge` with `Plugins/EngineWire` and rename the plugin entry in the `.uproject` if it lists one.
-- **Replies name each actor once**, in the receipt's `changes`: a one-actor change was listed by label and again by object path, and a many-actor reply repeated its actors in `affectedActors`, on both transports.
+- **Replies name each actor once**, in the receipt's `changes`: a one-actor change was listed by label and again by object path, and a many-actor reply repeated its actors in `affectedActors`, on both transports. `set_material` with `actorNames` lists under `results` only the actors that did not take the material.
 
 </details>
 
@@ -79,6 +79,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`stop` answers once play has ended**: it said "stopped" as it asked, and a minimized editor ran the session on for seconds, so the next edit could land in the play world and be thrown away.
 - **A motion read ended by a level the game loaded says `levelChanged`**: a death that reloaded the level ended it as `worldEnded`, the answer for play that stopped, while PIE ran on.
 - **A slow motion read and `get_stats` say how far video memory is over budget** (`videoMemoryOverBudgetMB`): a game holding most of the GPU made a run crawl at 5 fps, and the warning only guessed at a heavy scene while the viewport printed the figure.
+- **A Blueprint compile names a `PlaySound2D` or `PlaySoundAtLocation` node whose sound never ends by itself** (a warning in `diagnostics`): a looping sound, or a one-shot MetaSound that never fires On Finished (read from its graph on UE 5.5 and later). Those nodes cannot stop it, so it played until the level unloaded, one more copy per call, while the Blueprint compiled clean.
 
 </details>
 

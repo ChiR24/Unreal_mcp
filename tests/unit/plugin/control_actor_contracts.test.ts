@@ -475,6 +475,10 @@ describe('the many forms of set_visibility, set_actor_collision, add_tag and set
     );
     expect(many).toContain('Data->SetArrayField(TEXT("affectedActors"), McpHandlerUtils::ToJsonStringArray(Affected));');
     expect(many.indexOf('TEXT("affectedActors")'), 'the list rides on the incomplete reply too').toBeLessThan(many.indexOf('if (Failures.Num() > 0)'));
+    // Each actor also had a {actorName, applied: true} row, which only repeated affectedActors.
+    expect(sliceBetween(source, 'TEXT("actorNames")', 'TEXT("materials")'), 'rows only for the actors that did not take it')
+      .not.toContain('SetBoolField(TEXT("applied")');
+    expect(many).toMatch(/if \(Results\.Num\(\) > 0\) \{\s*Data->SetArrayField\(TEXT\("results"\), Results\);\s*\}/u);
     expect(source.match(/TEXT\("affectedActors"\)/gu), 'the single form names actorName instead').toHaveLength(1);
   });
 

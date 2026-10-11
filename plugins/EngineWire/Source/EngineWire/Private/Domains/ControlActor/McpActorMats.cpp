@@ -59,9 +59,6 @@ bool UEngineWireSubsystem::HandleControlActorSetMaterial(
       Capture.Begin(ItemId);
       HandleControlActorSetMaterial(ItemId, One, Socket);
       const FMcpCapturedResponse Reply = Capture.End(ItemId);
-      TSharedPtr<FJsonObject> Entry = McpHandlerUtils::CreateResultObject();
-      Entry->SetStringField(TEXT("actorName"), Name);
-      Entry->SetBoolField(TEXT("applied"), Reply.bSuccess);
       if (Reply.bSuccess) {
         FString Changed;
         if (!Reply.Result.IsValid() || !Reply.Result->TryGetStringField(TEXT("actorName"), Changed) || Changed.IsEmpty()) {
@@ -69,14 +66,19 @@ bool UEngineWireSubsystem::HandleControlActorSetMaterial(
         }
         Affected.AddUnique(Changed);
       } else {
+        // A row only for an actor that did not take it: {actorName, applied: true} per actor repeated affectedActors.
+        TSharedPtr<FJsonObject> Entry = McpHandlerUtils::CreateResultObject();
+        Entry->SetStringField(TEXT("actorName"), Name);
         Entry->SetStringField(TEXT("error"), Reply.Message);
+        Results.Add(MakeShared<FJsonValueObject>(Entry));
         Failures.Add(FString::Printf(TEXT("%s: %s"), *Name, *Reply.Message));
       }
-      Results.Add(MakeShared<FJsonValueObject>(Entry));
     }
-    const int32 Applied = Results.Num() - Failures.Num();
+    const int32 Applied = Names->Num() - Failures.Num();
     TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
-    Data->SetArrayField(TEXT("results"), Results);
+    if (Results.Num() > 0) {
+      Data->SetArrayField(TEXT("results"), Results);
+    }
     Data->SetNumberField(TEXT("applied"), Applied);
     Data->SetArrayField(TEXT("affectedActors"), McpHandlerUtils::ToJsonStringArray(Affected));
     if (Transaction) {
@@ -85,7 +87,7 @@ bool UEngineWireSubsystem::HandleControlActorSetMaterial(
     if (Failures.Num() > 0) {
       SendAutomationResponse(Socket, RequestId, false,
                              FString::Printf(TEXT("Material set on %d of %d actors; %s"), Applied,
-                                             Results.Num(), *FString::Join(Failures, TEXT("; "))),
+                                             Names->Num(), *FString::Join(Failures, TEXT("; "))),
                              Data, TEXT("MATERIAL_BATCH_INCOMPLETE"));
     } else {
       SendAutomationResponse(Socket, RequestId, true,

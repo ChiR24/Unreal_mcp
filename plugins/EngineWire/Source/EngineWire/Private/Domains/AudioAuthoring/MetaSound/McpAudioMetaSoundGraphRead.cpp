@@ -3,9 +3,57 @@
 // with edges given as bare vertex GUIDs) just to find a node id for set_default.
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/AudioAuthoring/McpAudioAuthoringPrivate.h"
+#include "Domains/AudioAuthoring/MetaSound/McpAudioSoundEnds.h"
+#include "Sound/SoundBase.h"
 
 namespace McpAudioAuthoring
 {
+FString DescribeEndlessSound(const USoundBase* Sound)
+{
+	if (!Sound)
+	{
+		return FString();
+	}
+	if (Sound->IsLooping())
+	{
+		return TEXT("loops");
+	}
+#if MCP_HAS_METASOUND && MCP_HAS_METASOUND_FRONTEND_V2
+	// A one-shot MetaSound stops when its On Finished output fires; a hiss or hum built without wiring it never does.
+	// Read only; TScriptInterface takes a mutable object.
+	UMetaSoundSource* MetaSound = const_cast<UMetaSoundSource*>(Cast<UMetaSoundSource>(Sound));
+	if (!MetaSound)
+	{
+		return FString();
+	}
+	TScriptInterface<IMetaSoundDocumentInterface> ScriptInterface(MetaSound);
+	const FMetasoundFrontendDocument& Doc = ScriptInterface->GetConstDocument();
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 6
+	const FMetasoundFrontendClassInterface& GraphInterface = Doc.RootGraph.GetDefaultInterface();
+#else
+	const FMetasoundFrontendClassInterface& GraphInterface = Doc.RootGraph.Interface;
+#endif
+	const FName OnFinished(TEXT("UE.Source.OneShot.OnFinished"));
+	const FMetasoundFrontendClassOutput* Finished = GraphInterface.Outputs.FindByPredicate(
+		[&OnFinished](const FMetasoundFrontendClassOutput& Output) { return Output.Name == OnFinished; });
+	if (!Finished)
+	{
+		return FString();
+	}
+	bool bFired = false;
+	Doc.RootGraph.IterateGraphPages([&bFired, Finished](const FMetasoundFrontendGraph& Page)
+	{
+		bFired = bFired || Page.Edges.ContainsByPredicate(
+			[Finished](const FMetasoundFrontendEdge& Edge) { return Edge.ToNodeID == Finished->NodeID; });
+	});
+	if (!bFired)
+	{
+		return TEXT("is a one-shot MetaSound that never fires On Finished");
+	}
+#endif
+	return FString();
+}
+
 #if MCP_HAS_METASOUND && MCP_HAS_METASOUND_FRONTEND_V2
 namespace
 {

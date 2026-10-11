@@ -8,7 +8,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 
 ### Changed
 - **Renamed EngineWire** (was McpAutomationBridge): plugin, modules (`EngineWire`, `EngineWireFab`), classes and the Project Settings page, with short source file names so every packaged path fits Fab's 170-character limit (longest 121). Settings saved under `[/Script/McpAutomationBridge.McpAutomationBridgeSettings]` still load while the new section is empty; saving them once moves them. Replace `Plugins/McpAutomationBridge` with `Plugins/EngineWire`, and rename the plugin entry in the `.uproject` if it lists one.
-- **Native reply compaction drops `affectedActors`** when the receipt's `changes` lists every entry (`ReceiptListedFields` in `McpJsonRpcReplyCompaction.cpp`, held equal to the stdio list by the parity test), and `McpExtractReceiptChanges` takes only the first actor single it finds (`actorName`, else `actorPath`), as `extractChanges` does.
+- **Native reply compaction drops `affectedActors`** when the receipt's `changes` lists every entry (`ReceiptListedFields` in `McpJsonRpcReplyCompaction.cpp`, held equal to the stdio list by the parity test), and `McpExtractReceiptChanges` takes only the first actor single it finds (`actorName`, else `actorPath`), as `extractChanges` does. `set_material`'s `actorNames` form writes a `results` row only for an actor whose run failed.
 
 ### Added
 - **Animation graph nodes by class**: the node-class lookup falls back to `AnimGraphNode_<name>` (spaces ignored) after every Blueprint spelling; `list_node_types` takes `filter`.
@@ -60,6 +60,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **`stop` replies from a ticker once `GEditor->PlayWorld` is gone** (`RequestEndPlayMap` only queues the end), or with `PIE_STOP_TIMEOUT` after 20 s.
 - **`sample_motion` ends with `levelChanged`** when its world is gone while `GEditor->PlayWorld` is set (a level reload or travel in PIE); `worldEnded` now means play stopped.
 - **`McpSlowFrameWarning` and `get_stats` read `GDemotedLocalMemorySize`** (an `RHI.h` extern on 5.0-5.2, `GRHIGlobals.DemotedLocalMemorySize` from 5.3), the figure the viewport's "Video memory has been exhausted" line prints: the warning names it as the cause, and `get_stats` reports it as `videoMemoryOverBudgetMB`.
+- **The compile's sound check also names endless sounds on play-and-forget nodes** (`McpAddSoundNodeWarnings`, was `McpAddUnattenuatedSoundWarnings`): a `PlaySound2D` or `PlaySoundAtLocation` node whose own Sound `McpAudioAuthoring::DescribeEndlessSound` (`MetaSound/McpAudioMetaSoundGraphRead.cpp`) calls endless, a `USoundBase` whose `IsLooping()` holds or, on 5.5+, a one-shot MetaSound with no edge into its `UE.Source.OneShot.OnFinished` output.
 ## [0.6.0-beta-e] - 2026-10-09
 
 Plugin-side changes since the `v0.6.0-beta-d` tag, from the code diff. The server-side view is in the root `CHANGELOG.md`.

@@ -2396,3 +2396,21 @@ describe('material node extents follow the title the editor draws', () => {
     expect(estimate).not.toContain('Expr->GetName()');
   });
 });
+
+describe('a sound that never ends by itself', () => {
+  // A steam hiss built as a one-shot MetaSound, its On Finished never wired, went on PlaySoundAtLocation with no word:
+  // the node returns nothing to stop, so every play ran until the level unloaded, one more copy per call.
+  it('every compile names a PlaySound2D or PlaySoundAtLocation node whose own sound never ends', () => {
+    const check = readFileSync(
+      join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'Foundation', 'BridgeHelpers', 'Blueprints', 'McpBPSoundCheck.cpp'),
+      'utf8',
+    );
+    expect(check).toContain('const bool bForgotten = Name == TEXT("PlaySoundAtLocation") || Name == TEXT("PlaySound2D");');
+    expect(check).toContain('const FString Endless = bForgotten ? McpAudioAuthoring::DescribeEndlessSound(Sound) : FString();');
+    const ends = code('AudioAuthoring', 'MetaSound', 'McpAudioMetaSoundGraphRead.cpp');
+    expect(ends).toMatch(/if \(Sound->IsLooping\(\)\)\s*\{\s*return TEXT\("loops"\);/u);
+    expect(ends).toContain('const FName OnFinished(TEXT("UE.Source.OneShot.OnFinished"));');
+    expect(ends).toMatch(/Page\.Edges\.ContainsByPredicate\(\s*\[Finished\]\(const FMetasoundFrontendEdge& Edge\) \{ return Edge\.ToNodeID == Finished->NodeID; \}\)/u);
+    expect(ends).toMatch(/if \(!bFired\)\s*\{\s*return TEXT\("is a one-shot MetaSound that never fires On Finished"\);/u);
+  });
+});
