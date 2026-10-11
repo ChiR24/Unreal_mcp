@@ -1018,6 +1018,12 @@ describe('connect_pins on pins added on demand', () => {
     expect(source).toContain('UEdGraphPin* ToPin = FindOrGrowPin(Context, ToNode, ToPinName);');
   });
 
+  // A batch link the engine made through an int-to-float conversion node answered connected false, as if it failed.
+  it('counts a link through the inserted conversion node as connected', () => {
+    const source = code('BlueprintGraph', 'McpBPGraphPinMutations.cpp');
+    expect(source).toContain('Result->SetBoolField(TEXT("connected"), FromPin->LinkedTo.Contains(ToPin) || (LinkedToNode(FromPin) && LinkedToNode(ToPin)));');
+  });
+
   // nodeType GetAllActorsOfClass, listed by create_node, answered NODE_TYPE_NOT_FOUND: it was aliased to a K2Node
   // class Unreal does not have, while the node is a plain call of the GameplayStatics function.
   it('GetAllActorsOfClass and GetActorOfClass create function calls', () => {

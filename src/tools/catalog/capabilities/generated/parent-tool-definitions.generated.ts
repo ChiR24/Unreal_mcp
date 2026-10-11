@@ -14078,7 +14078,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "connected": {
           "type": "boolean",
-          "description": "Whether the two pins are linked after the call, read back from the graph rather than inferred from the schema call."
+          "description": "Whether the two pins are linked after the call, directly or through the conversion node the engine inserted between differing pin types (conversionInserted), read back from the graph rather than inferred from the schema call."
         },
         "copiedWidgets": {
           "type": "array",

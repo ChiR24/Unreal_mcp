@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "3023fd215c8fcac3",
+  "catalogRevision": "7596273fbe33ee38",
   "recordCount": 410,
   "records": [
     {
@@ -16624,7 +16624,7 @@
             },
             "connected": {
               "type": "boolean",
-              "description": "Whether the two pins are linked after the call, read back from the graph rather than inferred from the schema call."
+              "description": "Whether the two pins are linked after the call, directly or through the conversion node the engine inserted between differing pin types (conversionInserted), read back from the graph rather than inferred from the schema call."
             },
             "sourcePinName": {
               "type": "string",
@@ -16926,8 +16926,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "77efc2e828f64517af6a73dd64f79d4d13977f7f05402f66f2b23ae73f9d2ce0",
-        "content": "d34037f7c34741f33393b006ef1c8a5ac50ce5e540fa55fe67501f2232aca632"
+        "schema": "2023ac3be3b5b7b7ba55af14abede80f485f5b46bb81f42e2ed0e8ea740ef77a",
+        "content": "4432ea0205413851be84957e7274530370b640ec7b67d47ec3750dd8390c4a34"
       }
     },
     {

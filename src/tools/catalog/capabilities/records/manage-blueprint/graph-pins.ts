@@ -27,7 +27,7 @@ export const GRAPH_PINS_RECORDS: readonly CapabilityRecordSource[] = [
     // successful link was indistinguishable from a no-op: "Pin connection
     // complete" and nothing else. `connected` is read back off the graph.
     outputProps: {
-      connected: { type: 'boolean', description: 'Whether the two pins are linked after the call, read back from the graph rather than inferred from the schema call.' },
+      connected: { type: 'boolean', description: 'Whether the two pins are linked after the call, directly or through the conversion node the engine inserted between differing pin types (conversionInserted), read back from the graph rather than inferred from the schema call.' },
       sourcePinName: { type: 'string', description: 'Source pin that was actually used — the first output pin when fromPinName named none.' },
       targetPinName: { type: 'string', description: 'Target pin that was actually used.' },
       sourcePinType: { type: 'string', description: 'Pin category of the source pin (exec, object, real, ...).' },

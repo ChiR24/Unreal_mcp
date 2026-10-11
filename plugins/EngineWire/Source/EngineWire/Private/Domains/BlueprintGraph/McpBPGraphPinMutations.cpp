@@ -201,7 +201,13 @@ static bool ConnectPins(FActionContext& Context)
     // "Pins connected." with an identical dataDigest for every call was no
     // evidence at all: a caller could not tell which pins were linked, or
     // whether the link survived. Read it back off the graph.
-    Result->SetBoolField(TEXT("connected"), FromPin->LinkedTo.Contains(ToPin));
+    // Through an inserted conversion node the pins are linked by way of it: connected false read as a failed link, and
+    // wiring it again added a second conversion node.
+    const auto LinkedToNode = [ConversionNode](const UEdGraphPin *Pin) {
+      return ConversionNode && Pin->LinkedTo.ContainsByPredicate(
+                                   [ConversionNode](const UEdGraphPin *Other) { return Other && Other->GetOwningNode() == ConversionNode; });
+    };
+    Result->SetBoolField(TEXT("connected"), FromPin->LinkedTo.Contains(ToPin) || (LinkedToNode(FromPin) && LinkedToNode(ToPin)));
     Result->SetStringField(TEXT("sourcePinName"), FromPin->GetName());
     Result->SetStringField(TEXT("targetPinName"), ToPin->GetName());
     Result->SetStringField(TEXT("sourcePinType"), FromPin->PinType.PinCategory.ToString());
