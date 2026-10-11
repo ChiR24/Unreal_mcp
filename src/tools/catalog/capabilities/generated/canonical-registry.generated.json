@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "c10bcfe4777f0238",
+  "catalogRevision": "4f667d610b8f37a1",
   "recordCount": 410,
   "records": [
     {
@@ -44051,7 +44051,14 @@
           "performance stats",
           "memory stats",
           "scene stats",
-          "fps"
+          "fps",
+          "game fps",
+          "measure fps",
+          "frame rate",
+          "frame time",
+          "how fast the game runs",
+          "gpu time",
+          "stat unit"
         ],
         "summary": "Read performance (FPS, frame rate and time, thread and GPU ms), memory usage (used, available, peak) or scene statistics (actors by category, components, hidden actors).",
         "whenToUse": [
@@ -44310,7 +44317,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "08c682cdadc902db138dfe47388fd71504b920670b73352e85f7fb11b1dcac8e",
-        "content": "7df8e29df2b9abd67a437ef23310f2a984d8b1c0eabf789ca6345a2b85b19a60"
+        "content": "dfe2decb619eaf4c5d5da606624120d353a2e093f43ee676cf03edbf7b449b35"
       }
     },
     {

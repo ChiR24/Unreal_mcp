@@ -399,4 +399,8 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   // A Blueprint Math Expression node (2026-10-11): both doors answered with the material node action.
   { query: 'add a math expression to a blueprint', accepted: ['blueprint.edit_graph'] },
   { query: 'blueprint math expression', accepted: ['blueprint.edit_graph'] },
+  { query: 'measure frame rate', accepted: ['inspect.get_stats'] },
+  { query: 'game fps', accepted: ['inspect.get_stats'] },
+  { query: 'how fast does the game run', accepted: ['inspect.get_stats'] },
+  { query: 'frame time of the game', accepted: ['inspect.get_stats'] },
 ];

@@ -40,7 +40,7 @@ export const INSPECT_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'get_stats', selector: 'statsKind',
     summary: 'Read performance (FPS, frame rate and time, thread and GPU ms), memory usage (used, available, peak) or scene statistics (actors by category, components, hidden actors).',
-    topics: ['performance stats', 'memory stats', 'scene stats', 'fps'],
+    topics: ['performance stats', 'memory stats', 'scene stats', 'fps', 'game fps', 'measure fps', 'frame rate', 'frame time', 'how fast the game runs', 'gpu time', 'stat unit'],
     members: { performance: 'get_performance_stats', memory: 'get_memory_stats', scene: 'get_scene_stats' },
   },
   {
