@@ -31,7 +31,15 @@ const TRANSFORM_INPUT = {
       required: ['actorName'],
       additionalProperties: false,
     },
-    description: 'Many actors in one call, each {actorName, location? or offset?, rotation?, scale?} with its own values (an omitted part keeps its current value); every actor is reported, and the call fails naming any that did not move.',
+    description: 'Many actors in one call, each {actorName, location? or offset?, rotation?, scale?} with its own values; a part an item leaves out takes the call\'s own location, offset, rotation or scale when given, else keeps its current value. Every actor is reported, and the call fails naming any that did not move.',
+  },
+  actorNames: {
+    type: 'array', items: { type: 'string' }, minItems: 1, maxItems: 500,
+    description: 'Many actors given the same change: the location, offset, rotation or scale beside it (forty frost caps rescaled by one scale, a group raised by one offset). Reported as actors is.',
+  },
+  report: {
+    type: 'string', enum: ['all', 'failures'],
+    description: 'With actors or actorNames: which items results lists, all (default) or only those that failed or look misplaced (placementWarning); movedActors counts every actor either way.',
   },
 };
 
@@ -69,13 +77,14 @@ const TRANSFORM_OUTPUT_PROPS = {
   },
   results: {
     type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
-    description: 'actors: one entry per actor (actorName, success, read-back location/rotation/scale, placementWarning, coplanarFaces, error), its placement checked once every actor in the call has moved.',
+    description: 'actors or actorNames: one entry per actor (actorName, success, read-back location/rotation/scale, placementWarning, coplanarFaces, error), its placement checked once every actor in the call has moved; report failures keeps only the failed and misplaced ones.',
   },
-  movedActors: { type: 'number', description: 'actors: how many actors took their transform.' },
+  movedActors: { type: 'number', description: 'actors or actorNames: how many actors took their transform.' },
+  report: { type: 'string', description: 'Echoes report when it narrowed results.' },
   ...PLACEMENT_FACTS,
   affectedActors: {
     type: 'array', items: { type: 'string' },
-    description: 'actors: the actors that took their transform, each by name and once; the receipt lists them as changes, with an actor handle each.',
+    description: 'actors or actorNames: the actors that took their transform, each by name and once; the receipt lists them as changes, with an actor handle each.',
   },
 } as const;
 
@@ -88,12 +97,12 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
     family: FAMILY_TRANSFORM,
     topics: ['move actor', 'set actor location', 'set position', 'rotate actor', 'set rotation', 'scale actor', 'teleport actor', 'translate'],
     aliases: ['control_actor.move', 'control_actor.move_actor'],
-    summary: 'Move, rotate or scale an actor by setting its world transform (location, rotation, scale) or moving it by an offset, or many actors in one call with actors.',
-    whenToUse: ['An actor must be moved, rotated, or rescaled in one call.', 'Several actors each need their own new location, rotation or scale (actors).', 'A group of actors must shift by the same amount (actors, each with offset).'],
+    summary: 'Move, rotate or scale an actor by setting its world transform (location, rotation, scale) or moving it by an offset, or many actors in one call: actors gives each its own, actorNames gives all the same.',
+    whenToUse: ['An actor must be moved, rotated, or rescaled in one call.', 'Several actors each need their own new location, rotation or scale (actors).', 'A group of actors must shift, turn or rescale by the same amount (actorNames with offset, rotation or scale).'],
     whenNotToUse: ['Only the transform needs to be read (use get_transform).'],
     inputProps: TRANSFORM_INPUT,
     required: [],
-    requiredOneOf: ['actorName', 'actors'],
+    requiredOneOf: ['actorName', 'actors', 'actorNames'],
     effect: 'write',
     behavior: { idempotency: 'idempotent' },
     exampleInput: { action: 'set_transform', actorName: 'Cube1', location: [10, 20, 30], rotation: [0, 90, 0], scale: [1, 1, 1] },
@@ -111,7 +120,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['Use set_transform to avoid alias normalization.'],
     inputProps: TRANSFORM_INPUT,
     required: [],
-    requiredOneOf: ['actorName', 'actors'],
+    requiredOneOf: ['actorName', 'actors', 'actorNames'],
     effect: 'write',
     behavior: { idempotency: 'idempotent' },
     exampleInput: { action: 'teleport_actor', actorName: 'Cube1', location: [5, 5, 5] },
@@ -129,7 +138,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['Use set_transform for the full transform verb.'],
     inputProps: TRANSFORM_INPUT,
     required: [],
-    requiredOneOf: ['actorName', 'actors'],
+    requiredOneOf: ['actorName', 'actors', 'actorNames'],
     effect: 'write',
     behavior: { idempotency: 'idempotent' },
     exampleInput: { action: 'set_actor_location', actorName: 'Cube1', location: [100, 0, 0] },
@@ -147,7 +156,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['Use set_transform for the full transform verb.'],
     inputProps: TRANSFORM_INPUT,
     required: [],
-    requiredOneOf: ['actorName', 'actors'],
+    requiredOneOf: ['actorName', 'actors', 'actorNames'],
     effect: 'write',
     behavior: { idempotency: 'idempotent' },
     exampleInput: { action: 'set_actor_rotation', actorName: 'Cube1', rotation: [0, 45, 0] },
@@ -165,7 +174,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['Use set_transform for the full transform verb.'],
     inputProps: TRANSFORM_INPUT,
     required: [],
-    requiredOneOf: ['actorName', 'actors'],
+    requiredOneOf: ['actorName', 'actors', 'actorNames'],
     effect: 'write',
     behavior: { idempotency: 'idempotent' },
     exampleInput: { action: 'set_actor_scale', actorName: 'Cube1', scale: [2, 2, 2] },
@@ -208,6 +217,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
         'The peak height, landing point or path of a moving actor is needed.',
         'An input must land at an exact moment (jump when a platform appears): inputs and startWhen run the whole timeline inside one call, so the caller\'s own delay between calls cannot shift it.',
         'Feet must be proven to plant without sliding, sinking or floating, or a hand or muzzle must be followed: points with groundTrace measure it per point.',
+        'A pawn dies, or a trigger fires, and what touched it is unknown: overlaps names every actor that began touching it, sample by sample.',
       ],
       whenNotToUse: ['Only the current transform is needed (use get_transform).', 'Nothing is playing: the editor world does not simulate (start PIE with control_editor.play).'],
       inputProps: {
@@ -236,6 +246,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
         },
         groundTrace: { type: 'boolean', description: 'With points: each sample\'s aboveGround gives each point\'s height over the first surface below it that blocks Visibility (the actor and what is attached to it ignored), negative when the point is inside that surface, and pointStats sums up its contact.' },
         contactCm: { type: 'number', description: 'With groundTrace: how far above its own lowest height a point still counts as planted (default 2 cm), so an ankle bone that never reaches the floor still counts as down when the foot is.' },
+        overlaps: { type: 'boolean', description: 'Also watch which actors overlap the watched one, checked every frame: a sample names those that began (overlapsBegan) or stopped (overlapsEnded) touching it since the sample before, and overlapped lists every actor it touched. Finds what killed a pawn, what a pickup or trigger fired on, or an enemy wandering into a spawn point.' },
         startWhen: {
           type: 'object',
           properties: {
@@ -255,8 +266,9 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
         actorName: { type: 'string', description: 'The actor watched.' },
         samples: {
           type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
-          description: 'One entry per sample: t (game seconds since the start), location [x, y, z], velocity [x, y, z], rotation [pitch, yaw, roll] in degrees (on the first sample and on each one where it changed, so a sample without it still has the last one written), properties, and with points their world locations (points) and heights over the ground (aboveGround, with groundTrace; a point with nothing below it within 10 m is left out).',
+          description: 'One entry per sample: t (game seconds since the start), location [x, y, z], velocity [x, y, z], rotation [pitch, yaw, roll] in degrees (on the first sample and on each one where it changed, so a sample without it still has the last one written), properties, with points their world locations (points) and heights over the ground (aboveGround, with groundTrace; a point with nothing below it within 10 m is left out), and with overlaps the actors that began or stopped touching it since the sample before (overlapsBegan, overlapsEnded).',
         },
+        overlapped: { type: 'array', items: { type: 'string' }, description: 'With overlaps: every actor that touched the watched one during the run, first touch first; empty when nothing did.' },
         sampleCount: { type: 'number', description: 'How many samples were taken.' },
         gameSeconds: { type: 'number', description: 'Game time covered.' },
         realSeconds: { type: 'number', description: 'Wall-clock time the run took.' },

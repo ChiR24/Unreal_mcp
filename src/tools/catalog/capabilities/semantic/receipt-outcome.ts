@@ -127,11 +127,14 @@ export function extractChanges(result: unknown): string[] {
   // a widget preview and a played sound name the asset they looked at or used. An
   // actor it changed is a separate fact and is still inferred from the actor fields.
   const assetsStated = Array.isArray(read('changedAssets'));
-  const singles = assetsStated ? CHANGE_ACTOR_SINGLE_FIELDS : [...CHANGE_ASSET_SINGLE_FIELDS, ...CHANGE_ACTOR_SINGLE_FIELDS];
-  for (const field of singles) {
+  const usable = (value: unknown): value is string => typeof value === 'string' && value.length > 0 && !isTransientPackagePath(value);
+  for (const field of assetsStated ? [] : CHANGE_ASSET_SINGLE_FIELDS) {
     const value = read(field);
-    if (typeof value === 'string' && value.length > 0 && !isTransientPackagePath(value)) collected.push(value);
+    if (usable(value)) collected.push(value);
   }
+  // One actor is one change: its name, or its object path when the reply names none (a move listed both).
+  const actor = CHANGE_ACTOR_SINGLE_FIELDS.map(read).find(usable);
+  if (actor !== undefined) collected.push(actor);
   return [...new Set(collected)];
 }
 

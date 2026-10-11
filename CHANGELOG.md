@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <summary><b>🔄 Changed</b></summary>
 
 - **The editor plugin is now EngineWire** (was McpAutomationBridge), with short source file names so every path in the Fab package fits Fab's 170-character limit. Settings saved under the old name still load, in the plugin and in the server's port lookup, until they are saved once under the new one. To upgrade, replace `Plugins/McpAutomationBridge` with `Plugins/EngineWire` and rename the plugin entry in the `.uproject` if it lists one.
+- **Replies name each actor once**, in the receipt's `changes`: a one-actor change was listed by label and again by object path, and a many-actor reply repeated its actors in `affectedActors`, on both transports.
 
 </details>
 
@@ -33,7 +34,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`process_asset` `mesh_materials` takes `assetPaths`**: one slot-name map on every mesh of an imported pack in a single call, passing over a slot a mesh lacks; an entry that no mesh has fails the call. A 32-mesh Fab pack took a call and a consent per mesh.
 - **Rows and grids from one spawn batch item**: `repeat` ({count, offset, rows, rowOffset}) places the item's copies stepped from its location, named `_1`, `_2`, ...; a batch places up to 1000 actors once unrolled. A row of racks was one hand-written item per actor.
 - **Spawn batch items take `properties`**, set on the spawned actor's root component (or `componentName`'s) as `edit_component` sets them, so a row of lights gets its colour and intensity in the same call.
-- **Spawns and moves name the faces they leave flickering**: `spawn`, `spawn_blueprint`, `spawn_batch` and `set_transform` list `coplanarFaces` (each face sharing a plane with another actor's and pointing the same way, with its direction and overlap) and say so in `placementWarning`. A room whose walls ran up to the top of its ceiling flickered from above while every spawn and move that built it answered clean; only `audit_placement` looked.
+- **Spawns and moves name the faces they leave flickering**: `spawn`, `spawn_blueprint`, `spawn_batch` and `set_transform` list `coplanarFaces` (each face sharing a plane with another actor's and pointing the same way, with its direction and overlap) and say so in `placementWarning`, checking only the meshes near what they placed. A room whose walls ran up to the top of its ceiling flickered from above while every spawn and move that built it answered clean; only `audit_placement` looked.
+- **`set_transform` gives many actors one change**: `actorNames` with an `offset`, `rotation`, `scale` or `location`, and an `actors` item takes any of those it leaves out from the call. `report: "failures"` keeps only the failed and misplaced items in `results`. Rescaling forty props took forty items that all said the same scale.
+- **A motion read names what touches the actor** (`overlaps`): each sample lists the actors that began or stopped overlapping it since the one before, checked every frame, and `overlapped` lists every one it touched. A pawn that died as it respawned took a long hunt to pin on the enemy walking into it.
 - **A game screenshot says the field of view the frame shows** (`horizontalFov`, `verticalFov`): `activeCameraFov` is the camera's setting, which holds only at the camera's own aspect ratio, so a wider viewport that keeps the vertical angle shows more across than it says.
 
 </details>
@@ -54,7 +57,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Math Expressions take unbracketed comparisons of arithmetic around `&&` and `||`**: `T - Next < 0 || T - Next >= 0.07` was refused as "'T' is a number". Arithmetic with no comparison there (`Gain + 1 && Ready`) is refused as a number.
 - **A placed enclosure is no longer measured against what it holds**: a cart corral spawned around its carts read "sunk 97 units" below the carts' tops.
 - **A spawn batch measures an actor stacked on another it placed against that actor**: a monitor on a desk from the same batch read "floating 91 units" over the floor.
-- **Call nodes take a function by the name the editor shows**: `AddLocalRotation` finds `K2_AddLocalRotation`; it failed `FUNCTION_NOT_FOUND`.
+- **Call nodes take a function by the name the editor shows**: `AddLocalRotation` finds `K2_AddLocalRotation` (it failed `FUNCTION_NOT_FOUND`), and a TextRender's `SetText` finds `K2_SetText` (it made a node from the native `SetText`, and the Blueprint then failed to compile).
 - **The fog's `density` says it is fog density** (`create_fog_volume`, `configure_exponential_height_fog`); it read "Foliage density."
 - **`raycast_mesh` takes `{start, end}` lines** as `raycast_world` does, stopping each at its end; a ray with neither form is refused instead of answering no hit.
 - **A graph batch refuses a step it does not run before running any**: an `arrange_nodes` at the end stopped the batch after the 69 steps before it were applied. The refusal says the batch already arranges the nodes it places.

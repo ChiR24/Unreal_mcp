@@ -8,6 +8,7 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   LOG_ONLY_EXECUTE_FIELDS,
+  RECEIPT_LISTED_FIELDS,
   RECEIPT_OUTCOME_LISTS,
   RESOLVED_IDENTITY_FIELDS,
   STOCK_OUTPUT_PROPERTIES
@@ -30,6 +31,7 @@ describe('reply compaction on both transports', () => {
     expect(listed(execute, 'LogOnlyExecuteFields')).toEqual([...LOG_ONLY_EXECUTE_FIELDS]);
     expect(listed(execute, 'ReceiptOutcomeLists')).toEqual([...RECEIPT_OUTCOME_LISTS]);
     expect(listed(execute, 'ResolvedIdentityFields')).toEqual([...RESOLVED_IDENTITY_FIELDS]);
+    expect(listed(execute, 'ReceiptListedFields')).toEqual([...RECEIPT_LISTED_FIELDS]);
   });
 
   it('carries the names a call used onto every native receipt, queued or not', () => {

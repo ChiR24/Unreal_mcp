@@ -76,6 +76,11 @@ describe('compactGatewayReply', () => {
       data: { details: { deletedCount: 2, deleted: ['/Game/A', '/Game/B'] } }
     }) as { data: unknown };
     expect(removed.data, 'a delete names its paths once, in the receipt').toEqual({ details: { deletedCount: 2 } });
+    const moved = compactGatewayReply({
+      success: true, operation: 'execute', receipt: { changes: ['Cap_1', 'Cap_2'] },
+      data: { movedActors: 2, affectedActors: ['Cap_1', 'Cap_2'] }
+    }) as { data: unknown };
+    expect(moved.data, 'a many-actor call names its actors once, in the receipt').toEqual({ movedActors: 2 });
     const failed = compactGatewayReply({ success: false, operation: 'execute', message: 'No.', result: { missing: ['/Game/B'] } });
     expect(failed, 'a failure keeps its detail').toMatchObject({ result: { missing: ['/Game/B'] } });
   });

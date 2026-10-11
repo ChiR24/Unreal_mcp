@@ -211,6 +211,33 @@ describe('sample_motion runs at full rate or says it did not', () => {
   it('tells a level the game loaded from play that stopped', () => {
     expect(source).toContain('return GEditor && GEditor->PlayWorld ? TEXT("levelChanged") : TEXT("worldEnded");');
   });
+
+  // A pawn that died the moment it respawned took twenty calls to pin on the enemy that walked into it.
+  it('names the actors that began or stopped touching the watched one, checked every frame', () => {
+    const points = read('Motion', 'McpMotionPoints.cpp');
+    const advance = sliceBetween(source, 'FString McpAdvanceMotionRun(', '} // namespace');
+
+    expect(source).toContain('McpStartMotionOverlaps(Run->Overlaps, Found, Payload);');
+    expect(advance.indexOf('McpTrackMotionOverlaps(Run.Overlaps, Actor);'), 'every frame, once the run has started')
+      .toBeGreaterThan(advance.indexOf('Run.bWaiting = false;'));
+    expect(source).toContain('McpSampleMotionOverlaps(Run.Overlaps, Actor, *Sample);');
+    expect(source).toContain('if (Run.Overlaps.bOn) Data->SetArrayField(TEXT("overlapped"), McpHandlerUtils::ToJsonStringArray(Run.Overlaps.Ever));');
+    expect(points.match(/McpActorRef\(/gu), 'a name is looked up only when a touch begins').toHaveLength(1);
+    expect(points).toContain('const FString Name = Begun.Add(Other, McpActorRef(Other));');
+  });
+
+  // An enemy whose overlap killed the pawn, which then switched its collision off, began and ended its touch inside one
+  // frame, so the per-frame check never saw it.
+  it('hears the actor\'s own begin-overlap event, so a touch over within a frame still counts', () => {
+    const points = read('Motion', 'McpMotionPoints.cpp');
+    const probe = read('Motion', 'McpMotionOverlapProbe.h');
+
+    expect(probe).toMatch(/UFUNCTION\(\)\s*void OnBegin\(AActor\* Overlapped, AActor\* Other\) \{ Heard\.Add\(Other\); \}/u);
+    expect(points).toContain('Actor->OnActorBeginOverlap.AddDynamic(Overlaps.Probe.Get(), &UMcpMotionOverlapProbe::OnBegin);');
+    expect(points, 'unbound when the run ends').toContain('Actor->OnActorBeginOverlap.RemoveDynamic(Probe.Get(), &UMcpMotionOverlapProbe::OnBegin);');
+    expect(points.indexOf('Overlaps.Probe->Heard.Reset();'), 'announced touches before the polled ones')
+      .toBeLessThan(points.indexOf('Actor->GetOverlappingActors(Now);'));
+  });
 });
 
 // "Bug1" found nothing among Bug_01..Bug_10 and the empty list read as "there are no bugs".
@@ -479,11 +506,23 @@ describe('the batch forms of spawn_batch, set_transform and set_blueprint_variab
   });
 
   it('the set_transform batch lists each actor that moved once, by McpActorRef, in the pass that re-checks the layout', () => {
-    const many = batch('McpActorTransform.cpp', 'TEXT("actors")', 'FString TargetName;');
+    const many = batch('McpActorTransform.cpp', 'McpTransformItems::Expand(Payload, Items)', 'FString TargetName;');
 
     expect(many).toMatch(/TArray<FString> Affected;\s*TMap<AActor \*, TSharedPtr<FJsonObject>> Rows;\s*for \(const TSharedPtr<FJsonValue> &Value : Results\) \{[\s\S]*?if \(!Moved\)\s*continue;\s*Affected\.AddUnique\(McpActorRef\(Moved\)\);/u);
     expect(many).toContain('Data->SetArrayField(TEXT("affectedActors"), McpHandlerUtils::ToJsonStringArray(Affected));');
     expect(read('McpActorTransform.cpp').match(/TEXT\("affectedActors"\)/gu), 'the set_visibility list and this one').toHaveLength(2);
+  });
+
+  // Scaling forty frost caps by one scale took forty items that all said the same thing, and each came back in full.
+  it('set_transform gives actorNames one shared change, items take the parts they leave out, and report failures trims results', () => {
+    const items = read('Placement/McpTransformItems.h');
+    const many = batch('McpActorTransform.cpp', 'McpTransformItems::Expand(Payload, Items)', 'FString TargetName;');
+
+    expect(items).toContain('const bool bNames = !Payload->HasField(TEXT("actors")) && Payload->TryGetArrayField(TEXT("actorNames"), List);');
+    expect(items).toMatch(/if \(!One->HasField\(Shared\) && !\(bPlace && bOwnPlace\) && Payload->HasField\(Shared\)\) \{\s*One->SetField\(Shared, Payload->TryGetField\(Shared\)\);/u);
+    expect(items, 'an item never recurses into the many form').toContain('One->RemoveField(TEXT("actors"));');
+    expect(many.indexOf('Results.RemoveAll('), 'after the layout is re-checked').toBeGreaterThan(many.indexOf('McpCoplanar::AddCoplanarToRows(Rows);'));
+    expect(many, 'the count is every actor, whatever results keeps').toContain('const int32 Done = Items.Num() - Failures.Num();');
   });
 
   it('the set_blueprint_variables batch lists an actor that took a variable, and the single form names the instance it changed', () => {
@@ -752,7 +791,7 @@ describe('every spawn says where the actor ended up, as set_transform does', () 
     const move = read('McpActorTransform.cpp');
     const batch = read('McpActorSpawnBatch.cpp');
 
-    expect(report.match(/FindCoplanarFaces\(World, FString\(\)\)/gu)).toHaveLength(1);
+    expect(report.match(/FindCoplanarFaces\(World, FString\(\), &Placed\)/gu)).toHaveLength(1);
     expect(report).toContain('(*Row)->SetArrayField(TEXT("coplanarFaces"), Faces);');
     expect(report).toContain('if (Faces.Num() > 1)');
     expect(move).toContain('McpDescribeActorPlacement(RequestId, Found, Data);');
@@ -762,6 +801,17 @@ describe('every spawn says where the actor ended up, as set_transform does', () 
       .toBeGreaterThan(batch.indexOf('McpPlacement::DescribePlacement(Item.Key, Item.Value);'));
     expect(batch.indexOf('PlacementWarnings += McpCoplanar::AddCoplanarToRows(Rows);'))
       .toBeLessThan(batch.indexOf('if (Payload->TryGetStringField(TEXT("report"), Report)'));
+  });
+
+  // Every move rescanned the level, reading the triangles of every distinct mesh in it, so a teleport cost the level.
+  it('the per-call scan reads only the meshes near what the call placed', () => {
+    const faces = read('Placement/McpCoplanarFaces.cpp');
+    const nearCheck = faces.indexOf('if (Focus && !Near.ContainsByPredicate(');
+
+    expect(faces).toContain('Near.Add(Actor->GetComponentsBoundingBox(true).ExpandBy(McpCoplanarPlaneTolerance + 1.0));');
+    expect(nearCheck).toBeGreaterThan(-1);
+    expect(nearCheck, 'before the mesh is read').toBeLessThan(faces.indexOf('MeasureFill(Mesh)'));
+    expect(faces).toContain('const bool bNamed = Focus ? Focus->Contains(Actor)');
   });
 
   it('spawn and spawn_blueprint ask through it once the reply names the actor', () => {

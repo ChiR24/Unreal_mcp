@@ -120,7 +120,8 @@ const TCHAR* const CHANGE_ASSET_SINGLES[] = {
 const TCHAR* const CHANGE_ACTOR_SINGLES[] = {TEXT("actorName"), TEXT("actorPath")};
 
 template <int32 Count>
-void AddSingleChanges(const TSharedPtr<FJsonObject>& Result, const TCHAR* const (&Fields)[Count], TArray<FString>& Changes)
+void AddSingleChanges(const TSharedPtr<FJsonObject>& Result, const TCHAR* const (&Fields)[Count], TArray<FString>& Changes,
+					  bool bFirstOnly = false)
 {
 	for (const TCHAR* Field : Fields)
 	{
@@ -128,6 +129,7 @@ void AddSingleChanges(const TSharedPtr<FJsonObject>& Result, const TCHAR* const 
 		if (!Text.IsEmpty() && !IsTransientPackagePath(Text))
 		{
 			Changes.AddUnique(Text);
+			if (bFirstOnly) return;
 		}
 	}
 }
@@ -166,7 +168,8 @@ TArray<FString> McpExtractReceiptChanges(const TSharedPtr<FJsonObject>& RawResul
 	{
 		AddSingleChanges(RawResult, CHANGE_ASSET_SINGLES, Changes);
 	}
-	AddSingleChanges(RawResult, CHANGE_ACTOR_SINGLES, Changes);
+	// One actor is one change: its name, or its object path when the reply names none. Mirrors extractChanges.
+	AddSingleChanges(RawResult, CHANGE_ACTOR_SINGLES, Changes, true);
 	return Changes;
 }
 

@@ -1,4 +1,5 @@
 #include "Domains/ControlActor/McpActorSupport.h"
+#include "Domains/ControlActor/Placement/McpTransformItems.h"
 #include "Foundation/McpScopedEditorTransaction.h"
 #include "Foundation/BridgeHelpers/Actors/McpActorMove.h"
 #include "Core/Requests/McpResponseCaptureRegistry.h"
@@ -6,27 +7,22 @@
 bool UEngineWireSubsystem::HandleControlActorSetTransform(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  // actors: many actors, each with its own location/rotation/scale, in one call
-  // (moving eight billboards was eight calls). Each item runs through this
-  // handler under a captured id, so it behaves exactly like a single call.
-  const TArray<TSharedPtr<FJsonValue>> *Items = nullptr;
-  if (Payload->TryGetArrayField(TEXT("actors"), Items) && Items->Num() > 0) {
+  // actors / actorNames: many actors in one call (moving eight billboards was
+  // eight calls). Each item runs through this handler under a captured id, so
+  // it behaves exactly like a single call.
+  TArray<TSharedPtr<FJsonObject>> Items;
+  if (McpTransformItems::Expand(Payload, Items)) {
     // The same bound spawn_batch and set_material's actorNames hold to.
-    if (Items->Num() > 500) {
+    if (Items.Num() > 500) {
       SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
-                                TEXT("actors takes at most 500 actors"), nullptr);
+                                TEXT("set_transform moves at most 500 actors per call"), nullptr);
       return true;
     }
     FMcpResponseCaptureRegistry &Capture = FMcpResponseCaptureRegistry::Get();
     TArray<TSharedPtr<FJsonValue>> Results;
     TArray<FString> Failures;
-    for (int32 Index = 0; Index < Items->Num(); ++Index) {
-      const TSharedPtr<FJsonObject> *Item = nullptr;
-      TSharedPtr<FJsonObject> One = MakeShared<FJsonObject>();
-      if ((*Items)[Index].IsValid() && (*Items)[Index]->TryGetObject(Item) && Item) {
-        One->Values = (*Item)->Values;
-        One->RemoveField(TEXT("actors"));
-      }
+    for (int32 Index = 0; Index < Items.Num(); ++Index) {
+      const TSharedPtr<FJsonObject> &One = Items[Index];
       FString Name;
       One->TryGetStringField(TEXT("actorName"), Name);
       const FString ItemId = FString::Printf(TEXT("%s#%d"), *RequestId, Index);
@@ -74,14 +70,23 @@ bool UEngineWireSubsystem::HandleControlActorSetTransform(
       Rows.Add(Moved, Entry);
     }
     McpCoplanar::AddCoplanarToRows(Rows);
-    const int32 Done = Results.Num() - Failures.Num();
+    const int32 Done = Items.Num() - Failures.Num();
     TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
+    // report: "failures" keeps the items that failed or look misplaced, as spawn_batch does:
+    // scaling forty actors echoed forty transforms back.
+    FString Report;
+    if (Payload->TryGetStringField(TEXT("report"), Report) && Report == TEXT("failures")) {
+      Results.RemoveAll([](const TSharedPtr<FJsonValue> &Value) {
+        return Value->AsObject()->GetBoolField(TEXT("success")) && !Value->AsObject()->HasField(TEXT("placementWarning"));
+      });
+      Data->SetStringField(TEXT("report"), Report);
+    }
     Data->SetArrayField(TEXT("results"), Results);
     Data->SetNumberField(TEXT("movedActors"), Done);
     Data->SetArrayField(TEXT("affectedActors"), McpHandlerUtils::ToJsonStringArray(Affected));
     if (Failures.Num() > 0) {
       SendAutomationResponse(Socket, RequestId, false,
-                             FString::Printf(TEXT("Moved %d of %d actors; %s"), Done, Results.Num(),
+                             FString::Printf(TEXT("Moved %d of %d actors; %s"), Done, Items.Num(),
                                              *FString::Join(Failures, TEXT("; "))),
                              Data, TEXT("TRANSFORM_BATCH_INCOMPLETE"));
     } else {
@@ -106,8 +111,7 @@ bool UEngineWireSubsystem::HandleControlActorSetTransform(
     return true;
   }
 
-  FVector Location =
-      ExtractVectorField(Payload, TEXT("location"), Found->GetActorLocation());
+  FVector Location = ExtractVectorField(Payload, TEXT("location"), Found->GetActorLocation());
   // offset: move by a delta from where the actor stands, so a group shifts by
   // one amount without reading each position first.
   if (Payload->HasField(TEXT("offset")) && Payload->HasField(TEXT("location"))) {
@@ -117,10 +121,8 @@ bool UEngineWireSubsystem::HandleControlActorSetTransform(
   }
   if (Payload->HasField(TEXT("offset")))
     Location = Found->GetActorLocation() + ExtractVectorField(Payload, TEXT("offset"), FVector::ZeroVector);
-  FRotator Rotation =
-      ExtractRotatorField(Payload, TEXT("rotation"), Found->GetActorRotation());
-  FVector Scale =
-      ExtractVectorField(Payload, TEXT("scale"), Found->GetActorScale3D());
+  FRotator Rotation = ExtractRotatorField(Payload, TEXT("rotation"), Found->GetActorRotation());
+  FVector Scale = ExtractVectorField(Payload, TEXT("scale"), Found->GetActorScale3D());
 
   FMcpScopedEditorTransaction Transaction(
       FText::FromString(TEXT("Set Actor Transform")),

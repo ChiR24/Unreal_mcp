@@ -91,8 +91,18 @@ describe('native McpExtractReceiptChanges mirrors the same rule', () => {
     const body = outcome().slice(outcome().indexOf('TArray<FString> McpExtractReceiptChanges('));
     expect(body).toMatch(/ReadField\(RawResult,\s*TEXT\("changedAssets"\)\)/u);
     expect(body).toMatch(
-      /if\s*\(!StatedAssets\.IsValid\(\)\s*\|\|\s*!StatedAssets->TryGetArray\(StatedArray\)\)\s*\{\s*AddSingleChanges\(RawResult,\s*CHANGE_ASSET_SINGLES,\s*Changes\);\s*\}\s*AddSingleChanges\(RawResult,\s*CHANGE_ACTOR_SINGLES,\s*Changes\);/u
+      /if\s*\(!StatedAssets\.IsValid\(\)\s*\|\|\s*!StatedAssets->TryGetArray\(StatedArray\)\)\s*\{\s*AddSingleChanges\(RawResult,\s*CHANGE_ASSET_SINGLES,\s*Changes\);\s*\}[^;]*AddSingleChanges\(RawResult,\s*CHANGE_ACTOR_SINGLES,\s*Changes,\s*true\);/u
     );
+    expect(outcome(), 'the first actor field found is the change').toMatch(/Changes\.AddUnique\(Text\);\s*if \(bFirstOnly\) return;/u);
+  });
+});
+
+// A move listed its actor twice, by label and by object path, as two changes.
+describe('one actor is one change', () => {
+  it('names it by actorName, or by actorPath when there is no name', () => {
+    const path = '/Game/Maps/Demo.Demo:PersistentLevel.StaticMeshActor_3';
+    expect(extractChanges({ success: true, actorName: 'Crate', actorPath: path })).toEqual(['Crate']);
+    expect(extractChanges({ success: true, actorPath: path })).toEqual([path]);
   });
 });
 

@@ -9,6 +9,7 @@ class AActor;
 class FJsonObject;
 class FMcpBridgeWebSocket;
 class UEngineWireSubsystem;
+class UStaticMesh;
 class UWorld;
 
 namespace McpCoplanar
@@ -29,10 +30,20 @@ struct FMcpCoplanarHit
     double FaceArea = 0.0; // the whole face of Actor that lies in the plane
 };
 
+// How much of each side of a mesh's local bounds (-X, +X, -Y, +Y, -Z, +Z) its own outward-facing triangles
+// cover: 1 for every side of a cube, about 0.79 for a cylinder's caps, 0 for anything curved.
+struct FMcpCoplanarFill
+{
+    double Share[6] = {};
+};
+FMcpCoplanarFill MeasureFill(const UStaticMesh* Mesh);
+
 // Every coplanar face pair among the visible static mesh components of World, largest overlap first. Only faces a
 // mesh really fills count (a cube's sides, a cylinder's caps), never the empty sides of a bounding box. With a
-// NameFilter, only pairs where either actor's label contains it.
-TArray<FMcpCoplanarHit> FindCoplanarFaces(UWorld* World, const FString& NameFilter);
+// NameFilter, only pairs where either actor's label contains it. With Focus, only pairs that touch one of those
+// actors, and only the pieces near them are measured: a spawn or a move costs its neighbourhood, not the level.
+TArray<FMcpCoplanarHit> FindCoplanarFaces(UWorld* World, const FString& NameFilter,
+                                          const TArray<AActor*>* Focus = nullptr);
 
 // One actor's coplanar faces, ready for a placement report: its worst pair in words, every pair as data.
 struct FMcpCoplanarReport
@@ -47,9 +58,9 @@ struct FMcpCoplanarReport
 TArray<FMcpCoplanarReport> ReportCoplanarFaces(UWorld* World, const FString& NameFilter);
 
 // The pairs that touch the actors a spawn or a move placed, written into each one's placement row (coplanarFaces, and
-// the largest pair in placementWarning), one scan for the whole call. Only audit_placement looked, so a room shell built
-// with its walls up to the ceiling's top flickered while every spawn and move answered clean. Returns the rows that had
-// no warning before.
+// the largest pair in placementWarning), one scan of their neighbourhood for the whole call. Only audit_placement
+// looked, so a room shell built with its walls up to the ceiling's top flickered while every spawn and move answered
+// clean. Returns the rows that had no warning before.
 int32 AddCoplanarToRows(const TMap<AActor*, TSharedPtr<FJsonObject>>& Rows);
 
 // "+X" for a face that points along an axis, so it reads like the gizmo arrows.

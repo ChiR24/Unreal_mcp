@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "91595119f21081f7",
+  "catalogRevision": "ea3c066cc8d40e12",
   "recordCount": 410,
   "records": [
     {
@@ -33900,7 +33900,8 @@
           "readMode=motion: A jump, spring launch, moving platform, enemy patrol or fall must be proven in PIE without a sleep-and-poll loop.",
           "readMode=motion: The peak height, landing point or path of a moving actor is needed.",
           "readMode=motion: An input must land at an exact moment (jump when a platform appears): inputs and startWhen run the whole timeline inside one call, so the caller's own delay between calls cannot shift it.",
-          "readMode=motion: Feet must be proven to plant without sliding, sinking or floating, or a hand or muzzle must be followed: points with groundTrace measure it per point."
+          "readMode=motion: Feet must be proven to plant without sliding, sinking or floating, or a hand or muzzle must be followed: points with groundTrace measure it per point.",
+          "readMode=motion: A pawn dies, or a trigger fires, and what touched it is unknown: overlaps names every actor that began touching it, sample by sample."
         ],
         "whenNotToUse": [
           "readMode=transform: The transform should be changed (use set_transform).",
@@ -33979,6 +33980,10 @@
             "contactCm": {
               "type": "number",
               "description": "With groundTrace: how far above its own lowest height a point still counts as planted (default 2 cm), so an ankle bone that never reaches the floor still counts as down when the foot is."
+            },
+            "overlaps": {
+              "type": "boolean",
+              "description": "Also watch which actors overlap the watched one, checked every frame: a sample names those that began (overlapsBegan) or stopped (overlapsEnded) touching it since the sample before, and overlapped lists every actor it touched. Finds what killed a pawn, what a pickup or trigger fired on, or an enemy wandering into a spawn point."
             },
             "startWhen": {
               "type": "object",
@@ -34082,7 +34087,14 @@
                 "additionalProperties": true,
                 "x-unreal-reflection-boundary": true
               },
-              "description": "One entry per sample: t (game seconds since the start), location [x, y, z], velocity [x, y, z], rotation [pitch, yaw, roll] in degrees (on the first sample and on each one where it changed, so a sample without it still has the last one written), properties, and with points their world locations (points) and heights over the ground (aboveGround, with groundTrace; a point with nothing below it within 10 m is left out)."
+              "description": "One entry per sample: t (game seconds since the start), location [x, y, z], velocity [x, y, z], rotation [pitch, yaw, roll] in degrees (on the first sample and on each one where it changed, so a sample without it still has the last one written), properties, with points their world locations (points) and heights over the ground (aboveGround, with groundTrace; a point with nothing below it within 10 m is left out), and with overlaps the actors that began or stopped touching it since the sample before (overlapsBegan, overlapsEnded)."
+            },
+            "overlapped": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "With overlaps: every actor that touched the watched one during the run, first touch first; empty when nothing did."
             },
             "sampleCount": {
               "type": "number",
@@ -34251,6 +34263,9 @@
             "contactCm": [
               "motion"
             ],
+            "overlaps": [
+              "motion"
+            ],
             "startWhen": [
               "motion"
             ]
@@ -34259,8 +34274,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "497f31c548c566fba719a52e2fd17e55a8828b12635eb6c577bc0234c9002758",
-        "content": "8acc62f73cdc2a99012e6f6ae403d06aa021e88cb02b75f13ee088712c2273c1"
+        "schema": "86e4e075a333bdf01b420b6fd34bd87b9081a81cdb4bf7f81f1b4e1bc4a7ff1f",
+        "content": "00894c69616b3a78cb83d7cb6883d6feb13f54e13fb7fb01a65dfcb3fdb69506"
       }
     },
     {
@@ -35448,7 +35463,7 @@
         "whenToUse": [
           "transformMode=transform: An actor must be moved, rotated, or rescaled in one call.",
           "transformMode=transform: Several actors each need their own new location, rotation or scale (actors).",
-          "transformMode=transform: A group of actors must shift by the same amount (actors, each with offset).",
+          "transformMode=transform: A group of actors must shift, turn or rescale by the same amount (actorNames with offset, rotation or scale).",
           "transformMode=location: An actor must be moved to a new location.",
           "transformMode=rotation: An actor must be rotated.",
           "transformMode=scale: An actor must be rescaled.",
@@ -35558,7 +35573,24 @@
                 ],
                 "additionalProperties": false
               },
-              "description": "Many actors in one call, each {actorName, location? or offset?, rotation?, scale?} with its own values (an omitted part keeps its current value); every actor is reported, and the call fails naming any that did not move."
+              "description": "Many actors in one call, each {actorName, location? or offset?, rotation?, scale?} with its own values; a part an item leaves out takes the call's own location, offset, rotation or scale when given, else keeps its current value. Every actor is reported, and the call fails naming any that did not move."
+            },
+            "actorNames": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "maxItems": 500,
+              "description": "Many actors given the same change: the location, offset, rotation or scale beside it (forty frost caps rescaled by one scale, a group raised by one offset). Reported as actors is."
+            },
+            "report": {
+              "type": "string",
+              "enum": [
+                "all",
+                "failures"
+              ],
+              "description": "With actors or actorNames: which items results lists, all (default) or only those that failed or look misplaced (placementWarning); movedActors counts every actor either way."
             },
             "transformMode": {
               "type": "string",
@@ -35579,7 +35611,8 @@
           "additionalProperties": false,
           "requiredOneOf": [
             "actorName",
-            "actors"
+            "actors",
+            "actorNames"
           ]
         },
         "output": {
@@ -35631,11 +35664,15 @@
                 "additionalProperties": true,
                 "x-unreal-reflection-boundary": true
               },
-              "description": "actors: one entry per actor (actorName, success, read-back location/rotation/scale, placementWarning, coplanarFaces, error), its placement checked once every actor in the call has moved."
+              "description": "actors or actorNames: one entry per actor (actorName, success, read-back location/rotation/scale, placementWarning, coplanarFaces, error), its placement checked once every actor in the call has moved; report failures keeps only the failed and misplaced ones."
             },
             "movedActors": {
               "type": "number",
-              "description": "actors: how many actors took their transform."
+              "description": "actors or actorNames: how many actors took their transform."
+            },
+            "report": {
+              "type": "string",
+              "description": "Echoes report when it narrowed results."
             },
             "groundZ": {
               "type": "number",
@@ -35684,7 +35721,7 @@
               "items": {
                 "type": "string"
               },
-              "description": "actors: the actors that took their transform, each by name and once; the receipt lists them as changes, with an actor handle each."
+              "description": "actors or actorNames: the actors that took their transform, each by name and once; the receipt lists them as changes, with an actor handle each."
             }
           },
           "required": [
@@ -35777,8 +35814,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "5ccfc6c25b3e567b5a9fbc13a63f48061597fb7561ae33effd0ac67a6c108e66",
-        "content": "cba437d0453d90d9d96be254b5e665c37f0fe4a7355385798063d593556cf304"
+        "schema": "e1f1f4536fc02680a670cf44ce900be30bd14498c9a5a741c6f32476e1b80f7e",
+        "content": "a125430e96eb46a07aeede566d96739b0cba6c13f57cf23be80df7d16dde7501"
       }
     },
     {

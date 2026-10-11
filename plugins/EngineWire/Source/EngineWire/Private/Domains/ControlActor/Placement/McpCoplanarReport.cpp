@@ -70,7 +70,9 @@ int32 AddCoplanarToRows(const TMap<AActor*, TSharedPtr<FJsonObject>>& Rows)
     {
         return 0;
     }
-    for (const FMcpCoplanarHit& Hit : FindCoplanarFaces(World, FString()))
+    TArray<AActor*> Placed;
+    Rows.GetKeys(Placed);
+    for (const FMcpCoplanarHit& Hit : FindCoplanarFaces(World, FString(), &Placed))
     {
         for (int32 Side = 0; Side < 2; ++Side)
         {

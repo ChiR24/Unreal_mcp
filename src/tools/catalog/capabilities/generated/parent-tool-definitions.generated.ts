@@ -3895,6 +3895,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "type": "string"
               },
               "description": "Several actors to toggle in one call and one undo step, in place of actorName; names not found are listed back under missing, and the actors changed under affectedActors (which the receipt lists as changes, with an actor handle each)."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "maxItems": 500,
+              "description": "Many actors given the same change: the location, offset, rotation or scale beside it (forty frost caps rescaled by one scale, a group raised by one offset). Reported as actors is."
             }
           ],
           "description": "Actor names to act on (batch delete)."
@@ -3962,7 +3971,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 ],
                 "additionalProperties": false
               },
-              "description": "Many actors in one call, each {actorName, location? or offset?, rotation?, scale?} with its own values (an omitted part keeps its current value); every actor is reported, and the call fails naming any that did not move."
+              "description": "Many actors in one call, each {actorName, location? or offset?, rotation?, scale?} with its own values; a part an item leaves out takes the call's own location, offset, rotation or scale when given, else keeps its current value. Every actor is reported, and the call fails naming any that did not move."
             },
             {
               "type": "array",
@@ -4278,6 +4287,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             }
           ],
           "description": "Move by [dx, dy, dz] from where the actor stands now, instead of to an absolute location; give one or the other."
+        },
+        "overlaps": {
+          "type": "boolean",
+          "description": "Also watch which actors overlap the watched one, checked every frame: a sample names those that began (overlapsBegan) or stopped (overlapsEnded) touching it since the sample before, and overlapped lists every actor it touched. Finds what killed a pawn, what a pickup or trigger fired on, or an enemy wandering into a spawn point."
         },
         "parentActor": {
           "type": "string",
@@ -4662,7 +4675,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "items": {
                 "type": "string"
               },
-              "description": "actors: the actors that took their transform, each by name and once; the receipt lists them as changes, with an actor handle each."
+              "description": "actors or actorNames: the actors that took their transform, each by name and once; the receipt lists them as changes, with an actor handle each."
             }
           ],
           "description": "The actors moved; the receipt lists them as changes, with an actor handle each."
@@ -4983,7 +4996,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "movedActors": {
           "type": "number",
-          "description": "actors: how many actors took their transform."
+          "description": "actors or actorNames: how many actors took their transform."
         },
         "movedCount": {
           "type": "number",
@@ -5021,6 +5034,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "minItems": 3,
           "maxItems": 3,
           "description": "World-space centre of the bounding box as [x, y, z]."
+        },
+        "overlapped": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "With overlaps: every actor that touched the watched one during the run, first touch first; empty when nothing did."
         },
         "overlappingActors": {
           "type": "array",
@@ -5085,7 +5105,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "additionalProperties": true,
                 "x-unreal-reflection-boundary": true
               },
-              "description": "actors: one entry per actor (actorName, success, read-back location/rotation/scale, placementWarning, coplanarFaces, error), its placement checked once every actor in the call has moved."
+              "description": "actors or actorNames: one entry per actor (actorName, success, read-back location/rotation/scale, placementWarning, coplanarFaces, error), its placement checked once every actor in the call has moved; report failures keeps only the failed and misplaced ones."
             },
             {
               "type": "array",
@@ -5136,7 +5156,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "additionalProperties": true,
             "x-unreal-reflection-boundary": true
           },
-          "description": "One entry per sample: t (game seconds since the start), location [x, y, z], velocity [x, y, z], rotation [pitch, yaw, roll] in degrees (on the first sample and on each one where it changed, so a sample without it still has the last one written), properties, and with points their world locations (points) and heights over the ground (aboveGround, with groundTrace; a point with nothing below it within 10 m is left out)."
+          "description": "One entry per sample: t (game seconds since the start), location [x, y, z], velocity [x, y, z], rotation [pitch, yaw, roll] in degrees (on the first sample and on each one where it changed, so a sample without it still has the last one written), properties, with points their world locations (points) and heights over the ground (aboveGround, with groundTrace; a point with nothing below it within 10 m is left out), and with overlaps the actors that began or stopped touching it since the sample before (overlapsBegan, overlapsEnded)."
         },
         "scale": {
           "oneOf": [

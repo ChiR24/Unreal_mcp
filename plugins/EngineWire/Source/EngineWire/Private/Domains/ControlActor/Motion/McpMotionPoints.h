@@ -2,6 +2,8 @@
 
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
+#include "Domains/ControlActor/Motion/McpMotionOverlapProbe.h"
+#include "UObject/StrongObjectPtr.h"
 
 class AActor;
 class USceneComponent;
@@ -36,3 +38,24 @@ void McpAddMotionPointStats(const FMcpMotionPoints &Points, FJsonObject &Data);
 
 /** The samples a run keeps: fewer with each point, so the reply stays within the response budget. */
 int32 McpMotionSampleCap(int32 Cap, const FMcpMotionPoints &Points);
+
+// sample_motion overlaps: the actors that touch the watched one. A rider that died the moment it respawned took twenty
+// calls to pin on the enemy that walked into it; the sample of the death now names it. A touch begins through the
+// actor's own begin-overlap event (Probe), so one the same frame ends still counts; it ends by the per-frame check.
+struct FMcpMotionOverlaps {
+  bool bOn = false;
+  TStrongObjectPtr<UMcpMotionOverlapProbe> Probe;
+  TWeakObjectPtr<AActor> Watched;
+  TMap<TWeakObjectPtr<AActor>, FString> Touching; // named once, when the touch began
+  TArray<FString> Began, Ended, Ever;             // Began and Ended since the last sample
+  ~FMcpMotionOverlaps();                          // unbinds the probe
+};
+
+/** Reads overlaps and, when it is true, binds the probe to the actor's begin-overlap event. */
+void McpStartMotionOverlaps(FMcpMotionOverlaps &Overlaps, AActor *Actor, const TSharedPtr<FJsonObject> &Payload);
+
+/** Notes which actors began or stopped overlapping the watched one since the last frame. */
+void McpTrackMotionOverlaps(FMcpMotionOverlaps &Overlaps, AActor *Actor);
+
+/** Tracks this frame, then writes overlapsBegan and overlapsEnded since the last sample into it. */
+void McpSampleMotionOverlaps(FMcpMotionOverlaps &Overlaps, AActor *Actor, FJsonObject &Sample);

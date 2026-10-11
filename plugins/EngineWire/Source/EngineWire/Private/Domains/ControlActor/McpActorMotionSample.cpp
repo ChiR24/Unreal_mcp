@@ -34,6 +34,7 @@ struct FMcpMotionRun {
   TOptional<FRotator> LastRotation; // the rotation the samples last carried
   TArray<FMcpMotionInput> Inputs;
   FMcpMotionPoints Points;
+  FMcpMotionOverlaps Overlaps;
   FMcpMotionTrigger Trigger;
   int32 Frames = 0;
   FMcpEditorRunHold Hold; // what the run changed in the editor, undone by EndEditorRunForMcp
@@ -80,6 +81,7 @@ void McpTakeMotionSample(FMcpMotionRun &Run, AActor *Actor, double GameTime) {
   Run.LastSampleGame = GameTime;
   Run.Extent += Location;
   McpSampleMotionPoints(Run.Points, Actor, *Sample, GameTime);
+  McpSampleMotionOverlaps(Run.Overlaps, Actor, *Sample);
   Run.Samples.Add(MakeShared<FJsonValueObject>(Sample));
 }
 
@@ -102,6 +104,7 @@ TSharedPtr<FJsonObject> McpMotionResult(const FMcpMotionRun &Run, const FString 
     Data->SetArrayField(TEXT("missingProperties"), Run.Missing);
   }
   McpAddMotionPointStats(Run.Points, *Data);
+  if (Run.Overlaps.bOn) Data->SetArrayField(TEXT("overlapped"), McpHandlerUtils::ToJsonStringArray(Run.Overlaps.Ever));
   if (Run.Inputs.Num() > 0) {
     Data->SetArrayField(TEXT("inputsApplied"), McpMotionInputsJson(Run.Inputs));
   }
@@ -152,6 +155,7 @@ FString McpAdvanceMotionRun(FMcpMotionRun &Run) {
     Run.NextSample = Now;
   }
   Run.Frames += 1;
+  McpTrackMotionOverlaps(Run.Overlaps, Actor); // every frame: a touch can begin and end between two samples
   McpApplyMotionInputs(Run.Inputs, Now - Run.StartGame, false);
   // A frame that did not advance game time repeats the last sample: a paused run at interval 0 kept
   // 74 copies of t=0.
@@ -214,6 +218,7 @@ bool UEngineWireSubsystem::HandleControlActorSampleMotion(
   Run->Duration = FMath::Clamp(Duration, 0.05, 30.0);
   Run->EndGame = Run->StartGame + Run->Duration;
   Run->StartReal = Run->LastAdvanceReal = FPlatformTime::Seconds();
+  McpStartMotionOverlaps(Run->Overlaps, Found, Payload);
   FString TimelineError;
   const TSharedPtr<FJsonObject> *When = nullptr;
   if (Payload->TryGetObjectField(TEXT("startWhen"), When) && When && When->IsValid()) {

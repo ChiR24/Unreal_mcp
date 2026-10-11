@@ -16,6 +16,9 @@ const TCHAR* const ResolvedIdentityFields[] = {TEXT("capabilityId"), TEXT("capab
 // The receipt fields that say what the call did; the rest of a receipt is bookkeeping.
 const TCHAR* const ReceiptOutcomeLists[] = {TEXT("nextCalls"), TEXT("handles"), TEXT("changes"), TEXT("warnings")};
 
+// Payload lists the receipt reads into its changes, so a copy of them says nothing once changes lists every entry.
+const TCHAR* const ReceiptListedFields[] = {TEXT("changedAssets"), TEXT("changedEntities"), TEXT("deleted"), TEXT("affectedActors")};
+
 bool AllListed(const FJsonArray& Items, const TArray<FString>& Listed)
 {
 	for (const TSharedPtr<FJsonValue>& Item : Items)
@@ -27,8 +30,8 @@ bool AllListed(const FJsonArray& Items, const TArray<FString>& Listed)
 	return true;
 }
 
-// A payload list (warnings, changedAssets, changedEntities, deleted) whose every entry the receipt already lists, at its root and down
-// details (where the receipt collects them).
+// A payload list (warnings, or one of ReceiptListedFields) whose every entry the receipt already lists, at its root and
+// down details (where the receipt collects them).
 TSharedPtr<FJsonObject> WithoutListed(const TSharedPtr<FJsonObject>& Payload, const TCHAR* Field, const TArray<FString>& Listed)
 {
 	TSharedPtr<FJsonObject> Out = Copy(Payload);
@@ -189,7 +192,7 @@ TSharedPtr<FJsonObject> CompactExecute(const TSharedPtr<FJsonObject>& Reply)
 	{
 		const TArray<FString> Changes = StringItems(ArrayField(Outcome, TEXT("changes")));
 		TSharedPtr<FJsonObject> Shown = WithoutListed(Data, TEXT("warnings"), Listed);
-		for (const TCHAR* Field : {TEXT("changedAssets"), TEXT("changedEntities"), TEXT("deleted")}) Shown = WithoutListed(Shown, Field, Changes);
+		for (const TCHAR* Field : ReceiptListedFields) Shown = WithoutListed(Shown, Field, Changes);
 		Shown = WithoutRepeatedValues(Shown);
 		if (SameField(Shown, TEXT("success"), Out, TEXT("success"))) Shown->RemoveField(TEXT("success"));
 		if (SameField(Shown, TEXT("message"), Out, TEXT("message"))) Shown->RemoveField(TEXT("message"));
