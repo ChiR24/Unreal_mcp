@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "94eaf7dedd4f0830",
-  "recordCount": 410,
+  "catalogRevision": "f3577bae2f3fc3e8",
+  "recordCount": 411,
   "records": [
     {
       "id": "animation_physics.analyze_animation",
@@ -17061,7 +17061,7 @@
             },
             "parentComponent": {
               "type": "string",
-              "description": "Parent SCS node name for reparenting."
+              "description": "Parent component to put the component under: one of this Blueprint's own, a parent Blueprint's scene component, or a native one (Mesh, CapsuleComponent)."
             },
             "attachTo": {
               "type": "string",
@@ -17179,7 +17179,7 @@
             },
             "parent": {
               "type": "string",
-              "description": "Parent SCS node name for reparenting."
+              "description": "Parent component to put the component under: one of this Blueprint's own, a parent Blueprint's scene component, or a native one (Mesh, CapsuleComponent)."
             },
             "compiled": {
               "type": "boolean",
@@ -17361,8 +17361,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "fd9e357731dad23d4871b0ec91ab554b5cdcc1e91b86d3fa6c896363c9fbdc95",
-        "content": "a22045c177180f3e101c2b87692ef494cd476b2b913d15cead2f20f3686a0cdb"
+        "schema": "3baadd9f06f47e55c0736ac9dda7779a9bde8268bfbca02aea60fc20f60c2291",
+        "content": "8b3a54729be1d2460cc908863836108ed30f716a566b36b9c9b8fd4340dfb095"
       }
     },
     {
@@ -18654,7 +18654,7 @@
                 "additionalProperties": true,
                 "x-unreal-reflection-boundary": true
               },
-              "description": "Components inherited from parent Blueprints (their own components) and from the native parent class (a Character's CollisionCylinder): componentName, componentType, isSceneComponent, ownerClass. A native one is valid as parentComponent for add_scs_component; one from a parent Blueprint is not.",
+              "description": "Components inherited from parent Blueprints (their own components) and from the native parent class (a Character's CollisionCylinder): componentName, componentType, isSceneComponent, ownerClass, and overridden when this Blueprint restyled the part. A scene component of either kind is valid as parentComponent or attachTo.",
               "x-unreal-reflection-boundary": true
             },
             "inheritedComponentCount": {
@@ -18747,8 +18747,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "957dfa5820eb56db1439248cd8baefd3985a3e8a712c9678388db328466f7803",
-        "content": "f0db85bd721fe531afb91bcf92dc5e7d7583dff827954aa80e060ad1cf8a4fe0"
+        "schema": "98d96d749a0ca824c95742330c2cf8e43d7484067ccf20fc9b8d3b49024f957a",
+        "content": "b3da193f045c342d324a2fdeb8ac2b96a7e3860c311dc2e0332d2bea51d6ffe8"
       }
     },
     {
@@ -53690,7 +53690,6 @@
           "get_metasound_graph",
           "read metasound graph",
           "metasound nodes",
-          "list metasound nodes",
           "inspect metasound",
           "metasound links"
         ],
@@ -53891,7 +53890,170 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "d5cf63fc9280b7fb3702b8053401d81414abc199289b2f8e8604720018423a66",
-        "content": "811997ef014e15531030c85f1f8b085507ba8c7f6008ec5cc3e37781772f4112"
+        "content": "174b774fde6308f0b40dfe3fc92cee3fa7f15c403bc9de826d7731ced1f3a1ea"
+      }
+    },
+    {
+      "id": "manage_audio.list_metasound_nodes",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "manage_audio",
+          "action": "list_metasound_nodes"
+        }
+      ],
+      "discovery": {
+        "domain": "audio",
+        "family": "metasound",
+        "topics": [
+          "list_metasound_nodes",
+          "list metasound nodes",
+          "metasound node classes",
+          "available metasound nodes",
+          "find metasound node",
+          "metasound node library"
+        ],
+        "summary": "List the MetaSound node classes the engine has, by part of their class name, display name or category, with what each does and, with includePins, its input and output pins: the nodeClassName add_node takes.",
+        "whenToUse": [
+          "Use it to list the MetaSound node classes the engine has, by part of their class name, display name or category, with what each does and, with includePins, its input and output pins: the nodeClassName add_node takes."
+        ],
+        "whenNotToUse": []
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "Action."
+            },
+            "filter": {
+              "type": "string",
+              "description": "Part of a class name, display name or category, spaces and case ignored (\"Trigger\", \"Envelope\", \"Filters\"); omitted, every class up to limit."
+            },
+            "includePins": {
+              "type": "boolean",
+              "description": "Also list each class's input and output pins as \"Name (Type)\", the names connect and set_default take."
+            },
+            "limit": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 200,
+              "description": "At most this many classes (default 50), those whose own name equals, starts with or contains filter first, the engine's UE nodes first among those, then by name; matchCount and truncated say what was left out."
+            }
+          },
+          "required": [
+            "action"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "nodeClasses": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Each matching MetaSound node class, by name: nodeClassName (the spelling add_node takes), category, description and, with includePins, inputs and outputs as \"Name (Type)\"."
+            },
+            "matchCount": {
+              "type": "number",
+              "description": "Number of node classes that match filter, before limit cut the list."
+            },
+            "truncated": {
+              "type": "boolean",
+              "description": "True when limit cut the list; raise limit or narrow filter to see the rest."
+            }
+          },
+          "required": [
+            "success",
+            "nodeClasses"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Find the trigger nodes",
+          "input": {
+            "action": "list_metasound_nodes",
+            "filter": "Trigger Filter",
+            "includePins": true
+          },
+          "output": {
+            "success": true,
+            "message": "1 node classes match",
+            "nodeClasses": [
+              {
+                "nodeClassName": "UE.Trigger Filter",
+                "category": "Triggers",
+                "description": "When triggered, Heads has the given probability chance to trigger, otherwise it's Tail.",
+                "inputs": [
+                  "Trigger (Trigger)",
+                  "Reset (Trigger)",
+                  "Seed (Int32)",
+                  "Probability (Float)"
+                ],
+                "outputs": [
+                  "Heads (Trigger)",
+                  "Tails (Trigger)"
+                ]
+              }
+            ],
+            "matchCount": 1,
+            "truncated": false
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [
+          "MetaSound"
+        ],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "read",
+        "idempotency": "idempotent",
+        "longRunning": false,
+        "safeToRetry": true
+      },
+      "policy": {
+        "requiredScope": "read",
+        "consent": "none",
+        "dataAccess": "project-read"
+      },
+      "cost": {
+        "latency": "interactive",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "manage_audio",
+        "dispatchAction": "manage_audio"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "9ebe96e378609a7d26ede02a2ad9bdbdf7a739022c46a9bdcb724e4b29b58489",
+        "content": "7418b1d2ac52ae3697afd1926fec9d46b5ce726ba676dc3fbb03129f4da85036"
       }
     },
     {
@@ -82794,7 +82956,7 @@
                 "x-unreal-reflection-boundary": true
               },
               "x-unreal-reflection-boundary": true,
-              "description": "Several parameter values at once, each {parameterName, parameterType (scalar | vector | texture), value, or texturePath for a texture}; every entry is reported, and the call fails naming any that did not apply."
+              "description": "Several parameter values at once, each {parameterName, parameterType (scalar | vector | texture), value, or texturePath for a texture}; applied counts those that took, and an entry that did not is listed under parameters with why and fails the call."
             },
             "save": {
               "type": "boolean",
@@ -82937,8 +83099,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "7c07c52c934dc853dc699e0b62fd370edc4d5c8f11d107401fee368cd1cecc7c",
-        "content": "58dbd317fc03ef4b3e772706433d019a2d5ef410d21140aac9779a13a40fa854"
+        "schema": "fbe40f401f6be15cc20cba64ec71051caeb205d445e2002e79faa342198e9ff0",
+        "content": "e6ad340fae27eba260dfead9252343dc6bf7490d94a8beb6354bd53d0835ec48"
       }
     },
     {
@@ -83755,7 +83917,7 @@
                 "x-unreal-reflection-boundary": true
               },
               "x-unreal-reflection-boundary": true,
-              "description": "Several parameter values at once, each {parameterName, parameterType (scalar | vector | texture), value, or texturePath for a texture}; every entry is reported, and the call fails naming any that did not apply."
+              "description": "Several parameter values at once, each {parameterName, parameterType (scalar | vector | texture), value, or texturePath for a texture}; applied counts those that took, and an entry that did not is listed under parameters with why and fails the call."
             },
             "assets": {
               "type": "array",
@@ -83884,8 +84046,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "11e96e936d5ae13d5e1d466041aa646a6f045654411468ce16cd4921a262b1d2",
-        "content": "4612b55c64df28ceea706fa2711f3653fd9954f2bbd3e017a52cd6040147e931"
+        "schema": "7b8212bca2f165d7e24722d624c833f93a6fbd4c2c978042c563134d71971b89",
+        "content": "a28d3ef149e1f78f023cb3dd21e093e128a903e3964d924aff984c72ee061ca0"
       }
     },
     {

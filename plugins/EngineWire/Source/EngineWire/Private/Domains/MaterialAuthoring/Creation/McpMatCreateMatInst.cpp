@@ -138,11 +138,11 @@ bool HandleCreateMaterialInstance(UEngineWireSubsystem* Bridge, const FString& R
       TArray<TSharedPtr<FJsonValue>> Results;
       TArray<FString> Failed;
       ApplyMaterialParameterList(Bridge, RequestId, NewInstance->GetOutermost()->GetName(), *Entries, Payload, Socket, Results, Failed);
-      Result->SetArrayField(TEXT("parameters"), Results);
       if (Failed.Num() > 0) {
+        Result->SetArrayField(TEXT("parameters"), Results);
         Bridge->SendAutomationResponse(Socket, RequestId, false,
             FString::Printf(TEXT("Material instance '%s' created, but %d of %d parameters did not apply: %s"),
-                            *Name, Failed.Num(), Results.Num(), *FString::Join(Failed, TEXT("; "))),
+                            *Name, Failed.Num(), Entries->Num(), *FString::Join(Failed, TEXT("; "))),
             Result, TEXT("PARAMETER_BATCH_INCOMPLETE"));
         return true;
       }

@@ -10025,7 +10025,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "x-unreal-reflection-boundary": true
           },
           "x-unreal-reflection-boundary": true,
-          "description": "Several parameter values at once, each {parameterName, parameterType (scalar | vector | texture), value, or texturePath for a texture}; every entry is reported, and the call fails naming any that did not apply."
+          "description": "Several parameter values at once, each {parameterName, parameterType (scalar | vector | texture), value, or texturePath for a texture}; applied counts those that took, and an entry that did not is listed under parameters with why and fails the call."
         },
         "parentMaterial": {
           "type": "string",
@@ -11985,6 +11985,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Attenuation falloff mode."
         },
+        "filter": {
+          "type": "string",
+          "description": "Part of a class name, display name or category, spaces and case ignored (\"Trigger\", \"Envelope\", \"Filters\"); omitted, every class up to limit."
+        },
         "gain": {
           "type": "number",
           "description": "Reverb master volume (0 to 1)."
@@ -12012,6 +12016,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "highMidGain": {
           "type": "number",
           "description": "Linear gain of EQ band 2 (0 to 4)."
+        },
+        "includePins": {
+          "type": "boolean",
+          "description": "Also list each class's input and output pins as \"Name (Type)\", the names connect and set_default take."
         },
         "indefinite": {
           "type": "boolean",
@@ -12050,6 +12058,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "lfeBleed": {
           "type": "number",
           "description": "Share of the sound sent to the LFE channel (0 to 1)."
+        },
+        "limit": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 200,
+          "description": "At most this many classes (default 50), those whose own name equals, starts with or contains filter first, the engine's UE nodes first among those, then by name; matchCount and truncated say what was left out."
         },
         "localizationKeyFormat": {
           "type": "string",
@@ -12377,6 +12391,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "configure_sound_class",
             "configure_sound_attenuation",
             "get_metasound_graph",
+            "list_metasound_nodes",
             "create_audio_asset",
             "get_audio_info",
             "set_dialogue_context"
@@ -12488,6 +12503,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "True when the node was newly inserted; false when an existing one was updated."
         },
+        "matchCount": {
+          "type": "number",
+          "description": "Number of node classes that match filter, before limit cut the list."
+        },
         "message": {
           "type": "string",
           "description": "Human-readable result message."
@@ -12495,6 +12514,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "modifierCount": {
           "type": "number",
           "description": "Number of Sound Class effects declared by the inspected Sound Mix."
+        },
+        "nodeClasses": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Each matching MetaSound node class, by name: nodeClassName (the spelling add_node takes), category, description and, with includePins, inputs and outputs as \"Name (Type)\"."
         },
         "nodeCount": {
           "type": "number",
@@ -12616,6 +12644,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "timelineStepSeconds": {
           "type": "number",
           "description": "Seconds each timeline entry covers: 0.05 for sounds up to 5 s, longer so there are at most 100 entries."
+        },
+        "truncated": {
+          "type": "boolean",
+          "description": "True when limit cut the list; raise limit or narrow filter to see the rest."
         },
         "type": {
           "type": "string",
@@ -13427,7 +13459,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "parentComponent": {
           "type": "string",
-          "description": "Parent SCS node name for reparenting."
+          "description": "Parent component to put the component under: one of this Blueprint's own, a parent Blueprint's scene component, or a native one (Mesh, CapsuleComponent)."
         },
         "parentSlot": {
           "type": "string",
@@ -14340,7 +14372,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "additionalProperties": true,
             "x-unreal-reflection-boundary": true
           },
-          "description": "Components inherited from parent Blueprints (their own components) and from the native parent class (a Character's CollisionCylinder): componentName, componentType, isSceneComponent, ownerClass. A native one is valid as parentComponent for add_scs_component; one from a parent Blueprint is not.",
+          "description": "Components inherited from parent Blueprints (their own components) and from the native parent class (a Character's CollisionCylinder): componentName, componentType, isSceneComponent, ownerClass, and overridden when this Blueprint restyled the part. A scene component of either kind is valid as parentComponent or attachTo.",
           "x-unreal-reflection-boundary": true
         },
         "inputPins": {
@@ -14518,7 +14550,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "parent": {
           "type": "string",
-          "description": "Parent SCS node name for reparenting."
+          "description": "Parent component to put the component under: one of this Blueprint's own, a parent Blueprint's scene component, or a native one (Mesh, CapsuleComponent)."
         },
         "parentClass": {
           "type": "string",

@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `94eaf7dedd4f0830`
+Catalog revision: `f3577bae2f3fc3e8`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 410 capabilities across
+The catalog declares 411 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -43,7 +43,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `inspect` | 21 | 16 | 4 | 1 | inspect |
 | `manage_ai` | 16 | 2 | 14 | 0 | manage ai |
 | `manage_asset` | 47 | 10 | 32 | 5 | asset, datatable, enum, material, struct, texture |
-| `manage_audio` | 13 | 2 | 11 | 0 | audio |
+| `manage_audio` | 14 | 3 | 11 | 0 | audio |
 | `manage_blueprint` | 29 | 7 | 16 | 6 | blueprint, widget |
 | `manage_character` | 10 | 2 | 8 | 0 | manage character |
 | `manage_combat` | 5 | 1 | 4 | 0 | manage combat |
@@ -62,7 +62,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-64 of 410 capabilities require consent.
+64 of 411 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -356,6 +356,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_audio.fade_sound` | `manage_audio` | `manage_audio` | write | write | none | `manage_audio.fade_sound` `manage_audio.fade_sound_in` `manage_audio.fade_sound_out` |
 | `manage_audio.get_audio_info` | `manage_audio` | `manage_audio` | read | read | none | `manage_audio.get_audio_info` |
 | `manage_audio.get_metasound_graph` | `manage_audio` | `manage_audio` | read | read | none | `manage_audio.get_metasound_graph` |
+| `manage_audio.list_metasound_nodes` | `manage_audio` | `manage_audio` | read | read | none | `manage_audio.list_metasound_nodes` |
 | `manage_audio.play_sound` | `manage_audio` | `manage_audio` | write | write | none | `manage_audio.play_sound` `manage_audio.play_sound_2d` `manage_audio.play_sound_at_location` `manage_audio.spawn_sound_at_location` `manage_audio.play_sound_attached` `manage_audio.prime_sound` `manage_audio.play_sound_measure` |
 | `manage_audio.set_dialogue_context` | `manage_audio` | `manage_audio` | write | write | none | `manage_audio.set_dialogue_context` |
 | `manage_audio.stop_sound` | `manage_audio` | `manage_audio` | write | write | none | `manage_audio.stop_sound` `manage_audio.pause_sound` `manage_audio.resume_sound` |

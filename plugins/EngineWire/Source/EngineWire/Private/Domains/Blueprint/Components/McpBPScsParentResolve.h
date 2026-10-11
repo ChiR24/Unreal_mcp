@@ -63,6 +63,17 @@ inline USceneComponent *FindInheritedSceneComponent(UBlueprint *Blueprint,
   return Cast<USceneComponent>(FindInheritedComponent(Blueprint, Name));
 }
 
+// A scene component from a parent Blueprint's construction script, by variable name: a node takes it as its parent
+// (variable and owner class), as the Components panel does.
+inline USCS_Node *FindInheritedScsSceneNode(UBlueprint *Blueprint, const FString &Name) {
+  USCS_Node *Found = nullptr;
+  McpPropertyCdoComponents::ForEachScsNode(Blueprint, [&](USCS_Node *Node, bool bInherited) {
+    if (bInherited && Node->GetVariableName().ToString().Equals(Name, ESearchCase::IgnoreCase)) Found = Node;
+    return Found == nullptr;
+  });
+  return Found && Found->ComponentTemplate && Found->ComponentTemplate->IsA<USceneComponent>() ? Found : nullptr;
+}
+
 // Attaches Child under ParentName, which may name an SCS node in this
 // Blueprint or an inherited/native scene component. Returns false with a
 // caller-facing reason rather than quietly leaving the node where it was.
@@ -104,15 +115,9 @@ inline bool AttachNodeToNamedParent(UBlueprint *Blueprint,
     return true;
   }
 
-  // A scene component from a parent Blueprint's construction script: the node names it as its parent (variable and
-  // owner class), as the Components panel does. Only native parents were looked up, so attachTo a parent Blueprint's
-  // part failed while get_scs listed it as inherited.
-  USCS_Node *InheritedNode = nullptr;
-  McpPropertyCdoComponents::ForEachScsNode(Blueprint, [&](USCS_Node *Node, bool bInherited) {
-    if (bInherited && Node->GetVariableName().ToString().Equals(Trimmed, ESearchCase::IgnoreCase)) InheritedNode = Node;
-    return InheritedNode == nullptr;
-  });
-  if (InheritedNode && InheritedNode->ComponentTemplate && InheritedNode->ComponentTemplate->IsA<USceneComponent>()) {
+  // Only native parents were looked up, so attachTo a parent Blueprint's part failed while get_scs listed it as
+  // inherited.
+  if (USCS_Node *InheritedNode = FindInheritedScsSceneNode(Blueprint, Trimmed)) {
     if (USCS_Node *OldParent = SCS->FindParentNode(Child)) {
       OldParent->RemoveChildNode(Child, /*bRemoveFromAllNodes=*/true);
       SCS->AddNode(Child);

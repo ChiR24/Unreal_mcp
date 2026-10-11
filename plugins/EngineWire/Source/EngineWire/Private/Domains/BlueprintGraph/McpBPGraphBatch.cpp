@@ -245,8 +245,7 @@ bool RunGraphBatch(FActionContext& Context, int32 MaxSteps, bool bCompile)
 
     SettleAutoPlacedNodes(Context.Blueprint, State);
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetArrayField(TEXT("results"), McpListTellingSteps(Results));
-    Result->SetObjectField(TEXT("nodeIds"), NodeIds);
+    McpSetBatchSteps(Result, Results, NodeIds);
     Result->SetNumberField(TEXT("succeeded"), Results.Num());
     // A step's warning (a Target pin now holding two objects) sat in results[], where no receipt check looks.
     TArray<TSharedPtr<FJsonValue>> Warnings;

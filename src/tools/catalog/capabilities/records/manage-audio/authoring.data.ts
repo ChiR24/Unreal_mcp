@@ -108,7 +108,17 @@ export const AUDIO_AUTHORING_RECORDS: readonly CapabilityRecordSource[] = [
     tool: T, action: 'get_metasound_graph', family: 'metasound', summary: 'Read a MetaSound graph: every node with its input literals, the links by pin name, and the graph inputs and outputs.',
     params: ['assetPath'], required: ['assetPath'], effect: 'read', plugins: META,
     outputs: ['assetPath', 'nodeCount', 'edgeCount', 'nodes', 'edges', 'graphInputs', 'graphOutputs'], outputRequired: ['nodes', 'edges'],
-  }), ['read metasound graph', 'metasound nodes', 'list metasound nodes', 'inspect metasound', 'metasound links']), examples: [{ title: 'Read a one-oscillator MetaSound', ...GET_METASOUND_GRAPH_EXAMPLE }] },
+  }), ['read metasound graph', 'metasound nodes', 'inspect metasound', 'metasound links']), examples: [{ title: 'Read a one-oscillator MetaSound', ...GET_METASOUND_GRAPH_EXAMPLE }] },
+  // A node's class name was a guess until add_node refused it: nothing listed what the registry holds.
+  { ...withInputProps(withTopics(utilityRecord({
+    tool: T, action: 'list_metasound_nodes', family: 'metasound', summary: 'List the MetaSound node classes the engine has, by part of their class name, display name or category, with what each does and, with includePins, its input and output pins: the nodeClassName add_node takes.',
+    params: [], effect: 'read', plugins: META,
+    outputs: ['nodeClasses', 'matchCount', 'truncated'], outputRequired: ['nodeClasses'],
+  }), ['list metasound nodes', 'metasound node classes', 'available metasound nodes', 'find metasound node', 'metasound node library']), {
+    filter: { type: 'string', description: 'Part of a class name, display name or category, spaces and case ignored ("Trigger", "Envelope", "Filters"); omitted, every class up to limit.' },
+    includePins: { type: 'boolean', description: 'Also list each class\'s input and output pins as "Name (Type)", the names connect and set_default take.' },
+    limit: { type: 'number', minimum: 1, maximum: 200, description: 'At most this many classes (default 50), those whose own name equals, starts with or contains filter first, the engine\'s UE nodes first among those, then by name; matchCount and truncated say what was left out.' },
+  }), examples: [{ title: 'Find the trigger nodes', input: { action: 'list_metasound_nodes', filter: 'Trigger Filter', includePins: true }, output: { success: true, message: '1 node classes match', nodeClasses: [{ nodeClassName: 'UE.Trigger Filter', category: 'Triggers', description: 'When triggered, Heads has the given probability chance to trigger, otherwise it\'s Tail.', inputs: ['Trigger (Trigger)', 'Reset (Trigger)', 'Seed (Int32)', 'Probability (Float)'], outputs: ['Heads (Trigger)', 'Tails (Trigger)'] }], matchCount: 1, truncated: false } }] },
   a('connect_metasound_nodes', 'Connect two MetaSound graph pins.', ['assetPath', 'sourceNodeId', 'sourceOutputName', 'targetNodeId', 'targetInputName', 'save'], ['assetPath', 'sourceNodeId', 'sourceOutputName', 'targetNodeId', 'targetInputName'], [], [], META),
   a('create_attenuation_settings', 'Create attenuation settings and return the asset path.', ['name', 'path', 'innerRadius', 'falloffDistance', 'save'], ['name'], ['assetPath'], ['assetPath']),
   a('create_dialogue_voice', 'Create a Dialogue Voice asset and return its path.', ['name', 'path', 'gender', 'plurality', 'save'], ['name'], ['assetPath'], ['assetPath']),

@@ -1,5 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 
+#include "Domains/Blueprint/Components/McpBPScsParentResolve.h"
 #include "Domains/SCS/McpSCSHandlers.h"
 #include "Domains/SCS/McpSCSSupport.h"
 
@@ -69,6 +70,12 @@ FString DescribeParentCandidates(UBlueprint *BP, USimpleConstructionScript *SCS)
       }
     }
   }
+  McpPropertyCdoComponents::ForEachScsNode(BP, [&Names](USCS_Node *Node, bool bInherited) {
+    if (bInherited && Node->ComponentTemplate && Node->ComponentTemplate->IsA<USceneComponent>()) {
+      Names.AddUnique(GetSCSNodeName(Node) + TEXT(" (inherited)"));
+    }
+    return true;
+  });
   UClass *ParentClass = BP ? BP->ParentClass : nullptr;
   if (AActor *CDO = ParentClass ? Cast<AActor>(ParentClass->GetDefaultObject()) : nullptr) {
     for (UActorComponent *Comp : CDO->GetComponents()) {
@@ -121,6 +128,7 @@ TSharedPtr<FJsonObject> FSCSHandlers::AddSCSComponent(
 
   USCS_Node *ParentNode = nullptr;
   USceneComponent *NativeParent = nullptr;
+  USCS_Node *InheritedParent = nullptr;
   if (!ParentComponentName.IsEmpty()) {
     if (IsSCSRootAlias(SCS, ParentComponentName)) {
       const TArray<USCS_Node *> &Roots = SCS->GetRootNodes();
@@ -136,10 +144,12 @@ TSharedPtr<FJsonObject> FSCSHandlers::AddSCSComponent(
       }
     } else {
       ParentNode = FindSCSNodeByVariableName(SCS, ParentComponentName);
-      if (!ParentNode) {
+      // A parent Blueprint's part, as edit_scs attachTo takes it (this path refused it).
+      InheritedParent = ParentNode ? nullptr : McpScsParent::FindInheritedScsSceneNode(Blueprint, ParentComponentName);
+      if (!ParentNode && !InheritedParent) {
         NativeParent = FindNativeSceneComponent(Blueprint, ParentComponentName);
       }
-      if (!ParentNode && !NativeParent) {
+      if (!ParentNode && !NativeParent && !InheritedParent) {
         Result->SetBoolField(TEXT("success"), false);
         Result->SetStringField(
             TEXT("error"),
@@ -149,7 +159,7 @@ TSharedPtr<FJsonObject> FSCSHandlers::AddSCSComponent(
                 *DescribeParentCandidates(Blueprint, SCS)));
         return Result;
       }
-      if (NativeParent && !CompClass->IsChildOf(USceneComponent::StaticClass())) {
+      if ((NativeParent || InheritedParent) && !CompClass->IsChildOf(USceneComponent::StaticClass())) {
         Result->SetBoolField(TEXT("success"), false);
         Result->SetStringField(
             TEXT("error"),
@@ -185,6 +195,8 @@ TSharedPtr<FJsonObject> FSCSHandlers::AddSCSComponent(
     SCS->AddNode(NewNode);
     if (NativeParent) {
       NewNode->SetParent(NativeParent);
+    } else if (InheritedParent) {
+      NewNode->SetParent(InheritedParent);
     }
   }
 

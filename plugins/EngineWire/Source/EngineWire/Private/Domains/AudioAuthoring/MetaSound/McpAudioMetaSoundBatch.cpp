@@ -260,7 +260,10 @@ TSharedPtr<FJsonObject> HandleMetaSoundBatchAction(const FString& SubAction, con
 			}
 		}
 		FString Applied;
-		if (Reply->TryGetStringField(TEXT("appliedValue"), Applied)) { Entry->SetStringField(TEXT("appliedValue"), Applied); }
+		if (Reply->TryGetStringField(TEXT("appliedValue"), Applied) && McpAppliedValueDiffers((*StepObj)->TryGetField(TEXT("defaultValue")), Applied))
+		{
+			Entry->SetStringField(TEXT("appliedValue"), Applied);
+		}
 		Results.Add(MakeShared<FJsonValueObject>(Entry));
 	}
 
@@ -269,8 +272,7 @@ TSharedPtr<FJsonObject> HandleMetaSoundBatchAction(const FString& SubAction, con
 	// Names the edited MetaSound, so the receipt carries its handle and changes[] (both were empty).
 	Response->SetStringField(TEXT("assetPath"), NormalizeAudioPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT(""))));
 	Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Ran %d MetaSound operations"), Steps->Num()));
-	Response->SetArrayField(TEXT("results"), McpListTellingSteps(Results));
-	Response->SetObjectField(TEXT("nodeIds"), NodeIds);
+	McpSetBatchSteps(Response, Results, NodeIds);
 	Response->SetNumberField(TEXT("succeeded"), Steps->Num());
 	return Response;
 }

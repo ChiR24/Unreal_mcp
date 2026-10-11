@@ -185,6 +185,8 @@ TSharedPtr<FJsonObject> HandleMetaSoundNodeConnect(const TSharedPtr<FJsonObject>
 // remove_metasound_node, disconnect_metasound_nodes (MetaSound/...MetaSoundGraphEdit.cpp) and get_metasound_graph (...GraphRead.cpp).
 TSharedPtr<FJsonObject> HandleMetaSoundGraphEditActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
 TSharedPtr<FJsonObject> HandleMetaSoundGraphReadAction(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
+// list_metasound_nodes (MetaSound/...MetaSoundNodeSearch.cpp), routed by HandleMetaSoundGraphReadAction.
+TSharedPtr<FJsonObject> ListMetaSoundNodeClasses(const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
 #if MCP_HAS_METASOUND_SEARCH_ENGINE
 bool ResolveMetaSoundNodeClassName(
 	const FString& Namespace,

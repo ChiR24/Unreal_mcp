@@ -8,6 +8,7 @@
 #include "Materials/MaterialInterface.h"
 #include "Engine/SCS_Node.h"
 #include "Engine/SimpleConstructionScript.h"
+#include "Domains/Property/McpPropCdoComponents.h"
 
 // Blueprint snapshot builder shared with blueprint_get (Domains/Blueprint). It is
 // declared locally because the Blueprint domain's aggregate declarations header
@@ -113,9 +114,15 @@ TArray<TSharedPtr<FJsonValue>> McpCollectBlueprintComponents(UBlueprint *Bluepri
                 {
                     Class = Node->ComponentClass;
                 }
-                Components.Add(MakeShared<FJsonValueObject>(McpMakeComponentEntry(
+                bool bOverridden = false;
+                const TSharedPtr<FJsonObject> Entry = McpMakeComponentEntry(
                     VarName, Class, Parent, Current == Blueprint ? TEXT("SCS") : TEXT("SCS_Inherited"),
-                    Node->ComponentTemplate)));
+                    McpPropertyCdoComponents::EffectiveTemplate(Blueprint, Node, &bOverridden));
+                if (bOverridden)
+                {
+                    Entry->SetBoolField(TEXT("overridden"), true);
+                }
+                Components.Add(MakeShared<FJsonValueObject>(Entry));
             }
         }
         UClass *ParentClass = Current->ParentClass;

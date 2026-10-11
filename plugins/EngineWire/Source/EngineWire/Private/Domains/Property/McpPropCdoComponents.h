@@ -35,6 +35,36 @@ void ForEachScsNode(UBlueprint* Blueprint, TVisitor&& Visit)
     }
 }
 
+// The template a Blueprint's instances get for an SCS node: the nearest inherited-component override between
+// Blueprint and the Blueprint that owns the node (a child Blueprint's edit of a parent's part), else the node's own.
+// A listing that read the node's own template showed a child's restyled part as the parent still has it.
+inline UActorComponent* EffectiveTemplate(UBlueprint* Blueprint, USCS_Node* Node, bool* bOutOverridden = nullptr)
+{
+    if (bOutOverridden)
+    {
+        *bOutOverridden = false;
+    }
+    for (UBlueprint* Bp = Blueprint; Bp != nullptr && Node != nullptr;)
+    {
+        if (Bp->SimpleConstructionScript && Bp->SimpleConstructionScript->GetAllNodes().Contains(Node))
+        {
+            break;
+        }
+        UInheritableComponentHandler* Handler = Bp->GetInheritableComponentHandler(false);
+        if (UActorComponent* Override = Handler ? Handler->GetOverridenComponentTemplate(FComponentKey(Node)) : nullptr)
+        {
+            if (bOutOverridden)
+            {
+                *bOutOverridden = true;
+            }
+            return Override;
+        }
+        UClass* ParentClass = Bp->ParentClass;
+        Bp = ParentClass ? Cast<UBlueprint>(ParentClass->ClassGeneratedBy) : nullptr;
+    }
+    return Node ? Node->ComponentTemplate : nullptr;
+}
+
 TSharedPtr<FJsonObject> BuildComponentSummary(
     UActorComponent* Template,
     const FString& DisplayName,

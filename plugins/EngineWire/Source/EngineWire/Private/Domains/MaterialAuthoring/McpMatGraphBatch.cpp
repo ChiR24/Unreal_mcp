@@ -275,8 +275,7 @@ bool HandleBuildMaterialGraph(UEngineWireSubsystem* Bridge, const FString& Reque
   TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
   // Named so the receipt carries the material as its handle and change; it listed neither.
   Result->SetStringField(TEXT("assetPath"), AssetPath);
-  Result->SetArrayField(TEXT("results"), McpListTellingSteps(Results));
-  Result->SetObjectField(TEXT("nodeIds"), NodeIds);
+  McpSetBatchSteps(Result, Results, NodeIds);
   Result->SetNumberField(TEXT("succeeded"), Results.Num());
   Result->SetBoolField(TEXT("compiled"), bCompiles);
   if (CompileErrors) {

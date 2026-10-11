@@ -213,9 +213,8 @@ void AddSCSNodeVerification(TSharedPtr<FJsonObject> Result,
   // top of the tree. Reporting "(root)" and isRoot:true for both was how a
   // RotatingMovementComponent came back looking like the Blueprint's root.
   USCS_Node *ParentNode = FindSCSParentNode(SCS, Node);
-  const bool bNativeParent =
-      !ParentNode && Node->bIsParentComponentNative &&
-      !Node->ParentComponentOrVariableName.IsNone();
+  // Native or a parent Blueprint's part: either is recorded on the node by name (SetParent).
+  const bool bNativeParent = !ParentNode && !Node->ParentComponentOrVariableName.IsNone();
   const bool bSceneComponent =
       Node->ComponentClass &&
       Node->ComponentClass->IsChildOf(USceneComponent::StaticClass());
@@ -268,10 +267,10 @@ bool SCSParentMatches(USimpleConstructionScript *SCS, USCS_Node *Node,
     return GetSCSNodeName(ActualParent)
         .Equals(ExpectedParentName, ESearchCase::IgnoreCase);
   }
-  // A node attached to an inherited native component has no SCS parent: the
+  // A node attached to an inherited component, native or a parent Blueprint's, has no SCS parent: the
   // parent is recorded on the node itself. Verifying only the SCS tree rejected
-  // every native attach as "parent did not match" after it had already worked.
-  if (!Node->bIsParentComponentNative || Node->ParentComponentOrVariableName.IsNone()) {
+  // every such attach as "parent did not match" after it had already worked.
+  if (Node->ParentComponentOrVariableName.IsNone()) {
     return false;
   }
   const FString StoredParent = Node->ParentComponentOrVariableName.ToString();

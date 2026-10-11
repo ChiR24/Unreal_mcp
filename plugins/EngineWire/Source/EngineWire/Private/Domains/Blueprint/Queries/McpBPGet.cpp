@@ -5,6 +5,7 @@
 #include "Engine/Blueprint.h"
 #include "Engine/SCS_Node.h"
 #include "Engine/SimpleConstructionScript.h"
+#include "Domains/Property/McpPropCdoComponents.h"
 #include "Foundation/BridgeHelpers/Properties/McpNestedPropPath.h"
 #include "Foundation/Reflection/McpPropertyReflection.h"
 
@@ -76,10 +77,13 @@ bool HandleBlueprintGet(const FBlueprintActionContext &Context) {
       FString ComponentName, ComponentPath;
       if (!PropertyValue.IsValid() && Generated &&
           PropertyName.Split(TEXT("."), &ComponentName, &ComponentPath)) {
-        USCS_Node *Node = BP->SimpleConstructionScript
-                              ? BP->SimpleConstructionScript->FindSCSNode(FName(*ComponentName))
-                              : nullptr;
-        UObject *Template = Node ? Node->ComponentTemplate : nullptr;
+        // A parent Blueprint's part too, as this Blueprint's override of it has it (a child's restyled part).
+        USCS_Node *Node = nullptr;
+        McpPropertyCdoComponents::ForEachScsNode(BP, [&](USCS_Node *Candidate, bool) {
+          Node = Candidate->GetVariableName().ToString().Equals(ComponentName, ESearchCase::IgnoreCase) ? Candidate : nullptr;
+          return Node == nullptr;
+        });
+        UObject *Template = Node ? McpPropertyCdoComponents::EffectiveTemplate(BP, Node) : nullptr;
         // A component the native parent creates (a Character's movement) is a
         // default subobject of the CDO, not an SCS node, so "CharMoveComp.
         // JumpZVelocity" and "CharacterMovement.JumpZVelocity" both missed. Take

@@ -28,7 +28,7 @@ export const P = {
   componentType: S('Component class name to add.'),
   componentClass: S('Component class path for SCS node creation.'),
   componentName: S('Name for the SCS component node.'),
-  parentComponent: S('Parent SCS node name for reparenting.'),
+  parentComponent: S('Parent component to put the component under: one of this Blueprint\'s own, a parent Blueprint\'s scene component, or a native one (Mesh, CapsuleComponent).'),
   attachTo: S('Socket or parent component to attach to: one of this Blueprint\'s own, a parent Blueprint\'s part, or a native one (Mesh, CapsuleComponent).'),
   location: { type: 'object', description: 'Relative location {x, y, z} for an SCS component template.', additionalProperties: true, 'x-unreal-reflection-boundary': true },
   rotation: { type: 'object', description: 'Relative rotation {pitch, yaw, roll} for an SCS component template.', additionalProperties: true, 'x-unreal-reflection-boundary': true },

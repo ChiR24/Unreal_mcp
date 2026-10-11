@@ -124,7 +124,6 @@ if (!ComponentClass) {
     }
   } else {
     bool bAddedViaSubsystem = false;
-    FString AdditionMethodStr;
     USubobjectDataSubsystem *Subsystem = nullptr;
     if (GEngine)
       Subsystem =
@@ -177,8 +176,6 @@ if (!ComponentClass) {
         FText FailReason;
         NewHandle = Subsystem->AddNewSubobject(Params, FailReason);
         bTriedNative = true;
-        AdditionMethodStr = TEXT(
-            "SubobjectDataSubsystem.AddNewSubobject(WithFailReason)");
 
         bool bHandleValid = true;
         if constexpr (bHandleHasIsValid) {
@@ -258,8 +255,6 @@ if (!ComponentClass) {
       if (AttachToName.TrimStartAndEnd().IsEmpty()) {
         McpScsParent::ReportParent(LocalBP->SimpleConstructionScript, ComponentName, OpSummary);
       }
-      if (!AdditionMethodStr.IsEmpty())
-        OpSummary->SetStringField(TEXT("additionMethod"), AdditionMethodStr);
       // The contract says add_component also takes `transform`, a `properties`
       // bag, `meshPath` and `materialPath`, but this only ever created the node:
       // in a batch every placement and every mesh assignment was accepted,

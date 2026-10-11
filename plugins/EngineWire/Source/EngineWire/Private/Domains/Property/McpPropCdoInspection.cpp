@@ -206,9 +206,14 @@ bool UEngineWireSubsystem::HandleInspectCdoAction(
             return true;
         }
         SeenNames.Add(VarName);
+        bool bOverridden = false;
         TSharedPtr<FJsonObject> CompObj = McpPropertyCdoComponents::BuildComponentSummary(
-            Node->ComponentTemplate, VarName, bInherited ? TEXT("SCS_Inherited") : TEXT("SCS"),
-            bDetailed, PropertyNameFilter);
+            McpPropertyCdoComponents::EffectiveTemplate(Blueprint, Node, &bOverridden), VarName,
+            bInherited ? TEXT("SCS_Inherited") : TEXT("SCS"), bDetailed, PropertyNameFilter);
+        if (bOverridden)
+        {
+            CompObj->SetBoolField(TEXT("overridden"), true);
+        }
         if (Node->ParentComponentOrVariableName != NAME_None)
         {
             CompObj->SetStringField(TEXT("attachParent"), Node->ParentComponentOrVariableName.ToString());

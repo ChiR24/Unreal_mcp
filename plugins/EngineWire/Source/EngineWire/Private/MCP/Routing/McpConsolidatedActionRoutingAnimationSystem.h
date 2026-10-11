@@ -76,6 +76,7 @@ inline const TArray<FString>& AudioAuthoring()
 		TEXT("add_metasound_output"), TEXT("set_metasound_default"),
 		TEXT("build_metasound"), TEXT("remove_metasound_node"),
 		TEXT("disconnect_metasound_nodes"), TEXT("get_metasound_graph"),
+		TEXT("list_metasound_nodes"),
 		TEXT("set_class_properties"), TEXT("set_class_parent"),
 		TEXT("add_mix_modifier"), TEXT("configure_mix_eq"),
 		TEXT("create_attenuation_settings"),

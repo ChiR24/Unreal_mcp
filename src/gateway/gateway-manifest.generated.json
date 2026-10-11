@@ -7777,7 +7777,7 @@
               "x-unreal-reflection-boundary": true
             },
             "x-unreal-reflection-boundary": true,
-            "description": "Several parameter values at once, each {parameterName, parameterType (scalar | vector | texture), value, or texturePath for a texture}; every entry is reported, and the call fails naming any that did not apply."
+            "description": "Several parameter values at once, each {parameterName, parameterType (scalar | vector | texture), value, or texturePath for a texture}; applied counts those that took, and an entry that did not is listed under parameters with why and fails the call."
           },
           "parentMaterial": {
             "type": "string",
@@ -8383,6 +8383,7 @@
         "configure_sound_class",
         "configure_sound_attenuation",
         "get_metasound_graph",
+        "list_metasound_nodes",
         "create_audio_asset",
         "get_audio_info",
         "set_dialogue_context"
@@ -8426,6 +8427,7 @@
         "fadeType",
         "falloffDistance",
         "falloffMode",
+        "filter",
         "gain",
         "gainHF",
         "gender",
@@ -8433,12 +8435,14 @@
         "highGain",
         "highMidFrequency",
         "highMidGain",
+        "includePins",
         "indefinite",
         "innerRadius",
         "inputName",
         "inputType",
         "kind",
         "lfeBleed",
+        "limit",
         "localizationKeyFormat",
         "location",
         "loopCount",
@@ -8709,6 +8713,10 @@
             "type": "string",
             "description": "Attenuation falloff mode."
           },
+          "filter": {
+            "type": "string",
+            "description": "Part of a class name, display name or category, spaces and case ignored (\"Trigger\", \"Envelope\", \"Filters\"); omitted, every class up to limit."
+          },
           "gain": {
             "type": "number",
             "description": "Reverb master volume (0 to 1)."
@@ -8736,6 +8744,10 @@
           "highMidGain": {
             "type": "number",
             "description": "Linear gain of EQ band 2 (0 to 4)."
+          },
+          "includePins": {
+            "type": "boolean",
+            "description": "Also list each class's input and output pins as \"Name (Type)\", the names connect and set_default take."
           },
           "indefinite": {
             "type": "boolean",
@@ -8774,6 +8786,12 @@
           "lfeBleed": {
             "type": "number",
             "description": "Share of the sound sent to the LFE channel (0 to 1)."
+          },
+          "limit": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 200,
+            "description": "At most this many classes (default 50), those whose own name equals, starts with or contains filter first, the engine's UE nodes first among those, then by name; matchCount and truncated say what was left out."
           },
           "localizationKeyFormat": {
             "type": "string",
@@ -9101,6 +9119,7 @@
               "configure_sound_class",
               "configure_sound_attenuation",
               "get_metasound_graph",
+              "list_metasound_nodes",
               "create_audio_asset",
               "get_audio_info",
               "set_dialogue_context"
@@ -10137,7 +10156,7 @@
           },
           "parentComponent": {
             "type": "string",
-            "description": "Parent SCS node name for reparenting."
+            "description": "Parent component to put the component under: one of this Blueprint's own, a parent Blueprint's scene component, or a native one (Mesh, CapsuleComponent)."
           },
           "parentSlot": {
             "type": "string",

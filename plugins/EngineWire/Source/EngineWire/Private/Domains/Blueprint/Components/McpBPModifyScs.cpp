@@ -36,7 +36,6 @@ bool HandleBlueprintModifyScs(const FBlueprintActionContext &Context) {
   LocalSCS->Modify();
   McpScsPropagate::Pending().Reset();
   for (int32 Index = 0; Index < State.DeferredOps.Num(); ++Index) {
-    const double OpStart = FPlatformTime::Seconds();
     const TSharedPtr<FJsonValue> &Value = State.DeferredOps[Index];
     if (!Value.IsValid() || Value->Type != EJson::Object) {
       continue;
@@ -48,9 +47,8 @@ bool HandleBlueprintModifyScs(const FBlueprintActionContext &Context) {
     TSharedPtr<FJsonObject> OpSummary = McpHandlerUtils::CreateResultObject();
     OpSummary->SetNumberField(TEXT("index"), Index);
     OpSummary->SetStringField(TEXT("type"), NormalizedType);
+    // An op's durationMs (milliseconds per edit) was log detail in every reply; the handler's time stays in the log.
     ApplyModifyScsOperation(LocalBP, LocalSCS, NormalizedType, Op, OpSummary);
-    const double OpElapsedMs = (FPlatformTime::Seconds() - OpStart) * 1000.0;
-    OpSummary->SetNumberField(TEXT("durationMs"), OpElapsedMs);
     State.FinalSummaries.Add(MakeShared<FJsonValueObject>(OpSummary));
   }
 

@@ -1,6 +1,7 @@
 #include "Domains/BlueprintGraph/McpBPGraphBatchSteps.h"
 
 #include "Domains/BlueprintGraph/Expression/McpBPGraphMathExpr.h"
+#include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
 
 namespace McpBlueprintGraphHandlers::GraphBatch
 {
@@ -87,8 +88,8 @@ FString ApplyPinDefaults(const FActionContext& Parent, const TSharedPtr<FJsonObj
     {
         return FString();
     }
+    // Only a pin that stored something other than its literal is named.
     TSharedPtr<FJsonObject> Applied = MakeShared<FJsonObject>();
-    Entry->SetObjectField(TEXT("pinDefaults"), Applied);
     for (const TPair<FString, TSharedPtr<FJsonValue>>& Pair : (*Defaults)->Values)
     {
         TSharedPtr<FJsonObject> Payload = MakeShared<FJsonObject>();
@@ -111,10 +112,15 @@ FString ApplyPinDefaults(const FActionContext& Parent, const TSharedPtr<FJsonObj
             return FString::Printf(TEXT("pinDefaults.%s: %s"), *Pair.Key, *Reply.Message);
         }
         FString AppliedValue;
-        if (Reply.Result.IsValid() && Reply.Result->TryGetStringField(TEXT("appliedValue"), AppliedValue))
+        if (Reply.Result.IsValid() && Reply.Result->TryGetStringField(TEXT("appliedValue"), AppliedValue) &&
+            McpAppliedValueDiffers(Pair.Value, AppliedValue))
         {
             Applied->SetStringField(Pair.Key, AppliedValue);
         }
+    }
+    if (Applied->Values.Num() > 0)
+    {
+        Entry->SetObjectField(TEXT("pinDefaults"), Applied);
     }
     return FString();
 }
@@ -167,6 +173,14 @@ FString RunBatchStep(const FActionContext& Context, FBatchState& State,
     FString Pins;
     const FMcpCapturedResponse Reply = RunPlacedStep(Context, State, Payload, Edit, StepId, Pins);
     CopyStepFields(Reply, Entry);
+    // A pin or node property that stored the literal asked for answers nothing new; one that changed it stays named.
+    FString AppliedValue;
+    if (Entry->TryGetStringField(TEXT("appliedValue"), AppliedValue) &&
+        !McpAppliedValueDiffers(Step->HasField(TEXT("propertyValue")) ? Step->TryGetField(TEXT("propertyValue"))
+                                                                       : Step->TryGetField(TEXT("value")), AppliedValue))
+    {
+        Entry->RemoveField(TEXT("appliedValue"));
+    }
     if (!Reply.bSuccess)
     {
         OutErrorCode = Reply.ErrorCode.IsEmpty() ? TEXT("STEP_FAILED") : Reply.ErrorCode;

@@ -213,6 +213,29 @@ static inline int32 GetJsonIntField(const TSharedPtr<FJsonObject>& Obj, const FS
     return static_cast<int32>(Value);
 }
 
+// A batch step's appliedValue repeated the literal it was given, spelled as the engine stores it (380 read back
+// "380.000000"), and kept the row listed: a batch names the value only when it differs (a clamp, a conversion).
+static inline bool McpAppliedValueDiffers(const TSharedPtr<FJsonValue>& Requested, const FString& Applied)
+{
+    if (!Requested.IsValid())
+    {
+        return true;
+    }
+    if (Requested->Type == EJson::Boolean)
+    {
+        return !Applied.Equals(Requested->AsBool() ? TEXT("true") : TEXT("false"), ESearchCase::IgnoreCase);
+    }
+    double Number = 0.0;
+    double AppliedNumber = 0.0;
+    if (Requested->TryGetNumber(Number))
+    {
+        return !LexTryParseString(AppliedNumber, *Applied) ||
+               !FMath::IsNearlyEqual(Number, AppliedNumber, 1e-6 * FMath::Max(1.0, FMath::Abs(Number)));
+    }
+    FString Text;
+    return !Requested->TryGetString(Text) || !Text.Equals(Applied);
+}
+
 // A batch reply listed every step, so a 108-step graph build answered some 70 rows of
 // {"index":N,"edit":"connect_pins","connected":true,"success":true}. A step that ran and says nothing beyond
 // those fields is left to the batch's succeeded count; created nodes, pin reports, replaced links, warnings and
@@ -250,4 +273,20 @@ static inline TArray<TSharedPtr<FJsonValue>> McpListTellingSteps(const TArray<TS
         }
     }
     return Telling;
+}
+
+// A finished batch's telling steps and its node ids; either is left out when empty, since results: [] and
+// nodeIds: {} said nothing the succeeded count does not.
+static inline void McpSetBatchSteps(const TSharedPtr<FJsonObject>& Result, const TArray<TSharedPtr<FJsonValue>>& Results,
+                                    const TSharedPtr<FJsonObject>& NodeIds)
+{
+    const TArray<TSharedPtr<FJsonValue>> Telling = McpListTellingSteps(Results);
+    if (Telling.Num() > 0)
+    {
+        Result->SetArrayField(TEXT("results"), Telling);
+    }
+    if (NodeIds.IsValid() && NodeIds->Values.Num() > 0)
+    {
+        Result->SetObjectField(TEXT("nodeIds"), NodeIds);
+    }
 }

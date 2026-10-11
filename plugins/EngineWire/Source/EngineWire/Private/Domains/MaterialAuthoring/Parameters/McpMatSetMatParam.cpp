@@ -24,9 +24,6 @@ void ApplyMaterialParameterList(UEngineWireSubsystem* Bridge, const FString& Req
     Capture.Begin(ItemId);
     HandleSetMaterialParameter(Bridge, ItemId, TEXT("set_material_parameter"), One, Socket);
     const FMcpCapturedResponse Reply = Capture.End(ItemId);
-    TSharedPtr<FJsonObject> Entry = McpHandlerUtils::CreateResultObject();
-    Entry->SetStringField(TEXT("parameterName"), Name);
-    Entry->SetBoolField(TEXT("applied"), Reply.bSuccess);
     if (Reply.bSuccess) {
       // The setter names the asset it wrote (the package path) the way a single parameter's reply does, so the
       // caller's reply can name it too and the receipt lists it.
@@ -34,11 +31,14 @@ void ApplyMaterialParameterList(UEngineWireSubsystem* Bridge, const FString& Req
         Reply.Result->TryGetStringField(TEXT("assetPath"), *OutChangedAssetPath);
       }
     } else {
+      // A row only for a value that did not apply: {parameterName, applied: true} per entry repeated the request.
       const FString Why = Reply.bCaptured ? Reply.Message : FString(TEXT("the parameter setter gave no answer"));
+      TSharedPtr<FJsonObject> Entry = McpHandlerUtils::CreateResultObject();
+      Entry->SetStringField(TEXT("parameterName"), Name);
       Entry->SetStringField(TEXT("error"), Why);
+      OutResults.Add(MakeShared<FJsonValueObject>(Entry));
       OutFailed.Add(FString::Printf(TEXT("%s: %s"), *Name, *Why));
     }
-    OutResults.Add(MakeShared<FJsonValueObject>(Entry));
   }
 }
 
@@ -103,20 +103,22 @@ bool HandleSetMaterialParameter(UEngineWireSubsystem* Bridge, const FString& Req
       FString ChangedAsset;
       ApplyMaterialParameterList(Bridge, RequestId, GetJsonStringField(Payload, TEXT("assetPath")), *Entries, Payload, Socket, Results, Failed, &ChangedAsset);
       TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
-      Data->SetArrayField(TEXT("parameters"), Results);
-      Data->SetNumberField(TEXT("applied"), Results.Num() - Failed.Num());
+      if (Results.Num() > 0) {
+        Data->SetArrayField(TEXT("parameters"), Results);
+      }
+      Data->SetNumberField(TEXT("applied"), Entries->Num() - Failed.Num());
       // Without it the reply named no asset, so the receipt's changes and handles were empty for a call that wrote one.
       if (!ChangedAsset.IsEmpty()) {
         Data->SetStringField(TEXT("assetPath"), ChangedAsset);
       }
       if (Failed.Num() > 0) {
         Bridge->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Set %d of %d parameters; %s"), Results.Num() - Failed.Num(), Results.Num(),
+            FString::Printf(TEXT("Set %d of %d parameters; %s"), Entries->Num() - Failed.Num(), Entries->Num(),
                             *FString::Join(Failed, TEXT("; "))),
             Data, TEXT("PARAMETER_BATCH_INCOMPLETE"));
       } else {
         Bridge->SendAutomationResponse(Socket, RequestId, true,
-            FString::Printf(TEXT("Set %d parameters"), Results.Num()), Data, FString());
+            FString::Printf(TEXT("Set %d parameters"), Entries->Num()), Data, FString());
       }
       return true;
     }

@@ -1712,8 +1712,28 @@ describe('a child Blueprint edits and attaches to its parent Blueprint parts', (
   });
   it('attachTo names a parent Blueprint part by variable, as the Components panel does', () => {
     const resolve = code('Blueprint', 'Components', 'McpBPScsParentResolve.h');
-    expect(resolve).toMatch(/if \(bInherited && Node->GetVariableName\(\)\.ToString\(\)\.Equals\(Trimmed, ESearchCase::IgnoreCase\)\) InheritedNode = Node;/u);
+    expect(resolve).toMatch(/if \(bInherited && Node->GetVariableName\(\)\.ToString\(\)\.Equals\(Name, ESearchCase::IgnoreCase\)\) Found = Node;/u);
+    expect(resolve).toContain('if (USCS_Node *InheritedNode = FindInheritedScsSceneNode(Blueprint, Trimmed)) {');
     expect(resolve).toContain('Child->SetParent(InheritedNode);');
+  });
+  // add_scs_component parentComponent "Hanger" on a child Blueprint answered "Parent component not found" while
+  // edit_scs attachTo took the same part.
+  it('add_scs_component parentComponent takes a parent Blueprint part too, and lists them when nothing matches', () => {
+    const add = code('SCS', 'McpSCSAddComponent.cpp');
+    expect(add).toContain('InheritedParent = ParentNode ? nullptr : McpScsParent::FindInheritedScsSceneNode(Blueprint, ParentComponentName);');
+    expect(add).toMatch(/\} else if \(InheritedParent\) \{\s*NewNode->SetParent\(InheritedParent\);/u);
+    expect(add).toContain('Names.AddUnique(GetSCSNodeName(Node) + TEXT(" (inherited)"));');
+  });
+  // get_blueprint_details listed a restyled gate's Tag as the parent's price tag while every placed copy drew the
+  // child's cube: the listings read the node's own template, never the child's override of it.
+  it('reads list a parent part as the child override has it, marked overridden', () => {
+    const header = code('Property', 'McpPropCdoComponents.h');
+    expect(header).toMatch(/if \(Bp->SimpleConstructionScript && Bp->SimpleConstructionScript->GetAllNodes\(\)\.Contains\(Node\)\)\s*\{\s*break;/u);
+    expect(header).toContain('Handler->GetOverridenComponentTemplate(FComponentKey(Node))');
+    expect(code('Environment', 'Inspection', 'McpEnvInspectBP.cpp')).toContain('McpPropertyCdoComponents::EffectiveTemplate(Blueprint, Node, &bOverridden)');
+    expect(code('Property', 'McpPropCdoInspection.cpp')).toContain('McpPropertyCdoComponents::EffectiveTemplate(Blueprint, Node, &bOverridden)');
+    expect(code('Blueprint', 'Components', 'McpBPScsGet.cpp')).toContain('McpPropertyCdoComponents::EffectiveTemplate(Blueprint, Node, &bOverridden);');
+    expect(code('Blueprint', 'Queries', 'McpBPGet.cpp')).toContain('UObject *Template = Node ? McpPropertyCdoComponents::EffectiveTemplate(BP, Node) : nullptr;');
   });
 });
 
@@ -2002,9 +2022,12 @@ describe('a batch lists the steps that have something to say', () => {
     const fields = code('..', 'Foundation', 'BridgeHelpers', 'Responses', 'McpJsonFields.h');
     expect(fields).toContain('static inline TArray<TSharedPtr<FJsonValue>> McpListTellingSteps(const TArray<TSharedPtr<FJsonValue>>& Results)');
     expect(fields).toContain('Step->Values.Num() == Plain');
-    expect(code('BlueprintGraph', 'McpBPGraphBatch.cpp')).toContain('Result->SetArrayField(TEXT("results"), McpListTellingSteps(Results));');
-    expect(code('MaterialAuthoring', 'McpMatGraphBatch.cpp')).toContain('Result->SetArrayField(TEXT("results"), McpListTellingSteps(Results));');
-    expect(code('AudioAuthoring', 'MetaSound', 'McpAudioMetaSoundBatch.cpp')).toContain('Response->SetArrayField(TEXT("results"), McpListTellingSteps(Results));');
+    // Through McpSetBatchSteps, which also leaves out an empty results or nodeIds.
+    expect(fields).toMatch(/const TArray<TSharedPtr<FJsonValue>> Telling = McpListTellingSteps\(Results\);\s*if \(Telling\.Num\(\) > 0\)/u);
+    expect(fields).toContain('if (NodeIds.IsValid() && NodeIds->Values.Num() > 0)');
+    expect(code('BlueprintGraph', 'McpBPGraphBatch.cpp')).toContain('McpSetBatchSteps(Result, Results, NodeIds);');
+    expect(code('MaterialAuthoring', 'McpMatGraphBatch.cpp')).toContain('McpSetBatchSteps(Result, Results, NodeIds);');
+    expect(code('AudioAuthoring', 'MetaSound', 'McpAudioMetaSoundBatch.cpp')).toContain('McpSetBatchSteps(Response, Results, NodeIds);');
   });
 
   it('keeps every step on a failed batch, where the failing step is the last result', () => {
@@ -2412,5 +2435,72 @@ describe('a sound that never ends by itself', () => {
     expect(ends).toContain('const FName OnFinished(TEXT("UE.Source.OneShot.OnFinished"));');
     expect(ends).toMatch(/Page\.Edges\.ContainsByPredicate\(\s*\[Finished\]\(const FMetasoundFrontendEdge& Edge\) \{ return Edge\.ToNodeID == Finished->NodeID; \}\)/u);
     expect(ends).toMatch(/if \(!bFired\)\s*\{\s*return TEXT\("is a one-shot MetaSound that never fires On Finished"\);/u);
+  });
+});
+
+describe('a batch names a literal only when the engine stored something else', () => {
+  // A MetaSound batch of 13 set_default steps answered 13 rows of {appliedValue: "380.000000"} for 380, and a graph
+  // batch echoed every pin default it set, so the rows that mattered drowned in repeats.
+  it('MetaSound and Blueprint graph batches drop an appliedValue equal to the literal asked for', () => {
+    const fields = readFileSync(
+      join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'Foundation', 'BridgeHelpers', 'Responses', 'McpJsonFields.h'),
+      'utf8',
+    );
+    expect(fields).toContain('static inline bool McpAppliedValueDiffers(const TSharedPtr<FJsonValue>& Requested, const FString& Applied)');
+    expect(fields).toMatch(/if \(Requested->Type == EJson::Boolean\)[\s\S]*?if \(Requested->TryGetNumber\(Number\)\)/u);
+    expect(code('AudioAuthoring', 'MetaSound', 'McpAudioMetaSoundBatch.cpp'))
+      .toContain('McpAppliedValueDiffers((*StepObj)->TryGetField(TEXT("defaultValue")), Applied)');
+    const steps = code('BlueprintGraph', 'McpBPGraphBatchSteps.cpp');
+    expect(steps).toContain('McpAppliedValueDiffers(Pair.Value, AppliedValue)');
+    expect(steps).toMatch(/if \(Applied->Values\.Num\(\) > 0\)\s*\{\s*Entry->SetObjectField\(TEXT\("pinDefaults"\), Applied\);/u);
+    expect(steps).toContain('Entry->RemoveField(TEXT("appliedValue"));');
+  });
+});
+
+describe('MetaSound node classes can be listed', () => {
+  // A fire crackle needed a random trigger filter, and nothing listed which node classes exist: the class name was a
+  // guess until add_node refused it.
+  it('list_metasound_nodes searches class name, display name and category, sorted, cut at limit', () => {
+    const search = code('AudioAuthoring', 'MetaSound', 'McpAudioMetaSoundNodeSearch.cpp');
+    expect(search).toContain('Metasound::Frontend::ISearchEngine::Get().FindAllClasses(false)');
+    expect(search).toContain('SquashName(Dotted + TEXT("|") + Meta.GetDisplayName().ToString() + TEXT("|") + Category).Contains(Filter, ESearchCase::IgnoreCase)');
+    // Ranked by where the filter hits the class's own name, the engine's UE nodes first within a tier, then by name:
+    // "Trigger" was led by enum conversions, then by Crossfade "Trigger Route" variants.
+    expect(search).toMatch(/const int32 Tier = Name\.Equals\(Filter, ESearchCase::IgnoreCase\) \? 0 : Name\.StartsWith\(Filter, ESearchCase::IgnoreCase\) \? 1\s*: Name\.Contains\(Filter, ESearchCase::IgnoreCase\) \? 2 : 3;/u);
+    expect(search).toContain('Rank.Add(Dotted, Tier * 2 + (Meta.GetClassName().Namespace.ToString().Equals(TEXT("UE"), ESearchCase::IgnoreCase) ? 0 : 1));');
+    expect(search).toContain('return Rank[A] != Rank[B] ? Rank[A] < Rank[B] : A.Compare(B, ESearchCase::CaseSensitive) < 0;');
+    expect(search).toContain('Response->SetBoolField(TEXT("truncated"), Names.Num() > Limit);');
+    expect(code('AudioAuthoring', 'MetaSound', 'McpAudioMetaSoundGraphRead.cpp')).toMatch(/if \(SubAction == TEXT\("list_metasound_nodes"\)\)\s*\{\s*return ListMetaSoundNodeClasses\(Params, Response\);/u);
+  });
+});
+
+describe('a component under a parent Blueprint part verifies', () => {
+  // add_scs_component parentComponent "Hanger" (a parent Blueprint's part) attached the node, then failed
+  // SCS_VERIFICATION_FAILED: the check accepted a parent recorded on the node only when it was native.
+  it('a parent recorded on the node matches whether it is native or a parent Blueprint part', () => {
+    const scs = code('SCS', 'McpSCSHandlers.cpp');
+    expect(scs).toMatch(/if \(Node->ParentComponentOrVariableName\.IsNone\(\)\) \{\s*return false;/u);
+    expect(scs).toContain('const bool bNativeParent = !ParentNode && !Node->ParentComponentOrVariableName.IsNone();');
+    expect(scs).not.toContain('!Node->bIsParentComponentNative || Node->ParentComponentOrVariableName.IsNone()');
+  });
+  it('a MetaSound class with no variant is named without ".None"', () => {
+    expect(code('AudioAuthoring', 'MetaSound', 'McpAudioMetaSoundNodeSearch.cpp'))
+      .toContain('const FString Variant = ClassName.Variant.IsNone() ? FString() : ClassName.Variant.ToString();');
+  });
+});
+
+describe('lists that only repeated the request are gone', () => {
+  // create_material_instance with nine parameters answered nine {parameterName, applied: true} rows, and every edit_scs
+  // operation carried its milliseconds and the subsystem call that made it.
+  it('a parameter list names only the values that did not apply', () => {
+    const params = code('MaterialAuthoring', 'Parameters', 'McpMatSetMatParam.cpp');
+    expect(params).not.toContain('Entry->SetBoolField(TEXT("applied"), Reply.bSuccess);');
+    expect(params).toMatch(/Entry->SetStringField\(TEXT\("error"\), Why\);\s*OutResults\.Add\(MakeShared<FJsonValueObject>\(Entry\)\);/u);
+    expect(params).toContain('Data->SetNumberField(TEXT("applied"), Entries->Num() - Failed.Num());');
+    expect(code('MaterialAuthoring', 'Creation', 'McpMatCreateMatInst.cpp')).toMatch(/if \(Failed\.Num\(\) > 0\) \{\s*Result->SetArrayField\(TEXT\("parameters"\), Results\);/u);
+  });
+  it('edit_scs operations carry no timing or subsystem detail', () => {
+    expect(code('Blueprint', 'Components', 'McpBPModifyScs.cpp')).not.toContain('TEXT("durationMs")');
+    expect(code('Blueprint', 'Components', 'McpBPModifyScsComponentOps.cpp')).not.toContain('TEXT("additionMethod")');
   });
 });

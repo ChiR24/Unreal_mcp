@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <summary><b>🔄 Changed</b></summary>
 
 - **The editor plugin is now EngineWire** (was McpAutomationBridge), with short source file names so every path in the Fab package fits Fab's 170-character limit. Settings saved under the old name still load, in the plugin and in the server's port lookup, until they are saved once under the new one. To upgrade, replace `Plugins/McpAutomationBridge` with `Plugins/EngineWire` and rename the plugin entry in the `.uproject` if it lists one.
-- **Replies name each actor once**, in the receipt's `changes`: a one-actor change was listed by label and again by object path, and a many-actor reply repeated its actors in `affectedActors`, on both transports. `set_material` with `actorNames` lists under `results` only the actors that did not take the material.
+- **Replies name each actor once**, in the receipt's `changes`: a one-actor change was listed by label and again by object path, and a many-actor reply repeated its actors in `affectedActors`, on both transports. `set_material` with `actorNames` lists under `results` only the actors that did not take the material, and graph and MetaSound batches name a step's `appliedValue` (and a create step's `pinDefaults`) only when the engine stored something other than the literal given: 380 came back as "380.000000" on every step. Graph, material and MetaSound batches leave out `results` and `nodeIds` when they would be empty. `set_material_parameter` and `create_material_instance` `parameters` list only the values that did not apply (`applied` counts the rest), and `edit_scs` operations no longer carry `durationMs` and `additionMethod`.
 
 </details>
 
@@ -39,13 +39,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **A motion read names what touches the actor** (`overlaps`): each sample lists the actors that began or stopped overlapping it since the one before, checked every frame, and `overlapped` lists every one it touched. A pawn that died as it respawned took a long hunt to pin on the enemy walking into it.
 - **A game screenshot says the field of view the frame shows** (`horizontalFov`, `verticalFov`): `activeCameraFov` is the camera's setting, which holds only at the camera's own aspect ratio, so a wider viewport that keeps the vertical angle shows more across than it says.
 - **`get_property` reads the same properties from several objects** (`objectPaths`): one row per object under `targets`, and an object that cannot be read says why while the others still answer. Eight platforms' state took eight calls.
+- **`manage_audio` `list_metasound_nodes`**: the MetaSound node classes the engine has, by part of their class name, display name or category, with what each does and (`includePins`) their pins, named as `add_node` takes them. A node's class name was a guess until `add_node` refused it.
 
 </details>
 
 <details>
 <summary><b>🔧 Fixed</b></summary>
 
-- **A child Blueprint can restyle its parent Blueprint's parts**: `edit_scs` `modify_component` and `attachTo` reached only the Blueprint's own and native components, so a part `get_scs` listed as inherited answered that it was neither.
+- **A child Blueprint can restyle its parent Blueprint's parts**: `edit_scs` `modify_component` and `attachTo` reached only the Blueprint's own and native components, so a part `get_scs` listed as inherited answered that it was neither. Reads show such a part as the child has it: `get_blueprint_details` and `inspect_cdo` listed the parent's version while every placed copy drew the child's (both now mark it `overridden`, as `get_scs` does), and `get_blueprint` `property` reaches a parent's part (`Tag.StaticMesh`). `add_scs_component` `parentComponent` takes a parent Blueprint's part as `attachTo` does; it answered "Parent component not found".
 - **`create_node` and `add_node` refuse a node the graph cannot hold** (`NODE_NOT_ALLOWED_IN_GRAPH`): an animation node placed in an EventGraph compiled clean and never ran.
 - **`import` answers with the mesh it brought in**, not whichever asset the importer listed first (a material or texture could take the destination name).
 - **Opening a level answers once it has settled** (`settledSeconds`), its textures streamed in and the viewport's game view kept: a screenshot right after showed placeholder textures and editor icons. The screenshot contract says water and texture detail follow a far camera jump over the next frames.

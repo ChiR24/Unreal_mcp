@@ -44,8 +44,15 @@ void CollectInheritedComponents(UBlueprint *Blueprint, const FString &Filter, TA
   McpPropertyCdoComponents::ForEachScsNode(Blueprint, [&](USCS_Node *Node, bool bInherited) {
     if (bInherited && Node->ComponentClass && ComponentClassMatches(Node->ComponentClass, Filter)) {
       const UBlueprint *Owner = Node->GetSCS() ? Node->GetSCS()->GetBlueprint() : nullptr;
-      Out.Add(InheritedRow(Node->GetVariableName().ToString(), Node->ComponentClass,
-                           Owner && Owner->GeneratedClass ? Owner->GeneratedClass->GetName() : FString()));
+      const TSharedPtr<FJsonValue> Row = InheritedRow(Node->GetVariableName().ToString(), Node->ComponentClass,
+                           Owner && Owner->GeneratedClass ? Owner->GeneratedClass->GetName() : FString());
+      // A part this Blueprint restyled through its override of it.
+      bool bOverridden = false;
+      McpPropertyCdoComponents::EffectiveTemplate(Blueprint, Node, &bOverridden);
+      if (bOverridden) {
+        Row->AsObject()->SetBoolField(TEXT("overridden"), true);
+      }
+      Out.Add(Row);
     }
     return true;
   });

@@ -107,6 +107,10 @@ TArray<TSharedPtr<FJsonValue>> MetaSoundClassVertices(const TArray<FMetasoundFro
 
 TSharedPtr<FJsonObject> HandleMetaSoundGraphReadAction(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response)
 {
+	if (SubAction == TEXT("list_metasound_nodes"))
+	{
+		return ListMetaSoundNodeClasses(Params, Response);
+	}
 	if (SubAction != TEXT("get_metasound_graph"))
 	{
 		return nullptr;
