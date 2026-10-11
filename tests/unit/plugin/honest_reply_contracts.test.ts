@@ -2333,3 +2333,27 @@ describe('stop answers once the play session has ended', () => {
     expect(stop.indexOf('RequestEndPlayMap'), 'no reply before the ticker').toBeLessThan(stop.indexOf('SendAutomationResponse(Socket, RequestId, bStopped'));
   });
 });
+
+// A Fab pack of 32 meshes with default-material slots took one call and one consent per mesh.
+describe('mesh_materials sets one slot map on many meshes', () => {
+  it('passes over a slot a mesh lacks, fails on an entry no mesh has, and loads every material first', () => {
+    const many = code('AssetWorkflow', 'Materials', 'McpAssetMeshMatsMany.cpp');
+    expect(many).toContain('if (!ResolveSlot(Slots, Wanted[Entry].Key, Assignment.Index, Reason, Code)) continue;');
+    expect(many).toContain('if (!Used[Entry]) Problems.Add(');
+    expect(many.indexOf('Material = LoadMaterial(MaterialText, Reason, Code);'), 'materials load before any mesh changes')
+      .toBeLessThan(many.indexOf('SetOnOneOfMany(PathValue.IsValid()'));
+    const single = code('AssetWorkflow', 'Materials', 'McpAssetMeshMats.cpp');
+    expect(single).toMatch(/if \(AssetPath\.IsEmpty\(\) && Payload->TryGetArrayField\(TEXT\("assetPaths"\), Paths\) && Paths && Paths->Num\(\) > 0\)\s*\{\s*return SetOnManyMeshes\(/u);
+  });
+});
+
+// A material batch's auto-placed nodes, 400 apart, were reported as overlapping: the width estimate read the object
+// name ("MaterialExpressionTextureSampleParameter2D_0", 408 px) instead of the title the editor draws.
+describe('material node extents follow the title the editor draws', () => {
+  it('measures the caption lines, not the object name', () => {
+    const header = code('MaterialAuthoring', 'McpMatPrivate.h');
+    const estimate = header.slice(header.indexOf('inline void EstimateMaterialNodeExtent('), header.indexOf('inline FString AddMaterialNodePlacementFields('));
+    expect(estimate).toContain('Expr->GetCaption(Captions);');
+    expect(estimate).not.toContain('Expr->GetName()');
+  });
+});

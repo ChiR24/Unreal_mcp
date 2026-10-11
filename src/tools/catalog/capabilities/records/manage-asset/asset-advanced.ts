@@ -21,9 +21,13 @@ const MESH_MATERIAL_ENTRY: JsonObject = {
   additionalProperties: false,
 };
 
+// Shared by the lods and mesh_materials members of the process_asset fold, so the folded record shows one text.
+const ASSET_PATHS = arr('Several asset paths to process in one call: lods generates LODs for each; mesh_materials sets the same materials entries on each mesh by slot name, passing over a slot a mesh lacks (an entry no mesh has fails the call), as a whole imported pack needs.');
+
 const MESH_MATERIALS_OUT = schema({
   success: bool('Operation succeeded.'),
   assetPath: ASSET_PATH,
+  meshes: arrObj('With assetPaths: one row per mesh, {assetPath, changed (slots this call changed on it), error (it is not a mesh, or does not load), saved (false only when it could not be saved)}.'),
   assetType: str('StaticMesh or SkeletalMesh.'),
   materialSlots: arrObj('Every slot of the mesh after the call, each {slotIndex, slotName, material (the asset path the slot holds, empty for none), changed (true when this call changed it)}.'),
   applied: num('Entries that were valid and applied.'),
@@ -51,7 +55,7 @@ export const ASSET_ADVANCED_RECORDS: readonly RecordSpec[] = [
       examples: [ex('Create a 1024x1024 HDR render target', { name: 'RT_SceneCapture', packagePath: '/Game/RenderTargets', width: 1024, height: 1024, format: 'RTF_RGBA16f', save: true }, { success: true })] }
   ),
   r('generate_lods', 'asset', 'Generate LOD levels for a static mesh asset.',
-    schema({ assetPath: ASSET_PATH, assetPaths: arr('Several asset paths to process in one call.'), lodCount: num('Number of LOD levels to generate (1-50, default 4).') }, [], ['assetPath', 'assetPaths']),
+    schema({ assetPath: ASSET_PATH, assetPaths: ASSET_PATHS, lodCount: num('Number of LOD levels to generate (1-50, default 4).') }, [], ['assetPath', 'assetPaths']),
     OK, { ...WRITE, longRunning: true }, WRITE_POLICY, HIGH,
     { whenToUse: ['One or several static meshes need LOD levels generated so distant copies render cheaper.'],
       whenNotToUse: [
@@ -63,17 +67,19 @@ export const ASSET_ADVANCED_RECORDS: readonly RecordSpec[] = [
   r('set_mesh_materials', 'asset', 'Set the materials in the slots of a static or skeletal mesh asset, by slot index or slot name, so every placement of the mesh shows them.',
     schema({
       assetPath: ASSET_PATH,
+      assetPaths: ASSET_PATHS,
       materials: {
         type: 'array', minItems: 1, items: MESH_MATERIAL_ENTRY,
         description: 'The slots to set, one entry per slot: [{slot, materialPath}]. slot is a 0-based index or a slot name (inspect_object objectKind=mesh lists both under materialSlots). Every entry is checked first. One that is refused (index out of range, unknown slot name, a material that does not load) is named under refused and fails the call, while the valid entries are applied together in a single rebuild of the mesh.',
       },
       save: bool('Save the mesh after the change. Defaults to true.'),
-    }, ['assetPath', 'materials']),
+    }, ['materials'], ['assetPath', 'assetPaths']),
     MESH_MATERIALS_OUT, WRITE, WRITE_POLICY, MEDIUM,
     { topics: ['set mesh materials', 'assign materials to a static mesh', 'mesh material slots', 'skeletal mesh materials', 'imported mesh grid material', 'materials on a mesh asset'],
       whenToUse: [
         'An imported mesh came in with every slot on the default grid material and each slot needs its own material, once for every placement of the mesh.',
         'Several slots of a static or skeletal mesh asset get their materials in one call, by index or by slot name.',
+        'Every mesh of an imported pack needs the same slot-name to material map (base, Material_0 ...): assetPaths with the slot names.',
       ],
       whenNotToUse: [
         'Only one placed actor must look different from its mesh (use control_actor.set_material, which overrides a component and leaves the asset alone).',

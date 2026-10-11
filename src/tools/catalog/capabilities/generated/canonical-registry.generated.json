@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "cff272199169db8e",
+  "catalogRevision": "c542b6544ce87342",
   "recordCount": 410,
   "records": [
     {
@@ -10610,6 +10610,7 @@
           "process=lods: One or several static meshes need LOD levels generated so distant copies render cheaper.",
           "process=mesh_materials: An imported mesh came in with every slot on the default grid material and each slot needs its own material, once for every placement of the mesh.",
           "process=mesh_materials: Several slots of a static or skeletal mesh asset get their materials in one call, by index or by slot name.",
+          "process=mesh_materials: Every mesh of an imported pack needs the same slot-name to material map (base, Material_0 ...): assetPaths with the slot names.",
           "process=mesh_collision: An imported or Fab mesh has no simple collision, so pawns fall through it or walk through it.",
           "process=mesh_collision: A decorative mesh (grass, flowers, small debris) must stop blocking the player.",
           "process=mesh_collision: A terrain-like or concave mesh must collide exactly with its own triangles (complex)."
@@ -10651,7 +10652,7 @@
               "items": {
                 "type": "string"
               },
-              "description": "Several asset paths to process in one call."
+              "description": "Several asset paths to process in one call: lods generates LODs for each; mesh_materials sets the same materials entries on each mesh by slot name, passing over a slot a mesh lacks (an entry no mesh has fails the call), as a whole imported pack needs."
             },
             "lodCount": {
               "type": "number",
@@ -10730,6 +10731,14 @@
             "assetPath": {
               "type": "string",
               "description": "Canonical /Game asset path."
+            },
+            "meshes": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "With assetPaths: one row per mesh, {assetPath, changed (slots this call changed on it), error (it is not a mesh, or does not load), saved (false only when it could not be saved)}."
             },
             "assetType": {
               "type": "string",
@@ -10846,7 +10855,8 @@
               "thumbnail"
             ],
             "assetPaths": [
-              "lods"
+              "lods",
+              "mesh_materials"
             ],
             "lodCount": [
               "lods"
@@ -10866,8 +10876,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "d43e535b0ebf6aa5ac77f9a08a72eb080d30be388772a48776a3b6d04ef423f8",
-        "content": "4fc6322067f47291886d11a6d287ecbbf864c390558c8c1cae940d44e0a6f261"
+        "schema": "00968496d1ade57e1578d0e7cb04c7dbe04d5197d65195478f1cc7caef4f2d3e",
+        "content": "cf3f8922f6bfe4082497cfe895e7ad15722ac3a7e6a02fdfd85cbc02f7494864"
       }
     },
     {

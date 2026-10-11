@@ -6788,7 +6788,7 @@
                 "items": {
                   "type": "string"
                 },
-                "description": "Several asset paths to process in one call."
+                "description": "Several asset paths to process in one call: lods generates LODs for each; mesh_materials sets the same materials entries on each mesh by slot name, passing over a slot a mesh lacks (an entry no mesh has fails the call), as a whole imported pack needs."
               }
             ],
             "description": "Absolute paths of the downloaded pack files. Used with folderName to synthesize a single-entry envelope when payload is omitted."

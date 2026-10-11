@@ -92,6 +92,9 @@ struct FAssignment
     UMaterialInterface* Material = nullptr;
 };
 
+// Writes the assignments into the mesh asset in one rebuild of its render data (McpAssetMeshMats.cpp).
+void ApplyAssignments(const FMeshSlots& Slots, const TArray<FAssignment>& Assignments);
+
 // The slot an entry names: a whole number (also as text), or a slot name. A refusal says why and which code it is.
 inline bool ResolveSlot(const FMeshSlots& Slots, const TSharedPtr<FJsonValue>& Value, int32& OutIndex, FString& OutReason,
                         FString& OutCode)

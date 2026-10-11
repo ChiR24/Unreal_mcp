@@ -9001,7 +9001,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "items": {
                 "type": "string"
               },
-              "description": "Several asset paths to process in one call."
+              "description": "Several asset paths to process in one call: lods generates LODs for each; mesh_materials sets the same materials entries on each mesh by slot name, passing over a slot a mesh lacks (an entry no mesh has fails the call), as a whole imported pack needs."
             }
           ],
           "description": "Absolute paths of the downloaded pack files. Used with folderName to synthesize a single-entry envelope when payload is omitted."
@@ -11204,6 +11204,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "meanValue": {
           "type": "number",
           "description": "Average texel over the whole texture, 0-1 (unused texels count as 1)."
+        },
+        "meshes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "With assetPaths: one row per mesh, {assetPath, changed (slots this call changed on it), error (it is not a mesh, or does not load), saved (false only when it could not be saved)}."
         },
         "message": {
           "type": "string",

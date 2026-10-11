@@ -51,6 +51,12 @@ void ApplyToSkeletalMesh(USkeletalMesh* Mesh, const TArray<FAssignment>& Assignm
 }
 } // namespace
 
+void ApplyAssignments(const FMeshSlots& Slots, const TArray<FAssignment>& Assignments)
+{
+    if (Slots.Static) ApplyToStaticMesh(Slots.Static, Assignments);
+    else ApplyToSkeletalMesh(Slots.Skeletal, Assignments);
+}
+
 bool HandleSetMeshMaterials(UEngineWireSubsystem* Bridge, const FString& RequestId,
                             const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
@@ -62,9 +68,6 @@ bool HandleSetMeshMaterials(UEngineWireSubsystem* Bridge, const FString& Request
 
     FString AssetPath;
     Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
-    if (AssetPath.IsEmpty()) return Fail(TEXT("assetPath required"), TEXT("INVALID_ARGUMENT"));
-    const FString SafePath = SanitizeProjectRelativePath(AssetPath);
-    if (SafePath.IsEmpty()) return Fail(McpPathRefusalMessage(TEXT("assetPath"), AssetPath), TEXT("SECURITY_VIOLATION"));
     const TArray<TSharedPtr<FJsonValue>>* Entries = nullptr;
     if (!Payload->TryGetArrayField(TEXT("materials"), Entries) || Entries == nullptr || Entries->Num() == 0)
     {
@@ -72,6 +75,14 @@ bool HandleSetMeshMaterials(UEngineWireSubsystem* Bridge, const FString& Request
     }
     bool bSave = true;
     Payload->TryGetBoolField(TEXT("save"), bSave);
+    const TArray<TSharedPtr<FJsonValue>>* Paths = nullptr;
+    if (AssetPath.IsEmpty() && Payload->TryGetArrayField(TEXT("assetPaths"), Paths) && Paths && Paths->Num() > 0)
+    {
+        return SetOnManyMeshes(Bridge, RequestId, Socket, *Paths, *Entries, bSave);
+    }
+    if (AssetPath.IsEmpty()) return Fail(TEXT("assetPath or assetPaths required"), TEXT("INVALID_ARGUMENT"));
+    const FString SafePath = SanitizeProjectRelativePath(AssetPath);
+    if (SafePath.IsEmpty()) return Fail(McpPathRefusalMessage(TEXT("assetPath"), AssetPath), TEXT("SECURITY_VIOLATION"));
 
     UObject* Asset = McpLoadAsset(SafePath);
     FMeshSlots Slots;

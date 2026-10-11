@@ -350,8 +350,13 @@ inline void EstimateMaterialNodeExtent(UMaterialExpression *Expr, float &OutWidt
     OutHeight += 34.0f; // single value row
   }
 
-  const FString Caption = Expr->GetName();
-  OutWidth = FMath::Max(200.0f, Caption.Len() * 8.0f + 56.0f);
+  // The title the editor draws (a parameter's name, "Multiply"), not the object name: that ran
+  // "MaterialExpressionTextureSampleParameter2D_0" to 408 px, and nodes the batch set 400 apart read as overlapping.
+  TArray<FString> Captions;
+  Expr->GetCaption(Captions);
+  int32 Longest = 0;
+  for (const FString &Line : Captions) { Longest = FMath::Max(Longest, Line.Len()); }
+  OutWidth = FMath::Max(200.0f, Longest * 8.0f + 56.0f);
 }
 
 /**
