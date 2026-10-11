@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "770cbefebacfb59a",
+  "catalogRevision": "d17befa88c4fda44",
   "recordCount": 410,
   "records": [
     {
@@ -96477,7 +96477,7 @@
           "check materials before packaging",
           "nanite material usage"
         ],
-        "summary": "Check that assets load without error, and with dataValidation that they pass the project's and the engine's Data Validation (the editor's Validate Assets): each asset path, or every asset under a folder (recursive by default); returns isValid, per-path results and the checked and invalid counts.",
+        "summary": "Check that assets load without error, with dataValidation that they pass the project's and the engine's Data Validation (the editor's Validate Assets), and with materialUsage that their meshes' materials carry the usage flags a cooked game needs: each asset path, or every asset under a folder (recursive by default); returns isValid, per-path results and the checked and invalid counts.",
         "whenToUse": [
           "Asset references must be validated before use.",
           "Assets must pass Data Validation (the editor's Validate Assets) before they are relied on or shipped.",
@@ -96578,7 +96578,7 @@
       },
       "examples": [
         {
-          "title": "Check that assets load without error, and with dataValidation that they pass the project's and the engine's Data Validation (the editor's Validate Assets): each asset path, or every asset under a folder (recursive by default); returns isValid, per-path results and the checked and invalid counts.",
+          "title": "Check that assets load without error, with dataValidation that they pass the project's and the engine's Data Validation (the editor's Validate Assets), and with materialUsage that their meshes' materials carry the usage flags a cooked game needs: each asset path, or every asset under a folder (recursive by default); returns isValid, per-path results and the checked and invalid counts.",
           "input": {
             "action": "validate_assets",
             "paths": [
@@ -96632,7 +96632,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "1a4c8a9c7a840611c9ceb3d828ecc414f3929426fb5538234d6a451fd04c8acc",
-        "content": "16521da19d16bd1b28757c0879b29c0f91ee7284eaf55c3b747b16ec134b8ff6"
+        "content": "0b804e29af96de69ce7f8282c3b00d960f80f3640bef0ebaa1cca5ee8e6cf099"
       }
     },
     {

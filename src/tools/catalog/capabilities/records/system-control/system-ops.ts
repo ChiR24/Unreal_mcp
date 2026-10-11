@@ -581,7 +581,7 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
     domain: 'project',
     family: 'project',
     topics: ['check they load', 'broken', 'fail to load', 'content folder', 'find broken assets', 'verify assets', 'data validation', 'run validators', 'material usage flags', 'missing usage flag', 'default material in packaged game', 'check materials before packaging', 'nanite material usage'],
-    summary: 'Check that assets load without error, and with dataValidation that they pass the project\'s and the engine\'s Data Validation (the editor\'s Validate Assets): each asset path, or every asset under a folder (recursive by default); returns isValid, per-path results and the checked and invalid counts.',
+    summary: 'Check that assets load without error, with dataValidation that they pass the project\'s and the engine\'s Data Validation (the editor\'s Validate Assets), and with materialUsage that their meshes\' materials carry the usage flags a cooked game needs: each asset path, or every asset under a folder (recursive by default); returns isValid, per-path results and the checked and invalid counts.',
     whenToUse: ['Asset references must be validated before use.', 'Assets must pass Data Validation (the editor\'s Validate Assets) before they are relied on or shipped.', 'Before packaging: materialUsage finds the meshes a cooked game would draw with the default material.'],
     whenNotToUse: ['A single asset must be imported or created (use manage_asset).'],
     inputProps: {
