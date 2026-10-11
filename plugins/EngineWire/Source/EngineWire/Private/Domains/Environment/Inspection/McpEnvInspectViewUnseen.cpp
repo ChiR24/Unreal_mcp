@@ -1,5 +1,6 @@
 #include "Domains/Environment/Inspection/McpEnvInspectViewIds.h"
 
+#include "Components/PrimitiveComponent.h"
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"
 #include "EditorViewportClient.h"
@@ -7,12 +8,30 @@
 
 // describe_view's answer for an actor the caller named that drew no pixel. Split from McpEnvInspectViewContents.cpp.
 namespace McpEnvironmentHandlers {
+namespace {
+// The box of what the game draws. The sprite the editor gives an actor with only a scene root is editor-only and
+// far bigger than a small prop: an 84 cm robot read as a 256 cm cube round its pivot.
+FBox McpDrawnBounds(const AActor &Actor)
+{
+    FBox Box(ForceInit);
+    TInlineComponentArray<UPrimitiveComponent *> Parts(&Actor);
+    for (const UPrimitiveComponent *Part : Parts)
+    {
+        if (Part->IsRegistered() && Part->IsVisible() && !Part->bHiddenInGame && !Part->IsEditorOnly())
+        {
+            Box += Part->Bounds.GetBox();
+        }
+    }
+    return Box.IsValid ? Box : Actor.GetComponentsBoundingBox(true);
+}
+} // namespace
+
 TSharedPtr<FJsonObject> McpDescribeUnseenActor(AActor *Actor, const FEditorViewportClient &Client, const FIntPoint &Size,
                                                const TArray<FColor> &Ids, TMap<uint32, FMcpViewProxy> &Proxies)
 {
     const TSharedPtr<FJsonObject> Row = MakeShared<FJsonObject>();
     Row->SetStringField(TEXT("name"), Actor->GetActorLabel());
-    const FBox Bounds = Actor->GetComponentsBoundingBox(true);
+    const FBox Bounds = McpDrawnBounds(*Actor);
     const FMatrix Axes = FRotationMatrix(Client.GetViewRotation());
     const double TanX = FMath::Tan(FMath::DegreesToRadians(Client.ViewFOV * 0.5));
     const double TanY = TanX * Size.Y / Size.X;
@@ -36,6 +55,8 @@ TSharedPtr<FJsonObject> McpDescribeUnseenActor(AActor *Actor, const FEditorViewp
     }
     // What is drawn over the box the bounds project to, by share of the box: the frontmost id per pixel.
     const FBox2D Box = Screen.Overlap(Frame);
+    const double InFrame = McpViewRound(100.0 * Box.GetArea() / FMath::Max(Screen.GetArea(), 1.0), 10.0);
+    Row->SetNumberField(TEXT("inFrame"), InFrame);
     TMap<AActor *, int64> Covers;
     int64 Total = 0;
     for (int32 Y = FMath::FloorToInt(Box.Min.Y); Y < FMath::Min(FMath::CeilToInt(Box.Max.Y), Size.Y); Y += McpViewStride)
@@ -56,17 +77,30 @@ TSharedPtr<FJsonObject> McpDescribeUnseenActor(AActor *Actor, const FEditorViewp
         Sorted.Add(Cover);
     }
     Sorted.Sort([](const TPair<AActor *, int64> &A, const TPair<AActor *, int64> &B) { return A.Value > B.Value; });
+    // What shows through the empty parts of its box cannot hide it: an actor centred farther from the camera (a
+    // storefront behind a balloon cluster), or ground below its middle, a thin slab (a carpet) or what it stands
+    // over (a floor block 5 m thick).
+    const FVector Middle = Bounds.GetCenter();
+    const double Depth = FVector::DotProduct(Middle - Client.GetViewLocation(), Axes.GetScaledAxis(EAxis::X));
     TArray<TSharedPtr<FJsonValue>> HiddenBy;
-    for (int32 Index = 0; Index < FMath::Min(Sorted.Num(), 3); ++Index)
+    for (int32 Index = 0; Index < Sorted.Num() && HiddenBy.Num() < 3; ++Index)
     {
+        const FBox Other = McpDrawnBounds(*Sorted[Index].Key);
+        const bool bUnder = Middle.X >= Other.Min.X && Middle.X <= Other.Max.X && Middle.Y >= Other.Min.Y && Middle.Y <= Other.Max.Y;
+        const bool bGround = Other.Max.Z < Middle.Z && (bUnder || Other.GetSize().Z < 0.25 * Bounds.GetSize().Z);
+        if (Other.IsValid && (bGround ||
+            FVector::DotProduct(Other.GetCenter() - Client.GetViewLocation(), Axes.GetScaledAxis(EAxis::X)) > Depth))
+        {
+            continue;
+        }
         const TSharedPtr<FJsonObject> Cover = MakeShared<FJsonObject>();
         Cover->SetStringField(TEXT("name"), Sorted[Index].Key->GetActorLabel());
         Cover->SetNumberField(TEXT("share"), McpViewRound(100.0 * Sorted[Index].Value / FMath::Max<int64>(Total, 1), 10.0));
         HiddenBy.Add(MakeShared<FJsonValueObject>(Cover));
     }
-    Row->SetStringField(TEXT("reason"), HiddenBy.Num() > 0
-        ? TEXT("hidden behind what is drawn over its box")
-        : TEXT("inside the frame, but nothing of it was drawn (hidden in game, or smaller than the sampling)"));
+    Row->SetStringField(TEXT("reason"), InFrame < 50.0 ? TEXT("at the edge of the frame, mostly outside it")
+        : HiddenBy.Num() > 0 ? TEXT("hidden behind what is drawn over its box")
+        : TEXT("not drawn, and nothing nearer is drawn over its box (hidden in game, or smaller than the sampling)"));
     Row->SetArrayField(TEXT("hiddenBy"), HiddenBy);
     return Row;
 }

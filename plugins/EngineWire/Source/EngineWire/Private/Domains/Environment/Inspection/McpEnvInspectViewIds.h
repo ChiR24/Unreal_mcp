@@ -37,8 +37,9 @@ inline double McpViewRound(double Value, double Scale)
 }
 
 // describe_view's row for an actor the caller named that drew no pixel: reason "outside the frame" when its bounds
-// project outside it, else what is drawn over the box they project to (hiddenBy: up to three actors by share of the
-// box). The level editor keeps the horizontal field of view fixed (MaintainXFOV), so ViewFOV is horizontal.
+// project outside it, else inFrame (percent of the box they project to inside the frame) and what is drawn over that
+// box (hiddenBy: up to three actors by share of the box, leaving out actors centred farther than it and the ground
+// under it). The level editor keeps the horizontal field of view fixed (MaintainXFOV), so ViewFOV is horizontal.
 TSharedPtr<FJsonObject> McpDescribeUnseenActor(AActor *Actor, const FEditorViewportClient &Client, const FIntPoint &Size,
                                                const TArray<FColor> &Ids, TMap<uint32, FMcpViewProxy> &Proxies);
 } // namespace McpEnvironmentHandlers

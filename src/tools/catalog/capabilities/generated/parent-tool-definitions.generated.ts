@@ -7327,7 +7327,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "additionalProperties": true,
             "x-unreal-reflection-boundary": true
           },
-          "description": "With actors: each named actor that drew no pixel, as {name, reason (outside the frame, hidden behind what is drawn over its box, or nothing of it drawn), hiddenBy [{name, share (percent of its box)}]}."
+          "description": "With actors: each named actor that drew no pixel, as {name, reason (outside the frame; at the edge of the frame, mostly outside it; hidden behind what is drawn over its box; or not drawn with nothing nearer over it), inFrame (percent of its projected box inside the frame), hiddenBy [{name, share (percent of its box)}], which leaves out actors centred farther than it and the ground under it}."
         },
         "objectName": {
           "type": "string",

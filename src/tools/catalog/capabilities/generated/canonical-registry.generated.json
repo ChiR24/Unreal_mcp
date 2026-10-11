@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "ae2395f63f5e0651",
+  "catalogRevision": "e79f7c0c49b41368",
   "recordCount": 410,
   "records": [
     {
@@ -42778,7 +42778,7 @@
                 "additionalProperties": true,
                 "x-unreal-reflection-boundary": true
               },
-              "description": "With actors: each named actor that drew no pixel, as {name, reason (outside the frame, hidden behind what is drawn over its box, or nothing of it drawn), hiddenBy [{name, share (percent of its box)}]}."
+              "description": "With actors: each named actor that drew no pixel, as {name, reason (outside the frame; at the edge of the frame, mostly outside it; hidden behind what is drawn over its box; or not drawn with nothing nearer over it), inFrame (percent of its projected box inside the frame), hiddenBy [{name, share (percent of its box)}], which leaves out actors centred farther than it and the ground under it}."
             },
             "notFound": {
               "type": "array",
@@ -42896,8 +42896,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "ce288c40be381311273d187cb15139021ee8920e0dd16638e7ebd39548db9e93",
-        "content": "d8969f3cd97225bd7474023f4238bcd9bfa8e9ba4ab816331877c7c0f3703320"
+        "schema": "7f77935fb4404a24ed09030c12fe63a13f95a4e2a5f75c22ed053554b36e4536",
+        "content": "4439f5376f16c76d13d18e6da5aadc554054098797b04e699f3b8d5eef266995"
       }
     },
     {

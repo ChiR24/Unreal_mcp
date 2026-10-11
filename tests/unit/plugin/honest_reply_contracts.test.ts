@@ -2172,6 +2172,12 @@ describe('describe_view counts what the game draws in the camera view', () => {
     expect(unseen, 'the level editor keeps the horizontal field of view').toContain('FMath::Tan(FMath::DegreesToRadians(Client.ViewFOV * 0.5))');
     expect(unseen).toContain('TEXT("outside the frame")');
     expect(unseen, 'what is drawn over its box, frontmost id per pixel').toContain('Covers.FindOrAdd(Proxy->Kind == EMcpViewKind::Actor ? Proxy->Actor : nullptr) += 1;');
+    // A storefront behind a balloon cluster at the frame edge was named as what hid it.
+    expect(unseen, 'ground under it, or an actor centred farther, cannot hide it').toContain('const bool bGround = Other.Max.Z < Middle.Z && (bUnder || Other.GetSize().Z < 0.25 * Bounds.GetSize().Z);');
+    // An editor-only sprite made an 84 cm robot a 256 cm cube.
+    expect(unseen, 'the box of what the game draws').toContain('if (Part->IsRegistered() && Part->IsVisible() && !Part->bHiddenInGame && !Part->IsEditorOnly())');
+    expect(unseen).toContain('Row->SetNumberField(TEXT("inFrame"), InFrame);');
+    expect(unseen).toContain('InFrame < 50.0 ? TEXT("at the edge of the frame, mostly outside it")');
   });
 });
 
