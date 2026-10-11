@@ -21,6 +21,6 @@ void AddViewportDetailsForUiScreenshot(
     const TSharedPtr<FJsonObject> &Resp, UGameViewportClient *ViewportClient,
     const FString &ActiveViewTargetPath, bool bHasPlayerCamera,
     const FVector &ActiveCameraLocation, const FRotator &ActiveCameraRotation,
-    float ActiveCameraFov);
+    float ActiveCameraFov, const FVector2D &RenderedFov);
 
 }

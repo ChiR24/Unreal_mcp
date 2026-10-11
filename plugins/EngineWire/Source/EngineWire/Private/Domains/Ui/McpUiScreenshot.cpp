@@ -7,6 +7,7 @@
 #include "Editor.h"
 #include "Engine/Engine.h"
 #include "Engine/GameViewportClient.h"
+#include "Engine/LocalPlayer.h"
 #include "GameFramework/PlayerController.h"
 #include "HAL/FileManager.h"
 #include "IImageWrapper.h"
@@ -20,6 +21,7 @@
 #include "Misc/Paths.h"
 #include "Modules/ModuleManager.h"
 #include "RenderingThread.h"
+#include "SceneView.h"
 #include "UnrealClient.h"
 
 namespace McpUiHandlers {
@@ -116,6 +118,7 @@ bool HandleScreenshotAction(
   FVector ActiveCameraLocation = FVector::ZeroVector;
   FRotator ActiveCameraRotation = FRotator::ZeroRotator;
   float ActiveCameraFov = 0.0f;
+  FVector2D RenderedFov = FVector2D::ZeroVector;
 
   if (UWorld *ViewportWorld = ViewportClient->GetWorld()) {
     if (APlayerController *PlayerController =
@@ -135,6 +138,16 @@ bool HandleScreenshotAction(
         ActiveCameraRotation = CameraView.Rotation;
         ActiveCameraFov = CameraView.FOV;
         bHasPlayerCamera = true;
+      }
+      // The camera's FOV is the frame's width only at its own aspect ratio: a viewport of another shape under the
+      // project's keep-vertical setting showed 64 degrees across for an FOV of 50, and points placed from 50 landed
+      // well off. The projection the frame was drawn with says what it shows.
+      FSceneViewProjectionData Projection;
+      ULocalPlayer *LocalPlayer = PlayerController->GetLocalPlayer();
+      if (LocalPlayer && LocalPlayer->GetProjectionData(Viewport, Projection) &&
+          Projection.ProjectionMatrix.M[3][3] == 0.0f) {
+        RenderedFov.X = FMath::RadiansToDegrees(2.0 * FMath::Atan(1.0 / Projection.ProjectionMatrix.M[0][0]));
+        RenderedFov.Y = FMath::RadiansToDegrees(2.0 * FMath::Atan(1.0 / Projection.ProjectionMatrix.M[1][1]));
       }
     }
   }
@@ -249,7 +262,7 @@ bool HandleScreenshotAction(
   Resp->SetBoolField(TEXT("forcedViewportDraw"), bForcedViewportDraw);
   AddViewportDetailsForUiScreenshot(Resp, ViewportClient, ActiveViewTargetPath,
                                     bHasPlayerCamera, ActiveCameraLocation,
-                                    ActiveCameraRotation, ActiveCameraFov);
+                                    ActiveCameraRotation, ActiveCameraFov, RenderedFov);
   Resp->SetBoolField(TEXT("saved"), bSaved);
   Resp->SetNumberField(TEXT("width"), Width);
   Resp->SetNumberField(TEXT("height"), Height);

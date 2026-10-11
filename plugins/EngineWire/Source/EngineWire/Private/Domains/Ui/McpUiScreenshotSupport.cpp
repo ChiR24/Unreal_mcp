@@ -65,7 +65,7 @@ void AddViewportDetailsForUiScreenshot(
     const TSharedPtr<FJsonObject> &Resp, UGameViewportClient *ViewportClient,
     const FString &ActiveViewTargetPath, bool bHasPlayerCamera,
     const FVector &ActiveCameraLocation, const FRotator &ActiveCameraRotation,
-    float ActiveCameraFov) {
+    float ActiveCameraFov, const FVector2D &RenderedFov) {
   if (UWorld *ViewportWorld = ViewportClient->GetWorld()) {
     Resp->SetStringField(TEXT("viewportWorld"), ViewportWorld->GetName());
     Resp->SetNumberField(TEXT("viewportWorldType"),
@@ -82,6 +82,11 @@ void AddViewportDetailsForUiScreenshot(
 
   Resp->SetObjectField(TEXT("activeCameraRotation"), McpHandlerUtils::RotatorToJson(ActiveCameraRotation));
   Resp->SetNumberField(TEXT("activeCameraFov"), ActiveCameraFov);
+  // What the frame shows across and up, in degrees: the camera's FOV holds only at its own aspect ratio.
+  if (RenderedFov.X > 0.0) {
+    Resp->SetNumberField(TEXT("horizontalFov"), FMath::RoundToDouble(RenderedFov.X * 100.0) / 100.0);
+    Resp->SetNumberField(TEXT("verticalFov"), FMath::RoundToDouble(RenderedFov.Y * 100.0) / 100.0);
+  }
 }
 
 }

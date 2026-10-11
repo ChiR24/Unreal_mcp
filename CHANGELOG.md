@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Box sound zones sized per axis**: `configure_sound_attenuation` `preset` and `distance` take `extent` {x, y, z}, so a zone can run the length of a hall without reaching as far sideways; `innerRadius` gives a box one size on all three axes.
 - **`inspect` `describe_view` takes `actors`**: only the rows of the actors named, and for each one that is not seen, why: outside the frame, at its edge (`inFrame`), or hidden, naming what is in front of it (`hiddenBy`, by share; the ground under it and what stands behind it are left out). Names that match no actor are listed under `notFound`.
 - **`validate_assets` `materialUsage`**: the material usage flags an asset's meshes need and their materials lack (a Nanite mesh's slots, a skeletal mesh's, and a Blueprint's Nanite, instanced, spline or skeletal parts), each with `unsaved` when the editor set the flag but it is not on disk yet. A mesh only ever spawned in play draws the default material there and in a cooked game, with nothing but a log warning. On UE 5.8 a material instance holds its own flags and is named itself.
+- **A game screenshot says the field of view the frame shows** (`horizontalFov`, `verticalFov`): `activeCameraFov` is the camera's setting, which holds only at the camera's own aspect ratio, so a wider viewport that keeps the vertical angle shows more across than it says.
 
 </details>
 

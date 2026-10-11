@@ -2306,3 +2306,17 @@ describe('edit_control_rig edits a rig through its own controllers and keeps wha
     expect(read).toContain('McpHandlerUtils::MarkNoAssetsChanged(Response);');
   });
 });
+
+// A game camera's FOV of 50 drew 64 degrees across on a wider viewport (the project kept the vertical FOV), so points
+// placed on the frame from the reported FOV landed well off.
+describe('a game screenshot says the field of view the frame was drawn with', () => {
+  it('reads both angles off the local player projection, beside the camera setting', () => {
+    const shot = code('Ui', 'McpUiScreenshot.cpp');
+    expect(shot).toContain('LocalPlayer->GetProjectionData(Viewport, Projection)');
+    expect(shot, 'an orthographic camera has no field of view').toContain('Projection.ProjectionMatrix.M[3][3] == 0.0f');
+    expect(shot).toContain('RenderedFov.X = FMath::RadiansToDegrees(2.0 * FMath::Atan(1.0 / Projection.ProjectionMatrix.M[0][0]));');
+    const support = code('Ui', 'McpUiScreenshotSupport.cpp');
+    expect(support).toContain('Resp->SetNumberField(TEXT("horizontalFov")');
+    expect(support).toContain('Resp->SetNumberField(TEXT("verticalFov")');
+  });
+});
