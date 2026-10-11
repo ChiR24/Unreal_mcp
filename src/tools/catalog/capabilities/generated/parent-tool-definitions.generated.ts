@@ -7654,6 +7654,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Active viewport width in pixels."
         },
+        "windowMinimized": {
+          "type": "boolean",
+          "description": "True when the editor window is minimized: no frame is drawn, so renderThreadMs, rhiThreadMs and gpuMs are left from the last drawn frame and the frame delta is the background throttle. Restore it (control_editor configure_editor setting window) before measuring. Absent otherwise."
+        },
         "worldGravityZ": {
           "type": "number",
           "description": "World gravity along Z."

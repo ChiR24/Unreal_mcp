@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "7596273fbe33ee38",
+  "catalogRevision": "9835c71c7b7817e5",
   "recordCount": 410,
   "records": [
     {
@@ -44178,6 +44178,10 @@
               "type": "number",
               "description": "Actor count of the measured world."
             },
+            "windowMinimized": {
+              "type": "boolean",
+              "description": "True when the editor window is minimized: no frame is drawn, so renderThreadMs, rhiThreadMs and gpuMs are left from the last drawn frame and the frame delta is the background throttle. Restore it (control_editor configure_editor setting window) before measuring. Absent otherwise."
+            },
             "isBenchmarking": {
               "type": "boolean",
               "description": "Whether the engine is in benchmarking mode."
@@ -44324,8 +44328,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "08c682cdadc902db138dfe47388fd71504b920670b73352e85f7fb11b1dcac8e",
-        "content": "dfe2decb619eaf4c5d5da606624120d353a2e093f43ee676cf03edbf7b449b35"
+        "schema": "3440babb753d1fdd7a0c37c13124d1787a93dba827f9e65c4ad5a3dda7caf156",
+        "content": "6ea39aaabc2c6630efbb40fa21386a6e4cd38f4ea25ad46d0a015b7015ed271c"
       }
     },
     {

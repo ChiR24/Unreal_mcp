@@ -6,6 +6,7 @@
 #include "Engine/Brush.h"
 #include "Engine/Light.h"
 #include "Engine/StaticMeshActor.h"
+#include "Framework/Docking/TabManager.h"
 #include "GameFramework/Volume.h"
 
 namespace McpEnvironmentHandlers {
@@ -218,6 +219,19 @@ bool HandleInspectStatsAction(
             Resp->SetNumberField(TEXT("rhiThreadMs"), RHIThreadMs);
             Resp->SetNumberField(TEXT("gpuMs"), GPUFrameMs);
             Resp->SetNumberField(TEXT("actorCount"), ActorCount);
+            // A minimized editor draws no frame: the render, RHI and GPU times stay those of the last frame it drew
+            // (identical on every read, the GPU time 150-750 ms) and the frame delta is the background throttle.
+            const TSharedPtr<SWindow> Root = FGlobalTabmanager::Get()->GetRootWindow();
+            if (Root.IsValid() && Root->IsWindowMinimized())
+            {
+                Resp->SetBoolField(TEXT("windowMinimized"), true);
+                TArray<TSharedPtr<FJsonValue>> Warnings;
+                Warnings.Add(MakeShared<FJsonValueString>(TEXT(
+                    "The editor window is minimized, so no frame is drawn: renderThreadMs, rhiThreadMs and gpuMs are "
+                    "left from the last drawn frame. Restore it (control_editor configure_editor setting window) "
+                    "before measuring.")));
+                Resp->SetArrayField(TEXT("warnings"), Warnings);
+            }
             Resp->SetBoolField(TEXT("isBenchmarking"), FApp::IsBenchmarking());
             Resp->SetBoolField(TEXT("useFixedTimeStep"), FApp::UseFixedTimeStep());
             Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,

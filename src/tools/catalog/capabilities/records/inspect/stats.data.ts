@@ -53,6 +53,7 @@ export const STATS_RECORDS: readonly CapabilityRecordSource[] = [
       rhiThreadMs: { type: 'number', description: 'RHI thread time in milliseconds.' },
       gpuMs: { type: 'number', description: 'GPU frame time in milliseconds.' },
       actorCount: { type: 'number', description: 'Actor count of the measured world.' },
+      windowMinimized: { type: 'boolean', description: 'True when the editor window is minimized: no frame is drawn, so renderThreadMs, rhiThreadMs and gpuMs are left from the last drawn frame and the frame delta is the background throttle. Restore it (control_editor configure_editor setting window) before measuring. Absent otherwise.' },
       isBenchmarking: { type: 'boolean', description: 'Whether the engine is in benchmarking mode.' },
       useFixedTimeStep: { type: 'boolean', description: 'Whether a fixed time step is active.' },
     },

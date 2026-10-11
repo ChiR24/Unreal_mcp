@@ -2007,6 +2007,12 @@ describe('performance stats give the game\'s own share of the frame', () => {
     const stats = code('Environment', 'Inspection', 'McpEnvInspectStats.cpp');
     expect(stats).toContain('if (WorldTickMs >= 0.0) Resp->SetNumberField(TEXT("worldTickMs"), WorldTickMs);');
   });
+
+  // With the editor minimized the render and RHI times read the same on every call and the GPU time 150-750 ms.
+  it('says when the editor window is minimized, so the render times are stale', () => {
+    const stats = code('Environment', 'Inspection', 'McpEnvInspectStats.cpp');
+    expect(stats).toMatch(/if \(Root\.IsValid\(\) && Root->IsWindowMinimized\(\)\)\s*\{\s*Resp->SetBoolField\(TEXT\("windowMinimized"\), true\);/u);
+  });
 });
 
 // get_splines_info with actorName answered the spline at the top level and again under splines; save_all carried every
