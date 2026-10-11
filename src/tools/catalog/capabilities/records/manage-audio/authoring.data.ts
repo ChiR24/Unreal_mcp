@@ -36,6 +36,19 @@ const GET_METASOUND_GRAPH_EXAMPLE: { readonly input: JsonObject; readonly output
 // Every audio asset edit saves unless told not to; manage_networking shares the bare `save` pin with the opposite default.
 const SAVE = { type: 'boolean', description: 'Persist the asset to disk (default true); false leaves the change in memory only.' } as const;
 const PARENT_CLASS = { type: 'string', description: 'Canonical /Game SoundClass asset path of the parent class.' } as const;
+// innerRadius gives a box one size on all three axes, and a hall or corridor zone is no cube.
+const BOX_EXTENT = {
+  type: 'object',
+  description: 'A Box shape\'s half-size on each axis in cm, {x, y, z}, each above 0: a zone the length of a hall without '
+    + 'reaching as far sideways. It replaces the size innerRadius gives a box; another shape is refused.',
+  properties: {
+    x: { type: 'number', description: 'Half-size along X, cm.' },
+    y: { type: 'number', description: 'Half-size along Y, cm.' },
+    z: { type: 'number', description: 'Half-size along Z, cm.' },
+  },
+  required: ['x', 'y', 'z'],
+  additionalProperties: false,
+} as const;
 
 const a = (action: string, summary: string, params: readonly string[], required: readonly string[], outputs: readonly string[] = [], outputRequired: readonly string[] = [], plugins: readonly string[] = [], requiredOneOf?: readonly string[]): CapabilityRecordSource => {
   const record = utilityRecord({
@@ -72,8 +85,9 @@ export const AUDIO_AUTHORING_RECORDS: readonly CapabilityRecordSource[] = [
     },
     save: { type: 'boolean', description: 'Save the MetaSound once, after the steps (default true); a batch that stops at a failing step saves the steps before it. false leaves every edit in memory only.' },
   })), examples: [{ title: 'Build a one-oscillator MetaSound', ...BUILD_METASOUND_EXAMPLE }] },
-  withInputProps(a('configure_distance_attenuation', 'Configure distance attenuation: inner radius, falloff distance and curve, and air absorption (a low-pass that muffles the sound with distance).',
+  withInputProps(a('configure_distance_attenuation', 'Configure distance attenuation: inner radius (or a box\'s size per axis), falloff distance and curve, and air absorption (a low-pass that muffles the sound with distance).',
     ['assetPath', 'innerRadius', 'falloffDistance', 'distanceAlgorithm', 'save'], ['assetPath']), {
+    extent: BOX_EXTENT,
     attenuateWithLPF: { type: 'boolean', description: 'Air absorption on or off: a low-pass whose cutoff drops with distance. Sending any lpf value turns it on unless this is false.' },
     lpfRadiusMin: { type: 'number', description: 'Distance in cm where the low-pass starts closing; nearer than this the cutoff is lpfFrequencyAtMin.' },
     lpfRadiusMax: { type: 'number', description: 'Distance in cm where the cutoff reaches lpfFrequencyAtMax.' },
@@ -130,5 +144,7 @@ export const AUDIO_AUTHORING_RECORDS: readonly CapabilityRecordSource[] = [
     ['doppler effect', 'pitch shift moving sound']),
   a('set_cue_concurrency', 'Assign concurrency settings to a Sound Cue.', ['assetPath', 'concurrencyPath', 'save'], ['assetPath']),
   withTopics(a('set_dialogue_context', 'Add a context mapping to a Dialogue Wave: who speaks it, to whom, and which SoundWave plays.', ['assetPath', 'speakerPath', 'targetVoices', 'soundWavePath', 'localizationKeyFormat', 'replace', 'save'], ['assetPath']), ['link sound to speaker']),
-  a('set_sound_attenuation', 'Create or update sound attenuation settings.', ['name', 'path', 'innerRadius', 'falloffDistance', 'attenuationShape', 'falloffMode', 'save'], ['name'], ['assetPath'], ['assetPath']),
+  withInputProps(a('set_sound_attenuation', 'Create or update sound attenuation settings; a Box shape takes its size per axis with extent.', ['name', 'path', 'innerRadius', 'falloffDistance', 'attenuationShape', 'falloffMode', 'save'], ['name'], ['assetPath'], ['assetPath']), {
+    extent: BOX_EXTENT,
+  }),
 ];

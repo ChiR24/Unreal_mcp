@@ -155,6 +155,14 @@ bool HandleSpatialActions(
       Payload->TryGetStringField(TEXT("falloffMode"), FalloffMode);
      bool bSave = true;
      Payload->TryGetBoolField(TEXT("save"), bSave);
+     // Checked before the asset is made.
+     TOptional<FVector> BoxExtent;
+     FString ExtentError;
+     if (!McpAudioAuthoring::ReadAttenuationBoxExtent(
+             Payload, AttenuationShape.Equals(TEXT("Box"), ESearchCase::IgnoreCase), BoxExtent, ExtentError)) {
+       Self->SendAutomationError(RequestingSocket, RequestId, ExtentError, TEXT("INVALID_ARGUMENT"));
+       return true;
+     }
 
      FString FullPath;
      FString PathError;
@@ -199,6 +207,7 @@ bool HandleSpatialActions(
       }
       // After the shape: it decides which extents the radius fills.
       McpAudioAuthoring::SetAttenuationInnerRadius(Atten->Attenuation, InnerRadius);
+      McpAudioAuthoring::ApplyAttenuationBoxExtent(Atten->Attenuation, BoxExtent);
 
       FString AppliedFalloffMode = TEXT("Linear");
       if (FalloffMode.Equals(TEXT("Logarithmic"), ESearchCase::IgnoreCase)) {
@@ -231,6 +240,7 @@ bool HandleSpatialActions(
       Resp->SetNumberField(TEXT("innerRadius"), InnerRadius);
       Resp->SetNumberField(TEXT("falloffDistance"), FalloffDistance);
       Resp->SetStringField(TEXT("attenuationShape"), AppliedShape);
+      McpAudioAuthoring::AddAttenuationBoxExtent(Resp, Atten->Attenuation);
       Resp->SetStringField(TEXT("falloffMode"), AppliedFalloffMode);
       McpHandlerUtils::AddVerification(Resp, Atten);
      Self->SendAutomationResponse(RequestingSocket, RequestId, true,

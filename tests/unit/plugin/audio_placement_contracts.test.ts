@@ -45,6 +45,21 @@ describe('innerRadius fills the extents the attenuation shape reads', () => {
     expect(preset.indexOf('McpAudioAuthoring::SetAttenuationInnerRadius(Atten->Attenuation, InnerRadius)'))
       .toBeGreaterThan(preset.lastIndexOf('EAttenuationShape::Sphere'));
   });
+
+  // A box zone for a long hall had to be a cube as wide and tall as the hall was long.
+  it('extent sizes a box per axis, checked before anything is made or changed and written after innerRadius', () => {
+    const helper = read('AudioAuthoring/McpAudioAuthoringPrivate.h');
+    expect(helper).toContain('inline bool ReadAttenuationBoxExtent(const TSharedPtr<FJsonObject>& Params, bool bBox, TOptional<FVector>& Out, FString& OutError)');
+    expect(helper).toContain('Size.GetMin() <= 0.0');
+    const preset = read('Audio/McpAudioOcclusionAndAttenuation.cpp');
+    expect(preset.indexOf('McpAudioAuthoring::ReadAttenuationBoxExtent(')).toBeLessThan(preset.indexOf('CreatePackage(*FullPath)'));
+    expect(preset.indexOf('McpAudioAuthoring::ApplyAttenuationBoxExtent(Atten->Attenuation, BoxExtent)'))
+      .toBeGreaterThan(preset.indexOf('McpAudioAuthoring::SetAttenuationInnerRadius(Atten->Attenuation, InnerRadius)'));
+    const authoring = read('AudioAuthoring/McpAudioAttenuation.cpp');
+    expect(authoring.indexOf('ReadAttenuationBoxExtent(Params,'))
+      .toBeLessThan(authoring.indexOf('Atten->Attenuation.DistanceAlgorithm = EAttenuationDistanceModel::Linear'));
+    expect(authoring).toContain('AddAttenuationBoxExtent(Response, Atten->Attenuation);');
+  });
 });
 
 // A distant engine was muffled by writing Attenuation.bAttenuateWithLPF and the LPF fields through set_property.

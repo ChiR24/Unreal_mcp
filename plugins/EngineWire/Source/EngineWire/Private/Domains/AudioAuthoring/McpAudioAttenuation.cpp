@@ -52,6 +52,12 @@ TSharedPtr<FJsonObject> HandleAttenuationActions(const FString& SubAction, const
 		{
 			return McpHandlerUtils::BuildErrorResponse(TEXT("ATTENUATION_NOT_FOUND"), FString::Printf(TEXT("Could not load SoundAttenuation: %s"), *AssetPath));
 		}
+		TOptional<FVector> BoxExtent;
+		FString ExtentError;
+		if (!ReadAttenuationBoxExtent(Params, Atten->Attenuation.AttenuationShape == EAttenuationShape::Box, BoxExtent, ExtentError))
+		{
+			return McpHandlerUtils::BuildErrorResponse(TEXT("INVALID_ARGUMENT"), ExtentError);
+		}
 
 		// Only when sent: defaulting to "linear" reset every curve a caller had chosen before.
 		const FString FunctionType = GetJsonStringField(Params, TEXT("distanceAlgorithm")).ToLower();
@@ -64,6 +70,7 @@ TSharedPtr<FJsonObject> HandleAttenuationActions(const FString& SubAction, const
 			return McpHandlerUtils::BuildErrorResponse(TEXT("INVALID_ARGUMENT"), FString::Printf(TEXT("distanceAlgorithm '%s' is not Linear, Logarithmic, Inverse or NaturalSound"), *FunctionType));
 		}
 		if (Params->HasField(TEXT("innerRadius"))) { SetAttenuationInnerRadius(Atten->Attenuation, GetJsonNumberField(Params, TEXT("innerRadius"), 400.0)); }
+		ApplyAttenuationBoxExtent(Atten->Attenuation, BoxExtent);
 		if (Params->HasField(TEXT("falloffDistance"))) { Atten->Attenuation.FalloffDistance = static_cast<float>(GetJsonNumberField(Params, TEXT("falloffDistance"), 3600.0)); }
 		// Air absorption: a low-pass whose cutoff falls from LPFFrequencyAtMin to LPFFrequencyAtMax between the two
 		// radii. Only reachable through dotted set_property paths before; a sent value turns the filter on.
@@ -82,6 +89,7 @@ TSharedPtr<FJsonObject> HandleAttenuationActions(const FString& SubAction, const
 		// Read back like its siblings: this one answered only "Operation complete", so a value it set went unseen.
 		Response->SetStringField(TEXT("distanceAlgorithm"), StaticEnum<EAttenuationDistanceModel>()->GetNameStringByValue(static_cast<int64>(Atten->Attenuation.DistanceAlgorithm)));
 		Response->SetNumberField(TEXT("innerRadius"), GetAttenuationInnerRadius(Atten->Attenuation));
+		AddAttenuationBoxExtent(Response, Atten->Attenuation);
 		Response->SetNumberField(TEXT("falloffDistance"), Atten->Attenuation.FalloffDistance);
 		Response->SetBoolField(TEXT("attenuateWithLPF"), Atten->Attenuation.bAttenuateWithLPF);
 		for (const TPair<const TCHAR*, float*>& Field : LowPass) { Response->SetNumberField(Field.Key, *Field.Value); }

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "0692536dbeee1f61",
+  "catalogRevision": "a8f2ea61757615f5",
   "recordCount": 410,
   "records": [
     {
@@ -50810,12 +50810,12 @@
         ],
         "summary": "Configure sound attenuation: distance falloff and air absorption, spatialization, occlusion, reverb send, or a named attenuation preset.",
         "whenToUse": [
-          "setting=distance: Use it to configure distance attenuation: inner radius, falloff distance and curve, and air absorption (a low-pass that muffles the sound with distance).",
+          "setting=distance: Use it to configure distance attenuation: inner radius (or a box's size per axis), falloff distance and curve, and air absorption (a low-pass that muffles the sound with distance).",
           "setting=spatialization: Use it to configure audio spatialization.",
           "setting=occlusion: Use it to configure audio occlusion.",
           "setting=reverb_send: Use it to configure an audio reverb send.",
           "setting=audio_occlusion: Use it to configure occlusion settings on a sound asset.",
-          "setting=preset: Use it to create or update sound attenuation settings."
+          "setting=preset: Use it to create or update sound attenuation settings; a Box shape takes its size per axis with extent."
         ],
         "whenNotToUse": []
       },
@@ -50847,6 +50847,30 @@
             "save": {
               "type": "boolean",
               "description": "Persist the asset to disk (default true); false leaves the change in memory only."
+            },
+            "extent": {
+              "type": "object",
+              "description": "A Box shape's half-size on each axis in cm, {x, y, z}, each above 0: a zone the length of a hall without reaching as far sideways. It replaces the size innerRadius gives a box; another shape is refused.",
+              "properties": {
+                "x": {
+                  "type": "number",
+                  "description": "Half-size along X, cm."
+                },
+                "y": {
+                  "type": "number",
+                  "description": "Half-size along Y, cm."
+                },
+                "z": {
+                  "type": "number",
+                  "description": "Half-size along Z, cm."
+                }
+              },
+              "required": [
+                "x",
+                "y",
+                "z"
+              ],
+              "additionalProperties": false
             },
             "attenuateWithLPF": {
               "type": "boolean",
@@ -51045,6 +51069,10 @@
             "distanceAlgorithm": [
               "distance"
             ],
+            "extent": [
+              "distance",
+              "preset"
+            ],
             "attenuateWithLPF": [
               "distance"
             ],
@@ -51117,8 +51145,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "be9020edb984cb4094cffd04de79bf1e74be6cf756ae7d89424870b54688a9a2",
-        "content": "16f29379d35b7ed94dee8d13c6fc0098539850034bdf1f97a07c565b7eda2fb5"
+        "schema": "23661626fa8384a5a84269d9d0a6dc97c224743bacefeeaef77e2fccf6bedc4d",
+        "content": "5cd4b471ec9583609670e82b12b13327a0fa639d9d545823ff37227dfc06b45b"
       }
     },
     {

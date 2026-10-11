@@ -2,6 +2,7 @@
 
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 
 #include "Dom/JsonObject.h"
 #include "Core/Module/EngineWireGlobals.h"
@@ -225,6 +226,36 @@ inline void SetAttenuationInnerRadius(FBaseAttenuationSettings& Settings, double
 	if (Settings.AttenuationShape == EAttenuationShape::Box) { Extents = FVector(Radius); }
 	else if (Settings.AttenuationShape == EAttenuationShape::Capsule) { Extents.Y = Radius; Extents.X = FMath::Max(Extents.X, Radius); }
 	else { Extents.X = Radius; }
+}
+/** extent {x, y, z}: a Box shape's half-size on each axis, where innerRadius gives all three one size (a hall is no
+ *  cube). Out is set when extent was sent; false with OutError for another shape or a missing or non-positive axis. */
+inline bool ReadAttenuationBoxExtent(const TSharedPtr<FJsonObject>& Params, bool bBox, TOptional<FVector>& Out, FString& OutError)
+{
+	const TSharedPtr<FJsonObject>* Extent = nullptr;
+	if (!Params->TryGetObjectField(TEXT("extent"), Extent)) { return true; }
+	FVector Size;
+	if (!bBox || !(*Extent)->TryGetNumberField(TEXT("x"), Size.X) || !(*Extent)->TryGetNumberField(TEXT("y"), Size.Y) ||
+		!(*Extent)->TryGetNumberField(TEXT("z"), Size.Z) || Size.GetMin() <= 0.0)
+	{
+		OutError = bBox ? TEXT("extent takes x, y and z, each a half-size above 0 cm")
+		                : TEXT("extent sizes a Box shape; innerRadius sizes a sphere, capsule or cone");
+		return false;
+	}
+	Out = Size;
+	return true;
+}
+/** Writes the box size ReadAttenuationBoxExtent read, after SetAttenuationInnerRadius; nothing when none was sent. */
+inline void ApplyAttenuationBoxExtent(FBaseAttenuationSettings& Settings, const TOptional<FVector>& Extent)
+{
+	if (Extent.IsSet()) { Settings.AttenuationShapeExtents = Extent.GetValue(); }
+}
+/** A Box shape's half-size per axis in a reply, as extent. */
+inline void AddAttenuationBoxExtent(const TSharedPtr<FJsonObject>& Response, const FBaseAttenuationSettings& Settings)
+{
+	if (Settings.AttenuationShape == EAttenuationShape::Box)
+	{
+		Response->SetObjectField(TEXT("extent"), McpHandlerUtils::VectorToJson(Settings.AttenuationShapeExtents));
+	}
 }
 /** The innerRadius SetAttenuationInnerRadius wrote, read from the axis the shape keeps it on. */
 inline double GetAttenuationInnerRadius(const FBaseAttenuationSettings& Settings)

@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`edit_dynamic_mesh` `create` starts from a static mesh** (`meshPath`): its geometry is copied in, each section as its slot's material id, so an existing asset can be cut, trimmed or edited and baked again.
 - **`system_control` `create_cpp_class`**: a new C++ class in a project module, as the editor's New C++ Class makes it: a header and a .cpp from a parent class (or a plain class), in a subfolder, public or private, then the editor's own compile. It answers with the file paths, the prefixed class name and what the class still needs (a compile, or a build and restart for a project's first module).
 - **`control_actor` `set_folder`** moves placed actors into an outliner folder, or back to the root; `spawn` and `spawn_blueprint` take `folder` and `tags` as batch items do.
+- **Box sound zones sized per axis**: `configure_sound_attenuation` `preset` and `distance` take `extent` {x, y, z}, so a zone can run the length of a hall without reaching as far sideways; `innerRadius` gives a box one size on all three axes.
 
 </details>
 

@@ -11825,6 +11825,30 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true
         },
+        "extent": {
+          "type": "object",
+          "description": "A Box shape's half-size on each axis in cm, {x, y, z}, each above 0: a zone the length of a hall without reaching as far sideways. It replaces the size innerRadius gives a box; another shape is refused.",
+          "properties": {
+            "x": {
+              "type": "number",
+              "description": "Half-size along X, cm."
+            },
+            "y": {
+              "type": "number",
+              "description": "Half-size along Y, cm."
+            },
+            "z": {
+              "type": "number",
+              "description": "Half-size along Z, cm."
+            }
+          },
+          "required": [
+            "x",
+            "y",
+            "z"
+          ],
+          "additionalProperties": false
+        },
         "fade": {
           "type": "string",
           "enum": [
