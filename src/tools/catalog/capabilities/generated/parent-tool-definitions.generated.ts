@@ -5268,7 +5268,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "items": {
             "type": "string"
           },
-          "description": "Save only these assets or levels, e.g. [\"/Game/UI/WBP_Menu\"], and leave every other dirty package as it is; omit to save everything dirty."
+          "description": "Save only these assets or levels, e.g. [\"/Game/UI/WBP_Menu\"], and leave every other dirty package as it is; omit to save everything dirty. A named asset the editor has loaded is written even when it is not marked dirty (a material usage flag the editor set while loading)."
         },
         "blendTime": {
           "type": "number",
@@ -23112,6 +23112,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Maps to cook. Pass these when a map is reached by NAME at runtime (OpenLevel) rather than by reference, or the cooker will not find it."
         },
+        "materialUsage": {
+          "type": "boolean",
+          "description": "Also list the material usage flags the assets' meshes need and their base materials lack (default false): a Nanite static mesh's slots, a skeletal mesh's, and a Blueprint's mesh components (Nanite, instanced, spline or skeletal), as materialUsage [{material, usage, property, unsaved, component, asset}] (a folder: at most 40, with materialUsageCount). The editor sets such a flag only while it draws the mesh outside play, so a mesh that only appears in play draws the default material there and in a cooked game; set property true on the material (inspect set_property) to fix one. unsaved true: the editor set the flag (drawing a preview or loading a mesh sets it) but it is not on disk yet; save that material (control_editor save_all with assetPaths). On UE 5.8 a material instance holds its own flags, so material can name the instance. A missing flag makes its row invalid."
+        },
         "maxFPS": {
           "type": "number",
           "description": "Maximum frames per second."
@@ -23693,7 +23697,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "isValid": {
           "type": "boolean",
-          "description": "True when every path loaded (and, with dataValidation, none was invalid)."
+          "description": "True when every path loaded (and, with dataValidation, none was invalid; with materialUsage, no flag was missing)."
         },
         "jobId": {
           "type": "string",
@@ -23898,7 +23902,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "additionalProperties": true,
                 "x-unreal-reflection-boundary": true
               },
-              "description": "One row per path: path, isValid, kind (asset, directory, missing or invalid), message, assetCount for a folder, and with dataValidation its verdict, errors, warnings or issues."
+              "description": "One row per path: path, isValid, kind (asset, directory, missing or invalid), message, assetCount for a folder, with dataValidation its verdict, errors, warnings or issues, and with materialUsage the missing flags (materialUsage, and materialUsageCount for a folder)."
             },
             {
               "type": "array",
@@ -23910,7 +23914,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "description": "With paths: one entry per path (path, deleted, and errorCode plus error when it was not deleted). The call fails with PARTIAL_DELETE when any path was not deleted."
             }
           ],
-          "description": "One row per path: path, isValid, kind (asset, directory, missing or invalid), message, assetCount for a folder, and with dataValidation its verdict, errors, warnings or issues."
+          "description": "One row per path: path, isValid, kind (asset, directory, missing or invalid), message, assetCount for a folder, with dataValidation its verdict, errors, warnings or issues, and with materialUsage the missing flags (materialUsage, and materialUsageCount for a folder)."
         },
         "returned": {
           "type": "number",

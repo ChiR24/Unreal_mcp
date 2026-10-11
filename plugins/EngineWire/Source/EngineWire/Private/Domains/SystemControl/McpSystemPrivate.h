@@ -4,12 +4,23 @@
 #include "Templates/SharedPointer.h"
 
 class FJsonObject;
+class FJsonValue;
 class FMcpBridgeWebSocket;
 class UEngineWireSubsystem;
 
 namespace McpSystemControlHandlers {
 
 using FSystemControlSocket = TSharedPtr<FMcpBridgeWebSocket>;
+
+// The material usage flags an asset's meshes need and their materials lack: a Nanite static mesh's slots, a
+// skeletal mesh's, and a Blueprint's mesh components (Nanite, instanced, spline or skeletal). Each as {material,
+// usage, property (the flag to set true on the material), unsaved (set in the editor, not on disk), component
+// (Blueprints)}. The editor sets a missing flag only when it draws the mesh outside play, so a mesh only ever spawned
+// in play renders the default material there and in a cooked game. McpSystemMaterialUsage.cpp.
+TArray<TSharedPtr<FJsonValue>> McpMissingMaterialUsage(UObject* Asset);
+// Starts or stops recording the usage flags the editor sets on 5.8 material instances, which the engine's own record
+// of flags awaiting a save leaves out. The subsystem's lifetime; nothing on earlier engines.
+void McpWatchMaterialUsage(bool bWatch);
 
 bool HandleValidateAssets(UEngineWireSubsystem* Self,
                           const FString& RequestId,

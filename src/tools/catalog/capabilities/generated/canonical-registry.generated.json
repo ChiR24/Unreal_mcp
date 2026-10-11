@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "e79f7c0c49b41368",
+  "catalogRevision": "c10bcfe4777f0238",
   "recordCount": 410,
   "records": [
     {
@@ -38836,7 +38836,7 @@
               "items": {
                 "type": "string"
               },
-              "description": "Save only these assets or levels, e.g. [\"/Game/UI/WBP_Menu\"], and leave every other dirty package as it is; omit to save everything dirty."
+              "description": "Save only these assets or levels, e.g. [\"/Game/UI/WBP_Menu\"], and leave every other dirty package as it is; omit to save everything dirty. A named asset the editor has loaded is written even when it is not marked dirty (a material usage flag the editor set while loading)."
             }
           },
           "required": [
@@ -39056,8 +39056,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "c254a97607a428289d1d730d0979401da1e2ec13839a89c594b264371eaacedb",
-        "content": "21e211a5e1b99f4cf2d421434477809f73b35d2ba5eb07e8917b00886db3f26f"
+        "schema": "87a41e8aa358d75918a48115cfc07c6df04f15b3b2d3e3d78c35ea069da76b9a",
+        "content": "c67e7edd64df5f6094390e5dd39131ab553363cab427a3b0af384feb392d3271"
       }
     },
     {
@@ -96456,7 +96456,8 @@
         "summary": "Check that assets load without error, and with dataValidation that they pass the project's and the engine's Data Validation (the editor's Validate Assets): each asset path, or every asset under a folder (recursive by default); returns isValid, per-path results and the checked and invalid counts.",
         "whenToUse": [
           "Asset references must be validated before use.",
-          "Assets must pass Data Validation (the editor's Validate Assets) before they are relied on or shipped."
+          "Assets must pass Data Validation (the editor's Validate Assets) before they are relied on or shipped.",
+          "Before packaging: materialUsage finds the meshes a cooked game would draw with the default material."
         ],
         "whenNotToUse": [
           "A single asset must be imported or created (use manage_asset)."
@@ -96493,6 +96494,10 @@
             "dataValidation": {
               "type": "boolean",
               "description": "Also run Data Validation on every asset that loads (default false): an asset row gains dataValidation (valid, invalid or notValidated, the last when no validator checks that kind of asset) with its errors and warnings, a folder row the count of each verdict and issues (up to 20 assets with errors or warnings). An invalid asset makes its row invalid."
+            },
+            "materialUsage": {
+              "type": "boolean",
+              "description": "Also list the material usage flags the assets' meshes need and their base materials lack (default false): a Nanite static mesh's slots, a skeletal mesh's, and a Blueprint's mesh components (Nanite, instanced, spline or skeletal), as materialUsage [{material, usage, property, unsaved, component, asset}] (a folder: at most 40, with materialUsageCount). The editor sets such a flag only while it draws the mesh outside play, so a mesh that only appears in play draws the default material there and in a cooked game; set property true on the material (inspect set_property) to fix one. unsaved true: the editor set the flag (drawing a preview or loading a mesh sets it) but it is not on disk yet; save that material (control_editor save_all with assetPaths). On UE 5.8 a material instance holds its own flags, so material can name the instance. A missing flag makes its row invalid."
             }
           },
           "required": [
@@ -96519,7 +96524,7 @@
             },
             "isValid": {
               "type": "boolean",
-              "description": "True when every path loaded (and, with dataValidation, none was invalid)."
+              "description": "True when every path loaded (and, with dataValidation, none was invalid; with materialUsage, no flag was missing)."
             },
             "results": {
               "type": "array",
@@ -96528,7 +96533,7 @@
                 "additionalProperties": true,
                 "x-unreal-reflection-boundary": true
               },
-              "description": "One row per path: path, isValid, kind (asset, directory, missing or invalid), message, assetCount for a folder, and with dataValidation its verdict, errors, warnings or issues."
+              "description": "One row per path: path, isValid, kind (asset, directory, missing or invalid), message, assetCount for a folder, with dataValidation its verdict, errors, warnings or issues, and with materialUsage the missing flags (materialUsage, and materialUsageCount for a folder)."
             },
             "checkedCount": {
               "type": "number",
@@ -96602,8 +96607,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "dfcdc2f72c76f5841edf930dd3792f229eea510cb71efcbd2e95f1f0731473ab",
-        "content": "2f0066ffe7e1e53018c5cf6e8c1a2b42dee144ecda7bf273f7881acbd9bcf45a"
+        "schema": "b3577a27f7cf97894a29b41ca170dc4a12a8b0de042cdf73875b4971f9d206fb",
+        "content": "06076d98d26969ac846a312dea1619a036bf3a23c95900cc74b8cb558cb8c5c2"
       }
     },
     {

@@ -255,6 +255,7 @@ void AuditActor(AActor* Actor, const TSet<FString>& Focus, double Tolerance, FPa
 FPartAudit AuditBlueprintParts(UBlueprint* Blueprint, const TSet<FString>& Focus, double Tolerance)
 {
     FPartAudit Audit;
+    const FMcpPreviewMaterialSaver Saver(Blueprint); // declared before the scene, so it runs once the scene is gone
     FPreviewScene Scene;
     if (AActor* Actor = SpawnPreview(Scene, Blueprint, Audit.Error))
     {
@@ -267,6 +268,7 @@ FPartAudit AuditBlueprintParts(UBlueprint* Blueprint, const TSet<FString>& Focus
 FPartAudit AuditBlueprintPartsUsingMesh(UBlueprint* Blueprint, const UStaticMesh* Mesh, double Tolerance)
 {
     FPartAudit Audit;
+    const FMcpPreviewMaterialSaver Saver(Blueprint);
     FPreviewScene Scene;
     AActor* Actor = SpawnPreview(Scene, Blueprint, Audit.Error);
     if (!Actor)

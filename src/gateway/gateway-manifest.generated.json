@@ -4378,7 +4378,7 @@
             "items": {
               "type": "string"
             },
-            "description": "Save only these assets or levels, e.g. [\"/Game/UI/WBP_Menu\"], and leave every other dirty package as it is; omit to save everything dirty."
+            "description": "Save only these assets or levels, e.g. [\"/Game/UI/WBP_Menu\"], and leave every other dirty package as it is; omit to save everything dirty. A named asset the editor has loaded is written even when it is not marked dirty (a material usage flag the editor set while loading)."
           },
           "blendTime": {
             "type": "number",
@@ -17382,6 +17382,7 @@
         "lines",
         "lodBias",
         "maps",
+        "materialUsage",
         "maxFPS",
         "maxTests",
         "megaLights",
@@ -17716,6 +17717,10 @@
               "description": "A /Game map package path."
             },
             "description": "Maps to cook. Pass these when a map is reached by NAME at runtime (OpenLevel) rather than by reference, or the cooker will not find it."
+          },
+          "materialUsage": {
+            "type": "boolean",
+            "description": "Also list the material usage flags the assets' meshes need and their base materials lack (default false): a Nanite static mesh's slots, a skeletal mesh's, and a Blueprint's mesh components (Nanite, instanced, spline or skeletal), as materialUsage [{material, usage, property, unsaved, component, asset}] (a folder: at most 40, with materialUsageCount). The editor sets such a flag only while it draws the mesh outside play, so a mesh that only appears in play draws the default material there and in a cooked game; set property true on the material (inspect set_property) to fix one. unsaved true: the editor set the flag (drawing a preview or loading a mesh sets it) but it is not on disk yet; save that material (control_editor save_all with assetPaths). On UE 5.8 a material instance holds its own flags, so material can name the instance. A missing flag makes its row invalid."
           },
           "maxFPS": {
             "type": "number",

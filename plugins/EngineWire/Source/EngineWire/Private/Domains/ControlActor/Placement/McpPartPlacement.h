@@ -36,6 +36,21 @@ struct FPartAudit
     FString Error;
 };
 
+// Drawing a preview instance, or compiling the Blueprint, sets the usage flags its materials need (Nanite,
+// skeletal, instanced), and while a mesh is still loading or building the editor cannot even mark them dirty: a
+// Blueprint saved without them left the flag off on disk, so a part only spawned in play drew the default material
+// there and in a cooked game. On scope exit, saves the project materials of the Blueprint's parts whose needed flag
+// is set but not on disk.
+class FMcpPreviewMaterialSaver
+{
+public:
+    explicit FMcpPreviewMaterialSaver(UBlueprint* InBlueprint) : Blueprint(InBlueprint) {}
+    ~FMcpPreviewMaterialSaver();
+
+private:
+    TWeakObjectPtr<UBlueprint> Blueprint;
+};
+
 // Measures a temporary instance of the Blueprint's class in a preview world, so the level is not
 // touched. Focus (component names) keeps only issues involving one of them; empty keeps all.
 // A part tagged mcp.placement.ok (component tag) is a deliberate embed and is left out.

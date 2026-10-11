@@ -243,6 +243,12 @@ bool UEngineWireSubsystem::HandleControlEditorSaveAll(
     ProcessPackage(Package);
   }
 
+  // A named package the editor holds but could not mark dirty (a material usage flag set while a mesh was still
+  // loading) is written too: its file lacks what the editor shows.
+  for (const FString& Name : OnlyPackages) {
+    ProcessPackage(FindPackage(nullptr, *Name));
+  }
+
   auto MakeStringArray = [](const TArray<FString>& Values) {
     TArray<TSharedPtr<FJsonValue>> Result;
     for (const FString& Value : Values) {

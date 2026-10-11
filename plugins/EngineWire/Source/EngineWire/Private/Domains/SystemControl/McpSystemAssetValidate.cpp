@@ -83,6 +83,7 @@ bool HandleValidateAssets(UEngineWireSubsystem* Self,
   UEditorValidatorSubsystem* Validator = GetJsonBoolField(Payload, TEXT("dataValidation")) && GEditor
       ? GEditor->GetEditorSubsystem<UEditorValidatorSubsystem>()
       : nullptr;
+  const bool bUsage = GetJsonBoolField(Payload, TEXT("materialUsage"));
   TArray<TSharedPtr<FJsonValue>> Results;
   int32 InvalidCount = 0;
 
@@ -129,6 +130,12 @@ bool HandleValidateAssets(UEngineWireSubsystem* Self,
       if (Asset && Validator && McpRunDataValidation(Validator, Asset, Row) == EDataValidationResult::Invalid) {
         FailRow(Row);
       }
+      if (const TArray<TSharedPtr<FJsonValue>> Missing = bUsage && Asset ? McpMissingMaterialUsage(Asset)
+                                                                          : TArray<TSharedPtr<FJsonValue>>();
+          Missing.Num() > 0) {
+        Row->SetArrayField(TEXT("materialUsage"), Missing);
+        FailRow(Row);
+      }
       continue;
     }
 
@@ -139,9 +146,19 @@ bool HandleValidateAssets(UEngineWireSubsystem* Self,
           UEditorAssetLibrary::ListAssets(SafePath, bRecursive, false);
       TArray<FString> Failed;
       TArray<TSharedPtr<FJsonValue>> Issues; // the assets the validators said something about, at most 20
+      TArray<TSharedPtr<FJsonValue>> Usage;  // missing material usage flags, at most 40, each with its asset
+      int32 UsageCount = 0;
       int32 Counts[3] = {0, 0, 0};          // invalid, valid, notValidated (EDataValidationResult order)
       for (const FString& AssetPath : Assets) {
         UObject* Asset = McpLoadAsset(AssetPath);
+        for (const TSharedPtr<FJsonValue>& Missing : bUsage && Asset ? McpMissingMaterialUsage(Asset)
+                                                                     : TArray<TSharedPtr<FJsonValue>>()) {
+          Missing->AsObject()->SetStringField(TEXT("asset"), AssetPath);
+          UsageCount += 1;
+          if (Usage.Num() < 40) {
+            Usage.Add(Missing);
+          }
+        }
         if (!Asset) {
           Failed.Add(AssetPath);
         } else if (Validator) {
@@ -173,6 +190,13 @@ bool HandleValidateAssets(UEngineWireSubsystem* Self,
           Row->SetArrayField(TEXT("issues"), Issues);
         }
         if (Counts[0] > 0) {
+          FailRow(Row);
+        }
+      }
+      if (bUsage) {
+        Row->SetArrayField(TEXT("materialUsage"), Usage);
+        Row->SetNumberField(TEXT("materialUsageCount"), UsageCount);
+        if (UsageCount > 0) {
           FailRow(Row);
         }
       }

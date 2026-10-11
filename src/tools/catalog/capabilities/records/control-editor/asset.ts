@@ -125,7 +125,7 @@ export const ASSET_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: {
       // Saving everything also wrote out unrelated work someone had open, and the
       // contract pointed at a per-asset save that did not exist.
-      assetPaths: { type: 'array', items: { type: 'string' }, description: 'Save only these assets or levels, e.g. ["/Game/UI/WBP_Menu"], and leave every other dirty package as it is; omit to save everything dirty.' },
+      assetPaths: { type: 'array', items: { type: 'string' }, description: 'Save only these assets or levels, e.g. ["/Game/UI/WBP_Menu"], and leave every other dirty package as it is; omit to save everything dirty. A named asset the editor has loaded is written even when it is not marked dirty (a material usage flag the editor set while loading).' },
     },
     required: [],
     outputProps: {

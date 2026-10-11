@@ -582,7 +582,7 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
     family: 'project',
     topics: ['check they load', 'broken', 'fail to load', 'content folder', 'find broken assets', 'verify assets', 'data validation', 'run validators'],
     summary: 'Check that assets load without error, and with dataValidation that they pass the project\'s and the engine\'s Data Validation (the editor\'s Validate Assets): each asset path, or every asset under a folder (recursive by default); returns isValid, per-path results and the checked and invalid counts.',
-    whenToUse: ['Asset references must be validated before use.', 'Assets must pass Data Validation (the editor\'s Validate Assets) before they are relied on or shipped.'],
+    whenToUse: ['Asset references must be validated before use.', 'Assets must pass Data Validation (the editor\'s Validate Assets) before they are relied on or shipped.', 'Before packaging: materialUsage finds the meshes a cooked game would draw with the default material.'],
     whenNotToUse: ['A single asset must be imported or created (use manage_asset).'],
     inputProps: {
       paths: { type: 'array', items: { type: 'string' }, description: 'Asset paths to validate.' },
@@ -590,13 +590,14 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
       path: { type: 'string', description: 'Another single asset or folder path; validated alongside assetPath when both are given.' },
       recursive: { type: 'boolean', description: 'For a folder path, include its subfolders (default true).' },
       dataValidation: { type: 'boolean', description: 'Also run Data Validation on every asset that loads (default false): an asset row gains dataValidation (valid, invalid or notValidated, the last when no validator checks that kind of asset) with its errors and warnings, a folder row the count of each verdict and issues (up to 20 assets with errors or warnings). An invalid asset makes its row invalid.' },
+      materialUsage: { type: 'boolean', description: 'Also list the material usage flags the assets\' meshes need and their base materials lack (default false): a Nanite static mesh\'s slots, a skeletal mesh\'s, and a Blueprint\'s mesh components (Nanite, instanced, spline or skeletal), as materialUsage [{material, usage, property, unsaved, component, asset}] (a folder: at most 40, with materialUsageCount). The editor sets such a flag only while it draws the mesh outside play, so a mesh that only appears in play draws the default material there and in a cooked game; set property true on the material (inspect set_property) to fix one. unsaved true: the editor set the flag (drawing a preview or loading a mesh sets it) but it is not on disk yet; save that material (control_editor save_all with assetPaths). On UE 5.8 a material instance holds its own flags, so material can name the instance. A missing flag makes its row invalid.' },
     },
     required: [],
     outputProps: {
-      isValid: { type: 'boolean', description: 'True when every path loaded (and, with dataValidation, none was invalid).' },
+      isValid: { type: 'boolean', description: 'True when every path loaded (and, with dataValidation, none was invalid; with materialUsage, no flag was missing).' },
       results: {
         type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
-        description: 'One row per path: path, isValid, kind (asset, directory, missing or invalid), message, assetCount for a folder, and with dataValidation its verdict, errors, warnings or issues.',
+        description: 'One row per path: path, isValid, kind (asset, directory, missing or invalid), message, assetCount for a folder, with dataValidation its verdict, errors, warnings or issues, and with materialUsage the missing flags (materialUsage, and materialUsageCount for a folder).',
       },
       checkedCount: { type: 'number', description: 'Paths checked.' },
       invalidCount: { type: 'number', description: 'Paths that failed.' },

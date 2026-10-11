@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`control_actor` `set_folder`** moves placed actors into an outliner folder, or back to the root; `spawn` and `spawn_blueprint` take `folder` and `tags` as batch items do.
 - **Box sound zones sized per axis**: `configure_sound_attenuation` `preset` and `distance` take `extent` {x, y, z}, so a zone can run the length of a hall without reaching as far sideways; `innerRadius` gives a box one size on all three axes.
 - **`inspect` `describe_view` takes `actors`**: only the rows of the actors named, and for each one that is not seen, why: outside the frame, at its edge (`inFrame`), or hidden, naming what is in front of it (`hiddenBy`, by share; the ground under it and what stands behind it are left out). Names that match no actor are listed under `notFound`.
+- **`validate_assets` `materialUsage`**: the material usage flags an asset's meshes need and their materials lack (a Nanite mesh's slots, a skeletal mesh's, and a Blueprint's Nanite, instanced, spline or skeletal parts), each with `unsaved` when the editor set the flag but it is not on disk yet. A mesh only ever spawned in play draws the default material there and in a cooked game, with nothing but a log warning. On UE 5.8 a material instance holds its own flags and is named itself.
 
 </details>
 
@@ -56,6 +57,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **A Math Expression that compares an input name with a true/false value is refused before it is applied**, saying the name is a number input; an expression that does not parse says that every input is a number.
 - **`create_primitive` `sdf` refuses a size its shape type does not read**, naming the sizes it does: `extent` on a cylinder was dropped and the cylinder came out at the default radius.
 - **A mesh component's `StaticMesh` set as a property** (`edit_scs` `set_property` or an operation's `properties`, a new Blueprint's `properties`) goes through the engine's mesh setter, and so do the placed copies `edit_scs` updates: the raw write tripped an engine ensure on the component's next mesh read.
+- **`edit_scs` saves the project materials its placement check gave a usage flag.** Drawing a Nanite part set the flag in memory only (while the mesh was still loading, without even marking the material unsaved), so the Blueprint saved cleanly and a cooked game drew the part with the default material.
+- **`save_all` with `assetPaths` writes a named asset the editor holds even when it is not marked dirty**: it answered "Saved 0" for a material whose usage flag the editor set while loading.
 
 </details>
 

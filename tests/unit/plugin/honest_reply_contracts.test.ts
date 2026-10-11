@@ -1760,6 +1760,12 @@ describe('save_all names the packages it left unsaved', () => {
     expect(source).toMatch(/LeftDirty\+\+;\s*LeftDirtyPackages\.Add\(Package->GetName\(\)\);/u);
     expect(source).toContain('Resp->SetArrayField(TEXT("leftDirtyPackages"), MakeStringArray(LeftDirtyPackages));');
   });
+
+  // A material given a usage flag while a mesh was loading was never marked dirty: assetPaths naming it saved 0.
+  it('writes a named package the editor holds even when it is not marked dirty', () => {
+    const source = code('ControlEditor', 'McpEditorAssets.cpp');
+    expect(source).toMatch(/for \(const FString& Name : OnlyPackages\) \{\s*ProcessPackage\(FindPackage\(nullptr, \*Name\)\);/u);
+  });
 });
 
 // raycast_world ignoreActors refused PlayerPawn, a name control_actor and set_property take while PIE runs.
@@ -2146,6 +2152,51 @@ describe('a Niagara advance or activate says what the system did', () => {
     expect(lifecycle).toMatch(/if \(GetJsonBoolField\(Context\.Payload, TEXT\("reset"\)\)\)\s*\{\s*NiagaraComponent->ResetSystem\(\);/u);
     expect(lifecycle).toContain('Response->SetBoolField(TEXT("active"), bActive);');
     expect(lifecycle).not.toContain('SetBoolField(TEXT("active"), true)');
+  });
+});
+
+// A mesh only spawned in play drew the default material there and in a cooked game, with only a log warning: the
+// editor sets a material's usage flag while it draws the mesh outside play.
+describe('validate_assets materialUsage lists the usage flags a cooked game would miss', () => {
+  it('checks Nanite, skeletal, instanced and spline uses on meshes and Blueprint components, and fails the row', () => {
+    const usage = code('SystemControl', 'McpSystemMaterialUsage.cpp');
+    expect(usage).toContain('const FMcpUsageNeed McpNaniteNeed{MATUSAGE_Nanite, TEXT("Nanite"), TEXT("bUsedWithNanite")};');
+    expect(usage).toContain('Base->MaterialDomain != MD_Surface || Base->bUsedAsSpecialEngineMaterial)');
+    // A placement preview set bUsedWithNanite in memory and left the material unsaved: the check passed and the
+    // cooked game would still have missed the flag.
+    expect(usage, 'a flag set but unsaved is reported').toContain(': McpUsagePending(Owner, Need.Usage) ? static_cast<UObject *>(Owner)');
+    // A mesh's asynchronous build finishing set the flag while the editor could not mark the material dirty: nothing
+    // was unsaved and the file still lacked it. The engine keeps its own record until the material is saved.
+    expect(usage, 'the engine record of flags awaiting a save').toContain('return Material->IsUsageFlagDirty(Usage);');
+    expect(usage, 'a 5.8 instance owns its flags').toContain('UMaterialInterface *Owner = Interface->IsA<UMaterialInstanceDynamic>() ? Base : Interface;');
+    // ...which 5.8 sets on an instance outside that record, with only a log line.
+    expect(usage).toContain('const TCHAR *Marker = TEXT(" needed to set usage flag ");');
+    expect(usage, 'kept until the file is written').toContain('IFileManager::Get().GetTimeStamp(*FPaths::ConvertRelativePathToFull(File)) < Given;');
+    expect(usage, 'whole seconds, as a file time is').toContain('FDateTime(Now.GetYear(), Now.GetMonth(), Now.GetDay(), Now.GetHour(), Now.GetMinute(), Now.GetSecond())');
+    const lifecycle = code('..', 'Core', 'Subsystem', 'EngineWireSubsystemLifecycle.cpp');
+    expect(lifecycle).toContain('McpSystemControlHandlers::McpWatchMaterialUsage(true);');
+    expect(lifecycle).toContain('McpSystemControlHandlers::McpWatchMaterialUsage(false);');
+    expect(usage, 'the parent\'s native components and the construction script\'s').toContain('TInlineComponentArray<UPrimitiveComponent *> Parts(Defaults);');
+    expect(usage).toContain('Cast<UPrimitiveComponent>(Node->ComponentTemplate)');
+    const validate = code('SystemControl', 'McpSystemAssetValidate.cpp');
+    expect(validate).toContain('const bool bUsage = GetJsonBoolField(Payload, TEXT("materialUsage"));');
+    expect(validate).toMatch(/Row->SetArrayField\(TEXT\("materialUsage"\), Missing\);\s*FailRow\(Row\);/u);
+    expect(validate).toContain('Row->SetNumberField(TEXT("materialUsageCount"), UsageCount);');
+  });
+
+  // The edit_scs placement preview drew a Nanite part, which set the flag and left the material dirty (or, while the
+  // mesh was still building, not even dirty); saving only the Blueprint left the flag off on disk.
+  it('saves the project materials a placement preview gave a flag, once the preview world is gone', () => {
+    const placement = code('ControlActor', 'Placement', 'McpPartPlacement.cpp');
+    for (const audit of ['FPartAudit AuditBlueprintParts(', 'FPartAudit AuditBlueprintPartsUsingMesh(']) {
+      const body = placement.slice(placement.indexOf(audit));
+      expect(body.indexOf('const FMcpPreviewMaterialSaver Saver(Blueprint);'), audit).toBeGreaterThan(-1);
+      expect(body.indexOf('const FMcpPreviewMaterialSaver Saver(Blueprint);'), audit).toBeLessThan(body.indexOf('FPreviewScene Scene;'));
+    }
+    const saver = code('ControlActor', 'Placement', 'McpPlacementMaterials.cpp');
+    // The compile can set the flag before the preview: the saver asks which needed flags are set but unsaved.
+    expect(saver).toContain('McpSystemControlHandlers::McpMissingMaterialUsage(Blueprint.Get())');
+    expect(saver, 'project content only').toContain('Material->GetOutermost()->GetName().StartsWith(TEXT("/Game/")) && McpSafeAssetSave(Material)');
   });
 });
 
