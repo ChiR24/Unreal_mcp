@@ -115,13 +115,14 @@ TSharedPtr<FJsonObject> McpMotionResult(const FMcpMotionRun &Run, const FString 
 }
 
 // One tick of a run: sample when due, and say why it ended ("" = keep going).
-// A PIE death that reloads the level destroys the actor, and stopping PIE
-// destroys the world; both end the run with the samples taken so far, so the
-// last sample is where the actor was when it happened.
+// Stopping PIE ends the world, and so does a death that reloads the level, but
+// PIE then runs on in the new one: that read "worldEnded" too, as if play had
+// stopped. Every end keeps the samples taken so far, so the last sample is
+// where the actor was when it happened.
 FString McpAdvanceMotionRun(FMcpMotionRun &Run) {
   UWorld *World = Run.World.Get();
   if (!World) {
-    return TEXT("worldEnded");
+    return GEditor && GEditor->PlayWorld ? TEXT("levelChanged") : TEXT("worldEnded");
   }
   AActor *Actor = Run.Actor.Get();
   if (!IsValid(Actor) || Actor->IsActorBeingDestroyed()) {

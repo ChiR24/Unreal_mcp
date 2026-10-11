@@ -206,6 +206,11 @@ describe('sample_motion runs at full rate or says it did not', () => {
     expect(source).toContain('Run->StartReal = Run->LastAdvanceReal = FPlatformTime::Seconds();');
     expect(source).toContain('Ended == TEXT("gamePaused")         ? McpGamePausedWarning(Run->World.Get())');
   });
+
+  // A death that reloaded the level ended the run as "worldEnded", the answer for stopped play, while PIE ran on.
+  it('tells a level the game loaded from play that stopped', () => {
+    expect(source).toContain('return GEditor && GEditor->PlayWorld ? TEXT("levelChanged") : TEXT("worldEnded");');
+  });
 });
 
 // "Bug1" found nothing among Bug_01..Bug_10 and the empty list read as "there are no bugs".

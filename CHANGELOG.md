@@ -62,6 +62,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **A link the engine makes through a conversion node reads `connected: true`** (`connect_pins` and graph batches): an int wired into a float pin answered `connected: false` beside `conversionInserted`, as if the link had failed.
 - **`get_stats` says when the editor window is minimized** (`windowMinimized`, with a warning): nothing is drawn then, so its render and GPU times were stale (the same on every read, the GPU time up to 750 ms).
 - **`resume` says when the game paused itself**: it answered "PIE session resumed" while the game's own pause (an intro card, a pause menu) held the world still. It now fails with `GAME_PAUSED`, and `unpauseGame` lifts that pause too; `play` warns when the editor window is minimized, which freezes such a card.
+- **A motion read ended by a level the game loaded says `levelChanged`**: a death that reloaded the level ended it as `worldEnded`, the answer for play that stopped, while PIE ran on.
 
 </details>
 
