@@ -301,7 +301,7 @@ export const GEOMETRY_OPTIMIZE_RECORDS: readonly CapabilityRecordSource[] = [
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'get_mesh_info', plugins: PLUGIN,
     topics: ['vertex count', 'triangle count', 'has uvs and normals', 'how many vertices does a mesh have'],
-    family: F, summary: 'Read a procedural DynamicMesh actor: vertex count and triangle count, and whether it has normals, UV sets, vertex colors and polygroups.', whenToUse: ['Mesh stats must be inspected.'], whenNotToUse: ['The mesh must be modified.'],
+    family: F, summary: 'Read a procedural DynamicMesh actor: vertex count and triangle count, and whether it has normals, UV sets, vertex colors and polygroups.', whenToUse: ['Mesh stats must be inspected.'], whenNotToUse: ['The mesh must be modified.', 'A static mesh asset\'s triangles, size or material slots are needed (use inspect inspect_object objectKind mesh).'],
     inputProps: { actorName: P.actorName, targetActor: P.targetActor }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'read', costLatency: 'instant', costResources: 'low',
     exampleInput: { action: 'get_mesh_info', targetActor: 'DM_A' }, exampleOutput: { success: true, message: 'Mesh info', vertexCount: 1200, triangleCount: 2400 },
     outputProps: {

@@ -98,7 +98,7 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'inspect', action: 'get_mesh_details', dispatchAction: 'inspect_object', domain: D, family: 'object',
     summary: 'Inspect a static or skeletal mesh asset: size, bounds, pivot, LODs, and every material slot with the triangles and bounds of the geometry it covers. Any other object is refused with TYPE_MISMATCH.',
-    topics: ['material slot bounds', 'which slot is which part'],
+    topics: ['material slot bounds', 'which slot is which part', 'mesh size', 'mesh bounds', 'static mesh size', 'static mesh triangles'],
     whenToUse: ['A mesh asset\'s details must be read.', 'It is not known which material slot holds which part of a mesh (legs, hull, claws): each slot lists the triangles and mesh-space bounds of its LOD0 geometry.'],
     whenNotToUse: ['Prefer the canonical inspect_object verb.'],
     inputProps: { objectPath: P.objectPath, actorName: P.actorName, name: P.name, detailed: P.detailed, propertyNames: P.propertyNames },

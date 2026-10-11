@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "1bd13ea76bd7489c",
+  "catalogRevision": "f306c57789a2e1e9",
   "recordCount": 410,
   "records": [
     {
@@ -44763,7 +44763,9 @@
           "dump object",
           "all properties",
           "material slot bounds",
-          "which slot is which part"
+          "which slot is which part",
+          "static mesh size",
+          "static mesh triangles"
         ],
         "summary": "Deep-inspect an actor or asset, or read a typed detail view of an actor, level, material, texture or mesh (its size, bounds, pivot, LODs and material slots, each with the triangles and bounds of the geometry it covers).",
         "whenToUse": [
@@ -45072,7 +45074,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "89424d46990a7df4469a65d88b2fd3bb11ab44cfd0cfe7325357c17fe7a1857b",
-        "content": "054d6bc47f90e2d69100eaacfabe5adbf3373e50e26aac5457d49e706bb7ce39"
+        "content": "7c6ec45db12400af4dc315940cc0a3911f0c15164b200dc2c1a8ca6d6dc99990"
       }
     },
     {
@@ -65567,7 +65569,8 @@
           "Mesh stats must be inspected."
         ],
         "whenNotToUse": [
-          "The mesh must be modified."
+          "The mesh must be modified.",
+          "A static mesh asset's triangles, size or material slots are needed (use inspect inspect_object objectKind mesh)."
         ]
       },
       "schemas": {
@@ -65674,7 +65677,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "9738f83d1bce302b716d4e63a228619ba0e9df32abf70cd4914cdae35813d180",
-        "content": "1ba47642afd85c44a7a1ba80d69a5a699decb1121ba7e8e09f3b5fa0d14221ef"
+        "content": "834260748c7e3a74c3b3b32edbf6a9ddda492d9eb0c771814842522555dac16f"
       }
     },
     {
