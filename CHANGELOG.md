@@ -33,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`process_asset` `mesh_materials` takes `assetPaths`**: one slot-name map on every mesh of an imported pack in a single call, passing over a slot a mesh lacks; an entry that no mesh has fails the call. A 32-mesh Fab pack took a call and a consent per mesh.
 - **Rows and grids from one spawn batch item**: `repeat` ({count, offset, rows, rowOffset}) places the item's copies stepped from its location, named `_1`, `_2`, ...; a batch places up to 1000 actors once unrolled. A row of racks was one hand-written item per actor.
 - **Spawn batch items take `properties`**, set on the spawned actor's root component (or `componentName`'s) as `edit_component` sets them, so a row of lights gets its colour and intensity in the same call.
+- **Spawns and moves name the faces they leave flickering**: `spawn`, `spawn_blueprint`, `spawn_batch` and `set_transform` list `coplanarFaces` (each face sharing a plane with another actor's and pointing the same way, with its direction and overlap) and say so in `placementWarning`. A room whose walls ran up to the top of its ceiling flickered from above while every spawn and move that built it answered clean; only `audit_placement` looked.
 - **A game screenshot says the field of view the frame shows** (`horizontalFov`, `verticalFov`): `activeCameraFov` is the camera's setting, which holds only at the camera's own aspect ratio, so a wider viewport that keeps the vertical angle shows more across than it says.
 
 </details>

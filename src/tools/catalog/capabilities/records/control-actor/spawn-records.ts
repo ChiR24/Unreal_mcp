@@ -5,7 +5,7 @@
 import type { CapabilityRecordSource } from '../../model.js';
 import { ANY_EDITOR_STATE, buildCoreRecord } from '../core/builder.js';
 import { bool, num, str } from '../shared/schema-props.js';
-import { DOMAIN, P } from './properties.js';
+import { DOMAIN, P, PLACEMENT_FACTS } from './properties.js';
 
 const FAMILY_SPAWN = 'spawn';
 const FAMILY_LIFECYCLE = 'lifecycle';
@@ -16,27 +16,6 @@ const SPAWN_UNDO = {
   additionalProperties: true,
   'x-unreal-reflection-boundary': true,
   description: 'Whether editor undo takes the spawn back: {undoable: true, transactionScope: "Spawn Actors"} (control_editor undo removes every actor the call made), or {undoable: false, reasonCode, reason}.',
-} as const;
-
-// Where the actor ended up: the placement check set_transform runs, so a mesh whose pivot is its bounds centre does not
-// sit half under the floor behind a bare success. Each fact is present only when the check could measure it.
-const SPAWN_PLACEMENT = {
-  groundZ: num('Z of the solid surface under the actor; absent when nothing is below it.'),
-  groundClearance: num('How far the bottom of the actor\'s bounds sits above that surface; negative means it is sunk into it.'),
-  placementWarning: str('Present when the placement looks wrong: it intersects other actors, is sunk below the surface under it (the bottom of its bounds is under it, wherever its pivot is; suggestedLocation rests it), floats more than 50 units above it, or has nothing below it (an actor held up from the side is mounted, never floating: see mountedOn). A water body is a surface, not a solid: an actor partly under water (a buoy, a hull, a wading pawn) is neither intersecting nor sunk, and groundZ is the water level. Tag the actor mcp.placement.ok when that is deliberate and it is never reported.'),
-  mountedOn: str('The actor this one hangs on from the side (a window band flush on a hall, an awning on a facade): its bounds touch or overlap that actor\'s vertical face, so it is held up and is not reported floating or without a surface below. Present only then.'),
-  overlappingActors: {
-    type: 'array',
-    items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
-    'x-unreal-reflection-boundary': true,
-    description: 'The actors it intersects (up to 8): actorName, actorClass, penetrationDepth.',
-  },
-  suggestedLocation: {
-    type: 'object',
-    additionalProperties: true,
-    'x-unreal-reflection-boundary': true,
-    description: 'The actor location (x, y, z) that rests the actor on the surface under it: its own location raised by the depth it is sunk, whatever its pivot. Present only when it is sunk.',
-  },
 } as const;
 
 // Outliner folder and actor tags, as a spawn_batch item takes them; a single spawn refused folder.
@@ -77,7 +56,7 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
     required: [],
     // The handler places a mesh actor for a bare meshPath; the schema refused that call before it got there.
     requiredOneOf: ['classPath', 'actorClass', 'meshPath'],
-    outputProps: { name: P.actorName, undo: SPAWN_UNDO, ...SPAWN_PLACEMENT },
+    outputProps: { name: P.actorName, undo: SPAWN_UNDO, ...PLACEMENT_FACTS },
     outputRequired: [],
     effect: 'write',
     costLatency: 'interactive',
@@ -124,7 +103,7 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
     // classPath/actorClass, so a bare spawn is refused by the schema instead
     // of by the handler.
     requiredOneOf: ['blueprintPath'],
-    outputProps: { name: P.actorName, undo: SPAWN_UNDO, ...SPAWN_PLACEMENT },
+    outputProps: { name: P.actorName, undo: SPAWN_UNDO, ...PLACEMENT_FACTS },
     outputRequired: [],
     effect: 'write',
     costLatency: 'interactive',
@@ -191,7 +170,7 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
     outputProps: {
       spawned: num('Actors spawned.'),
       failed: num('Items that failed to spawn or to take their material, variables or properties.'),
-      placementWarnings: num('Items that spawned but look misplaced (sunk into the surface under them, floating, intersecting other actors or with nothing below); each carries its placementWarning in results. A warning is not a failure: it changes neither failed nor success.'),
+      placementWarnings: num('Items that spawned but look misplaced (sunk into the surface under them, floating, intersecting other actors, with nothing below, or with a face flickering against another actor\'s in the same plane); each carries its placementWarning in results. A warning is not a failure: it changes neither failed nor success.'),
       results: {
         type: 'array',
         items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
@@ -199,7 +178,7 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
         description: 'Per item (only the failed ones and those with a placementWarning or ignoredKeys under report: failures): '
           + 'index (its place in the batch once repeats are unrolled), success, name, path, error, errorCode, variablesSet, variablesError, materialApplied, materialError, propertiesError, '
           + 'ignoredKeys (the item\'s keys no spawn reads, such as a "label" meant as actorName), and the placement '
-          + 'facts set_transform reports (groundZ, groundClearance, placementWarning, overlappingActors, suggestedLocation), '
+          + 'facts set_transform reports (groundZ, groundClearance, placementWarning, overlappingActors, coplanarFaces, suggestedLocation), '
           + 'measured after the item took its tags, variables and material, so an item tagged mcp.placement.ok is never '
           + 'reported. name is the label the item asked for, or the unique actor name when it gave no actorName.',
       },

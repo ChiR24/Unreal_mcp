@@ -312,7 +312,7 @@ bool UEngineWireSubsystem::HandleControlActorSpawn(
   }
 
 	McpHandlerUtils::AddVerification(Data, Spawned);
-	McpDescribeSpawnPlacement(RequestId, Spawned, Data);
+	McpDescribeActorPlacement(RequestId, Spawned, Data);
 
 	SendAutomationResponse(Socket, RequestId, true, TEXT("Actor spawned"), Data);
   return true;

@@ -60,4 +60,65 @@ TArray<FMcpCoplanarReport> ReportCoplanarFaces(UWorld* World, const FString& Nam
     Reports.Sort([](const FMcpCoplanarReport& A, const FMcpCoplanarReport& B) { return A.Severity > B.Severity; });
     return Reports;
 }
+
+int32 AddCoplanarToRows(const TMap<AActor*, TSharedPtr<FJsonObject>>& Rows)
+{
+    int32 Warned = 0;
+    // The actors one call placed all stand in one world.
+    UWorld* World = Rows.Num() > 0 ? Rows.CreateConstIterator().Key()->GetWorld() : nullptr;
+    if (!World)
+    {
+        return 0;
+    }
+    for (const FMcpCoplanarHit& Hit : FindCoplanarFaces(World, FString()))
+    {
+        for (int32 Side = 0; Side < 2; ++Side)
+        {
+            AActor* Self = Side == 0 ? Hit.Actor : Hit.OtherActor;
+            AActor* Other = Side == 0 ? Hit.OtherActor : Hit.Actor;
+            const TSharedPtr<FJsonObject>* Row = Rows.Find(Self);
+            if (!Row || (Side == 1 && Self == Other))
+            {
+                continue;
+            }
+            const FString Direction = DescribeDirection(Hit.Normal); // both faces point this way
+            TSharedPtr<FJsonObject> Face = MakeShared<FJsonObject>();
+            Face->SetStringField(TEXT("direction"), Direction);
+            Face->SetStringField(TEXT("component"), Side == 0 ? Hit.Component : Hit.OtherComponent);
+            Face->SetStringField(TEXT("otherActor"), McpActorRef(Other));
+            Face->SetStringField(TEXT("otherComponent"), Side == 0 ? Hit.OtherComponent : Hit.Component);
+            Face->SetNumberField(TEXT("overlapU"), FMath::RoundToDouble(Hit.OverlapU));
+            Face->SetNumberField(TEXT("overlapV"), FMath::RoundToDouble(Hit.OverlapV));
+            TArray<TSharedPtr<FJsonValue>> Faces;
+            const TArray<TSharedPtr<FJsonValue>>* Existing = nullptr;
+            if ((*Row)->TryGetArrayField(TEXT("coplanarFaces"), Existing) && Existing)
+            {
+                Faces = *Existing;
+            }
+            Faces.Add(MakeShared<FJsonValueObject>(Face));
+            (*Row)->SetArrayField(TEXT("coplanarFaces"), Faces);
+            if (Faces.Num() > 1)
+            {
+                continue; // the warning names the largest pair; coplanarFaces lists the rest
+            }
+            const FString Note = FString::Printf(
+                TEXT("has a face pointing %s in the same plane as '%s', overlapping %.0f x %.0f units, which flickers "
+                     "there (z-fighting): move one about 2 units apart"),
+                *Direction, *McpActorRef(Other), Hit.OverlapU, Hit.OverlapV);
+            FString Warning;
+            if ((*Row)->TryGetStringField(TEXT("placementWarning"), Warning) && !Warning.IsEmpty())
+            {
+                Warning.RemoveFromEnd(TEXT("."));
+                Warning += TEXT("; ") + Note + TEXT(".");
+            }
+            else
+            {
+                Warning = FString::Printf(TEXT("'%s' %s."), *McpActorRef(Self), *Note);
+                ++Warned;
+            }
+            (*Row)->SetStringField(TEXT("placementWarning"), Warning);
+        }
+    }
+    return Warned;
+}
 } // namespace McpCoplanar

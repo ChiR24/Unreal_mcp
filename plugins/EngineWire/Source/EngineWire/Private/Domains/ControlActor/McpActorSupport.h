@@ -10,6 +10,7 @@
 #include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Core/Requests/McpResponseCaptureRegistry.h"
+#include "Domains/ControlActor/Placement/McpCoplanarFaces.h"
 #include "Foundation/McpScopedEditorTransaction.h"
 #include "Misc/PackageName.h"
 #include "Misc/Paths.h"
@@ -246,10 +247,14 @@ bool McpPlacementAccepted(const AActor *Actor);
 // the placement is judged, so a tag of mcp.placement.ok counts.
 void McpApplySpawnOrganisation(AActor *Actor, const TSharedPtr<FJsonObject> &Payload);
 
-// A spawn answers where the actor ended up, as set_transform does. A spawn run as an item of spawn_batch (captured) leaves
-// it to the batch: it checks after it has tagged the actor (mcp.placement.ok), and the check walks every actor in the level.
-inline void McpDescribeSpawnPlacement(const FString &RequestId, AActor *Spawned, const TSharedPtr<FJsonObject> &Data) {
+// A spawn or a move answers where the actor ended up, and which faces of it share a plane with another (z-fighting). Run
+// as an item of spawn_batch or of set_transform's actors (captured), it leaves both to the batch, which checks once the
+// whole layout stands (a spawn after tagging the actor mcp.placement.ok): each check walks every actor in the level.
+inline void McpDescribeActorPlacement(const FString &RequestId, AActor *Actor, const TSharedPtr<FJsonObject> &Data) {
   if (!FMcpResponseCaptureRegistry::Get().IsCapturing(RequestId)) {
-    McpPlacement::DescribePlacement(Spawned, Data);
+    McpPlacement::DescribePlacement(Actor, Data);
+    TMap<AActor *, TSharedPtr<FJsonObject>> Row;
+    Row.Add(Actor, Data);
+    McpCoplanar::AddCoplanarToRows(Row);
   }
 }

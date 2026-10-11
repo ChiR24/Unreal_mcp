@@ -156,7 +156,7 @@ describe('handlers answer what they did', () => {
       const source = code('ControlActor', file);
       const organise = source.indexOf('McpApplySpawnOrganisation(Spawned, Payload);');
       expect(organise, file).toBeGreaterThan(-1);
-      expect(organise, file).toBeLessThan(source.indexOf('McpDescribeSpawnPlacement(RequestId, Spawned,'));
+      expect(organise, file).toBeLessThan(source.indexOf('McpDescribeActorPlacement(RequestId, Spawned,'));
     }
     expect(code('ControlActor', 'McpActorSpawnBatch.cpp')).toContain('void McpApplySpawnOrganisation(AActor *Actor, const TSharedPtr<FJsonObject> &Payload) {');
     const tags = code('ControlActor', 'McpActorTags.cpp');

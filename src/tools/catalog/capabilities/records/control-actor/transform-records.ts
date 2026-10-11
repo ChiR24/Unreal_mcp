@@ -6,7 +6,7 @@
  */
 import type { CapabilityRecordSource } from '../../model.js';
 import { ANY_EDITOR_STATE, buildCoreRecord } from '../core/builder.js';
-import { DOMAIN, P } from './properties.js';
+import { DOMAIN, P, PLACEMENT_FACTS } from './properties.js';
 
 const FAMILY_TRANSFORM = 'transform';
 const FAMILY_PHYSICS = 'physics';
@@ -69,9 +69,10 @@ const TRANSFORM_OUTPUT_PROPS = {
   },
   results: {
     type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
-    description: 'actors: one entry per actor (actorName, success, read-back location/rotation/scale, placementWarning, error).',
+    description: 'actors: one entry per actor (actorName, success, read-back location/rotation/scale, placementWarning, coplanarFaces, error), its placement checked once every actor in the call has moved.',
   },
   movedActors: { type: 'number', description: 'actors: how many actors took their transform.' },
+  ...PLACEMENT_FACTS,
   affectedActors: {
     type: 'array', items: { type: 'string' },
     description: 'actors: the actors that took their transform, each by name and once; the receipt lists them as changes, with an actor handle each.',

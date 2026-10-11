@@ -54,9 +54,11 @@ bool UEngineWireSubsystem::HandleControlActorSetTransform(
     // Each item was checked right after its own move, while the actors after
     // it still stood at their old spots: a coin moved into a new arc reported
     // overlapping a coin that was about to move away. Re-check every moved
-    // actor against the finished layout. The same pass names the actors that moved (each
-    // McpActorRef, once), for the receipt's changes and handles.
+    // actor against the finished layout, and scan the level once for faces the moved actors
+    // now share a plane with. The same pass names the actors that moved (each McpActorRef,
+    // once), for the receipt's changes and handles.
     TArray<FString> Affected;
+    TMap<AActor *, TSharedPtr<FJsonObject>> Rows;
     for (const TSharedPtr<FJsonValue> &Value : Results) {
       const TSharedPtr<FJsonObject> Entry = Value->AsObject();
       AActor *Moved = Entry->GetBoolField(TEXT("success"))
@@ -69,7 +71,9 @@ bool UEngineWireSubsystem::HandleControlActorSetTransform(
       Entry->RemoveField(TEXT("placementWarning"));
       if (TSharedPtr<FJsonValue> Warning = Fresh->TryGetField(TEXT("placementWarning")))
         Entry->SetField(TEXT("placementWarning"), Warning);
+      Rows.Add(Moved, Entry);
     }
+    McpCoplanar::AddCoplanarToRows(Rows);
     const int32 Done = Results.Num() - Failures.Num();
     TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
     Data->SetArrayField(TEXT("results"), Results);
@@ -171,7 +175,7 @@ bool UEngineWireSubsystem::HandleControlActorSetTransform(
   }
 
 	McpHandlerUtils::AddVerification(Data, Found);
-	McpPlacement::DescribePlacement(Found, Data);
+	McpDescribeActorPlacement(RequestId, Found, Data);
 
 	SendAutomationResponse(Socket, RequestId, true, TEXT("Actor transform updated"), Data);
   return true;

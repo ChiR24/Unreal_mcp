@@ -4807,6 +4807,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Actor components."
         },
+        "coplanarFaces": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "x-unreal-reflection-boundary": true,
+          "description": "Its faces that lie in the same plane as a face of another actor and point the same way, so the overlap flickers between the two (z-fighting): direction (+X, -Z, ...), component, otherActor, otherComponent, overlapU and overlapV (the overlap's size in units), largest first. Move one about 2 units apart along direction, or stop a wall at a ceiling's underside; control_actor fix_coplanar nudges every pair. Present only when there is one."
+        },
         "count": {
           "type": "number",
           "description": "Number of actors returned."
@@ -5032,11 +5042,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "placementWarning": {
           "type": "string",
-          "description": "Present when the placement looks wrong: it intersects other actors, is sunk below the surface under it (the bottom of its bounds is under it, wherever its pivot is; suggestedLocation rests it), floats more than 50 units above it, or has nothing below it (an actor held up from the side is mounted, never floating: see mountedOn). A water body is a surface, not a solid: an actor partly under water (a buoy, a hull, a wading pawn) is neither intersecting nor sunk, and groundZ is the water level. Tag the actor mcp.placement.ok when that is deliberate and it is never reported."
+          "description": "Present when the placement looks wrong: it intersects other actors, is sunk below the surface under it (the bottom of its bounds is under it, wherever its pivot is; suggestedLocation rests it), floats more than 50 units above it, has nothing below it (an actor held up from the side is mounted, never floating: see mountedOn), or has a face in the same plane as another actor's, pointing the same way, which flickers where they overlap (z-fighting: see coplanarFaces). A water body is a surface, not a solid: an actor partly under water (a buoy, a hull, a wading pawn) is neither intersecting nor sunk, and groundZ is the water level. Tag the actor mcp.placement.ok when the placement is deliberate and it is never reported; the tag does not hide a shared plane, which always flickers."
         },
         "placementWarnings": {
           "type": "number",
-          "description": "Items that spawned but look misplaced (sunk into the surface under them, floating, intersecting other actors or with nothing below); each carries its placementWarning in results. A warning is not a failure: it changes neither failed nor success."
+          "description": "Items that spawned but look misplaced (sunk into the surface under them, floating, intersecting other actors, with nothing below, or with a face flickering against another actor's in the same plane); each carries its placementWarning in results. A warning is not a failure: it changes neither failed nor success."
         },
         "pointStats": {
           "type": "object",
@@ -5075,7 +5085,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "additionalProperties": true,
                 "x-unreal-reflection-boundary": true
               },
-              "description": "actors: one entry per actor (actorName, success, read-back location/rotation/scale, placementWarning, error)."
+              "description": "actors: one entry per actor (actorName, success, read-back location/rotation/scale, placementWarning, coplanarFaces, error), its placement checked once every actor in the call has moved."
             },
             {
               "type": "array",
@@ -5085,10 +5095,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "x-unreal-reflection-boundary": true
               },
               "x-unreal-reflection-boundary": true,
-              "description": "Per item (only the failed ones and those with a placementWarning or ignoredKeys under report: failures): index (its place in the batch once repeats are unrolled), success, name, path, error, errorCode, variablesSet, variablesError, materialApplied, materialError, propertiesError, ignoredKeys (the item's keys no spawn reads, such as a \"label\" meant as actorName), and the placement facts set_transform reports (groundZ, groundClearance, placementWarning, overlappingActors, suggestedLocation), measured after the item took its tags, variables and material, so an item tagged mcp.placement.ok is never reported. name is the label the item asked for, or the unique actor name when it gave no actorName."
+              "description": "Per item (only the failed ones and those with a placementWarning or ignoredKeys under report: failures): index (its place in the batch once repeats are unrolled), success, name, path, error, errorCode, variablesSet, variablesError, materialApplied, materialError, propertiesError, ignoredKeys (the item's keys no spawn reads, such as a \"label\" meant as actorName), and the placement facts set_transform reports (groundZ, groundClearance, placementWarning, overlappingActors, coplanarFaces, suggestedLocation), measured after the item took its tags, variables and material, so an item tagged mcp.placement.ok is never reported. name is the label the item asked for, or the unique actor name when it gave no actorName."
             }
           ],
-          "description": "Per item (only the failed ones and those with a placementWarning or ignoredKeys under report: failures): index (its place in the batch once repeats are unrolled), success, name, path, error, errorCode, variablesSet, variablesError, materialApplied, materialError, propertiesError, ignoredKeys (the item's keys no spawn reads, such as a \"label\" meant as actorName), and the placement facts set_transform reports (groundZ, groundClearance, placementWarning, overlappingActors, suggestedLocation), measured after the item took its tags, variables and material, so an item tagged mcp.placement.ok is never reported. name is the label the item asked for, or the unique actor name when it gave no actorName."
+          "description": "Per item (only the failed ones and those with a placementWarning or ignoredKeys under report: failures): index (its place in the batch once repeats are unrolled), success, name, path, error, errorCode, variablesSet, variablesError, materialApplied, materialError, propertiesError, ignoredKeys (the item's keys no spawn reads, such as a \"label\" meant as actorName), and the placement facts set_transform reports (groundZ, groundClearance, placementWarning, overlappingActors, coplanarFaces, suggestedLocation), measured after the item took its tags, variables and material, so an item tagged mcp.placement.ok is never reported. name is the label the item asked for, or the unique actor name when it gave no actorName."
         },
         "returned": {
           "type": "number",

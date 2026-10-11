@@ -46,6 +46,12 @@ struct FMcpCoplanarReport
 // FindCoplanarFaces grouped by the actor to nudge, worst first.
 TArray<FMcpCoplanarReport> ReportCoplanarFaces(UWorld* World, const FString& NameFilter);
 
+// The pairs that touch the actors a spawn or a move placed, written into each one's placement row (coplanarFaces, and
+// the largest pair in placementWarning), one scan for the whole call. Only audit_placement looked, so a room shell built
+// with its walls up to the ceiling's top flickered while every spawn and move answered clean. Returns the rows that had
+// no warning before.
+int32 AddCoplanarToRows(const TMap<AActor*, TSharedPtr<FJsonObject>>& Rows);
+
 // "+X" for a face that points along an axis, so it reads like the gizmo arrows.
 FString DescribeDirection(const FVector& Normal);
 

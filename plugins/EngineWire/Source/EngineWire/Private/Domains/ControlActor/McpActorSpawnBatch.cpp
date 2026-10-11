@@ -1,5 +1,6 @@
 #include "Domains/ControlActor/McpActorSupport.h"
 #include "Core/Requests/McpResponseCaptureRegistry.h"
+#include "Domains/ControlActor/Placement/McpCoplanarFaces.h"
 #include "Domains/ControlActor/Placement/McpSpawnRepeat.h"
 #include "Physics/Experimental/PhysInterface_Chaos.h"
 
@@ -242,10 +243,13 @@ bool UEngineWireSubsystem::HandleControlActorSpawnBatch(
   if (SpawnWorld && !SpawnWorld->IsGameWorld() && SpawnWorld->GetPhysicsScene()) {
     FPhysInterface_Chaos::FlushScene(SpawnWorld->GetPhysicsScene());
   }
+  TMap<AActor *, TSharedPtr<FJsonObject>> Rows;
   for (const TPair<AActor *, TSharedPtr<FJsonObject>> &Item : Placed) {
     McpPlacement::DescribePlacement(Item.Key, Item.Value);
     PlacementWarnings += Item.Value->HasField(TEXT("placementWarning")) ? 1 : 0;
+    Rows.Add(Item.Key, Item.Value);
   }
+  PlacementWarnings += McpCoplanar::AddCoplanarToRows(Rows);
 
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   // report: "failures" keeps only the items that went wrong: a 130-actor

@@ -481,7 +481,7 @@ describe('the batch forms of spawn_batch, set_transform and set_blueprint_variab
   it('the set_transform batch lists each actor that moved once, by McpActorRef, in the pass that re-checks the layout', () => {
     const many = batch('McpActorTransform.cpp', 'TEXT("actors")', 'FString TargetName;');
 
-    expect(many).toMatch(/TArray<FString> Affected;\s*for \(const TSharedPtr<FJsonValue> &Value : Results\) \{[\s\S]*?if \(!Moved\)\s*continue;\s*Affected\.AddUnique\(McpActorRef\(Moved\)\);/u);
+    expect(many).toMatch(/TArray<FString> Affected;\s*TMap<AActor \*, TSharedPtr<FJsonObject>> Rows;\s*for \(const TSharedPtr<FJsonValue> &Value : Results\) \{[\s\S]*?if \(!Moved\)\s*continue;\s*Affected\.AddUnique\(McpActorRef\(Moved\)\);/u);
     expect(many).toContain('Data->SetArrayField(TEXT("affectedActors"), McpHandlerUtils::ToJsonStringArray(Affected));');
     expect(read('McpActorTransform.cpp').match(/TEXT\("affectedActors"\)/gu), 'the set_visibility list and this one').toHaveLength(2);
   });
@@ -742,7 +742,26 @@ describe('every spawn says where the actor ended up, as set_transform does', () 
   const flat = (source: string): string => source.split(/\s+/u).join(' ');
 
   it('one helper asks, and leaves it to the batch when the run is one of its items', () => {
-    expect(support()).toMatch(/inline void McpDescribeSpawnPlacement\(const FString &RequestId, AActor \*Spawned, const TSharedPtr<FJsonObject> &Data\) \{\s*if \(!FMcpResponseCaptureRegistry::Get\(\)\.IsCapturing\(RequestId\)\) \{\s*McpPlacement::DescribePlacement\(Spawned, Data\);\s*\}\s*\}/u);
+    expect(support()).toMatch(/inline void McpDescribeActorPlacement\(const FString &RequestId, AActor \*Actor, const TSharedPtr<FJsonObject> &Data\) \{\s*if \(!FMcpResponseCaptureRegistry::Get\(\)\.IsCapturing\(RequestId\)\) \{\s*McpPlacement::DescribePlacement\(Actor, Data\);\s*TMap<AActor \*, TSharedPtr<FJsonObject>> Row;\s*Row\.Add\(Actor, Data\);\s*McpCoplanar::AddCoplanarToRows\(Row\);\s*\}\s*\}/u);
+  });
+
+  // Only audit_placement looked for faces sharing a plane, so a room shell whose walls ran up to the ceiling's top
+  // flickered from above while every spawn and move that built it answered clean.
+  it('a spawn or a move names the faces it left sharing a plane, one level scan per call', () => {
+    const report = read('Placement/McpCoplanarReport.cpp');
+    const move = read('McpActorTransform.cpp');
+    const batch = read('McpActorSpawnBatch.cpp');
+
+    expect(report.match(/FindCoplanarFaces\(World, FString\(\)\)/gu)).toHaveLength(1);
+    expect(report).toContain('(*Row)->SetArrayField(TEXT("coplanarFaces"), Faces);');
+    expect(report).toContain('if (Faces.Num() > 1)');
+    expect(move).toContain('McpDescribeActorPlacement(RequestId, Found, Data);');
+    expect(move).not.toContain('McpPlacement::DescribePlacement(Found, Data);');
+    expect(move.indexOf('McpCoplanar::AddCoplanarToRows(Rows);')).toBeGreaterThan(move.indexOf('Rows.Add(Moved, Entry);'));
+    expect(batch.indexOf('PlacementWarnings += McpCoplanar::AddCoplanarToRows(Rows);'))
+      .toBeGreaterThan(batch.indexOf('McpPlacement::DescribePlacement(Item.Key, Item.Value);'));
+    expect(batch.indexOf('PlacementWarnings += McpCoplanar::AddCoplanarToRows(Rows);'))
+      .toBeLessThan(batch.indexOf('if (Payload->TryGetStringField(TEXT("report"), Report)'));
   });
 
   it('spawn and spawn_blueprint ask through it once the reply names the actor', () => {
@@ -750,9 +769,9 @@ describe('every spawn says where the actor ended up, as set_transform does', () 
     const blueprint = read('McpActorBPSpawn.cpp');
 
     expect(spawn).not.toContain('McpPlacement::DescribePlacement(');
-    expect(spawn.indexOf('McpDescribeSpawnPlacement(RequestId, Spawned, Data);')).toBeGreaterThan(spawn.indexOf('McpHandlerUtils::AddVerification(Data, Spawned);'));
-    expect(blueprint.indexOf('McpDescribeSpawnPlacement(RequestId, Spawned, Resp);')).toBeGreaterThan(blueprint.indexOf('McpHandlerUtils::AddVerification(Resp, Spawned);'));
-    expect(blueprint.indexOf('McpDescribeSpawnPlacement(RequestId, Spawned, Resp);')).toBeLessThan(blueprint.indexOf('SendAutomationResponse(Socket, RequestId, true, TEXT("Blueprint spawned")'));
+    expect(spawn.indexOf('McpDescribeActorPlacement(RequestId, Spawned, Data);')).toBeGreaterThan(spawn.indexOf('McpHandlerUtils::AddVerification(Data, Spawned);'));
+    expect(blueprint.indexOf('McpDescribeActorPlacement(RequestId, Spawned, Resp);')).toBeGreaterThan(blueprint.indexOf('McpHandlerUtils::AddVerification(Resp, Spawned);'));
+    expect(blueprint.indexOf('McpDescribeActorPlacement(RequestId, Spawned, Resp);')).toBeLessThan(blueprint.indexOf('SendAutomationResponse(Socket, RequestId, true, TEXT("Blueprint spawned")'));
   });
 
   it('spawn_batch measures each item once the whole batch stands, tagged, furnished and coloured, and keeps a flagged item under report: failures', () => {
@@ -760,7 +779,7 @@ describe('every spawn says where the actor ended up, as set_transform does', () 
     const measured = source.indexOf('McpPlacement::DescribePlacement(Item.Key, Item.Value);');
 
     expect(flat(source)).toContain('if (Actor) { Placed.Emplace(Actor, Entry); } }');
-    expect(flat(source)).toContain('for (const TPair<AActor *, TSharedPtr<FJsonObject>> &Item : Placed) { McpPlacement::DescribePlacement(Item.Key, Item.Value); PlacementWarnings += Item.Value->HasField(TEXT("placementWarning")) ? 1 : 0; }');
+    expect(flat(source)).toContain('for (const TPair<AActor *, TSharedPtr<FJsonObject>> &Item : Placed) { McpPlacement::DescribePlacement(Item.Key, Item.Value); PlacementWarnings += Item.Value->HasField(TEXT("placementWarning")) ? 1 : 0; Rows.Add(Item.Key, Item.Value); }');
     expect(measured, 'after the tags and folder').toBeGreaterThan(source.indexOf('ApplySpawnOrganisation(Actor, Item);'));
     expect(measured, 'after the variables').toBeGreaterThan(source.indexOf('HandleControlActorSetBlueprintVariables('));
     expect(measured, 'after the material').toBeGreaterThan(source.indexOf('HandleControlActorSetMaterial('));

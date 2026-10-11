@@ -31,6 +31,7 @@ const PLACEMENT_SUNK = `MCP_PlaceSunk_${ts}`;
 const PLACEMENT_WALL = `MCP_PlaceWall_${ts}`;
 const PLACEMENT_AWNING = `MCP_PlaceAwning_${ts}`;
 const PLACEMENT_HOVER = `MCP_PlaceHover_${ts}`;
+const PLACEMENT_FLUSH = `MCP_PlaceFlush_${ts}`;
 const COMPONENT_NAME = `MCPPointLight_${ts}`;
 const MESH_COMPONENT = `MCPConeMesh_${ts}`;
 const ENGINE_BASIC_MATERIAL = '/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial';
@@ -104,7 +105,11 @@ const testCases = [
   { scenario: 'Setup: a wall standing on the placement floor', toolName: 'control_actor', arguments: { action: 'spawn', classPath: '/Engine/BasicShapes/Cube', actorName: PLACEMENT_WALL, location: { x: 9000, y: 9900, z: 510 }, scale: [20, 1, 10] }, expected: 'success' },
   { scenario: 'CREATE: an awning touching the wall face is mounted on it, not floating', toolName: 'control_actor', arguments: { action: 'spawn', classPath: '/Engine/BasicShapes/Cube', actorName: PLACEMENT_AWNING, location: { x: 9000, y: 9775, z: 300 }, scale: [4, 1.5, 0.1] }, expected: 'success', assertions: [{ path: 'structuredContent.result.mountedOn', equals: PLACEMENT_WALL, label: 'the reply says what it hangs on' }, { path: 'structuredContent.result.placementWarning', equals: undefined, label: 'and does not call it floating' }] },
   { scenario: 'CREATE: the same awning away from the wall is floating', toolName: 'control_actor', arguments: { action: 'spawn', classPath: '/Engine/BasicShapes/Cube', actorName: PLACEMENT_HOVER, location: { x: 9000, y: 9300, z: 300 }, scale: [4, 1.5, 0.1] }, expected: 'success', assertions: [{ path: 'structuredContent.result.placementWarning', includes: 'floating', label: 'nothing holds it up' }, { path: 'structuredContent.result.mountedOn', equals: undefined, label: 'and it is mounted on nothing' }] },
-  { scenario: 'DELETE: the placement wall, awning and hovering box', toolName: 'control_actor', arguments: { action: 'delete', actorNames: [PLACEMENT_WALL, PLACEMENT_AWNING, PLACEMENT_HOVER] }, expected: 'success|not found' },
+  // A block set into the wall's thickness has its Y faces in the wall's planes: they flicker (z-fighting) wherever
+  // they overlap, which only audit_placement used to find.
+  { scenario: 'CREATE: a spawn flush with a wall face names the shared plane', toolName: 'control_actor', arguments: { action: 'spawn', classPath: '/Engine/BasicShapes/Cube', actorName: PLACEMENT_FLUSH, location: { x: 9000, y: 9900, z: 600 } }, expected: 'success', assertions: [{ path: 'structuredContent.result.placementWarning', includes: 'same plane', label: 'the reply says a face flickers against the wall' }, { path: 'structuredContent.result.coplanarFaces', length: 1, label: 'one row per actor it shares a plane with' }, { path: 'structuredContent.result.coplanarFaces.0.otherActor', equals: PLACEMENT_WALL, label: 'against the wall' }] },
+  { scenario: 'UPDATE: set_transform moving it clear of the wall reports no shared plane', toolName: 'control_actor', arguments: { action: 'set_transform', actorName: PLACEMENT_FLUSH, location: { x: 9600, y: 9500, z: 60 } }, expected: 'success', assertions: [{ path: 'structuredContent.result.coplanarFaces', equals: undefined, label: 'nothing shares a plane with it now' }] },
+  { scenario: 'DELETE: the placement wall, awning and hovering box', toolName: 'control_actor', arguments: { action: 'delete', actorNames: [PLACEMENT_WALL, PLACEMENT_AWNING, PLACEMENT_HOVER, PLACEMENT_FLUSH] }, expected: 'success|not found' },
   { scenario: 'DELETE: the placement batch actors by their tag', toolName: 'control_actor', arguments: { action: 'delete_by_tag', tag: PLACEMENT_TAG }, expected: 'success' },
   { scenario: 'DELETE: the sunk placement actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: PLACEMENT_SUNK }, expected: 'success|not found' },
   { scenario: 'DELETE: the placement floor', toolName: 'control_actor', arguments: { action: 'delete', actorName: PLACEMENT_FLOOR }, expected: 'success|not found' },
