@@ -59,6 +59,7 @@ describe('innerRadius fills the extents the attenuation shape reads', () => {
     expect(authoring.indexOf('ReadAttenuationBoxExtent(Params,'))
       .toBeLessThan(authoring.indexOf('Atten->Attenuation.DistanceAlgorithm = EAttenuationDistanceModel::Linear'));
     expect(authoring).toContain('AddAttenuationBoxExtent(Response, Atten->Attenuation);');
+    expect(preset, 'the preset reply reads the size back').toContain('Resp->SetNumberField(TEXT("innerRadius"), McpAudioAuthoring::GetAttenuationInnerRadius(Atten->Attenuation));');
   });
 });
 

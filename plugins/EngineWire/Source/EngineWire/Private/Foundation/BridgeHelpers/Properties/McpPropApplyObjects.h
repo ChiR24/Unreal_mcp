@@ -14,10 +14,11 @@
  * The component whose StaticMesh this property is, or null for any other property. That mesh goes through
  * SetStaticMesh: a raw write leaves KnownStaticMesh stale and the engine ensures on the next GetStaticMesh, and it
  * skips the render state an empty component needs and the physics, navigation, streaming and bounds updates. The
- * property is a member of the component class (a struct member has no owner class), so its container is the component.
+ * component class must own the property itself, so its container is the component: a struct member or a function
+ * parameter named StaticMesh lives in another buffer (GetOwnerClass would walk up from a function to its class).
  */
 static inline UStaticMeshComponent *McpStaticMeshOwner(const FProperty *Property, void *Container) {
-  const UClass *Owner = Property ? Property->GetOwnerClass() : nullptr;
+  const UClass *Owner = Property ? Cast<UClass>(Property->GetOwnerUField()) : nullptr;
   return Owner && Owner->IsChildOf(UStaticMeshComponent::StaticClass()) &&
                  Property->GetFName() == FName(TEXT("StaticMesh"))
              ? static_cast<UStaticMeshComponent *>(Container)

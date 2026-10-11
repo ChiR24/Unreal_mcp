@@ -1855,7 +1855,9 @@ describe('a component key with a setter is written through the setter', () => {
 describe('a component mesh goes through SetStaticMesh', () => {
   it('the shared JSON writer and the push to placed copies set a StaticMeshComponent mesh through its setter', () => {
     const writer = readFileSync(join(DOMAINS, '..', 'Foundation', 'BridgeHelpers', 'Properties', 'McpPropApplyObjects.h'), 'utf8');
-    expect(writer, 'a struct member named StaticMesh has no owner class').toContain('Owner->IsChildOf(UStaticMeshComponent::StaticClass())');
+    expect(writer, 'a struct member or function parameter named StaticMesh is not the component\'s')
+      .toContain('Cast<UClass>(Property->GetOwnerUField())');
+    expect(writer).toContain('Owner->IsChildOf(UStaticMeshComponent::StaticClass())');
     expect(writer).toContain('MeshOwner->SetStaticMesh(Cast<UStaticMesh>(Value));');
     expect(writer, 'set and clear alike').toContain('return Assign(Res);');
     expect(writer).toContain('return Assign(nullptr);');

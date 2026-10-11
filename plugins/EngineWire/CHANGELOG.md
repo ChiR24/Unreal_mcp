@@ -17,7 +17,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **`get_widget_animation`**: walks the animation's bindings for each driven widget's tracks and float-channel keys; the track count includes binding tracks (it read 0).
 - **`create_cpp_class`**: `GameProjectUtils::AddCodeToProject` with `GIsRunningUnattendedScript` held, so the wizard's message boxes never block the game thread; the module comes from `GetCurrentProjectModules`, the parent must be native and pass `IsValidBaseClassForCreation`, and the subfolder is a relative path of names. The plugin now depends on `GameProjectGeneration`.
 - **`set_folder`**: `AActor::SetFolderPath` on one actor or an `actorNames` list, as one undo step.
-- **Box attenuation `extent`** (`set_sound_attenuation`, `configure_distance_attenuation`): `ReadAttenuationBoxExtent` checks it before the asset is made or changed (a Box shape, three half-sizes above 0), `ApplyAttenuationBoxExtent` writes it after the inner radius, and the reply reports `extent`.
+- **Box attenuation `extent`** (`set_sound_attenuation`, `configure_distance_attenuation`): `ReadAttenuationBoxExtent` checks it before the asset is made or changed (a Box shape, three half-sizes above 0), `ApplyAttenuationBoxExtent` writes it after the inner radius, and the reply reads `extent` and `innerRadius` back from the asset.
 
 ### Fixed
 - **`create_node` and `add_node` check the graph's schema** (`CanCreateUnderSpecifiedSchema`) and refuse a node it cannot hold with `NODE_NOT_ALLOWED_IN_GRAPH`.
@@ -34,7 +34,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **`raycast_mesh` takes `{start, end}` rays** (a ray from start that reports nothing past end) and refuses a ray with neither form.
 - **A graph batch's create step re-lists the node's pins after its `pinDefaults`**, which can rebuild it.
 - **`spawn` and `spawn_blueprint` apply `folder` and `tags`** (`McpApplySpawnOrganisation`, shared with `spawn_batch` items) before the placement is judged.
-- **The JSON property writer sets a `UStaticMeshComponent`'s `StaticMesh` through `SetStaticMesh`** (`McpStaticMeshOwner`, by the property's owner class), and so does the `edit_scs` push to placed copies: the raw writes left `KnownStaticMesh` stale and the engine ensured on the next `GetStaticMesh`. A static component that keeps its mesh once play has begun fails the write.
+- **The JSON property writer sets a `UStaticMeshComponent`'s `StaticMesh` through `SetStaticMesh`** (`McpStaticMeshOwner`: the component class must own the property directly, so a struct member or function parameter of that name is left alone), and so does the `edit_scs` push to placed copies: the raw writes left `KnownStaticMesh` stale and the engine ensured on the next `GetStaticMesh`. A static component that keeps its mesh once play has begun fails the write.
 ## [0.6.0-beta-e] - 2026-10-09
 
 Plugin-side changes since the `v0.6.0-beta-d` tag, from the code diff. The server-side view is in the root `CHANGELOG.md`.

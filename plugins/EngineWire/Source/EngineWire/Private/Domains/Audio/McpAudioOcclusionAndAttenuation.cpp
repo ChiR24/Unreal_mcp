@@ -237,7 +237,8 @@ bool HandleSpatialActions(
       Resp->SetBoolField(TEXT("success"), true);
       Resp->SetStringField(TEXT("path"), Atten->GetPathName());
       Resp->SetStringField(TEXT("name"), Name);
-      Resp->SetNumberField(TEXT("innerRadius"), InnerRadius);
+      // Read back: extent replaces the size innerRadius gives a box.
+      Resp->SetNumberField(TEXT("innerRadius"), McpAudioAuthoring::GetAttenuationInnerRadius(Atten->Attenuation));
       Resp->SetNumberField(TEXT("falloffDistance"), FalloffDistance);
       Resp->SetStringField(TEXT("attenuationShape"), AppliedShape);
       McpAudioAuthoring::AddAttenuationBoxExtent(Resp, Atten->Attenuation);
