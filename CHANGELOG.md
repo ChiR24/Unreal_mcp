@@ -48,7 +48,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **A placed enclosure is no longer measured against what it holds**: a cart corral spawned around its carts read "sunk 97 units" below the carts' tops.
 - **`raycast_mesh` takes `{start, end}` lines** as `raycast_world` does, stopping each at its end; a ray with neither form is refused instead of answering no hit.
 - **A graph batch's create step lists the node's pins after its `pinDefaults`**: a spawn node's Class default adds its exposed pins, which the reply left out.
-- **Search finds the pin-unlinking action** for "disconnect" and "unlink" requests.
+- **Search finds the pin-unlinking action** for "disconnect" and "unlink" requests, and the graph edit action for a Blueprint Math Expression (it answered with the material node action); `create_node` lists `MathExpression` among its node types.
 - **Placement warnings check the real collision of meshes that collide on their own triangles**, as store packs and baked meshes do: a lamp post between parked cars read as intersecting four of them, and a barrier under an entrance canopy as intersecting the building.
 - **A duplicated Blueprint's Math Expression nodes read its own variables.** They kept the source's variable ids and failed to compile until each expression was set again.
 - **A Math Expression that compares an input name with a true/false value is refused before it is applied**, saying the name is a number input; an expression that does not parse says that every input is a number.

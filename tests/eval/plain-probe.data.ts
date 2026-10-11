@@ -396,4 +396,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   // A light with the settings a caller names (2026-10-01): the native door listed no light capability for the first.
   { query: 'add spot light intensity color', accepted: ['build_environment.create_light'] },
   { query: 'street lamp light', accepted: ['build_environment.create_light'] },
+  // A Blueprint Math Expression node (2026-10-11): both doors answered with the material node action.
+  { query: 'add a math expression to a blueprint', accepted: ['blueprint.edit_graph'] },
+  { query: 'blueprint math expression', accepted: ['blueprint.edit_graph'] },
 ];
