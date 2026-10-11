@@ -80,6 +80,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`stop` answers once play has ended**: it said "stopped" as it asked, and a minimized editor ran the session on for seconds, so the next edit could land in the play world and be thrown away.
 - **A motion read ended by a level the game loaded says `levelChanged`**: a death that reloaded the level ended it as `worldEnded`, the answer for play that stopped, while PIE ran on.
 - **A slow motion read and `get_stats` say how far video memory is over budget** (`videoMemoryOverBudgetMB`): a game holding most of the GPU made a run crawl at 5 fps, and the warning only guessed at a heavy scene while the viewport printed the figure.
+- **`console_command` returns what a command logs on another thread**: `au.DumpActiveSounds` left out its last sounds, which the audio thread logged after the command returned.
 - **A Blueprint compile names a `PlaySound2D` or `PlaySoundAtLocation` node whose sound never ends by itself** (a warning in `diagnostics`): a looping sound, or a one-shot MetaSound that never fires On Finished (read from its graph on UE 5.5 and later). Those nodes cannot stop it, so it played until the level unloaded, one more copy per call, while the Blueprint compiled clean.
 
 </details>

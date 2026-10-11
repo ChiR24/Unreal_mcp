@@ -61,6 +61,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **`stop` replies from a ticker once `GEditor->PlayWorld` is gone** (`RequestEndPlayMap` only queues the end), or with `PIE_STOP_TIMEOUT` after 20 s.
 - **`sample_motion` ends with `levelChanged`** when its world is gone while `GEditor->PlayWorld` is set (a level reload or travel in PIE); `worldEnded` now means play stopped.
 - **`McpSlowFrameWarning` and `get_stats` read `GDemotedLocalMemorySize`** (an `RHI.h` extern on 5.0-5.2, `GRHIGlobals.DemotedLocalMemorySize` from 5.3), the figure the viewport's "Video memory has been exhausted" line prints: the warning names it as the cause, and `get_stats` reports it as `videoMemoryOverBudgetMB`.
+- **`console_command` flushes threaded logs before it stops capturing** (`GLog->FlushThreadedLogs()` every 20 ms until no line arrives for 60 ms, at most 0.5 s): the redirector passes other threads' lines to a device that is not thread-safe only when it flushes, so a command whose work runs on another thread lost its last lines.
 - **The compile's sound check also names endless sounds on play-and-forget nodes** (`McpAddSoundNodeWarnings`, was `McpAddUnattenuatedSoundWarnings`): a `PlaySound2D` or `PlaySoundAtLocation` node whose own Sound `McpAudioAuthoring::DescribeEndlessSound` (`MetaSound/McpAudioMetaSoundGraphRead.cpp`) calls endless, a `USoundBase` whose `IsLooping()` holds or, on 5.5+, a one-shot MetaSound with no edge into its `UE.Source.OneShot.OnFinished` output.
 ## [0.6.0-beta-e] - 2026-10-09
 

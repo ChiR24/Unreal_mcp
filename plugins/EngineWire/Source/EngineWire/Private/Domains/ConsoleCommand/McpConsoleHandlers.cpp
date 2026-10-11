@@ -232,6 +232,16 @@ bool UEngineWireSubsystem::HandleConsoleCommandAction(
         {
             bHandled = GEngine->Exec(World, *Command, OutputCapture);
         }
+        // A command that hands its work to another thread (au.DumpActiveSounds runs on the audio thread) logs after
+        // Exec returns, and the log passes other threads' lines on only when it flushes: the dump's last sound was
+        // missing. Flush until the log has been quiet for 60 ms, for at most half a second.
+        for (int32 Quiet = 0, Waited = 0; Quiet < 3 && Waited < 25; ++Waited)
+        {
+            const int32 Before = LogCapture.Lines.Num();
+            FPlatformProcess::Sleep(0.02f);
+            GLog->FlushThreadedLogs();
+            Quiet = LogCapture.Lines.Num() == Before ? Quiet + 1 : 0;
+        }
         GLog->RemoveOutputDevice(&LogCapture);
 
         auto BoundText = [](FString Text)

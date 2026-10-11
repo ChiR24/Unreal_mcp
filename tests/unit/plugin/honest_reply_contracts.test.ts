@@ -2504,3 +2504,13 @@ describe('lists that only repeated the request are gone', () => {
     expect(code('Blueprint', 'Components', 'McpBPModifyScsComponentOps.cpp')).not.toContain('TEXT("additionMethod")');
   });
 });
+
+describe('a console command returns what it logged on other threads', () => {
+  // au.DumpActiveSounds listed every sound but the last: the audio thread logged it after Exec returned, and the log
+  // passes other threads' lines on only when it flushes, by which time the capture was gone.
+  it('flushes threaded logs until the log is quiet before the capture is removed', () => {
+    const console = code('ConsoleCommand', 'McpConsoleHandlers.cpp');
+    expect(console).toMatch(/for \(int32 Quiet = 0, Waited = 0; Quiet < 3 && Waited < 25; \+\+Waited\)\s*\{\s*const int32 Before = LogCapture\.Lines\.Num\(\);\s*FPlatformProcess::Sleep\(0\.02f\);\s*GLog->FlushThreadedLogs\(\);/u);
+    expect(console.indexOf('GLog->FlushThreadedLogs();')).toBeLessThan(console.indexOf('GLog->RemoveOutputDevice(&LogCapture);'));
+  });
+});
