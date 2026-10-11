@@ -121,4 +121,31 @@ inline bool ExpandMirror(const TSharedPtr<FJsonObject>& Obj, TArray<FShape>& Cop
     }
     return true;
 }
+
+// relativeTo: an earlier shapes[] entry whose frame this one is placed in. center, rotation,
+// repeat and mirror are read from that shape's centre along its own turned axes, so the eyes on
+// a leaning head stay on it without the caller working out the rotation. Authored holds each
+// entry's own frame (its first copy) in mesh space, in shapes[] order.
+inline bool ExpandCopies(const TSharedPtr<FJsonObject>& Obj, const FShape& S, int32 Index, TArray<FTransform>& Authored, TArray<FShape>& Out, FString& Error)
+{
+    const int32 Parent = Obj->HasField(TEXT("relativeTo")) ? GetJsonIntField(Obj, TEXT("relativeTo"), -1) : -1;
+    if (Obj->HasField(TEXT("relativeTo")) && (Parent < 0 || Parent >= Index))
+    {
+        Error = TEXT("relativeTo must be the index of an earlier shapes[] entry.");
+        return false;
+    }
+    TArray<FShape> Copies;
+    if (!ExpandRepeat(Obj, S, Copies, Error) || !ExpandMirror(Obj, Copies, Error))
+    {
+        return false;
+    }
+    const FTransform Frame = Parent >= 0 ? Authored[Parent] : FTransform::Identity;
+    for (FShape& Copy : Copies)
+    {
+        Copy.Frame = Copy.Frame * Frame;
+    }
+    Authored.Add(Copies[0].Frame);
+    Out.Append(Copies);
+    return true;
+}
 } // namespace McpGeometrySdf

@@ -35,7 +35,8 @@ const SDF_SHAPES: JsonObject = {
     properties: {
       type: { type: 'string', enum: ['sphere', 'ellipsoid', 'box', 'capsule', 'cylinder', 'torus', 'cone'], description: 'sphere (radius), ellipsoid (radii), box (extent = half size, rounding), capsule (radius, length of the straight part, along local Z), cylinder (radius, length, rounding, along local Z), torus (radius to the tube centre, thickness = tube radius, in local XY), cone (radius at the bottom, topRadius, length, along local Z, rounded ends). radius also sets an ellipsoid\'s radii and a box\'s extent when those are left out; any other size a type does not read is refused.' },
       operation: { type: 'string', enum: ['union', 'subtract', 'intersect'], description: 'union adds the shape (default), subtract carves it out of what came before (a recess, socket or groove), intersect keeps only the overlap.' },
-      center: vec('Shape centre in the mesh\'s local space, cm (default 0,0,0).'),
+      center: vec('Shape centre in the mesh\'s local space, cm (default 0,0,0); with relativeTo, in that shape\'s frame.'),
+      relativeTo: { type: 'integer', minimum: 0, maximum: 63, description: 'Index of an earlier shapes[] entry to place this one on: center, rotation, repeat and mirror are then measured from that shape\'s centre along its own turned axes (not scaled by its size), so the eyes, mouth or buttons of a leaning or turned part stay on it without working out the rotation. mirror then reflects across that shape\'s own planes.' },
       rotation: { type: 'object', description: 'Shape rotation {pitch, yaw, roll} in degrees; turns the shape\'s local Z axis for capsule, cylinder, cone and torus.', properties: { pitch: cm('Pitch'), yaw: cm('Yaw'), roll: cm('Roll') }, additionalProperties: false },
       radius: cm('Radius in cm (sphere, capsule, cylinder, cone base; torus: distance to the tube centre). Default 50.'),
       radii: vec('Ellipsoid radii along local X, Y, Z in cm.'),

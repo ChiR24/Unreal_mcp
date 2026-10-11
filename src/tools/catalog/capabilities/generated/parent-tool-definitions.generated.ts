@@ -17652,7 +17652,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               },
               "center": {
                 "type": "object",
-                "description": "Shape centre in the mesh's local space, cm (default 0,0,0).",
+                "description": "Shape centre in the mesh's local space, cm (default 0,0,0); with relativeTo, in that shape's frame.",
                 "properties": {
                   "x": {
                     "type": "number",
@@ -17668,6 +17668,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                   }
                 },
                 "additionalProperties": false
+              },
+              "relativeTo": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 63,
+                "description": "Index of an earlier shapes[] entry to place this one on: center, rotation, repeat and mirror are then measured from that shape's centre along its own turned axes (not scaled by its size), so the eyes, mouth or buttons of a leaning or turned part stay on it without working out the rotation. mirror then reflects across that shape's own planes."
               },
               "rotation": {
                 "type": "object",

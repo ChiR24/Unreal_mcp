@@ -40,6 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **A game screenshot says the field of view the frame shows** (`horizontalFov`, `verticalFov`): `activeCameraFov` is the camera's setting, which holds only at the camera's own aspect ratio, so a wider viewport that keeps the vertical angle shows more across than it says.
 - **`get_property` reads the same properties from several objects** (`objectPaths`): one row per object under `targets`, and an object that cannot be read says why while the others still answer. Eight platforms' state took eight calls.
 - **`manage_audio` `list_metasound_nodes`**: the MetaSound node classes the engine has, by part of their class name, display name or category, with what each does and (`includePins`) their pins, named as `add_node` takes them. A node's class name was a guess until `add_node` refused it.
+- **An SDF shape can sit on an earlier one** (`relativeTo`): its center, rotation, repeat and mirror are measured from that shape's centre along its own turned axes. The eyes and mouth of a leaning body took the rotation worked out by hand for every part.
 
 </details>
 

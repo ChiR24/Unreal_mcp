@@ -85,6 +85,14 @@ describe('create_sdf meshes one field', () => {
     expect(handler).toContain('which does not read %s; a %s reads %s.');
   });
 
+  // The eyes and mouth of a leaning body had to be placed with hand-worked rotation maths.
+  it('places a relativeTo shape, its repeats and its mirrors in an earlier shape\'s frame', () => {
+    const copies = code('Primitives/McpGeometrySdfCopies.h');
+    expect(handler).toContain('McpGeometrySdf::ExpandCopies(*Obj, S, Index, Authored, Out, CopyError)');
+    expect(copies).toMatch(/!ExpandRepeat\(Obj, S, Copies, Error\) \|\| !ExpandMirror\(Obj, Copies, Error\)[\s\S]*Copy\.Frame = Copy\.Frame \* Frame;/u);
+    expect(copies).toContain('(Parent < 0 || Parent >= Index)');
+  });
+
   it('holds the mesh it made to the triangle cap, so the documented 256 is reachable', () => {
     // 8 * N^2 refused every resolution-256 call (524,288 > 500,000) whatever the shapes were.
     expect(handler).toContain('GuardMeshBudget(Self, RequestId, Socket, Mesh.TriangleCount(), TEXT("SDF meshing at this resolution"))');
@@ -98,6 +106,8 @@ describe('create_primitive offers sdf', () => {
     const input = record?.schemas.input.properties as Record<string, { enum?: unknown[] }> | undefined;
     expect(input?.primitive?.enum).toContain('sdf');
     expect(Object.keys(input ?? {})).toEqual(expect.arrayContaining(['shapes', 'resolution']));
+    const shapes = input?.shapes as { items?: { properties?: Record<string, unknown> } } | undefined;
+    expect(Object.keys(shapes?.items?.properties ?? {})).toContain('relativeTo');
     const output = record?.schemas.output.properties as Record<string, unknown> | undefined;
     expect(Object.keys(output ?? {})).toEqual(expect.arrayContaining(['parts', 'vertexCount', 'triangleCount']));
   });

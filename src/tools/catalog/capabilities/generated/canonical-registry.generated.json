@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "f3577bae2f3fc3e8",
+  "catalogRevision": "390ee4eb62e04a85",
   "recordCount": 411,
   "records": [
     {
@@ -63784,7 +63784,7 @@
                   },
                   "center": {
                     "type": "object",
-                    "description": "Shape centre in the mesh's local space, cm (default 0,0,0).",
+                    "description": "Shape centre in the mesh's local space, cm (default 0,0,0); with relativeTo, in that shape's frame.",
                     "properties": {
                       "x": {
                         "type": "number",
@@ -63800,6 +63800,12 @@
                       }
                     },
                     "additionalProperties": false
+                  },
+                  "relativeTo": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 63,
+                    "description": "Index of an earlier shapes[] entry to place this one on: center, rotation, repeat and mirror are then measured from that shape's centre along its own turned axes (not scaled by its size), so the eyes, mouth or buttons of a leaning or turned part stay on it without working out the rotation. mirror then reflects across that shape's own planes."
                   },
                   "rotation": {
                     "type": "object",
@@ -64271,8 +64277,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "5e33520d58c50a0f4d857b7b93e85616d3753331254f7a32555f22f00e3f80c8",
-        "content": "025bb7a0c6e28910820bda8c84601bffc43c9c78e7098b04cf7d28c3a064162e"
+        "schema": "74292ef3184cbd077486438e8e2066edcca5ae5451c8492c9a5cb4f3a00c3d1e",
+        "content": "4fc2cc2d75b8b5de1210d713d8c5609ae9f1c8426805b0e1276c1a238e7511ec"
       }
     },
     {

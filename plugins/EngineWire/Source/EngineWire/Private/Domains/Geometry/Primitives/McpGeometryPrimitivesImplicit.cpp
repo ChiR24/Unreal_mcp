@@ -62,6 +62,7 @@ FString ReadShapes(const TSharedPtr<FJsonObject>& Payload, TArray<FShape>& Out)
     {
         return TEXT("shapes must list 1 to 64 shapes, each {type: sphere|ellipsoid|box|capsule|cylinder|torus|cone, ...}.");
     }
+    TArray<FTransform> Authored;
     for (int32 Index = 0; Index < Items->Num(); ++Index)
     {
         const TSharedPtr<FJsonObject>* Obj = nullptr;
@@ -105,13 +106,11 @@ FString ReadShapes(const TSharedPtr<FJsonObject>& Payload, TArray<FShape>& Out)
         }
         S.Source = Index;
         S.Reach = McpGeometrySdf::BoundRadius(S);
-        TArray<FShape> Copies;
         FString CopyError;
-        if (!McpGeometrySdf::ExpandRepeat(*Obj, S, Copies, CopyError) || !McpGeometrySdf::ExpandMirror(*Obj, Copies, CopyError))
+        if (!McpGeometrySdf::ExpandCopies(*Obj, S, Index, Authored, Out, CopyError))
         {
             return FString::Printf(TEXT("shapes[%d]: %s"), Index, *CopyError);
         }
-        Out.Append(Copies);
         if (Out.Num() > 1024)
         {
             return TEXT("repeat and mirror copies come to more than 1024 shapes; split the part into two meshes.");

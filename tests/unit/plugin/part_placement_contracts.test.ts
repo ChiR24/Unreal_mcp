@@ -71,7 +71,8 @@ describe('an SDF shape can stand for its copies', () => {
   const field = code('Domains/Geometry/Primitives/McpGeometrySdfField.h');
 
   it('expands repeat, then mirror, keeping the authoring index on every copy', () => {
-    expect(read).toContain('McpGeometrySdf::ExpandRepeat(*Obj, S, Copies, CopyError) || !McpGeometrySdf::ExpandMirror(*Obj, Copies, CopyError)');
+    expect(read).toContain('McpGeometrySdf::ExpandCopies(*Obj, S, Index, Authored, Out, CopyError)');
+    expect(copies).toContain('!ExpandRepeat(Obj, S, Copies, Error) || !ExpandMirror(Obj, Copies, Error)');
     expect(read).toContain('S.Source = Index;');
     expect(read).toContain('Mesh.SetTriangleGroup(Tid, Owner.Source + 1);');
   });
