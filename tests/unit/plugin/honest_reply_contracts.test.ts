@@ -1552,6 +1552,15 @@ describe('a graph batch checks its expressions before any step runs', () => {
       .toBeLessThan(mutations.indexOf('bHandled = McpTrySetNodeAssetPropertyForMcp(TargetNode, PropertyName, Value);'));
   });
 
+  // An arrange_nodes after 69 steps stopped the batch there, the 69 applied.
+  it('refuses a step the batch does not run in the pre-check, before any step', () => {
+    const batch = code('BlueprintGraph', 'McpBPGraphBatch.cpp');
+    expect(batch).toContain('const bool bRuns = IsBatchableEdit(Edit);');
+    expect(batch).toContain(': DescribeUnbatchableEdit(Edit); !Bad.IsEmpty())');
+    expect(batch.indexOf('const bool bRuns = IsBatchableEdit(Edit);')).toBeLessThan(batch.indexOf('RunBatchStep(Context, State'));
+    expect(code('BlueprintGraph', 'McpBPGraphBatchSteps.cpp')).toContain('return DescribeUnbatchableEdit(Edit);');
+  });
+
   // "T - Next < 0 || T - Next >= 0.07" was refused as "'T' is a number": the check read the token beside || alone.
   it('judges each whole operand of && and ||, up to the next && || comma or enclosing bracket', () => {
     const math = code('BlueprintGraph', 'Expression', 'McpBPGraphMathExpr.cpp');

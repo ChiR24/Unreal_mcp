@@ -83,14 +83,18 @@ FString PrecheckSteps(const FActionContext& Context, const TArray<TSharedPtr<FJs
         {
             continue;
         }
-        if (const FString Bad = DescribeExpressionStep(Context.Blueprint, **Step, DeclaredBools); !Bad.IsEmpty())
-        {
-            OutIndex = Index;
-            OutCode = TEXT("EXPRESSION_INVALID");
-            return Bad;
-        }
         FString Edit, NodeType, Member, MemberClass;
         (*Step)->TryGetStringField(TEXT("edit"), Edit);
+        // An edit the batch does not run stopped it at that step, the steps before it applied (an arrange_nodes
+        // after 69 steps), so it is refused here with the expressions, before any step runs.
+        const bool bRuns = IsBatchableEdit(Edit);
+        if (const FString Bad = bRuns ? DescribeExpressionStep(Context.Blueprint, **Step, DeclaredBools)
+                                      : DescribeUnbatchableEdit(Edit); !Bad.IsEmpty())
+        {
+            OutIndex = Index;
+            OutCode = bRuns ? TEXT("EXPRESSION_INVALID") : TEXT("INVALID_OPERATION");
+            return Bad;
+        }
         (*Step)->TryGetStringField(TEXT("nodeType"), NodeType);
         (*Step)->TryGetStringField(TEXT("memberName"), Member);
         if (!(*Step)->TryGetStringField(TEXT("memberClass"), MemberClass))

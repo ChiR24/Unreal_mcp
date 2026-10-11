@@ -44,6 +44,9 @@ FMcpCapturedResponse RunPlacedStep(const FActionContext& Parent, FBatchState& St
 /** Synchronous, non-destructive edits only; the member steps are among them. */
 bool IsBatchableEdit(const FString& Edit);
 
+/** Why a step whose edit IsBatchableEdit refuses cannot run, listing the edits that can. */
+FString DescribeUnbatchableEdit(const FString& Edit);
+
 /** Every function, variable, dispatcher and async factory the steps name must resolve before
  *  any step runs; add_variable, add_function, add_event and add_event_dispatcher steps declare
  *  theirs for later steps. Empty on success, else the reason with OutIndex and OutCode set. */

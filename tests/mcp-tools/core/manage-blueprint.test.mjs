@@ -288,6 +288,12 @@ const testCases = [
     { edit: 'connect_pins', from: '$entry.then', to: '$print.execute' },
   ] }, expected: 'success', assertions: [{ path: 'structuredContent.result.succeeded', equals: 2, label: 'the entry node resolved' }] },
 
+  // === BATCH: a step the batch does not run is refused before any step, not after the ones before it applied ===
+  { scenario: 'ERROR: build_graph refuses a last arrange_nodes step before running any', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: BP_PATH, graphName: 'EventGraph', operations: [
+    { edit: 'create_node', id: 'unrun', nodeType: 'CallFunction', memberName: 'PrintString' },
+    { edit: 'arrange_nodes' },
+  ] }, expected: 'error|INVALID_OPERATION' },
+
   // === BATCH: a step whose explicit posX/posY overlaps a node is moved to a free slot and says so, instead of stopping the batch ===
   { scenario: 'BATCH: build_graph moves a create step off an overlapping position', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: BP_PATH, graphName: 'EventGraph', operations: [
     { edit: 'create_node', id: 'first', nodeType: 'CallFunction', memberName: 'PrintString', posX: 4000, posY: 4000 },

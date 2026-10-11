@@ -47,6 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Math Expressions take unbracketed comparisons of arithmetic around `&&` and `||`**: `T - Next < 0 || T - Next >= 0.07` was refused as "'T' is a number". Arithmetic with no comparison there (`Gain + 1 && Ready`) is refused as a number.
 - **A placed enclosure is no longer measured against what it holds**: a cart corral spawned around its carts read "sunk 97 units" below the carts' tops.
 - **`raycast_mesh` takes `{start, end}` lines** as `raycast_world` does, stopping each at its end; a ray with neither form is refused instead of answering no hit.
+- **A graph batch refuses a step it does not run before running any**: an `arrange_nodes` at the end stopped the batch after the 69 steps before it were applied. The refusal says the batch already arranges the nodes it places.
 - **A graph batch's create step lists the node's pins after its `pinDefaults`**: a spawn node's Class default adds its exposed pins, which the reply left out.
 - **Search finds the pin-unlinking action** for "disconnect" and "unlink" requests, and the graph edit action for a Blueprint Math Expression (it answered with the material node action); `create_node` lists `MathExpression` among its node types.
 - **Placement warnings check the real collision of meshes that collide on their own triangles**, as store packs and baked meshes do: a lamp post between parked cars read as intersecting four of them, and a barrier under an entrance canopy as intersecting the building.

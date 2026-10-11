@@ -148,10 +148,7 @@ FString RunBatchStep(const FActionContext& Context, FBatchState& State,
     if (!StepValue.IsValid() || !StepValue->TryGetObject(StepPtr) ||
         !(*StepPtr)->TryGetStringField(TEXT("edit"), Edit) || !IsBatchableEdit(Edit))
     {
-        // A step with an unknown edit (set_pin_default) was told it had none.
-        return FString::Printf(TEXT("%s: add_variable, add_function, add_event, add_event_dispatcher, create_node, "
-                                    "connect_pins, set_pin_default_value, set_node_property or create_reroute_node"),
-            Edit.IsEmpty() ? TEXT("each step needs `edit`") : *FString::Printf(TEXT("`edit` '%s' is not a step this batch runs"), *Edit));
+        return DescribeUnbatchableEdit(Edit);
     }
     const TSharedPtr<FJsonObject> Step = *StepPtr;
     Entry->SetStringField(TEXT("edit"), Edit);
@@ -215,6 +212,17 @@ FString RunBatchStep(const FActionContext& Context, FBatchState& State,
         }
     }
     return FString();
+}
+
+FString DescribeUnbatchableEdit(const FString& Edit)
+{
+    // A step with an unknown edit (set_pin_default) was told it had none.
+    return FString::Printf(TEXT("%s: add_variable, add_function, add_event, add_event_dispatcher, create_node, "
+                                "connect_pins, set_pin_default_value, set_node_property or create_reroute_node%s"),
+        Edit.IsEmpty() ? TEXT("each step needs `edit`") : *FString::Printf(TEXT("`edit` '%s' is not a step this batch runs"), *Edit),
+        Edit == TEXT("arrange_nodes") ? TEXT(". The batch already moves each node it places without posX and posY "
+                                             "beside a node it is wired to.")
+                                      : TEXT(""));
 }
 
 FString DescribeExpressionStep(const UBlueprint* Blueprint, const FJsonObject& Step, TSet<FName>& DeclaredBools)

@@ -33,6 +33,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **Math Expressions**: `set_node_property` and the batch pre-check write a unary minus as `(0 - x)` (`RewriteUnaryMinus`) before the node parses it, and judge each whole operand of `&&` and `||` (`DescribeNumberLogic`: up to the next `&&`, `||` or comma on its bracket level), not the name beside the operator: `T - Next < 0 || Ready` was refused as "'T' is a number".
 - **`raycast_mesh` takes `{start, end}` rays** (a ray from start that reports nothing past end) and refuses a ray with neither form.
 - **A graph batch's create step re-lists the node's pins after its `pinDefaults`**, which can rebuild it.
+- **`build_graph`'s pre-check refuses an edit `IsBatchableEdit` does not run**, before any step (`DescribeUnbatchableEdit`, shared with the step runner); it was refused only at its own step.
 - **`spawn` and `spawn_blueprint` apply `folder` and `tags`** (`McpApplySpawnOrganisation`, shared with `spawn_batch` items) before the placement is judged.
 - **The JSON property writer sets a `UStaticMeshComponent`'s `StaticMesh` through `SetStaticMesh`** (`McpStaticMeshOwner`: the component class must own the property directly, so a struct member or function parameter of that name is left alone), and so does the `edit_scs` push to placed copies: the raw writes left `KnownStaticMesh` stale and the engine ensured on the next `GetStaticMesh`. A static component that keeps its mesh once play has begun fails the write.
 ## [0.6.0-beta-e] - 2026-10-09
