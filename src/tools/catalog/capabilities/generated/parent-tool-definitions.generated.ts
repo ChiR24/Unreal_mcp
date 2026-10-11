@@ -6251,6 +6251,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Several world actors to act on in one call, in place of actorName; names not found are listed back."
         },
+        "actors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Only these actors (label, name or path): their rows under actors, and under notVisible each one that drew no pixel with its reason, outside the frame or hidden, with hiddenBy naming the actors drawn over its box (up to three, by share of the box). Names that match no actor are listed under notFound. limit does not apply."
+        },
         "blueprintPath": {
           "type": "string",
           "description": "Blueprint asset /Game path (for CDO/component inspection without spawning)."
@@ -7305,6 +7312,22 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "additionalProperties": false,
           "description": "normal: percent of the drawn pixels facing up (normal z above 0.7), down (below -0.7) and sideways."
+        },
+        "notFound": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "With actors: the names that match no actor."
+        },
+        "notVisible": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "With actors: each named actor that drew no pixel, as {name, reason (outside the frame, hidden behind what is drawn over its box, or nothing of it drawn), hiddenBy [{name, share (percent of its box)}]}."
         },
         "objectName": {
           "type": "string",

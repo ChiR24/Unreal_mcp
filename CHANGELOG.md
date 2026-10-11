@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`system_control` `create_cpp_class`**: a new C++ class in a project module, as the editor's New C++ Class makes it: a header and a .cpp from a parent class (or a plain class), in a subfolder, public or private, then the editor's own compile. It answers with the file paths, the prefixed class name and what the class still needs (a compile, or a build and restart for a project's first module).
 - **`control_actor` `set_folder`** moves placed actors into an outliner folder, or back to the root; `spawn` and `spawn_blueprint` take `folder` and `tags` as batch items do.
 - **Box sound zones sized per axis**: `configure_sound_attenuation` `preset` and `distance` take `extent` {x, y, z}, so a zone can run the length of a hall without reaching as far sideways; `innerRadius` gives a box one size on all three axes.
+- **`inspect` `describe_view` takes `actors`**: only the rows of the actors named, and for each one that is not seen, why: outside the frame, or hidden, naming what is drawn over it (`hiddenBy`, by share). Names that match no actor are listed under `notFound`.
 
 </details>
 

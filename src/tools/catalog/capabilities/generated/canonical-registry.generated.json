@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "35b8a91269e72eb3",
+  "catalogRevision": "ae2395f63f5e0651",
   "recordCount": 410,
   "records": [
     {
@@ -42630,7 +42630,7 @@
           "frame brightness",
           "too dark"
         ],
-        "summary": "Describe what the level viewport's camera sees, as text: each actor in view with its share of the frame, its box on screen, how bright it is drawn and its distance, the share that is background (sky, void), and the frame's brightness. location and rotation place the camera first, as control_editor screenshot takes them.",
+        "summary": "Describe what the level viewport's camera sees, as text: each actor in view with its share of the frame, its box on screen, how bright it is drawn and its distance, the share that is background (sky, void), and the frame's brightness; or only the actors named, with what hides each one that is not seen. location and rotation place the camera first, as control_editor screenshot takes them.",
         "whenToUse": [
           "A shot must be checked without looking at a picture: is the subject in view, how much of the frame it fills, where it sits, whether it is lit or lost in the dark.",
           "A camera placement must be compared or tuned by numbers (subject coverage, sky share, brightness)."
@@ -42638,7 +42638,7 @@
         "whenNotToUse": [
           "A picture is wanted (use control_editor screenshot).",
           "Play In Editor runs: the level viewport does not show the running game (stop it, or use Simulate).",
-          "Whether something blocks a line of sight (use raycast_world)."
+          "Whether collision blocks a line between two points (use raycast_world)."
         ]
       },
       "schemas": {
@@ -42649,6 +42649,13 @@
             "action": {
               "type": "string",
               "description": "The action to execute on the parent tool."
+            },
+            "actors": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Only these actors (label, name or path): their rows under actors, and under notVisible each one that drew no pixel with its reason, outside the frame or hidden, with hiddenBy naming the actors drawn over its box (up to three, by share of the box). Names that match no actor are listed under notFound. limit does not apply."
             },
             "location": {
               "type": "object",
@@ -42763,6 +42770,22 @@
               },
               "additionalProperties": false,
               "description": "The frame as drawn: p10, median and p90 brightness (0-1), and the percent of the frame clipped (a channel at full) or dark (below 0.05)."
+            },
+            "notVisible": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "With actors: each named actor that drew no pixel, as {name, reason (outside the frame, hidden behind what is drawn over its box, or nothing of it drawn), hiddenBy [{name, share (percent of its box)}]}."
+            },
+            "notFound": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "With actors: the names that match no actor."
             }
           },
           "required": [
@@ -42777,7 +42800,7 @@
       },
       "examples": [
         {
-          "title": "Describe what the level viewport's camera sees, as text: each actor in view with its share of the frame, its box on screen, how bright it is drawn and its distance, the share that is background (sky, void), and the frame's brightness. location and rotation place the camera first, as control_editor screenshot takes them.",
+          "title": "Describe what the level viewport's camera sees, as text: each actor in view with its share of the frame, its box on screen, how bright it is drawn and its distance, the share that is background (sky, void), and the frame's brightness; or only the actors named, with what hides each one that is not seen. location and rotation place the camera first, as control_editor screenshot takes them.",
           "input": {
             "action": "describe_view",
             "location": {
@@ -42873,8 +42896,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "a95089571d6d3fdc6e482e182930fc1c165a98a8dcdc0d7508c0862cd144ef56",
-        "content": "36b555e22370d6dd2ce673fece348907a0e54b23dc1c1ac652996a8b63ac45df"
+        "schema": "ce288c40be381311273d187cb15139021ee8920e0dd16638e7ebd39548db9e93",
+        "content": "d8969f3cd97225bd7474023f4238bcd9bfa8e9ba4ab816331877c7c0f3703320"
       }
     },
     {

@@ -202,11 +202,12 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'inspect', action: 'describe_view', dispatchAction: 'describe_view', domain: D, family: 'object',
     editorStates: ['edit', 'simulate'],
-    summary: 'Describe what the level viewport\'s camera sees, as text: each actor in view with its share of the frame, its box on screen, how bright it is drawn and its distance, the share that is background (sky, void), and the frame\'s brightness. location and rotation place the camera first, as control_editor screenshot takes them.',
+    summary: 'Describe what the level viewport\'s camera sees, as text: each actor in view with its share of the frame, its box on screen, how bright it is drawn and its distance, the share that is background (sky, void), and the frame\'s brightness; or only the actors named, with what hides each one that is not seen. location and rotation place the camera first, as control_editor screenshot takes them.',
     topics: ['what is visible', 'what the camera sees', 'describe view', 'describe frame', 'is it on screen', 'player on screen', 'screen coverage', 'check the camera shot', 'in shot', 'visible actors', 'frame brightness', 'too dark'],
     whenToUse: ['A shot must be checked without looking at a picture: is the subject in view, how much of the frame it fills, where it sits, whether it is lit or lost in the dark.', 'A camera placement must be compared or tuned by numbers (subject coverage, sky share, brightness).'],
-    whenNotToUse: ['A picture is wanted (use control_editor screenshot).', 'Play In Editor runs: the level viewport does not show the running game (stop it, or use Simulate).', 'Whether something blocks a line of sight (use raycast_world).'],
+    whenNotToUse: ['A picture is wanted (use control_editor screenshot).', 'Play In Editor runs: the level viewport does not show the running game (stop it, or use Simulate).', 'Whether collision blocks a line between two points (use raycast_world).'],
     inputProps: {
+      actors: { type: 'array', items: { type: 'string' }, description: 'Only these actors (label, name or path): their rows under actors, and under notVisible each one that drew no pixel with its reason, outside the frame or hidden, with hiddenBy naming the actors drawn over its box (up to three, by share of the box). Names that match no actor are listed under notFound. limit does not apply.' },
       location: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }, additionalProperties: false, description: 'Camera location {x, y, z} in cm; omitted, the viewport\'s current one. The camera stays there.' },
       rotation: { type: 'object', properties: { pitch: { type: 'number' }, yaw: { type: 'number' }, roll: { type: 'number' } }, additionalProperties: false, description: 'Camera rotation {pitch, yaw, roll} in degrees; omitted, the viewport\'s current one.' },
       limit: { type: 'number', description: 'Most actors to list, largest share first (default 20, at most 100); visibleActors counts them all.' },
@@ -232,6 +233,8 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
       background: { type: 'number', description: 'Percent of the frame where no object was drawn (sky, void).' },
       other: { type: 'number', description: 'Percent drawn by what only the editor shows (icons, gizmos, shapes hidden in game) or no actor owns (BSP).' },
       brightness: { type: 'object', properties: { p10: { type: 'number' }, median: { type: 'number' }, p90: { type: 'number' }, clipped: { type: 'number' }, dark: { type: 'number' } }, additionalProperties: false, description: 'The frame as drawn: p10, median and p90 brightness (0-1), and the percent of the frame clipped (a channel at full) or dark (below 0.05).' },
+      notVisible: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'With actors: each named actor that drew no pixel, as {name, reason (outside the frame, hidden behind what is drawn over its box, or nothing of it drawn), hiddenBy [{name, share (percent of its box)}]}.' },
+      notFound: { type: 'array', items: { type: 'string' }, description: 'With actors: the names that match no actor.' },
     },
     outputRequired: ['visibleActors', 'actors', 'background', 'brightness'],
   }),

@@ -35,9 +35,6 @@ FMcpViewProxy McpViewProxyOf(const FColor &Id)
 }
 
 namespace {
-// Every second pixel of every second row: a quarter of the pixels, plenty for shares of the frame.
-constexpr int32 McpViewStride = 2;
-
 struct FMcpViewActor {
     AActor *Actor = nullptr;
     int64 Pixels = 0;
@@ -47,13 +44,6 @@ struct FMcpViewActor {
     int32 MaxY = 0;
     double Luma = 0.0;
 };
-
-// Rounded to 1 / Scale (10 for tenths). Dividing by the scale, not multiplying by a step, keeps 61.9 from printing
-// as 61.900000000000006.
-double McpViewRound(double Value, double Scale)
-{
-    return FMath::RoundToDouble(Value * Scale) / Scale;
-}
 } // namespace
 
 bool HandleInspectViewContentsAction(
@@ -146,13 +136,38 @@ bool HandleInspectViewContentsAction(
     TArray<FMcpViewActor> Rows;
     Seen.GenerateValueArray(Rows);
     Rows.Sort([](const FMcpViewActor &A, const FMcpViewActor &B) { return A.Pixels > B.Pixels; });
+    // actors: only the actors the caller names, and why each one that drew nothing is not seen. Checking one prop
+    // from a camera meant reading every row of a full frame.
+    const TArray<TSharedPtr<FJsonValue>> *Requested = nullptr;
+    Payload->TryGetArrayField(TEXT("actors"), Requested);
+    TSet<AActor *> Named;
+    TArray<TSharedPtr<FJsonValue>> NotVisible, NotFound;
+    for (int32 Index = 0; Requested && Index < Requested->Num(); ++Index)
+    {
+        const FString Name = (*Requested)[Index]->AsString();
+        AActor *Actor = McpHandlerUtils::FindActorByName(Name);
+        if (!Actor)
+        {
+            NotFound.Add(MakeShared<FJsonValueString>(Name));
+            continue;
+        }
+        Named.Add(Actor);
+        if (!Seen.Contains(Actor))
+        {
+            NotVisible.Add(MakeShared<FJsonValueObject>(McpDescribeUnseenActor(Actor, *Client, Size, Ids, Proxies)));
+        }
+    }
     const int32 Limit = FMath::Clamp(GetJsonIntField(Payload, TEXT("limit"), 20), 1, 100);
     const FVector Camera = Client->GetViewLocation();
     const auto Percent = [Samples](int64 Count) { return McpViewRound(100.0 * Count / Samples, 100.0); };
     TArray<TSharedPtr<FJsonValue>> Listed;
     for (const FMcpViewActor &Row : Rows)
     {
-        if (Listed.Num() == Limit)
+        if (Requested && !Named.Contains(Row.Actor))
+        {
+            continue;
+        }
+        if (!Requested && Listed.Num() == Limit)
         {
             break;
         }
@@ -201,8 +216,15 @@ bool HandleInspectViewContentsAction(
     Result->SetNumberField(TEXT("background"), Percent(Background));
     Result->SetNumberField(TEXT("other"), Percent(Other));
     Result->SetObjectField(TEXT("brightness"), Brightness);
+    if (Requested)
+    {
+        Result->SetArrayField(TEXT("notVisible"), NotVisible);
+        Result->SetArrayField(TEXT("notFound"), NotFound);
+    }
     McpHandlerUtils::MarkNoAssetsChanged(Result);
-    const FString Message = Rows.Num() == 0
+    const FString Message = Requested
+        ? FString::Printf(TEXT("%d of %d named actor(s) in view."), Listed.Num(), Requested->Num())
+        : Rows.Num() == 0
         ? FString::Printf(TEXT("No actor in view; %.1f%% of the frame is background."), Percent(Background))
         : FString::Printf(TEXT("%d actor(s) in view; the largest is %s at %.1f%% of the frame."), Rows.Num(),
                           *Rows[0].Actor->GetActorLabel(), Percent(Rows[0].Pixels));

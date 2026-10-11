@@ -2161,6 +2161,18 @@ describe('describe_view counts what the game draws in the camera view', () => {
     const inspect = code('Environment', 'Inspection', 'McpEnvInspect.cpp');
     expect(inspect).toContain('return HandleInspectViewContentsAction(*this, RequestId, Payload, RequestingSocket);');
   });
+
+  // Checking one prop from a camera meant reading every row of a 40-actor frame, and a missing one said nothing.
+  it('lists only the actors named and says why each unseen one is not drawn', () => {
+    const view = code('Environment', 'Inspection', 'McpEnvInspectViewContents.cpp');
+    expect(view).toContain('Payload->TryGetArrayField(TEXT("actors"), Requested);');
+    expect(view).toContain('NotVisible.Add(MakeShared<FJsonValueObject>(McpDescribeUnseenActor(Actor, *Client, Size, Ids, Proxies)));');
+    expect(view).toContain('if (Requested && !Named.Contains(Row.Actor))');
+    const unseen = code('Environment', 'Inspection', 'McpEnvInspectViewUnseen.cpp');
+    expect(unseen, 'the level editor keeps the horizontal field of view').toContain('FMath::Tan(FMath::DegreesToRadians(Client.ViewFOV * 0.5))');
+    expect(unseen).toContain('TEXT("outside the frame")');
+    expect(unseen, 'what is drawn over its box, frontmost id per pixel').toContain('Covers.FindOrAdd(Proxy->Kind == EMcpViewKind::Actor ? Proxy->Actor : nullptr) += 1;');
+  });
 });
 
 // A frame could only be judged by eye: no pass said which actor a region belongs to, how far it is or which way it
