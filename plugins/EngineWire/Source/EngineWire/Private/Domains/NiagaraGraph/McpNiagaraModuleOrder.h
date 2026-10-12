@@ -40,9 +40,10 @@ inline TArray<UNiagaraNodeFunctionCall*> StackModules(UNiagaraNodeOutput& Output
     return Modules;
 }
 
-// Where a module goes so its dependencies hold: before the first module of the stack that provides one of its
-// post-dependencies (a force before Solve Forces and Velocity), else INDEX_NONE, the end. Appended, a force landed
-// after the solver and the stack failed "The module has unmet dependencies".
+// Where a module goes so its dependencies hold: before the first module of the stack that has to run after it, being
+// the provider of one of its post-dependencies (a force goes before Solve Forces and Velocity) or needing something it
+// provides as a pre-dependency (a missing provider goes before the module that asked for it); else INDEX_NONE, the
+// end. Appended, a force landed after the solver and the stack failed "The module has unmet dependencies".
 inline int32 DependencyInsertIndex(UNiagaraScript& Script, UNiagaraNodeOutput& Output)
 {
     const FVersionedNiagaraScriptData* Data = Script.GetLatestScriptData();
@@ -50,11 +51,21 @@ inline int32 DependencyInsertIndex(UNiagaraScript& Script, UNiagaraNodeOutput& O
     for (int32 Index = 0; Data && Index < Modules.Num(); ++Index)
     {
         UNiagaraScript* Other = Modules[Index]->FunctionScript;
-        const FVersionedNiagaraScriptData* Provider = Other ? Other->GetScriptData(Modules[Index]->SelectedScriptVersion) : nullptr;
+        const FVersionedNiagaraScriptData* OtherData = Other ? Other->GetScriptData(Modules[Index]->SelectedScriptVersion) : nullptr;
+        if (!OtherData)
+        {
+            continue;
+        }
         for (const FNiagaraModuleDependency& Dependency : Data->RequiredDependencies)
         {
-            if (Provider && Dependency.Type == ENiagaraModuleDependencyType::PostDependency &&
-                Provider->ProvidedDependencies.Contains(Dependency.Id))
+            if (Dependency.Type == ENiagaraModuleDependencyType::PostDependency && OtherData->ProvidedDependencies.Contains(Dependency.Id))
+            {
+                return Index;
+            }
+        }
+        for (const FNiagaraModuleDependency& Dependency : OtherData->RequiredDependencies)
+        {
+            if (Dependency.Type == ENiagaraModuleDependencyType::PreDependency && Data->ProvidedDependencies.Contains(Dependency.Id))
             {
                 return Index;
             }

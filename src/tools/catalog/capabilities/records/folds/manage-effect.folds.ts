@@ -20,7 +20,7 @@ export const MANAGE_EFFECT_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'add_niagara_module', selector: 'moduleKind',
-    summary: 'Add a module to a Niagara emitter: any module script by path, or a typed module (spawn rate/burst/per-unit, initialize particle, velocity, acceleration, force, color, size, collision, kill, camera offset, particle state, sprite/mesh/ribbon/light renderer, simulation stage, event generator/receiver).',
+    summary: 'Add a module to a Niagara emitter: any module script by path, or a typed module (spawn rate/burst/per-unit, initialize particle, velocity, acceleration, force, color, size, collision, kill, camera offset, particle state, sprite/mesh/ribbon/light renderer, simulation stage, event generator/receiver). It goes where its dependencies hold (a force before Solve Forces and Velocity).',
     topics: ['niagara module', 'spawn rate', 'sprite renderer', 'mesh renderer', 'ribbon renderer', 'particle velocity', 'particle color', 'simulation stage', 'particles fall with gravity', 'particles collide'],
     members: {
       module: 'add_niagara_module',
@@ -54,7 +54,7 @@ export const MANAGE_EFFECT_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'get_niagara_info', selector: 'info',
-    summary: 'Read a Niagara system: each emitter (enabled, CPU or GPU, stack modules, current module input values, an input that reads a parameter or a dynamic input as {linkedTo}, the static switches such as Ribbon Width Mode that gate them, and its renderers with the object path inspect.set_property writes and their material) and its user parameters; an emitter asset gives its name and CPU or GPU target. info=validate lists errors and warnings.',
+    summary: 'Read a Niagara system: each emitter (enabled, CPU or GPU, stack modules, current module input values, an input that reads a parameter or a dynamic input as {linkedTo}, the static switches such as Ribbon Width Mode that gate them, and its renderers with the object path inspect.set_property writes and their material) and its user parameters; an emitter asset gives its name and CPU or GPU target. info=validate lists errors and warnings, each naming the module, the problem and the fixes the editor offers.',
     topics: ['emitter list', 'stack modules', 'user parameters', 'static switches'],
     members: { info: 'get_niagara_info', validate: 'validate_niagara_system' },
   },

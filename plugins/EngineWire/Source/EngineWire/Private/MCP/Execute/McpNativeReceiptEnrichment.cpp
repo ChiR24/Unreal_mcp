@@ -87,9 +87,11 @@ FString McpCanonicalizeRequestId(const TSharedPtr<FJsonValue>& Id)
 }
 
 // receipt.warnings was filled from DeprecationWarnings() alone, so everything a
-// handler actually warned about -- captured engine errors, Niagara stack errors,
-// "the handler still reports success" disclosures -- sat in data.details.warnings
-// where no caller checking the receipt would look. Harvest those too.
+// handler actually warned about -- captured engine errors, "the handler still
+// reports success" disclosures -- sat in data.details.warnings where no caller
+// checking the receipt would look. Harvest those too. Niagara stack errors are
+// left where they are: add_niagara_module declares stackErrors, so a copy here
+// only repeated each one.
 static void McpCollectResultWarnings(const TSharedPtr<FJsonObject>& Source,
                                      TArray<FString>& Out)
 {
@@ -97,25 +99,15 @@ static void McpCollectResultWarnings(const TSharedPtr<FJsonObject>& Source,
 	{
 		return;
 	}
-	static const TCHAR* const WarningFields[] = {TEXT("warnings"), TEXT("stackErrors")};
-	for (const TCHAR* Field : WarningFields)
+	const TArray<TSharedPtr<FJsonValue>>* Values = nullptr;
+	if (Source->TryGetArrayField(TEXT("warnings"), Values) && Values)
 	{
-		const TArray<TSharedPtr<FJsonValue>>* Values = nullptr;
-		if (!Source->TryGetArrayField(Field, Values) || !Values)
-		{
-			continue;
-		}
-		const bool bIsError = FCString::Strcmp(Field, TEXT("stackErrors")) == 0;
 		for (const TSharedPtr<FJsonValue>& Value : *Values)
 		{
-			if (!Value.IsValid())
-			{
-				continue;
-			}
-			const FString Text = Value->AsString();
+			const FString Text = Value.IsValid() ? Value->AsString() : FString();
 			if (!Text.IsEmpty())
 			{
-				Out.AddUnique(bIsError ? FString::Printf(TEXT("stack error: %s"), *Text) : Text);
+				Out.AddUnique(Text);
 			}
 		}
 	}

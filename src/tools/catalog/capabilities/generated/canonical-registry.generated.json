@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "d614c364b054e296",
+  "catalogRevision": "ee4e98f0f23d7400",
   "recordCount": 411,
   "records": [
     {
@@ -58331,7 +58331,7 @@
           "particles fall with gravity",
           "particles collide"
         ],
-        "summary": "Add a module to a Niagara emitter: any module script by path, or a typed module (spawn rate/burst/per-unit, initialize particle, velocity, acceleration, force, color, size, collision, kill, camera offset, particle state, sprite/mesh/ribbon/light renderer, simulation stage, event generator/receiver).",
+        "summary": "Add a module to a Niagara emitter: any module script by path, or a typed module (spawn rate/burst/per-unit, initialize particle, velocity, acceleration, force, color, size, collision, kill, camera offset, particle state, sprite/mesh/ribbon/light renderer, simulation stage, event generator/receiver). It goes where its dependencies hold (a force before Solve Forces and Velocity).",
         "whenToUse": [
           "moduleKind=module: Emitter needs a module.",
           "moduleKind=spawn_rate: Emitter spawns over time.",
@@ -58493,6 +58493,17 @@
             "nodeId": {
               "type": "string",
               "description": "Niagara graph node identifier."
+            },
+            "stackIndex": {
+              "type": "number",
+              "description": "Where the module went in its stack (0 is the first module), when it went ahead of a module that must run after it; absent when it went at the end."
+            },
+            "stackErrors": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "What the Niagara editor's stack shows as errors for the system after the add, each naming the module, the problem and the editor's fixes; empty when the stack is clean."
             }
           },
           "required": [
@@ -58503,7 +58514,7 @@
       },
       "examples": [
         {
-          "title": "Add a module to a Niagara emitter: any module script by path, or a typed module (spawn rate/burst/per-unit, initialize particle, velocity, acceleration, force, color, size, collision, kill, camera offset, particle state, sprite/mesh/ribbon/light renderer, simulation stage, event generator/receiver).",
+          "title": "Add a module to a Niagara emitter: any module script by path, or a typed module (spawn rate/burst/per-unit, initialize particle, velocity, acceleration, force, color, size, collision, kill, camera offset, particle state, sprite/mesh/ribbon/light renderer, simulation stage, event generator/receiver). It goes where its dependencies hold (a force before Solve Forces and Velocity).",
           "input": {
             "action": "add_niagara_module",
             "assetPath": "/Game/NS_Fire",
@@ -58620,8 +58631,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "721dc4464f43a877ee76e96bf1ba4c6ebd7ead9d2ee531b8552c14bc78fdd9af",
-        "content": "b5fdb2af506b05ad535a1e792bdb5647ba2e3651743837397fa17343f273175a"
+        "schema": "6bb60d4cfd96dcae86c1f31e0934f95787bc228cce45c35ffc6cc2aa6200456b",
+        "content": "9791ac66a1c3823465d1092c22e07bfbf23ff14bb432ecab22695b04dd70f4ed"
       }
     },
     {
@@ -60130,7 +60141,7 @@
           "user parameters",
           "static switches"
         ],
-        "summary": "Read a Niagara system: each emitter (enabled, CPU or GPU, stack modules, current module input values, an input that reads a parameter or a dynamic input as {linkedTo}, the static switches such as Ribbon Width Mode that gate them, and its renderers with the object path inspect.set_property writes and their material) and its user parameters; an emitter asset gives its name and CPU or GPU target. info=validate lists errors and warnings.",
+        "summary": "Read a Niagara system: each emitter (enabled, CPU or GPU, stack modules, current module input values, an input that reads a parameter or a dynamic input as {linkedTo}, the static switches such as Ribbon Width Mode that gate them, and its renderers with the object path inspect.set_property writes and their material) and its user parameters; an emitter asset gives its name and CPU or GPU target. info=validate lists errors and warnings, each naming the module, the problem and the fixes the editor offers.",
         "whenToUse": [
           "info=info: Inspect a Niagara system.",
           "info=validate: Catch authoring errors."
@@ -60222,7 +60233,7 @@
       },
       "examples": [
         {
-          "title": "Read a Niagara system: each emitter (enabled, CPU or GPU, stack modules, current module input values, an input that reads a parameter or a dynamic input as {linkedTo}, the static switches such as Ribbon Width Mode that gate them, and its renderers with the object path inspect.set_property writes and their material) and its user parameters; an emitter asset gives its name and CPU or GPU target. info=validate lists errors and warnings.",
+          "title": "Read a Niagara system: each emitter (enabled, CPU or GPU, stack modules, current module input values, an input that reads a parameter or a dynamic input as {linkedTo}, the static switches such as Ribbon Width Mode that gate them, and its renderers with the object path inspect.set_property writes and their material) and its user parameters; an emitter asset gives its name and CPU or GPU target. info=validate lists errors and warnings, each naming the module, the problem and the fixes the editor offers.",
           "input": {
             "action": "get_niagara_info",
             "assetPath": "/Game/NS_Fire",
@@ -60272,7 +60283,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "f251d6730117cacc98a9d93652b954b98783c723b82c220ea2341c17eb9ba984",
-        "content": "069550b71e82f42deab9b84da6386a72fb47f8bdb056852daceba38803c14d27"
+        "content": "92ad5f55b5cf20b0e04363517b85de6f5df6b01d9543e63d022ef3f7d3e80642"
       }
     },
     {

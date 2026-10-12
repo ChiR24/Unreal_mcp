@@ -21,7 +21,12 @@ static void CollectStackIssues(UNiagaraStackEntry* Entry, TArray<TSharedPtr<FJso
         // Which entry, what is wrong and the editor's own fixes: "The module has unmet dependencies." alone named
         // neither the module nor the dependency.
         const FString Short = Issue.GetShortDescription().ToString();
-        const FString Long = Issue.GetLongDescription().ToString();
+        // The engine's text breaks lines and pads with spaces; one line reads cleanly in a reply.
+        FString Long = Issue.GetLongDescription().ToString().Replace(TEXT("\r"), TEXT(" ")).Replace(TEXT("\n"), TEXT(" "));
+        while (Long.ReplaceInline(TEXT("  "), TEXT(" ")) > 0)
+        {
+        }
+        Long.TrimStartAndEndInline();
         FString Message = Entry->GetDisplayName().ToString() + TEXT(": ") + Short;
         if (!Long.IsEmpty() && Long != Short)
         {

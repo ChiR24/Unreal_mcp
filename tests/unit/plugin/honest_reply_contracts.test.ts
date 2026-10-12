@@ -1685,6 +1685,32 @@ describe('a duplicated Blueprint keeps its Math Expressions bound to its own var
   });
 });
 
+// A force added to an update stack landed after Solve Forces and Velocity, so the system failed "The module has unmet
+// dependencies." (on the generic add, with no word of it in the reply), and that message named neither the module nor a fix.
+describe('a Niagara module goes where its dependencies hold', () => {
+  it('inserts before the first module providing a post-dependency, on both add paths, and names the issue in full', () => {
+    const order = code('NiagaraGraph', 'McpNiagaraModuleOrder.h');
+    expect(order).toContain('Dependency.Type == ENiagaraModuleDependencyType::PostDependency && OtherData->ProvidedDependencies.Contains(Dependency.Id)');
+    expect(order, 'a missing provider goes before the module that asked for it').toContain(
+      'Dependency.Type == ENiagaraModuleDependencyType::PreDependency && Data->ProvidedDependencies.Contains(Dependency.Id)');
+    expect(order, 'the engine GetOrderedModuleNodes is not exported').not.toContain('GetOrderedModuleNodes(');
+    const generic = code('NiagaraGraph', 'McpNiagaraGraphHandlers.cpp');
+    expect(generic).toContain('McpNiagaraModuleOrder::DependencyInsertIndex(*ModuleScript, *OutputNode)');
+    expect(generic).toContain('ModuleScript, *OutputNode, StackIndex);');
+    expect(generic).toContain('McpNiagaraAuthoringHandlers::CollectNiagaraSystemStackIssues(System, StackErrors, StackWarnings);');
+    expect(code('NiagaraAuthoring', 'McpNiagaraStackGraph.cpp')).toContain('McpNiagaraModuleOrder::DependencyInsertIndex(*ModuleScript, *TargetOutput)');
+    const issues = code('NiagaraAuthoring', 'McpNiagaraStackIssues.cpp');
+    expect(issues).toContain('FString Message = Entry->GetDisplayName().ToString() + TEXT(": ") + Short;');
+    expect(issues).toContain('for (const UNiagaraStackEntry::FStackIssueFix& Fix : Issue.GetFixes())');
+    // Each error was in stackErrors, again in warnings and the receipt, with a count, a flag and a dependency list.
+    const context = code('NiagaraAuthoring', 'McpNiagaraContext.cpp');
+    expect(context).toContain('Context.Result->SetArrayField(TEXT("stackErrors"), Errors);');
+    expect(context).not.toContain('hasUnmetDependencies');
+    expect(code('NiagaraAuthoring', 'McpNiagaraContext.h')).not.toContain('dependencyHint');
+    expect(code('..', 'MCP', 'Execute', 'McpNativeReceiptEnrichment.cpp')).not.toContain('TEXT("stackErrors")');
+  });
+});
+
 // set_parameter on a placed effect answered "Niagara parameter set" for a name its system lacks (the component's
 // setter adds any name), wrote a Vector parameter as Float unless told, reached only the actor's first component,
 // and left the level unmarked, so the value was lost at the next start unless another edit had dirtied it.

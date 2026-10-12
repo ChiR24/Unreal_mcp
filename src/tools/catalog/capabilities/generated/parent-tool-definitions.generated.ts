@@ -16378,6 +16378,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "List of string values."
         },
+        "stackErrors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "What the Niagara editor's stack shows as errors for the system after the add, each naming the module, the problem and the editor's fixes; empty when the stack is clean."
+        },
+        "stackIndex": {
+          "type": "number",
+          "description": "Where the module went in its stack (0 is the first module), when it went ahead of a module that must run after it; absent when it went at the end."
+        },
         "success": {
           "type": "boolean",
           "description": "Whether the action succeeded."

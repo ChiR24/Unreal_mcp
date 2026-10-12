@@ -44,18 +44,20 @@ static void AppendStackIssueWarnings(const FActionContext& Context, bool bSucces
     TArray<TSharedPtr<FJsonValue>> Errors;
     TArray<TSharedPtr<FJsonValue>> Warnings;
     CollectNiagaraSystemStackIssues(System, Errors, Warnings);
-    TArray<TSharedPtr<FJsonValue>> Merged = Errors;
-    Merged.Append(Warnings);
-    const bool bUnmetDependencies = Merged.ContainsByPredicate([](const TSharedPtr<FJsonValue>& Value)
-    {
-        return Value.IsValid() && Value->AsString().Contains(TEXT("unmet dependencies"), ESearchCase::IgnoreCase);
-    });
-    Context.Result->SetArrayField(TEXT("warnings"), Merged);
+    // Each error once, in the declared stackErrors (it named the module, the problem and the fix); stack warnings join
+    // the handler's own. Errors also went into warnings, with a count, a flag and a dependency list repeating them.
     Context.Result->SetArrayField(TEXT("stackErrors"), Errors);
-    Context.Result->SetArrayField(TEXT("stackWarnings"), Warnings);
-    Context.Result->SetNumberField(TEXT("stackIssueCount"), Merged.Num());
-    Context.Result->SetBoolField(TEXT("hasUnmetDependencies"), bUnmetDependencies);
-    if (bUnmetDependencies) { McpAnnotateUnmetDependencies(Context.Result); }
+    if (Warnings.Num() > 0)
+    {
+        const TArray<TSharedPtr<FJsonValue>>* Existing = nullptr;
+        TArray<TSharedPtr<FJsonValue>> All;
+        if (Context.Result->TryGetArrayField(TEXT("warnings"), Existing) && Existing)
+        {
+            All = *Existing;
+        }
+        All.Append(Warnings);
+        Context.Result->SetArrayField(TEXT("warnings"), All);
+    }
 }
 
 void FActionContext::SendSuccess(bool bSuccess, const FString& Message) const
