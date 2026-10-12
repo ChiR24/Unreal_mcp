@@ -244,6 +244,8 @@ FString BareInputName(const FString& InputName);
 bool FindModuleInput(UNiagaraNodeFunctionCall* Module, const FString& InputName, FNiagaraVariable& OutInput);
 // Every input FindModuleInput can find on Module, comma-separated, for an error that names the right spellings.
 FString ListModuleInputs(UNiagaraNodeFunctionCall* Module);
+// The dynamic-input call that "<FunctionName>.<Input>" names (RandomRangeFloat.Minimum), with the input; null if none.
+UNiagaraNodeFunctionCall* FindDynamicInputCallInput(UNiagaraGraph* Graph, const FString& InputName, FNiagaraVariable& OutInput);
 UNiagaraNodeFunctionCall* ResolveDynamicInputTargetNode(
     FActionContext& Context,
     UNiagaraGraph* Graph,

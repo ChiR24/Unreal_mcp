@@ -41,6 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`get_property` reads the same properties from several objects** (`objectPaths`): one row per object under `targets`, and an object that cannot be read says why while the others still answer. Eight platforms' state took eight calls.
 - **`manage_audio` `list_metasound_nodes`**: the MetaSound node classes the engine has, by part of their class name, display name or category, with what each does and (`includePins`) their pins, named as `add_node` takes them. A node's class name was a guess until `add_node` refused it.
 - **An SDF shape can sit on an earlier one** (`relativeTo`): its center, rotation, repeat and mirror are measured from that shape's centre along its own turned axes. The eyes and mouth of a leaning body took the rotation worked out by hand for every part.
+- **A placed effect's values in one call**: `edit_niagara_system` `set_parameter` with `actorName` takes `parameters` (several user parameters at once) and `componentName` (one of an actor's several effects, such as a Blueprint's fire and smoke; it always wrote the first). Six placed fires with five values each took thirty calls.
 
 </details>
 
@@ -83,6 +84,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **A slow motion read and `get_stats` say how far video memory is over budget** (`videoMemoryOverBudgetMB`): a game holding most of the GPU made a run crawl at 5 fps, and the warning only guessed at a heavy scene while the viewport printed the figure.
 - **`console_command` returns what a command logs on another thread**: `au.DumpActiveSounds` left out its last sounds, which the audio thread logged after the command returned.
 - **A Blueprint compile names a `PlaySound2D` or `PlaySoundAtLocation` node whose sound never ends by itself** (a warning in `diagnostics`): a looping sound, or a one-shot MetaSound that never fires On Finished (read from its graph on UE 5.5 and later). Those nodes cannot stop it, so it played until the level unloaded, one more copy per call, while the Blueprint compiled clean.
+- **`bind_parameter_to_source` takes every input `get_niagara_info` lists**: a module input with a space in its name (`ShapeLocation.Box Size`) and an input of a dynamic input feeding a module (`RandomRangeFloat.Minimum`). Both were refused, so a fire's size and speed could not be set per placement. `get_niagara_info` shows such a bound dynamic-input input as `{linkedTo}`; it showed the number stored before the bind.
+- **A duplicated Niagara system plays at once.** Every effect that played a fresh copy logged "Error initializing data interfaces" and stopped, until something else compiled the copy.
+- **`set_parameter` on a placed effect refuses a name its system lacks** (`PARAM_NOT_FOUND`, with the names it has) and writes each parameter in its own type: it answered "Niagara parameter set" for a misspelled name, and wrote a Vector as a Float unless `parameterType` said otherwise. The level is marked unsaved, so the values survive a restart without another edit to save them.
 
 </details>
 

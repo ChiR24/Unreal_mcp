@@ -15,14 +15,20 @@
 #include "EditorAssetLibrary.h"
 #include "Engine/Blueprint.h"
 #include "IAssetTools.h"
+#include "NiagaraSystem.h"
 
 namespace {
 // A Blueprint copy's variables get new GUIDs, and its Math Expressions still named the source's (they failed to
-// compile until each expression was set again by name).
-void RebindCopiedExpressions(const FString &SourcePath, UObject *Copy) {
+// compile until each expression was set again by name). A Niagara system copy could not start until something
+// compiled it: every component playing it logged "Error initializing data interfaces" and stopped.
+void PrepareCopy(const FString &SourcePath, UObject *Copy) {
   UBlueprint *CopyBlueprint = Cast<UBlueprint>(Copy);
   if (UBlueprint *Source = CopyBlueprint ? Cast<UBlueprint>(McpLoadAsset(SourcePath)) : nullptr) {
     McpBlueprintMathExpression::RebindDuplicatedExpressions(*Source, *CopyBlueprint);
+  }
+  if (UNiagaraSystem *System = Cast<UNiagaraSystem>(Copy)) {
+    System->RequestCompile(false);
+    System->WaitForCompilationComplete(false, false);
   }
 }
 } // namespace
@@ -102,18 +108,11 @@ bool UEngineWireSubsystem::HandleImportAsset(
             return;
           }
 
-          IAssetTools &AssetTools =
-              FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools")
-                  .Get();
-
-          TArray<FString> Files;
-          Files.Add(ResolvedSourcePath);
-
-          UAutomatedAssetImportData *ImportData =
-              NewObject<UAutomatedAssetImportData>();
+          IAssetTools &AssetTools = FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools").Get();
+          UAutomatedAssetImportData *ImportData = NewObject<UAutomatedAssetImportData>();
           ImportData->bReplaceExisting = true;
           ImportData->DestinationPath = DestPath;
-          ImportData->Filenames = Files;
+          ImportData->Filenames = {ResolvedSourcePath};
           FString SetupError, SetupCode;
           ImportData->Factory = McpMakeFbxFactory(ImportData, FbxOptions, SetupError, SetupCode);
           if (SetupError.IsEmpty() && ImportData->Factory != nullptr) {
@@ -282,7 +281,7 @@ bool UEngineWireSubsystem::HandleDuplicateAsset(
 
       // A duplicate lives only in memory until saved; unsaved, it was gone after the next editor start.
       if (UObject *Copy = UEditorAssetLibrary::DuplicateAsset(SourceAssetPath, TargetAssetPath)) {
-        RebindCopiedExpressions(SourceAssetPath, Copy);
+        PrepareCopy(SourceAssetPath, Copy);
         ++DuplicatedCount;
         SavedCount += McpSafeAssetSave(Copy) ? 1 : 0;
       }
@@ -326,7 +325,7 @@ bool UEngineWireSubsystem::HandleDuplicateAsset(
   }
 
   if (UObject *NewAsset = UEditorAssetLibrary::DuplicateAsset(SourcePath, DestinationPath)) {
-    RebindCopiedExpressions(SourcePath, NewAsset);
+    PrepareCopy(SourcePath, NewAsset);
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("assetPath"), DestinationPath);

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "390ee4eb62e04a85",
+  "catalogRevision": "d614c364b054e296",
   "recordCount": 411,
   "records": [
     {
@@ -59708,12 +59708,13 @@
         "whenToUse": [
           "edit=add_emitter: System needs an emitter.",
           "edit=add_user_parameter: Expose a user param.",
-          "edit=bind_parameter: A Blueprint sets a value at run time (Set Niagara Variable on a user parameter): parameterName is the module input as get_niagara_info lists it (InitializeParticle.Color), sourceBinding the user parameter (User.Tint).",
+          "edit=bind_parameter: A Blueprint sets a value at run time (Set Niagara Variable on a user parameter): parameterName is the module input as get_niagara_info lists it (InitializeParticle.Color, ShapeLocation.Box Size), or an input of a dynamic input feeding one (RandomRangeFloat.Minimum), sourceBinding the user parameter (User.Tint).",
           "edit=bind_parameter: A value must follow an engine, system or emitter parameter (sourceBinding Emitter.Age).",
           "edit=set_parameter_value: A user parameter or a module input value must change.",
           "edit=set_parameter_value: Several values of one system or emitter must change together (parameters): one call, one save.",
           "edit=set_parameter_value: A module input changes nothing because a static switch gates it (a Ribbon Width written while InitializeParticle.Ribbon Width Mode is Unset): set the switch; get_niagara_info lists every staticSwitches value.",
           "edit=set_parameter: A parameter value must change.",
+          "edit=set_parameter: One placed effect needs its own size, rate or colour while the other placements of its system keep theirs: actorName, with parameters for several values in one call.",
           "edit=set_dynamic_input: Expression-driven value needed.",
           "edit=set_emitter_properties: Emitter config must change.",
           "edit=enable_gpu_simulation: GPU particles needed.",
@@ -59786,11 +59787,15 @@
                 ],
                 "additionalProperties": false
               },
-              "description": "Several values written together and saved once, in place of parameterName and parameterValue: each {parameterName, parameterValue} names a user parameter, a module input or a module's static switch as get_niagara_info lists it (InitializeParticle.Lifetime, InitializeParticle.Ribbon Width Mode), and emitterName and save apply to every entry. The reply lists every entry (parameterName, applied, error); the call fails PARAMETER_BATCH_INCOMPLETE naming any that did not apply, and the others stay written."
+              "description": "Several values written together and saved once, in place of parameterName and parameterValue: each {parameterName, parameterValue} names a user parameter, a module input or a module's static switch as get_niagara_info lists it (InitializeParticle.Lifetime, InitializeParticle.Ribbon Width Mode), and emitterName and save apply to every entry. With actorName (edit=set_parameter) each entry is a user parameter of that placed effect, in place of parameterName and value. The reply lists every entry (parameterName, applied, error); the call fails PARAMETER_BATCH_INCOMPLETE naming any that did not apply, and the others stay written."
             },
             "actorName": {
               "type": "string",
               "description": "Target actor name in the current level."
+            },
+            "componentName": {
+              "type": "string",
+              "description": "Actor form: which Niagara component of the actor takes the values, when it has several (a Blueprint with a fire and a smoke); default its first. A name it lacks is refused with the names it has."
             },
             "value": {
               "description": "Property value (any type)."
@@ -59925,6 +59930,10 @@
             "applied": {
               "type": "number",
               "description": "A parameters call: how many entries were written."
+            },
+            "componentName": {
+              "type": "string",
+              "description": "Actor form: the Niagara component that took the values."
             }
           },
           "required": [
@@ -60030,9 +60039,13 @@
               "set_parameter_value"
             ],
             "parameters": [
-              "set_parameter_value"
+              "set_parameter_value",
+              "set_parameter"
             ],
             "actorName": [
+              "set_parameter"
+            ],
+            "componentName": [
               "set_parameter"
             ],
             "value": [
@@ -60085,8 +60098,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "f3564c1d36d0aca566e3b8ea4010825b0ebfc23f8cf2fcb6a8590622e2e19af5",
-        "content": "8d0e52e025e228760ea92dddbcd0cfa48512099bd38929a4ff2414ca87b5f231"
+        "schema": "a51e7b2e5576cbb0215832eb4b02f40c02330413d4927e2d7c7e11b38e2a814c",
+        "content": "d9a71b8e338f43019e4b508e026968751ab76e69ed46b2a8fb019d85a0eb2414"
       }
     },
     {

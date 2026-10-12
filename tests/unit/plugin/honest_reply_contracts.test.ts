@@ -485,6 +485,21 @@ describe('handlers answer what they did', () => {
     expect(code('NiagaraAuthoring', 'McpNiagaraParams.cpp')).toContain('if (SubAction == TEXT("set_parameter_value")) return SetParameterValue(Context);');
   });
 
+  // bind refused "ShapeLocation.Box Size" (a space is not an identifier character) although get_niagara_info lists it and
+  // set_parameter_value writes it, and it never looked past module calls, so "RandomRangeFloat.Minimum" was not an input.
+  it('bind_parameter_to_source takes the module and dynamic-input input names get_niagara_info lists', () => {
+    const params = code('NiagaraAuthoring', 'McpNiagaraParams.cpp');
+    expect(params).toContain('Function = FindDynamicInputCallInput(Graph, ParamName, Input);');
+    expect(params, 'only a variable the call creates is held to identifier characters').toContain(
+      'if (!bModuleInput && !ValidateNiagaraIdentifier(Context, ParamName, TEXT("parameterName"), true))');
+    expect(params).not.toContain('ValidateNiagaraIdentifier(Context, ParamName, TEXT("parameterName"), true) ||');
+    expect(code('NiagaraAuthoring', 'McpNiagaraDynamicInputResolve.cpp')).toContain('Call->GetCalledUsage() == ENiagaraScriptUsage::DynamicInput');
+    // get_niagara_info showed a bound dynamic-input input as its stale literal: only module calls' overrides were read.
+    const info = code('NiagaraAuthoring', 'McpNiagaraModuleInfo.cpp');
+    expect(info).toContain('if (Usage != ENiagaraScriptUsage::Module && Usage != ENiagaraScriptUsage::DynamicInput)');
+    expect(info).not.toContain('Module->GetCalledUsage() != ENiagaraScriptUsage::Module');
+  });
+
   // A Ribbon Width written while InitializeParticle.Ribbon Width Mode was Unset changed nothing, and no call could see or flip the
   // switch: a static switch is a pin of the module's call node, not a rapid-iteration parameter.
   it('set_parameter_value sets a module static switch as the stack does, and get_niagara_info lists them', () => {
@@ -581,7 +596,10 @@ describe('handlers answer what they did', () => {
     const input = record?.schemas.input;
     const output = record?.schemas.output.properties;
 
-    expect(record?.routing.dispatchBy?.declaredBy?.parameters, 'a call that sends a list and no edit runs set_parameter_value').toEqual(['set_parameter_value']);
+    // A list is read by the system form and by a placed effect's form (with actorName, which only set_parameter reads,
+    // so a list sent with actorName and no edit still picks it).
+    expect(record?.routing.dispatchBy?.declaredBy?.parameters).toEqual(['set_parameter_value', 'set_parameter']);
+    expect(record?.routing.dispatchBy?.declaredBy?.actorName).toEqual(['set_parameter']);
     const ok = { edit: 'set_parameter_value', systemPath: '/Game/NS_Fire', parameters: [{ parameterName: 'InitializeParticle.Lifetime', parameterValue: 2 }, { parameterName: 'Size', parameterValue: [1, 2, 3] }] };
     expect(validateAgainstCapabilitySchema(ok, input)).toBeUndefined();
     expect(validateAgainstCapabilitySchema({ ...ok, parameters: [{ parameterName: 'Size' }] }, input)?.pointer, 'an entry without a value').toMatch(/^\/parameters\/0/u);
@@ -1659,9 +1677,38 @@ describe('a duplicated Blueprint keeps its Math Expressions bound to its own var
     expect(copy).toContain('Bridge->ForgetCapturedMessages([&CopyPath](const FString &Line) { return Line.Contains(CopyPath); });');
     expect(copy).toContain('FKismetEditorUtilities::CompileBlueprint(&Copy);');
     const handler = code('AssetWorkflow', 'Operations', 'McpAssetImportDuplicate.cpp');
-    expect(handler.indexOf('RebindCopiedExpressions(SourcePath, NewAsset);')).toBeGreaterThan(-1);
-    expect(handler.indexOf('RebindCopiedExpressions(SourcePath, NewAsset);')).toBeLessThan(handler.indexOf('McpSafeAssetSave(NewAsset)'));
-    expect(handler.indexOf('RebindCopiedExpressions(SourceAssetPath, Copy);')).toBeLessThan(handler.indexOf('McpSafeAssetSave(Copy)'));
+    expect(handler).toContain('McpBlueprintMathExpression::RebindDuplicatedExpressions(*Source, *CopyBlueprint);');
+    expect(handler.indexOf('PrepareCopy(SourcePath, NewAsset);')).toBeGreaterThan(-1);
+    expect(handler.indexOf('PrepareCopy(SourcePath, NewAsset);')).toBeLessThan(handler.indexOf('McpSafeAssetSave(NewAsset)'));
+    expect(handler.indexOf('PrepareCopy(SourceAssetPath, Copy);')).toBeGreaterThan(-1);
+    expect(handler.indexOf('PrepareCopy(SourceAssetPath, Copy);')).toBeLessThan(handler.indexOf('McpSafeAssetSave(Copy)'));
+  });
+});
+
+// set_parameter on a placed effect answered "Niagara parameter set" for a name its system lacks (the component's
+// setter adds any name), wrote a Vector parameter as Float unless told, reached only the actor's first component,
+// and left the level unmarked, so the value was lost at the next start unless another edit had dirtied it.
+describe('a placed effect takes only the user parameters its system has', () => {
+  it('resolves each name and type from the system, names the component, and marks the level', () => {
+    const params = code('Effect', 'McpEffectNiagaraRuntimeParams.cpp');
+    expect(params).toContain('System->GetExposedParameters().ReadParameterVariables()');
+    expect(params).toContain('Write.Code = TEXT("PARAM_NOT_FOUND");');
+    expect(params).toContain('const FString Kind = UserTypeKind(Var->GetType());');
+    expect(params).toContain('Component->GetName().Equals(ComponentName, ESearchCase::IgnoreCase)');
+    expect(params).toContain('Component->Modify();');
+    expect(params).toContain('TEXT("PARAMETER_BATCH_INCOMPLETE")');
+    expect(params).not.toContain('FindComponentByClass<UNiagaraComponent>()');
+  });
+});
+
+// A duplicated Niagara system could not start until something compiled it: every component playing the copy logged
+// "Error initializing data interfaces. Completing system." and stopped.
+describe('a duplicated Niagara system can play at once', () => {
+  it('compiles the copy and waits for it before the copy is saved', () => {
+    const handler = code('AssetWorkflow', 'Operations', 'McpAssetImportDuplicate.cpp');
+    expect(handler).toContain('if (UNiagaraSystem *System = Cast<UNiagaraSystem>(Copy)) {');
+    expect(handler).toContain('System->RequestCompile(false);');
+    expect(handler).toContain('System->WaitForCompilationComplete(false, false);');
   });
 });
 
@@ -1792,8 +1839,9 @@ describe('a file delete the system accepted counts as done', () => {
 describe('a Niagara parameter write answers in the capability shape', () => {
   it('sends no boolean applied and takes LinearColor as Color', () => {
     const source = code('Effect', 'McpEffectNiagaraRuntimeParams.cpp');
-    expect(source).not.toContain('SetBoolField(TEXT("applied")');
-    expect(source).toMatch(/ParameterType\.Equals\(TEXT\("LinearColor"\), ESearchCase::IgnoreCase\)\)\s*\{\s*ParameterType = TEXT\("Color"\);/u);
+    expect(source, 'only a parameters entry says applied: true or false').not.toContain('Response->SetBoolField(TEXT("applied")');
+    expect(source).toContain('Response->SetNumberField(TEXT("applied"), Results.Num() - Failed.Num());');
+    expect(source).toContain('(Kind == TEXT("Color") && TypeHint.Equals(TEXT("LinearColor"), ESearchCase::IgnoreCase))');
   });
 });
 

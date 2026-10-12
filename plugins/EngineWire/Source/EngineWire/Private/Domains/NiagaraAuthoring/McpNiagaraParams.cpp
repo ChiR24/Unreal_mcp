@@ -67,7 +67,7 @@ static bool BindParameterToSource(FActionContext& Context)
         Context.SendError(Context.SystemPath.IsEmpty() ? TEXT("Missing 'systemPath' (or 'assetPath'): the Niagara System.") : TEXT("Missing 'parameterName' or 'sourceBinding'."), TEXT("INVALID_ARGUMENT"));
         return true;
     }
-    if (!ValidateNiagaraIdentifier(Context, ParamName, TEXT("parameterName"), true) || !ValidateNiagaraIdentifier(Context, SourceBinding, TEXT("sourceBinding"), true))
+    if (!ValidateNiagaraIdentifier(Context, SourceBinding, TEXT("sourceBinding"), true))
     {
         return true;
     }
@@ -89,7 +89,11 @@ static bool BindParameterToSource(FActionContext& Context)
     FString NotAnInputCode;
     UNiagaraNodeFunctionCall* Function = ResolveDynamicInputTargetNode(Context, Graph, FString(), ParamName, NotAnInput, NotAnInputCode);
     FNiagaraVariable Input;
-    const bool bModuleInput = Function && FindModuleInput(Function, ParamName, Input);
+    if (!(Function && FindModuleInput(Function, ParamName, Input)))
+    {
+        Function = FindDynamicInputCallInput(Graph, ParamName, Input);
+    }
+    const bool bModuleInput = Function != nullptr;
     // "InitializeParticle.Colour" names a module but none of its inputs: a typo, not a variable to create.
     int32 Dot = INDEX_NONE;
     const FString Prefix = ParamName.FindChar(TEXT('.'), Dot) ? ParamName.Left(Dot) : FString();
@@ -122,6 +126,12 @@ static bool BindParameterToSource(FActionContext& Context)
                 User ? TEXT("PARAM_TYPE_MISMATCH") : TEXT("PARAM_NOT_FOUND"));
             return true;
         }
+    }
+    // A module input keeps the engine's own name ("Uniform Sprite Size Min"); only a variable this call creates is held
+    // to identifier characters.
+    if (!bModuleInput && !ValidateNiagaraIdentifier(Context, ParamName, TEXT("parameterName"), true))
+    {
+        return true;
     }
     Graph->Modify();
     if (!bModuleInput)

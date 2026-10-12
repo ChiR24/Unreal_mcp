@@ -47,6 +47,28 @@ bool FindModuleInput(UNiagaraNodeFunctionCall* Module, const FString& InputName,
     return false;
 }
 
+// "RandomRangeFloat.Minimum": an input of a dynamic input that feeds a module input, named by the dynamic input's
+// own function name as get_niagara_info lists it. Only module calls are searched elsewhere.
+UNiagaraNodeFunctionCall* FindDynamicInputCallInput(UNiagaraGraph* Graph, const FString& InputName, FNiagaraVariable& OutInput)
+{
+    int32 DotIndex = INDEX_NONE;
+    if (!Graph || !InputName.FindChar(TEXT('.'), DotIndex))
+    {
+        return nullptr;
+    }
+    const FString Prefix = InputName.Left(DotIndex);
+    for (UEdGraphNode* Node : Graph->Nodes)
+    {
+        UNiagaraNodeFunctionCall* Call = Cast<UNiagaraNodeFunctionCall>(Node);
+        if (Call && Call->GetCalledUsage() == ENiagaraScriptUsage::DynamicInput && Call->GetFunctionName().Equals(Prefix, ESearchCase::IgnoreCase) &&
+            FindModuleInput(Call, InputName, OutInput))
+        {
+            return Call;
+        }
+    }
+    return nullptr;
+}
+
 FString ListModuleInputs(UNiagaraNodeFunctionCall* Module)
 {
     TArray<FString> Names;

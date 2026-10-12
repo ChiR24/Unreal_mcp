@@ -15880,6 +15880,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Color as an {r, g, b, a} object or an [r, g, b, a] array: 0 to 255 channels for debug_shape, 0 to 1 for a light."
         },
+        "componentName": {
+          "type": "string",
+          "description": "Actor form: which Niagara component of the actor takes the values, when it has several (a Blueprint with a fire and a smoke); default its first. A name it lacks is refused with the names it has."
+        },
         "control": {
           "type": "string",
           "enum": [
@@ -16150,7 +16154,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             ],
             "additionalProperties": false
           },
-          "description": "Several values written together and saved once, in place of parameterName and parameterValue: each {parameterName, parameterValue} names a user parameter, a module input or a module's static switch as get_niagara_info lists it (InitializeParticle.Lifetime, InitializeParticle.Ribbon Width Mode), and emitterName and save apply to every entry. The reply lists every entry (parameterName, applied, error); the call fails PARAMETER_BATCH_INCOMPLETE naming any that did not apply, and the others stay written."
+          "description": "Several values written together and saved once, in place of parameterName and parameterValue: each {parameterName, parameterValue} names a user parameter, a module input or a module's static switch as get_niagara_info lists it (InitializeParticle.Lifetime, InitializeParticle.Ribbon Width Mode), and emitterName and save apply to every entry. With actorName (edit=set_parameter) each entry is a user parameter of that placed effect, in place of parameterName and value. The reply lists every entry (parameterName, applied, error); the call fails PARAMETER_BATCH_INCOMPLETE naming any that did not apply, and the others stay written."
         },
         "path": {
           "type": "string",
@@ -16310,6 +16314,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "applied": {
           "type": "number",
           "description": "A parameters call: how many entries were written."
+        },
+        "componentName": {
+          "type": "string",
+          "description": "Actor form: the Niagara component that took the values."
         },
         "details": {
           "type": "object",

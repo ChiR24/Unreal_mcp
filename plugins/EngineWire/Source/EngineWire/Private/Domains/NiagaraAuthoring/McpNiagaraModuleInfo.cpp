@@ -28,7 +28,8 @@ static FString DescribeInputSource(const UEdGraphPin& Source)
 
 // The stack modules of an emitter by name. A module's override node (the parameter-map set feeding its map input)
 // holds one pin per input set in the stack; an input wired there reads a parameter or a dynamic input, while
-// moduleInputs only had the literal stored for it, so a linked input showed a stale value.
+// moduleInputs only had the literal stored for it, so a linked input showed a stale value. A dynamic input has an
+// override node of its own (RandomRangeFloat.Minimum bound to User.SpeedMin is wired there).
 void AddEmitterModuleInfo(TSharedPtr<FJsonObject>& EmitterObj, const FNiagaraEmitterHandle& Handle)
 {
     UNiagaraScriptSource* ScriptSource = GetEmitterScriptSource(const_cast<FNiagaraEmitterHandle*>(&Handle));
@@ -43,14 +44,18 @@ void AddEmitterModuleInfo(TSharedPtr<FJsonObject>& EmitterObj, const FNiagaraEmi
     for (UEdGraphNode* GraphNode : ScriptSource->NodeGraph->Nodes)
     {
         UNiagaraNodeFunctionCall* Module = Cast<UNiagaraNodeFunctionCall>(GraphNode);
-        if (!Module || !Module->FunctionScript || Module->GetCalledUsage() != ENiagaraScriptUsage::Module)
+        const ENiagaraScriptUsage Usage = Module && Module->FunctionScript ? Module->GetCalledUsage() : ENiagaraScriptUsage::Function;
+        if (Usage != ENiagaraScriptUsage::Module && Usage != ENiagaraScriptUsage::DynamicInput)
         {
             continue;
         }
-        TSharedPtr<FJsonObject> ModuleObj = McpHandlerUtils::CreateResultObject();
-        ModuleObj->SetStringField(TEXT("name"), Module->GetFunctionName());
-        ModuleObj->SetBoolField(TEXT("enabled"), Module->IsNodeEnabled());
-        Modules.Add(MakeShared<FJsonValueObject>(ModuleObj));
+        if (Usage == ENiagaraScriptUsage::Module)
+        {
+            TSharedPtr<FJsonObject> ModuleObj = McpHandlerUtils::CreateResultObject();
+            ModuleObj->SetStringField(TEXT("name"), Module->GetFunctionName());
+            ModuleObj->SetBoolField(TEXT("enabled"), Module->IsNodeEnabled());
+            Modules.Add(MakeShared<FJsonValueObject>(ModuleObj));
+        }
         const FString Prefix = Module->GetFunctionName() + TEXT(".");
         for (const UEdGraphPin* MapIn : Module->Pins)
         {
