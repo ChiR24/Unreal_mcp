@@ -13803,6 +13803,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Face of the TextBlock font: Regular, Bold, Italic, Light... A face the font lacks is refused with the list it has."
         },
+        "unusedOnly": {
+          "type": "boolean",
+          "description": "Only nodes that do nothing: a call no exec wire reaches, or a getter, math or other pure node whose result nothing reads (what is left behind when the node that read it was deleted; the compiler says nothing). Events, input actions and function entries never count. Combines with filter."
+        },
         "userSpecifiedScale": {
           "type": "number",
           "description": "User specified scale value."

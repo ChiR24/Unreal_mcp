@@ -166,11 +166,12 @@ export const GRAPH_NODES_RECORDS: readonly CapabilityRecordSource[] = [
     family: FAMILY,
     domain: DOMAIN,
     summary: 'Read all nodes in a Blueprint graph, optionally including per-node pins and links; filter and page a large graph.',
-    whenToUse: ['The full node list of a graph must be inspected in one call.', 'A large graph must be read in parts: filter by node title or by what a pin holds, page with offset/limit.', 'The node that builds or uses a given asset, class or literal must be found, e.g. the Create Widget node for WBP_MainMenu.'],
+    whenToUse: ['The full node list of a graph must be inspected in one call.', 'A large graph must be read in parts: filter by node title or by what a pin holds, page with offset/limit.', 'The node that builds or uses a given asset, class or literal must be found, e.g. the Create Widget node for WBP_MainMenu.', 'Leftovers must be found after an edit: unusedOnly lists the nodes that do nothing, to delete them.'],
     whenNotToUse: ['A single node\'s details are needed (use get_node_details).'],
     inputProps: {
       blueprintPath: P.blueprintPath, graphName: P.graphName, includePins: P.includePins,
       filter: { type: 'string', description: 'Only nodes whose title or name, or whose pin default value or default object path, contains this text (case-insensitive, spaces ignored), e.g. "IA_Move", "Set bLocked", or "WBP_MainMenu" for the Create Widget node whose Class pin holds /Game/UI/WBP_MainMenu.WBP_MainMenu_C; or whose input is wired from a variable or component of that name, so "Arm" lists every node that reads or moves the Arm component (find each writer before driving it from Tick).' },
+      unusedOnly: { type: 'boolean', description: 'Only nodes that do nothing: a call no exec wire reaches, or a getter, math or other pure node whose result nothing reads (what is left behind when the node that read it was deleted; the compiler says nothing). Events, input actions and function entries never count. Combines with filter.' },
       offset: { type: 'number', description: 'Skip this many matching nodes (paging).' },
       limit: { type: 'number', description: 'Return at most this many nodes; totalCount and hasMore say what is left. Use it with includePins on a big graph.' },
     },

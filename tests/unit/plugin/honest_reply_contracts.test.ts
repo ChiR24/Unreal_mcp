@@ -2750,3 +2750,14 @@ describe('a motion sample reports the velocity an actor moves at', () => {
     expect(sample).toContain('McpMotionVec(Actor->GetVelocity().IsNearlyZero() ? Moved : Actor->GetVelocity())');
   });
 });
+
+describe('a graph read lists the nodes that do nothing', () => {
+  // Deleting the MoveComponentTo nodes a physics rework replaced left two unlinked Get Arm getters behind; the
+  // compiler says nothing about such leftovers, so nothing found them.
+  it('unusedOnly keeps an unreached call or an unread pure node, never a chain start', () => {
+    const queries = code('BlueprintGraph', 'McpBPGraphQueries.cpp');
+    expect(queries).toContain('return bExecIn ? !bExecInLinked : (!bExecOut && bDataOut && !bDataOutLinked);');
+    expect(queries).toContain('Context.Payload->TryGetBoolField(TEXT("unusedOnly"), bUnusedOnly);');
+    expect(queries).toContain('(bUnusedOnly && !NodeDoesNothing(Node))');
+  });
+});

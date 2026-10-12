@@ -1,5 +1,6 @@
 #include "Domains/BlueprintGraph/McpBPGraphPrivate.h"
 
+#include "EdGraphSchema_K2.h"
 #include "K2Node_VariableGet.h"
 
 namespace McpBlueprintGraphHandlers
@@ -124,6 +125,29 @@ static bool NodeMatchesGraphFilter(const UEdGraphNode* Node, const FString& Titl
     return false;
 }
 
+// A node that does nothing: a call no exec wire reaches, or a getter, math or other pure node whose result nothing
+// reads. Deleting what read a node leaves it behind, and the compiler says nothing. A node that starts a chain (an
+// event, an input action, a function entry) never counts; nor does one without pins (a comment).
+static bool NodeDoesNothing(const UEdGraphNode* Node)
+{
+    bool bExecIn = false, bExecInLinked = false, bExecOut = false, bDataOut = false, bDataOutLinked = false;
+    for (const UEdGraphPin* Pin : Node->Pins)
+    {
+        if (!Pin || Pin->bHidden)
+        {
+            continue;
+        }
+        const bool bExec = Pin->PinType.PinCategory == UEdGraphSchema_K2::PC_Exec;
+        const bool bLinked = Pin->LinkedTo.Num() > 0;
+        bExecIn |= bExec && Pin->Direction == EGPD_Input;
+        bExecInLinked |= bExec && Pin->Direction == EGPD_Input && bLinked;
+        bExecOut |= bExec && Pin->Direction == EGPD_Output;
+        bDataOut |= !bExec && Pin->Direction == EGPD_Output;
+        bDataOutLinked |= !bExec && Pin->Direction == EGPD_Output && bLinked;
+    }
+    return bExecIn ? !bExecInLinked : (!bExecOut && bDataOut && !bDataOutLinked);
+}
+
 static bool GetGraphDetails(FActionContext& Context)
 {
     if (Context.SubAction != TEXT("get_graph_details"))
@@ -138,12 +162,14 @@ static bool GetGraphDetails(FActionContext& Context)
     // caller narrows by title, name or a pin's default (filter) and pages
     // (offset/limit); totalCount and hasMore say what is left.
     bool bIncludePins = false;
+    bool bUnusedOnly = false;
     FString Filter;
     int32 Offset = 0;
     int32 Limit = 0;
     if (Context.Payload.IsValid())
     {
         Context.Payload->TryGetBoolField(TEXT("includePins"), bIncludePins);
+        Context.Payload->TryGetBoolField(TEXT("unusedOnly"), bUnusedOnly);
         Context.Payload->TryGetStringField(TEXT("filter"), Filter);
         Context.Payload->TryGetNumberField(TEXT("offset"), Offset);
         Context.Payload->TryGetNumberField(TEXT("limit"), Limit);
@@ -167,7 +193,8 @@ static bool GetGraphDetails(FActionContext& Context)
             continue;
         }
         const FString Title = Node->GetNodeTitle(ENodeTitleType::ListView).ToString();
-        if (!Filter.IsEmpty() && !NodeMatchesGraphFilter(Node, Title, SquashedFilter))
+        if ((!Filter.IsEmpty() && !NodeMatchesGraphFilter(Node, Title, SquashedFilter)) ||
+            (bUnusedOnly && !NodeDoesNothing(Node)))
         {
             continue;
         }

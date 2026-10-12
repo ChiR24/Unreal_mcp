@@ -44,7 +44,7 @@ describe('get_graph_details filter reads what a node\'s pins hold', () => {
   });
 
   it('the listing loop filters through it, so the paging counts agree', () => {
-    expect(queries()).toMatch(/if \(!Filter\.IsEmpty\(\) && !NodeMatchesGraphFilter\(Node, Title, SquashedFilter\)\)/u);
+    expect(queries()).toMatch(/if \(\(!Filter\.IsEmpty\(\) && !NodeMatchesGraphFilter\(Node, Title, SquashedFilter\)\) \|\|\s*\(bUnusedOnly && !NodeDoesNothing\(Node\)\)\)/u);
   });
 
   it('the filter description says so', () => {

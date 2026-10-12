@@ -87,5 +87,5 @@ inline const FMcpCapabilityShard& At(int32 Index)
 
 inline int32 TotalRecordCount() { return 411; }
 
-inline const TCHAR* CatalogRevision() { return TEXT("870aee95c4ed2cf9"); }
+inline const TCHAR* CatalogRevision() { return TEXT("1159f0f7e93e247d"); }
 }
