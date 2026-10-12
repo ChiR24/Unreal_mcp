@@ -84,7 +84,7 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'configure_post_process', selector: 'setting',
     summary: 'Configure a post-process setting on a volume or camera: bloom, exposure, depth of field, motion blur, tonemapper, color grading, LUT, white balance, vignette, grain, chromatic aberration, lens flare, SSAO/GTAO, SSR, screen percentage, blend.',
-    topics: ['post process', 'bloom', 'exposure', 'depth of field', 'motion blur', 'tonemapper', 'color grading', 'vignette', 'add bloom', 'screen tint', 'change screen tint', 'add bloom or depth of field'],
+    topics: ['post process', 'bloom', 'exposure', 'auto exposure', 'eye adaptation', 'depth of field', 'motion blur', 'tonemapper', 'color grading', 'vignette', 'add bloom', 'screen tint', 'change screen tint', 'add bloom or depth of field'],
     members: byName(['configure_bloom', 'set_bloom_intensity', 'set_bloom_threshold', 'configure_exposure', 'set_exposure_compensation', 'set_exposure_method',
       'set_exposure_min_max', 'configure_dof', 'set_dof_method', 'set_focal_distance', 'set_aperture', 'configure_bokeh', 'configure_motion_blur',
       'set_motion_blur_amount', 'set_motion_blur_max', 'configure_tonemapper', 'set_tonemapper_type', 'set_pp_color_grading', 'set_pp_lut',

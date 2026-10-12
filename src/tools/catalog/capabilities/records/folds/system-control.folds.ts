@@ -22,7 +22,7 @@ export const SYSTEM_CONTROL_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'profile_performance', selector: 'control',
     summary: 'Profile performance: start or stop profiling, run a benchmark, generate a memory report, show stats.',
-    topics: ['profiling', 'benchmark', 'memory report', 'stat unit', 'show stats'],
+    topics: ['profiling', 'benchmark', 'memory report', 'stat unit', 'show stats', 'profile the game', 'find what is slow'],
     members: { start: 'start_profiling', stop: 'stop_profiling', benchmark: 'run_benchmark', memory_report: 'generate_memory_report', show_stats: 'show_stats' },
   },
   {

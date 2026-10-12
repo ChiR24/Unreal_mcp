@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "b1b202a27e770cdd",
+  "catalogRevision": "18493ac3b60e8b5a",
   "recordCount": 411,
   "records": [
     {
@@ -23566,6 +23566,8 @@
           "post process",
           "bloom",
           "exposure",
+          "auto exposure",
+          "eye adaptation",
           "depth of field",
           "motion blur",
           "tonemapper",
@@ -23959,7 +23961,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "8aee5e45c49e9a6c798cf11206b9aaefea3d6ba723ecc6bc6e6d01793c1140b9",
-        "content": "a931ec7cb4c9218f0a2e279ea278401e1f84bdf30ce5c66862059869fc7cec4f"
+        "content": "3715d4a030e5a6424c19016748c9993c6000b1176f65115e4be86bd20ec36ed7"
       }
     },
     {
@@ -92632,12 +92634,14 @@
         "family": "console",
         "topics": [
           "console_command",
-          "active sounds"
+          "active sounds",
+          "live coding"
         ],
         "summary": "Run a validated console command.",
         "whenToUse": [
           "A console command must be run with explicit empty-input rejection.",
           "The sounds playing right now must be listed (is the music still on, did a loop stop): au.DumpActiveSounds puts each one with its asset, owner and volume in output.",
+          "C++ must be recompiled while the editor runs: LiveCoding.Compile (read_log shows the result; a Live Coding patch is lost when the editor restarts, so a lasting change needs a full build with the editor closed).",
           "An arbitrary console command must be run and its result returned."
         ],
         "whenNotToUse": [
@@ -92744,7 +92748,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "60f83cf067f4f83dc8a574e8e06158c13fab777b793f916986a18de69d179b39",
-        "content": "72726a8bfdc3094fdf6ccea7bc9dbfb1c9ebdfd4993d24aeed94e329e407ea93"
+        "content": "0b6533449203accee5ff80325d24ea666786c5d246b1957948d57023c78cac27"
       }
     },
     {
@@ -95019,7 +95023,9 @@
           "packaging the game",
           "build game",
           "maps to cook",
-          "shipping build"
+          "shipping build",
+          "package for windows",
+          "cook content"
         ],
         "summary": "Start a project package (cook, stage, pak, archive) and return a jobId to poll; the build runs asynchronously in the editor.",
         "whenToUse": [
@@ -95171,7 +95177,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "bdd2296d252b0be4d01736c528d9b2986164e8f267b9b6a71ac966c4fa31633a",
-        "content": "5442e873c68d354aa4c406fd6eb15a8d8af8b32b69b99a3164852eff04cb417f"
+        "content": "977344f5506c44407a3299ef01298d86b4dfa4cfbd41cc7511c0f47ab73916ae"
       }
     },
     {
@@ -95548,7 +95554,9 @@
           "benchmark",
           "memory report",
           "stat unit",
-          "show stats"
+          "show stats",
+          "profile the game",
+          "find what is slow"
         ],
         "summary": "Profile performance: start or stop profiling, run a benchmark, generate a memory report, show stats.",
         "whenToUse": [
@@ -95711,7 +95719,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "6151889906909554a91a7beb95faf7b8e2c01e15c38c5530d819af017153c011",
-        "content": "fcb13e24c1a217d63df8758c4636fc729094c704af14c09c9b70f1797359ba94"
+        "content": "a0daa132cf7543fdb6036fb3acf0631bfbf467bccbcdcbe3ad1155933c1cd6d7"
       }
     },
     {
@@ -97393,7 +97401,8 @@
           "lod bias",
           "streaming priority",
           "texture group",
-          "virtual texture"
+          "virtual texture",
+          "reduce texture size"
         ],
         "summary": "Configure texture settings: compression, LOD bias, streaming priority, texture group, virtual texturing.",
         "whenToUse": [
@@ -97552,7 +97561,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "d32c5e45e536acff5310e75333b1ecc717b74e3cb42c647e59454b58bf8f1ea5",
-        "content": "879c8e176550b7ba97305d002e3b87a5849ae12ada45740d8225840bb8cb5ed6"
+        "content": "e399c8b8f8610e0461c9daad1cc4148de7734fd35fb19f5caeb6e81c4aeb45bf"
       }
     },
     {

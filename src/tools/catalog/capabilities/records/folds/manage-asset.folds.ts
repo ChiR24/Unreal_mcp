@@ -234,7 +234,7 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'configure_texture', selector: 'setting',
     summary: 'Configure texture settings: compression, LOD bias, streaming priority, texture group, virtual texturing.',
-    topics: ['texture compression', 'lod bias', 'streaming priority', 'texture group', 'virtual texture'],
+    topics: ['texture compression', 'lod bias', 'streaming priority', 'texture group', 'virtual texture', 'reduce texture size'],
     members: { compression: 'set_compression_settings', lod_bias: 'set_lod_bias', streaming_priority: 'set_streaming_priority', texture_group: 'set_texture_group', virtual_texture: 'configure_virtual_texture' },
   },
 ];

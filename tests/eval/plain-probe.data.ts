@@ -443,4 +443,11 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'random number', accepted: ['blueprint.edit_graph'] },
   { query: 'for each loop', accepted: ['blueprint.edit_graph'] },
   { query: 'gate node', accepted: ['blueprint.edit_graph'] },
+  { query: 'package for windows', accepted: ['system_control.package_project'] },
+  { query: 'cook content', accepted: ['system_control.package_project'] },
+  { query: 'profile the game', accepted: ['system_control.profile_performance'] },
+  { query: 'eye adaptation', accepted: ['build_environment.configure_post_process'] },
+  { query: 'auto exposure', accepted: ['build_environment.configure_post_process'] },
+  { query: 'reduce texture size', accepted: ['texture.configure_texture'] },
+  { query: 'live coding', accepted: ['system_control.console_command', 'control_editor.console_command'] },
 ];
