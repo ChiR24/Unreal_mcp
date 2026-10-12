@@ -170,7 +170,7 @@ export const GRAPH_NODES_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['A single node\'s details are needed (use get_node_details).'],
     inputProps: {
       blueprintPath: P.blueprintPath, graphName: P.graphName, includePins: P.includePins,
-      filter: { type: 'string', description: 'Only nodes whose title or name, or whose pin default value or default object path, contains this text (case-insensitive, spaces ignored), e.g. "IA_Move", "Set bLocked", or "WBP_MainMenu" for the Create Widget node whose Class pin holds /Game/UI/WBP_MainMenu.WBP_MainMenu_C.' },
+      filter: { type: 'string', description: 'Only nodes whose title or name, or whose pin default value or default object path, contains this text (case-insensitive, spaces ignored), e.g. "IA_Move", "Set bLocked", or "WBP_MainMenu" for the Create Widget node whose Class pin holds /Game/UI/WBP_MainMenu.WBP_MainMenu_C; or whose input is wired from a variable or component of that name, so "Arm" lists every node that reads or moves the Arm component (find each writer before driving it from Tick).' },
       offset: { type: 'number', description: 'Skip this many matching nodes (paging).' },
       limit: { type: 'number', description: 'Return at most this many nodes; totalCount and hasMore say what is left. Use it with includePins on a big graph.' },
     },

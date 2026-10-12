@@ -2731,3 +2731,13 @@ describe('remove_variable takes a list under one consent', () => {
     expect(metadata).toContain('McpMatchVariableNames(Blueprint, VarNames, Missing, Known);');
   });
 });
+
+describe('a graph filter finds what reads or moves a variable', () => {
+  // A Tick that set the customs boom every frame froze the Set Relative Rotation that raised it; filter "Arm" listed
+  // the getters and setters but not that node, so the competing writer had to be found by hand.
+  it('matches a node whose input is wired from a variable or component getter of that name', () => {
+    const queries = code('BlueprintGraph', 'McpBPGraphQueries.cpp');
+    expect(queries).toContain('#include "K2Node_VariableGet.h"');
+    expect(queries).toMatch(/Pin->Direction == EGPD_Input && Linked \? Cast<UK2Node_VariableGet>\(Linked->GetOwningNode\(\)\) : nullptr;\s*if \(Getter && Matches\(Getter->GetVarNameString\(\)\)\)/u);
+  });
+});

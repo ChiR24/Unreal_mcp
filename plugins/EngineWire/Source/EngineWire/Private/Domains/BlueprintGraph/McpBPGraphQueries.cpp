@@ -1,5 +1,7 @@
 #include "Domains/BlueprintGraph/McpBPGraphPrivate.h"
 
+#include "K2Node_VariableGet.h"
+
 namespace McpBlueprintGraphHandlers
 {
 // An enum, soft reference or interface pin names its sub-type too, not only an object, class or struct; an array, set
@@ -98,10 +100,25 @@ static bool NodeMatchesGraphFilter(const UEdGraphNode* Node, const FString& Titl
     }
     for (const UEdGraphPin* Pin : Node->Pins)
     {
-        if (Pin && (Matches(Pin->DefaultValue) || Matches(Pin->DefaultTextValue.ToString()) ||
-                    (Pin->DefaultObject && Matches(Pin->DefaultObject->GetPathName()))))
+        if (!Pin)
+        {
+            continue;
+        }
+        if (Matches(Pin->DefaultValue) || Matches(Pin->DefaultTextValue.ToString()) ||
+            (Pin->DefaultObject && Matches(Pin->DefaultObject->GetPathName())))
         {
             return true;
+        }
+        // An input wired from a variable or component of that name: "Arm" finds the Set Relative Rotation that moves the
+        // Arm component, so every writer of it can be found (a Tick that sets it each frame overrides the others).
+        for (const UEdGraphPin* Linked : Pin->LinkedTo)
+        {
+            const UK2Node_VariableGet* Getter =
+                Pin->Direction == EGPD_Input && Linked ? Cast<UK2Node_VariableGet>(Linked->GetOwningNode()) : nullptr;
+            if (Getter && Matches(Getter->GetVarNameString()))
+            {
+                return true;
+            }
         }
     }
     return false;
