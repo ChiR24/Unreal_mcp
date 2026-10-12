@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "37f79913aeb8d81e",
+  "catalogRevision": "19956644c0732aa9",
   "recordCount": 411,
   "records": [
     {
@@ -13199,7 +13199,7 @@
             },
             "inputs": {
               "type": "array",
-              "description": "Function input parameter descriptors.",
+              "description": "Function inputs, each {name, type}, with the types add_event parameters take (Float, Vector, Actor, Array<Int> ...). A nameless entry or a type no pin takes is refused (TYPE_RESOLUTION_FAILED) before anything changes.",
               "items": {
                 "type": "object",
                 "additionalProperties": true,
@@ -13209,7 +13209,7 @@
             },
             "outputs": {
               "type": "array",
-              "description": "Function output parameter descriptors.",
+              "description": "Function outputs (its return values), each {name, type}, with the types inputs take.",
               "items": {
                 "type": "object",
                 "additionalProperties": true,
@@ -13243,7 +13243,7 @@
             },
             "parameters": {
               "type": "array",
-              "description": "Function/event parameter descriptors.",
+              "description": "Event parameters, each {name, type}. Types: bool, byte, int, int64, float, double, string, name, text, vector, vector2d, rotator, transform, color, linearcolor, object, class, a class, struct or enum name (Actor, HitResult), Object:/Script/Engine.Actor, Struct:<path>, Enum:<path>, and Array<T>, Set<T> or Map<Key,Value>. A nameless entry or a type no pin takes is refused (TYPE_RESOLUTION_FAILED) before anything changes.",
               "items": {
                 "type": "object",
                 "additionalProperties": true,
@@ -13430,8 +13430,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "1ec3e015b70c055675e024594442db97428cf07f56f1ef9ebce5e32c9ab6bc4a",
-        "content": "90ecbe9aab4de2ea7ac9c1c4419e83220992ca2e2358d2f34d4c25d385c65028"
+        "schema": "d0748c85861697161d07c09edfec5b9a265bdec34ff11f43c4b23e29b4cc357c",
+        "content": "b39a94393c34cc1f69206eeed0ec5d19fd2ab96687879729ab9df837f3ca180f"
       }
     },
     {
@@ -16407,7 +16407,7 @@
             },
             "parameters": {
               "type": "array",
-              "description": "CustomEvent inputs, each {name, type}: float, double, int, int64, bool, byte, string, name, text, object, class, or a struct (Vector, /Script/CoreUObject.Vector).",
+              "description": "CustomEvent inputs, each {name, type}: float, double, int, int64, bool, byte, string, name, text, object, class, softobject, an enum or struct name (Vector, Rotator, Transform, /Script/CoreUObject.Vector) or a class name (Actor) for an object of that class. An array, set or map parameter needs add_event. A nameless entry or another type is refused (TYPE_RESOLUTION_FAILED) before anything changes.",
               "items": {
                 "type": "object",
                 "additionalProperties": true,
@@ -16936,8 +16936,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "5b7b461d1412c2fed63cc6c1e45e96502db6ed8226a4d1f2b290c15348bea1a3",
-        "content": "367ad7295c78a575bc4102fac437a12620a0622660cdc4bdadf4fea4bb11f23a"
+        "schema": "4975a36bcaf695f1387a4fd9b311b53ad73ab0b7abbd0157fc22138e4f41fef0",
+        "content": "17f829533205219673598f4a3238412b7a433468fe9b6f938ec42303256c53e3"
       }
     },
     {

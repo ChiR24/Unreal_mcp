@@ -175,6 +175,35 @@ FEdGraphPinType MakePinType(const FString& InType)
     return Result.PinType;
 }
 
+FString DescribeInvalidParam(const TArray<TSharedPtr<FJsonValue>>& Params, const TCHAR* Field)
+{
+    for (int32 Index = 0; Index < Params.Num(); ++Index)
+    {
+        const TSharedPtr<FJsonObject>* Param = nullptr;
+        FString Name;
+        FString Type;
+        if (Params[Index].IsValid() && Params[Index]->TryGetObject(Param) && Param)
+        {
+            (*Param)->TryGetStringField(TEXT("name"), Name);
+            (*Param)->TryGetStringField(TEXT("type"), Type);
+        }
+        if (Name.TrimStartAndEnd().IsEmpty())
+        {
+            return FString::Printf(TEXT("%s[%d] has no name: each entry is {name, type}."), Field, Index);
+        }
+        const FTypeResolutionResult Resolved = ResolvePinType(Type);
+        if (!Resolved.bSuccess)
+        {
+            return FString::Printf(TEXT("%s[%d] has type '%s', which no pin takes (%s). Types: bool, byte, int, int64, "
+                                        "float, double, string, name, text, vector, vector2d, rotator, transform, color, "
+                                        "linearcolor, object, class, a class, struct or enum name, Object:/Script/Engine.Actor, "
+                                        "Struct:<path> or Enum:<path>, and Array<T>, Set<T> or Map<Key,Value>."),
+                                   Field, Index, *Type, *Resolved.OutError);
+        }
+    }
+    return FString();
+}
+
 FString DescribePinType(const FEdGraphPinType& PinType)
 {
     FString BaseType = PinType.PinCategory.ToString();

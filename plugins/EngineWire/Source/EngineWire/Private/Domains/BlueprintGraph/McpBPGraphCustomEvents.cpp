@@ -70,40 +70,34 @@ static bool AddParameters(
     UFunction* Function,
     const TArray<TSharedPtr<FJsonValue>>& Parameters)
 {
+    // A type this path cannot build was dropped from the event with only a log line, and the call answered success.
     TArray<FProperty*> Properties;
-    for (const TSharedPtr<FJsonValue>& ParameterValue : Parameters)
+    FString Error;
+    for (int32 Index = 0; Index < Parameters.Num() && Error.IsEmpty(); ++Index)
     {
-        const TSharedPtr<FJsonObject>& Parameter =
-            ParameterValue->AsObject();
-        if (!Parameter.IsValid())
-        {
-            continue;
-        }
-
+        const TSharedPtr<FJsonObject>* Parameter = nullptr;
         FString ParameterName;
         FString ParameterType;
-        if (!Parameter->TryGetStringField(
-                TEXT("name"),
-                ParameterName) ||
-            !Parameter->TryGetStringField(
-                TEXT("type"),
-                ParameterType))
+        if (Parameters[Index].IsValid() && Parameters[Index]->TryGetObject(Parameter) && Parameter)
         {
-            Context.SendError(
-                TEXT("Missing 'name' or 'type' in parameter definition."),
-                TEXT("INVALID_PARAMETER"));
-            return false;
+            (*Parameter)->TryGetStringField(TEXT("name"), ParameterName);
+            (*Parameter)->TryGetStringField(TEXT("type"), ParameterType);
         }
-
-        if (FProperty* Property = CreateCustomEventParameter(
-                Function,
-                ParameterName,
-                ParameterType))
+        FProperty* Property = ParameterName.IsEmpty() ? nullptr
+            : CreateCustomEventParameter(Function, ParameterName, ParameterType);
+        if (Property)
         {
             Properties.Add(Property);
+            continue;
         }
+        Error = FString::Printf(
+            TEXT("parameters[%d] needs a name and a type a custom event takes, not '%s': float, double, int, int64, "
+                 "bool, byte, string, name, text, object, class, softobject, an enum or struct name (Vector, Rotator, "
+                 "Transform) or a class name (Actor). For an array, set or map parameter use add_event."),
+            Index, *ParameterType);
     }
 
+    // Linked even on a refusal, so the function frees what it made.
     if (Properties.Num() > 0)
     {
         Function->ChildProperties = Properties[0];
@@ -113,7 +107,11 @@ static bool AddParameters(
         }
     }
     Function->Bind();
-    return true;
+    if (!Error.IsEmpty())
+    {
+        Context.SendError(Error, TEXT("TYPE_RESOLUTION_FAILED"));
+    }
+    return Error.IsEmpty();
 }
 
 bool TryCreateCustomEventNode(
@@ -214,7 +212,6 @@ bool TryCreateCustomEventNode(
         return true;
     }
 
-    RemoveExistingCustomEvents(Context.Blueprint, EventName);
     if (!Context.Blueprint->GeneratedClass)
     {
         Context.SendError(
@@ -236,10 +233,13 @@ bool TryCreateCustomEventNode(
     TemporaryFunction->FunctionFlags =
         FUNC_Public | FUNC_BlueprintCallable;
 
+    // The parameters are checked before the old event goes: a refused call removed it all the same.
     if (!AddParameters(Context, TemporaryFunction, *Parameters))
     {
+        TemporaryFunction->MarkAsGarbage();
         return true;
     }
+    RemoveExistingCustomEvents(Context.Blueprint, EventName);
 
     UK2Node_CustomEvent* EventNode =
         UK2Node_CustomEvent::CreateFromFunction(

@@ -6,6 +6,7 @@
 #include "Foundation/BridgeHelpers/Blueprints/McpBPCompileHelpers.h"
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsBlueprintGraph.h"
 #include "Misc/ScopeExit.h"
 
 #include "Engine/Blueprint.h"
@@ -60,6 +61,13 @@ bool HandleBlueprintAddFunction(const FBlueprintActionContext &Context) {
         (OutputsField && OutputsField->Num() > 0)
             ? *OutputsField
             : TArray<TSharedPtr<FJsonValue>>();
+    // A type no pin takes became a wildcard pin, a nameless entry was skipped, and the function answered success.
+    FString BadParam = McpBlueprintUtils::DescribeInvalidParam(Inputs, TEXT("inputs"));
+    BadParam = BadParam.IsEmpty() ? McpBlueprintUtils::DescribeInvalidParam(Outputs, TEXT("outputs")) : BadParam;
+    if (!BadParam.IsEmpty()) {
+      Bridge.SendAutomationError(RequestingSocket, RequestId, BadParam, TEXT("TYPE_RESOLUTION_FAILED"));
+      return true;
+    }
     // Omitted, a new function keeps the editor default: public.
     const bool bIsPublic = LocalPayload->HasField(TEXT("isPublic"))
                                ? GetJsonBoolField(LocalPayload, TEXT("isPublic"))

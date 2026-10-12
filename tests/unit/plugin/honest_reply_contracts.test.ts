@@ -2657,3 +2657,30 @@ describe('a console command returns what it logged on other threads', () => {
     expect(console.indexOf('GLog->FlushThreadedLogs();')).toBeLessThan(console.indexOf('GLog->RemoveOutputDevice(&LogCapture);'));
   });
 });
+
+describe('a parameter no pin takes is refused before anything is made', () => {
+  // add_function inputs [{name: "Speed", type: "flaot"}] made a wildcard pin and answered success, and a nameless entry
+  // was skipped; a graph custom event dropped a type it could not build and removed the old event before checking.
+  it('add_function and add_event check every {name, type} first', () => {
+    const resolver = code('..', 'Foundation', 'Blueprint', 'McpBlueprintUtilsTypeResolver.cpp');
+    expect(resolver).toMatch(/if \(Name\.TrimStartAndEnd\(\)\.IsEmpty\(\)\)\s*\{\s*return FString::Printf/u);
+    expect(resolver).toMatch(/const FTypeResolutionResult Resolved = ResolvePinType\(Type\);\s*if \(!Resolved\.bSuccess\)/u);
+    const fn = code('Blueprint', 'Functions', 'McpBPAddFunction.cpp');
+    expect(fn).toContain('McpBlueprintUtils::DescribeInvalidParam(Outputs, TEXT("outputs"))');
+    expect(fn.indexOf('McpBlueprintUtils::DescribeInvalidParam(Inputs, TEXT("inputs"))')).toBeGreaterThan(0);
+    expect(fn.indexOf('DescribeInvalidParam(Inputs')).toBeLessThan(fn.indexOf('FBlueprintEditorUtils::CreateNewGraph('));
+    const event = code('Blueprint', 'Events', 'McpBPAddEventCustom.cpp');
+    expect(event.indexOf('DescribeInvalidParam(Params, TEXT("parameters"))')).toBeGreaterThan(0);
+    expect(event.indexOf('DescribeInvalidParam(Params')).toBeLessThan(event.indexOf('FGraphNodeCreator<UK2Node_CustomEvent>'));
+  });
+  it('a graph custom event refuses a type it cannot build and keeps the old event', () => {
+    const events = code('BlueprintGraph', 'McpBPGraphCustomEvents.cpp');
+    expect(events).toContain('Context.SendError(Error, TEXT("TYPE_RESOLUTION_FAILED"));');
+    expect(events.indexOf('RemoveExistingCustomEvents(Context.Blueprint, EventName);'))
+      .toBeGreaterThan(events.indexOf('if (!AddParameters(Context, TemporaryFunction, *Parameters))'));
+    const params = code('BlueprintGraph', 'McpBPGraphCustomEventParams.cpp');
+    expect(params).toMatch(/PinType\.PinCategory == UEdGraphSchema_K2::PC_Byte\)\s*\{\s*FByteProperty/u);
+    expect(params).toContain('ObjectProperty->PropertyClass = ReferenceClass;');
+    expect(params).toContain('ClassProperty->MetaClass = ReferenceClass;');
+  });
+});

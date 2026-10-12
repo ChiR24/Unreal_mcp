@@ -79,6 +79,10 @@ ENGINEWIRE_API FTypeResolutionResult ResolvePinType(
 /** Legacy wrapper: resolves the type and falls back to PC_Wildcard on error
  *  (logging the diagnostic).  Prefer ResolvePinType() in new code. */
 ENGINEWIRE_API FEdGraphPinType MakePinType(const FString& TypeName);
+/** The first {name, type} descriptor of Params (named Field[index]) with no name or a type ResolvePinType cannot
+ *  take, as a refusal listing the accepted spellings; empty when every one is valid. MakePinType made such a type a
+ *  wildcard pin, a nameless entry was skipped, and add_function and add_event answered success. */
+ENGINEWIRE_API FString DescribeInvalidParam(const TArray<TSharedPtr<FJsonValue>>& Params, const TCHAR* Field);
 ENGINEWIRE_API FString DescribePinType(const FEdGraphPinType& PinType);
 ENGINEWIRE_API TArray<TSharedPtr<FJsonValue>> CollectBlueprintVariables(UBlueprint* Blueprint);
 ENGINEWIRE_API TArray<TSharedPtr<FJsonValue>> CollectBlueprintFunctions(UBlueprint* Blueprint);

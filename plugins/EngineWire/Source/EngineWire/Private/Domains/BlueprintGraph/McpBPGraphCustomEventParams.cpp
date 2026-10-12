@@ -14,6 +14,9 @@ FProperty* CreateCustomEventParameter(
         ResolveCustomEventPinType(ParameterType);
     const FName PropertyName(*ParameterName);
     FProperty* Property = nullptr;
+    // A bare object, class or softobject names no class and takes any object; these were dropped from the event.
+    UClass* ReferenceClass = Cast<UClass>(PinType.PinSubCategoryObject.Get());
+    ReferenceClass = ReferenceClass ? ReferenceClass : UObject::StaticClass();
 
     if (PinType.PinCategory == UEdGraphSchema_K2::PC_Real)
     {
@@ -59,14 +62,13 @@ FProperty* CreateCustomEventParameter(
     {
         Property = new FTextProperty(Function, PropertyName, RF_Public);
     }
-    else if (
-        PinType.PinCategory == UEdGraphSchema_K2::PC_Byte &&
-        PinType.PinSubCategoryObject.IsValid())
+    else if (PinType.PinCategory == UEdGraphSchema_K2::PC_Byte)
     {
+        // A bare byte names no enum.
         FByteProperty* ByteProperty =
             new FByteProperty(Function, PropertyName, RF_Public);
         ByteProperty->Enum =
-            Cast<UEnum>(PinType.PinSubCategoryObject);
+            Cast<UEnum>(PinType.PinSubCategoryObject.Get());
         Property = ByteProperty;
     }
     else if (
@@ -79,35 +81,26 @@ FProperty* CreateCustomEventParameter(
             Cast<UScriptStruct>(PinType.PinSubCategoryObject);
         Property = StructProperty;
     }
-    else if (
-        PinType.PinCategory == UEdGraphSchema_K2::PC_Object &&
-        PinType.PinSubCategoryObject.IsValid())
+    else if (PinType.PinCategory == UEdGraphSchema_K2::PC_Object)
     {
         FObjectProperty* ObjectProperty =
             new FObjectProperty(Function, PropertyName, RF_Public);
-        ObjectProperty->PropertyClass =
-            Cast<UClass>(PinType.PinSubCategoryObject);
+        ObjectProperty->PropertyClass = ReferenceClass;
         Property = ObjectProperty;
     }
-    else if (
-        PinType.PinCategory == UEdGraphSchema_K2::PC_Class &&
-        PinType.PinSubCategoryObject.IsValid())
+    else if (PinType.PinCategory == UEdGraphSchema_K2::PC_Class)
     {
         FClassProperty* ClassProperty =
             new FClassProperty(Function, PropertyName, RF_Public);
         ClassProperty->PropertyClass = UClass::StaticClass();
-        ClassProperty->MetaClass =
-            Cast<UClass>(PinType.PinSubCategoryObject);
+        ClassProperty->MetaClass = ReferenceClass;
         Property = ClassProperty;
     }
-    else if (
-        PinType.PinCategory == UEdGraphSchema_K2::PC_SoftObject &&
-        PinType.PinSubCategoryObject.IsValid())
+    else if (PinType.PinCategory == UEdGraphSchema_K2::PC_SoftObject)
     {
         FSoftObjectProperty* SoftProperty =
             new FSoftObjectProperty(Function, PropertyName, RF_Public);
-        SoftProperty->PropertyClass =
-            Cast<UClass>(PinType.PinSubCategoryObject);
+        SoftProperty->PropertyClass = ReferenceClass;
         Property = SoftProperty;
     }
 

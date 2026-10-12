@@ -103,19 +103,19 @@ export const P = {
   customEventName: S('Custom event name to create.'),
   parameters: {
     type: 'array',
-    description: 'Function/event parameter descriptors.',
+    description: 'Event parameters, each {name, type}. Types: bool, byte, int, int64, float, double, string, name, text, vector, vector2d, rotator, transform, color, linearcolor, object, class, a class, struct or enum name (Actor, HitResult), Object:/Script/Engine.Actor, Struct:<path>, Enum:<path>, and Array<T>, Set<T> or Map<Key,Value>. A nameless entry or a type no pin takes is refused (TYPE_RESOLUTION_FAILED) before anything changes.',
     items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
     'x-unreal-reflection-boundary': true,
   },
   inputs: {
     type: 'array',
-    description: 'Function input parameter descriptors.',
+    description: 'Function inputs, each {name, type}, with the types add_event parameters take (Float, Vector, Actor, Array<Int> ...). A nameless entry or a type no pin takes is refused (TYPE_RESOLUTION_FAILED) before anything changes.',
     items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
     'x-unreal-reflection-boundary': true,
   },
   outputs: {
     type: 'array',
-    description: 'Function output parameter descriptors.',
+    description: 'Function outputs (its return values), each {name, type}, with the types inputs take.',
     items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
     'x-unreal-reflection-boundary': true,
   },

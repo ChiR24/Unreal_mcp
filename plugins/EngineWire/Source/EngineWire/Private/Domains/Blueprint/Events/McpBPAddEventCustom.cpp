@@ -3,6 +3,7 @@
 #include "Foundation/BridgeHelpers/Assets/McpAssetSaveRegistry.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPCompileHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsBlueprintGraph.h"
 
 #include "Engine/Blueprint.h"
 #include "Kismet2/BlueprintEditorUtils.h"
@@ -16,6 +17,12 @@ bool McpBlueprintAddEventCustom(
   UEngineWireSubsystem &Bridge = Context.Bridge;
   const FString &RequestId = Context.RequestId;
   TSharedPtr<FMcpBridgeWebSocket> RequestingSocket = Context.RequestingSocket;
+  // A type no pin takes became a wildcard parameter, a nameless entry was skipped, and the event answered success.
+  const FString BadParam = McpBlueprintUtils::DescribeInvalidParam(Params, TEXT("parameters"));
+  if (!BadParam.IsEmpty()) {
+    Bridge.SendAutomationError(RequestingSocket, RequestId, BadParam, TEXT("TYPE_RESOLUTION_FAILED"));
+    return true;
+  }
 
   FName EventName = CustomName.IsEmpty()
                         ? FName(*FString::Printf(TEXT("Event_%s"),
