@@ -75,6 +75,9 @@ bool HandleInspectRuntimeReportAction(
             const bool bIsPIE = World->WorldType == EWorldType::PIE;
             Report->SetBoolField(TEXT("isPIE"), bIsPIE);
 
+            // A bare report described the first 25 actors in level order (world settings, brushes, lights) with every
+            // component: kilobytes to learn the session and its pawn. Actors are listed only when something selects them.
+            const bool bListActors = !ActorName.IsEmpty() || !Filter.IsEmpty() || ComponentNames.Num() > 0 || PropertyNames.Num() > 0;
             constexpr int32 MaxReportedActors = 25;
             TArray<TSharedPtr<FJsonValue>> ActorsArray;
             int32 TotalActorCount = 0;
@@ -87,7 +90,7 @@ bool HandleInspectRuntimeReportAction(
                     continue;
                 }
                 ++TotalActorCount;
-                if (!bIsPIE)
+                if (!bIsPIE || !bListActors)
                 {
                     continue;
                 }
@@ -115,8 +118,11 @@ bool HandleInspectRuntimeReportAction(
                     }
                 }
             }
-            Report->SetArrayField(TEXT("actors"), ActorsArray);
-            Report->SetNumberField(TEXT("count"), ActorsArray.Num());
+            if (bListActors)
+            {
+                Report->SetArrayField(TEXT("actors"), ActorsArray);
+                Report->SetNumberField(TEXT("count"), ActorsArray.Num());
+            }
             Report->SetNumberField(TEXT("totalActorCount"), TotalActorCount);
             if (!bIsPIE || OmittedActorCount > 0)
             {
@@ -162,13 +168,13 @@ bool HandleInspectRuntimeReportAction(
                     CameraJson->SetObjectField(TEXT("cameraRotation"), McpHandlerUtils::RotatorToJson(CameraManager->GetCameraRotation()));
                     CameraJson->SetNumberField(TEXT("fov"), CameraManager->GetFOVAngle());
                     Report->SetObjectField(TEXT("playerCameraManager"), CameraJson);
-                    Report->SetObjectField(TEXT("cameraLocation"), McpHandlerUtils::VectorToJson(CameraManager->GetCameraLocation()));
-                    Report->SetObjectField(TEXT("cameraRotation"), McpHandlerUtils::RotatorToJson(CameraManager->GetCameraRotation()));
                 }
             }
 
             Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
-                                   TEXT("Runtime inspection report generated"), Report, FString());
+                                   bListActors ? TEXT("Runtime inspection report generated")
+                                               : TEXT("Runtime report of the session; pass filter (part of an actor's name, label or class) or actorName to describe actors"),
+                                   Report, FString());
             return true;
         }
     return false;

@@ -21,8 +21,8 @@ const RUNTIME_REPORT_OUTPUT = {
   worldPath: { type: 'string', description: 'Package path of that world.' },
   worldType: { type: 'string', description: 'World type, e.g. PIE or Editor.' },
   isPIE: { type: 'boolean', description: 'Whether a PIE session is active.' },
-  actors: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Matching runtime actors and their inspected components/properties.' },
-  count: { type: 'number', description: 'Number of actors returned after filtering.' },
+  actors: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Matching runtime actors and their inspected components/properties, at most 25. Only when filter, actorName, componentNames or propertyNames selects them.' },
+  count: { type: 'number', description: 'Number of actors returned after filtering; absent with actors.' },
   totalActorCount: { type: 'number', description: 'Total actors in the inspected world.' },
   playerController: { type: 'string', description: 'Object path of the active PlayerController (inspect_object it for details).' },
   pawn: { type: 'string', description: 'Object path of the possessed pawn; inspect it to find where the player actually is.' },
@@ -34,7 +34,7 @@ export const RUNTIME_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'inspect', action: 'runtime_report', dispatchAction: 'runtime_report', domain: D, family: 'runtime',
     editorStates: ANY_EDITOR_STATE,
-    summary: 'Return a runtime report for the current PIE/simulate session.',
+    summary: 'Report the running PIE/simulate session: its world, player pawn, controller, view target and camera; with filter or actorName, also the matching actors with their components and properties.',
     whenToUse: ['Runtime state of actors/components/properties must be inspected during PIE.', 'PIE-only runtime state must be inspected.'],
     whenNotToUse: ['The editor is not in PIE; the report will be empty.'],
     inputProps: {

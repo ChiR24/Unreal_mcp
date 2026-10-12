@@ -6770,7 +6770,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "additionalProperties": true,
                 "x-unreal-reflection-boundary": true
               },
-              "description": "Matching runtime actors and their inspected components/properties."
+              "description": "Matching runtime actors and their inspected components/properties, at most 25. Only when filter, actorName, componentNames or propertyNames selects them."
             },
             {
               "type": "array",
@@ -6932,7 +6932,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "count": {
           "type": "number",
-          "description": "Number of actors returned after filtering."
+          "description": "Number of actors returned after filtering; absent with actors."
         },
         "defaultGameMode": {
           "type": "string",

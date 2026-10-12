@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "6967254ef789d56b",
+  "catalogRevision": "07b3034442dd9d6b",
   "recordCount": 411,
   "records": [
     {
@@ -46148,11 +46148,11 @@
                 "additionalProperties": true,
                 "x-unreal-reflection-boundary": true
               },
-              "description": "Matching runtime actors and their inspected components/properties."
+              "description": "Matching runtime actors and their inspected components/properties, at most 25. Only when filter, actorName, componentNames or propertyNames selects them."
             },
             "count": {
               "type": "number",
-              "description": "Number of actors returned after filtering."
+              "description": "Number of actors returned after filtering; absent with actors."
             },
             "totalActorCount": {
               "type": "number",
@@ -46230,8 +46230,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "534f1412a3d7a9e1cdad97b770d6c75d200e2f4ff2a7fe341585d2aa37b47149",
-        "content": "770c2d39819bdc351f67fa1a1b80016ef3cfbceeb9d09d68de9fa4a468274a2d"
+        "schema": "099dc7de870fc5352daf0508a5ac826ec1f89296adf93e2d2310506fe2ad0af1",
+        "content": "4e61f82d6c56425788b381fc2bc5b2159310c4cc971752747c61dbb40efe0858"
       }
     },
     {

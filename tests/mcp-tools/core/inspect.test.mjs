@@ -132,6 +132,7 @@ const testCases = [
   { scenario: 'INFO: get_editor_settings', toolName: 'inspect', arguments: { action: 'get_editor_settings' }, expected: 'success', assertions: [{ path: 'structuredContent.result.shadersCompiling', gte: 0, label: 'the editor settings read carries the shader count too' }] },
   { scenario: 'INFO: runtime_report', toolName: 'inspect', arguments: { action: 'runtime_report', actorName: ACTOR, componentNames: [COMPONENT], propertyNames: ['ActorLabel'] }, expected: 'success' },
   { scenario: 'INFO: pie_report', toolName: 'inspect', arguments: { action: 'pie_report', filter: ACTOR }, expected: 'success' },
+  { scenario: 'INFO: a bare runtime_report describes no actors', toolName: 'inspect', arguments: { action: 'runtime_report' }, expected: 'success', assertions: [{ path: 'structuredContent.result.message', includes: 'pass filter', label: 'it says how to list actors' }] },
 
   // === DESTRUCTIVE / CLEANUP ===
   { scenario: 'DELETE: delete_object', toolName: 'inspect', arguments: { action: 'delete_object', actorNames: [DELETE_ACTOR] }, expected: 'success|not found' },
