@@ -439,4 +439,8 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'make the music quieter', accepted: ['manage_audio.fade_sound', 'manage_audio.configure_sound_class'] },
   { query: 'enemy chases player', accepted: ['manage_ai.edit_behavior_tree'] },
   { query: 'chase player', accepted: ['manage_ai.edit_behavior_tree'] },
+  { query: 'set a timer', accepted: ['blueprint.edit_graph'] },
+  { query: 'random number', accepted: ['blueprint.edit_graph'] },
+  { query: 'for each loop', accepted: ['blueprint.edit_graph'] },
+  { query: 'gate node', accepted: ['blueprint.edit_graph'] },
 ];

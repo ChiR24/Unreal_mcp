@@ -416,9 +416,6 @@ export function scoreDocument(
     + exactMatchBonus(document, context)
     + actionCoverageScore(document, context)
     + adjacencyScore(document.sequences, context.contentTokens);
-  if (matchScore < RETRIEVAL_SCORE_CONSTANTS.minimumRelevanceScore) return null;
-  // Only ever reorders records the query already matched; it never makes one a result.
-  const effect = document.record.behavior.effect;
   // Every content word named by the record itself: "change button text" is all of
   // set_widget_layout's vocabulary, while add_content_widget matched two of its
   // words through member names and outranked it.
@@ -426,6 +423,10 @@ export function scoreDocument(
     .filter((entry) => RETRIEVAL_COVERAGE_FIELDS.has(entry.field))
     .flatMap((entry) => entry.allMatchedTokens));
   const fullyNamed = context.contentTokens.length >= 2 && context.contentTokens.every((token) => named.has(token));
+  // A record whose own names and topics hold every content word stays a result although its action words are
+  // missing from the query: "random number" dropped edit_graph, whose topic says exactly that, and found nothing.
+  if (matchScore < RETRIEVAL_SCORE_CONSTANTS.minimumRelevanceScore && !fullyNamed) return null;
+  const effect = document.record.behavior.effect;
   const score = matchScore
     + (fullyNamed ? RETRIEVAL_SCORE_CONSTANTS.fullCoverageBonus : 0)
     + (context.readIntent && effect === 'read' ? RETRIEVAL_SCORE_CONSTANTS.readIntentBonus : 0)
