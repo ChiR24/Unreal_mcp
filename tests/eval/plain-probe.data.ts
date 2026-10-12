@@ -434,4 +434,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'looping music', accepted: ['manage_audio.play_sound'] },
   { query: 'music that loops', accepted: ['manage_audio.play_sound'] },
   { query: 'set master volume', accepted: ['manage_audio.configure_sound_class'] },
+  { query: 'turn down the music volume', accepted: ['manage_audio.fade_sound', 'manage_audio.configure_sound_class'] },
+  { query: 'music volume', accepted: ['manage_audio.fade_sound', 'manage_audio.configure_sound_class'] },
+  { query: 'make the music quieter', accepted: ['manage_audio.fade_sound', 'manage_audio.configure_sound_class'] },
 ];

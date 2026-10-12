@@ -11,6 +11,7 @@ export const MANAGE_AUDIO_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'fade_sound', selector: 'fade',
     summary: 'Fade a playing sound: to a target volume, in, or out.',
+    topics: ['music volume', 'turn down the music', 'lower the volume', 'make the music quieter'],
     members: { to_volume: 'fade_sound', in: 'fade_sound_in', out: 'fade_sound_out' },
   },
   {

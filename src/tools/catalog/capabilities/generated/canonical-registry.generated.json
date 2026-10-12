@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "4f6707cef035b9fc",
+  "catalogRevision": "0631da9f92811ce7",
   "recordCount": 411,
   "records": [
     {
@@ -53394,7 +53394,11 @@
         "domain": "audio",
         "family": "runtime",
         "topics": [
-          "fade_sound"
+          "fade_sound",
+          "music volume",
+          "turn down the music",
+          "lower the volume",
+          "make the music quieter"
         ],
         "summary": "Fade a playing sound: to a target volume, in, or out.",
         "whenToUse": [
@@ -53548,7 +53552,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "5c00c06e120e9ba8334d9908c2acec526a5bc27ae74f4b591599620f8b18f196",
-        "content": "5b10aab1653c8bb49214f18923915c476b0504b8eaf270a11c5a0a011fd008f8"
+        "content": "27d0570bd2f26fde4a6b074612b930301435ec5b9b1b48793d524d2fe6e8def9"
       }
     },
     {
