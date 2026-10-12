@@ -429,4 +429,9 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'make the player run faster', accepted: ['manage_character.configure_character', 'manage_character.set_movement_property'] },
   { query: 'turn off the sound', accepted: ['manage_audio.stop_sound'] },
   { query: 'hide the light', accepted: ['control_actor.set_visibility'] },
+  { query: 'rotating platform', accepted: ['control_actor.edit_component'] },
+  { query: 'moving platform', accepted: ['control_actor.edit_component'] },
+  { query: 'looping music', accepted: ['manage_audio.play_sound'] },
+  { query: 'music that loops', accepted: ['manage_audio.play_sound'] },
+  { query: 'set master volume', accepted: ['manage_audio.configure_sound_class'] },
 ];

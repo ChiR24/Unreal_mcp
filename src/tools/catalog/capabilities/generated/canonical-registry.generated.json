@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "969468dbc2576988",
+  "catalogRevision": "4f6707cef035b9fc",
   "recordCount": 411,
   "records": [
     {
@@ -32677,6 +32677,8 @@
           "change sign text",
           "set light intensity",
           "turn off a light",
+          "rotating platform",
+          "moving platform",
           "light color",
           "light radius",
           "change light color",
@@ -32690,6 +32692,7 @@
         "summary": "Add or remove an actor component, or set one or more of its properties (a placed mesh's StaticMesh or OverrideMaterials, a light's Intensity or LightColor, a TextRender's Text).",
         "whenToUse": [
           "edit=add: A component must be attached to an existing actor.",
+          "edit=add: A placed actor must spin or travel by itself, like a platform: add a RotatingMovementComponent (RotationRate) or an InterpToMovementComponent (at least two ControlPoints).",
           "edit=remove: A component must be permanently detached and removed from an actor.",
           "edit=set_property: Component properties must be changed via a properties object or propertyName/value pair.",
           "edit=set_property: Several placed actors need the same component values (a row of lights' colour or light function): actorNames does them in one call.",
@@ -32862,7 +32865,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "a53bd4b3024e95b704c17e00b15eba521603fcffb361c73f5daa71d435ea85af",
-        "content": "49f52d59680500ab8cc50acb32a230b6cbc22fa07eef83fc0ceef3c95173b705"
+        "content": "e8bfc17f02df64ed2250417220fbb8448758aed324b2f091293357555799cf1c"
       }
     },
     {
@@ -51423,7 +51426,8 @@
           "sound class parent",
           "mix modifier",
           "mix eq",
-          "mix equalizer"
+          "mix equalizer",
+          "master volume"
         ],
         "summary": "Configure a sound class or mix: parent class, class properties, mix modifier, mix EQ.",
         "whenToUse": [
@@ -51709,7 +51713,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "d11a2ff84c587cbda995765b9d65ffc30a482725be96dcb9f177f3b59e898f9b",
-        "content": "31eebb9a3a6e05417bd2a0305daa9125396b26bf09b13691bb8683cb70a010b5"
+        "content": "bfaafa401a90e815fef9dede090162592a40c8efe63da57237d5b2851ffed0ec"
       }
     },
     {
@@ -54179,6 +54183,7 @@
           "preload sound",
           "measure sound",
           "is sound audible",
+          "looping music",
           "play audio",
           "play sfx",
           "ui sound",
@@ -54471,7 +54476,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "5a15db6eda3d6892a99e9122abce96bfeb692004006237f52d28ca1f16c91dcc",
-        "content": "21591c7ab04741610656d969c6de1b6512f3dc16bd19cc50b309f6100552ab38"
+        "content": "fa317c1bc29c0c74d8bf3967d6ef2ba54a949c8728443bbd4e825abaae173918"
       }
     },
     {

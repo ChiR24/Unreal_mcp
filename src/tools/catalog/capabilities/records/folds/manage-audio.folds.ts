@@ -5,7 +5,7 @@ export const MANAGE_AUDIO_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'play_sound', selector: 'playback',
     summary: 'Play a sound: 2D, at a location (played or spawned), attached to an actor, or prime it for playback. A 2D sound (looping music too) plays until stop_sound. measure plays it 2D and reports how loud it played (peak and average dB, silent). The sounds already playing are listed by console_command au.DumpActiveSounds.',
-    topics: ['play sound', 'play sound 2d', 'play sound at location', 'attached sound', 'prime sound', 'preview sound', 'preload sound', 'measure sound', 'is sound audible'],
+    topics: ['play sound', 'play sound 2d', 'play sound at location', 'attached sound', 'prime sound', 'preview sound', 'preload sound', 'measure sound', 'is sound audible', 'looping music'],
     members: { '2d': 'play_sound_2d', at_location: 'play_sound_at_location', spawn_at_location: 'spawn_sound_at_location', attached: 'play_sound_attached', prime: 'prime_sound', measure: 'play_sound_measure' },
   },
   {
@@ -60,7 +60,7 @@ export const MANAGE_AUDIO_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'configure_sound_class', selector: 'setting',
     summary: 'Configure a sound class or mix: parent class, class properties, mix modifier, mix EQ.',
-    topics: ['sound class properties', 'sound class parent', 'mix modifier', 'mix eq', 'mix equalizer'],
+    topics: ['sound class properties', 'sound class parent', 'mix modifier', 'mix eq', 'mix equalizer', 'master volume'],
     members: { parent: 'set_class_parent', properties: 'set_class_properties', mix_modifier: 'add_mix_modifier', mix_eq: 'configure_mix_eq' },
   },
   {
