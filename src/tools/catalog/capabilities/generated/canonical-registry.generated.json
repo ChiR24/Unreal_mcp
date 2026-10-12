@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "0b3f210bf38e413c",
+  "catalogRevision": "01393041542a0be6",
   "recordCount": 411,
   "records": [
     {
@@ -1068,7 +1068,7 @@
           "A vehicle must be set up (ChaosVehicles)."
         ],
         "whenNotToUse": [
-          "Use configure_physics_simulation."
+          "A skeletal mesh only has to simulate physics, not drive (use setup_physics_simulation)."
         ]
       },
       "schemas": {
@@ -1243,7 +1243,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "04e2a8d02b4107691ef7269803fde158f4cdfa9dd20865cd8a1df0f564420761",
-        "content": "433b40d1a9baaed0f8719bad5c0d1b6b027470adf4a22ea530796307e97bb17c"
+        "content": "ab1d78953d355becafb33b4d69001095d2e86200c91ffbfd5e27a8b8f8d43847"
       }
     },
     {
@@ -55066,8 +55066,7 @@
         ],
         "whenNotToUse": [
           "setting=movement_speeds: Use set_walk_speed.",
-          "setting=jump: Use set_jump_height.",
-          "setting=crouch: Use configure_sprint."
+          "setting=jump: Use set_jump_height."
         ]
       },
       "schemas": {
@@ -55451,7 +55450,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "bcae2654a2de5b198c482ed9c60a5714ca0d0240bd522bffae79efd0967b8c74",
-        "content": "f94f54c5f07269ae5680cc3c751a603738aa71e75638172f2c4c3cb6ef870a88"
+        "content": "6f7688d79c2c25383b35946b817e4a2016c3be4dc6b32ec917b843e20628224d"
       }
     },
     {
@@ -57031,7 +57030,7 @@
           "setting=homing: The projectile should track a target."
         ],
         "whenNotToUse": [
-          "setting=projectile: Use configure_hitscan for instant hits."
+          "setting=projectile: A hit must land at once (hitscan): trace in the weapon Blueprint graph instead (blueprint edit_graph)."
         ]
       },
       "schemas": {
@@ -57208,7 +57207,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "930c39ace1930dc8527f842422d73a20f0ea124cbd886fb5bb333346b815158d",
-        "content": "b12d865af73aa8e7ab89454ba1970b358ec2fbcfb9243375320a592ddb611879"
+        "content": "ae7280275b3c90e30abaa4b5a66cdc60d3b395f6f6d3b86ecdb814c507081784"
       }
     },
     {
@@ -57251,8 +57250,8 @@
           "setting=attachments: Modular optics or grips are needed."
         ],
         "whenNotToUse": [
-          "setting=weapon_mesh: Use configure_weapon_sockets for attach points.",
-          "setting=attachments: Use setup_weapon_switching to swap whole weapons."
+          "setting=weapon_mesh: Attach points on the character are skeleton sockets (use animation_physics configure_socket).",
+          "setting=attachments: Swapping whole weapons is Blueprint logic (blueprint edit_graph)."
         ]
       },
       "schemas": {
@@ -57420,7 +57419,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "aac6d960da7754f2f005757a2da3cd14bb798c13b15cce861303f54025a77d8e",
-        "content": "c9394ebb4d52dafc7f65c7aec63a8d8eb6f91fad4b4c119aadbdbba8f58bbea3"
+        "content": "e36acc8620438ac80f0f81a6bb705879ae78acb8b6f9616344962c7bcaa42260"
       }
     },
     {
@@ -57487,7 +57486,7 @@
           "kind=damage_type_setup: A damage class is needed by name and folder."
         ],
         "whenNotToUse": [
-          "kind=damage_type|damage_type_setup: Use configure_damage_execution to tune multipliers."
+          "kind=damage_type|damage_type_setup: Damage multipliers are a Gameplay Effect execution (manage_gas configure_gameplay_effect add_execution_calculation)."
         ]
       },
       "schemas": {
@@ -57686,7 +57685,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "44f7382ba0dd09197ccc8a4eaa9fe592fa4930688d8687d19838169b6c4b3c6d",
-        "content": "3998c54c79ce4c9ce1509aaecce5c2c4364c83eb12dadf1ae4075742e6c8715c"
+        "content": "bd8317c8a4cb6a09ebf1051109c665b9c3d74568644925690c1f7c2b44a32429"
       }
     },
     {
@@ -57723,7 +57722,7 @@
         ],
         "whenNotToUse": [
           "info=info: Mutating an asset; use the configure actions.",
-          "info=stats: Use set_weapon_stats to change them."
+          "info=stats: The stats are Blueprint variable defaults: change them with blueprint edit_variable set_default."
         ]
       },
       "schemas": {
@@ -57833,7 +57832,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "fa9b48cddec15896cfab7fd10a3ffce861059c8bdbca74dbf61ac42758d01fec",
-        "content": "42f33b83542d331a5e817eaea4e142838850ef6ca995c47e4972740484326ca2"
+        "content": "2812573af7d99bce77696c9a8948481530091272deae187b8127c9359dd5c92d"
       }
     },
     {
@@ -60881,7 +60880,7 @@
         "whenNotToUse": [
           "setting=tags: Use create_gameplay_ability.",
           "setting=activation_policy: The default LocalPredicted policy is wanted.",
-          "setting=add_to_set: The ability is granted directly to an actor; use grant_ability."
+          "setting=add_to_set: The ability is granted directly to an actor: that is Blueprint logic on its Ability System Component (blueprint edit_graph, Give Ability)."
         ]
       },
       "schemas": {
@@ -61113,7 +61112,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "2bc4edbf45b240afa176e8f85b380c05ecc0b9c069c59f577da9dfe593b0cca3",
-        "content": "a36501d360e32621e4b286104dd2d1b4a26d1e09e38bf7ade6874dcd4f52f7ad"
+        "content": "50a9987f57875b5f4d6c08e5021e6310df02635979276f1cec89685d1f56b6b1"
       }
     },
     {
@@ -61916,7 +61915,7 @@
           "kind=execution_calculation: Effect magnitude needs code the modifier curve cannot express."
         ],
         "whenNotToUse": [
-          "kind=gameplay_ability: Use add_ability_task.",
+          "kind=gameplay_ability: The ability exists and needs its logic: build its graph, ability tasks included (blueprint edit_graph).",
           "kind=gameplay_effect: Use add_effect_modifier.",
           "kind=attribute_set: Use add_attribute.",
           "kind=gameplay_cue_notify: Use add_effect_cue.",
@@ -62095,7 +62094,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "337ebf0eb6f943ca9093c7695eeb251fb74e3ef443c5f041fa63740f5a72d40f",
-        "content": "3612ec164a49150d56231f10428a22099d07a05c42f4779f26073a4dfbd16eda"
+        "content": "1eee1809bc568a31e68aaf9d1df544c62f76b39156177ce13037346252e6bb02"
       }
     },
     {
