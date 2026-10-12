@@ -126,8 +126,8 @@ inline FString RedactFilesystemPathsForResponse(const FString& Input, bool bName
 
     for (int32 Index = 0; Index < Input.Len();)
     {
-        const bool bAllowedUnrealPath =
-            Input[Index] == '/' && IsAllowedUnrealMountPath(Input, Index, bNameMounts);
+        const bool bAllowedUnrealPath = Input[Index] == '/' &&
+            (IsAllowedUnrealMountPath(Input, Index, bNameMounts) || IsProjectRelativePathAt(Input, Index));
         // A lone '/' in prose is a separator, not a path root: require a
         // plausible path character next, then either a second separator or a
         // known host root as the first segment. Spaces and parentheses only
@@ -169,8 +169,11 @@ inline FString RedactFilesystemPathsForResponse(const FString& Input, bool bName
             bUnixPath = Separators >= 2 || bStandaloneToken;
             UnixEnd = Scan;
         }
+        // A drive letter starts a token: the "t:/" inside Object:/Script/Engine.Actor or Struct:/Game/... is a typed
+        // Unreal path, and redacting it from there left "Objec[path redacted]".
         const bool bWindowsPath =
             Index + 2 < Input.Len() && FChar::IsAlpha(Input[Index]) &&
+            (Index == 0 || !FChar::IsAlnum(Input[Index - 1])) &&
             Input[Index + 1] == ':' &&
             (Input[Index + 2] == '/' || Input[Index + 2] == '\\');
         const bool bUncPath =

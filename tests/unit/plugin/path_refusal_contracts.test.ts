@@ -136,6 +136,12 @@ describe('a reply keeps a registered content mount readable', () => {
   it('still hides a host path of every shape, and the root nothing has mounted', () => {
     const redact = sanitization.slice(sanitization.indexOf('inline FString RedactFilesystemPathsForResponse'));
     expect(redact).toContain('const bool bWindowsPath');
+    // "e.g. 'Content/Icons/Logo.png'" read "Content[path redacted]": a project folder path names no host directory.
+    expect(redact).toContain('(IsAllowedUnrealMountPath(Input, Index, bNameMounts) || IsProjectRelativePathAt(Input, Index))');
+    const project = contentPaths.slice(contentPaths.indexOf('inline bool IsProjectRelativePathAt('));
+    expect(project).toContain('return bAfterToken && !Run.Contains(TEXT("..")) && !Run.Contains(TEXT(":")) &&');
+    // A drive letter starts a token, so the "t:/" in Object:/Script/Engine.Actor is not a drive.
+    expect(redact).toMatch(/FChar::IsAlpha\(Input\[Index\]\) &&\s*\(Index == 0 \|\| !FChar::IsAlnum\(Input\[Index - 1\]\)\) &&\s*Input\[Index \+ 1\] == ':'/u);
     expect(redact).toContain('const bool bUncPath');
     expect(redact).toContain('FString(TEXT("[path redacted]"))');
     expect(redact).toContain('IsAllowedUnrealMountPath(Input, Index, bNameMounts)');

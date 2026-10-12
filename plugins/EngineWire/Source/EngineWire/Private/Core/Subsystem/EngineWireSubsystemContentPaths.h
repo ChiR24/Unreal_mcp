@@ -27,6 +27,29 @@ inline bool IsRegisteredContentMountAt(const FString& Value, int32 Index)
            FPackageName::MountPointExists(TEXT("/") + Name + TEXT("/"));
 }
 
+// A path under a project folder ("Content/Icons/Logo.png", "Saved/Logs/Game.log") names no host directory, but it was
+// redacted from its first '/', so the refusal that suggests one read "e.g. 'Content[path redacted]'". Index is the '/'
+// after the folder; the folder must start its token, and the run must not climb with ".." or hold a drive's ':'.
+inline bool IsProjectRelativePathAt(const FString& Value, int32 Index)
+{
+    int32 Start = Index;
+    while (Start > 0 && (FChar::IsAlnum(Value[Start - 1]) || Value[Start - 1] == TEXT('_')))
+    {
+        --Start;
+    }
+    int32 End = Index;
+    while (End < Value.Len() && (FChar::IsAlnum(Value[End]) || FCString::Strchr(TEXT("/._-:"), Value[End])))
+    {
+        ++End;
+    }
+    const FString Folder = Value.Mid(Start, Index - Start);
+    const FString Run = Value.Mid(Index, End - Index);
+    const bool bAfterToken = Start == 0 || !FCString::Strchr(TEXT("/\\._-:+~"), Value[Start - 1]);
+    return bAfterToken && !Run.Contains(TEXT("..")) && !Run.Contains(TEXT(":")) &&
+           (Folder == TEXT("Content") || Folder == TEXT("Saved") || Folder == TEXT("Config") ||
+            Folder == TEXT("Plugins") || Folder == TEXT("Source"));
+}
+
 // A host path to a package file under mounted content says which asset an engine warning is about
 // (the disk path of M_Wall.uasset, then ": Default Material will be used"). Redacting the whole run
 // left "[path redacted], Default Material will be used", which names nothing. The part up to the
