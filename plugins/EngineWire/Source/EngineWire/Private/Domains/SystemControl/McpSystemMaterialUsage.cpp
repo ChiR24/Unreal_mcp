@@ -53,9 +53,9 @@ class FMcpUsageLogWatch final : public FOutputDevice
 public:
     void Serialize(const TCHAR *V, ELogVerbosity::Type, const FName &Category) override
     {
-        static const FName LogMaterial(TEXT("LogMaterial"));
+        static const FName MaterialLogCategory(TEXT("LogMaterial"));
         const TCHAR *Marker = TEXT(" needed to set usage flag ");
-        const TCHAR *At = Category == LogMaterial && FCString::Strncmp(V, TEXT("Material "), 9) == 0 ? FCString::Strstr(V, Marker) : nullptr;
+        const TCHAR *At = Category == MaterialLogCategory && FCString::Strncmp(V, TEXT("Material "), 9) == 0 ? FCString::Strstr(V, Marker) : nullptr;
         for (int32 Usage = 0; At && Usage < MATUSAGE_MAX; ++Usage)
         {
             if (UMaterialInterface::GetUsageName(EMaterialUsage(Usage)) == At + FCString::Strlen(Marker))
