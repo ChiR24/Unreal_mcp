@@ -125,10 +125,12 @@ bool ResolveFromCapabilityField(
 }
 
 bool ResolveFromLegacyFields(
-	const FString& Tool, const FString& Action, const FMcpCanonicalRecordIndex& Index,
+	const FString& RequestedTool, const FString& Action, const FMcpCanonicalRecordIndex& Index,
 	const FMcpCapabilityRecord*& OutRecord, FMcpSemanticError& OutError,
 	TSharedPtr<FJsonObject>& OutGuidance)
 {
+	// The namespace a caller reads off a search row's capability ID (asset for asset.list) names its parent tool.
+	const FString Tool = Index.ResolveToolNamespace(RequestedTool);
 	OutRecord = Index.FindByLegacy(Tool, Action);
 	if (OutRecord)
 	{

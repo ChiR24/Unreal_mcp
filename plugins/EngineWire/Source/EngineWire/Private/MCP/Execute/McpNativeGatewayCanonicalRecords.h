@@ -60,6 +60,13 @@ public:
 
 	TArray<FString> GetCapabilityIds() const;
 
+	/**
+	 * A capability ID's namespace (asset.list -> asset) is not always a parent tool: asset.* is dispatched by
+	 * manage_asset, blueprint.* by manage_blueprint. The parent tool a namespace names, when every record carrying
+	 * it agrees on one (the TypeScript deriveNamespaceAliases rule); otherwise, and for a real tool name, Tool.
+	 */
+	FString ResolveToolNamespace(const FString& Tool) const;
+
 private:
 	bool bLoaded = false;
 	FString LoadError;
@@ -68,6 +75,7 @@ private:
 	TMap<FString, FString> LegacyToCapabilityId;
 	TMap<FString, FString> CapabilityIdToLegacyAction;
 	TMap<FString, TArray<FString>> AliasToCapabilityIds;
+	TMap<FString, FString> ParentToolByNamespace;
 };
 
 /** Stable key for a generated legacy {tool, action} pair. */

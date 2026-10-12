@@ -8,6 +8,7 @@
 #include "MCP/Gateway/McpNativeGatewayDescribe.h"
 #include "MCP/Gateway/McpNativeGatewaySearch.h"
 #include "MCP/Gateway/McpNativeGatewayDirectCallMigration.h"
+#include "MCP/Execute/McpNativeGatewayCanonicalRecords.h"
 
 
 void FMcpNativeTransport::HandleGatewayCall(
@@ -121,7 +122,15 @@ void FMcpNativeTransport::HandleGatewayCall(
 			int32 O = 0;
 			if (Params->TryGetNumberField(TEXT("actionOffset"), O)) DiscoveryQuery.Offset = FMath::Max(0, O);
 		}
-		SendDiscoveryResult(McpGatewayDescribeCapability(DiscoveryQuery, CapabilityStore, IsToolEnabled));
+		// As on execute, the namespace of a capability ID (asset for asset.list) names its parent tool.
+		const FString AskedTool = DiscoveryQuery.Tool;
+		DiscoveryQuery.Tool = FMcpCanonicalRecordIndex::Get().ResolveToolNamespace(AskedTool);
+		TSharedPtr<FJsonObject> Described = McpGatewayDescribeCapability(DiscoveryQuery, CapabilityStore, IsToolEnabled);
+		if (Described.IsValid() && !DiscoveryQuery.bHasAction && DiscoveryQuery.Tool != AskedTool)
+		{
+			Described->SetStringField(TEXT("resolvedFromNamespace"), AskedTool);
+		}
+		SendDiscoveryResult(Described);
 		return;
 	}
 

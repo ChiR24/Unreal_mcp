@@ -59,6 +59,30 @@ FMcpCanonicalRecordIndex FMcpCanonicalRecordIndex::Build()
 		return Index;
 	}
 
+	// A caller who read asset.list off a search row and sent tool "asset" was refused UNKNOWN_TOOL here while the
+	// TypeScript door resolved it. A namespace is an alias only while every record carrying it names one parent.
+	TSet<FString> ParentTools;
+	TMap<FString, TSet<FString>> OwnersByNamespace;
+	for (const FMcpCapabilityRecord& Record : Store.GetRecords())
+	{
+		ParentTools.Add(Record.Parent);
+	}
+	for (const FMcpCapabilityRecord& Record : Store.GetRecords())
+	{
+		FString Namespace;
+		if (Record.Id.Split(TEXT("."), &Namespace, nullptr, ESearchCase::CaseSensitive) && !ParentTools.Contains(Namespace))
+		{
+			OwnersByNamespace.FindOrAdd(Namespace).Add(Record.Parent);
+		}
+	}
+	for (const TPair<FString, TSet<FString>>& Entry : OwnersByNamespace)
+	{
+		if (Entry.Value.Num() == 1)
+		{
+			Index.ParentToolByNamespace.Add(Entry.Key, *Entry.Value.CreateConstIterator());
+		}
+	}
+
 	Index.bLoaded = true;
 	return Index;
 }
@@ -118,6 +142,12 @@ FString FMcpCanonicalRecordIndex::GetLegacyActionForCapability(const FString& Ca
 {
 	const FString* Action = CapabilityIdToLegacyAction.Find(CapabilityId);
 	return Action ? *Action : FString();
+}
+
+FString FMcpCanonicalRecordIndex::ResolveToolNamespace(const FString& Tool) const
+{
+	const FString* Parent = ParentToolByNamespace.Find(Tool);
+	return Parent ? *Parent : Tool;
 }
 
 TArray<FString> FMcpCanonicalRecordIndex::GetCapabilityIds() const
