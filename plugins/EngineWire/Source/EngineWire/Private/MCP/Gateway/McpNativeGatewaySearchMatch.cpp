@@ -29,7 +29,7 @@ const TCHAR* const FunctionWords[] = {
 	TEXT("its"), TEXT("is"), TEXT("are"), TEXT("be"), TEXT("as"), TEXT("all"), TEXT("every"), TEXT("any"), TEXT("some"), TEXT("my"), TEXT("our"),
 	TEXT("their"), TEXT("his"), TEXT("her"), TEXT("you"), TEXT("me"), TEXT("we"), TEXT("i"), TEXT("please"), TEXT("then"), TEXT("so"),
 	TEXT("what"), TEXT("which"), TEXT("how"), TEXT("where"), TEXT("who"), TEXT("when"), TEXT("why"), TEXT("do"), TEXT("does"), TEXT("did"),
-	TEXT("can"), TEXT("could"), TEXT("should"), TEXT("would"), TEXT("will"), TEXT("want"), TEXT("need"),
+	TEXT("can"), TEXT("could"), TEXT("should"), TEXT("would"), TEXT("will"), TEXT("want"), TEXT("need"), TEXT("if"), TEXT("whether"),
 };
 
 // Words that open a request to READ something, matched against the first word as

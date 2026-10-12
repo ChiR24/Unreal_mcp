@@ -88,7 +88,7 @@ export const WATER_RECORDS: readonly CapabilityRecordSource[] = [
     exampleInput: { action: 'configure_water_collision', collisionEnabled: true },
   }),
   buildRecord({
-    id: 'build_environment.create_buoyancy_component', action: 'create_buoyancy_component', topics: ['make a boat float'], family: F,
+    id: 'build_environment.create_buoyancy_component', action: 'create_buoyancy_component', topics: ['make a boat float', 'make an object float'], family: F,
     summary: 'Make an actor float: add a buoyancy component (pontoons in settings.BuoyancyData) to an actor whose root is a physics-simulating mesh, and let it take the water body\'s overlap at level load, so one placed already in the water floats instead of sinking. In a Blueprint, add /Script/Water.BuoyancyComponent with edit_scs and set the class default bGenerateOverlapEventsDuringLevelStreaming to true.',
     whenToUse: WU, whenNotToUse: ['Buoyancy is not needed.'],
     inputProps: { actorPath: P.actorPath, actorName: P.actorName, targetActor: P.targetActor, settings: P.settings },

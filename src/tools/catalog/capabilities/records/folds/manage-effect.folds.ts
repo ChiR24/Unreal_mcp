@@ -6,7 +6,7 @@ export const MANAGE_EFFECT_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'activate', selector: 'control',
     summary: 'Activate, deactivate or reset a Niagara component on an actor, or activate an effect by asset or system name.',
-    topics: ['activate effect', 'deactivate effect', 'reset effect', 'niagara component', 'restart particle effect', 'reset niagara system'],
+    topics: ['activate effect', 'deactivate effect', 'stop effect', 'reset effect', 'niagara component', 'restart particle effect', 'reset niagara system'],
     members: { activate: 'activate', deactivate: 'deactivate', reset: 'reset', effect: 'activate_effect' },
   },
   {

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "7298bb1bf895c666",
+  "catalogRevision": "6967254ef789d56b",
   "recordCount": 411,
   "records": [
     {
@@ -25457,7 +25457,8 @@
         "family": "water",
         "topics": [
           "create_buoyancy_component",
-          "make a boat float"
+          "make a boat float",
+          "make an object float"
         ],
         "summary": "Make an actor float: add a buoyancy component (pontoons in settings.BuoyancyData) to an actor whose root is a physics-simulating mesh, and let it take the water body's overlap at level load, so one placed already in the water floats instead of sinking. In a Blueprint, add /Script/Water.BuoyancyComponent with edit_scs and set the class default bGenerateOverlapEventsDuringLevelStreaming to true.",
         "whenToUse": [
@@ -25564,7 +25565,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "9803911dcf49872f1136ef4600e25fe2464a736cdd8ffe4bfaad4c84e6cd0953",
-        "content": "dffe03d5c95996071d87a0fc1fd662be342d4062c1d3c6b24db67dd7a659aadb"
+        "content": "f52ca00e39d29cfdf7c26462dbdba30e69e1f5ce8cf84aec436ee1ad0f188879"
       }
     },
     {
@@ -31433,7 +31434,8 @@
         "topics": [
           "apply_force",
           "push actor",
-          "apply impulse"
+          "apply impulse",
+          "add impulse"
         ],
         "summary": "Apply a physics force vector to an actor, auto-enabling simulation on failure.",
         "whenToUse": [
@@ -31542,7 +31544,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "87ebc190189ab47ed725be001ed1701ae9229912e083d2731eee9b482df9d6ef",
-        "content": "0ab3e5605f637668ad68147e96b8113bf01ec224057880b76e7ed4c659fecb39"
+        "content": "54e214e46f464ab869c946bddcd96e331a2f17c6118c9f05abd12dbdea20b34f"
       }
     },
     {
@@ -32674,6 +32676,7 @@
           "text render text",
           "change sign text",
           "set light intensity",
+          "turn off a light",
           "light color",
           "light radius",
           "change light color",
@@ -32859,7 +32862,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "a53bd4b3024e95b704c17e00b15eba521603fcffb361c73f5daa71d435ea85af",
-        "content": "04894fd6c1ee54d9db930a23e8b52d60c583a95b25fd502d37448f71254a8ed4"
+        "content": "49f52d59680500ab8cc50acb32a230b6cbc22fa07eef83fc0ceef3c95173b705"
       }
     },
     {
@@ -35889,7 +35892,8 @@
           "toggle visibility",
           "hidden in game",
           "make actor invisible",
-          "unhide actor"
+          "unhide actor",
+          "hide a light"
         ],
         "summary": "Show or hide an actor, or many at once with actorNames.",
         "whenToUse": [
@@ -36000,7 +36004,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "127a0b12e6f6500a252b87c15fadc2915c8b2428ed6cf5027ab0d09a9c8d0e79",
-        "content": "9fa33ce140e4e5da9e76fec8a873835aec2f818900815b0dd735ec71d3220d01"
+        "content": "8a0e6a296bde921c1986242b1711883ccd9583681c118746cb709b763c3c553b"
       }
     },
     {
@@ -40159,6 +40163,7 @@
           "check or toggle a checkbox in running game",
           "press key",
           "press jump key",
+          "make the player jump",
           "simulate key press",
           "drive game ui",
           "test running game",
@@ -40344,7 +40349,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "c34497120097fe6eca82759f0b327d2f944af638b72841c0beddaf221a049c27",
-        "content": "96fe1a1410c672e128790957f87d47c7a9aac97424ae30db2c8bfcb44c89c5c8"
+        "content": "6e1ceb2705a6e91cddb3f639103a001f388dd94a9b3773e09e709c5646936148"
       }
     },
     {
@@ -54650,6 +54655,7 @@
           "pause music",
           "pause sound",
           "resume music",
+          "turn off sound",
           "stop sound",
           "stop music",
           "stop audio",
@@ -54790,7 +54796,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "02700276699d3a4122e1ed9f6f68c6c5bc45952b544a4a36c89574fb3ae55d03",
-        "content": "fdc29cef2af1083c65239287b10713a9c05eb02685168eca57fa1c8b8c28fb79"
+        "content": "5fcd110d6439ec3285917eefff577fb0de06c74e35f4ef8d91920b2bab464d49"
       }
     },
     {
@@ -55036,7 +55042,8 @@
           "crouch",
           "capsule",
           "character camera",
-          "assign anim blueprint"
+          "assign anim blueprint",
+          "make the player run faster"
         ],
         "summary": "Configure a Character Blueprint: movement speeds, jump, crouch, rotation, capsule, mesh, camera, nav movement.",
         "whenToUse": [
@@ -55436,7 +55443,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "bcae2654a2de5b198c482ed9c60a5714ca0d0240bd522bffae79efd0967b8c74",
-        "content": "57a2fa3ebf11b82eb8396b08995847092736c216549a40964b2253b1873aed63"
+        "content": "f94f54c5f07269ae5680cc3c751a603738aa71e75638172f2c4c3cb6ef870a88"
       }
     },
     {
@@ -57862,6 +57869,7 @@
           "activate",
           "activate effect",
           "deactivate effect",
+          "stop effect",
           "reset effect",
           "niagara component",
           "restart particle effect",
@@ -58005,7 +58013,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "a9a6f0572cd99b432ce7eb6ad6106bc1a852a4994ddd4c413d82bf6124e3d842",
-        "content": "75364e0d173799cbef55e34255bddcdb8a938619ce8eea6bf66ceff9147da963"
+        "content": "08ea7718c42f2dd2ae88abe57803c9066875c19281cd20bf9ef0b1740662fa7a"
       }
     },
     {

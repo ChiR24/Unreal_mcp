@@ -420,4 +420,13 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'remove several blueprint variables', accepted: ['blueprint.remove_variable'] },
   { query: 'list metasound nodes', accepted: ['manage_audio.list_metasound_nodes'] },
   { query: 'is the game paused', accepted: ['inspect.get_editor_state'] },
+  { query: 'check if actors are floating', accepted: ['control_actor.audit_placement'] },
+  { query: 'turn off a light', accepted: ['control_actor.edit_component'] },
+  { query: 'stop a niagara effect', accepted: ['manage_effect.activate'] },
+  { query: 'make the player jump', accepted: ['control_editor.simulate_input', 'manage_character.configure_character'] },
+  { query: 'add impulse to actor', accepted: ['control_actor.apply_force'] },
+  { query: 'make an object float on water', accepted: ['build_environment.create_buoyancy_component'] },
+  { query: 'make the player run faster', accepted: ['manage_character.configure_character', 'manage_character.set_movement_property'] },
+  { query: 'turn off the sound', accepted: ['manage_audio.stop_sound'] },
+  { query: 'hide the light', accepted: ['control_actor.set_visibility'] },
 ];
