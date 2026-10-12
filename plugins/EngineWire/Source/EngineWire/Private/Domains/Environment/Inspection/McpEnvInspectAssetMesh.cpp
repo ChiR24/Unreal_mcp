@@ -10,6 +10,9 @@
 #include "PhysicsEngine/PhysicsAsset.h"
 #include "Rendering/SkeletalMeshLODRenderData.h"
 #include "Rendering/SkeletalMeshRenderData.h"
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+#include "Engine/SkinnedAssetCommon.h"
+#endif
 #include "StaticMeshResources.h"
 
 namespace McpEnvironmentHandlers {

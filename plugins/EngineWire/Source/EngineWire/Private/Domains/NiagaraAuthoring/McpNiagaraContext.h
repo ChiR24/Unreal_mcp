@@ -32,7 +32,15 @@
 #include "NiagaraConstants.h"
 #include "NiagaraDataInterface.h"
 #include "NiagaraDataInterfaceAudioSpectrum.h"
+// UE 5.1's Niagara module keeps NiagaraStats.h in its Private folder without adding that folder to its
+// public include paths, so NiagaraDataInterfaceCollisionQuery.h (which includes NiagaraCollision.h,
+// which includes NiagaraStats.h) cannot be included from another module. Epic added the path in 5.2.
+#if !(ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 1)
 #include "NiagaraDataInterfaceCollisionQuery.h"
+#define MCP_HAS_NIAGARA_COLLISION_QUERY_DI 1
+#else
+#define MCP_HAS_NIAGARA_COLLISION_QUERY_DI 0
+#endif
 #include "NiagaraDataInterfaceSpline.h"
 #include "NiagaraEditorModule.h"
 #include "NiagaraEditorUtilities.h"

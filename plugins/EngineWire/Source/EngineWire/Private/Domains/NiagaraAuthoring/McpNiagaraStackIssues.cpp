@@ -18,7 +18,19 @@ static void CollectStackIssues(UNiagaraStackEntry* Entry, TArray<TSharedPtr<FJso
     }
     for (const UNiagaraStackEntry::FStackIssue& Issue : Entry->GetIssues())
     {
-        const FString Message = Issue.GetShortDescription().ToString();
+        // Which entry, what is wrong and the editor's own fixes: "The module has unmet dependencies." alone named
+        // neither the module nor the dependency.
+        const FString Short = Issue.GetShortDescription().ToString();
+        const FString Long = Issue.GetLongDescription().ToString();
+        FString Message = Entry->GetDisplayName().ToString() + TEXT(": ") + Short;
+        if (!Long.IsEmpty() && Long != Short)
+        {
+            Message += TEXT(" ") + Long;
+        }
+        for (const UNiagaraStackEntry::FStackIssueFix& Fix : Issue.GetFixes())
+        {
+            Message += TEXT(" Fix: ") + Fix.GetDescription().ToString() + TEXT(".");
+        }
         if (Issue.GetSeverity() == EStackIssueSeverity::Error)
         {
             Errors.Add(MakeShared<FJsonValueString>(Message));

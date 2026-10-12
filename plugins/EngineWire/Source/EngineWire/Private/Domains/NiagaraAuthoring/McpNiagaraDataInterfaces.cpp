@@ -82,6 +82,7 @@ static bool AddAudioSpectrumDI(FActionContext& Context)
     return FinishDataInterfaceAction(Context, System, TEXT("AudioSpectrum"), ParamName, AddDataInterfaceUserParameter(System, ParamName, UNiagaraDataInterfaceAudioSpectrum::StaticClass()), TEXT("Added Audio Spectrum data interface."), TEXT("Audio Spectrum DI added."));
 }
 
+#if MCP_HAS_NIAGARA_COLLISION_QUERY_DI
 static bool AddCollisionQueryDI(FActionContext& Context)
 {
     UNiagaraSystem* System = nullptr;
@@ -93,6 +94,7 @@ static bool AddCollisionQueryDI(FActionContext& Context)
     const FString ParamName = GetJsonStringField(Context.Payload, TEXT("parameterName"), TEXT("MCP_CollisionQueryDataInterface"));
     return FinishDataInterfaceAction(Context, System, TEXT("CollisionQuery"), ParamName, AddDataInterfaceUserParameter(System, ParamName, UNiagaraDataInterfaceCollisionQuery::StaticClass()), TEXT("Added Collision Query data interface."), TEXT("Collision Query DI added."));
 }
+#endif // MCP_HAS_NIAGARA_COLLISION_QUERY_DI
 
 bool HandleDataInterfaceAction(FActionContext& Context, const FString& SubAction)
 {
@@ -100,7 +102,9 @@ bool HandleDataInterfaceAction(FActionContext& Context, const FString& SubAction
     if (SubAction == TEXT("add_static_mesh_data_interface")) return AddStaticMeshDI(Context);
     if (SubAction == TEXT("add_spline_data_interface")) return AddSplineDI(Context);
     if (SubAction == TEXT("add_audio_spectrum_data_interface")) return AddAudioSpectrumDI(Context);
+#if MCP_HAS_NIAGARA_COLLISION_QUERY_DI
     if (SubAction == TEXT("add_collision_query_data_interface")) return AddCollisionQueryDI(Context);
+#endif
     return false;
 }
 }

@@ -64,8 +64,8 @@
 #include "RigVMBlueprintGeneratedClass.h"
 #endif
 
-// UE 5.0 uses UControlRigBlueprintGeneratedClass (different name from UE 5.1+)
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 0
+// UE 5.0-5.1 use UControlRigBlueprintGeneratedClass; 5.2 renamed it to URigVMBlueprintGeneratedClass.
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION <= 1
 #include "ControlRigBlueprintGeneratedClass.h"
 #endif
 

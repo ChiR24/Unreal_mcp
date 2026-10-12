@@ -1,6 +1,7 @@
 #include "Domains/AssetWorkflow/Structs/McpAssetStructsShared.h"
 #include "Domains/AssetWorkflow/Structs/McpAssetStructsAnalysis.h"
 #include "Engine/DataAsset.h"
+#include "Kismet2/CompilerResultsLog.h"
 
 
 bool HandleStructAnalysisSearchUsage(UEngineWireSubsystem& Bridge, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)

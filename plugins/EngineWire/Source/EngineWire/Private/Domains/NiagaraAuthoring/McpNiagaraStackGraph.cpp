@@ -1,4 +1,5 @@
 #include "Domains/NiagaraAuthoring/McpNiagaraContext.h"
+#include "Domains/NiagaraGraph/McpNiagaraModuleOrder.h"
 
 namespace McpNiagaraAuthoringHandlers
 {
@@ -52,7 +53,7 @@ UNiagaraNodeFunctionCall* AddModuleToEmitterStack(
     return FNiagaraStackGraphUtilities::AddScriptModuleToStack(
         ModuleScript,
         *TargetOutput,
-        INDEX_NONE,
+        McpNiagaraModuleOrder::DependencyInsertIndex(*ModuleScript, *TargetOutput),
         SuggestedName.IsEmpty() ? ModuleScript->GetName() : SuggestedName);
 #else
     UE_LOG(LogEngineWireSubsystem, Warning, TEXT("AddModule failed: FNiagaraStackGraphUtilities is not available in UE 5.0. Consider upgrading to UE 5.1+ for full Niagara stack graph support."));

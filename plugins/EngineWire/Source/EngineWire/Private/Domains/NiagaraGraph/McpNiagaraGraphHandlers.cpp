@@ -5,6 +5,8 @@
 #include "Core/Module/EngineWireGlobals.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Domains/NiagaraGraph/McpNiagaraGraphPrivate.h"
+#include "Domains/NiagaraGraph/McpNiagaraModuleOrder.h"
+#include "Domains/NiagaraAuthoring/McpNiagaraContext.h"
 
 #include "Dom/JsonObject.h"
 
@@ -165,9 +167,10 @@ bool UEngineWireSubsystem::HandleNiagaraGraphAction(
             return true;
         }
 
+        const int32 StackIndex = McpNiagaraModuleOrder::DependencyInsertIndex(*ModuleScript, *OutputNode);
         UNiagaraNodeFunctionCall* FuncNode =
             FNiagaraStackGraphUtilities::AddScriptModuleToStack(
-                ModuleScript, *OutputNode);
+                ModuleScript, *OutputNode, StackIndex);
         if (!FuncNode || !FuncNode->NodeGuid.IsValid())
         {
             SendAutomationError(RequestingSocket, RequestId,
@@ -180,6 +183,15 @@ bool UEngineWireSubsystem::HandleNiagaraGraphAction(
         McpHandlerUtils::AddVerification(Result, System);
         Result->SetStringField(TEXT("modulePath"), ModulePath);
         Result->SetStringField(TEXT("nodeId"), FuncNode->NodeGuid.ToString());
+        if (StackIndex != INDEX_NONE)
+        {
+            Result->SetNumberField(TEXT("stackIndex"), StackIndex);
+        }
+        // What the editor's stack shows for the system now, as the typed module adds report it.
+        TArray<TSharedPtr<FJsonValue>> StackErrors;
+        TArray<TSharedPtr<FJsonValue>> StackWarnings;
+        McpNiagaraAuthoringHandlers::CollectNiagaraSystemStackIssues(System, StackErrors, StackWarnings);
+        Result->SetArrayField(TEXT("stackErrors"), StackErrors);
 
         SendAutomationResponse(RequestingSocket, RequestId, true,
             TEXT("Module node added."), Result);
