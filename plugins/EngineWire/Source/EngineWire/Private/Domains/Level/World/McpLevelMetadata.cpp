@@ -9,9 +9,7 @@ bool HandleSetMetadataAction(UEngineWireSubsystem& Subsystem, const FString& Req
     FString AssetPath;
     if (Payload.IsValid()) {
       AssetPayload->Values = Payload->Values;
-      if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) || AssetPath.IsEmpty()) {
-        Payload->TryGetStringField(TEXT("levelPath"), AssetPath);
-      }
+      Payload->TryGetStringField(TEXT("levelPath"), AssetPath);
     }
 
     AssetPath = NormalizeLevelPackagePath(AssetPath);

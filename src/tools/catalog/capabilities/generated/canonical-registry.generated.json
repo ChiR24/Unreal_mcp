@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "07b3034442dd9d6b",
+  "catalogRevision": "f97a475f9330cc6e",
   "recordCount": 411,
   "records": [
     {
@@ -37742,10 +37742,6 @@
             "actorName": {
               "type": "string",
               "description": "Name of the actor to target."
-            },
-            "name": {
-              "type": "string",
-              "description": "Name identifier."
             }
           },
           "required": [
@@ -37817,8 +37813,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "b1b75636a4d680203817bf0e5caddb24c8438e0df1b586dad7f913cd1f42a631",
-        "content": "4ae01a03f7b53bd14cb6b9329384e51376a0a640fb89310bb4d20d50f6a2a874"
+        "schema": "1904d48f0fbed1b63c88abaa8d9d1cae0a59ba0b5647cee82c7a5c2d6257daaf",
+        "content": "183dff43b46eb7360d48f8e908421ecf9809db62dd3a4b80fc611a9299b458c2"
       }
     },
     {
@@ -38407,14 +38403,6 @@
             "levelPath": {
               "type": "string",
               "description": "Level asset path."
-            },
-            "path": {
-              "type": "string",
-              "description": "Directory or file path."
-            },
-            "assetPath": {
-              "type": "string",
-              "description": "Asset path (e.g. /Game/Path/Asset)."
             }
           },
           "required": [
@@ -38494,8 +38482,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "506f438c253f3dac734cd1b31cc0cbd30dc5c69e7c0cbfeb7daa6e611dc13c51",
-        "content": "2f30b301f37c4d3d00a5f2a5a15aa2f2b0115e3eb61ebecd7f4fddf8e6e41a0a"
+        "schema": "2d26f9eb5c1c7a01f4e40ae4ac9a8a7368ba514ebc09f829f28f1918432016d4",
+        "content": "d98ac0e345cfde67c9fd36e1efd66827636305b52913f4829d27e384977b859d"
       }
     },
     {
@@ -70423,7 +70411,8 @@
           "A level asset must be permanently removed using the delete_level verb."
         ],
         "whenNotToUse": [
-          "The level should be unloaded rather than deleted."
+          "The level should be unloaded rather than deleted.",
+          "The level is the one open in the editor: open another first (LEVEL_LOADED)."
         ]
       },
       "schemas": {
@@ -70438,17 +70427,6 @@
             "levelPath": {
               "type": "string",
               "description": "Level asset path (e.g. /Game/Maps/Demo)."
-            },
-            "levelPaths": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "description": "Array of level asset paths."
-            },
-            "path": {
-              "type": "string",
-              "description": "Alias of levelPath resolved by the manage_level argument normalizer."
             }
           },
           "required": [
@@ -70474,9 +70452,9 @@
               "x-unreal-reflection-boundary": true,
               "description": "Additional handler result fields not named by the contract."
             },
-            "deletedCount": {
-              "type": "number",
-              "description": "Number of levels successfully deleted."
+            "deleted": {
+              "type": "boolean",
+              "description": "True once the map file and its built data and external actor files are gone."
             }
           },
           "required": [
@@ -70494,8 +70472,8 @@
           },
           "output": {
             "success": true,
-            "message": "Level deleted",
-            "deletedCount": 1
+            "message": "Level file deleted: /Game/Maps/OldDemo",
+            "deleted": true
           }
         }
       ],
@@ -70526,8 +70504,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "ea4d723086daf4756b90034f1720ddfed5167f67d6d990f4adb939b3b959fcbb",
-        "content": "305de43f5eb122353192dcf7c3544bd903c6c00864eb81fda660ab623499aad5"
+        "schema": "733157395aa0d9c95f6ab4c7e9ce2d4b45d97c6857ecc3260ee87c9e00ddc0e5",
+        "content": "ef739e5bfeca0ea49f80c468ff0621d031bb99da39f587ba74dc4099bbe24ce8"
       }
     },
     {
@@ -70586,10 +70564,6 @@
             "destinationPath": {
               "type": "string",
               "description": "Destination path for move/copy."
-            },
-            "targetPath": {
-              "type": "string",
-              "description": "Alias of destinationPath resolved by the manage_level argument normalizer."
             },
             "overwrite": {
               "type": "boolean",
@@ -70683,9 +70657,6 @@
             "rename": "rename_level"
           },
           "declaredBy": {
-            "targetPath": [
-              "duplicate"
-            ],
             "newName": [
               "rename"
             ]
@@ -70694,8 +70665,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "004194252ca905f10c2ddac391f98413fa016ba5833a4df955f7010183633620",
-        "content": "c3dfe34e6c199f203f9efa46b871cc1c4dcc2869c85423d1e034f028191539e1"
+        "schema": "fe13039535f4b2a75881962f7c881a23520f115abb1701baf5b0dbf5da28fa7d",
+        "content": "830e58469094ea6913c45063fbfbe7feba0c8d2be8d82aba21f273e60775d9a3"
       }
     },
     {
@@ -71072,7 +71043,7 @@
             },
             "targetPath": {
               "type": "string",
-              "description": "Alias of destinationPath resolved by the manage_level argument normalizer."
+              "description": "Alias of destinationPath."
             },
             "overwrite": {
               "type": "boolean",
@@ -71149,8 +71120,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "2c857c92a64393881c2aaab25b0af5878024d10569f8d57913e6c112346e828d",
-        "content": "c102f2e25b0f1b41acd2b41a605d51506e7b2275c36d3901f2bb6d576e9becef"
+        "schema": "7932a11d6eacf7461d61cdd04446347ea820795478e602e05264c6c7aa1bce80",
+        "content": "845fbbe856e5e7cd5a70e65f63d90a5414559d22b560445d8ea73cfdc25ab626"
       }
     },
     {
@@ -71729,10 +71700,6 @@
               "type": "string",
               "description": "Level asset path (e.g. /Game/Maps/Demo)."
             },
-            "assetPath": {
-              "type": "string",
-              "description": "Alias of levelPath resolved by the manage_level argument normalizer."
-            },
             "metadata": {
               "type": "object",
               "description": "Metadata key/value pairs to write.",
@@ -71813,8 +71780,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "5958b2f53d866b6363f05fb614f8a615e46e64f34fa69239c26b1cb57fda310e",
-        "content": "676509669c239856fcf9d575848fba2ed106d20f48b0a5322e4a0f38909f4cee"
+        "schema": "391542f47d98205803d88e61c30678bef618145e98a728ed081543c828e5253c",
+        "content": "4176f7d3a94313da92179141f8d20643126e3e3f7e67ae5435f5c9d4d44497bf"
       }
     },
     {
@@ -72310,10 +72277,6 @@
             "levelPath": {
               "type": "string",
               "description": "Level asset path (e.g. /Game/Maps/Demo)."
-            },
-            "assetPath": {
-              "type": "string",
-              "description": "Alias of levelPath resolved by the manage_level argument normalizer."
             }
           },
           "required": [
@@ -72397,8 +72360,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "d4b002cbdc07fda37aacb2467284fed04c085a2732cca5f0c6aaf3401bbcfb09",
-        "content": "190b657e7d750d1ac2292afde9b6ed8b52c33bfcba019f563de2109d7e2a4ccb"
+        "schema": "32983073e127d8ddc805dfc6d4a248f58b63fd66428db08a3de48c4e0c369e9d",
+        "content": "f09487de921d3ac47bbb943d8d5c150a4567969bd2ecd5b4325f7c04f7c79be5"
       }
     },
     {

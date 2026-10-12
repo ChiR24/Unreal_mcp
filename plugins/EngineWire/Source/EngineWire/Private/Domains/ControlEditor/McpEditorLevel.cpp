@@ -41,17 +41,10 @@ bool UEngineWireSubsystem::HandleControlEditorOpenLevel(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
   FString LevelPath;
-  // levelPath is the primary, path and assetPath are aliases
   Payload->TryGetStringField(TEXT("levelPath"), LevelPath);
   if (LevelPath.IsEmpty()) {
-    Payload->TryGetStringField(TEXT("path"), LevelPath);
-  }
-  if (LevelPath.IsEmpty()) {
-    Payload->TryGetStringField(TEXT("assetPath"), LevelPath);
-  }
-  if (LevelPath.IsEmpty()) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
-                              TEXT("levelPath, path, or assetPath required"), nullptr);
+                              TEXT("levelPath required"), nullptr);
     return true;
   }
 

@@ -8,7 +8,6 @@ bool HandleValidateLevelAction(UEngineWireSubsystem& Subsystem, const FString& R
     FString LevelPath;
     if (Payload.IsValid()) {
       Payload->TryGetStringField(TEXT("levelPath"), LevelPath);
-      if (LevelPath.IsEmpty()) Payload->TryGetStringField(TEXT("assetPath"), LevelPath);
     }
     if (LevelPath.IsEmpty()) {
       Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,

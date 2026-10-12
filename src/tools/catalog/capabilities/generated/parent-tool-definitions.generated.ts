@@ -5532,7 +5532,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "path": {
           "type": "string",
-          "description": "Directory or file path."
+          "description": "Directory to save the PNG in, inside the project (relative to it, or absolute under it). Default Saved/Screenshots (game_viewport: Saved/Screenshots/WindowsEditor). A path outside the project is refused."
         },
         "preferences": {
           "type": "object",
@@ -19185,10 +19185,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
     "inputSchema": {
       "type": "object",
       "properties": {
-        "assetPath": {
-          "type": "string",
-          "description": "Alias of levelPath resolved by the manage_level argument normalizer."
-        },
         "color": {
           "type": "array",
           "items": {
@@ -19254,13 +19250,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Folder the new level goes in (e.g. /Game/Maps, combined with levelName), or its full path; omitted, the level lands in /Game/Maps."
         },
-        "levelPaths": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Array of level asset paths."
-        },
         "lightClass": {
           "type": "string",
           "description": "Light class name or path, for a class lightType does not name, including a Blueprint light (/Game/Lights/BP_Lamp.BP_Lamp_C); build_environment list_light_types lists the loaded ones. Wins over lightType."
@@ -19300,10 +19289,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "parentLevel": {
           "type": "string",
           "description": "Level the sub-level belongs to; it must be the level open in the editor, or the call is refused (load it first)."
-        },
-        "path": {
-          "type": "string",
-          "description": "Alias of levelPath resolved by the manage_level argument normalizer."
         },
         "properties": {
           "type": "object",
@@ -19373,7 +19358,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "targetPath": {
           "type": "string",
-          "description": "Alias of destinationPath resolved by the manage_level argument normalizer."
+          "description": "Alias of destinationPath."
         },
         "timeDilation": {
           "type": "number",
@@ -19510,9 +19495,9 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Levels in the current world (persistent level plus streaming levels)."
         },
-        "deletedCount": {
-          "type": "number",
-          "description": "Number of levels successfully deleted."
+        "deleted": {
+          "type": "boolean",
+          "description": "True once the map file and its built data and external actor files are gone."
         },
         "details": {
           "type": "object",

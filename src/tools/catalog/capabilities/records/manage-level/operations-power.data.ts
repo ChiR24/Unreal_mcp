@@ -90,7 +90,7 @@ export const OPERATIONS_POWER_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Write metadata key/value pairs to a level asset via the shared metadata bridge route.',
     whenToUse: ['Level asset metadata must be written.'],
     whenNotToUse: ['The target is not a /Game level asset path.'],
-    inputProps: { levelPath: P.levelPath, assetPath: P.assetPath, metadata: P.metadata },
+    inputProps: { levelPath: P.levelPath, metadata: P.metadata },
     required: ['levelPath', 'metadata'],
     effect: 'write', behavior: { idempotency: 'idempotent' },
     exampleInput: { action: 'set_metadata', levelPath: '/Game/Maps/Demo', metadata: { author: 'MCP' } },

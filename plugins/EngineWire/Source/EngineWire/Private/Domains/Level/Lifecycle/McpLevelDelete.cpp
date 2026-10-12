@@ -11,24 +11,7 @@ bool HandleDeleteLevelAction(UEngineWireSubsystem& Subsystem, const FString& Req
     FString LevelPath;
     if (Payload.IsValid())
       Payload->TryGetStringField(TEXT("levelPath"), LevelPath);
-    if (LevelPath.IsEmpty() && Payload.IsValid())
-      Payload->TryGetStringField(TEXT("path"), LevelPath);
 
-    // `levelPaths` used to be silently ignored while the call reported success
-    // (dogfood #157b). One level is deleted per call: accept a single-entry
-    // array, and refuse a batch loudly instead of pretending.
-    const TArray<TSharedPtr<FJsonValue>>* LevelPathsArray = nullptr;
-    if (Payload.IsValid() && Payload->TryGetArrayField(TEXT("levelPaths"), LevelPathsArray) && LevelPathsArray) {
-      if (LevelPathsArray->Num() > 1 || (LevelPathsArray->Num() == 1 && !LevelPath.IsEmpty())) {
-        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
-                               TEXT("delete_level removes one level per call; pass a single levelPath (or a one-entry levelPaths) and repeat for each level"),
-                               nullptr, TEXT("BATCH_NOT_SUPPORTED"));
-        return true;
-      }
-      if (LevelPathsArray->Num() == 1 && (*LevelPathsArray)[0].IsValid()) {
-        LevelPath = (*LevelPathsArray)[0]->AsString();
-      }
-    }
     if (LevelPath.IsEmpty()) {
       Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("levelPath required for delete_level"),

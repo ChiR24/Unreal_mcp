@@ -9,12 +9,6 @@ bool UEngineWireSubsystem::HandleControlEditorFocusActor(
   FString ActorName;
   Payload->TryGetStringField(TEXT("actorName"), ActorName);
   if (ActorName.IsEmpty()) {
-    Payload->TryGetStringField(TEXT("name"), ActorName);
-  }
-  if (ActorName.IsEmpty()) {
-    Payload->TryGetStringField(TEXT("objectPath"), ActorName);
-  }
-  if (ActorName.IsEmpty()) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
                               TEXT("actorName required"), nullptr);
     return true;

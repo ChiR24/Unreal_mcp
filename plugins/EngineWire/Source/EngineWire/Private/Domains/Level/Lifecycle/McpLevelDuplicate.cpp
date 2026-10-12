@@ -11,7 +11,7 @@ bool HandleDuplicateLevelAction(UEngineWireSubsystem& Subsystem, const FString& 
     if (SourcePath.IsEmpty() && Payload.IsValid())
       Payload->TryGetStringField(TEXT("levelPath"), SourcePath);
 
-    FString DestinationPath = McpGetFirstStringField(Payload, {TEXT("destinationPath"), TEXT("targetPath")});
+    FString DestinationPath = McpGetFirstStringField(Payload, {TEXT("destinationPath")});
 
     if (SourcePath.IsEmpty()) {
       Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
