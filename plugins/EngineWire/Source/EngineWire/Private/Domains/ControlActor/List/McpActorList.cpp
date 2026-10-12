@@ -212,19 +212,19 @@ bool UEngineWireSubsystem::HandleControlActorList(
       TArray<TSharedPtr<FJsonValue>> Missing;
       for (const FString &Wanted : PropertyNames) {
         UObject *Owner = nullptr;
+        // As JSON, the form get_property answers in: a bool read "False", a float "2.200000" and an array of
+        // actors a quoted export string a caller had to parse.
         if (FProperty *Property = McpResolveActorPropertyPath(Actor, Wanted, Owner)) {
-          Properties->SetStringField(Wanted.Contains(TEXT(".")) ? Wanted : Property->GetName(),
-                                     McpPropertyReflection::GetPropertyValueAsString(Owner, Property));
+          Properties->SetField(Wanted.Contains(TEXT(".")) ? Wanted : Property->GetName(),
+                               McpPropertyReflection::ExportPropertyToJsonValueOrText(Owner, Property));
           continue;
         }
         // A struct member of the actor itself (a post process volume's Settings.BloomIntensity) or a deeper
         // path read as missing here while get_property found it: fall back to the resolver get_property uses.
         void *Container = nullptr;
-        FString Resolved, Error, Value;
+        FString Resolved, Error;
         if (FProperty *Nested = McpResolvePropertyPath(Actor, Wanted, Container, Resolved, Error)) {
-          const void *NestedValue = Nested->ContainerPtrToValuePtr<void>(Container);
-          MCP_PROPERTY_EXPORT_TEXT(Nested, Value, NestedValue, NestedValue, nullptr, PPF_None);
-          Properties->SetStringField(Wanted, Value);
+          Properties->SetField(Wanted, McpPropertyReflection::ExportPropertyToJsonValueOrText(Container, Nested));
         } else {
           Missing.Add(MakeShared<FJsonValueString>(Wanted));
         }

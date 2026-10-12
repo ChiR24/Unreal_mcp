@@ -224,7 +224,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
         actorName: P.pieActorName,
         durationSeconds: { type: 'number', description: 'Game seconds to watch (default 2, at most 30). Game time, so a clock slowed with set_game_speed still covers the same span of play; a run that needs more wall-clock time than maxRealSeconds stops there (endedBecause realTimeCap).' },
         intervalSeconds: { type: 'number', description: 'Game seconds between samples (default 0.05; 0 samples every frame). At most 400 samples are kept.' },
-        propertyNames: { type: 'array', items: { type: 'string' }, description: 'Actor properties read at every sample, e.g. ["bDead", "HP"], or a component\'s as "Component.Property" ("Visual.RelativeScale3D" catches a squash on landing), the component by its name or by the actor property that holds it ("CharacterMovement.MaxWalkSpeed"); a name that resolves to nothing is listed under missingProperties.' },
+        propertyNames: { type: 'array', items: { type: 'string' }, description: 'Actor properties read at every sample, each as JSON (a number, true or false, the name of an enum value, the path of an object, or an array of them), e.g. ["bDead", "HP"], or a component\'s as "Component.Property" ("Visual.RelativeScale3D" catches a squash on landing), the component by its name or by the actor property that holds it ("CharacterMovement.MaxWalkSpeed"); a name that resolves to nothing is listed under missingProperties.' },
         maxRealSeconds: { type: 'number', description: 'Wall-clock cap (default 25, at most 50): the run stops here and reports how much game time it covered, so a long run or an editor throttled to 3 fps still answers before a client that gives up at 30 s. Raise it only for a client that waits longer.' },
         inputs: {
           type: 'array',
@@ -252,7 +252,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
           properties: {
             actorName: { type: 'string', description: 'Actor whose property starts the run.' },
             propertyName: { type: 'string', description: 'That actor\'s property, as propertyNames reads it: bActorEnableCollision, or a component\'s as Component.Property (CharacterMovement.MovementMode starts the run on a landing when equals is MOVE_Walking).' },
-            equals: { description: 'Value that starts the run, as samples show it ("True", "False", 3).' },
+            equals: { description: 'Value that starts the run, as samples show it (true, false, 3, "Walking").' },
             waitForChange: { type: 'boolean', description: 'Default true: start only when the value BECOMES equals (a platform appearing), not while it already is.' },
             maxWaitSeconds: { type: 'number', description: 'Game seconds to wait before giving up with endedBecause startWhenTimeout (default 10, at most 30).' },
           },
@@ -296,7 +296,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
       exampleOutput: {
         success: true, message: '31 samples of BP_Hero_C_0 over 1.50 game seconds (duration)',
         actorName: 'BP_Hero_C_0', sampleCount: 31, gameSeconds: 1.5, realSeconds: 3.2, endedBecause: 'duration',
-        samples: [{ t: 0, location: [8500, 0, 56.1], velocity: [0, 0, 0], rotation: [0, 90, 0], properties: { bDead: 'False' } }],
+        samples: [{ t: 0, location: [8500, 0, 56.1], velocity: [0, 0, 0], rotation: [0, 90, 0], properties: { bDead: false } }],
         start: [8500, 0, 56.1], end: [9310, 0, 130.2], min: [8500, 0, 56.1], max: [9310, 0, 302.4],
       },
     }),

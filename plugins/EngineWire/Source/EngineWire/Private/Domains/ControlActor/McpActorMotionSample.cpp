@@ -72,7 +72,7 @@ void McpTakeMotionSample(FMcpMotionRun &Run, AActor *Actor, double GameTime) {
     for (const FMcpMotionProperty &Watched : Run.Properties) {
       UObject *Owner = Watched.Owner.Get();
       if (FProperty *Property = Owner ? Owner->GetClass()->FindPropertyByName(Watched.Property) : nullptr) {
-        Values->SetStringField(Watched.Label, McpPropertyReflection::GetPropertyValueAsString(Owner, Property));
+        Values->SetField(Watched.Label, McpPropertyReflection::ExportPropertyToJsonValueOrText(Owner, Property));
       }
     }
     Sample->SetObjectField(TEXT("properties"), Values);

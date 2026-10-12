@@ -988,7 +988,7 @@ describe('list reads struct members of an actor', () => {
   // list only followed Component.Property, never a struct member of the actor itself.
   it('list falls back to the get_property resolver for struct members and deeper paths', () => {
     const source = code('ControlActor', 'List', 'McpActorList.cpp');
-    expect(source).toMatch(/if \(FProperty \*Nested = McpResolvePropertyPath\(Actor, Wanted, Container, Resolved, Error\)\) \{\s*const void \*NestedValue = Nested->ContainerPtrToValuePtr<void>\(Container\);\s*MCP_PROPERTY_EXPORT_TEXT\(Nested, Value, NestedValue, NestedValue, nullptr, PPF_None\);\s*Properties->SetStringField\(Wanted, Value\);/u);
+    expect(source).toMatch(/if \(FProperty \*Nested = McpResolvePropertyPath\(Actor, Wanted, Container, Resolved, Error\)\) \{\s*Properties->SetField\(Wanted, McpPropertyReflection::ExportPropertyToJsonValueOrText\(Container, Nested\)\);/u);
   });
 });
 
@@ -1801,8 +1801,9 @@ describe('listed struct values show their zero fields', () => {
   it('exports a value against itself in the shared property reader and the list fallback', () => {
     const reader = readFileSync(join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'Foundation', 'Reflection', 'McpPropertyReflectionUtilities.cpp'), 'utf8');
     expect(reader).toContain('MCP_PROPERTY_EXPORT_TEXT(Property, Result, Value, Value, nullptr, PPF_None);');
-    expect(code('ControlActor', 'List', 'McpActorList.cpp'))
-      .toContain('MCP_PROPERTY_EXPORT_TEXT(Nested, Value, NestedValue, NestedValue, nullptr, PPF_None);');
+    const reflection = readFileSync(join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'Foundation', 'Reflection', 'McpPropertyReflection.cpp'), 'utf8');
+    expect(reflection).toContain('MCP_PROPERTY_EXPORT_TEXT(Property, Text, Value, Value, nullptr, PPF_None);');
+    expect(reflection).toContain('StructProp->Struct->ExportText(Exported, StructValue, StructValue, nullptr, 0, nullptr, true);');
   });
 });
 
@@ -2776,5 +2777,20 @@ describe('a Niagara module add names the module as its inputs go by', () => {
     const modules = code('NiagaraAuthoring', 'McpNiagaraParticleModules.cpp');
     expect(modules).toContain('const UNiagaraNodeFunctionCall* Added = AddModuleToEmitterStack(Handle, ModulePath, Module->Usage, ModuleName);');
     expect(modules).toContain('ModuleName = Added->GetFunctionName();');
+  });
+});
+
+describe('a listed or sampled property reads as a JSON value', () => {
+  // list propertyNames answered "False", "2.200000" and an array of actors as one quoted export string, while
+  // get_property answered the same properties as false, 2.2 and an array of paths.
+  it('list and motion samples use the exporter get_property uses, with export text only where it has no form', () => {
+    const reflection = code('..', 'Foundation', 'Reflection', 'McpPropertyReflection.cpp');
+    expect(reflection).toMatch(/ExportPropertyToJsonValueOrText\(void\* TargetContainer, FProperty\* Property\)\s*\{\s*TSharedPtr<FJsonValue> Json = ExportPropertyToJsonValue\(TargetContainer, Property\);/u);
+    const list = code('ControlActor', 'List', 'McpActorList.cpp');
+    expect(list).toContain('McpPropertyReflection::ExportPropertyToJsonValueOrText(Owner, Property)');
+    expect(list).toContain('McpPropertyReflection::ExportPropertyToJsonValueOrText(Container, Nested)');
+    expect(list).not.toContain('GetPropertyValueAsString');
+    expect(code('ControlActor', 'McpActorMotionSample.cpp'))
+      .toContain('Values->SetField(Watched.Label, McpPropertyReflection::ExportPropertyToJsonValueOrText(Owner, Property));');
   });
 });

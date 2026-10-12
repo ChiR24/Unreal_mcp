@@ -129,6 +129,19 @@ TSharedPtr<FJsonValue> ExportPropertyToJsonValue(void* TargetContainer, FPropert
     return nullptr;
 }
 
+TSharedPtr<FJsonValue> ExportPropertyToJsonValueOrText(void* TargetContainer, FProperty* Property)
+{
+    TSharedPtr<FJsonValue> Json = ExportPropertyToJsonValue(TargetContainer, Property);
+    if (!Json.IsValid() && TargetContainer && Property)
+    {
+        FString Text;
+        const void* Value = Property->ContainerPtrToValuePtr<void>(TargetContainer);
+        MCP_PROPERTY_EXPORT_TEXT(Property, Text, Value, Value, nullptr, PPF_None);
+        Json = MakeShared<FJsonValueString>(Text);
+    }
+    return Json;
+}
+
 namespace
 {
 // A struct's editable fields as export text; "" when none is left out or none is editable, so a vector, a colour or

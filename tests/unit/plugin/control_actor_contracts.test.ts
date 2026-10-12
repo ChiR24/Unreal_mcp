@@ -121,7 +121,7 @@ describe('control_actor.list propertyNames takes "Component.Property" like sampl
   it('list reads the value off the resolved owner and keys a component property as asked', () => {
     const list = read('List', 'McpActorList.cpp');
 
-    expect(list).toMatch(/GetPropertyValueAsString\(Owner, Property\)/u);
+    expect(list).toMatch(/ExportPropertyToJsonValueOrText\(Owner, Property\)/u);
     expect(list).toMatch(/Wanted\.Contains\(TEXT\("\."\)\) \? Wanted : Property->GetName\(\)/u);
     expect(list).toMatch(/Missing\.Add\(MakeShared<FJsonValueString>\(Wanted\)\)/u);
   });

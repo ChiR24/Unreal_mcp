@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "8a6be6ec6f362d5b",
+  "catalogRevision": "19047bad6ecd4ccb",
   "recordCount": 411,
   "records": [
     {
@@ -33975,7 +33975,7 @@
               "items": {
                 "type": "string"
               },
-              "description": "Actor properties read at every sample, e.g. [\"bDead\", \"HP\"], or a component's as \"Component.Property\" (\"Visual.RelativeScale3D\" catches a squash on landing), the component by its name or by the actor property that holds it (\"CharacterMovement.MaxWalkSpeed\"); a name that resolves to nothing is listed under missingProperties."
+              "description": "Actor properties read at every sample, each as JSON (a number, true or false, the name of an enum value, the path of an object, or an array of them), e.g. [\"bDead\", \"HP\"], or a component's as \"Component.Property\" (\"Visual.RelativeScale3D\" catches a squash on landing), the component by its name or by the actor property that holds it (\"CharacterMovement.MaxWalkSpeed\"); a name that resolves to nothing is listed under missingProperties."
             },
             "maxRealSeconds": {
               "type": "number",
@@ -34038,7 +34038,7 @@
                   "description": "That actor's property, as propertyNames reads it: bActorEnableCollision, or a component's as Component.Property (CharacterMovement.MovementMode starts the run on a landing when equals is MOVE_Walking)."
                 },
                 "equals": {
-                  "description": "Value that starts the run, as samples show it (\"True\", \"False\", 3)."
+                  "description": "Value that starts the run, as samples show it (true, false, 3, \"Walking\")."
                 },
                 "waitForChange": {
                   "type": "boolean",
@@ -34315,8 +34315,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "95bbc4485a04153bd7b4052ddfc1bb91cc425895fd5a075251a3e9b8b27fdcf6",
-        "content": "2324a6676a3387c158ece0ac1f47a66d104a30f82fa4b7174129eaf495e08f7e"
+        "schema": "7e937842c86ef82583e8d36de1b6c0f7788bb0d69cbce2db32e2b8ca0d5137f0",
+        "content": "427f5067b4ed028797f108160f0ba79f05b577aa4ad27683c0de603b28f8899d"
       }
     },
     {
@@ -34401,7 +34401,7 @@
               "items": {
                 "type": "string"
               },
-              "description": "Property or Blueprint variable names to read on every listed actor, returned per actor under properties, e.g. Kind and Content, or a component's as \"Component.Property\" (StaticMeshComponent.LDMaxDrawDistance, Visual.RelativeScale3D; the component by its name, or by the actor property that holds it, as CharacterMovement.MaxWalkSpeed), keyed as asked. A name that an actor lacks, or whose component it lacks, is listed under missingProperties for that actor."
+              "description": "Property or Blueprint variable names to read on every listed actor, returned per actor under properties, each as JSON (a number, true or false, the name of an enum value, the path of an object, or an array of them), e.g. Kind and Content, or a component's as \"Component.Property\" (StaticMeshComponent.LDMaxDrawDistance, Visual.RelativeScale3D; the component by its name, or by the actor property that holds it, as CharacterMovement.MaxWalkSpeed), keyed as asked. A name that an actor lacks, or whose component it lacks, is listed under missingProperties for that actor."
             },
             "near": {
               "type": "array",
@@ -34647,8 +34647,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "3440f8ea2ac7a85c66a027913afd9bf92deb2903061b5d01b8dccf75a7bcb479",
-        "content": "e2f18f42d4a4adbd90c89d7dfac8fa2a39b50f59681176db64359512249324c9"
+        "schema": "6e9d75f86e682ff04987647a57d7b51ace81a30d9800c2b9fe643eb66de6e19a",
+        "content": "6fdc2e137b24a34d27838808614d289aec8a8b51f2a00d70f524a314d7b45ba3"
       }
     },
     {

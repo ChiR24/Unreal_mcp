@@ -13,6 +13,8 @@
 namespace McpPropertyReflection
 {
 ENGINEWIRE_API TSharedPtr<FJsonValue> ExportPropertyToJsonValue(void* TargetContainer, FProperty* Property);
+// The same, or the property's export text when it has no JSON form (a delegate): a read never comes back empty.
+ENGINEWIRE_API TSharedPtr<FJsonValue> ExportPropertyToJsonValueOrText(void* TargetContainer, FProperty* Property);
 // The echo of a write: a struct, or an array of them, shows its editable fields only (see the .cpp).
 ENGINEWIRE_API TSharedPtr<FJsonValue> ExportWrittenValueToJson(void* TargetContainer, FProperty* Property);
 ENGINEWIRE_API TSharedPtr<FJsonObject> ExportPropertiesToJson(UObject* Object, const TArray<FName>& PropertyNames);
