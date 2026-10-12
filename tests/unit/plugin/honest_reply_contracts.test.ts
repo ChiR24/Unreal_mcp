@@ -1041,6 +1041,14 @@ describe('Blueprints that depend on a changed Widget Blueprint', () => {
 });
 
 describe('connect_pins on pins added on demand', () => {
+  // "FromNode 'K2Node_CallFunction_3' pins: execute, ..., Key, . ToNode ...": both nodes, hidden pins, a dangling comma.
+  it('PIN_NOT_FOUND names the pin that missed and joins the visible pins of its node', () => {
+    const pins = code('BlueprintGraph', 'McpBPGraphPinMutations.cpp');
+    expect(pins).toContain('TEXT("No %s pin \'%s\' on \'%s\'. Its pins: %s.")');
+    expect(pins).toContain('if (Pin && !Pin->bHidden)');
+    expect(pins, 'no list with a dangling separator, no log copy').not.toContain('FromPinsList');
+  });
+
   // A build_graph step connecting a Sequence's then_2 stopped the batch with PIN_NOT_FOUND ("pins: execute, then_0,
   // then_1"): the editor adds that pin on demand, the tool never did.
   it('connect_pins grows a node that adds pins on demand to the pin it names, and takes back pins added in vain', () => {
@@ -1620,7 +1628,7 @@ describe('a graph batch checks its expressions before any step runs', () => {
     expect(types, 'only a name that is the whole operand under C precedence').toContain('IsEqualityEdge(Parts, RightLast + 1)');
     expect(types, 'the literals true and false are bools').toContain('Name.Equals(TEXT("true"), ESearchCase::IgnoreCase)');
     const mutations = code('BlueprintGraph', 'McpBPGraphNodeMutations.cpp');
-    expect(mutations).toContain('A name that is not a variable is a number input, never true/false.');
+    expect(mutations).toContain('A name that is not a variable is a number input, never true/false and never a vector: ');
   });
 
   // Every caller wrote vec(-170, 10, z) or 0.5 * -x first and got a refusal: the node has no unary minus.
@@ -2146,9 +2154,28 @@ describe('a batch lists the steps that have something to say', () => {
     expect(code('AudioAuthoring', 'MetaSound', 'McpAudioMetaSoundBatch.cpp')).toContain('McpSetBatchSteps(Response, Results, NodeIds);');
   });
 
-  it('keeps every step on a failed batch, where the failing step is the last result', () => {
+  it('lists the failing step last on a failed batch, alone once the steps before it were undone', () => {
     const batch = code('BlueprintGraph', 'McpBPGraphBatch.cpp');
     expect(batch).toContain('Details->SetArrayField(TEXT("results"), Results);');
+    expect(batch.indexOf('McpBlueprintBehaviour::UndoBatch(')).toBeLessThan(batch.indexOf('Details->SetArrayField(TEXT("results"), Results);'));
+    expect(code('BlueprintGraph', 'Behaviour', 'McpBPBehaviourSnapshot.cpp')).toContain('Results.RemoveAt(0, FailedIndex);');
+    // The message is cut at 512 characters: what happened to the Blueprint goes before the step's own error.
+    expect(batch).toContain('TEXT("build_graph stopped at operations[%d]. %s %s"), Index,');
+  });
+
+  // A type error at step 5 left the two variables and three nodes the steps before it made.
+  it('undoes the steps before a failing one, from a snapshot taken before step 0', () => {
+    const batch = code('BlueprintGraph', 'McpBPGraphBatch.cpp');
+    expect(batch).toContain('bCompile ? McpBlueprintBehaviour::TakeSnapshot(Context.Blueprint) : McpBlueprintBehaviour::FSnapshot();');
+    expect(batch.indexOf('McpBlueprintBehaviour::TakeSnapshot(')).toBeLessThan(batch.indexOf('RunBatchStep(Context, State'));
+    expect(batch).toContain('McpBlueprintBehaviour::UndoBatch(Context.Blueprint, Before, *Steps, Results)');
+    expect(batch, 'a failed batch names no removed node').not.toContain('Details->SetObjectField(TEXT("nodeIds"), NodeIds);');
+    const snapshot = code('BlueprintGraph', 'Behaviour', 'McpBPBehaviourSnapshot.cpp');
+    expect(snapshot).toMatch(/Detail::Restore\(Blueprint, Before, MakeShared<FJsonObject>\(\)\);\s*if \(!Before\.bPackageDirty\)/u);
+    expect(snapshot, 'what it cannot put back is named').toContain('set on a node that was already there');
+    // Removing a new Math Expression took its sub-graph along; removing that graph's tunnel node crashed the editor.
+    expect(snapshot).toContain('FBlueprintEditorUtils::FindBlueprintForGraph(Graph) != Blueprint');
+    expect(code('BlueprintGraph', 'Behaviour', 'McpBPBehaviourOwnership.cpp')).toContain('FBlueprintEditorUtils::FindBlueprintForGraph(Graph) != Blueprint');
   });
 
   // A created node's row repeated its id beside the batch's nodeIds map.

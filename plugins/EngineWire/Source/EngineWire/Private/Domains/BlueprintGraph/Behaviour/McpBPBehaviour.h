@@ -72,6 +72,12 @@ struct FSnapshot
  *  also removes those components. */
 FSnapshot TakeSnapshot(UBlueprint* Blueprint);
 
+/** Puts a Blueprint back after a build_graph batch failed (Before taken before step 0), and saves it when its package
+ *  was clean before, so the disk matches too. Results holds a row per step up to the failed one, which it cuts to that
+ *  row (the others name undone nodes). Returns the reply's sentence on what remains. */
+FString UndoBatch(UBlueprint* Blueprint, const FSnapshot& Before, const TArray<TSharedPtr<FJsonValue>>& Steps,
+                  TArray<TSharedPtr<FJsonValue>>& Results);
+
 struct FAuthorResult
 {
     /** The behaviour is in the Blueprint and the Blueprint was saved. */

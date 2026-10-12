@@ -391,6 +391,8 @@ const testCases = [
     { edit: 'create_node', graphName: 'BatchPassThrough', nodeType: 'CallFunction', memberName: 'PrintString', pinDefaults: { NoSuchPin: 'x' } },
   ] }, expected: 'error|PIN_DEFAULT_FAILED' },
   { scenario: 'VERIFY: the failed step left no node behind', toolName: 'manage_blueprint', arguments: { action: 'get_graph_details', blueprintPath: BP_PATH, graphName: 'BatchPassThrough', filter: 'Print' }, expected: 'success', assertions: [{ path: 'structuredContent.result.totalCount', equals: 0, label: 'the PrintString node of the failed step is gone' }] },
+  // A failed batch is all or nothing: the add_variable step before the failing one is undone too.
+  { scenario: 'VERIFY: the failed batch took back the variable its first step added', toolName: 'manage_blueprint', arguments: { action: 'get_blueprint', blueprintPath: BP_PATH, propertyName: 'BatchStopFlag' }, expected: 'error|PROPERTY_NOT_FOUND' },
 
   // === NODE: create_node CustomEvent with typed parameters ===
   { scenario: 'NODE: create_node custom event with parameters', toolName: 'manage_blueprint', arguments: { action: 'create_node', blueprintPath: BP_PATH, graphName: 'EventGraph', nodeType: 'CustomEvent', eventName: 'AddScore', parameters: [{ name: 'Points', type: 'int' }], posX: 2400, posY: 1200 }, expected: 'success' },

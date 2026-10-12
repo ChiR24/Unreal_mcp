@@ -119,6 +119,11 @@ int32 RemoveOwned(UBlueprint* Blueprint, const FString& Tag)
     Blueprint->GetAllGraphs(Graphs);
     for (UEdGraph* Graph : Graphs)
     {
+        // A Math Expression removed above took its own sub-graph (tagged too) out of the Blueprint.
+        if (!Graph || FBlueprintEditorUtils::FindBlueprintForGraph(Graph) != Blueprint)
+        {
+            continue;
+        }
         for (UEdGraphNode* Node : TArray<UEdGraphNode*>(Graph->Nodes))
         {
             // An entry node goes only with its whole graph (above); alone it would

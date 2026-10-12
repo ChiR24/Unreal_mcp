@@ -225,7 +225,8 @@ static bool SetNodeProperty(FActionContext& Context)
         Context.TargetGraph->NotifyGraphChanged();
         // With no specific note, still say what an input is: a number input used as true/false got only the bare text.
         FString Unknown = McpBlueprintMathExpression::DescribeProblems(Context.Blueprint, Value);
-        Unknown = Unknown.IsEmpty() ? TEXT("A name that is not a variable is a number input, never true/false.") : Unknown;
+        Unknown = Unknown.IsEmpty() ? TEXT("A name that is not a variable is a number input, never true/false and never a vector: "
+                                                   "write VECT(x, y, z) of its parts, or name a vector variable.") : Unknown;
         Context.SendError(
             FString::Printf(TEXT("The expression '%s' does not parse, so the node would have no output; it keeps the "
                                  "old one. %s Call a function by its compact title (max, clamp, abs, sin), else its "

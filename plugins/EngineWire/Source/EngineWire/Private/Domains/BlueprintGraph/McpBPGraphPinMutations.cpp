@@ -78,42 +78,20 @@ static bool ConnectPins(FActionContext& Context)
     UEdGraphPin* ToPin = FindOrGrowPin(Context, ToNode, ToPinName);
     if (!FromPin || !ToPin)
     {
-        FString FromPinsList;
-        FString ToPinsList;
-        for (UEdGraphPin* Pin : FromNode->Pins)
+        // The pin that missed and the pins its node shows: both nodes' lists, every hidden pin included, ended
+        // "Key, ." and went to the log twice as warnings.
+        const UEdGraphNode* Missed = FromPin ? ToNode : FromNode;
+        TArray<FString> Names;
+        for (const UEdGraphPin* Pin : Missed->Pins)
         {
-            if (Pin)
+            if (Pin && !Pin->bHidden)
             {
-                FromPinsList += Pin->PinName.ToString() + TEXT(", ");
+                Names.Add(Pin->PinName.ToString());
             }
         }
-        for (UEdGraphPin* Pin : ToNode->Pins)
-        {
-            if (Pin)
-            {
-                ToPinsList += Pin->PinName.ToString() + TEXT(", ");
-            }
-        }
-        UE_LOG(
-            LogTemp,
-            Warning,
-            TEXT("connect_pins: FromNode '%s' pins: %s"),
-            *FromNode->GetName(),
-            *FromPinsList);
-        UE_LOG(
-            LogTemp,
-            Warning,
-            TEXT("connect_pins: ToNode '%s' pins: %s"),
-            *ToNode->GetName(),
-            *ToPinsList);
-        // The pin lists were already computed - they just went to the editor
-        // log, where the caller cannot see them.
         Context.SendError(
-            FString::Printf(
-                TEXT("No %s pin matched. FromNode '%s' pins: %s. ToNode '%s' pins: %s."),
-                FromPin == nullptr ? TEXT("source") : TEXT("target"),
-                *FromNode->GetName(), *FromPinsList,
-                *ToNode->GetName(), *ToPinsList),
+            FString::Printf(TEXT("No %s pin '%s' on '%s'. Its pins: %s."), FromPin ? TEXT("target") : TEXT("source"),
+                            FromPin ? *ToPinName : *FromPinName, *Missed->GetName(), *FString::Join(Names, TEXT(", "))),
             TEXT("PIN_NOT_FOUND"));
         return true;
     }

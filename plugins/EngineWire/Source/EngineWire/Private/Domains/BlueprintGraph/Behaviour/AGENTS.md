@@ -407,7 +407,7 @@ Each member step compiles once (variables, dispatchers, functions), plus the fin
 | `previousRemoved` | applied | Nodes and function graphs a replace removed first |
 | `hooks` | applied | See HOOKS |
 | `stepCount` | applied | build_graph steps run |
-| `results`, `nodeIds`, `succeeded` | batch ran | The batch's per-step results; `nodeIds` maps recipe ids to node guids (`<id>_return` too) |
+| `results`, `nodeIds`, `succeeded` | batch ran | The batch's per-step results; `nodeIds` maps recipe ids to node guids (`<id>_return` too), only when every step ran |
 | `failedIndex`, `failedStep` | a step failed | Batch index, and where it came from: `functions[0].operations[3]`, `eventGraph[2]`, `variables[1] Speed`, `input`, `input registration` |
 | `variables` | applied | `[{name, status: added, redefaulted or kept}]` |
 | `compiled`, `compilerStatus`, `errorCount`, `warningCount`, `diagnostics` | compiled | The final compile |

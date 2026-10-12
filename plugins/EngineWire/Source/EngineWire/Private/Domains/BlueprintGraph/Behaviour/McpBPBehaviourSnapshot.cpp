@@ -7,8 +7,10 @@
 #include "EdGraph/EdGraphPin.h"
 #include "Engine/SCS_Node.h"
 #include "Engine/SimpleConstructionScript.h"
+#include "Foundation/BridgeHelpers/Assets/McpAssetSaveRegistry.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPCompileHelpers.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPDiag.h"
+#include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 
 namespace McpBlueprintBehaviour
@@ -123,6 +125,12 @@ void Restore(UBlueprint* Blueprint, const FSnapshot& Before, const TSharedPtr<FJ
     Blueprint->GetAllGraphs(Graphs);
     for (UEdGraph* Graph : Graphs)
     {
+        // A composite node removed above (a Math Expression) took its own sub-graph out of the Blueprint, and
+        // removing that graph's tunnel nodes failed FindBlueprintForNodeChecked: the editor crashed.
+        if (!Graph || FBlueprintEditorUtils::FindBlueprintForGraph(Graph) != Blueprint)
+        {
+            continue;
+        }
         for (UEdGraphNode* Node : TArray<UEdGraphNode*>(Graph->Nodes))
         {
             if (Node && !Before.NodeGuids.Contains(Node->NodeGuid))
@@ -215,4 +223,33 @@ void Restore(UBlueprint* Blueprint, const FSnapshot& Before, const TSharedPtr<FJ
     Report->SetBoolField(TEXT("rolledBack"), true);
 }
 } // namespace Detail
+
+FString UndoBatch(UBlueprint* Blueprint, const FSnapshot& Before, const TArray<TSharedPtr<FJsonValue>>& Steps,
+                  TArray<TSharedPtr<FJsonValue>>& Results)
+{
+    const int32 FailedIndex = FMath::Max(Results.Num() - 1, 0);
+    Results.RemoveAt(0, FailedIndex); // success rows naming nodes the undo removed
+    Detail::Restore(Blueprint, Before, MakeShared<FJsonObject>());
+    if (!Before.bPackageDirty)
+    {
+        SaveLoadedAssetThrottled(Blueprint, true); // a package that was already dirty keeps its unsaved work unsaved
+    }
+    // ponytail: a property set on a node that was already there (an Expression) stays, since putting it back rebuilds
+    // the node's pins; setting it again is harmless, so the reply names it. Snapshot node properties if that matters.
+    TArray<FString> Kept;
+    for (int32 Index = 0; Index < FailedIndex && Index < Steps.Num(); ++Index)
+    {
+        const TSharedPtr<FJsonObject> Step = Steps[Index].IsValid() ? Steps[Index]->AsObject() : nullptr;
+        if (GetJsonStringField(Step, TEXT("edit")) == TEXT("set_node_property") &&
+            !McpGetFirstStringField(Step, {TEXT("nodeId"), TEXT("nodeGuid")}).StartsWith(TEXT("$")))
+        {
+            Kept.Add(FString::Printf(TEXT("operations[%d]"), Index));
+        }
+    }
+    const FString Except = Kept.Num() == 0 ? FString()
+        : FString::Printf(TEXT(", except the node property %s set on a node that was already there (setting it again "
+                               "is harmless)"), *FString::Join(Kept, TEXT(", ")));
+    return FString::Printf(TEXT("Nothing was applied: the %d step(s) before it were undone%s. Fix that step and send the "
+                                "whole batch again."), FailedIndex, *Except);
+}
 } // namespace McpBlueprintBehaviour

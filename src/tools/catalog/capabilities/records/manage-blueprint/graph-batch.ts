@@ -51,14 +51,16 @@ export const GRAPH_BATCH_RECORDS: readonly CapabilityRecordSource[] = [
           + 'free position instead, and its result says where in placementWarning, so a crowded row never stops the batch (a '
           + 'single create_node call still refuses an overlap). Every function, variable, dispatcher and async factory a step names is '
           + 'checked before any step runs, so a misspelled one fails the batch with nothing applied; any other failure stops '
-          + 'the batch at that step, and that step leaves nothing behind (a member step included), in whichever graph it ran.',
+          + 'the batch at that step and undoes the steps before it (members, nodes, links and pin defaults, in every graph), '
+          + 'so a failed batch leaves the Blueprint as it was: fix that step and send the whole batch again. Only a '
+          + 'set_node_property on a node that was already there stays, and the error names it.',
       },
     },
     required: ['blueprintPath', 'operations'],
     outputProps: {
-      results: { type: 'array', items: ITEM, 'x-unreal-reflection-boundary': true, description: 'Per-step outcome: index, edit, id, success, error, nodeGuid, resultNodeGuid (add_function), pins (for created nodes), connected, appliedValue, placementWarning (a create step that was moved off an overlapping position, or placed where it still overlaps), inputPins and boundToMembers (a Math Expression\'s Expression step: the pins it made, and the names that read member variables instead). A step that ran and has nothing more to say (a plain connect_pins, an add_variable) is counted in succeeded, not listed; a failed batch lists every step.' },
-      nodeIds: { type: 'object', additionalProperties: { type: 'string' }, description: 'Step id -> node guid for every node the batch created or reused; an add_function step with an id also adds "<id>_return" for its return node.' },
-      succeeded: { type: 'number', description: 'Steps that completed.' },
+      results: { type: 'array', items: ITEM, 'x-unreal-reflection-boundary': true, description: 'Per-step outcome: index, edit, id, success, error, nodeGuid, resultNodeGuid (add_function), pins (for created nodes), connected, appliedValue, placementWarning (a create step that was moved off an overlapping position, or placed where it still overlaps), inputPins and boundToMembers (a Math Expression\'s Expression step: the pins it made, and the names that read member variables instead). A step that ran and has nothing more to say (a plain connect_pins, an add_variable) is counted in succeeded, not listed; a failed batch lists only the step that failed, with its error.' },
+      nodeIds: { type: 'object', additionalProperties: { type: 'string' }, description: 'Step id -> node guid for every node the batch created or reused; an add_function step with an id also adds "<id>_return" for its return node. Absent when a step failed: its nodes were removed.' },
+      succeeded: { type: 'number', description: 'Steps that completed; 0 when a step failed, since the steps before it were undone.' },
       failedIndex: { type: 'number', description: 'Index of the step that stopped the batch (failures only).' },
       compiled: { type: 'boolean', description: 'True when the Blueprint compiles after the batch (warnings allowed).' },
       compilerStatus: { type: 'string', description: 'Blueprint status after the final compile.' },

@@ -1,6 +1,7 @@
 #include "Domains/BlueprintGraph/McpBPGraphPrivate.h"
 
 #include "Domains/Blueprint/McpBPActionContext.h"
+#include "Domains/BlueprintGraph/Behaviour/McpBPBehaviour.h"
 #include "Domains/BlueprintGraph/Behaviour/McpBPBehaviourNodes.h"
 #include "Domains/BlueprintGraph/McpBPGraphCompatibility.h"
 #include "Domains/BlueprintGraph/McpBPGraphBatchSteps.h"
@@ -11,8 +12,8 @@
 // used to cost a round trip per node, per link and per pin default; a batch runs
 // the SAME single-step handlers in-process (their replies are parked by
 // FMcpResponseCaptureRegistry instead of sent), so every step keeps its checks.
-// The batch stops at the first failing step; steps before it stay applied and
-// their node ids come back so the caller can continue from there.
+// The batch stops at the first failing step and undoes the steps before it: kept,
+// a type error at step 5 left two variables and three nodes for the caller to find.
 namespace McpBlueprintGraphHandlers
 {
 namespace
@@ -190,6 +191,9 @@ bool RunGraphBatch(FActionContext& Context, int32 MaxSteps, bool bCompile)
         return true;
     }
 
+    // Author (bCompile false) takes its own snapshot and puts the Blueprint back itself.
+    const McpBlueprintBehaviour::FSnapshot Before =
+        bCompile ? McpBlueprintBehaviour::TakeSnapshot(Context.Blueprint) : McpBlueprintBehaviour::FSnapshot();
     FBatchState State;
     for (UEdGraphNode* Existing : Context.TargetGraph->Nodes)
     {
@@ -227,19 +231,17 @@ bool RunGraphBatch(FActionContext& Context, int32 MaxSteps, bool bCompile)
         {
             continue;
         }
-        // The steps before this one stay applied, so they are saved as before.
-        SaveLoadedAssetThrottled(Context.Blueprint);
         Entry->SetStringField(TEXT("error"), Error);
+        // Author (bCompile false) puts the Blueprint back itself and reads every step's result.
+        const FString Outcome = bCompile ? McpBlueprintBehaviour::UndoBatch(Context.Blueprint, Before, *Steps, Results)
+                                         : FString(TEXT("Its caller undoes the steps before it."));
         TSharedPtr<FJsonObject> Details = McpHandlerUtils::CreateResultObject();
         Details->SetArrayField(TEXT("results"), Results);
-        Details->SetObjectField(TEXT("nodeIds"), NodeIds);
-        Details->SetNumberField(TEXT("succeeded"), Index);
+        Details->SetNumberField(TEXT("succeeded"), 0);
         Details->SetNumberField(TEXT("failedIndex"), Index);
-        FString Reason = Error;
-        Reason.RemoveFromEnd(TEXT("."));
-        Context.SendErrorWithDetails(FString::Printf(
-            TEXT("build_graph stopped at operations[%d]: %s. The %d step(s) before it were applied; "
-                 "their node ids are in the error detail's `nodeIds`."), Index, *Reason, Index), ErrorCode, Details);
+        // The outcome first: the message is cut at 512 characters, and the step's own error is in results.
+        Context.SendErrorWithDetails(FString::Printf(TEXT("build_graph stopped at operations[%d]. %s %s"), Index,
+                                                     *Outcome, *Error), ErrorCode, Details);
         return true;
     }
 
