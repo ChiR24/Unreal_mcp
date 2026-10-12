@@ -63,6 +63,11 @@ bool McpSendComponentPropertyShortfall(UEngineWireSubsystem &Bridge,
                                        TSharedPtr<FMcpBridgeWebSocket> Socket, const FString &RequestId,
                                        const TArray<FString> &Applied, const TArray<FString> &Warnings,
                                        const TSharedPtr<FJsonObject> &Data, const FString &Prefix = FString());
+// set_component_properties with actorNames, already resolved (McpActorComponentDetails.cpp): writes the reply.
+void McpSetComponentPropertiesOnActors(UEngineWireSubsystem &Bridge, TSharedPtr<FMcpBridgeWebSocket> Socket,
+                                       const FString &RequestId, const TArray<AActor *> &Actors,
+                                       const TArray<FString> &Missing, const FString &ComponentName,
+                                       const TSharedPtr<FJsonObject> &Properties);
 
 // An actor's outliner folder, "" at the root. FName spells NAME_None "None", so
 // ToString() alone counted the root as a folder named None in list's summary,

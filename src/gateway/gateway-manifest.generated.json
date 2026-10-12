@@ -3621,6 +3621,13 @@
                 "items": {
                   "type": "string"
                 },
+                "description": "Several actors whose component of componentName takes the same properties in one call and one undo step, in place of actorName (a row of point lights, each LightComponent0). The actors changed are counted in updatedActors and listed under affectedActors (which the receipt lists as changes), names that matched no actor come back in missing, and an actor whose component did not take everything is a results row {actorName, error} that fails the call PARTIAL_FAILURE."
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "minItems": 1,
                 "maxItems": 500,
                 "description": "Many actors given the same change: the location, offset, rotation or scale beside it (forty frost caps rescaled by one scale, a group raised by one offset). Reported as actors is."

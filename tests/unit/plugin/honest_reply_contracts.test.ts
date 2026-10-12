@@ -1685,6 +1685,18 @@ describe('a duplicated Blueprint keeps its Math Expressions bound to its own var
   });
 });
 
+// A dozen fire lights each took an edit_component call for one property.
+describe('a component property goes onto many actors in one call', () => {
+  it('resolves actorNames, writes the named component of each in one transaction, and rows only what did not take', () => {
+    expect(code('ControlActor', 'McpActorComponentProps.cpp')).toContain(
+      'McpSetComponentPropertiesOnActors(*this, Socket, RequestId, Actors, Missing, ComponentName, PropertiesObject);');
+    const many = code('ControlActor', 'McpActorComponentDetails.cpp');
+    expect(many).toContain('FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Set Component Properties")),');
+    expect(many).toContain('Data->SetNumberField(TEXT("updatedActors"), Updated.Num());');
+    expect(many).toContain('Rows.Num() == 0 ? FString() : FString(TEXT("PARTIAL_FAILURE"))');
+  });
+});
+
 // A force added to an update stack landed after Solve Forces and Velocity, so the system failed "The module has unmet
 // dependencies." (on the generic add, with no word of it in the reply), and that message named neither the module nor a fix.
 describe('a Niagara module goes where its dependencies hold', () => {

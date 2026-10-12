@@ -185,9 +185,9 @@ bool UEngineWireSubsystem::HandleControlActorSetComponentProperties(
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
   FString TargetName;
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
-  if (TargetName.IsEmpty()) {
+  if (TargetName.IsEmpty() && !Payload->HasField(TEXT("actorNames"))) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
-                              TEXT("actorName required"), nullptr);
+                              TEXT("actorName (or actorNames) required"), nullptr);
     return true;
   }
 
@@ -218,6 +218,13 @@ bool UEngineWireSubsystem::HandleControlActorSetComponentProperties(
     }
     PropertiesObject = MakeShared<FJsonObject>();
     PropertiesObject->SetField(PropertyName, ValueField);
+  }
+
+  TArray<AActor *> Actors;
+  TArray<FString> Missing;
+  if (McpResolveActorNames(Payload, [this](const FString &Name) { return FindActorByName(Name); }, Actors, Missing)) {
+    McpSetComponentPropertiesOnActors(*this, Socket, RequestId, Actors, Missing, ComponentName, PropertiesObject);
+    return true;
   }
 
   AActor *Found = FindActorByName(TargetName);

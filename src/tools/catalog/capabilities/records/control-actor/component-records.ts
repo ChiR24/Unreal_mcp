@@ -20,6 +20,16 @@ const MATERIAL_INPUT = {
   // materialPath or materials; the handler refuses a call with neither.
   requiredOneOf: ['actorName', 'actorNames'],
 } as const;
+// set_component_property and its alias take one actor or many (a dozen fire lights each took a call for one property).
+const COMPONENT_PROPERTY_INPUT = {
+  inputProps: {
+    actorName: P.actorName,
+    actorNames: { type: 'array', items: { type: 'string' }, description: 'Several actors whose component of componentName takes the same properties in one call and one undo step, in place of actorName (a row of point lights, each LightComponent0). The actors changed are counted in updatedActors and listed under affectedActors (which the receipt lists as changes), names that matched no actor come back in missing, and an actor whose component did not take everything is a results row {actorName, error} that fails the call PARTIAL_FAILURE.' },
+    componentName: P.componentName, properties: P.properties, propertyName: P.propertyName, value: P.value,
+  },
+  required: ['componentName'],
+  requiredOneOf: ['actorName', 'actorNames'],
+} as const;
 
 export const COMPONENT_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
@@ -60,10 +70,9 @@ export const COMPONENT_RECORDS: readonly CapabilityRecordSource[] = [
     domain: DOMAIN,
     family: FAMILY_COMPONENT,
     summary: 'Set one or more properties on a named actor component. For RelativeScale3D/RelativeLocation, note that a child inherits its parent\'s scale: Unreal multiplies parent and child scale COMPONENT-WISE in the child\'s own local axes, and rotation does NOT permute which axis each factor lands on. World size = ParentScale * ChildScale * MeshExtent per local axis, and world offset = ParentScale * RelativeLocation. Under a parent scaled non-uniformly, divide the offset you want by the parent scale on that axis.',
-    whenToUse: ['Component properties must be changed via a properties object or propertyName/value pair.'],
+    whenToUse: ['Component properties must be changed via a properties object or propertyName/value pair.', 'Several placed actors need the same component values (a row of lights\' colour or light function): actorNames does them in one call.'],
     whenNotToUse: ['The property should only be read (use get_component_property).'],
-    inputProps: { actorName: P.actorName, componentName: P.componentName, properties: P.properties, propertyName: P.propertyName, value: P.value },
-    required: ['actorName', 'componentName'],
+    ...COMPONENT_PROPERTY_INPUT,
     effect: 'write',
     behavior: { idempotency: 'idempotent' },
     exampleInput: { action: 'set_component_property', actorName: 'Cube1', componentName: 'Light1', properties: { Intensity: 5.0 } },
@@ -76,8 +85,7 @@ export const COMPONENT_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Alias of set_component_property. The bridge dispatches both names to the same handler.',
     whenToUse: ['Preferred when callers use the plural set_component_properties verb.'],
     whenNotToUse: ['Use set_component_property to avoid alias normalization.'],
-    inputProps: { actorName: P.actorName, componentName: P.componentName, properties: P.properties, propertyName: P.propertyName, value: P.value },
-    required: ['actorName', 'componentName'],
+    ...COMPONENT_PROPERTY_INPUT,
     effect: 'write',
     behavior: { idempotency: 'idempotent' },
     exampleInput: { action: 'set_component_properties', actorName: 'Cube1', componentName: 'Light1', properties: { Intensity: 5.0 } },

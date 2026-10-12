@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "ee4e98f0f23d7400",
+  "catalogRevision": "9e051f0161b9c4ef",
   "recordCount": 411,
   "records": [
     {
@@ -32657,6 +32657,7 @@
           "edit=add: A component must be attached to an existing actor.",
           "edit=remove: A component must be permanently detached and removed from an actor.",
           "edit=set_property: Component properties must be changed via a properties object or propertyName/value pair.",
+          "edit=set_property: Several placed actors need the same component values (a row of lights' colour or light function): actorNames does them in one call.",
           "edit=set_properties: Preferred when callers use the plural set_component_properties verb."
         ],
         "whenNotToUse": [
@@ -32694,6 +32695,13 @@
               "type": "string",
               "description": "Static mesh asset (/Game path) to show on the new component; only a StaticMeshComponent takes one. A mesh that does not load fails the call, naming the component that was still added."
             },
+            "actorNames": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Several actors whose component of componentName takes the same properties in one call and one undo step, in place of actorName (a row of point lights, each LightComponent0). The actors changed are counted in updatedActors and listed under affectedActors (which the receipt lists as changes), names that matched no actor come back in missing, and an actor whose component did not take everything is a results row {actorName, error} that fails the call PARTIAL_FAILURE."
+            },
             "propertyName": {
               "type": "string",
               "description": "Component property to read or write: a name (Intensity), or a dotted path through structs at any depth (BodyInstance.CollisionEnabled, LightmassSettings.bShadowIndirectOnly). A bare name that is not on the component itself resolves to the one struct member carrying it (CollisionEnabled reads and writes BodyInstance.CollisionEnabled); a name several structs carry is refused with the full paths to choose from."
@@ -32714,8 +32722,7 @@
           },
           "required": [
             "action",
-            "edit",
-            "actorName"
+            "edit"
           ],
           "additionalProperties": false
         },
@@ -32802,6 +32809,10 @@
             "meshPath": [
               "add"
             ],
+            "actorNames": [
+              "set_property",
+              "set_properties"
+            ],
             "propertyName": [
               "set_property",
               "set_properties"
@@ -32815,8 +32826,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "72207c12be52e975e72863ba37afdb4cf6a28537e006795855b30fad2abe5047",
-        "content": "42fd2c9fd08928ea296fb2e9d315ec59ac6c1d31e84ef12669d4f7e8f016ab77"
+        "schema": "a53bd4b3024e95b704c17e00b15eba521603fcffb361c73f5daa71d435ea85af",
+        "content": "04894fd6c1ee54d9db930a23e8b52d60c583a95b25fd502d37448f71254a8ed4"
       }
     },
     {

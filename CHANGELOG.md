@@ -41,6 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`get_property` reads the same properties from several objects** (`objectPaths`): one row per object under `targets`, and an object that cannot be read says why while the others still answer. Eight platforms' state took eight calls.
 - **`manage_audio` `list_metasound_nodes`**: the MetaSound node classes the engine has, by part of their class name, display name or category, with what each does and (`includePins`) their pins, named as `add_node` takes them. A node's class name was a guess until `add_node` refused it.
 - **An SDF shape can sit on an earlier one** (`relativeTo`): its center, rotation, repeat and mirror are measured from that shape's centre along its own turned axes. The eyes and mouth of a leaning body took the rotation worked out by hand for every part.
+- **`edit_component` sets the same component values on many actors** (`actorNames`), in one undo step: a dozen fire lights each took a call for one light function. Names that matched no actor come back in `missing`, and an actor whose component did not take everything fails the call naming it.
 - **A placed effect's values in one call**: `edit_niagara_system` `set_parameter` with `actorName` takes `parameters` (several user parameters at once) and `componentName` (one of an actor's several effects, such as a Blueprint's fire and smoke; it always wrote the first). Six placed fires with five values each took thirty calls.
 
 </details>
