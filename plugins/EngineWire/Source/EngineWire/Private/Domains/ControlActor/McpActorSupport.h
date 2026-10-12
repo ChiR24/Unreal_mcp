@@ -96,6 +96,27 @@ inline FProperty *McpResolveActorPropertyPath(AActor *Actor, const FString &Want
   return OutOwner ? OutOwner->GetClass()->FindPropertyByName(FName(*PropertyName)) : nullptr;
 }
 
+// An actor variable, or an array of them, takes the actors by label or name, as every other call names actors: an
+// array took paths only, so FireFx ["S6_RackFire_1", ...] needed each fire's /Game/...:PersistentLevel.NiagaraActor_6.
+inline TSharedPtr<FJsonValue> McpActorRefsToPaths(const TSharedPtr<FJsonValue> &Value, const FProperty *Property,
+                                                  TFunctionRef<AActor *(const FString &)> Find) {
+  const FArrayProperty *Array = CastField<FArrayProperty>(Property);
+  const FObjectProperty *Reference = CastField<FObjectProperty>(Array ? Array->Inner : Property);
+  if (!Value.IsValid() || !Reference || !Reference->PropertyClass || !Reference->PropertyClass->IsChildOf(AActor::StaticClass()))
+    return Value;
+  const auto ToPath = [&Find](const TSharedPtr<FJsonValue> &Item) -> TSharedPtr<FJsonValue> {
+    const FString Name = Item.IsValid() && Item->Type == EJson::String ? Item->AsString() : FString();
+    AActor *Actor = !Name.IsEmpty() && !Name.Contains(TEXT("/")) ? Find(Name) : nullptr;
+    return Actor ? MakeShared<FJsonValueString>(Actor->GetPathName()) : Item;
+  };
+  if (!Array || Value->Type != EJson::Array)
+    return Array ? Value : ToPath(Value);
+  TArray<TSharedPtr<FJsonValue>> Items;
+  for (const TSharedPtr<FJsonValue> &Item : Value->AsArray())
+    Items.Add(ToPath(Item));
+  return MakeShared<FJsonValueArray>(Items);
+}
+
 // control_actor.list's structural filters. Finding every TextRenderActor, or
 // what an outliner folder holds, used to mean guessing label substrings. Tag:
 // the actor carries it. ClassName: the actor's class or any parent, by name or

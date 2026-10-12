@@ -45,7 +45,7 @@ export const P = {
   tag: str('Actor tag: one entry in the Tags list of an actor (not a Gameplay Tag) to add, remove, find or delete by.'),
   variables: {
     type: 'object',
-    description: 'Blueprint variable name to value map.',
+    description: 'Blueprint variable name to value map. An actor variable, or an array of them, takes each actor by its label or name as list shows it ("Door_1", ["Fire_1", "Fire_2"]) or by its object path.',
     additionalProperties: true,
     'x-unreal-reflection-boundary': true,
   },

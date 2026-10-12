@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "19047bad6ecd4ccb",
+  "catalogRevision": "734a62ec48ad9c77",
   "recordCount": 411,
   "records": [
     {
@@ -34995,7 +34995,7 @@
                   },
                   "variables": {
                     "type": "object",
-                    "description": "Blueprint variable name to value map.",
+                    "description": "Blueprint variable name to value map. An actor variable, or an array of them, takes each actor by its label or name as list shows it (\"Door_1\", [\"Fire_1\", \"Fire_2\"]) or by its object path.",
                     "additionalProperties": true,
                     "x-unreal-reflection-boundary": true
                   }
@@ -35084,8 +35084,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "5855f5c291009b73d179c417c0e5672856373def15830a45f51296cfc8cf8e31",
-        "content": "457efc580c860f1bdf2f442244969dfa311ce64cd8cc62f8579cf14b2cf7cab2"
+        "schema": "b489ea3a3cfadfc17572a4fed5a4430281fde42e2e6c78a681777c3e89897687",
+        "content": "6ba9f3a1501d6153e94d49c4f689eb80caa4f8c9527e3ad081c81db2d393dc4d"
       }
     },
     {

@@ -146,13 +146,8 @@ bool UEngineWireSubsystem::HandleControlActorSetBlueprintVariables(
     if (!Property)
       continue;
 
-    // An actor variable takes the actor by label or name, as every other call names actors; only a path loaded.
-    TSharedPtr<FJsonValue> Value = Pair.Value;
-    const FObjectProperty *Reference = CastField<FObjectProperty>(Property);
-    AActor *Referenced = Reference && Reference->PropertyClass && Reference->PropertyClass->IsChildOf(AActor::StaticClass()) &&
-        Value.IsValid() && Value->Type == EJson::String && !Value->AsString().IsEmpty() &&
-        !Value->AsString().Contains(TEXT("/")) ? FindActorByName(Value->AsString()) : nullptr;
-    if (Referenced) Value = MakeShared<FJsonValueString>(Referenced->GetPathName());
+    const TSharedPtr<FJsonValue> Value =
+        McpActorRefsToPaths(Pair.Value, Property, [this](const FString &Name) { return FindActorByName(Name); });
     FString ApplyError;
     if (ApplyJsonValueToProperty(Found, Property, Value, ApplyError))
       Applied.Add(VariableName);

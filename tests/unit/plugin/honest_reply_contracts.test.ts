@@ -176,8 +176,13 @@ describe('handlers answer what they did', () => {
   // answered "Variables updated" with the miss only in a warning.
   it('set_blueprint_variables takes an actor variable by label and fails the call when a value does not take', () => {
     const source = code('ControlActor', 'McpActorAdvanced.cpp');
-    expect(source).toContain('Reference->PropertyClass->IsChildOf(AActor::StaticClass())');
-    expect(source).toContain('if (Referenced) Value = MakeShared<FJsonValueString>(Referenced->GetPathName());');
+    const support = code('ControlActor', 'McpActorSupport.h');
+    expect(source).toContain('McpActorRefsToPaths(Pair.Value, Property, [this](const FString &Name) { return FindActorByName(Name); });');
+    expect(support).toContain('Reference->PropertyClass->IsChildOf(AActor::StaticClass())');
+    expect(support).toContain('return Actor ? MakeShared<FJsonValueString>(Actor->GetPathName()) : Item;');
+    // An array of actors (FireFx) took paths only.
+    expect(support).toContain('CastField<FObjectProperty>(Array ? Array->Inner : Property)');
+    expect(support).toContain('for (const TSharedPtr<FJsonValue> &Item : Value->AsArray())');
     expect(source).toContain('ApplyJsonValueToProperty(Found, Property, Value, ApplyError)');
     const refusal = source.indexOf('TEXT("VARIABLE_NOT_SET")');
     expect(refusal).toBeGreaterThan(-1);
