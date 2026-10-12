@@ -315,6 +315,10 @@ bool UEngineWireSubsystem::HandleControlEditorScreenshot(
   if (Payload->HasField(TEXT("_levelEditorFronted"))) {
     Resp->SetBoolField(TEXT("levelEditorBroughtToFront"), true);
   }
+  // Nothing that ticks moves in a viewport that is not realtime: a placed fire showed no flame at all.
+  if (CaptureClient && !CaptureClient->IsRealtime()) {
+    Resp->SetArrayField(TEXT("warnings"), TArray<TSharedPtr<FJsonValue>>{MakeShared<FJsonValueString>(TEXT("The level viewport is not realtime, so particle effects and anything else that ticks stand still or are missing from this picture: turn realtime on with control_editor configure_viewport, or capture the running game."))});
+  }
   SendScreenshotReceiptForMcp(this, Socket, RequestId, Payload, Resp,
                               PngData.GetData(), PngData.Num(), FullPath,
                               TEXT("Screenshot"));

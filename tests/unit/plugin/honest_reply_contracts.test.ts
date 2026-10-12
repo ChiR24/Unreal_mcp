@@ -2805,3 +2805,12 @@ describe('a folder delete counts the assets it held', () => {
     expect(mutation).toContain('Resp->SetNumberField(TEXT("deletedCount"), DeletedAssets);');
   });
 });
+
+describe('a level viewport screenshot says when the viewport is not realtime', () => {
+  // A fire placed in the level showed no flame in an editor screenshot: nothing ticks in a viewport that is not realtime.
+  it('warns from the client it photographed', () => {
+    const shot = code('ControlEditor', 'McpEditorScreenshot.cpp');
+    expect(shot).toContain('if (CaptureClient && !CaptureClient->IsRealtime()) {');
+    expect(shot).toContain('The level viewport is not realtime');
+  });
+});
