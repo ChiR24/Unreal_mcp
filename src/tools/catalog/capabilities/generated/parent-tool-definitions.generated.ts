@@ -14628,7 +14628,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "pins": {
           "type": "array",
           "x-unreal-reflection-boundary": true,
-          "description": "Pin descriptors (pinName, direction, pinType, pinSubType: the class, struct or enum it carries, container: array, set or map when the pin holds many pinType values, valueType: the value type of a map, linkedTo[] of {nodeId, pinName, nodeTitle}, defaultValue).",
+          "description": "Pin descriptors (pinName, direction, pinType, pinSubType: the class, struct or enum it carries, container: array, set or map when the pin holds many pinType values, valueType: the value type of a map, linkedTo[] of {nodeId, pinName, nodeTitle}, and for a visible input nothing is wired to the literal it holds: defaultValue, defaultTextValue or defaultObjectPath).",
           "items": {
             "type": "object",
             "additionalProperties": true,

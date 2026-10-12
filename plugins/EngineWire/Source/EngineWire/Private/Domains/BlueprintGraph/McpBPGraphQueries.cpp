@@ -25,6 +25,29 @@ void AddPinTypeFields(const TSharedPtr<FJsonObject>& PinObject, const FEdGraphPi
     }
 }
 
+// A pin's literal, for a visible input nothing is wired to: the compiled graph never reads an output's default, a
+// wired input's or a hidden self pin's (a library call's class default object), and a wired Size pin showing
+// "defaultValue": "0.0" read as the value it used.
+void AddPinDefaultFields(const TSharedPtr<FJsonObject>& PinObject, const UEdGraphPin& Pin)
+{
+    if (Pin.bHidden || Pin.Direction != EGPD_Input || Pin.LinkedTo.Num() > 0)
+    {
+        return;
+    }
+    if (!Pin.DefaultValue.IsEmpty())
+    {
+        PinObject->SetStringField(TEXT("defaultValue"), Pin.DefaultValue);
+    }
+    else if (!Pin.DefaultTextValue.IsEmptyOrWhitespace())
+    {
+        PinObject->SetStringField(TEXT("defaultTextValue"), Pin.DefaultTextValue.ToString());
+    }
+    else if (Pin.DefaultObject)
+    {
+        PinObject->SetStringField(TEXT("defaultObjectPath"), Pin.DefaultObject->GetPathName());
+    }
+}
+
 static TSharedPtr<FJsonObject> MakePinSummary(UEdGraphPin* Pin)
 {
     TSharedPtr<FJsonObject> PinObject =
@@ -66,22 +89,7 @@ static TSharedPtr<FJsonObject> MakePinSummary(UEdGraphPin* Pin)
     // reading a whole graph could not tell a pin holding "L_Hub" from an
     // empty one, and the absence of the field read as "no value" -- which
     // sent a live debugging session down the wrong branch entirely.
-    if (!Pin->DefaultValue.IsEmpty())
-    {
-        PinObject->SetStringField(TEXT("defaultValue"), Pin->DefaultValue);
-    }
-    else if (!Pin->DefaultTextValue.IsEmptyOrWhitespace())
-    {
-        PinObject->SetStringField(
-            TEXT("defaultTextValue"),
-            Pin->DefaultTextValue.ToString());
-    }
-    else if (Pin->DefaultObject)
-    {
-        PinObject->SetStringField(
-            TEXT("defaultObjectPath"),
-            Pin->DefaultObject->GetPathName());
-    }
+    AddPinDefaultFields(PinObject, *Pin);
     return PinObject;
 }
 

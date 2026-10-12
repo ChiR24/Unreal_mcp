@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "1159f0f7e93e247d",
+  "catalogRevision": "ab6838bd6b1cf621",
   "recordCount": 411,
   "records": [
     {
@@ -19510,7 +19510,7 @@
             "pins": {
               "type": "array",
               "x-unreal-reflection-boundary": true,
-              "description": "Pin descriptors (pinName, direction, pinType, pinSubType: the class, struct or enum it carries, container: array, set or map when the pin holds many pinType values, valueType: the value type of a map, linkedTo[] of {nodeId, pinName, nodeTitle}, defaultValue).",
+              "description": "Pin descriptors (pinName, direction, pinType, pinSubType: the class, struct or enum it carries, container: array, set or map when the pin holds many pinType values, valueType: the value type of a map, linkedTo[] of {nodeId, pinName, nodeTitle}, and for a visible input nothing is wired to the literal it holds: defaultValue, defaultTextValue or defaultObjectPath).",
               "items": {
                 "type": "object",
                 "additionalProperties": true,
@@ -19669,8 +19669,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "9a6e1bb62b7aa1924cc3c42ee287ae739dad05c5a04669cd61e58d33966b1865",
-        "content": "09efcf6429706a3b5548d3885c8456603067c44acc4a9b0ac36be54eed19b167"
+        "schema": "8f33459cd2cac8f83bcb51145c73160c2e2690127fcbfd6b15a32d354e44c573",
+        "content": "9f61c89bff4623ff8096659e95db4a831fabc34cb561b5a4e9d19afb95b210ec"
       }
     },
     {

@@ -56,6 +56,18 @@ describe('get_graph_details filter reads what a node\'s pins hold', () => {
   });
 });
 
+// A wired Size pin read "defaultValue": "0.0", an output pin carried one, and a library call's hidden self pin
+// named the class default object: none of them is a value the compiled graph uses.
+describe('a pin descriptor names a literal only on a visible input nothing is wired to', () => {
+  it('both pin serializers share the one rule', () => {
+    const queries = read('Domains', 'BlueprintGraph', 'McpBPGraphQueries.cpp');
+
+    expect(queries).toContain('if (Pin.bHidden || Pin.Direction != EGPD_Input || Pin.LinkedTo.Num() > 0)');
+    expect(queries).toContain('AddPinDefaultFields(PinObject, *Pin);');
+    expect(read('Domains', 'BlueprintGraph', 'McpBPGraphDetails.cpp')).toContain('AddPinDefaultFields(PinObject, *Pin);');
+  });
+});
+
 describe('a function the memberClass lacks names the classes that do declare it', () => {
   it('searches every loaded class, not only the function libraries', () => {
     const search = sliceBetween(

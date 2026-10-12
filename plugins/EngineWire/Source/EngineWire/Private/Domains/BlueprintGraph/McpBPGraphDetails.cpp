@@ -44,25 +44,7 @@ static TSharedPtr<FJsonObject> MakeDetailedPin(UEdGraphPin* Pin)
         }
     }
     PinObject->SetArrayField(TEXT("linkedTo"), LinkedTo);
-
-    if (!Pin->DefaultValue.IsEmpty())
-    {
-        PinObject->SetStringField(
-            TEXT("defaultValue"),
-            Pin->DefaultValue);
-    }
-    else if (!Pin->DefaultTextValue.IsEmptyOrWhitespace())
-    {
-        PinObject->SetStringField(
-            TEXT("defaultTextValue"),
-            Pin->DefaultTextValue.ToString());
-    }
-    else if (Pin->DefaultObject)
-    {
-        PinObject->SetStringField(
-            TEXT("defaultObjectPath"),
-            Pin->DefaultObject->GetPathName());
-    }
+    AddPinDefaultFields(PinObject, *Pin);
     return PinObject;
 }
 
