@@ -152,7 +152,13 @@ bool HandleInspectComponentDetailsAction(
                     TEXT("INVALID_ARGUMENT"));
     }
     McpDescribeComponent(Component, Resp);
-    McpAppendPropertyDump(Component, McpReadStringListField(Payload, TEXT("propertyNames"), TEXT("propertyName")), Resp);
+    // Property values only when asked for, as inspect_object gives them: by name, or every one with detailed. Every
+    // property a Niagara component declares (195) was most of a 30 KB reply that wanted its transform and state.
+    const TArray<FString> PropertyNames = McpReadStringListField(Payload, TEXT("propertyNames"), TEXT("propertyName"));
+    if (PropertyNames.Num() > 0 || GetJsonBoolField(Payload, TEXT("detailed"), false))
+    {
+        McpAppendPropertyDump(Component, PropertyNames, Resp);
+    }
     Resp->SetBoolField(TEXT("success"), true);
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                                   TEXT("Component details retrieved"), Resp, FString());

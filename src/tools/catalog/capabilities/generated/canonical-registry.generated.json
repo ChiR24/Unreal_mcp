@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "9e051f0161b9c4ef",
+  "catalogRevision": "4281d155e426345e",
   "recordCount": 411,
   "records": [
     {
@@ -43337,7 +43337,11 @@
               "items": {
                 "type": "string"
               },
-              "description": "Specific property names to include."
+              "description": "Property values to add to the reply, by name (Intensity, bIsActive), as text under properties; a name the class lacks is listed under missingProperties. Without propertyNames or detailed no property values come back."
+            },
+            "detailed": {
+              "type": "boolean",
+              "description": "Every property the component's class declares, as text (up to 200): a Niagara or mesh component declares about 200, most of the reply. Prefer propertyNames."
             },
             "propertyName": {
               "type": "string",
@@ -43401,6 +43405,9 @@
             "action": "get_component_details",
             "actorName": "PlayerStart_1",
             "componentName": "Billboard",
+            "propertyNames": [
+              "bHiddenInGame"
+            ],
             "info": "details"
           },
           "output": {
@@ -43444,6 +43451,9 @@
             "propertyNames": [
               "details"
             ],
+            "detailed": [
+              "details"
+            ],
             "propertyName": [
               "property"
             ],
@@ -43455,8 +43465,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "35bc2f292fd4ad077c545bd62c41c4077b7f2dd1b5239fdfbd46c0df3849294a",
-        "content": "1df3f734de4692cc6ad5257c57754b03b9c204f402c1b0718002872aafbeb81b"
+        "schema": "98684e1409e8ae5419662d27ae73921dc7554f6889be401c96b7d62e3a8b7d1f",
+        "content": "6708a1f0eb2ef0c2e6e16d63a407683d4fea354f451dbfd95512386530637d03"
       }
     },
     {
@@ -59721,14 +59731,16 @@
           "dynamic input",
           "gpu simulation",
           "add emitter",
+          "copy emitter",
           "gpu particles",
           "particle lifetime",
           "static switch",
           "ribbon width"
         ],
-        "summary": "Edit a Niagara system: add an emitter, user parameters or parameter bindings, set parameter values or dynamic inputs, emitter properties, GPU simulation, connect pins.",
+        "summary": "Edit a Niagara system: add an emitter (an asset, or a copy of another system's), user parameters or parameter bindings, set parameter values or dynamic inputs, emitter properties, GPU simulation, connect pins.",
         "whenToUse": [
           "edit=add_emitter: System needs an emitter.",
+          "edit=add_emitter: An emitter built in one system is wanted in another.",
           "edit=add_user_parameter: Expose a user param.",
           "edit=bind_parameter: A Blueprint sets a value at run time (Set Niagara Variable on a user parameter): parameterName is the module input as get_niagara_info lists it (InitializeParticle.Color, ShapeLocation.Box Size), or an input of a dynamic input feeding one (RandomRangeFloat.Minimum), sourceBinding the user parameter (User.Tint).",
           "edit=bind_parameter: A value must follow an engine, system or emitter parameter (sourceBinding Emitter.Age).",
@@ -59767,7 +59779,15 @@
             },
             "emitterName": {
               "type": "string",
-              "description": "Name for the new emitter handle (default the emitter asset name)."
+              "description": "Name for the new emitter handle (default the emitter asset's name, or the copied emitter's); a name the system already has gets a number."
+            },
+            "sourceSystemPath": {
+              "type": "string",
+              "description": "Niagara system to copy sourceEmitterName from, in place of emitterPath. The user parameters the emitter reads come along with their values when this system lacks them. An emitter that inherits from an emitter asset is refused (EMITTER_INHERITS): add that asset with emitterPath."
+            },
+            "sourceEmitterName": {
+              "type": "string",
+              "description": "The emitter of sourceSystemPath to copy, by the name get_niagara_info lists."
             },
             "save": {
               "type": "boolean",
@@ -59929,6 +59949,13 @@
               "type": "string",
               "description": "Emitter name within the target Niagara system."
             },
+            "userParametersAdded": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "User parameters a copy brought along (User.EmberRate), absent when none."
+            },
             "parameterName": {
               "type": "string",
               "description": "Niagara parameter name."
@@ -59966,7 +59993,7 @@
       },
       "examples": [
         {
-          "title": "Edit a Niagara system: add an emitter, user parameters or parameter bindings, set parameter values or dynamic inputs, emitter properties, GPU simulation, connect pins.",
+          "title": "Edit a Niagara system: add an emitter (an asset, or a copy of another system's), user parameters or parameter bindings, set parameter values or dynamic inputs, emitter properties, GPU simulation, connect pins.",
           "input": {
             "action": "edit_niagara_system",
             "systemPath": "/Game/NS_Fire",
@@ -60032,6 +60059,12 @@
               "set_emitter_properties",
               "enable_gpu_simulation",
               "connect_pins"
+            ],
+            "sourceSystemPath": [
+              "add_emitter"
+            ],
+            "sourceEmitterName": [
+              "add_emitter"
             ],
             "save": [
               "add_emitter",
@@ -60120,8 +60153,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "a51e7b2e5576cbb0215832eb4b02f40c02330413d4927e2d7c7e11b38e2a814c",
-        "content": "d9a71b8e338f43019e4b508e026968751ab76e69ed46b2a8fb019d85a0eb2414"
+        "schema": "ccea52373871959889c7c04de28dbc0b6ad7ba3bae73e0f165cde7fa21293728",
+        "content": "a0fcec14b1cb4a2182ba5ff68299fc57ad8e5ff83c59871d1b5fc965c4496541"
       }
     },
     {
@@ -60152,7 +60185,7 @@
           "user parameters",
           "static switches"
         ],
-        "summary": "Read a Niagara system: each emitter (enabled, CPU or GPU, stack modules, current module input values, an input that reads a parameter or a dynamic input as {linkedTo}, the static switches such as Ribbon Width Mode that gate them, and its renderers with the object path inspect.set_property writes and their material) and its user parameters; an emitter asset gives its name and CPU or GPU target. info=validate lists errors and warnings, each naming the module, the problem and the fixes the editor offers.",
+        "summary": "Read a Niagara system: each emitter (enabled, CPU or GPU, stack modules, current module input values, an input that reads a parameter or a dynamic input as {linkedTo}, the static switches such as Ribbon Width Mode that gate them, and its renderers with the object path inspect.set_property writes and their material) and its user parameters; emitterName and moduleNames narrow it to one emitter and the named modules. An emitter asset gives its name and CPU or GPU target. info=validate lists errors and warnings, each naming the module, the problem and the fixes the editor offers.",
         "whenToUse": [
           "info=info: Inspect a Niagara system.",
           "info=validate: Catch authoring errors."
@@ -60177,6 +60210,17 @@
             "system": {
               "type": "string",
               "description": "Niagara system path; alias normalized to systemPath."
+            },
+            "emitterName": {
+              "type": "string",
+              "description": "Only this emitter, by the name get_niagara_info lists; a name the system lacks fails EMITTER_NOT_FOUND with the names it has."
+            },
+            "moduleNames": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Only these modules' moduleInputs and staticSwitches (Collision, SpawnRate), any case; a whole system's inputs run to 15 KB."
             },
             "info": {
               "type": "string",
@@ -60244,10 +60288,14 @@
       },
       "examples": [
         {
-          "title": "Read a Niagara system: each emitter (enabled, CPU or GPU, stack modules, current module input values, an input that reads a parameter or a dynamic input as {linkedTo}, the static switches such as Ribbon Width Mode that gate them, and its renderers with the object path inspect.set_property writes and their material) and its user parameters; an emitter asset gives its name and CPU or GPU target. info=validate lists errors and warnings, each naming the module, the problem and the fixes the editor offers.",
+          "title": "Read a Niagara system: each emitter (enabled, CPU or GPU, stack modules, current module input values, an input that reads a parameter or a dynamic input as {linkedTo}, the static switches such as Ribbon Width Mode that gate them, and its renderers with the object path inspect.set_property writes and their material) and its user parameters; emitterName and moduleNames narrow it to one emitter and the named modules. An emitter asset gives its name and CPU or GPU target. info=validate lists errors and warnings, each naming the module, the problem and the fixes the editor offers.",
           "input": {
             "action": "get_niagara_info",
             "assetPath": "/Game/NS_Fire",
+            "emitterName": "Sparks",
+            "moduleNames": [
+              "Collision"
+            ],
             "info": "info"
           },
           "output": {
@@ -60288,13 +60336,21 @@
           "actions": {
             "info": "get_niagara_info",
             "validate": "validate_niagara_system"
+          },
+          "declaredBy": {
+            "emitterName": [
+              "info"
+            ],
+            "moduleNames": [
+              "info"
+            ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "f251d6730117cacc98a9d93652b954b98783c723b82c220ea2341c17eb9ba984",
-        "content": "92ad5f55b5cf20b0e04363517b85de6f5df6b01d9543e63d022ef3f7d3e80642"
+        "schema": "1aa66d5f6c60d1566427754ec9bb5c1d129768ad2e579c1b76b5bb9478db65d5",
+        "content": "dfd56811b168a165968d75fdc11cb7939b7fbab254b5e0798a7e733412224d00"
       }
     },
     {

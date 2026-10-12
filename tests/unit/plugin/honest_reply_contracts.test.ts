@@ -1685,6 +1685,36 @@ describe('a duplicated Blueprint keeps its Math Expressions bound to its own var
   });
 });
 
+// get_component_details sent every property the class declares (195 for a Niagara component) on every call.
+describe('a component read sends property values only when asked', () => {
+  it('dumps them for propertyNames or detailed, as inspect_object does', () => {
+    expect(code('Environment', 'Inspection', 'McpEnvInspectComponent.cpp')).toContain(
+      'if (PropertyNames.Num() > 0 || GetJsonBoolField(Payload, TEXT("detailed"), false))');
+  });
+});
+
+// An emitter built in one Niagara system had to be rebuilt module by module in the next.
+describe('add_emitter copies another system\'s emitter as the editor paste does', () => {
+  it('adds through the engine utility, cuts the source as parent and brings the user parameters it reads', () => {
+    const copy = code('NiagaraAuthoring', 'McpNiagaraEmitterCopy.cpp');
+    expect(copy).toContain('FNiagaraEditorUtilities::AddEmitterToSystem(*System, *SourceEmitter');
+    expect(copy).toContain('MCP_GET_EMITTER_DATA(*Added)->RemoveParent();');
+    expect(copy).toContain('Source->GetExposedParameters().CopyParameterData(Target, Param);');
+    expect(copy).toContain('TEXT("EMITTER_INHERITS")');
+    expect(code('NiagaraAuthoring', 'McpNiagaraSystems.cpp')).toContain('return CopyEmitterFromSystem(Context);');
+  });
+});
+
+// get_niagara_info sent every emitter's inputs and switches, about 15 KB per system.
+describe('a Niagara read narrows to one emitter and the named modules', () => {
+  it('skips other emitters and keeps only the named modules\' entries', () => {
+    const info = code('NiagaraAuthoring', 'McpNiagaraInfoValidate.cpp');
+    expect(info).toContain('Handle.GetName().ToString() != OnlyEmitter');
+    expect(info).toContain('KeepModuleEntries(EmitterObj, ModuleNames);');
+    expect(info).toContain('TEXT("EMITTER_NOT_FOUND")');
+  });
+});
+
 // A dozen fire lights each took an edit_component call for one property.
 describe('a component property goes onto many actors in one call', () => {
   it('resolves actorNames, writes the named component of each in one transaction, and rows only what did not take', () => {

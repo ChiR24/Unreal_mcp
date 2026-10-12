@@ -204,6 +204,12 @@ void CollectNiagaraSystemStackIssues(
 // parameter or a dynamic input as {linkedTo}, which the literal stored for the input does not show.
 void AddEmitterModuleInfo(TSharedPtr<FJsonObject>& EmitterObj, const FNiagaraEmitterHandle& Handle);
 #endif
+// In McpNiagaraEmitterCopy.cpp: add_emitter with sourceSystemPath + sourceEmitterName copies that system's emitter
+// (modules, values, renderers, bindings) and the user parameters it reads, as the editor's paste does.
+bool CopyEmitterFromSystem(FActionContext& Context);
+// In McpNiagaraModuleInfo.cpp: drops EmitterObj's moduleInputs and staticSwitches of modules not named (any case);
+// no names keeps everything.
+void KeepModuleEntries(const TSharedPtr<FJsonObject>& EmitterObj, const TArray<FString>& ModuleNames);
 #if MCP_HAS_NIAGARA_INPUT_OVERRIDES
 // The last "."-separated part of an input name ("Module.Lifetime" -> "Lifetime").
 FString BareInputName(const FString& InputName);

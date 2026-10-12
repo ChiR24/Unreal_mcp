@@ -119,7 +119,7 @@ static TArray<TSharedPtr<FJsonValue>> CollectRenderers(MCP_NIAGARA_EMITTER_DATA_
     return Renderers;
 }
 
-static void AddSystemInfo(TSharedPtr<FJsonObject>& InfoObj, UNiagaraSystem* System)
+static void AddSystemInfo(TSharedPtr<FJsonObject>& InfoObj, UNiagaraSystem* System, const FString& OnlyEmitter, const TArray<FString>& ModuleNames)
 {
     InfoObj->SetStringField(TEXT("assetType"), TEXT("System"));
     InfoObj->SetNumberField(TEXT("emitterCount"), System->GetEmitterHandles().Num());
@@ -128,6 +128,10 @@ static void AddSystemInfo(TSharedPtr<FJsonObject>& InfoObj, UNiagaraSystem* Syst
     const TArray<UNiagaraScript*> Scripts = GatherModuleInputScripts(System);
     for (const FNiagaraEmitterHandle& Handle : System->GetEmitterHandles())
     {
+        if (!OnlyEmitter.IsEmpty() && Handle.GetName().ToString() != OnlyEmitter)
+        {
+            continue;
+        }
         TSharedPtr<FJsonObject> EmitterObj = McpHandlerUtils::CreateResultObject();
         EmitterObj->SetStringField(TEXT("name"), Handle.GetName().ToString());
         EmitterObj->SetBoolField(TEXT("enabled"), Handle.GetIsEnabled());
@@ -150,6 +154,7 @@ static void AddSystemInfo(TSharedPtr<FJsonObject>& InfoObj, UNiagaraSystem* Syst
         // input that reads a parameter or a dynamic input instead of its stored literal.
         AddEmitterModuleInfo(EmitterObj, Handle);
 #endif
+        KeepModuleEntries(EmitterObj, ModuleNames);
         EmittersArray.Add(MakeShared<FJsonValueObject>(EmitterObj));
     }
     InfoObj->SetArrayField(TEXT("emitters"), EmittersArray);
@@ -183,10 +188,21 @@ static bool GetNiagaraInfo(FActionContext& Context)
         Context.SendError(FString::Printf(TEXT("Niagara asset not found: %s"), *TargetPath), TEXT("ASSET_NOT_FOUND"));
         return true;
     }
+    if (System && !Context.EmitterName.IsEmpty() && !FindEmitterHandle(System, Context.EmitterName))
+    {
+        TArray<FString> Names;
+        for (const FNiagaraEmitterHandle& Handle : System->GetEmitterHandles())
+        {
+            Names.Add(Handle.GetName().ToString());
+        }
+        Context.SendError(FString::Printf(TEXT("No emitter '%s' in %s. Its emitters: %s."), *Context.EmitterName, *TargetPath,
+                                          *FString::Join(Names, TEXT(", "))), TEXT("EMITTER_NOT_FOUND"));
+        return true;
+    }
     TSharedPtr<FJsonObject> InfoObj = McpHandlerUtils::CreateResultObject();
     if (System)
     {
-        AddSystemInfo(InfoObj, System);
+        AddSystemInfo(InfoObj, System, Context.EmitterName, McpGetStringListField(Context.Payload, TEXT("moduleNames"), TEXT("moduleName")));
     }
     else
     {

@@ -6347,7 +6347,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "detailed": {
           "type": "boolean",
-          "description": "Return detailed property/component information."
+          "description": "Every property the component's class declares, as text (up to 200): a Niagara or mesh component declares about 200, most of the reply. Prefer propertyNames."
         },
         "editorState": {
           "type": "string",
@@ -6525,6 +6525,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "items": {
                 "type": "string"
               },
+              "description": "Property values to add to the reply, by name (Intensity, bIsActive), as text under properties; a name the class lacks is listed under missingProperties. Without propertyNames or detailed no property values come back."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
               "description": "Specific property names to include."
             },
             {
@@ -6537,7 +6544,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "description": "Several properties of the same target in one call, in place of propertyName: each read as a single call would (dotted paths too, such as CharacterMovement.MaxWalkSpeed). Answered under properties; a name that does not resolve is listed under missingProperties with the reason, and the others still answer."
             }
           ],
-          "description": "Several properties of the same target in one call, in place of propertyName: each read as a single call would (dotted paths too, such as CharacterMovement.MaxWalkSpeed). Answered under properties; a name that does not resolve is listed under missingProperties with the reason, and the others still answer."
+          "description": "Property values to add to the reply, by name (Intensity, bIsActive), as text under properties; a name the class lacks is listed under missingProperties. Without propertyNames or detailed no property values come back."
         },
         "propertyPath": {
           "type": "string",
@@ -16117,6 +16124,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Module (function call) name that owns inputName; alternative to targetNodeId."
         },
+        "moduleNames": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Only these modules' moduleInputs and staticSwitches (Collision, SpawnRate), any case; a whole system's inputs run to 15 KB."
+        },
         "modulePath": {
           "type": "string",
           "description": "Canonical /Niagara module script path to insert."
@@ -16222,6 +16236,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "sourceBinding": {
           "type": "string",
           "description": "The parameter to read: a user parameter of the same type (User.Tint) or an engine, system or emitter one (Emitter.Age)."
+        },
+        "sourceEmitterName": {
+          "type": "string",
+          "description": "The emitter of sourceSystemPath to copy, by the name get_niagara_info lists."
+        },
+        "sourceSystemPath": {
+          "type": "string",
+          "description": "Niagara system to copy sourceEmitterName from, in place of emitterPath. The user parameters the emitter reads come along with their values when this system lacks them. An emitter that inherits from an emitter asset is refused (EMITTER_INHERITS): add that asset with emitterPath."
         },
         "spawnOnEvent": {
           "type": "boolean",
@@ -16403,6 +16425,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "systemPath": {
           "type": "string",
           "description": "Canonical /Game asset path."
+        },
+        "userParametersAdded": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "User parameters a copy brought along (User.EmberRate), absent when none."
         },
         "valid": {
           "type": "boolean",

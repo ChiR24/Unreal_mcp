@@ -53,6 +53,9 @@ const testCases = [
   { scenario: 'ERROR: raycast_world refuses an unknown channel', toolName: 'inspect', arguments: { action: 'raycast_world', channel: `NoSuchChannel_${ts}`, rays: [{ start: { x: 0, y: 0, z: 400 }, end: { x: 0, y: 0, z: 0 } }] }, expected: 'error|INVALID_ARGUMENT' },
   { scenario: 'ERROR: get_mesh_details refuses a texture', toolName: 'inspect', arguments: { action: 'get_mesh_details', objectPath: ENGINE_DEFAULT_TEXTURE }, expected: 'error|TYPE_MISMATCH' },
   { scenario: 'INFO: get_component_details', toolName: 'inspect', arguments: { action: 'get_component_details', actorName: ACTOR, componentName: COMPONENT }, expected: 'success' },
+  // Property values come back only when asked for: every one a Niagara component declares was most of a 30 KB reply.
+  { scenario: 'INFO: get_component_details reads the properties named', toolName: 'inspect', arguments: { action: 'get_component_details', actorName: ACTOR, componentName: COMPONENT, propertyNames: ['Intensity'] }, expected: 'success', assertions: [{ path: 'structuredContent.result.propertyCount', equals: 1, label: 'only the property asked for' }] },
+  { scenario: 'INFO: get_component_details detailed reads every property', toolName: 'inspect', arguments: { action: 'get_component_details', actorName: ACTOR, componentName: COMPONENT, detailed: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.totalPropertyCount', label: 'the full property list came back' }] },
 
   // === PROPERTIES / COMPONENTS ===
   { scenario: 'CONFIG: set_property', toolName: 'inspect', arguments: inspectActor('set_property', { propertyName: 'InitialLifeSpan', value: 0 }), expected: 'success' },

@@ -93,6 +93,10 @@ static bool CreateNiagaraEmitter(FActionContext& Context)
 
 static bool AddEmitterToSystem(FActionContext& Context)
 {
+    if (Context.Payload->HasField(TEXT("sourceSystemPath")))
+    {
+        return CopyEmitterFromSystem(Context);
+    }
     // Naming both fields when only one is absent sends the caller looking at the
     // one they already supplied. Name the missing one, and say what emitterPath
     // is for: this instances an EXISTING emitter asset, it does not create one.
@@ -107,7 +111,8 @@ static bool AddEmitterToSystem(FActionContext& Context)
         Context.SendError(
             FString::Printf(TEXT("Missing %s. add_emitter instances an existing Niagara emitter "
                                  "asset into a system: emitterPath must point at a UNiagaraEmitter "
-                                 "asset (create one with create_effect kind=niagara_emitter)."),
+                                 "asset (create one with create_effect kind=niagara_emitter), or "
+                                 "sourceSystemPath + sourceEmitterName copy another system's emitter."),
                             *Missing),
             TEXT("INVALID_ARGUMENT"));
         return true;
@@ -158,6 +163,8 @@ static bool AddEmitterToSystem(FActionContext& Context)
 #else
     AddedEmitterName = System->AddEmitterHandle(*Emitter, Context.EmitterName.IsEmpty() ? FName(*Emitter->GetName()) : FName(*Context.EmitterName)).GetName().ToString();
 #endif
+    // The engine's add leaves the system uncompiled; compile it as the other stack edits do.
+    System->RequestCompile(false);
     MarkDirtyAndVerify(Context, System);
     Context.Result->SetStringField(TEXT("emitterName"), AddedEmitterName);
     Context.Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Added emitter '%s' to system."), *AddedEmitterName));
