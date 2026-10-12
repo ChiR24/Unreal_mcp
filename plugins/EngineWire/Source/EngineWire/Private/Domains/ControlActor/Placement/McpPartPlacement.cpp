@@ -50,22 +50,24 @@ struct FPart
     TSet<FString> Accepted;
 };
 
-TSharedPtr<FPartShape> BuildShape(UStaticMesh* Mesh)
+TSharedPtr<FPartShape> BuildShape(UStaticMesh* Mesh, const FVector& Scale)
 {
     // The source mesh, not the render data: a Nanite mesh's render LOD 0 is its coarse fallback
     // (334 triangles for a 40k-triangle body), which would place surfaces a centimetre off.
     const FMeshDescription* Description = Mesh ? Mesh->GetMeshDescription(0) : nullptr;
-    if (!Description)
-    {
-        return nullptr;
-    }
+    if (!Description) return nullptr;
     TSharedPtr<FPartShape> Shape = MakeShared<FPartShape>();
     FMeshDescriptionToDynamicMesh Converter;
     Converter.Convert(Description, Shape->Mesh);
-    if (Shape->Mesh.TriangleCount() == 0)
+    if (Shape->Mesh.TriangleCount() == 0) return nullptr;
+    // The part's scale goes into the mesh, so the nearest surface is found by world distance: in the unscaled
+    // space of a cylinder stretched into a 19 m pipe, the nearest surface to a nozzle 3 cm inside its wall was
+    // the end cap, 2.5 m away. A mirrored part is turned inside out by its scale and turned back.
+    for (const int32 Vid : Shape->Mesh.VertexIndicesItr())
     {
-        return nullptr;
+        Shape->Mesh.SetVertex(Vid, Shape->Mesh.GetVertex(Vid) * FVector3d(Scale));
     }
+    if (Scale.X * Scale.Y * Scale.Z < 0.0) Shape->Mesh.ReverseOrientation();
     Shape->Tree = MakeUnique<FDynamicMeshAABBTree3>(&Shape->Mesh, true);
     Shape->Winding = MakeUnique<FWindingTree>(Shape->Tree.Get(), true);
     return Shape;
@@ -103,18 +105,20 @@ TArray<UStaticMeshComponent*> RelevantParts(AActor* Actor, const TSet<FString>& 
     });
 }
 
-void CollectParts(AActor* Actor, const TSet<FString>& Focus, TMap<UStaticMesh*, TSharedPtr<FPartShape>>& Shapes,
+void CollectParts(AActor* Actor, const TSet<FString>& Focus, TMap<FString, TSharedPtr<FPartShape>>& Shapes,
                   TArray<FPart>& Parts)
 {
     for (UStaticMeshComponent* Component : RelevantParts(Actor, Focus))
     {
         UStaticMesh* Mesh = Component->GetStaticMesh();
-        TSharedPtr<FPartShape>& Shape = Shapes.FindOrAdd(Mesh);
-        if (!Shape.IsValid()) Shape = BuildShape(Mesh);
+        const FVector Scale = Component->GetComponentTransform().GetScale3D();
+        TSharedPtr<FPartShape>& Shape = Shapes.FindOrAdd(Mesh->GetPathName() + Scale.ToString());
+        if (!Shape.IsValid()) Shape = BuildShape(Mesh, Scale);
         if (!Shape.IsValid()) continue;
         FPart& Part = Parts.AddDefaulted_GetRef();
         Part.Name = Component->GetName();
         Part.Transform = Component->GetComponentTransform();
+        Part.Transform.SetScale3D(FVector::OneVector); // the shape carries the scale
         Part.Shape = Shape.Get();
         for (const FName& Tag : Component->ComponentTags)
         {
@@ -192,10 +196,7 @@ void FindBuried(const TArray<FPart>& Parts, const TSet<FString>& Focus, double T
 void FindSunk(const TArray<FPart>& Parts, const TSet<FString>& Focus, const FPartAudit& Audit,
               double Tolerance, TArray<FPartIssue>& Out)
 {
-    if (!Audit.bHasGround)
-    {
-        return;
-    }
+    if (!Audit.bHasGround) return;
     for (const FPart& Part : Parts)
     {
         const double Depth = Audit.GroundZ - Part.Box.Min.Z;
@@ -242,7 +243,7 @@ void AuditActor(AActor* Actor, const TSet<FString>& Focus, double Tolerance, FPa
         Audit.bHasGround = true;
         Audit.GroundZ = Capsule->GetComponentLocation().Z - Capsule->GetScaledCapsuleHalfHeight();
     }
-    TMap<UStaticMesh*, TSharedPtr<FPartShape>> Shapes;
+    TMap<FString, TSharedPtr<FPartShape>> Shapes;
     TArray<FPart> Parts;
     CollectParts(Actor, Focus, Shapes, Parts);
     Audit.Examined = Parts.Num();

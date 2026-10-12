@@ -25,6 +25,15 @@ describe('Blueprint parts that sink are named', () => {
     expect(audit).toContain('GetScaledCapsuleHalfHeight()');
   });
 
+  // A nozzle 3 cm into a cylinder scaled into a 19 m pipe read 253.5 cm deep: the nearest surface in the unscaled
+  // space was the end cap.
+  it('measures depth in world distance on a part with a non-uniform or mirrored scale', () => {
+    expect(audit).toContain('Shape->Mesh.SetVertex(Vid, Shape->Mesh.GetVertex(Vid) * FVector3d(Scale));');
+    expect(audit).toContain('if (Scale.X * Scale.Y * Scale.Z < 0.0) Shape->Mesh.ReverseOrientation();');
+    expect(audit).toContain('Shapes.FindOrAdd(Mesh->GetPathName() + Scale.ToString())');
+    expect(audit).toContain('Part.Transform.SetScale3D(FVector::OneVector);');
+  });
+
   it('leaves out a part tagged as a deliberate embed', () => {
     expect(audit).toContain('const FName AcceptedTag(TEXT("mcp.placement.ok"));');
     expect(audit).toContain('ComponentHasTag(AcceptedTag)');
