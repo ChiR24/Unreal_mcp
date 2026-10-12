@@ -205,20 +205,22 @@ function validateObject(
   pointer: string
 ): SchemaViolation | undefined {
   const properties = isRecord(schema.properties) ? schema.properties : undefined;
+  // A key the action does not take, sent beside a missing one, is usually that field misnamed (path for savePath,
+  // assetPath for meshPath): the refusal named only the missing field, and the stray key looked accepted.
+  const strayNote = (): string => {
+    const stray = schema.additionalProperties === false
+      ? Object.keys(value).filter((key) => properties === undefined || !Object.hasOwn(properties, key))
+      : [];
+    return stray.length === 0 ? '' : `; sent ${stray.join(', ')}, which this action does not take`;
+  };
 
   if (Array.isArray(schema.required)) {
     for (const name of schema.required) {
       if (typeof name === 'string' && !Object.hasOwn(value, name)) {
-        // A key the action does not take, sent beside the missing one, is usually that field misnamed (path for
-        // savePath): the refusal named only the missing field, and the stray key looked accepted.
-        const stray = schema.additionalProperties === false
-          ? Object.keys(value).filter((key) => properties === undefined || !Object.hasOwn(properties, key))
-          : [];
-        const missing = describeMissingParameter(name, properties);
         return {
           reason: 'missing-required',
           pointer: `${pointer}/${name}`,
-          message: stray.length === 0 ? missing : `${missing}; sent ${stray.join(', ')}, which this action does not take`
+          message: `${describeMissingParameter(name, properties)}${strayNote()}`
         };
       }
     }
@@ -231,7 +233,7 @@ function validateObject(
       return {
         reason: 'required-one-of',
         pointer: `${pointer}/requiredOneOf`,
-        message: `At least one of [${group.join(', ')}] must be provided`
+        message: `At least one of [${group.join(', ')}] must be provided${strayNote()}`
       };
     }
   }

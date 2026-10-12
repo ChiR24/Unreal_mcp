@@ -2190,7 +2190,14 @@ describe('a missing required parameter names the keys sent in its place', () => 
   it('adds the keys the action does not take to the native refusal', () => {
     const source = code('..', 'MCP', 'Execute', 'McpNativeGatewaySchemaValidation.cpp');
     expect(source).toContain('if (!(*Properties)->HasField(Entry.Key)) Stray.Add(Entry.Key);');
-    expect(source).toContain('TEXT("%s; sent %s, which this action does not take")');
+    expect(source).toContain('TEXT("; sent %s, which this action does not take")');
+    expect(source).toContain('McpSchemaKeywords::JoinPointer(Pointer, Missing[0]), Message + StrayNote);');
+  });
+
+  // spawn sent { assetPath } answered only "At least one of [classPath, ...] must be provided".
+  it('adds them to a missing at-least-one-of group too', () => {
+    const source = code('..', 'MCP', 'Execute', 'McpNativeGatewaySchemaValidation.cpp');
+    expect(source).toMatch(/CheckRequiredOneOf\(Object, Schema, Pointer, OutViolation\)\)\s*\{\s*OutViolation\.Message \+= StrayNote;/u);
   });
 });
 

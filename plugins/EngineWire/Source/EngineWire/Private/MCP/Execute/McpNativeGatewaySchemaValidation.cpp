@@ -153,6 +153,16 @@ bool ValidateObjectBody(
 	const bool bHasProperties =
 		Schema->TryGetObjectField(TEXT("properties"), Properties) && Properties;
 
+	// A key the action does not take, sent beside a missing one, is usually that field misnamed (path for savePath,
+	// assetPath for meshPath): the refusal named only the missing field, and the stray key looked accepted.
+	TArray<FString> Stray;
+	bool bOpen = true;
+	if (bHasProperties && Schema->TryGetBoolField(TEXT("additionalProperties"), bOpen) && !bOpen)
+	{
+		for (const TPair<FString, TSharedPtr<FJsonValue>> Entry : Object->Values) { if (!(*Properties)->HasField(Entry.Key)) Stray.Add(Entry.Key); }
+	}
+	const FString StrayNote = Stray.Num() == 0 ? FString() : FString::Printf(TEXT("; sent %s, which this action does not take"), *FString::Join(Stray, TEXT(", ")));
+
 	const TArray<TSharedPtr<FJsonValue>>* Required = nullptr;
 	if (Schema->TryGetArrayField(TEXT("required"), Required) && Required)
 	{
@@ -171,26 +181,18 @@ bool ValidateObjectBody(
 		// enough to build a valid request.
 		if (Missing.Num() > 0)
 		{
-			// A key the action does not take, sent beside the missing one, is usually that field misnamed (path for
-			// savePath): the refusal named only the missing field, and the stray key looked accepted.
-			TArray<FString> Stray;
-			bool bOpen = true;
-			if (bHasProperties && Schema->TryGetBoolField(TEXT("additionalProperties"), bOpen) && !bOpen)
-			{
-				for (const TPair<FString, TSharedPtr<FJsonValue>> Entry : Object->Values) { if (!(*Properties)->HasField(Entry.Key)) Stray.Add(Entry.Key); }
-			}
 			const FString Message = Missing.Num() == 1
 				? McpSchemaKeywords::DescribeMissingParameter(Missing[0], bHasProperties ? *Properties : nullptr)
 				: FString::Printf(TEXT("Missing required parameters: %s"), *FString::Join(Missing, TEXT(", ")));
 			OutViolation = McpSchemaKeywords::MakeViolation(EMcpSchemaViolation::MissingRequired,
-				McpSchemaKeywords::JoinPointer(Pointer, Missing[0]),
-				Stray.Num() == 0 ? Message : FString::Printf(TEXT("%s; sent %s, which this action does not take"), *Message, *FString::Join(Stray, TEXT(", "))));
+				McpSchemaKeywords::JoinPointer(Pointer, Missing[0]), Message + StrayNote);
 			return false;
 		}
 	}
 
 	if (!McpSchemaKeywords::CheckRequiredOneOf(Object, Schema, Pointer, OutViolation))
 	{
+		OutViolation.Message += StrayNote;
 		return false;
 	}
 
