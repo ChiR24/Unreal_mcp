@@ -220,10 +220,13 @@ bool UEngineWireSubsystem::HandleControlEditorSetCamera(
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), bLocationApplied && bRotationApplied);
   Resp->SetStringField(TEXT("view"), bPieView ? TEXT("pie_ejected") : TEXT("editor_viewport"));
-  Resp->SetObjectField(TEXT("requestedLocation"),
-                       McpHandlerUtils::VectorToJson(RequestedLocation));
-  Resp->SetObjectField(TEXT("requestedRotation"),
-                       McpHandlerUtils::RotatorToJson(RequestedRotation));
+  // The request is echoed only where the viewport did not take it; otherwise it repeats cameraLocation/Rotation.
+  if (!bLocationApplied) {
+    Resp->SetObjectField(TEXT("requestedLocation"), McpHandlerUtils::VectorToJson(RequestedLocation));
+  }
+  if (!bRotationApplied) {
+    Resp->SetObjectField(TEXT("requestedRotation"), McpHandlerUtils::RotatorToJson(RequestedRotation));
+  }
   Resp->SetObjectField(TEXT("cameraLocation"),
                        McpHandlerUtils::VectorToJson(AppliedLocation));
   Resp->SetObjectField(TEXT("cameraRotation"),
