@@ -56,7 +56,10 @@ void McpTakeMotionSample(FMcpMotionRun &Run, AActor *Actor, double GameTime) {
   TSharedPtr<FJsonObject> Sample = MakeShared<FJsonObject>();
   Sample->SetNumberField(TEXT("t"), McpRoundTo(GameTime - Run.StartGame, 1000.0));
   Sample->SetArrayField(TEXT("location"), McpMotionVec(Location));
-  Sample->SetArrayField(TEXT("velocity"), McpMotionVec(Actor->GetVelocity()));
+  // GetVelocity reads a movement component or a physics body, so an actor moved by setting its location (a scripted
+  // cart, a tweened platform) read as standing still while it crossed 570 cm/s; it takes what its positions show.
+  const FVector Moved = Run.Samples.Num() > 0 && GameTime > Run.LastSampleGame ? (Location - Run.Last) / (GameTime - Run.LastSampleGame) : FVector::ZeroVector;
+  Sample->SetArrayField(TEXT("velocity"), McpMotionVec(Actor->GetVelocity().IsNearlyZero() ? Moved : Actor->GetVelocity()));
   // A floating hull's roll or a turning pawn's heading was unreadable over time. The rotation rides on the first
   // sample and on each one where it moved, so an actor that never turns adds nothing.
   const FRotator Rotation = Actor->GetActorRotation();

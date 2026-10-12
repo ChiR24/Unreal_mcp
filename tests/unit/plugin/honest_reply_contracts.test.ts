@@ -2741,3 +2741,12 @@ describe('a graph filter finds what reads or moves a variable', () => {
     expect(queries).toMatch(/Pin->Direction == EGPD_Input && Linked \? Cast<UK2Node_VariableGet>\(Linked->GetOwningNode\(\)\) : nullptr;\s*if \(Getter && Matches\(Getter->GetVarNameString\(\)\)\)/u);
   });
 });
+
+describe('a motion sample reports the velocity an actor moves at', () => {
+  // A runaway cart moved by SetActorLocation crossed 570 cm/s while every sample said velocity [0, 0, 0].
+  it('falls back to the velocity the sampled positions show when the engine reports none', () => {
+    const sample = code('ControlActor', 'McpActorMotionSample.cpp');
+    expect(sample).toContain('(Location - Run.Last) / (GameTime - Run.LastSampleGame)');
+    expect(sample).toContain('McpMotionVec(Actor->GetVelocity().IsNearlyZero() ? Moved : Actor->GetVelocity())');
+  });
+});

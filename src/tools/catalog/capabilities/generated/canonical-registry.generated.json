@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "d694f92aa0f938d4",
+  "catalogRevision": "870aee95c4ed2cf9",
   "recordCount": 411,
   "records": [
     {
@@ -34120,7 +34120,7 @@
                 "additionalProperties": true,
                 "x-unreal-reflection-boundary": true
               },
-              "description": "One entry per sample: t (game seconds since the start), location [x, y, z], velocity [x, y, z], rotation [pitch, yaw, roll] in degrees (on the first sample and on each one where it changed, so a sample without it still has the last one written), properties, with points their world locations (points) and heights over the ground (aboveGround, with groundTrace; a point with nothing below it within 10 m is left out), and with overlaps the actors that began or stopped touching it since the sample before (overlapsBegan, overlapsEnded)."
+              "description": "One entry per sample: t (game seconds since the start), location [x, y, z], velocity [x, y, z] (cm/s: the movement or physics velocity, or for an actor moved by setting its location, the one its positions show since the sample before), rotation [pitch, yaw, roll] in degrees (on the first sample and on each one where it changed, so a sample without it still has the last one written), properties, with points their world locations (points) and heights over the ground (aboveGround, with groundTrace; a point with nothing below it within 10 m is left out), and with overlaps the actors that began or stopped touching it since the sample before (overlapsBegan, overlapsEnded)."
             },
             "overlapped": {
               "type": "array",
@@ -34307,8 +34307,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "86e4e075a333bdf01b420b6fd34bd87b9081a81cdb4bf7f81f1b4e1bc4a7ff1f",
-        "content": "00894c69616b3a78cb83d7cb6883d6feb13f54e13fb7fb01a65dfcb3fdb69506"
+        "schema": "95bbc4485a04153bd7b4052ddfc1bb91cc425895fd5a075251a3e9b8b27fdcf6",
+        "content": "2324a6676a3387c158ece0ac1f47a66d104a30f82fa4b7174129eaf495e08f7e"
       }
     },
     {
