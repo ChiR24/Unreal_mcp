@@ -71,7 +71,7 @@ function createRenderingSetupCases(ctx) {
       arguments: {
         action: 'create_render_target',
         name: ctx.renderTargetName,
-        path: ctx.folder,
+        packagePath: ctx.folder,
         width: 512,
         height: 512,
         format: 'RGBA16F'
@@ -521,7 +521,7 @@ function createRenderingAdversarialCases(ctx) {
       arguments: {
         action: 'create_render_target',
         name: `RT_Invalid_${ctx.ts}`,
-        path: ctx.folder,
+        packagePath: ctx.folder,
         width: 0,
         height: -1
       },
@@ -533,7 +533,7 @@ function createRenderingAdversarialCases(ctx) {
       arguments: {
         action: 'create_render_target',
         name: `RT_Unsafe_${ctx.ts}`,
-        path: ctx.folder,
+        packagePath: ctx.folder,
         width: 8192,
         height: 8192,
         format: 'RGBA32F'
@@ -546,7 +546,7 @@ function createRenderingAdversarialCases(ctx) {
       arguments: {
         action: 'create_render_target',
         name: ctx.renderTargetName,
-        path: ctx.folder,
+        packagePath: ctx.folder,
         width: 512,
         height: 512
       },
@@ -701,7 +701,7 @@ function createRenderingAdversarialCases(ctx) {
         name: 'EvilRT',
         width: 64,
         height: 64,
-        path: '/Game/../../../etc/Evil'
+        packagePath: '/Game/../../../etc/Evil'
       },
       expected: errorExpected('not found', 'invalid', 'unsupported')
     },

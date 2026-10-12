@@ -66,7 +66,7 @@ const testCases = [
   // === BOOLEAN: difference (the boolean_subtract spelling) ===
   { scenario: 'Setup: create boolean target mesh', toolName: 'manage_geometry', arguments: { action: 'create_procedural_mesh', name: BOOL_TARGET, actorName: BOOL_TARGET }, expected: 'success' },
   { scenario: 'Setup: create boolean tool mesh', toolName: 'manage_geometry', arguments: { action: 'create_procedural_mesh', name: BOOL_TOOL, actorName: BOOL_TOOL }, expected: 'success' },
-  { scenario: 'BOOLEAN: difference subtracts the tool from the target', toolName: 'manage_geometry', arguments: { action: 'difference', targetActor: BOOL_TARGET, toolActor: BOOL_TOOL, keepTool: true, keepInside: false }, expected: 'success' },
+  { scenario: 'BOOLEAN: difference subtracts the tool from the target', toolName: 'manage_geometry', arguments: { action: 'difference', targetActor: BOOL_TARGET, toolActor: BOOL_TOOL, keepTool: true }, expected: 'success' },
 
   // === CLEANUP ===
   { scenario: 'Cleanup: delete promoted mesh actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: MESH_ACTOR }, expected: 'success|not found' },

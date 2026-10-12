@@ -82,7 +82,7 @@ const testCases = [
   { scenario: 'Setup: create validation material', toolName: 'manage_asset', arguments: { action: 'create_material', name: 'M_SystemControlValidation', path: TEST_FOLDER }, expected: 'success|already exists' },
 
   // === ACTION ===
-  { scenario: 'ACTION: profile', toolName: 'system_control', arguments: { action: 'profile', profileType: 'cpu' }, expected: 'success' },
+  { scenario: 'ACTION: profile', toolName: 'system_control', arguments: { action: 'profile', profileType: 'CPU' }, expected: 'success' },
   { scenario: 'ACTION: show_fps', toolName: 'system_control', arguments: { action: 'show_fps', enabled: true }, expected: 'success' },
   // === CONFIG ===
   { scenario: 'CONFIG: set_quality', toolName: 'system_control', arguments: { action: 'set_quality', category: 'ViewDistance', level: 1 }, expected: 'success' },

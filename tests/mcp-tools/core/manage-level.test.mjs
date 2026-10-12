@@ -72,7 +72,7 @@ const testCases = [
   { scenario: 'INFO: get_current_level', toolName: 'manage_level', arguments: { action: 'get_current_level' }, expected: 'success' },
 
   // === ASSET OPERATIONS ===
-  { scenario: 'ACTION: duplicate_level', toolName: 'manage_level', arguments: { action: 'duplicate_level', sourcePath: MAIN_LEVEL, destinationPath: DUPLICATED_LEVEL, targetPath: TEST_FOLDER, overwrite: false }, expected: 'success|already exists' },
+  { scenario: 'ACTION: duplicate_level', toolName: 'manage_level', arguments: { action: 'duplicate_level', sourcePath: MAIN_LEVEL, destinationPath: DUPLICATED_LEVEL, overwrite: false }, expected: 'success|already exists' },
   { scenario: 'ACTION: rename_level', toolName: 'manage_level', arguments: { action: 'rename_level', levelPath: DUPLICATED_LEVEL, newName: RENAMED_LEVEL_NAME, overwrite: false }, expected: 'success|already exists' },
   { scenario: 'ACTION: rename_level to a destinationPath', toolName: 'manage_level', arguments: { action: 'rename_level', levelPath: RENAMED_LEVEL, destinationPath: MOVED_LEVEL }, expected: 'success|already exists' },
   { scenario: 'DELETE: delete SAVE_AS_LEVEL', toolName: 'manage_level', arguments: { action: 'delete', levelPath: SAVE_AS_LEVEL }, expected: 'success|not found' },

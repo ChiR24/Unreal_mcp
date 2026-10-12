@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "01393041542a0be6",
+  "catalogRevision": "d984aea10d90f070",
   "recordCount": 411,
   "records": [
     {
@@ -15078,7 +15078,7 @@
             },
             "blueprintType": {
               "type": "string",
-              "description": "Blueprint type hint for creation."
+              "description": "Picks the parent class when parentClass is absent: Actor, Pawn, Character or FunctionLibrary."
             },
             "createIfMissing": {
               "type": "boolean",
@@ -15098,8 +15098,7 @@
           "required": [
             "action",
             "name",
-            "savePath",
-            "parentClass"
+            "savePath"
           ],
           "additionalProperties": false
         },
@@ -15212,8 +15211,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "a8db077cfb145cea9c2fa492002f2db987cd74f9d98954410e53bbc32408c6af",
-        "content": "91a00b087533ddd8a66313dc1ef082a6b8a72c26c6a2900a324ddf88b6364c41"
+        "schema": "2cde3b92c2122d3f6cb9ad32fe85205a5ec70017743c873cd38909722901e5bb",
+        "content": "a13574e215c78312cc1ba1f0b947b0de5a8a6e0e26b0849b56960e9c6e3cf5d8"
       }
     },
     {
@@ -51154,23 +51153,23 @@
               "description": "Seconds to interpolate occlusion changes."
             },
             "enableReverbSend": {
-              "type": "string",
+              "type": "boolean",
               "description": "Whether the sound sends to reverb."
             },
             "reverbDistanceMin": {
-              "type": "string",
+              "type": "number",
               "description": "Distance at which the reverb send starts."
             },
             "reverbDistanceMax": {
-              "type": "string",
+              "type": "number",
               "description": "Distance at which the reverb wet level reaches its maximum."
             },
             "reverbWetLevelMin": {
-              "type": "string",
+              "type": "number",
               "description": "Minimum reverb wet level (0-1)."
             },
             "reverbWetLevelMax": {
-              "type": "string",
+              "type": "number",
               "description": "Maximum reverb wet level (0-1)."
             },
             "soundPath": {
@@ -51382,8 +51381,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "23661626fa8384a5a84269d9d0a6dc97c224743bacefeeaef77e2fccf6bedc4d",
-        "content": "5cd4b471ec9583609670e82b12b13327a0fa639d9d545823ff37227dfc06b45b"
+        "schema": "e064f3107471a4d0b9b41721fc5888bcca13777381ac155dc32e1c8f044b6060",
+        "content": "6f577a8868d3d1ca10b13cc4aeb50aa423b926e00a887595f8f29d8cc6f43f72"
       }
     },
     {
@@ -51495,7 +51494,7 @@
               "description": "Canonical /Game SoundClass asset path."
             },
             "volumeAdjuster": {
-              "type": "string",
+              "type": "number",
               "description": "Volume multiplier applied by the mix modifier."
             },
             "pitchAdjuster": {
@@ -51723,8 +51722,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "d11a2ff84c587cbda995765b9d65ffc30a482725be96dcb9f177f3b59e898f9b",
-        "content": "bfaafa401a90e815fef9dede090162592a40c8efe63da57237d5b2851ffed0ec"
+        "schema": "3424b7cb0c12cad5e140c609467a3c1ca2d5671bf6fe3904ae664fe76b80f8ec",
+        "content": "4e6a82e76773cc2f90c1017558058207d1642891322e8586baf28bc2e2bae94e"
       }
     },
     {
@@ -73538,7 +73537,7 @@
             },
             "location": {
               "type": "object",
-              "description": "World location {x, y, z}.",
+              "description": "World location {x, y, z}; the world origin when omitted.",
               "properties": {
                 "x": {
                   "type": "number",
@@ -73730,8 +73729,7 @@
           },
           "required": [
             "action",
-            "volumeClass",
-            "location"
+            "volumeClass"
           ],
           "additionalProperties": false
         },
@@ -73830,8 +73828,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "2c5a64c137611f5cc67bdb14e0779cd8be0bc9c337e4a3e05d8711eac66257c9",
-        "content": "e420613d4836f7d1e0fde257b7bb6c0718fc32f42a13430e093d536f33f690f0"
+        "schema": "a32f86d0821ce12e07016e5d6ab88999f6828db65c2e31d817ad68db1eec7271",
+        "content": "a8378cb8c23b6be070f090b4003cb1588d8dd65f8d418307473e809a40cb6df6"
       }
     },
     {
@@ -76470,7 +76468,7 @@
               "description": "Net cull distance squared."
             },
             "useOwnerNetRelevancy": {
-              "type": "string",
+              "type": "boolean",
               "description": "Use owner net relevancy."
             },
             "usePushModel": {
@@ -76699,8 +76697,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "76d7f7ec91e303fd8f8d1299126361c78a718cdc85f65bcf3d53ddd4a2bc5535",
-        "content": "364fc69d891694343cf7c01acd8bedd87e08cd11a1d03553205bd9e2ad3db8e8"
+        "schema": "78fb182af861d370b237889d6add8728d172edc1c164406fca92924cea057693",
+        "content": "de79b79a65b1d7c6329f7d339cf7a94d55fff625c01d224731b0208367b83a4d"
       }
     },
     {
@@ -83400,6 +83398,10 @@
               "type": "string",
               "description": "Material /Game asset path."
             },
+            "assetPath": {
+              "type": "string",
+              "description": "Material asset path (accepted in place of materialPath)."
+            },
             "nodeId": {
               "type": "string",
               "description": "Node ID."
@@ -83410,10 +83412,13 @@
             }
           },
           "required": [
-            "materialPath",
             "nodeId"
           ],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "requiredOneOf": [
+            "materialPath",
+            "assetPath"
+          ]
         },
         "output": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -83478,8 +83483,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "0554c4e2a6a6e993289f90aaaec33036c10f7a5ec29e55099f4d8253b34efbed",
-        "content": "eed37a176ef0756f692aa2005770459790a7108f31ad0a448364ccd49fea668d"
+        "schema": "4d2535083e0767e0e3c02178d25f89ad96f371fc15bc05854de3de543534fb4c",
+        "content": "60afc07c22cefa466f507d0213769f1709e3cf604ae295893e0f9de6c847aa23"
       }
     },
     {
@@ -88385,10 +88390,13 @@
             }
           },
           "required": [
-            "action",
-            "playerPath"
+            "action"
           ],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "requiredOneOf": [
+            "playerPath",
+            "mediaPlayerPath"
+          ]
         },
         "output": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -88463,10 +88471,6 @@
             "seek": "seek_media"
           },
           "declaredBy": {
-            "mediaPlayerPath": [
-              "play",
-              "seek"
-            ],
             "mediaSourcePath": [
               "play"
             ],
@@ -88502,8 +88506,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "d4400d8f509c8034e1b4e6b5442bb26b9689f682e064eb4204d9c6b53b768efd",
-        "content": "75c5027462f444db1f68e5b892b8b598ca12a70dfc79b3f51193ca323b9908b1"
+        "schema": "ccbb9d6802af262ae9cab7ec9e26822b18f8115dcccf7c8b84cea09ff781e9ef",
+        "content": "8a76499dd76e60b8d6d1845dfc914b8bb48c20b0f2a5b9fed884880ce52a5d98"
       }
     },
     {

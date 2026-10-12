@@ -25,7 +25,7 @@ const EXEC_CALC = `EC_TestCalc_${ts}`;
 const testCases = [
   // === SETUP ===
   { scenario: 'Setup: create the ability the set will reference', toolName: 'manage_gas', arguments: { action: 'create_gameplay_ability', name: `GA_TestAbility_${ts}`, path: TEST_FOLDER }, expected: 'success|already exists' },
-  { scenario: 'Setup: create the pawn blueprint', toolName: 'manage_blueprint', arguments: { action: 'create_blueprint', name: `BP_TestPawn_${ts}`, path: TEST_FOLDER, parentClass: 'Character' }, expected: 'success|already exists' },
+  { scenario: 'Setup: create the pawn blueprint', toolName: 'manage_blueprint', arguments: { action: 'create_blueprint', name: `BP_TestPawn_${ts}`, savePath: TEST_FOLDER, parentClass: 'Character' }, expected: 'success|already exists' },
   { scenario: 'Setup: create the AI controller', toolName: 'manage_ai', arguments: { action: 'create_ai_controller', name: `AIC_TestController_${ts}`, path: TEST_FOLDER }, expected: 'success|already exists' },
 
   // === GAS: create_ability_set (setPath | assetPath are a one-of pair) ===

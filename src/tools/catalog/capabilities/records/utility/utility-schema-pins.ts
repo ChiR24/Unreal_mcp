@@ -31,6 +31,7 @@ export const BOOLEAN_FIELDS = new Set([
   // publishing them as strings made a schema-valid boolean unrepresentable.
   'shift', 'ctrl', 'alt', 'cmd',
   'smoothing', 'all', 'oneShot',
+  'enableReverbSend', 'useOwnerNetRelevancy',
 ]);
 
 /** Field names whose JSON-Schema type is `number` on the wire. */
@@ -49,7 +50,7 @@ export const NUMBER_FIELDS = new Set([
   'midFrequency', 'midGain', 'highMidFrequency', 'highMidGain', 'highFrequency', 'highGain',
   'density', 'diffusion', 'gain', 'gainHF', 'decayTime', 'decayHFRatio', 'lfeBleed',
   'voiceCenterChannelVolume', 'micInputGain', 'noiseGateThreshold', 'silenceDetectionThreshold', 'sampleRate',
-  'maxSeconds',
+  'maxSeconds', 'volumeAdjuster', 'reverbDistanceMin', 'reverbDistanceMax', 'reverbWetLevelMin', 'reverbWetLevelMax',
 ]);
 
 /** Field names whose value is an arbitrary reflection-boundary object. */

@@ -111,7 +111,7 @@ export const LEVEL_VOLUME_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['An existing volume must be resized or reconfigured; use set_volume_extent or set_volume_properties.'],
     inputProps: {
       volumeClass,
-      volumeName: P.volumeName, location: P.location, rotation: P.rotation, extent: P.extent, actorPath,
+      volumeName: P.volumeName, location: { ...P.location, description: 'World location {x, y, z}; the world origin when omitted.' }, rotation: P.rotation, extent: P.extent, actorPath,
       boxExtent: P.boxExtent, sphereRadius: P.sphereRadius, capsuleRadius: P.capsuleRadius, capsuleHalfHeight: P.capsuleHalfHeight,
       bPainCausing: P.bPainCausing, damagePerSec: P.damagePerSec,
       fluidFriction: P.fluidFriction, terminalVelocity: P.terminalVelocity, bWaterVolume: P.bWaterVolume,
@@ -127,7 +127,7 @@ export const LEVEL_VOLUME_RECORDS: readonly CapabilityRecordSource[] = [
       },
       save: P.levelEditSave,
     },
-    required: ['volumeClass', 'location'], effect: 'write', costLatency: 'interactive', costResources: 'low',
+    required: ['volumeClass'], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'create_volume', volumeClass: 'TriggerVolume', location: { x: 0, y: 0, z: 0 }, extent: { x: 500, y: 500, z: 200 } },
   }),
   buildWorldRecord({

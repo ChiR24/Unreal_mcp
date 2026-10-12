@@ -33,7 +33,7 @@ const testCases = [
 { scenario: 'Setup: create test source effect chain', toolName: 'manage_audio', arguments: { action: 'create_source_effect_chain', name: 'TestSourceEffectChain', path: TEST_FOLDER }, expected: 'success|already exists' },
 
 // Spawn actor for fade/attached tests — requires classPath
-{ scenario: 'Setup: spawn actor for fade tests', toolName: 'control_actor', arguments: { action: 'spawn', name: FADE_ACTOR_NAME, classPath: '/Script/Engine.Actor', location: [0, 0, 0] }, expected: 'success|already exists' },
+{ scenario: 'Setup: spawn actor for fade tests', toolName: 'control_actor', arguments: { action: 'spawn', actorName: FADE_ACTOR_NAME, classPath: '/Script/Engine.Actor', location: [0, 0, 0] }, expected: 'success|already exists' },
 
 // Create AudioComponent on the spawned actor
 { scenario: 'Setup: create audio component on actor', toolName: 'manage_audio', arguments: { action: 'create_audio_component', soundPath: SOUND_CUE, actorName: FADE_ACTOR_NAME }, expected: 'success', captureResult: { key: 'audioComponentName', fromField: 'result.componentName' } },

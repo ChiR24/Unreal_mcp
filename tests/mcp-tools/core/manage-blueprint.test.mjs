@@ -27,7 +27,7 @@ const SOUND_BP_NAME = `BP_SoundProbe_${ts}`;
 
 const testCases = [
   // === SETUP ===
-  { scenario: 'Setup: create test blueprint', toolName: 'manage_blueprint', arguments: { action: 'create_blueprint', name: BP_NAME, path: TEST_FOLDER, parentClass: 'Actor' }, expected: 'success|already exists', assertions: [{ path: 'structuredContent.result.assetPath', equals: BP_PATH, label: 'create_blueprint path alias uses requested folder' }] },
+  { scenario: 'Setup: create test blueprint', toolName: 'manage_blueprint', arguments: { action: 'create_blueprint', name: BP_NAME, savePath: TEST_FOLDER, parentClass: 'Actor' }, expected: 'success|already exists', assertions: [{ path: 'structuredContent.result.assetPath', equals: BP_PATH, label: 'create_blueprint uses the requested folder' }] },
   { scenario: 'Setup: create input action asset', toolName: 'manage_networking', arguments: { action: 'create_input_action', name: INPUT_ACTION_NAME, path: TEST_FOLDER }, expected: 'success|already exists' },
 
   // === ACTION: create (requires name + path/blueprintPath) ===
@@ -159,7 +159,7 @@ const testCases = [
   { scenario: 'ERROR: remove_variable refuses a list with a name it lacks', toolName: 'manage_blueprint', arguments: { action: 'remove_variable', blueprintPath: BP_PATH, variableNames: ['ScratchA'] }, expected: 'error|not found' },
 
   // === ADD: add_function (blueprintPath + functionName) ===
-  { scenario: 'ADD: add_function', toolName: 'manage_blueprint', arguments: { action: 'add_function', blueprintPath: BP_PATH, memberName: 'TestFunction', inputs: [{ name: 'InputValue', type: 'Float' }], outputs: [{ name: 'ReturnValue', type: 'Float' }], isPublic: true }, expected: 'success|already exists' },
+  { scenario: 'ADD: add_function', toolName: 'manage_blueprint', arguments: { action: 'add_function', blueprintPath: BP_PATH, functionName: 'TestFunction', inputs: [{ name: 'InputValue', type: 'Float' }], outputs: [{ name: 'ReturnValue', type: 'Float' }], isPublic: true }, expected: 'success|already exists' },
   { scenario: 'ADD: add_function private', toolName: 'manage_blueprint', arguments: { action: 'add_function', blueprintPath: BP_PATH, functionName: 'TestPrivateFunction', isPublic: false }, expected: 'success|already exists' },
   // pure: its call nodes get no exec pins. Declared outputs make a return node, named by resultNodeGuid.
   { scenario: 'ADD: add_function pure with a return node', toolName: 'manage_blueprint', arguments: { action: 'add_function', blueprintPath: BP_PATH, functionName: 'TestPureFunction', inputs: [{ name: 'Value', type: 'Float' }], outputs: [{ name: 'Result', type: 'Float' }], pure: true }, expected: 'success', captureResult: { key: 'pureReturnId', fromField: 'result.resultNodeGuid' } },
@@ -281,13 +281,13 @@ const testCases = [
 
   // === CONFIG: set_pin_default_value (blueprintPath + nodeGuid + pinName + value) ===
   // Uses the real nodeId captured from the first Sequence node.
-  { scenario: 'CONFIG: set_pin_default_value', toolName: 'manage_blueprint', arguments: { action: 'set_pin_default_value', blueprintPath: BP_PATH, nodeGuid: '${captured:printNodeId}', pinName: 'InString', defaultValue: 'test', graphName: 'EventGraph' }, expected: 'success', assertions: [{ path: 'structuredContent.value', equals: 'test', label: 'set_pin_default_value returns applied value' }] },
+  { scenario: 'CONFIG: set_pin_default_value', toolName: 'manage_blueprint', arguments: { action: 'set_pin_default_value', blueprintPath: BP_PATH, nodeGuid: '${captured:printNodeId}', pinName: 'InString', propertyValue: 'test', graphName: 'EventGraph' }, expected: 'success', assertions: [{ path: 'structuredContent.value', equals: 'test', label: 'set_pin_default_value returns applied value' }] },
 
   // === VERIFY: pin default persisted on PrintString node ===
   { scenario: 'VERIFY: pin default persisted', toolName: 'manage_blueprint', arguments: { action: 'get_pin_details', blueprintPath: BP_PATH, nodeGuid: '${captured:printNodeId}', pinName: 'InString', graphName: 'EventGraph' }, expected: 'success', assertions: [{ path: 'structuredContent.result.pins', includesObject: { pinName: 'InString', defaultValue: 'test' }, label: 'PrintString InString pin default is persisted' }] },
 
   // === INFO: the graph filter also reads what a node's pins hold (a literal default, or a default object's path) ===
-  { scenario: 'CONFIG: set_pin_default_value a literal the graph filter can find', toolName: 'manage_blueprint', arguments: { action: 'set_pin_default_value', blueprintPath: BP_PATH, nodeGuid: '${captured:printNodeId}', pinName: 'InString', defaultValue: 'PinFilterNeedle', graphName: 'EventGraph' }, expected: 'success' },
+  { scenario: 'CONFIG: set_pin_default_value a literal the graph filter can find', toolName: 'manage_blueprint', arguments: { action: 'set_pin_default_value', blueprintPath: BP_PATH, nodeGuid: '${captured:printNodeId}', pinName: 'InString', propertyValue: 'PinFilterNeedle', graphName: 'EventGraph' }, expected: 'success' },
   { scenario: 'INFO: get_graph_details filter matches a pin default value, case-insensitively', toolName: 'manage_blueprint', arguments: { action: 'get_graph_details', blueprintPath: BP_PATH, graphName: 'EventGraph', filter: 'pinfilterneedle' }, expected: 'success', assertions: [{ path: 'structuredContent.result.totalCount', equals: 1, label: 'the node holding the literal is found by it' }] },
   { scenario: 'CONFIG: wire a variable getter into a Delay for the graph filter', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: BP_PATH, graphName: 'EventGraph', operations: [{ edit: 'create_node', id: 'pwr', nodeType: 'VariableGet', memberName: 'SpawnPower' }, { edit: 'create_node', id: 'wait', nodeType: 'CallFunction', memberName: 'Delay' }, { edit: 'connect_pins', from: '$pwr.SpawnPower', to: '$wait.Duration' }] }, expected: 'success' },
   { scenario: 'INFO: get_graph_details filter finds a node wired from a variable of that name', toolName: 'manage_blueprint', arguments: { action: 'get_graph_details', blueprintPath: BP_PATH, graphName: 'EventGraph', filter: 'SpawnPower' }, expected: 'success', assertions: [{ path: 'structuredContent.result.nodes', includesObject: { nodeTitle: 'Delay' }, label: 'the Delay fed by SpawnPower' }] },
@@ -327,7 +327,7 @@ const testCases = [
   ] }, expected: 'success', assertions: [{ path: 'structuredContent.result.succeeded', equals: 2, label: 'both steps ran' }, { path: 'structuredContent.result.results.1.placementWarning', includes: 'was placed at', label: 'the second step names where it went' }] },
 
   // === BATCH: a compile names a sound played at a location with no attenuation, heard at any distance ===
-  { scenario: 'Setup: create a sound probe blueprint', toolName: 'manage_blueprint', arguments: { action: 'create_blueprint', name: SOUND_BP_NAME, path: TEST_FOLDER, parentClass: 'Actor' }, expected: 'success|already exists' },
+  { scenario: 'Setup: create a sound probe blueprint', toolName: 'manage_blueprint', arguments: { action: 'create_blueprint', name: SOUND_BP_NAME, savePath: TEST_FOLDER, parentClass: 'Actor' }, expected: 'success|already exists' },
   { scenario: 'BATCH: a compile warns about a sound played at a location with no attenuation', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: `${TEST_FOLDER}/${SOUND_BP_NAME}`, graphName: 'EventGraph', operations: [
     { edit: 'create_node', id: 'sound', nodeType: 'CallFunction', memberName: 'PlaySoundAtLocation', pinDefaults: { Sound: ENGINE_SOUND } },
   ] }, expected: 'success', assertions: [{ path: 'structuredContent.result.diagnostics.0.message', includes: 'no attenuation', label: 'the compile names the sound heard everywhere' }] },
@@ -576,6 +576,7 @@ const testCases = [
     // === CREATE ===
     { scenario: 'CREATE: create_widget_blueprint', toolName: 'manage_blueprint', arguments: { action: 'create_widget_blueprint', name: `WBP_CreateWidget_${ts}`, path: TEST_FOLDER, parentClass: 'UserWidget' }, expected: 'success|already exists' },
     { scenario: 'CREATE: create_widget_blueprint named by its widgetPath', toolName: 'manage_blueprint', arguments: { action: 'create_widget_blueprint', widgetPath: `${TEST_FOLDER}/WBP_ByPath_${ts}` }, expected: 'success|already exists' },
+    { scenario: 'CREATE: create_widget_blueprint into a folder', toolName: 'manage_blueprint', arguments: { action: 'create_widget_blueprint', name: `WBP_InFolder_${ts}`, folder: TEST_FOLDER }, expected: 'success|already exists' },
     { scenario: 'CONFIG: set_widget_parent_class', toolName: 'manage_blueprint', arguments: widgetArgs('set_widget_parent_class', { parentClass: 'UserWidget' }), expected: 'success' },
 
     // === ADD ===
@@ -634,7 +635,6 @@ const testCases = [
     { scenario: 'INFO: get_widget_info', toolName: 'manage_blueprint', arguments: widgetArgs('get_widget_info'), expected: 'success' },
     { scenario: 'INFO: get_widget_animation lists the animations with their timing', toolName: 'manage_blueprint', arguments: widgetArgs('get_widget_animation'), expected: 'success' },
     { scenario: 'INFO: get_widget_animation reads the keys each widget got', toolName: 'manage_blueprint', arguments: widgetArgs('get_widget_animation', { animationName: ANIMATION_NAME }), expected: 'success', assertions: [{ path: 'structuredContent.result.widgets', minLength: 2, label: 'TitleText and PlayButton are both driven' }] },
-    { scenario: 'INFO: get_widget_info by name + folder', toolName: 'manage_blueprint', arguments: { action: 'get_widget_info', name: WIDGET_NAME, folder: TEST_FOLDER }, expected: 'success' },
     { scenario: 'ACTION: preview_widget', toolName: 'manage_blueprint', arguments: widgetArgs('preview_widget'), expected: 'success' },
     { scenario: 'ACTION: preview_widget drawn for a small screen, editor opened', toolName: 'manage_blueprint', arguments: widgetArgs('preview_widget', { resolution: '640x360', openEditor: true }), expected: 'success', assertions: [{ path: 'structuredContent.result.width', equals: 640, label: 'drawn at the asked width' }] },
     { scenario: 'ACTION: preview_widget drawn once shaders finish', toolName: 'manage_blueprint', arguments: widgetArgs('preview_widget', { waitForShaders: true }), expected: 'success', timeoutMs: 30000, assertions: [{ path: 'structuredContent.result.shadersCompiling', gte: 0, label: 'shader jobs reported' }] },

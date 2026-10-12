@@ -26,7 +26,7 @@ const testCases = [
     arguments: {
       action: 'create_blueprint',
       name: `BP_InstancedHolder_${ts}`,
-      path: TEST_FOLDER,
+      savePath: TEST_FOLDER,
       parentClass: 'Actor',
     },
     expected: 'success|already exists',

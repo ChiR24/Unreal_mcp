@@ -24,7 +24,7 @@ const testCases = [
   {
     scenario: 'Setup: create test blueprint',
     toolName: 'manage_blueprint',
-    arguments: { action: 'create', name: blueprintName, path: TEST_FOLDER, parentClass: 'Actor' },
+    arguments: { action: 'create', name: blueprintName, savePath: TEST_FOLDER, parentClass: 'Actor' },
     expected: 'success',
     captureResult: { key: 'blueprintPath', fromField: 'result.assetPath' }
   },

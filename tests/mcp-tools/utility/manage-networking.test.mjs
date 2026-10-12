@@ -31,7 +31,7 @@ const testCases = [
   {
     scenario: 'Setup: create replicated actor blueprint',
     toolName: 'manage_blueprint',
-    arguments: { action: 'create_blueprint', name: ACTOR_BP_NAME, path: TEST_FOLDER, parentClass: 'Actor' },
+    arguments: { action: 'create_blueprint', name: ACTOR_BP_NAME, savePath: TEST_FOLDER, parentClass: 'Actor' },
     expected: 'success|already exists',
     assertions: [{ path: 'structuredContent.result.assetPath', equals: EXPECTED_ACTOR_BP_ASSET_PATH, label: 'network actor blueprint created' }]
   },
@@ -41,7 +41,7 @@ const testCases = [
   {
     scenario: 'Setup: create network character blueprint',
     toolName: 'manage_blueprint',
-    arguments: { action: 'create_blueprint', name: CHARACTER_BP_NAME, path: TEST_FOLDER, parentClass: 'Character' },
+    arguments: { action: 'create_blueprint', name: CHARACTER_BP_NAME, savePath: TEST_FOLDER, parentClass: 'Character' },
     expected: 'success|already exists',
     assertions: [{ path: 'structuredContent.result.assetPath', equals: EXPECTED_CHARACTER_BP_ASSET_PATH, label: 'network character blueprint created' }]
   },

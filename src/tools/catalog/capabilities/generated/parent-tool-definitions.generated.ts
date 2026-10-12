@@ -11932,7 +11932,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Whether the feature is enabled."
         },
         "enableReverbSend": {
-          "type": "string",
+          "type": "boolean",
           "description": "Whether the sound sends to reverb."
         },
         "eqPriority": {
@@ -12244,11 +12244,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Replace the context mapping of the same speaker instead of adding another (default false)."
         },
         "reverbDistanceMax": {
-          "type": "string",
+          "type": "number",
           "description": "Distance at which the reverb wet level reaches its maximum."
         },
         "reverbDistanceMin": {
-          "type": "string",
+          "type": "number",
           "description": "Distance at which the reverb send starts."
         },
         "reverbEffect": {
@@ -12256,11 +12256,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Canonical /Game ReverbEffect asset path."
         },
         "reverbWetLevelMax": {
-          "type": "string",
+          "type": "number",
           "description": "Maximum reverb wet level (0-1)."
         },
         "reverbWetLevelMin": {
-          "type": "string",
+          "type": "number",
           "description": "Minimum reverb wet level (0-1)."
         },
         "rotation": {
@@ -12389,7 +12389,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Volume multiplier."
         },
         "volumeAdjuster": {
-          "type": "string",
+          "type": "number",
           "description": "Volume multiplier applied by the mix modifier."
         },
         "wavePath": {
@@ -12774,7 +12774,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "blueprintType": {
           "type": "string",
-          "description": "Blueprint type hint for creation."
+          "description": "Picks the parent class when parentClass is absent: Actor, Pawn, Character or FunctionLibrary."
         },
         "bottom": {
           "type": "number",
@@ -19896,23 +19896,47 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Loading range for grid cells."
         },
         "location": {
-          "type": "object",
-          "description": "World location {x, y, z}.",
-          "properties": {
-            "x": {
-              "type": "number",
-              "description": "X"
+          "oneOf": [
+            {
+              "type": "object",
+              "description": "World location {x, y, z}.",
+              "properties": {
+                "x": {
+                  "type": "number",
+                  "description": "X"
+                },
+                "y": {
+                  "type": "number",
+                  "description": "Y"
+                },
+                "z": {
+                  "type": "number",
+                  "description": "Z"
+                }
+              },
+              "additionalProperties": false
             },
-            "y": {
-              "type": "number",
-              "description": "Y"
-            },
-            "z": {
-              "type": "number",
-              "description": "Z"
+            {
+              "type": "object",
+              "description": "World location {x, y, z}; the world origin when omitted.",
+              "properties": {
+                "x": {
+                  "type": "number",
+                  "description": "X"
+                },
+                "y": {
+                  "type": "number",
+                  "description": "Y"
+                },
+                "z": {
+                  "type": "number",
+                  "description": "Z"
+                }
+              },
+              "additionalProperties": false
             }
-          },
-          "additionalProperties": false
+          ],
+          "description": "World location {x, y, z}."
         },
         "nodeClass": {
           "type": "string",
@@ -20671,7 +20695,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Trigger type."
         },
         "useOwnerNetRelevancy": {
-          "type": "string",
+          "type": "boolean",
           "description": "Use owner net relevancy."
         },
         "usePushModel": {

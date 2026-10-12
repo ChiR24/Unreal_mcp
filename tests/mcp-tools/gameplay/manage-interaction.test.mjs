@@ -39,7 +39,7 @@ const testCases = [
   {
     scenario: 'Setup: create interaction actor blueprint',
     toolName: 'manage_blueprint',
-    arguments: { action: 'create', name: BLUEPRINT_NAME, path: TEST_FOLDER, parentClass: 'Actor' },
+    arguments: { action: 'create', name: BLUEPRINT_NAME, savePath: TEST_FOLDER, parentClass: 'Actor' },
     expected: 'success',
     captureResult: { key: 'blueprintPath', fromField: 'result.assetPath' },
     assertions: [{ path: 'structuredContent.result.assetPath', equals: EXPECTED_BLUEPRINT_PATH, label: 'interaction target blueprint path returned' }]
