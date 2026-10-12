@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Dom/JsonObject.h"
 
 // Ranking behind the native gateway's "Undeclared parameter" text, mirrored
 // byte-for-byte by the TypeScript describeUndeclaredParameter.
@@ -86,5 +87,31 @@ inline TArray<FString> RankParameterNames(
 	TArray<FString> Ranked = MoveTemp(Near);
 	Ranked.Append(Rest);
 	return Ranked;
+}
+
+// A key that is one of a declared parameter's values (motion for readMode) is that parameter set to it: the list named
+// readMode and never said motion was one of its values. The first such parameter of Declared, the value as the schema
+// spells it; empty when none. Mirrors the TypeScript enumHint.
+inline FString EnumValueHint(const FString& Key, const TSharedPtr<FJsonObject>& Properties, const TArray<FString>& Declared)
+{
+	for (const FString& Name : Declared)
+	{
+		const TSharedPtr<FJsonObject>* Schema = nullptr;
+		const TArray<TSharedPtr<FJsonValue>>* Values = nullptr;
+		if (!Properties.IsValid() || !Properties->TryGetObjectField(Name, Schema) || !Schema ||
+		    !(*Schema)->TryGetArrayField(TEXT("enum"), Values) || !Values)
+		{
+			continue;
+		}
+		for (const TSharedPtr<FJsonValue>& Value : *Values)
+		{
+			FString Text;
+			if (Value.IsValid() && Value->TryGetString(Text) && Text.Equals(Key, ESearchCase::IgnoreCase))
+			{
+				return FString::Printf(TEXT("did you mean %s: '%s'; "), *Name, *Text);
+			}
+		}
+	}
+	return FString();
 }
 }

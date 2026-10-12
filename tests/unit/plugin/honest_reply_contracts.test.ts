@@ -2832,3 +2832,14 @@ describe('a float property reads as it was typed', () => {
     expect(arrays).toContain('return ExportPropertyToJsonValueOrText(ElemPtr, Inner);');
   });
 });
+
+describe('an undeclared key that is a declared parameter value names that parameter', () => {
+  // get_transform with motion: true answered "allowed: ..., readMode, ..." and never said motion was a readMode value.
+  it('builds the hint natively as the TypeScript gateway does', () => {
+    const hints = code('..', 'MCP', 'Execute', 'Request', 'McpNativeGatewayParameterHints.h');
+    expect(hints).toContain('return FString::Printf(TEXT("did you mean %s: \'%s\'; "), *Name, *Text);');
+    const keywords = code('..', 'MCP', 'Execute', 'McpNativeGatewaySchemaKeywords.cpp');
+    expect(keywords).toContain('const FString EnumHint = McpParameterHints::EnumValueHint(Key, Properties, Declared);');
+    expect(keywords).toContain('EnumHint.IsEmpty() ? *Hint : *EnumHint');
+  });
+});

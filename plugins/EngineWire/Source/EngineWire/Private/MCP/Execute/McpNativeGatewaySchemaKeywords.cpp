@@ -267,10 +267,11 @@ FString DescribeUndeclaredParameter(const FString& Key, const TSharedPtr<FJsonOb
 	Declared.Sort([](const FString& A, const FString& B) { return A.Compare(B, ESearchCase::CaseSensitive) < 0; });
 	FString Hint;
 	TArray<FString> Ranked = McpParameterHints::RankParameterNames(Key, Declared, Hint);
+	const FString EnumHint = McpParameterHints::EnumValueHint(Key, Properties, Declared);
 	const int32 ListedCount = FMath::Min(Ranked.Num(), 24);
 	const FString More = Ranked.Num() > ListedCount ? FString::Printf(TEXT(" and %d more"), Ranked.Num() - ListedCount) : FString();
 	Ranked.SetNum(ListedCount);
-	return FString::Printf(TEXT("Undeclared parameter '%s' (%sallowed: %s%s)"), *Key, *Hint, *FString::Join(Ranked, TEXT(", ")), *More);
+	return FString::Printf(TEXT("Undeclared parameter '%s' (%sallowed: %s%s)"), *Key, EnumHint.IsEmpty() ? *Hint : *EnumHint, *FString::Join(Ranked, TEXT(", ")), *More);
 }
 
 }

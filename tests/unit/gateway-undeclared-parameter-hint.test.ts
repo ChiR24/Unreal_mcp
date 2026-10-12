@@ -38,6 +38,16 @@ describe('describeUndeclaredParameter', () => {
     expect(message).toBe("Undeclared parameter 'bogus' (allowed: mode)");
   });
 
+  // get_transform with motion: true answered "allowed: ..., readMode, ..." and never said motion was a readMode value.
+  it('names the parameter a key is a value of, ahead of any name match', () => {
+    const transform = { actorName: { type: 'string' }, readMode: { type: 'string', enum: ['now', 'motion'] } };
+
+    expect(describeUndeclaredParameter('motion', transform)).toBe(
+      "Undeclared parameter 'motion' (did you mean readMode: 'motion'; allowed: actorName, readMode)"
+    );
+    expect(describeUndeclaredParameter('Motion', transform)).toContain("did you mean readMode: 'motion'");
+  });
+
   it('never offers the envelope fields, which execute refuses inside params', () => {
     const play = { action: { type: 'string' }, actorName: { type: 'string' }, control: { type: 'string' } };
 

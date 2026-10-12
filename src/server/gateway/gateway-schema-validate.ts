@@ -97,7 +97,18 @@ export function describeUndeclaredParameter(
   const near = declared
     .filter((name) => score(name) > 0)
     .sort((a, b) => (score(b) - score(a)) || (a.length - b.length) || (a < b ? -1 : a > b ? 1 : 0));
-  const hint = near.length > 0 ? `did you mean '${near[0]}'; ` : '';
+  // A key that is one of a declared parameter's values (motion for readMode) is that parameter set to it: the list
+  // named readMode and never said motion was one of its values. Mirrors McpParameterHints::EnumValueHint.
+  const enumHint = declared
+    .map((name) => {
+      const schema = properties?.[name];
+      const value = isRecord(schema) && Array.isArray(schema.enum)
+        ? schema.enum.find((entry) => typeof entry === 'string' && entry.toLowerCase() === lowerKey)
+        : undefined;
+      return typeof value === 'string' ? `did you mean ${name}: '${value}'; ` : undefined;
+    })
+    .find((entry) => entry !== undefined);
+  const hint = enumHint ?? (near.length > 0 ? `did you mean '${near[0]}'; ` : '');
   const ranked = [...near, ...declared.filter((name) => score(name) === 0)];
   const listed = ranked.slice(0, MAX_LISTED_PARAMETERS);
   const more = ranked.length > listed.length ? ` and ${ranked.length - listed.length} more` : '';
