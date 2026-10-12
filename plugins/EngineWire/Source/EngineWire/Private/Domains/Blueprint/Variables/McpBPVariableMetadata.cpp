@@ -10,6 +10,40 @@
 #include "Kismet2/BlueprintEditorUtils.h"
 
 namespace McpBlueprintHandlers {
+TArray<FString> McpReadVariableNames(const TSharedPtr<FJsonObject> &Payload) {
+  TArray<FString> Names;
+  const TArray<TSharedPtr<FJsonValue>> *NameList = nullptr;
+  if (Payload.IsValid() && Payload->TryGetArrayField(TEXT("variableNames"), NameList)) {
+    for (const TSharedPtr<FJsonValue> &Name : *NameList) {
+      if (Name.IsValid() && Name->Type == EJson::String && !Name->AsString().IsEmpty()) {
+        Names.AddUnique(Name->AsString());
+      }
+    }
+  }
+  FString Single;
+  if (Payload.IsValid() && Payload->TryGetStringField(TEXT("variableName"), Single) && !Single.IsEmpty()) {
+    Names.AddUnique(Single);
+  }
+  return Names;
+}
+
+void McpMatchVariableNames(const UBlueprint *Blueprint, TArray<FString> &InOutNames, TArray<FString> &OutMissing,
+                           TArray<FString> &OutKnown) {
+  for (const FBPVariableDescription &Desc : Blueprint->NewVariables) {
+    OutKnown.Add(Desc.VarName.ToString());
+  }
+  for (FString &Name : InOutNames) {
+    const FString *Match = OutKnown.FindByPredicate([&Name](const FString &Candidate) {
+      return Candidate.Equals(Name, ESearchCase::IgnoreCase);
+    });
+    if (Match) {
+      Name = *Match;
+    } else {
+      OutMissing.Add(Name);
+    }
+  }
+}
+
 bool HandleBlueprintSetVariableMetadata(const FBlueprintActionContext &Context) {
   MCP_BLUEPRINT_ACTION_LOCALS(Context);
   if (ActionMatchesPattern(TEXT("set_variable_metadata"))) {
@@ -28,19 +62,7 @@ bool HandleBlueprintSetVariableMetadata(const FBlueprintActionContext &Context) 
 
     // variableNames: the same metadata on several variables in one call (five
     // ExposeOnSpawn flags used to be five calls, five compiles, five saves).
-    TArray<FString> VarNames;
-    const TArray<TSharedPtr<FJsonValue>> *NameList = nullptr;
-    if (LocalPayload->TryGetArrayField(TEXT("variableNames"), NameList)) {
-      for (const TSharedPtr<FJsonValue> &Name : *NameList) {
-        if (Name.IsValid() && Name->Type == EJson::String && !Name->AsString().IsEmpty()) {
-          VarNames.AddUnique(Name->AsString());
-        }
-      }
-    }
-    FString VarName;
-    if (LocalPayload->TryGetStringField(TEXT("variableName"), VarName) && !VarName.IsEmpty()) {
-      VarNames.AddUnique(VarName);
-    }
+    TArray<FString> VarNames = McpReadVariableNames(LocalPayload);
     if (VarNames.Num() == 0) {
       Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("variableName or variableNames required"), nullptr,
@@ -78,22 +100,12 @@ bool HandleBlueprintSetVariableMetadata(const FBlueprintActionContext &Context) 
 
     const FString RegistryKey = Normalized.IsEmpty() ? Path : Normalized;
 
-    TArray<FName> VarFNames;
     TArray<FString> Missing;
     TArray<FString> Known;
-    for (const FBPVariableDescription &Desc : Blueprint->NewVariables) {
-      Known.Add(Desc.VarName.ToString());
-    }
-    for (FString &Name : VarNames) {
-      const FString *Match = Known.FindByPredicate([&Name](const FString &Candidate) {
-        return Candidate.Equals(Name, ESearchCase::IgnoreCase);
-      });
-      if (Match) {
-        Name = *Match;
-        VarFNames.Add(FName(*Name));
-      } else {
-        Missing.Add(Name);
-      }
+    McpMatchVariableNames(Blueprint, VarNames, Missing, Known);
+    TArray<FName> VarFNames;
+    for (const FString &Name : VarNames) {
+      VarFNames.Add(FName(*Name));
     }
 
     if (Missing.Num() > 0) {
@@ -105,7 +117,7 @@ bool HandleBlueprintSetVariableMetadata(const FBlueprintActionContext &Context) 
                              TEXT("VARIABLE_NOT_FOUND"));
       return true;
     }
-    VarName = VarNames[0];
+    const FString VarName = VarNames[0];
 
     Blueprint->Modify();
 

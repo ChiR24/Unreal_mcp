@@ -2717,3 +2717,17 @@ describe('an enum type keeps its enum when compiled', () => {
     expect(summary).toContain('Vt.TerminalCategory == UEdGraphSchema_K2::PC_Enum || Vt.TerminalCategory == UEdGraphSchema_K2::PC_Byte');
   });
 });
+
+describe('remove_variable takes a list under one consent', () => {
+  // Removing eight variables took sixteen calls: one name per call, and a describe for each consent.
+  it('reads variableNames like set_variable_metadata and checks every name before removing any', () => {
+    const remove = code('Blueprint', 'Variables', 'McpBPVariableRemovalRename.cpp');
+    expect(remove).toContain('TArray<FString> VarNames = McpReadVariableNames(LocalPayload);');
+    expect(remove.indexOf('McpMatchVariableNames(Blueprint, VarNames, Missing, Known);'))
+      .toBeLessThan(remove.indexOf('FBlueprintEditorUtils::RemoveMemberVariable(Blueprint, FName(*Name));'));
+    expect(remove).toContain('Nothing was removed.');
+    const metadata = code('Blueprint', 'Variables', 'McpBPVariableMetadata.cpp');
+    expect(metadata).toContain('TArray<FString> VarNames = McpReadVariableNames(LocalPayload);');
+    expect(metadata).toContain('McpMatchVariableNames(Blueprint, VarNames, Missing, Known);');
+  });
+});

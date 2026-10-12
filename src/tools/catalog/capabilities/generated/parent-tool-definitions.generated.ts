@@ -13828,10 +13828,22 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Variable name to add, remove, rename, or modify."
         },
         "variableNames": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Several variables to give the same metadata in one call (one compile and save), in place of or besides variableName."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Several variables to remove in one call, in place of or besides variableName. Every name must exist (any letter case), or nothing is removed and the reply lists the Blueprint's variables."
+            }
+          ],
           "description": "Several variables to give the same metadata in one call (one compile and save), in place of or besides variableName."
         },
         "variableType": {
@@ -14829,11 +14841,23 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Variable name to add, remove, rename, or modify."
         },
         "variableNames": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Every variable that took the metadata."
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Every variable removed, in the Blueprint's own spelling."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Every variable that took the metadata."
+            }
+          ],
+          "description": "Every variable removed, in the Blueprint's own spelling."
         },
         "variables": {
           "type": "array",

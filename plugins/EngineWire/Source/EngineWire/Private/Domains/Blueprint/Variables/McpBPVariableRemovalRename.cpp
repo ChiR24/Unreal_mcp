@@ -26,19 +26,15 @@ bool HandleBlueprintRemoveRenameVariable(const FBlueprintActionContext &Context)
       return true;
     }
 
-    FString VarName;
-    LocalPayload->TryGetStringField(TEXT("variableName"), VarName);
-    if (VarName.TrimStartAndEnd().IsEmpty()) {
+    // variableNames: several variables under one consent, one compile and one save (eight
+    // removals were sixteen calls, a describe for each consent).
+    TArray<FString> VarNames = McpReadVariableNames(LocalPayload);
+    if (VarNames.Num() == 0) {
       Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("variableName required"), nullptr,
+                             TEXT("variableName or variableNames required"), nullptr,
                              TEXT("INVALID_ARGUMENT"));
       return true;
     }
-
-    UE_LOG(LogEngineWireSubsystem, Log,
-           TEXT("HandleBlueprintAction: blueprint_remove_variable start "
-                "RequestId=%s Path=%s VarName=%s"),
-           *RequestId, *Path, *VarName);
 
     FString LocalNormalized;
     FString LocalLoadError;
@@ -53,41 +49,41 @@ bool HandleBlueprintRemoveRenameVariable(const FBlueprintActionContext &Context)
       return true;
     }
 
-    const FName TargetVarName(*VarName);
-    int32 VarIndex = -1;
-    for (int32 i = 0; i < Blueprint->NewVariables.Num(); ++i) {
-      if (Blueprint->NewVariables[i].VarName == TargetVarName) {
-        VarIndex = i;
-        break;
-      }
-    }
-
-    if (VarIndex == INDEX_NONE) {
+    // Every name must be there, or nothing is removed.
+    TArray<FString> Missing;
+    TArray<FString> Known;
+    McpMatchVariableNames(Blueprint, VarNames, Missing, Known);
+    if (Missing.Num() > 0) {
       Bridge.SendAutomationResponse(
           RequestingSocket, RequestId, false,
-          FString::Printf(TEXT("Variable '%s' not found in blueprint."),
-                          *VarName),
+          FString::Printf(TEXT("Variable not found: %s. Nothing was removed. The Blueprint's variables: %s."),
+                          *FString::Join(Missing, TEXT(", ")),
+                          Known.Num() > 0 ? *FString::Join(Known, TEXT(", ")) : TEXT("<none>")),
           nullptr, TEXT("NOT_FOUND"));
       return true;
     }
 
-    FBlueprintEditorUtils::RemoveMemberVariable(Blueprint, TargetVarName);
+    TArray<TSharedPtr<FJsonValue>> Removed;
+    for (const FString &Name : VarNames) {
+      FBlueprintEditorUtils::RemoveMemberVariable(Blueprint, FName(*Name));
+      Removed.Add(MakeShared<FJsonValueString>(Name));
+    }
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
     McpSafeCompileBlueprint(Blueprint);
     const bool bSaved = SaveLoadedAssetThrottled(Blueprint);
 
     UE_LOG(LogEngineWireSubsystem, Log,
-           TEXT("HandleBlueprintAction: variable '%s' removed from '%s' "
-                "(saved=%s)"),
-           *VarName, *Path, bSaved ? TEXT("true") : TEXT("false"));
+           TEXT("HandleBlueprintAction: %d variable(s) removed from '%s' (saved=%s)"),
+           VarNames.Num(), *Path, bSaved ? TEXT("true") : TEXT("false"));
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(TEXT("variableName"), VarName);
+    Result->SetStringField(TEXT("variableName"), VarNames[0]);
+    Result->SetArrayField(TEXT("variableNames"), Removed);
     Result->SetStringField(TEXT("blueprintPath"), LocalNormalized);
     // Add verification data for the blueprint asset
     McpHandlerUtils::AddVerification(Result, Blueprint);
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
-                           TEXT("Variable removed successfully"), Result);
+                           FString::Printf(TEXT("Removed %s."), *FString::Join(VarNames, TEXT(", "))), Result);
     return true;
   }
 

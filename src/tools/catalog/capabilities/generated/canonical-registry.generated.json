@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "a44b68d87e20b61d",
+  "catalogRevision": "e334c61ab7526025",
   "recordCount": 411,
   "records": [
     {
@@ -20299,9 +20299,10 @@
         "topics": [
           "remove_variable"
         ],
-        "summary": "Permanently remove a member variable from a Blueprint.",
+        "summary": "Permanently remove one or more member variables from a Blueprint.",
         "whenToUse": [
-          "A member variable must be permanently deleted."
+          "A member variable must be permanently deleted.",
+          "Several variables must go at once: variableNames removes them under one consent, with one compile and save."
         ],
         "whenNotToUse": [
           "The variable should be renamed rather than removed."
@@ -20323,14 +20324,24 @@
             "variableName": {
               "type": "string",
               "description": "Variable name to add, remove, rename, or modify."
+            },
+            "variableNames": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Several variables to remove in one call, in place of or besides variableName. Every name must exist (any letter case), or nothing is removed and the reply lists the Blueprint's variables."
             }
           },
           "required": [
             "action",
-            "blueprintPath",
-            "variableName"
+            "blueprintPath"
           ],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "requiredOneOf": [
+            "variableName",
+            "variableNames"
+          ]
         },
         "output": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -20348,6 +20359,17 @@
               "type": "object",
               "x-unreal-reflection-boundary": true,
               "description": "Additional handler result fields not named by the contract."
+            },
+            "variableName": {
+              "type": "string",
+              "description": "Variable name to add, remove, rename, or modify."
+            },
+            "variableNames": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Every variable removed, in the Blueprint's own spelling."
             }
           },
           "required": [
@@ -20358,7 +20380,7 @@
       },
       "examples": [
         {
-          "title": "Permanently remove a member variable from a Blueprint.",
+          "title": "Permanently remove one or more member variables from a Blueprint.",
           "input": {
             "action": "remove_variable",
             "blueprintPath": "/Game/Blueprints/BP_Test",
@@ -20398,8 +20420,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "f76eefa3f8ad3552271887b09a4c7094638143123976b567c244bd02eaec69b9",
-        "content": "1278ee03c79a4ed1ffc0e62da3cd04549da2b7455b67e5408055df011cc5db1c"
+        "schema": "0f4d7ba182372b914e1da53f5cced062d63d909f7cea78db5a3ec9b9bd8551f3",
+        "content": "2d2cbedb27bf56d36346ab6b2cdc1b54f67b7aae08747b2b027fa1302914c992"
       }
     },
     {

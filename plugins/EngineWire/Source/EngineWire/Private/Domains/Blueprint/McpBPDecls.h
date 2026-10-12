@@ -13,6 +13,11 @@ bool ActionMatchesPattern(const FBlueprintActionContext &Context,
 FString ResolveBlueprintRequestedPath(
     const TSharedPtr<FJsonObject> &LocalPayload);
 UBlueprint *ResolveScsBlueprint(const TSharedPtr<FJsonObject> &Payload);
+// variableNames then variableName, without repeats: set_variable_metadata and remove_variable read a list the same way.
+TArray<FString> McpReadVariableNames(const TSharedPtr<FJsonObject> &Payload);
+// Each name takes the Blueprint's own spelling (case-insensitive); OutMissing gets the names it lacks, OutKnown its variables.
+void McpMatchVariableNames(const UBlueprint *Blueprint, TArray<FString> &InOutNames, TArray<FString> &OutMissing,
+                           TArray<FString> &OutKnown);
 void FEngineWire_AddUserDefinedPin(UK2Node *Node,
                                             const FString &PinName,
                                             const FString &PinType,

@@ -153,6 +153,10 @@ const testCases = [
   // === DELETE: remove_variable (blueprintPath + variableName) ===
   // Now remove the renamed variable after metadata was set.
   { scenario: 'DELETE: remove_variable', toolName: 'manage_blueprint', arguments: { action: 'remove_variable', blueprintPath: BP_PATH, variableName: 'RenamedVariable' }, expected: 'success|not found' },
+  { scenario: 'ADD: add_variable ScratchA for a list removal', toolName: 'manage_blueprint', arguments: { action: 'add_variable', blueprintPath: BP_PATH, variableName: 'ScratchA', variableType: 'Float' }, expected: 'success|already exists' },
+  { scenario: 'ADD: add_variable ScratchB for a list removal', toolName: 'manage_blueprint', arguments: { action: 'add_variable', blueprintPath: BP_PATH, variableName: 'ScratchB', variableType: 'Int' }, expected: 'success|already exists' },
+  { scenario: 'DELETE: remove_variable takes variableNames', toolName: 'manage_blueprint', arguments: { action: 'remove_variable', blueprintPath: BP_PATH, variableNames: ['ScratchA', 'scratchb'] }, expected: 'success', assertions: [{ path: 'structuredContent.result.variableNames', includes: 'ScratchB', label: 'removed in its own spelling' }] },
+  { scenario: 'ERROR: remove_variable refuses a list with a name it lacks', toolName: 'manage_blueprint', arguments: { action: 'remove_variable', blueprintPath: BP_PATH, variableNames: ['ScratchA'] }, expected: 'error|not found' },
 
   // === ADD: add_function (blueprintPath + functionName) ===
   { scenario: 'ADD: add_function', toolName: 'manage_blueprint', arguments: { action: 'add_function', blueprintPath: BP_PATH, memberName: 'TestFunction', inputs: [{ name: 'InputValue', type: 'Float' }], outputs: [{ name: 'ReturnValue', type: 'Float' }], isPublic: true }, expected: 'success|already exists' },
