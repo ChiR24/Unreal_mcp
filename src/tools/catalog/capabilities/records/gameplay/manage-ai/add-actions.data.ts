@@ -201,7 +201,7 @@ export const AI_ADD_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   aiRecord({
     action: 'add_task_node', summary: 'Add a task node to a Behavior Tree asset.',
-    use: 'A Behavior Tree branch needs a leaf task.',
+    use: 'A Behavior Tree branch needs a leaf task. An enemy that chases the player is a Sequence with a MoveTo task whose Blackboard key (an Object key such as TargetActor) holds the player, run on its AI controller with run_behavior_tree.',
     avoid: 'Use add_composite_node for flow control.',
     props: { behaviorTreePath: A.behaviorTreePath, taskType: A.taskType, parentNodeId: A.parentNodeId },
     required: ['behaviorTreePath', 'taskType'], plugins: BT,

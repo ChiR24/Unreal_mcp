@@ -437,4 +437,6 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'turn down the music volume', accepted: ['manage_audio.fade_sound', 'manage_audio.configure_sound_class'] },
   { query: 'music volume', accepted: ['manage_audio.fade_sound', 'manage_audio.configure_sound_class'] },
   { query: 'make the music quieter', accepted: ['manage_audio.fade_sound', 'manage_audio.configure_sound_class'] },
+  { query: 'enemy chases player', accepted: ['manage_ai.edit_behavior_tree'] },
+  { query: 'chase player', accepted: ['manage_ai.edit_behavior_tree'] },
 ];

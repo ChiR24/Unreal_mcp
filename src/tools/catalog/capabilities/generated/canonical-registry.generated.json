@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "0631da9f92811ce7",
+  "catalogRevision": "39c4fe954096a114",
   "recordCount": 411,
   "records": [
     {
@@ -47883,12 +47883,14 @@
           "task node",
           "decorator",
           "service",
-          "bt node"
+          "bt node",
+          "enemy chases player",
+          "chase the player"
         ],
         "summary": "Edit a Behavior Tree graph: add composite, task, decorator, service or generic nodes and subnodes, connect or break connections, configure or remove nodes.",
         "whenToUse": [
           "edit=add_composite: A Behavior Tree needs a Selector or Sequence branch.",
-          "edit=add_task: A Behavior Tree branch needs a leaf task.",
+          "edit=add_task: A Behavior Tree branch needs a leaf task. An enemy that chases the player is a Sequence with a MoveTo task whose Blackboard key (an Object key such as TargetActor) holds the player, run on its AI controller with run_behavior_tree.",
           "edit=add_decorator: A Behavior Tree branch needs a conditional gate.",
           "edit=add_service: A Behavior Tree branch needs recurring background work.",
           "edit=add_node: A Behavior Tree graph needs a node placed at explicit coordinates.",
@@ -48215,7 +48217,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "38033c07cf28e73a9264761aa23843caad7e4fc03d924b5ec467bc1b04a23e98",
-        "content": "dd7ae2fb6a62b8308e50c40b44bb8b243dd0dd2a98496a73d7691871bdda01fd"
+        "content": "d522b47cb4a36d2fb7738b867f845b7db74d074b3c264ac0ac13930d94fee4f2"
       }
     },
     {
