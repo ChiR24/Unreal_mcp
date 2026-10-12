@@ -2684,3 +2684,19 @@ describe('a parameter no pin takes is refused before anything is made', () => {
     expect(params).toContain('ClassProperty->MetaClass = ReferenceClass;');
   });
 });
+
+describe('a pin descriptor says when it holds many values', () => {
+  // An Array<Int> event input read back as pinType "int", the same as one int, and an enum or soft reference pin named
+  // no sub-type: get_node_details and every pin summary only named one for an object, class or struct.
+  it('both pin serializers add pinSubType, container and a map value type through one helper', () => {
+    const queries = code('BlueprintGraph', 'McpBPGraphQueries.cpp');
+    expect(queries).toMatch(/if \(PinType\.PinSubCategoryObject\.IsValid\(\)\)\s*\{\s*PinObject->SetStringField\(TEXT\("pinSubType"\)/u);
+    expect(queries).toContain('PinObject->SetStringField(TEXT("container"), PinType.IsArray() ? TEXT("array") : PinType.IsSet() ? TEXT("set") : TEXT("map"));');
+    expect(queries).toContain('PinObject->SetStringField(TEXT("valueType"), Value.TerminalSubCategoryObject.IsValid()');
+    for (const file of ['McpBPGraphQueries.cpp', 'McpBPGraphDetails.cpp']) {
+      const source = code('BlueprintGraph', file);
+      expect(source).toContain('AddPinTypeFields(PinObject, Pin->PinType);');
+      expect(source).not.toContain('Pin->PinType.PinCategory == TEXT("struct")) &&');
+    }
+  });
+});

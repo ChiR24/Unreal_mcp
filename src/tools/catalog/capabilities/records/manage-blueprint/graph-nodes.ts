@@ -142,7 +142,7 @@ export const GRAPH_NODES_RECORDS: readonly CapabilityRecordSource[] = [
       nodeComment: { type: 'string', description: 'Node comment, empty when it has none.' },
       x: { type: 'number', description: 'Node X position in the graph.' },
       y: { type: 'number', description: 'Node Y position in the graph.' },
-      pins: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Pin descriptors (name, direction, type, links).', 'x-unreal-reflection-boundary': true },
+      pins: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Pin descriptors (pinName, direction, pinType, pinSubType: the class, struct or enum it carries, container: array, set or map when the pin holds many pinType values, valueType: the value type of a map, linkedTo[] of {nodeId, pinName, nodeTitle}, defaultValue).', 'x-unreal-reflection-boundary': true },
       // An animation node's pins say nothing of what it plays or how: those are settings of the node itself.
       animationAsset: { type: 'string', description: 'An animation graph node that plays an asset (a Sequence Player, a Blend Space Player ...): the path of the animation it plays. Absent on other nodes and on a player with no asset.' },
       animationAssetClass: { type: 'string', description: 'The class of that animation asset (AnimSequence, BlendSpace ...).' },
@@ -204,7 +204,7 @@ export const GRAPH_NODES_RECORDS: readonly CapabilityRecordSource[] = [
     requiredOneOf: ['nodeId', 'nodeGuid'],
     outputProps: {
       nodeId: P.nodeId,
-      pins: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Pin descriptors (pinName, direction, pinType, pinSubType, linkedTo[] of {nodeId, pinName, nodeTitle}, defaults).', 'x-unreal-reflection-boundary': true },
+      pins: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Pin descriptors (pinName, direction, pinType, pinSubType: the class, struct or enum it carries, container: array, set or map when the pin holds many pinType values, valueType: the value type of a map, linkedTo[] of {nodeId, pinName, nodeTitle}, defaults).', 'x-unreal-reflection-boundary': true },
     },
     outputRequired: ['pins'],
     effect: 'read',

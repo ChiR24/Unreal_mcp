@@ -268,6 +268,8 @@ const FString* StandardMacroGraphName(const FString& NodeType);
 // paths, which the name-oriented ResolveUClass() cannot load.
 UClass* ResolveTargetClassFromString(const FString& InClassString);
 FEdGraphPinType ResolveCustomEventPinType(const FString& TypeName);
+// pinSubType, container and a map's valueType on a pin descriptor (McpBPGraphQueries.cpp).
+void AddPinTypeFields(const TSharedPtr<FJsonObject>& PinObject, const FEdGraphPinType& PinType);
 FProperty* CreateCustomEventParameter(
     UFunction* Function,
     const FString& ParameterName,

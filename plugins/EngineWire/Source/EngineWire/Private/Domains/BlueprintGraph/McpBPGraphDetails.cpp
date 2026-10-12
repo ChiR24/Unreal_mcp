@@ -21,15 +21,7 @@ static TSharedPtr<FJsonObject> MakeDetailedPin(UEdGraphPin* Pin)
         TEXT("pinType"),
         Pin->PinType.PinCategory.ToString());
 
-    if ((Pin->PinType.PinCategory == TEXT("object") ||
-         Pin->PinType.PinCategory == TEXT("class") ||
-         Pin->PinType.PinCategory == TEXT("struct")) &&
-        Pin->PinType.PinSubCategoryObject.IsValid())
-    {
-        PinObject->SetStringField(
-            TEXT("pinSubType"),
-            Pin->PinType.PinSubCategoryObject->GetName());
-    }
+    AddPinTypeFields(PinObject, Pin->PinType);
 
     TArray<TSharedPtr<FJsonValue>> LinkedTo;
     for (UEdGraphPin* LinkedPin : Pin->LinkedTo)

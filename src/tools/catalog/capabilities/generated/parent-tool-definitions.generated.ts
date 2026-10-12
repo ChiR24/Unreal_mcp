@@ -14612,7 +14612,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "pins": {
           "type": "array",
           "x-unreal-reflection-boundary": true,
-          "description": "Pin descriptors (name, direction, type, links).",
+          "description": "Pin descriptors (pinName, direction, pinType, pinSubType: the class, struct or enum it carries, container: array, set or map when the pin holds many pinType values, valueType: the value type of a map, linkedTo[] of {nodeId, pinName, nodeTitle}, defaultValue).",
           "items": {
             "type": "object",
             "additionalProperties": true,

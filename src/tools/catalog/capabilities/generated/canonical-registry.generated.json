@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "19956644c0732aa9",
+  "catalogRevision": "a44b68d87e20b61d",
   "recordCount": 411,
   "records": [
     {
@@ -19505,7 +19505,7 @@
             "pins": {
               "type": "array",
               "x-unreal-reflection-boundary": true,
-              "description": "Pin descriptors (name, direction, type, links).",
+              "description": "Pin descriptors (pinName, direction, pinType, pinSubType: the class, struct or enum it carries, container: array, set or map when the pin holds many pinType values, valueType: the value type of a map, linkedTo[] of {nodeId, pinName, nodeTitle}, defaultValue).",
               "items": {
                 "type": "object",
                 "additionalProperties": true,
@@ -19661,8 +19661,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "c1e233e409bb854a99aa5b31f1faab3854daf4f964d26867a93639a04b7004b3",
-        "content": "e65868512cccd767a987f6433952830b5d93dfadc8b7ba6c5bda15c040561e87"
+        "schema": "dbed0e9eec23776d14b2d1022a09675fb7cc54cd55a0493ee8254e0fa765d4e1",
+        "content": "5a550a9f9001a80c458f810942fba1c7e17915504ccbfce996335d2dba2ae91e"
       }
     },
     {

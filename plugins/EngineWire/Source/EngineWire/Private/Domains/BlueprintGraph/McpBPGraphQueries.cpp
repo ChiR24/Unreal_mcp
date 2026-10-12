@@ -2,6 +2,26 @@
 
 namespace McpBlueprintGraphHandlers
 {
+// An enum, soft reference or interface pin names its sub-type too, not only an object, class or struct; an array, set
+// or map pin read as its element type ("int"), the same as one value, and a map pin never named its value type.
+void AddPinTypeFields(const TSharedPtr<FJsonObject>& PinObject, const FEdGraphPinType& PinType)
+{
+    if (PinType.PinSubCategoryObject.IsValid())
+    {
+        PinObject->SetStringField(TEXT("pinSubType"), PinType.PinSubCategoryObject->GetName());
+    }
+    if (PinType.IsContainer())
+    {
+        PinObject->SetStringField(TEXT("container"), PinType.IsArray() ? TEXT("array") : PinType.IsSet() ? TEXT("set") : TEXT("map"));
+    }
+    if (PinType.IsMap())
+    {
+        const FEdGraphTerminalType& Value = PinType.PinValueType;
+        PinObject->SetStringField(TEXT("valueType"), Value.TerminalSubCategoryObject.IsValid()
+            ? Value.TerminalSubCategoryObject->GetName() : Value.TerminalCategory.ToString());
+    }
+}
+
 static TSharedPtr<FJsonObject> MakePinSummary(UEdGraphPin* Pin)
 {
     TSharedPtr<FJsonObject> PinObject =
@@ -15,15 +35,7 @@ static TSharedPtr<FJsonObject> MakePinSummary(UEdGraphPin* Pin)
     PinObject->SetStringField(
         TEXT("direction"),
         Pin->Direction == EGPD_Input ? TEXT("Input") : TEXT("Output"));
-    if ((Pin->PinType.PinCategory == TEXT("object") ||
-         Pin->PinType.PinCategory == TEXT("class") ||
-         Pin->PinType.PinCategory == TEXT("struct")) &&
-        Pin->PinType.PinSubCategoryObject.IsValid())
-    {
-        PinObject->SetStringField(
-            TEXT("pinSubType"),
-            Pin->PinType.PinSubCategoryObject->GetName());
-    }
+    AddPinTypeFields(PinObject, Pin->PinType);
 
     TArray<TSharedPtr<FJsonValue>> LinkedTo;
     for (UEdGraphPin* LinkedPin : Pin->LinkedTo)
