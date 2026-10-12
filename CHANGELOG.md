@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`set_camera` echoes the requested pose only when the viewport did not take it**: every reply carried `requestedLocation` and `requestedRotation` beside the identical `cameraLocation` and `cameraRotation`.
 - **The HTTP door takes a capability ID's namespace as its tool**: execute and describe resolve `asset`, `material`, `blueprint`, `sequence` and the other namespaces to the parent tool that owns them, as the stdio door already did. A call built from a search row's `asset.list` (`tool: "asset"`) was refused UNKNOWN_TOOL over HTTP.
 - **A spawn batch of more than 20 items lists only what needs a look**: `report` defaults to `failures` past 20 items once repeats are unrolled, and the receipt still names every actor (`report: "all"` brings every row back). 117 hung ceiling parts answered 45K characters, mostly rows saying they float as intended; the batch's text now says to tag such parts `mcp.placement.ok`.
+- **Transforms read as they were typed**: every location, rotation and scale a reply carries rounds to ten significant digits. A 90 degree yaw read 89.99999999999999 and a camera y 1710.5776600334307.
 
 </details>
 

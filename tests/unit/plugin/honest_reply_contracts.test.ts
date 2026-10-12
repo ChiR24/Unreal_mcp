@@ -2857,3 +2857,14 @@ describe('an undeclared key that is a declared parameter value names that parame
     expect(keywords).toContain('EnumHint.IsEmpty() ? *Hint : *EnumHint');
   });
 });
+
+describe('a transform reads as it was typed', () => {
+  // A 90 degree yaw read 89.99999999999999 and a camera y 1710.5776600334307: noise from the transform math.
+  it('rounds every vector and rotator of a reply to ten significant digits', () => {
+    const transforms = code('..', 'Foundation', 'HandlerUtils', 'McpHandlerUtilsTransforms.h');
+    expect(transforms).toContain('FCString::Atod(*FString::Printf(TEXT("%.10g"), Value))');
+    for (const field of ['Vector.X', 'Vector.Y', 'Vector.Z', 'Rotator.Pitch', 'Rotator.Yaw', 'Rotator.Roll']) {
+      expect(transforms.split(`ReadableDouble(${field})`).length - 1, field).toBe(2);
+    }
+  });
+});
