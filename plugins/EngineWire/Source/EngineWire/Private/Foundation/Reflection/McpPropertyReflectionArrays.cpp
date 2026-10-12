@@ -7,13 +7,7 @@ namespace Private
 TSharedPtr<FJsonValue> ExportElementToJsonValue(FProperty* Inner, void* ElemPtr)
 {
     // A container's inner property sits at offset 0, so the element is its own container.
-    if (TSharedPtr<FJsonValue> Value = ExportPropertyToJsonValue(ElemPtr, Inner))
-    {
-        return Value;
-    }
-    FString ElemStr;
-    MCP_PROPERTY_EXPORT_TEXT(Inner, ElemStr, ElemPtr, nullptr, nullptr, PPF_None);
-    return MakeShared<FJsonValueString>(ElemStr);
+    return ExportPropertyToJsonValueOrText(ElemPtr, Inner);
 }
 }
 

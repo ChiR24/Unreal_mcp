@@ -2814,3 +2814,13 @@ describe('a level viewport screenshot says when the viewport is not realtime', (
     expect(shot).toContain('The level viewport is not realtime');
   });
 });
+
+describe('a float property reads as it was typed', () => {
+  // LightDecay 2.2 read back as 2.200000047683716: the float was widened to double before it was written out.
+  it('writes a float through its seven significant digits, in arrays, maps and sets too', () => {
+    const reflection = code('..', 'Foundation', 'Reflection', 'McpPropertyReflection.cpp');
+    expect(reflection).toContain('FString::Printf(TEXT("%.7g"), FloatProp->GetPropertyValue_InContainer(TargetContainer))');
+    const arrays = code('..', 'Foundation', 'Reflection', 'McpPropertyReflectionArrays.cpp');
+    expect(arrays).toContain('return ExportPropertyToJsonValueOrText(ElemPtr, Inner);');
+  });
+});
