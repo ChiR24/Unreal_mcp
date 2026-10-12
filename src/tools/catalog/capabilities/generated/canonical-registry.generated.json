@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "f97a475f9330cc6e",
+  "catalogRevision": "969468dbc2576988",
   "recordCount": 411,
   "records": [
     {
@@ -36152,7 +36152,7 @@
                 "x-unreal-reflection-boundary": true
               },
               "x-unreal-reflection-boundary": true,
-              "description": "Actors to spawn, 1-500. Each is a spawn payload: classPath, blueprintPath or meshPath, plus actorName, location, rotation, scale ([x, y, z] arrays). Optional per item: materialPath (applied like set_material; componentName/materialSlot/allComponents narrow it), variables ({name: value} Blueprint variables set on the new instance, like set_blueprint_variables; in a running game they are set before its BeginPlay, so it starts with them), properties ({name: value} set on the root component, or on componentName's, as edit_component sets them: a light's Intensity, LightColor and AttenuationRadius), folder (outliner folder path), tags (actor tags; delete_by_tag removes the batch again), repeat ({count, offset [x, y, z], rows, rowOffset [x, y, z]}: count x rows copies of the item, each moved from its location by offset per copy and rowOffset per row, actorName numbered _1, _2, ...; a row of racks, a grid of lights; at most 1000 actors once unrolled). Items that fail are reported; the rest still spawn."
+              "description": "Actors to spawn, 1-500. Each is a spawn payload: classPath, blueprintPath or meshPath, plus actorName, location, rotation, scale ([x, y, z] arrays). Optional per item: materialPath (applied like set_material; componentName/materialSlot/allComponents narrow it), variables ({name: value} Blueprint variables set on the new instance, like set_blueprint_variables; in a running game they are set before its BeginPlay, so it starts with them), properties ({name: value} set on the root component, or on componentName's, as edit_component sets them: a light's Intensity, LightColor and AttenuationRadius), folder (outliner folder path), tags (actor tags; delete_by_tag removes the batch again), repeat ({count, offset [x, y, z], rows, rowOffset [x, y, z]}: count x rows copies of the item, each moved from its location by offset per copy and rowOffset per row, actorName numbered _1, _2, ...; a row of racks, a grid of lights; at most 1000 actors once unrolled). Items that fail are reported; the rest still spawn. Parts meant to hang in the air or sit inside another (ceiling ducts, lights, a flange on a pipe) take the tag mcp.placement.ok (defaults.tags covers the whole batch), so the reply keeps only what needs fixing."
             },
             "defaults": {
               "type": "object",
@@ -36166,7 +36166,7 @@
                 "all",
                 "failures"
               ],
-              "description": "Which items results lists: all (default), or failures only (items that failed to spawn or to take their material or variables, and items with a placementWarning); spawned and failed still count every item. Use failures for big layouts."
+              "description": "Which items results lists: all, or failures only (items that failed to spawn or to take their material or variables, and items with a placementWarning); spawned and failed still count every item. Default all, or failures for a batch of more than 20 items once repeats are unrolled; the receipt still names every actor."
             },
             "spawnKind": {
               "type": "string",
@@ -36280,7 +36280,7 @@
                 "x-unreal-reflection-boundary": true
               },
               "x-unreal-reflection-boundary": true,
-              "description": "Per item (only the failed ones and those with a placementWarning or ignoredKeys under report: failures): index (its place in the batch once repeats are unrolled), success, name, path, error, errorCode, variablesSet, variablesError, materialApplied, materialError, propertiesError, ignoredKeys (the item's keys no spawn reads, such as a \"label\" meant as actorName), and the placement facts set_transform reports (groundZ, groundClearance, placementWarning, overlappingActors, coplanarFaces, suggestedLocation), measured after the item took its tags, variables and material, so an item tagged mcp.placement.ok is never reported. name is the label the item asked for, or the unique actor name when it gave no actorName."
+              "description": "Per item (only the failed ones and those with a placementWarning or ignoredKeys under report: failures, the default past 20 items): index (its place in the batch once repeats are unrolled), success, name, path, error, errorCode, variablesSet, variablesError, materialApplied, materialError, propertiesError, ignoredKeys (the item's keys no spawn reads, such as a \"label\" meant as actorName), and the placement facts set_transform reports (groundZ, groundClearance, placementWarning, overlappingActors, coplanarFaces, suggestedLocation), measured after the item took its tags, variables and material, so an item tagged mcp.placement.ok is never reported. name is the label the item asked for, or the unique actor name when it gave no actorName."
             },
             "unnamedActors": {
               "type": "array",
@@ -36417,8 +36417,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "5831516601e24165f297291e7cab49a71a26e268a8491f3c54874b3ba68df5a8",
-        "content": "a20048a4cf689392121a693ef0d95fedeb2ce5d443ec73b5af4e2dd166dc16b5"
+        "schema": "0ab1dd65e7c8bfcea541631356247c07874f6e160f535b4f80c38381ccfaf4fd",
+        "content": "f715c431de14be3f7bbfe7dc3f4b2b51e163f8a22275721c323c13e431cd0b01"
       }
     },
     {

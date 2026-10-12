@@ -149,7 +149,7 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
           + '(actor tags; delete_by_tag removes the batch again), repeat ({count, offset [x, y, z], rows, rowOffset '
           + '[x, y, z]}: count x rows copies of the item, each moved from its location by offset per copy and rowOffset '
           + 'per row, actorName numbered _1, _2, ...; a row of racks, a grid of lights; at most 1000 actors once '
-          + 'unrolled). Items that fail are reported; the rest still spawn.',
+          + 'unrolled). Items that fail are reported; the rest still spawn. Parts meant to hang in the air or sit inside another (ceiling ducts, lights, a flange on a pipe) take the tag mcp.placement.ok (defaults.tags covers the whole batch), so the reply keeps only what needs fixing.',
       },
       defaults: {
         type: 'object',
@@ -160,9 +160,9 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
       report: {
         type: 'string',
         enum: ['all', 'failures'],
-        description: 'Which items results lists: all (default), or failures only (items that failed to spawn or to take '
+        description: 'Which items results lists: all, or failures only (items that failed to spawn or to take '
           + 'their material or variables, and items with a placementWarning); spawned and failed still count every item. '
-          + 'Use failures for big layouts.',
+          + 'Default all, or failures for a batch of more than 20 items once repeats are unrolled; the receipt still names every actor.',
       },
     },
     required: ['actors'],
@@ -175,7 +175,7 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
         type: 'array',
         items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
         'x-unreal-reflection-boundary': true,
-        description: 'Per item (only the failed ones and those with a placementWarning or ignoredKeys under report: failures): '
+        description: 'Per item (only the failed ones and those with a placementWarning or ignoredKeys under report: failures, the default past 20 items): '
           + 'index (its place in the batch once repeats are unrolled), success, name, path, error, errorCode, variablesSet, variablesError, materialApplied, materialError, propertiesError, '
           + 'ignoredKeys (the item\'s keys no spawn reads, such as a "label" meant as actorName), and the placement '
           + 'facts set_transform reports (groundZ, groundClearance, placementWarning, overlappingActors, coplanarFaces, suggestedLocation), '

@@ -254,9 +254,13 @@ bool UEngineWireSubsystem::HandleControlActorSpawnBatch(
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   // report: "failures" keeps only the items that went wrong: a 130-actor
   // layout echoed every path and name back, ~15K characters of "success". An item that
-  // spawned but looks misplaced (sunk, floating, intersecting) stays: finding it is the point.
+  // spawned but looks misplaced (sunk, floating, intersecting) stays: finding it is the point. A batch of more
+  // than 20 items defaults to it (117 hung ceiling parts answered 45K characters); the receipt names every actor.
   FString Report;
-  if (Payload->TryGetStringField(TEXT("report"), Report) && Report == TEXT("failures")) {
+  if (!Payload->TryGetStringField(TEXT("report"), Report) && Results.Num() > 20) {
+    Report = TEXT("failures");
+  }
+  if (Report == TEXT("failures")) {
     Results.RemoveAll([](const TSharedPtr<FJsonValue> &Value) {
       const TSharedPtr<FJsonObject> Entry = Value->AsObject();
       return Entry->GetBoolField(TEXT("success")) && !Entry->HasField(TEXT("materialError")) &&

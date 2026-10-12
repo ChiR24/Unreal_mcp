@@ -811,7 +811,7 @@ describe('every spawn says where the actor ended up, as set_transform does', () 
     expect(batch.indexOf('PlacementWarnings += McpCoplanar::AddCoplanarToRows(Rows);'))
       .toBeGreaterThan(batch.indexOf('McpPlacement::DescribePlacement(Item.Key, Item.Value);'));
     expect(batch.indexOf('PlacementWarnings += McpCoplanar::AddCoplanarToRows(Rows);'))
-      .toBeLessThan(batch.indexOf('if (Payload->TryGetStringField(TEXT("report"), Report)'));
+      .toBeLessThan(batch.indexOf('if (Report == TEXT("failures")) {'));
   });
 
   // Every move rescanned the level, reading the triangles of every distinct mesh in it, so a teleport cost the level.
