@@ -169,6 +169,7 @@ bool UEngineWireSubsystem::HandleDeleteAssets(
   }
 
   TArray<FString> DeletedPaths;
+  int32 DeletedAssets = 0; // a deleted folder is one path but every asset it held: "deletedCount": 1 for two
   TArray<FString> NotFoundPaths;
   TArray<FString> FailedToDeletePaths;
   TArray<FString> ReferencedPaths;
@@ -202,10 +203,7 @@ bool UEngineWireSubsystem::HandleDeleteAssets(
   for (const FString &Path : PathsToDelete) {
     ++PathIndex;
     const FString SafePath = SanitizeProjectRelativePath(Path);
-    if (SafePath.IsEmpty()) {
-      FailedToDeletePaths.Add(Path);
-      continue;
-    }
+    if (SafePath.IsEmpty()) { FailedToDeletePaths.Add(Path); continue; }
 
     // Check if it's a directory first (folder path)
     if (UEditorAssetLibrary::DoesDirectoryExist(SafePath)) {
@@ -220,10 +218,13 @@ bool UEngineWireSubsystem::HandleDeleteAssets(
         SendProgressUpdate(RequestId, (PathIndex + Percent / 100.0f) * 100.0f / Total,
                            FString::Printf(TEXT("deleting %s (folder %d of %d): %s"), *SafePath, PathIndex + 1, Total, *What));
       };
+      TArray<FAssetData> InFolder;
+      FAssetRegistryModule::GetRegistry().GetAssetsByPath(FName(*SafePath), InFolder, /*bRecursive=*/true);
       if (McpSafeOperations::McpSafeDeleteFolder(SafePath, &Remaining, Report, DeleteSet))
       {
         // McpSafeDeleteFolder performs registry and filesystem verification itself.
         DeletedPaths.Add(SafePath);
+        DeletedAssets += InFolder.Num();
       } else {
         // Name what survived, so a caller never has to list the folder again to find out.
         FailedToDeletePaths.Add(SafePath);
@@ -243,6 +244,7 @@ bool UEngineWireSubsystem::HandleDeleteAssets(
                   !FPackageName::DoesPackageExist(FPackageName::ObjectPathToPackageName(SafePath)))) {
         // The file fallback can answer false after the asset is already gone (a level did): what is left decides.
         DeletedPaths.Add(FPackageName::ObjectPathToPackageName(SafePath));
+        ++DeletedAssets;
       } else {
         // Say what is left: a file kept on disk under a still-loaded package returns on the next editor start.
         FailedToDeletePaths.Add(McpAssetExists(SafePath) ? SafePath
@@ -259,7 +261,7 @@ bool UEngineWireSubsystem::HandleDeleteAssets(
   // Return success only if at least one asset was deleted
   bool bSuccess = DeletedPaths.Num() > 0;
   Resp->SetBoolField(TEXT("success"), bSuccess);
-  Resp->SetNumberField(TEXT("deletedCount"), DeletedPaths.Num());
+  Resp->SetNumberField(TEXT("deletedCount"), DeletedAssets);
   // The receipt's changes[] reads deleted; with only a count, a delete reported that it changed nothing.
   TArray<TSharedPtr<FJsonValue>> DeletedArray;
   for (const FString& P : DeletedPaths) { DeletedArray.Add(MakeShared<FJsonValueString>(P)); }

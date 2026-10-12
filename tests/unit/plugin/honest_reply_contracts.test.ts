@@ -2794,3 +2794,14 @@ describe('a listed or sampled property reads as a JSON value', () => {
       .toContain('Values->SetField(Watched.Label, McpPropertyReflection::ExportPropertyToJsonValueOrText(Owner, Property));');
   });
 });
+
+describe('a folder delete counts the assets it held', () => {
+  // Deleting a folder of two assets answered "deletedCount": 1, the one path asked for.
+  it('reads the folder from the asset registry before it goes, and counts a single asset as one', () => {
+    const mutation = code('AssetWorkflow', 'Operations', 'McpAssetAssetMutation.cpp');
+    expect(mutation).toMatch(/GetAssetsByPath\(FName\(\*SafePath\), InFolder,\s*true\);/u);
+    expect(mutation).toContain('DeletedAssets += InFolder.Num();');
+    expect(mutation).toContain('++DeletedAssets;');
+    expect(mutation).toContain('Resp->SetNumberField(TEXT("deletedCount"), DeletedAssets);');
+  });
+});
