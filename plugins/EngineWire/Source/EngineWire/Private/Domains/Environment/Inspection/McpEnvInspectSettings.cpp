@@ -81,6 +81,7 @@ bool HandleInspectSettingsAction(
                 Resp->SetNumberField(TEXT("deltaTimeSeconds"), World->GetDeltaSeconds());
                 Resp->SetBoolField(TEXT("hasBegunPlay"), World->HasBegunPlay());
                 Resp->SetBoolField(TEXT("isPlayInEditor"), World->IsPlayInEditor());
+                Resp->SetBoolField(TEXT("isPaused"), World->IsPaused());
                 if (AWorldSettings* WorldSettings = World->GetWorldSettings())
                 {
                     Resp->SetNumberField(TEXT("killZ"), WorldSettings->KillZ);

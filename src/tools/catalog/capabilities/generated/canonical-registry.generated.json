@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "4f62ac48263f835c",
+  "catalogRevision": "7298bb1bf895c666",
   "recordCount": 411,
   "records": [
     {
@@ -43714,6 +43714,7 @@
           "world settings",
           "project settings",
           "editor settings",
+          "is the game paused",
           "selection",
           "current selection",
           "editor selection",
@@ -43722,7 +43723,7 @@
           "project name",
           "game settings"
         ],
-        "summary": "Read editor state: selected actors, viewport, world settings, project settings, editor settings.",
+        "summary": "Read editor state: selected actors, viewport, world settings (with whether the game is playing or paused), project settings, editor settings.",
         "whenToUse": [
           "editorState=selected_actors: The current editor selection must be inspected.",
           "editorState=viewport: Viewport and camera state must be inspected.",
@@ -43831,6 +43832,10 @@
             "isPlayInEditor": {
               "type": "boolean",
               "description": "Whether this world is a PIE world."
+            },
+            "isPaused": {
+              "type": "boolean",
+              "description": "Whether game time stands still: control_editor pause, or the game paused itself (an intro card or a pause menu). Nothing moves or simulates until control_editor resume (unpauseGame for a pause the game holds)."
             },
             "killZ": {
               "type": "number",
@@ -43941,7 +43946,7 @@
       },
       "examples": [
         {
-          "title": "Read editor state: selected actors, viewport, world settings, project settings, editor settings.",
+          "title": "Read editor state: selected actors, viewport, world settings (with whether the game is playing or paused), project settings, editor settings.",
           "input": {
             "action": "get_editor_state",
             "editorState": "selected_actors"
@@ -43990,8 +43995,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "d37a07ec51b5339bdd3b7f61de2bc30a17e239031fdd3a70facd1a823b64d132",
-        "content": "f03058945e0bf3d4ffa7430b9c24ff325279a092f23c9cb6fb3e007aa9949e07"
+        "schema": "c634a4b6ee4620984c4ae25378372881911ab4803491067ea0ac1f7b7bc67371",
+        "content": "76a7a8a9f0d1a4f333e83e3f31a6164399ea294a9578ded9a550d184f590fac3"
       }
     },
     {

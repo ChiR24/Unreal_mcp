@@ -419,4 +419,5 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'copy an emitter from another niagara system', accepted: ['manage_effect.edit_niagara_system'] },
   { query: 'remove several blueprint variables', accepted: ['blueprint.remove_variable'] },
   { query: 'list metasound nodes', accepted: ['manage_audio.list_metasound_nodes'] },
+  { query: 'is the game paused', accepted: ['inspect.get_editor_state'] },
 ];

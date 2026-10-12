@@ -40,6 +40,9 @@ const testCases = [
   { scenario: 'OPTIONAL: start_recording with durationSeconds and frameRate', toolName: 'control_editor', arguments: { action: 'start_recording', name: `Recording_Opt_${ts}`, durationSeconds: 1, frameRate: 30 }, expected: 'success' },
   { scenario: 'PLAYBACK: stop_recording after optional capture', toolName: 'control_editor', arguments: { action: 'stop_recording' }, expected: 'success' },
   { scenario: 'PLAYBACK: pause', toolName: 'control_editor', arguments: { action: 'pause' }, expected: 'success' },
+  // A pawn teleported into a paused game floats where it was put; the reply and its receipt say why.
+  { scenario: 'VERIFY: a world edit while paused says nothing will move', toolName: 'control_actor', arguments: { action: 'set_transform', actorName: PIE_PAWN, location: { x: 180, y: 0, z: 400 } }, expected: 'success', assertions: [{ path: 'structuredContent.result.details.gamePaused', equals: true, label: 'the reply flags the paused play world' }, { path: 'structuredContent.receipt.warnings.1', includes: 'The game is paused', label: 'and the receipt says nothing will move' }] },
+  { scenario: 'VERIFY: world settings read the pause', toolName: 'inspect', arguments: { action: 'get_world_settings' }, expected: 'success', assertions: [{ path: 'structuredContent.result.isPaused', equals: true, label: 'the play world reads paused' }] },
   // A game that pauses itself (a title or intro card) stays paused with the editor's pause off: resume says so.
   { scenario: 'PLAYBACK: resume', toolName: 'control_editor', arguments: { action: 'resume' }, expected: 'success|GAME_PAUSED' },
   { scenario: 'PLAYBACK: resume with unpauseGame', toolName: 'control_editor', arguments: { action: 'resume', unpauseGame: true }, expected: 'success' },

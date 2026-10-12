@@ -133,15 +133,23 @@ static void McpAddPieWorldWarning(const FString& CapabilityId,
 		return;
 	}
 	FString World;
+	bool bPaused = false, bDetailsPaused = false;
 	const TSharedPtr<FJsonObject>* Details = nullptr;
-	if (!Source->TryGetStringField(TEXT("worldName"), World) &&
-	    Source->TryGetObjectField(TEXT("details"), Details) && Details)
+	if (Source->TryGetObjectField(TEXT("details"), Details) && Details)
 	{
 		(*Details)->TryGetStringField(TEXT("worldName"), World);
+		(*Details)->TryGetBoolField(TEXT("gamePaused"), bDetailsPaused);
 	}
+	Source->TryGetStringField(TEXT("worldName"), World);
+	Source->TryGetBoolField(TEXT("gamePaused"), bPaused);
+	bPaused = bPaused || bDetailsPaused;
 	if (World.Contains(TEXT("/UEDPIE_")))
 	{
 		Out.AddUnique(FString::Printf(TEXT("Applied to the running Play-In-Editor world (%s): the change is discarded when play stops and the editor level is unchanged. Stop PIE first to edit the level."), *World));
+	}
+	if (bPaused)
+	{
+		Out.AddUnique(TEXT("The game is paused (an intro card, a pause menu or control_editor pause): nothing it moves or simulates advances until play resumes (control_editor resume with unpauseGame)."));
 	}
 }
 

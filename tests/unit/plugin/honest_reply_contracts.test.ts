@@ -2833,6 +2833,20 @@ describe('a float property reads as it was typed', () => {
   });
 });
 
+describe('a world edit in a paused game says nothing will move', () => {
+  // A character moved into a game its title card had paused stayed in the air where it was put: it read as broken gravity.
+  it('flags the paused play world on every reply and warns on world edits, on both transports', () => {
+    const responses = code('..', 'Core', 'Subsystem', 'EngineWireSubsystemResponses.cpp');
+    expect(responses).toMatch(/ContextWorld->IsPlayInEditor\(\) && ContextWorld->IsPaused\(\)\)\s*\{\s*EffectiveResult->SetBoolField\(TEXT\("gamePaused"\), true\);/u);
+    const native = code('..', 'MCP', 'Execute', 'McpNativeReceiptEnrichment.cpp');
+    const stdio = readFileSync(join('src', 'server', 'gateway', 'gateway-execute-dispatch.ts'), 'utf8');
+    const warning = 'The game is paused (an intro card, a pause menu or control_editor pause): nothing it moves or simulates advances until play resumes (control_editor resume with unpauseGame).';
+    expect(native).toContain(warning);
+    expect(stdio).toContain(warning);
+    expect(stdio).toContain('(isRecord(details) && details.gamePaused === true)');
+  });
+});
+
 describe('an undeclared key that is a declared parameter value names that parameter', () => {
   // get_transform with motion: true answered "allowed: ..., readMode, ..." and never said motion was a readMode value.
   it('builds the hint natively as the TypeScript gateway does', () => {

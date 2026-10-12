@@ -7254,6 +7254,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether a PIE session is active."
         },
+        "isPaused": {
+          "type": "boolean",
+          "description": "Whether game time stands still: control_editor pause, or the game paused itself (an intro card or a pause menu). Nothing moves or simulates until control_editor resume (unpauseGame for a pause the game holds)."
+        },
         "isPieWorld": {
           "type": "boolean",
           "description": "Whether the world is a PIE world."
