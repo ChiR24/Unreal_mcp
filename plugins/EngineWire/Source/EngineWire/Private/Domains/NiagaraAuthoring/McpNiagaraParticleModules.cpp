@@ -94,16 +94,20 @@ bool HandleFixedModuleAction(FActionContext& Context, const FString& SubAction)
     }
     // Recorded so an unmet-dependency report can name the actual dependency.
     Context.Result->SetStringField(TEXT("moduleScriptPath"), ModulePath);
-    if (!AddModuleToEmitterStack(Handle, ModulePath, Module->Usage, ModuleName))
+    const UNiagaraNodeFunctionCall* Added = AddModuleToEmitterStack(Handle, ModulePath, Module->Usage, ModuleName);
+    if (!Added)
     {
         Context.SendError(FString::Printf(TEXT("Failed to add the %s module to the emitter stack."), *ModuleName), TEXT("CREATE_FAILED"));
         return true;
     }
+    // The name the stack gave it is the one its inputs go by: the reply said "CurlForce" and "Scale Sprite Size"
+    // while set_parameter_value wanted CurlNoiseForce.Noise Strength and ScaleSpriteSize.Uniform Curve Scale.
+    ModuleName = Added->GetFunctionName();
     MarkDirtyAndVerify(Context, System);
     Context.Result->SetStringField(TEXT("moduleName"), ModuleName);
     Context.Result->SetBoolField(TEXT("moduleAdded"), true);
     Context.Result->SetStringField(TEXT("message"), FString::Printf(
-        TEXT("Added the %s module with its default inputs; set them with set_parameter_value (parameterName \"<Module>.<Input>\")."), *ModuleName));
+        TEXT("Added the %s module with its default inputs; set them with set_parameter_value (parameterName \"%s.<Input>\")."), *ModuleName, *ModuleName));
     Context.SendSuccess(true, FString::Printf(TEXT("%s module added."), *ModuleName));
     return true;
 }

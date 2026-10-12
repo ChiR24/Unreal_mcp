@@ -2761,3 +2761,13 @@ describe('a graph read lists the nodes that do nothing', () => {
     expect(queries).toContain('(bUnusedOnly && !NodeDoesNothing(Node))');
   });
 });
+
+describe('a Niagara module add names the module as its inputs go by', () => {
+  // The reply said CurlForce and Scale Sprite Size, while set_parameter_value wanted CurlNoiseForce.Noise Strength
+  // and ScaleSpriteSize.Uniform Curve Scale.
+  it('reads the name back from the module the stack made', () => {
+    const modules = code('NiagaraAuthoring', 'McpNiagaraParticleModules.cpp');
+    expect(modules).toContain('const UNiagaraNodeFunctionCall* Added = AddModuleToEmitterStack(Handle, ModulePath, Module->Usage, ModuleName);');
+    expect(modules).toContain('ModuleName = Added->GetFunctionName();');
+  });
+});
