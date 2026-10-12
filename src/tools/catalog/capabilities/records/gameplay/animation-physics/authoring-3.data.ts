@@ -53,7 +53,7 @@ export const ANIM_AUTHORED_3: readonly CapabilityRecordSource[] = [
     effect: 'write', editorStates: ['edit'], latency: 'interactive', resources: 'medium', plugins: ['ChaosVehiclesPlugin', 'EditorScriptingUtilities'],
     exampleInput: { action: 'configure_vehicle', actorName: 'Car_1', vehicleType: 'WheeledVehicle4W', dragCoefficient: 0.32 } }),
   buildRecord({ parentTool: T, id: `${T}.setup_physics_simulation`, action: 'setup_physics_simulation', topics: ['simulate physics', 'enable skeletal mesh physics'], family: F,
-    summary: 'Generate and assign a Physics Asset so a skeletal mesh can simulate.', whenToUse: ['A skeletal mesh must simulate physics.'], whenNotToUse: ['Use configure_vehicle.'],
+    summary: 'Generate and assign a Physics Asset so a skeletal mesh can simulate. A placed static mesh falls and tumbles without one: set bSimulatePhysics true on its mesh component (control_actor edit_component set_property).', whenToUse: ['A skeletal mesh must simulate physics.'], whenNotToUse: ['A vehicle is being set up (use configure_vehicle).', 'The object is a static mesh: set bSimulatePhysics on its component instead (control_actor edit_component set_property).'],
     inputProps: { actorName: P.actorName, skeletonPath: P.skeletonPath, skeletalMeshPath: P.skeletalMeshPath, savePath: A.savePath, physicsAssetName: A.physicsAssetName, assignToMesh: A.assignToMesh }, required: [],
     effect: 'write', editorStates: ['edit', 'pie'], behavior: { idempotency: 'idempotent' }, latency: 'interactive', resources: 'low',
     plugins: ESU, outputProps: { existingAsset: P.bool_, meshPath: P.meshPath }, outputRequired: [],

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "18493ac3b60e8b5a",
+  "catalogRevision": "0b3f210bf38e413c",
   "recordCount": 411,
   "records": [
     {
@@ -7126,12 +7126,13 @@
           "simulate physics",
           "enable skeletal mesh physics"
         ],
-        "summary": "Generate and assign a Physics Asset so a skeletal mesh can simulate.",
+        "summary": "Generate and assign a Physics Asset so a skeletal mesh can simulate. A placed static mesh falls and tumbles without one: set bSimulatePhysics true on its mesh component (control_actor edit_component set_property).",
         "whenToUse": [
           "A skeletal mesh must simulate physics."
         ],
         "whenNotToUse": [
-          "Use configure_vehicle."
+          "A vehicle is being set up (use configure_vehicle).",
+          "The object is a static mesh: set bSimulatePhysics on its component instead (control_actor edit_component set_property)."
         ]
       },
       "schemas": {
@@ -7201,7 +7202,7 @@
       },
       "examples": [
         {
-          "title": "Generate and assign a Physics Asset so a skeletal mesh can simulate.",
+          "title": "Generate and assign a Physics Asset so a skeletal mesh can simulate. A placed static mesh falls and tumbles without one: set bSimulatePhysics true on its mesh component (control_actor edit_component set_property).",
           "input": {
             "action": "setup_physics_simulation",
             "skeletalMeshPath": "/Game/SKM_Char",
@@ -7247,7 +7248,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "421bce1e4e31843d1b17d5ecafa6864a986f83a5f387e30989a722cc0da4d7f6",
-        "content": "a1e211c681cd65bf9f3a0b230da3e2cd6cf77b63534e5fd3256ebd0f22192ba0"
+        "content": "4076d1669daa2e9b741b9d0456676bf6f110b7db9ba69bd6d11830b5e92ba2ce"
       }
     },
     {
