@@ -80,7 +80,7 @@ const testCases = [
   { scenario: 'DELETE: delete EXPORTED_LEVEL', toolName: 'manage_level', arguments: { action: 'delete', levelPath: EXPORTED_LEVEL }, expected: 'success|not found' },
   { scenario: 'DELETE: delete SAVE_VIA_SAVE_LEVEL', toolName: 'manage_level', arguments: { action: 'delete', levelPath: SAVE_VIA_SAVE_LEVEL }, expected: 'success|not found' },
   { scenario: 'DELETE: delete', toolName: 'manage_level', arguments: { action: 'delete', levelPath: MOVED_LEVEL }, expected: 'success|not found' },
-  { scenario: 'DELETE: delete_level path alias', toolName: 'manage_level', arguments: { action: 'delete_level', path: IMPORTED_LEVEL }, expected: 'success|not found' },
+  { scenario: 'DELETE: delete_level', toolName: 'manage_level', arguments: { action: 'delete_level', levelPath: IMPORTED_LEVEL }, expected: 'success|not found' },
 
   // === CLEANUP ===
   { scenario: 'Cleanup: delete test actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: TEST_ACTOR }, expected: 'success|not found' },
