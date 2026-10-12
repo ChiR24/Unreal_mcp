@@ -1,4 +1,5 @@
 #include "Domains/NiagaraAuthoring/McpNiagaraContext.h"
+#include "Foundation/Reflection/McpPropertyReflection.h"
 
 namespace McpNiagaraAuthoringHandlers
 {
@@ -8,7 +9,8 @@ static TSharedPtr<FJsonValue> ReadModuleInputValue(const FNiagaraParameterStore&
     const FNiagaraTypeDefinition& Type = Entry.GetType();
     const uint8* Data = Store.GetParameterData(FNiagaraVariable(Entry));
     if (!Data) return nullptr;
-    if (Type == FNiagaraTypeDefinition::GetFloatDef()) return MakeShared<FJsonValueNumber>(*reinterpret_cast<const float*>(Data));
+    // Floats as typed: a smoke colour of 0.035 read 0.03500000014901161.
+    if (Type == FNiagaraTypeDefinition::GetFloatDef()) return MakeShared<FJsonValueNumber>(McpPropertyReflection::ReadableFloat(*reinterpret_cast<const float*>(Data)));
     if (Type == FNiagaraTypeDefinition::GetIntDef() || Type.IsEnum()) return MakeShared<FJsonValueNumber>(*reinterpret_cast<const int32*>(Data));
     if (Type == FNiagaraTypeDefinition::GetBoolDef()) return MakeShared<FJsonValueBoolean>(reinterpret_cast<const FNiagaraBool*>(Data)->GetValue());
     const int32 Count = Type == FNiagaraTypeDefinition::GetVec2Def() ? 2
@@ -18,7 +20,7 @@ static TSharedPtr<FJsonValue> ReadModuleInputValue(const FNiagaraParameterStore&
     TArray<TSharedPtr<FJsonValue>> Components;
     for (int32 Index = 0; Index < Count; ++Index)
     {
-        Components.Add(MakeShared<FJsonValueNumber>(reinterpret_cast<const float*>(Data)[Index]));
+        Components.Add(MakeShared<FJsonValueNumber>(McpPropertyReflection::ReadableFloat(reinterpret_cast<const float*>(Data)[Index])));
     }
     return MakeShared<FJsonValueArray>(Components);
 }

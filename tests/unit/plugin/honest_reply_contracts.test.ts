@@ -2817,9 +2817,12 @@ describe('a level viewport screenshot says when the viewport is not realtime', (
 
 describe('a float property reads as it was typed', () => {
   // LightDecay 2.2 read back as 2.200000047683716: the float was widened to double before it was written out.
-  it('writes a float through its seven significant digits, in arrays, maps and sets too', () => {
+  it('writes a float through its seven significant digits, in arrays, maps, sets and Niagara module inputs too', () => {
     const reflection = code('..', 'Foundation', 'Reflection', 'McpPropertyReflection.cpp');
-    expect(reflection).toContain('FString::Printf(TEXT("%.7g"), FloatProp->GetPropertyValue_InContainer(TargetContainer))');
+    expect(reflection).toContain('return FCString::Atod(*FString::Printf(TEXT("%.7g"), Value));');
+    expect(reflection).toContain('ReadableFloat(FloatProp->GetPropertyValue_InContainer(TargetContainer))');
+    const niagara = code('NiagaraAuthoring', 'McpNiagaraInfoValidate.cpp');
+    expect(niagara.match(/McpPropertyReflection::ReadableFloat\(/gu)).toHaveLength(2);
     const arrays = code('..', 'Foundation', 'Reflection', 'McpPropertyReflectionArrays.cpp');
     expect(arrays).toContain('return ExportPropertyToJsonValueOrText(ElemPtr, Inner);');
   });

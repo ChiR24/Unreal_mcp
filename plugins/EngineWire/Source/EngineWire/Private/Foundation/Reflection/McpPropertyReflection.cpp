@@ -26,8 +26,7 @@ TSharedPtr<FJsonValue> ExportPropertyToJsonValue(void* TargetContainer, FPropert
     }
     if (FFloatProperty* FloatProp = CastField<FFloatProperty>(Property))
     {
-        // Widened to double, a float read 2.200000047683716; its seven significant digits read it as it was typed.
-        return MakeShared<FJsonValueNumber>(FCString::Atod(*FString::Printf(TEXT("%.7g"), FloatProp->GetPropertyValue_InContainer(TargetContainer))));
+        return MakeShared<FJsonValueNumber>(ReadableFloat(FloatProp->GetPropertyValue_InContainer(TargetContainer)));
     }
     if (FDoubleProperty* DoubleProp = CastField<FDoubleProperty>(Property))
     {
@@ -128,6 +127,11 @@ TSharedPtr<FJsonValue> ExportPropertyToJsonValue(void* TargetContainer, FPropert
     }
 
     return nullptr;
+}
+
+double ReadableFloat(float Value)
+{
+    return FCString::Atod(*FString::Printf(TEXT("%.7g"), Value));
 }
 
 TSharedPtr<FJsonValue> ExportPropertyToJsonValueOrText(void* TargetContainer, FProperty* Property)
