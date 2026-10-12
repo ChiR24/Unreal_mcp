@@ -306,6 +306,14 @@ const testCases = [
     { edit: 'connect_pins', from: '$entry.then', to: '$print.execute' },
   ] }, expected: 'success', assertions: [{ path: 'structuredContent.result.succeeded', equals: 2, label: 'the entry node resolved' }] },
 
+  // === BATCH: a create step's expression gives a Math Expression its formula and pins, before its pinDefaults ===
+  { scenario: 'BATCH: build_graph creates a Math Expression with its formula and an input default', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: BP_PATH, graphName: 'EventGraph', operations: [
+    { edit: 'create_node', id: 'blend', nodeType: 'MathExpression', expression: 'Low + (High - Low) * Alpha', pinDefaults: { Alpha: 0.5 } },
+  ] }, expected: 'success', assertions: [{ path: 'structuredContent.result.results.0.inputPins', length: 3, label: 'the formula made its three input pins' }] },
+  { scenario: 'ERROR: build_graph refuses a create step expression that does not parse', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: BP_PATH, graphName: 'EventGraph', operations: [
+    { edit: 'create_node', nodeType: 'MathExpression', expression: 'FMax(Gain, 0)' },
+  ] }, expected: 'error|EXPRESSION_INVALID' },
+
   // === BATCH: a step the batch does not run is refused before any step, not after the ones before it applied ===
   { scenario: 'ERROR: build_graph refuses a last arrange_nodes step before running any', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: BP_PATH, graphName: 'EventGraph', operations: [
     { edit: 'create_node', id: 'unrun', nodeType: 'CallFunction', memberName: 'PrintString' },

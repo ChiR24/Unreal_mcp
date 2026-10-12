@@ -2595,7 +2595,7 @@ describe('a batch names a literal only when the engine stored something else', (
       .toContain('McpAppliedValueDiffers((*StepObj)->TryGetField(TEXT("defaultValue")), Applied)');
     const steps = code('BlueprintGraph', 'McpBPGraphBatchSteps.cpp');
     expect(steps).toContain('McpAppliedValueDiffers(Pair.Value, AppliedValue)');
-    expect(steps).toMatch(/if \(Applied->Values\.Num\(\) > 0\)\s*\{\s*Entry->SetObjectField\(TEXT\("pinDefaults"\), Applied\);/u);
+    expect(steps).toMatch(/if \(Applied->Values\.Num\(\) > 0\)\s*\{?\s*Entry->SetObjectField\(TEXT\("pinDefaults"\), Applied\);/u);
     expect(steps).toContain('Entry->RemoveField(TEXT("appliedValue"));');
   });
 });

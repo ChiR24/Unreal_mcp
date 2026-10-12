@@ -68,6 +68,24 @@ describe('a pin descriptor names a literal only on a visible input nothing is wi
   });
 });
 
+// A create step's expression was dropped: the Math Expression came back with no pins, and the batch answered success.
+describe('a build_graph create step takes a Math Expression formula', () => {
+  const steps = (): string => read('Domains', 'BlueprintGraph', 'McpBPGraphBatchSteps.cpp');
+
+  it('sets it through set_node_property Expression, before pinDefaults name its inputs', () => {
+    expect(steps()).toContain('RunStep(Parent, Payload, TEXT("set_node_property"), StepId + TEXT(".expression"), Unused)');
+    expect(steps()).toMatch(/ApplyExpression\(Context, Payload, Guid, StepId, Entry, OutErrorCode\);\s*DefaultsError = DefaultsError\.IsEmpty\(\) \? ApplyPinDefaults\(/u);
+  });
+
+  it('checks it before any step runs, as it checks an Expression property step', () => {
+    expect(steps()).toContain('Edit == TEXT("create_node") && Step.TryGetStringField(TEXT("expression"), Expression)');
+  });
+
+  it('the batch description says so', () => {
+    expect(paramDescription('blueprint.edit_graph', 'operations')).toMatch(/MathExpression with expression/u);
+  });
+});
+
 describe('a function the memberClass lacks names the classes that do declare it', () => {
   it('searches every loaded class, not only the function libraries', () => {
     const search = sliceBetween(
