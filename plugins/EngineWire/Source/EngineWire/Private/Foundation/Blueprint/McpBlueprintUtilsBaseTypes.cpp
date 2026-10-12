@@ -118,7 +118,9 @@ bool ResolveBaseType(
             OutError = FString::Printf(TEXT("Unresolved enum '%s'"), *EnumPath);
             return false;
         }
-        OutPin = MakePin(K2::PC_Enum, NAME_None, Enum);
+        // A Blueprint enum pin is a byte pin naming its enum, as the editor's type picker makes it: the compiler has no
+        // PC_Enum case and built such a variable, input or member as an int32 property.
+        OutPin = MakePin(K2::PC_Byte, NAME_None, Enum);
         return true;
     }
 
@@ -158,9 +160,15 @@ bool ResolveBaseType(
             return SetStructPin(*It, OutPin);
         }
     }
-    if (UEnum* Enum = FindObject<UEnum>(nullptr, *Token))
+    UEnum* Enum = FindObject<UEnum>(nullptr, *Token);
+    // A bare enum name (EMovementMode) is no path FindObject takes: it was refused as an unknown type.
+    for (TObjectIterator<UEnum> It; It && !Enum; ++It)
     {
-        OutPin = MakePin(K2::PC_Enum, NAME_None, Enum);
+        Enum = It->GetName().Equals(Token, ESearchCase::IgnoreCase) ? *It : nullptr;
+    }
+    if (Enum)
+    {
+        OutPin = MakePin(K2::PC_Byte, NAME_None, Enum);
         return true;
     }
     if (UClass* ClassResolve = ResolveClassByName(Token))

@@ -97,7 +97,7 @@ void McpRefreshStructDependents(UUserDefinedStruct* S,
     for (const FStructVariableDescription& Var : FStructureEditorUtils::GetVarDesc(S))
     {
         const FEdGraphPinType PinType = Var.ToPinType();
-        if (PinType.PinCategory == UEdGraphSchema_K2::PC_Enum)
+        if (PinType.PinCategory == UEdGraphSchema_K2::PC_Enum || PinType.PinCategory == UEdGraphSchema_K2::PC_Byte)
         {
             if (UEnum* E = Cast<UEnum>(PinType.PinSubCategoryObject.Get()))
             {

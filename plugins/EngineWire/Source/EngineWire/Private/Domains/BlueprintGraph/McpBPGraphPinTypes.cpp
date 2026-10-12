@@ -131,7 +131,13 @@ FEdGraphPinType ResolveCustomEventPinType(const FString& TypeName)
         return PinType;
     }
 
-    if (UEnum* Enum = FindObject<UEnum>(nullptr, *CleanType))
+    UEnum* Enum = FindObject<UEnum>(nullptr, *CleanType);
+    // A bare enum name (EMovementMode) is no path FindObject takes: the parameter was refused.
+    for (TObjectIterator<UEnum> It; It && !Enum; ++It)
+    {
+        Enum = It->GetName().Equals(CleanType, ESearchCase::IgnoreCase) ? *It : nullptr;
+    }
+    if (Enum)
     {
         PinType.PinCategory = UEdGraphSchema_K2::PC_Byte;
         PinType.PinSubCategoryObject = Enum;

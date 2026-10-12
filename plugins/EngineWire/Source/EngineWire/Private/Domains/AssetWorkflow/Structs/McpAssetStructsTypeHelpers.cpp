@@ -50,7 +50,9 @@ FString PinTypeToSummary(const FEdGraphPinType& Pin)
             Base += TEXT(":") + Sub->GetPathName();
         }
     }
-    else if (Pin.PinCategory == UEdGraphSchema_K2::PC_Enum)
+    // An enum member is a byte pin naming its enum (the editor's form, and the resolver's); PC_Enum is older MCP output.
+    else if (Pin.PinCategory == UEdGraphSchema_K2::PC_Enum ||
+             (Pin.PinCategory == UEdGraphSchema_K2::PC_Byte && Cast<UEnum>(Pin.PinSubCategoryObject.Get())))
     {
         Base = TEXT("Enum:");
         if (UEnum* Enum = Cast<UEnum>(Pin.PinSubCategoryObject.Get()))
@@ -114,7 +116,7 @@ FString PinTypeToSummary(const FEdGraphPinType& Pin)
                 {
                     return TEXT("Struct:") + Cast<UScriptStruct>(Vt.TerminalSubCategoryObject.Get())->GetPathName();
                 }
-                if (Vt.TerminalCategory == UEdGraphSchema_K2::PC_Enum)
+                if (Vt.TerminalCategory == UEdGraphSchema_K2::PC_Enum || Vt.TerminalCategory == UEdGraphSchema_K2::PC_Byte)
                 {
                     return TEXT("Enum:") + Cast<UEnum>(Vt.TerminalSubCategoryObject.Get())->GetPathName();
                 }

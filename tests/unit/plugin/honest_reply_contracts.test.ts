@@ -2700,3 +2700,20 @@ describe('a pin descriptor says when it holds many values', () => {
     }
   });
 });
+
+describe('an enum type keeps its enum when compiled', () => {
+  // add_variable Enum:/Script/Engine.EMovementMode compiled to an int32 property: the resolver made a PC_Enum pin, and
+  // the compiler has no PC_Enum case ("Failed to resolve the type-subtype, create a generic property"). A custom event
+  // with that parameter failed to compile as "out-of-date". The editor's type picker makes a byte pin naming the enum.
+  it('the shared resolver makes byte pins for enums, and struct summaries read them as enums', () => {
+    const base = code('..', 'Foundation', 'Blueprint', 'McpBlueprintUtilsBaseTypes.cpp');
+    expect(base).not.toContain('MakePin(K2::PC_Enum');
+    expect(base.split('MakePin(K2::PC_Byte, NAME_None, Enum)').length - 1).toBe(2);
+    // A bare enum name (EMovementMode) is no path FindObject takes; both resolvers scan for it by name.
+    expect(base).toContain('for (TObjectIterator<UEnum> It; It && !Enum; ++It)');
+    expect(code('BlueprintGraph', 'McpBPGraphPinTypes.cpp')).toContain('for (TObjectIterator<UEnum> It; It && !Enum; ++It)');
+    const summary = code('AssetWorkflow', 'Structs', 'McpAssetStructsTypeHelpers.cpp');
+    expect(summary).toMatch(/Pin\.PinCategory == UEdGraphSchema_K2::PC_Byte && Cast<UEnum>\(Pin\.PinSubCategoryObject\.Get\(\)\)/u);
+    expect(summary).toContain('Vt.TerminalCategory == UEdGraphSchema_K2::PC_Enum || Vt.TerminalCategory == UEdGraphSchema_K2::PC_Byte');
+  });
+});
