@@ -39,7 +39,7 @@ export const COMPONENT_RECORDS: readonly CapabilityRecordSource[] = [
     family: FAMILY_COMPONENT,
     topics: ['add component to actor', 'actor component', 'attach component to actor'],
     summary: 'Add a new component of a given type to an actor. If any requested property (or meshPath) does not apply, the call fails naming what did not, although the component was added.',
-    whenToUse: ['A component must be attached to an existing actor.', 'A placed actor must spin or travel by itself, like a platform: add a RotatingMovementComponent (RotationRate) or an InterpToMovementComponent (at least two ControlPoints).'],
+    whenToUse: ['A component must be attached to an existing actor.', 'A placed actor must spin or travel by itself, like a platform: add a RotatingMovementComponent (properties RotationRate {pitch, yaw, roll} in degrees per second) or an InterpToMovementComponent (ControlPoints: two or more {PositionControlPoint {x, y, z}, bPositionIsRelative}, Duration in seconds, and BehaviourType PingPong or Loop: the default OneShot stops at the last point).'],
     whenNotToUse: ['An existing component should be configured (use set_component_property).'],
     inputProps: {
       actorName: P.actorName, componentType: P.componentType, componentName: P.componentName, properties: P.properties,

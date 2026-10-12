@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "81ca4eb517b96e6a",
+  "catalogRevision": "b1b202a27e770cdd",
   "recordCount": 411,
   "records": [
     {
@@ -32698,7 +32698,7 @@
         "summary": "Add or remove an actor component, or set one or more of its properties (a placed mesh's StaticMesh or OverrideMaterials, a light's Intensity or LightColor, a TextRender's Text).",
         "whenToUse": [
           "edit=add: A component must be attached to an existing actor.",
-          "edit=add: A placed actor must spin or travel by itself, like a platform: add a RotatingMovementComponent (RotationRate) or an InterpToMovementComponent (at least two ControlPoints).",
+          "edit=add: A placed actor must spin or travel by itself, like a platform: add a RotatingMovementComponent (properties RotationRate {pitch, yaw, roll} in degrees per second) or an InterpToMovementComponent (ControlPoints: two or more {PositionControlPoint {x, y, z}, bPositionIsRelative}, Duration in seconds, and BehaviourType PingPong or Loop: the default OneShot stops at the last point).",
           "edit=remove: A component must be permanently detached and removed from an actor.",
           "edit=set_property: Component properties must be changed via a properties object or propertyName/value pair.",
           "edit=set_property: Several placed actors need the same component values (a row of lights' colour or light function): actorNames does them in one call.",
@@ -32871,7 +32871,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "a53bd4b3024e95b704c17e00b15eba521603fcffb361c73f5daa71d435ea85af",
-        "content": "e8bfc17f02df64ed2250417220fbb8448758aed324b2f091293357555799cf1c"
+        "content": "debf977d1316d4734a11291f40370096a2e7e3a3d3350e7cd892e81ec10fd856"
       }
     },
     {
