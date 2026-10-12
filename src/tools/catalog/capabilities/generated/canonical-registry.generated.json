@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "734a62ec48ad9c77",
+  "catalogRevision": "4f62ac48263f835c",
   "recordCount": 411,
   "records": [
     {
@@ -19358,9 +19358,11 @@
           "node types",
           "find nodes",
           "search graph nodes",
-          "filter graph nodes"
+          "filter graph nodes",
+          "unused nodes",
+          "what writes a variable"
         ],
-        "summary": "Inspect a Blueprint graph: its nodes (every one, or those whose title, pin default, text or object path matches a filter), node details, pin details, or the available node types.",
+        "summary": "Inspect a Blueprint graph: its nodes (every one, those whose title, pin default, text or object path matches a filter, or the unused ones), node details, pin details, or the available node types.",
         "whenToUse": [
           "info=graph: The full node list of a graph must be inspected in one call.",
           "info=graph: A large graph must be read in parts: filter by node title or by what a pin holds, page with offset/limit.",
@@ -19575,7 +19577,7 @@
       },
       "examples": [
         {
-          "title": "Inspect a Blueprint graph: its nodes (every one, or those whose title, pin default, text or object path matches a filter), node details, pin details, or the available node types.",
+          "title": "Inspect a Blueprint graph: its nodes (every one, those whose title, pin default, text or object path matches a filter, or the unused ones), node details, pin details, or the available node types.",
           "input": {
             "action": "inspect_graph",
             "blueprintPath": "/Game/Blueprints/BP_Test",
@@ -19670,7 +19672,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "8f33459cd2cac8f83bcb51145c73160c2e2690127fcbfd6b15a32d354e44c573",
-        "content": "9f61c89bff4623ff8096659e95db4a831fabc34cb561b5a4e9d19afb95b210ec"
+        "content": "9f54d72976fe749a9fc8fe28d1caee96a0b17c539b5d65c503f2184a4f0b62ce"
       }
     },
     {
@@ -54192,7 +54194,7 @@
           "audio meter",
           "verify sound plays"
         ],
-        "summary": "Play a sound: 2D, at a location (played or spawned), attached to an actor, or prime it for playback. A 2D sound (looping music too) plays until stop_sound. measure plays it 2D and reports how loud it played (peak and average dB, silent).",
+        "summary": "Play a sound: 2D, at a location (played or spawned), attached to an actor, or prime it for playback. A 2D sound (looping music too) plays until stop_sound. measure plays it 2D and reports how loud it played (peak and average dB, silent). The sounds already playing are listed by console_command au.DumpActiveSounds.",
         "whenToUse": [
           "playback=2d: Use it to play a non-spatial sound.",
           "playback=at_location: Use it to play a sound at a world location.",
@@ -54370,7 +54372,7 @@
       },
       "examples": [
         {
-          "title": "Play a sound: 2D, at a location (played or spawned), attached to an actor, or prime it for playback. A 2D sound (looping music too) plays until stop_sound. measure plays it 2D and reports how loud it played (peak and average dB, silent).",
+          "title": "Play a sound: 2D, at a location (played or spawned), attached to an actor, or prime it for playback. A 2D sound (looping music too) plays until stop_sound. measure plays it 2D and reports how loud it played (peak and average dB, silent). The sounds already playing are listed by console_command au.DumpActiveSounds.",
           "input": {
             "action": "play_sound",
             "soundPath": "/Game/Audio/Waves/SW_FootstepConcrete",
@@ -54471,7 +54473,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "5a15db6eda3d6892a99e9122abce96bfeb692004006237f52d28ca1f16c91dcc",
-        "content": "af3a6492dde52754c47accc6f194efb0e18d5c357e43cb1fb5f92002d9602f06"
+        "content": "21591c7ab04741610656d969c6de1b6512f3dc16bd19cc50b309f6100552ab38"
       }
     },
     {
@@ -92636,11 +92638,13 @@
         "domain": "console",
         "family": "console",
         "topics": [
-          "console_command"
+          "console_command",
+          "active sounds"
         ],
         "summary": "Run a validated console command.",
         "whenToUse": [
           "A console command must be run with explicit empty-input rejection.",
+          "The sounds playing right now must be listed (is the music still on, did a loop stop): au.DumpActiveSounds puts each one with its asset, owner and volume in output.",
           "An arbitrary console command must be run and its result returned."
         ],
         "whenNotToUse": [
@@ -92747,7 +92751,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "60f83cf067f4f83dc8a574e8e06158c13fab777b793f916986a18de69d179b39",
-        "content": "c044a15eaa08fad4d7511f6259de2750e0f04cfb47f14eb0e94d27618b91a509"
+        "content": "72726a8bfdc3094fdf6ccea7bc9dbfb1c9ebdfd4993d24aeed94e329e407ea93"
       }
     },
     {

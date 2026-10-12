@@ -410,4 +410,13 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'material usage flags', accepted: ['system_control.validate_assets'] },
   { query: 'default material in packaged game', accepted: ['system_control.validate_assets'] },
   { query: 'check nanite materials before packaging', accepted: ['system_control.validate_assets'] },
+  { query: 'find unused blueprint nodes', accepted: ['blueprint.inspect_graph'] },
+  { query: 'who writes this variable', accepted: ['blueprint.inspect_graph'] },
+  { query: 'active sounds', accepted: ['system_control.console_command'] },
+  { query: 'which actors overlapped the player', accepted: ['control_actor.get_transform'] },
+  { query: 'spawn a row of actors', accepted: ['control_actor.spawn'] },
+  { query: 'move several actors at once', accepted: ['control_actor.set_transform'] },
+  { query: 'copy an emitter from another niagara system', accepted: ['manage_effect.edit_niagara_system'] },
+  { query: 'remove several blueprint variables', accepted: ['blueprint.remove_variable'] },
+  { query: 'list metasound nodes', accepted: ['manage_audio.list_metasound_nodes'] },
 ];

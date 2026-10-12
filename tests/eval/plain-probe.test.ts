@@ -9,7 +9,7 @@ import { gatewaySearchRanker, type GatewayRanker } from './measure-retrieval.js'
 import { nativeSearchRanker } from './native-ranker.js';
 import { PLAIN_PROBE } from './plain-probe.data.js';
 
-const FLOORS = { typescript: 393, native: 395 } as const;
+const FLOORS = { typescript: 402, native: 404 } as const;
 
 const firstHits = (rank: GatewayRanker): number =>
   PLAIN_PROBE.filter((entry) => entry.accepted.includes(String(rank(entry.query, 1)[0]))).length;
