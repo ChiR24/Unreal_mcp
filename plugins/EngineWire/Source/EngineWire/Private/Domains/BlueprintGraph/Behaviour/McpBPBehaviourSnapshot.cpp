@@ -7,10 +7,12 @@
 #include "EdGraph/EdGraphPin.h"
 #include "Engine/SCS_Node.h"
 #include "Engine/SimpleConstructionScript.h"
+#include "Engine/TimelineTemplate.h"
 #include "Foundation/BridgeHelpers/Assets/McpAssetSaveRegistry.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPCompileHelpers.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPDiag.h"
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
+#include "K2Node_Timeline.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 
 namespace McpBlueprintBehaviour
@@ -88,6 +90,10 @@ FSnapshot TakeSnapshot(UBlueprint* Blueprint)
     Out.bCompiled = Blueprint->Status == BS_UpToDate || Blueprint->Status == BS_UpToDateWithWarnings;
     Out.bPackageDirty = Blueprint->GetOutermost()->IsDirty();
     Out.Variables = Blueprint->NewVariables;
+    for (UTimelineTemplate* Template : Blueprint->Timelines)
+    {
+        Out.Timelines.Add(Template);
+    }
     Out.Graphs.Append(SnapshotMemberGraphs(Blueprint));
     if (Blueprint->SimpleConstructionScript)
     {
@@ -135,6 +141,13 @@ void Restore(UBlueprint* Blueprint, const FSnapshot& Before, const TSharedPtr<FJ
         {
             if (Node && !Before.NodeGuids.Contains(Node->NodeGuid))
             {
+                // Removing a Timeline node deletes its timeline: unbind one that was there before (edit_timeline keyed
+                // it), so only a timeline the batch made goes with the node.
+                UK2Node_Timeline* Timeline = Cast<UK2Node_Timeline>(Node);
+                if (Timeline && Before.Timelines.Contains(Blueprint->FindTimelineTemplateByVariableName(Timeline->TimelineName)))
+                {
+                    Timeline->TimelineName = NAME_None;
+                }
                 FBlueprintEditorUtils::RemoveNode(Blueprint, Node, /*bDontRecompile=*/true);
             }
             else if (Node)

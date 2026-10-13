@@ -62,6 +62,7 @@ struct FSnapshot
     TSet<UEdGraph*> Graphs;                  // function, dispatcher and event graphs
     TArray<FBPVariableDescription> Variables; // NewVariables, defaults and flags included
     TSet<USCS_Node*> ScsNodes;
+    TSet<UObject*> Timelines;                 // timeline templates, which a removed Timeline node would take along
     bool bCompiled = false;                   // compile status before the call
     bool bPackageDirty = false;
 };
