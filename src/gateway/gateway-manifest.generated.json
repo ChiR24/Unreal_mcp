@@ -9293,6 +9293,7 @@
         "customEventName",
         "damage",
         "defaultValue",
+        "delay",
         "deleteScope",
         "delta",
         "destroyOnDeath",
@@ -9378,6 +9379,7 @@
         "namespace",
         "newName",
         "newParent",
+        "nextLevel",
         "nodeGuid",
         "nodeId",
         "nodeIds",
@@ -9555,7 +9557,8 @@
               "shoot",
               "chase",
               "controls",
-              "respawn"
+              "respawn",
+              "goal"
             ],
             "description": "Which add behaviour variant to run."
           },
@@ -9713,6 +9716,10 @@
           },
           "defaultValue": {
             "description": "Default value for the variable or property."
+          },
+          "delay": {
+            "type": "number",
+            "description": "Seconds between reaching the goal and opening nextLevel (default 2)."
           },
           "deleteScope": {
             "type": "string",
@@ -10195,6 +10202,10 @@
             "type": "string",
             "description": "New parent SCS node name."
           },
+          "nextLevel": {
+            "type": "string",
+            "description": "Level opened once the goal is reached, by name or /Game path (a path must exist). Omitted: the game stays in this level, and OnGoalReached is left for other logic."
+          },
           "nodeGuid": {
             "type": "string",
             "description": "Node GUID accepted in place of nodeId."
@@ -10571,7 +10582,7 @@
           },
           "soundPath": {
             "type": "string",
-            "description": "Sound asset played where the pickup was."
+            "description": "Sound asset played at the actor: where a pickup was collected, or a goal when the player reaches it."
           },
           "sourceNode": {
             "type": "string",
@@ -11316,17 +11327,21 @@
         "configure_weapon",
         "configure_projectile",
         "configure_damage",
-        "get_combat_info"
+        "get_combat_info",
+        "apply_damage"
       ],
       "parameterNames": [
+        "actorName",
         "attachmentSlots",
         "baseDamage",
         "blueprintPath",
         "bounceEnabled",
         "bounceVelocityRatio",
+        "causerName",
         "collisionRadius",
         "damage",
         "damageMultiplier",
+        "damageType",
         "fireRate",
         "hitboxBoneName",
         "hitboxSize",
@@ -11351,6 +11366,10 @@
       "inputSchema": {
         "type": "object",
         "properties": {
+          "actorName": {
+            "type": "string",
+            "description": "The actor to hit, by name in the running game; PlayerPawn names the pawn the player controls."
+          },
           "attachmentSlots": {
             "type": "array",
             "description": "Attachment slot definitions created on the weapon.",
@@ -11392,6 +11411,10 @@
             "type": "number",
             "description": "Fraction of velocity retained on bounce (0-1)."
           },
+          "causerName": {
+            "type": "string",
+            "description": "The actor that deals it (DamageCauser), by name; its controller, or the controller of the pawn it is, instigates. Omitted: no causer."
+          },
           "collisionRadius": {
             "type": "number",
             "description": "Projectile collision sphere radius."
@@ -11403,6 +11426,10 @@
           "damageMultiplier": {
             "type": "number",
             "description": "Damage multiplier applied for this hitbox."
+          },
+          "damageType": {
+            "type": "string",
+            "description": "Damage type class, a path or a name (default DamageType)."
           },
           "fireRate": {
             "type": "number",
@@ -11547,7 +11574,8 @@
               "configure_weapon",
               "configure_projectile",
               "configure_damage",
-              "get_combat_info"
+              "get_combat_info",
+              "apply_damage"
             ],
             "description": "Action to invoke on manage_combat."
           }

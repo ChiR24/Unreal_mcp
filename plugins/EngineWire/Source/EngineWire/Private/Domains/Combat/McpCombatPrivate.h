@@ -83,5 +83,6 @@ struct FCombatActionContext
     bool HandleDamageExecution() const;
     bool HandleWeaponEquipment() const;
     bool HandleInfoActions() const;
+    bool HandleRuntimeDamage() const;
 };
 }

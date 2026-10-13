@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "282f914c94ee5e34",
-  "recordCount": 415,
+  "catalogRevision": "922fd9067dde7709",
+  "recordCount": 416,
   "records": [
     {
       "id": "animation_physics.analyze_animation",
@@ -12792,7 +12792,8 @@
         "blueprint.add_shoot",
         "blueprint.add_chase",
         "blueprint.add_controls",
-        "blueprint.add_respawn"
+        "blueprint.add_respawn",
+        "blueprint.add_goal"
       ],
       "legacyIds": [
         {
@@ -12854,6 +12855,13 @@
           "folded": {
             "behaviour": "respawn"
           }
+        },
+        {
+          "tool": "manage_blueprint",
+          "action": "add_goal",
+          "folded": {
+            "behaviour": "goal"
+          }
         }
       ],
       "discovery": {
@@ -12909,9 +12917,16 @@
           "respawn at checkpoint",
           "fall off the map",
           "respawn when falling",
-          "player falls off"
+          "player falls off",
+          "goal",
+          "goal zone",
+          "level complete",
+          "finish line",
+          "end of the level",
+          "win when the player reaches the goal",
+          "go to the next level"
         ],
-        "summary": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player, walk, look and jump controls for a Character, or a pawn that respawns when it falls or dies, with checkpoints.",
+        "summary": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player, walk, look and jump controls for a Character, a pawn that respawns when it falls or dies (with checkpoints), or a goal that ends the level when the player reaches it.",
         "whenToUse": [
           "behaviour=health: A player, enemy or breakable object must take damage and die; bind OnHealthChanged to a health bar.",
           "behaviour=damage_on_touch: Spikes, lava, an enemy body or a fire must hurt what touches it.",
@@ -12921,7 +12936,8 @@
           "behaviour=chase: An enemy or creature must run after the player; with usePathfinding (default) the level needs a Nav Mesh Bounds Volume (manage_ai configure_navigation), without it the pawn heads straight for the player.",
           "behaviour=controls: A Character made with manage_character create_character_blueprint (or any Character without input) must be playable: it has no input until this runs.",
           "behaviour=respawn: A player pawn must not be lost for good when it falls off the level or dies.",
-          "behaviour=respawn: Checkpoints: tag a trigger actor (manage_interaction create_interactable trigger, or any actor that overlaps pawns) with checkpointTag; the pawn respawns where it stood when it touched it."
+          "behaviour=respawn: Checkpoints: tag a trigger actor (manage_interaction create_interactable trigger, or any actor that overlaps pawns) with checkpointTag; the pawn respawns where it stood when it touched it.",
+          "behaviour=goal: A level needs an end: a finish line, an exit door, a flag the player reaches."
         ],
         "whenNotToUse": [
           "behaviour=health: The project uses the Gameplay Ability System for attributes (use manage_gas).",
@@ -12931,7 +12947,8 @@
           "behaviour=shoot: A weapon actor the pawn holds must do the shooting (use manage_combat configure_projectile for its Fire function).",
           "behaviour=chase: The pawn needs patrols, senses or decisions beyond chasing (use manage_ai with a Behavior Tree or State Tree).",
           "behaviour=controls: Only one key or action must be added (use manage_networking configure_input for the asset and blueprint edit_graph for its node).",
-          "behaviour=respawn: A pawn that should stay dead, such as an enemy: give it the health behaviour with destroyOnDeath instead."
+          "behaviour=respawn: A pawn that should stay dead, such as an enemy: give it the health behaviour with destroyOnDeath instead.",
+          "behaviour=goal: Something must happen on every touch, by any actor (use a trigger actor from manage_interaction create_interactable)."
         ]
       },
       "schemas": {
@@ -12977,7 +12994,7 @@
             },
             "soundPath": {
               "type": "string",
-              "description": "Sound asset played where the pickup was."
+              "description": "Sound asset played at the actor: where a pickup was collected, or a goal when the player reaches it."
             },
             "sprintSpeed": {
               "type": "number",
@@ -13035,6 +13052,14 @@
               "type": "string",
               "description": "Actor tag that marks a checkpoint (default Checkpoint)."
             },
+            "nextLevel": {
+              "type": "string",
+              "description": "Level opened once the goal is reached, by name or /Game path (a path must exist). Omitted: the game stays in this level, and OnGoalReached is left for other logic."
+            },
+            "delay": {
+              "type": "number",
+              "description": "Seconds between reaching the goal and opening nextLevel (default 2)."
+            },
             "behaviour": {
               "type": "string",
               "enum": [
@@ -13045,7 +13070,8 @@
                 "shoot",
                 "chase",
                 "controls",
-                "respawn"
+                "respawn",
+                "goal"
               ],
               "description": "Which add behaviour variant to run."
             }
@@ -13118,7 +13144,7 @@
       },
       "examples": [
         {
-          "title": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player, walk, look and jump controls for a Character, or a pawn that respawns when it falls or dies, with checkpoints.",
+          "title": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player, walk, look and jump controls for a Character, a pawn that respawns when it falls or dies (with checkpoints), or a goal that ends the level when the player reaches it.",
           "input": {
             "action": "add_behaviour",
             "blueprintPath": "/Game/Blueprints/BP_Enemy",
@@ -13167,7 +13193,8 @@
             "shoot": "add_shoot",
             "chase": "add_chase",
             "controls": "add_controls",
-            "respawn": "add_respawn"
+            "respawn": "add_respawn",
+            "goal": "add_goal"
           },
           "declaredBy": {
             "maxHealth": [
@@ -13192,7 +13219,8 @@
               "pickup"
             ],
             "soundPath": [
-              "pickup"
+              "pickup",
+              "goal"
             ],
             "sprintSpeed": [
               "sprint"
@@ -13239,14 +13267,20 @@
             ],
             "checkpointTag": [
               "respawn"
+            ],
+            "nextLevel": [
+              "goal"
+            ],
+            "delay": [
+              "goal"
             ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "732f529fa3c5af9ab64eb793130c920dba8300b4d4e3cebf7068ed3f73052028",
-        "content": "913944f087ebb5b5efa3c8fdfb6302c4a7148a7ceab6cab569f97214a4cf1c01"
+        "schema": "32e9f8642213096108e435af103c3838dfb185f31072f080f972c55d6a723115",
+        "content": "b4f4b761aaf4788d274c151eb572bc19f951e0ac3103dd5fd1f817d279600710"
       }
     },
     {
@@ -57785,6 +57819,147 @@
         "algorithm": "sha256",
         "schema": "e4a44b41622a3dd289ba00c448262214968d649d561b9a0fd66e06720a65a205",
         "content": "8222db484ab2f8b47abc3d20147c08d56cbac7861672e6e837a4168596a128dd"
+      }
+    },
+    {
+      "id": "manage_combat.apply_damage",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "manage_combat",
+          "action": "apply_damage"
+        }
+      ],
+      "discovery": {
+        "domain": "manage combat",
+        "family": "combat",
+        "topics": [
+          "apply_damage",
+          "apply damage",
+          "deal damage",
+          "damage an actor",
+          "hurt the player",
+          "kill the player",
+          "test health"
+        ],
+        "summary": "Deal damage to an actor in the running game, as a hit does (ApplyDamage): its own damage handling decides what happens, so an actor with the health behaviour loses Health and dies at 0. A negative amount heals such an actor.",
+        "whenToUse": [
+          "A health, death or respawn behaviour must be tested while the game runs, without placing a weapon or a pain volume first."
+        ],
+        "whenNotToUse": [
+          "The damage a weapon or projectile Blueprint deals must change (configure_projectile, create_combat_asset)."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "actorName": {
+              "type": "string",
+              "description": "The actor to hit, by name in the running game; PlayerPawn names the pawn the player controls."
+            },
+            "damage": {
+              "type": "number",
+              "description": "Damage to deal; a negative amount heals an actor whose damage handling allows it (the health behaviour does)."
+            },
+            "causerName": {
+              "type": "string",
+              "description": "The actor that deals it (DamageCauser), by name; its controller, or the controller of the pawn it is, instigates. Omitted: no causer."
+            },
+            "damageType": {
+              "type": "string",
+              "description": "Damage type class, a path or a name (default DamageType)."
+            }
+          },
+          "required": [
+            "actorName",
+            "damage"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "damageApplied": {
+              "type": "number",
+              "description": "The damage the actor took: 0 when it cannot be damaged (Can be Damaged off)."
+            },
+            "health": {
+              "type": "number",
+              "description": "Its Health variable after the hit, when it has a number by that name (the health behaviour gives one)."
+            },
+            "destroyed": {
+              "type": "boolean",
+              "description": "The hit destroyed the actor."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Deal damage to an actor in the running game, as a hit does (ApplyDamage): its own damage handling decides what happens, so an actor with the health behaviour loses Health and dies at 0. A negative amount heals such an actor.",
+          "input": {
+            "action": "apply_damage",
+            "actorName": "PlayerPawn",
+            "damage": 25
+          },
+          "output": {
+            "success": true,
+            "message": "BP_Player0 took 25 damage; its Health is now 75.",
+            "damageApplied": 25,
+            "health": 75
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [],
+        "editorStates": [
+          "pie",
+          "simulate"
+        ]
+      },
+      "behavior": {
+        "effect": "write",
+        "idempotency": "non-idempotent",
+        "longRunning": false,
+        "safeToRetry": false
+      },
+      "policy": {
+        "requiredScope": "write",
+        "consent": "none",
+        "dataAccess": "project-write"
+      },
+      "cost": {
+        "latency": "instant",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "manage_combat",
+        "dispatchAction": "apply_damage"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "03dabd0ce5981ab1306a3ef94e2cb5992b77053f50ab7e6e8466fb028c23098f",
+        "content": "a59d8429efb78169207e1923df8c1be7f4c06dd851c5b381db7cc4d71e6b4e39"
       }
     },
     {

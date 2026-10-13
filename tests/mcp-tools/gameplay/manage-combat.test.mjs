@@ -22,6 +22,8 @@ const testCases = [
   // === SETUP ===
   { scenario: 'Setup: spawn test actor', toolName: 'control_actor', arguments: { action: 'spawn', classPath: '/Engine/BasicShapes/Cube', actorName: TEST_ACTOR, location: { x: 0, y: 0, z: 100 } }, expected: 'success' },
 
+  // A hit lands only on the running game; the editor level is not a target.
+  { scenario: 'ERROR: apply_damage outside PIE', toolName: 'manage_combat', arguments: { action: 'apply_damage', actorName: 'PlayerPawn', damage: 10 }, expected: 'error|PIE_NOT_RUNNING|EDITOR_STATE_MISMATCH' },
   // === WEAPON BASE ===
   {
     scenario: 'CREATE: create_weapon_blueprint',

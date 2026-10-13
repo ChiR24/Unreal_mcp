@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `282f914c94ee5e34`
+Catalog revision: `922fd9067dde7709`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 415 capabilities across
+The catalog declares 416 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -46,7 +46,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_audio` | 14 | 3 | 11 | 0 | audio |
 | `manage_blueprint` | 32 | 7 | 19 | 6 | blueprint, widget |
 | `manage_character` | 10 | 2 | 8 | 0 | manage character |
-| `manage_combat` | 5 | 1 | 4 | 0 | manage combat |
+| `manage_combat` | 6 | 1 | 5 | 0 | manage combat |
 | `manage_effect` | 13 | 2 | 10 | 1 | manage effect |
 | `manage_gas` | 6 | 1 | 5 | 0 | manage gas |
 | `manage_geometry` | 16 | 2 | 14 | 0 | world |
@@ -62,7 +62,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-64 of 415 capabilities require consent.
+64 of 416 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -186,7 +186,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `asset.rename` | `manage_asset` | `rename` | write | write | explicit | `manage_asset.rename` `manage_asset.rename_asset` |
 | `asset.set_metadata` | `manage_asset` | `set_metadata` | write | write | explicit | `manage_asset.set_metadata` `manage_asset.set_tags` |
 | `asset.source_control` | `manage_asset` | `source_control_checkout` | write | write | explicit | `manage_asset.source_control` `manage_asset.source_control_checkout` `manage_asset.source_control_submit` `manage_asset.source_control_enable` `manage_asset.source_control_init` `manage_asset.source_control_commit_all` |
-| `blueprint.add_behaviour` | `manage_blueprint` | `add_health` | write | write | none | `manage_blueprint.add_behaviour` `manage_blueprint.add_health` `manage_blueprint.add_damage_on_touch` `manage_blueprint.add_pickup` `manage_blueprint.add_sprint` `manage_blueprint.add_shoot` `manage_blueprint.add_chase` `manage_blueprint.add_controls` `manage_blueprint.add_respawn` |
+| `blueprint.add_behaviour` | `manage_blueprint` | `add_health` | write | write | none | `manage_blueprint.add_behaviour` `manage_blueprint.add_health` `manage_blueprint.add_damage_on_touch` `manage_blueprint.add_pickup` `manage_blueprint.add_sprint` `manage_blueprint.add_shoot` `manage_blueprint.add_chase` `manage_blueprint.add_controls` `manage_blueprint.add_respawn` `manage_blueprint.add_goal` |
 | `blueprint.add_content_widget` | `manage_blueprint` | `add_text_block` | write | write | none | `manage_blueprint.add_content_widget` `manage_blueprint.add_text_block` `manage_blueprint.add_rich_text_block` `manage_blueprint.add_image` `manage_blueprint.add_button` `manage_blueprint.add_check_box` `manage_blueprint.add_combo_box` `manage_blueprint.add_slider` `manage_blueprint.add_spin_box` `manage_blueprint.add_progress_bar` `manage_blueprint.add_text_input` `manage_blueprint.add_list_view` `manage_blueprint.add_tree_view` `manage_blueprint.add_widget_component` |
 | `blueprint.add_function` | `manage_blueprint` | `add_function` | write | write | none | `manage_blueprint.add_function` `manage_blueprint.add_event` |
 | `blueprint.add_game_widget` | `manage_blueprint` | `add_health_bar` | write | write | none | `manage_blueprint.add_game_widget` `manage_blueprint.add_health_bar` `manage_blueprint.add_ammo_counter` `manage_blueprint.add_crosshair` `manage_blueprint.add_minimap` `manage_blueprint.add_compass` `manage_blueprint.add_damage_indicator` `manage_blueprint.add_interaction_prompt` `manage_blueprint.add_objective_tracker` `manage_blueprint.add_quest_tracker` |
@@ -374,6 +374,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_character.rig_metahuman` | `manage_character` | `rig_metahuman` | write | write | none | `manage_character.rig_metahuman` |
 | `manage_character.set_movement_property` | `manage_character` | `set_walk_speed` | write | write | none | `manage_character.set_movement_property` `manage_character.set_walk_speed` `manage_character.set_jump_height` `manage_character.set_gravity_scale` `manage_character.set_ground_friction` `manage_character.set_braking_deceleration` |
 | `manage_character.setup_movement` | `manage_character` | `setup_movement` | write | write | none | `manage_character.setup_movement` |
+| `manage_combat.apply_damage` | `manage_combat` | `apply_damage` | write | write | none | `manage_combat.apply_damage` |
 | `manage_combat.configure_damage` | `manage_combat` | `configure_hit_detection` | write | write | none | `manage_combat.configure_damage` `manage_combat.configure_hit_detection` `manage_combat.setup_hitbox_component` |
 | `manage_combat.configure_projectile` | `manage_combat` | `configure_projectile` | write | write | none | `manage_combat.configure_projectile` `manage_combat.configure_projectile_movement` `manage_combat.configure_projectile_collision` `manage_combat.configure_projectile_homing` |
 | `manage_combat.configure_weapon` | `manage_combat` | `configure_weapon_mesh` | write | write | none | `manage_combat.configure_weapon` `manage_combat.configure_weapon_mesh` `manage_combat.setup_attachment_system` |

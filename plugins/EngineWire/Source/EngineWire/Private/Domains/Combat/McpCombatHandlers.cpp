@@ -42,7 +42,8 @@ bool UEngineWireSubsystem::HandleManageCombatAction(
         Context.HandleDamageTypes() ||
         Context.HandleDamageExecution() ||
         Context.HandleWeaponEquipment() ||
-        Context.HandleInfoActions())
+        Context.HandleInfoActions() ||
+        Context.HandleRuntimeDamage())
     {
         return true;
     }

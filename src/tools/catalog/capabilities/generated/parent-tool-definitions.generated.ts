@@ -12839,7 +12839,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "shoot",
             "chase",
             "controls",
-            "respawn"
+            "respawn",
+            "goal"
           ],
           "description": "Which add behaviour variant to run."
         },
@@ -12997,6 +12998,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "defaultValue": {
           "description": "Default value for the variable or property."
+        },
+        "delay": {
+          "type": "number",
+          "description": "Seconds between reaching the goal and opening nextLevel (default 2)."
         },
         "deleteScope": {
           "type": "string",
@@ -13479,6 +13484,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "New parent SCS node name."
         },
+        "nextLevel": {
+          "type": "string",
+          "description": "Level opened once the goal is reached, by name or /Game path (a path must exist). Omitted: the game stays in this level, and OnGoalReached is left for other logic."
+        },
         "nodeGuid": {
           "type": "string",
           "description": "Node GUID accepted in place of nodeId."
@@ -13855,7 +13864,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "soundPath": {
           "type": "string",
-          "description": "Sound asset played where the pickup was."
+          "description": "Sound asset played at the actor: where a pickup was collected, or a goal when the player reaches it."
         },
         "sourceNode": {
           "type": "string",
@@ -15857,6 +15866,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
     "inputSchema": {
       "type": "object",
       "properties": {
+        "actorName": {
+          "type": "string",
+          "description": "The actor to hit, by name in the running game; PlayerPawn names the pawn the player controls."
+        },
         "attachmentSlots": {
           "type": "array",
           "description": "Attachment slot definitions created on the weapon.",
@@ -15898,6 +15911,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Fraction of velocity retained on bounce (0-1)."
         },
+        "causerName": {
+          "type": "string",
+          "description": "The actor that deals it (DamageCauser), by name; its controller, or the controller of the pawn it is, instigates. Omitted: no causer."
+        },
         "collisionRadius": {
           "type": "number",
           "description": "Projectile collision sphere radius."
@@ -15909,6 +15926,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "damageMultiplier": {
           "type": "number",
           "description": "Damage multiplier applied for this hitbox."
+        },
+        "damageType": {
+          "type": "string",
+          "description": "Damage type class, a path or a name (default DamageType)."
         },
         "fireRate": {
           "type": "number",
@@ -16053,7 +16074,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "configure_weapon",
             "configure_projectile",
             "configure_damage",
-            "get_combat_info"
+            "get_combat_info",
+            "apply_damage"
           ],
           "description": "Action to invoke on manage_combat."
         }
@@ -16109,9 +16131,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Damage it deals on a hit."
         },
+        "damageApplied": {
+          "type": "number",
+          "description": "The damage the actor took: 0 when it cannot be damaged (Can be Damaged off)."
+        },
         "damageTypePath": {
           "type": "string",
           "description": "Canonical /Game damage type asset path."
+        },
+        "destroyed": {
+          "type": "boolean",
+          "description": "The hit destroyed the actor."
         },
         "details": {
           "type": "object",
@@ -16125,6 +16155,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "fireRate": {
           "type": "number",
           "description": "Rate of fire in rounds per minute."
+        },
+        "health": {
+          "type": "number",
+          "description": "Its Health variable after the hit, when it has a number by that name (the health behaviour gives one)."
         },
         "hitboxSize": {
           "type": "object",

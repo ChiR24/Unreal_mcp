@@ -1,8 +1,9 @@
-// add_health, add_damage_on_touch, add_pickup, add_sprint, add_shoot and add_chase (blueprint.add_behaviour): gameplay logic written into an
+// add_health, add_damage_on_touch, add_pickup, add_sprint, add_shoot, add_chase and add_goal (blueprint.add_behaviour): gameplay logic written into an
 // Actor Blueprint from a recipe (Resources/Recipes/Gameplay and Character) through McpBlueprintBehaviour::Author, so
 // the Blueprint holds plain engine nodes. Each was a hand-built graph of ten to forty nodes and pins to get right.
 #include "Domains/Blueprint/McpBPActionContext.h"
 #include "Domains/BlueprintGraph/Behaviour/McpBPBehaviour.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
 #include "Foundation/BridgeHelpers/Reflection/McpClassResolve.h"
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
 
@@ -111,6 +112,23 @@ bool PlanChase(const TSharedPtr<FJsonObject> &Payload, const UBlueprint *Bluepri
   return true;
 }
 
+// The player reaching the actor (recipe Gameplay/Goal); a nextLevel given as a path must be an asset that exists.
+bool PlanGoal(const TSharedPtr<FJsonObject> &Payload, FBehaviourPlan &Plan, FString &OutError) {
+  const FString Level = GetJsonStringField(Payload, TEXT("nextLevel")).TrimStartAndEnd();
+  const double Delay = GetJsonNumberField(Payload, TEXT("delay"), 2.0);
+  if (!ReadSound(Payload, Plan, OutError)) {
+    return false;
+  }
+  OutError = Delay < 0.0 ? FString(TEXT("delay must be 0 or more"))
+             : Level.StartsWith(TEXT("/")) && !McpAssetExists(Level)
+                 ? FString::Printf(TEXT("nextLevel %s is not a level in the project"), *Level)
+                 : FString();
+  Plan.Recipe = TEXT("Goal");
+  SetString(Plan, TEXT("NextLevel"), Level.IsEmpty() ? FString(TEXT("None")) : Level);
+  SetNumber(Plan, TEXT("Delay"), Delay);
+  return OutError.IsEmpty();
+}
+
 // A chasing pawn moves only under an AI controller: placed or spawned, it gets one.
 void PossessByAI(UBlueprint *Blueprint, const TSharedPtr<FJsonObject> &Report) {
   APawn *Pawn = Blueprint->GeneratedClass ? Cast<APawn>(Blueprint->GeneratedClass->GetDefaultObject()) : nullptr;
@@ -160,6 +178,8 @@ bool PlanBehaviour(const FString &Action, const TSharedPtr<FJsonObject> &Payload
     return PlanShoot(Payload, Blueprint, Plan, OutError);
   } else if (Action == TEXT("add_chase")) {
     return PlanChase(Payload, Blueprint, Plan, OutError);
+  } else if (Action == TEXT("add_goal")) {
+    return PlanGoal(Payload, Plan, OutError);
   } else {
     const UClass *Parent = Blueprint->GeneratedClass ? Blueprint->GeneratedClass.Get() : Blueprint->ParentClass.Get();
     const double SprintSpeed = GetJsonNumberField(Payload, TEXT("sprintSpeed"), 1000.0);
@@ -180,7 +200,7 @@ bool PlanBehaviour(const FString &Action, const TSharedPtr<FJsonObject> &Payload
 bool HandleBlueprintAddBehaviour(const FBlueprintActionContext &Context) {
   MCP_BLUEPRINT_ACTION_LOCALS(Context);
   static const TCHAR *const Actions[] = {TEXT("add_health"), TEXT("add_damage_on_touch"), TEXT("add_pickup"),
-                                         TEXT("add_sprint"), TEXT("add_shoot"), TEXT("add_chase")};
+                                         TEXT("add_sprint"), TEXT("add_shoot"), TEXT("add_chase"), TEXT("add_goal")};
   const TCHAR *Matched = nullptr;
   for (const TCHAR *Each : Actions) {
     Matched = Matched ? Matched : (ActionMatchesPattern(Each) ? Each : nullptr);

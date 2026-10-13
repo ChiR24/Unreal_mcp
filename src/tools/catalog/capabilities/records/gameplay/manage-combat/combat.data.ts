@@ -2,15 +2,9 @@
  * manage_combat records: weapon base and firing modes, projectiles, damage
  * types, damage execution, hitboxes, attachments and introspection.
  *
- * Parameters mirror the field literals read by
- * McpCombatInfo.cpp, DamageTypes.cpp,
- * DamageExecution.cpp, HealthRuntime.cpp and DefenseRuntime.cpp.
- *
- * apply_damage / heal / create_shield / modify_armor are Blueprint AUTHORING
- * actions despite their runtime-sounding names: the native handlers load the
- * Blueprint, call AddBlueprintVariableCombat, compile and McpSafeAssetSave. No
- * live PIE actor is mutated, so they stay editorStates 'edit' like every other
- * action on this tool.
+ * Parameters mirror the field literals read by the Domains/Combat handlers. Every
+ * action authors Blueprint assets in edit mode except apply_damage, which hits an
+ * actor in the running game.
  */
 import type { CapabilityRecordSource } from '../../../model.js';
 import { buildRecord } from '../helpers.js';
@@ -105,4 +99,25 @@ export const COMBAT_RECORDS: readonly CapabilityRecordSource[] = [
     effect: 'read', latency: 'instant', resources: 'low',
     outputProps: { combatInfo: C.combatInfo }, outputRequired: [],
     exampleInput: { action: 'get_combat_stats', blueprintPath: WEAPON }, exampleOutput: { success: true, message: 'Combat stats', combatInfo: { parentClass: 'Actor', baseDamage: 45 } } }),
+  // A hit in the running game through UGameplayStatics::ApplyDamage (McpCombatRuntimeDamage.cpp).
+  buildRecord({ parentTool: T, id: `${T}.apply_damage`, action: 'apply_damage', family: F,
+    topics: ['apply damage', 'deal damage', 'damage an actor', 'hurt the player', 'kill the player', 'test health'],
+    summary: 'Deal damage to an actor in the running game, as a hit does (ApplyDamage): its own damage handling decides what happens, so an actor with the health behaviour loses Health and dies at 0. A negative amount heals such an actor.',
+    whenToUse: ['A health, death or respawn behaviour must be tested while the game runs, without placing a weapon or a pain volume first.'],
+    whenNotToUse: ['The damage a weapon or projectile Blueprint deals must change (configure_projectile, create_combat_asset).'],
+    inputProps: {
+      actorName: { type: 'string', description: 'The actor to hit, by name in the running game; PlayerPawn names the pawn the player controls.' },
+      damage: { type: 'number', description: 'Damage to deal; a negative amount heals an actor whose damage handling allows it (the health behaviour does).' },
+      causerName: { type: 'string', description: 'The actor that deals it (DamageCauser), by name; its controller, or the controller of the pawn it is, instigates. Omitted: no causer.' },
+      damageType: { type: 'string', description: 'Damage type class, a path or a name (default DamageType).' },
+    },
+    required: ['actorName', 'damage'],
+    effect: 'write', editorStates: ['pie', 'simulate'], latency: 'instant', resources: 'low',
+    outputProps: {
+      damageApplied: { type: 'number', description: 'The damage the actor took: 0 when it cannot be damaged (Can be Damaged off).' },
+      health: { type: 'number', description: 'Its Health variable after the hit, when it has a number by that name (the health behaviour gives one).' },
+      destroyed: { type: 'boolean', description: 'The hit destroyed the actor.' },
+    }, outputRequired: [],
+    exampleInput: { action: 'apply_damage', actorName: 'PlayerPawn', damage: 25 },
+    exampleOutput: { success: true, message: 'BP_Player0 took 25 damage; its Health is now 75.', damageApplied: 25, health: 75 } }),
 ];

@@ -1,6 +1,6 @@
 /**
  * Gameplay behaviours written into an Actor Blueprint from the plugin's recipe files
- * (McpBlueprintBehaviour::Author): health, damage on touch, pickups, sprint, shooting, chasing, player controls and respawning. Folded
+ * (McpBlueprintBehaviour::Author): health, damage on touch, pickups, sprint, shooting, chasing, player controls, respawning and a goal. Folded
  * into blueprint.add_behaviour (selector behaviour). Every one is all or nothing,
  * re-runnable (a second run replaces the first), compiled and saved.
  */
@@ -18,6 +18,8 @@ const BEHAVIOUR_OUTPUT = {
   functions: { type: 'array', items: { type: 'string' }, description: 'Functions it added, which other logic can call.' },
   dispatchers: { type: 'array', items: { type: 'string' }, description: 'Event dispatchers it added, which other logic can bind.' },
 } as const;
+
+const SOUND_PATH = { type: 'string', description: 'Sound asset played at the actor: where a pickup was collected, or a goal when the player reaches it.' } as const;
 
 const OVERLAP_NOTE = 'It fires on overlap, so the actor needs a component that overlaps pawns (a sphere or box with the Trigger or OverlapAllDynamic profile).';
 
@@ -82,7 +84,7 @@ export const BEHAVIOURS_RECORDS: readonly CapabilityRecordSource[] = [
       collectorClass: { type: 'string', description: 'Instead of heal: the class that collects it (a Blueprint path such as /Game/Blueprints/BP_Player), whose variableName goes up by amount.' },
       variableName: { type: 'string', description: 'With collectorClass: the collector\'s Int or Float variable (Coins).' },
       amount: { type: 'number', description: 'With collectorClass: added each time (default 1).' },
-      soundPath: { type: 'string', description: 'Sound asset played where the pickup was.' },
+      soundPath: SOUND_PATH,
     },
     required: ['blueprintPath'],
     outputProps: BEHAVIOUR_OUTPUT,
@@ -215,5 +217,29 @@ export const BEHAVIOURS_RECORDS: readonly CapabilityRecordSource[] = [
     resources: 'medium',
     plugins: BP_PLUGINS,
     exampleInput: { action: 'add_respawn', blueprintPath: '/Game/Blueprints/BP_Player', fallHeight: 1500 },
+  }),
+  buildRecord({
+    id: 'blueprint.add_goal',
+    action: 'add_goal',
+    family: FAMILY,
+    domain: DOMAIN,
+    topics: ['goal', 'goal zone', 'level complete', 'finish line', 'end of the level', 'win when the player reaches the goal', 'go to the next level'],
+    summary: 'Make an actor the goal of a level: the first time the player touches it, OnGoalReached fires and soundPath plays there, and with nextLevel that level opens delay seconds later. ' + OVERLAP_NOTE,
+    whenToUse: ['A level needs an end: a finish line, an exit door, a flag the player reaches.'],
+    whenNotToUse: ['Something must happen on every touch, by any actor (use a trigger actor from manage_interaction create_interactable).'],
+    inputProps: {
+      blueprintPath: P.blueprintPath,
+      nextLevel: { type: 'string', description: 'Level opened once the goal is reached, by name or /Game path (a path must exist). Omitted: the game stays in this level, and OnGoalReached is left for other logic.' },
+      delay: { type: 'number', description: 'Seconds between reaching the goal and opening nextLevel (default 2).' },
+      soundPath: SOUND_PATH,
+    },
+    required: ['blueprintPath'],
+    outputProps: BEHAVIOUR_OUTPUT,
+    effect: 'write',
+    behavior: { idempotency: 'idempotent' },
+    latency: 'interactive',
+    resources: 'medium',
+    plugins: BP_PLUGINS,
+    exampleInput: { action: 'add_goal', blueprintPath: '/Game/Blueprints/BP_Flag', nextLevel: '/Game/Maps/L_Level2' },
   }),
 ];

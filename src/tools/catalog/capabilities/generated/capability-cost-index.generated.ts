@@ -813,6 +813,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_blueprint::add_event": "interactive|low",
   "manage_blueprint::add_function": "interactive|low",
   "manage_blueprint::add_game_widget": "interactive|low",
+  "manage_blueprint::add_goal": "interactive|medium",
   "manage_blueprint::add_grid_panel": "interactive|low",
   "manage_blueprint::add_health": "interactive|medium",
   "manage_blueprint::add_health_bar": "interactive|low",
@@ -962,6 +963,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_character::set_movement_property": "interactive|low",
   "manage_character::set_walk_speed": "interactive|low",
   "manage_character::setup_movement": "interactive|medium",
+  "manage_combat::apply_damage": "instant|low",
   "manage_combat::configure_damage": "interactive|low",
   "manage_combat::configure_hit_detection": "interactive|low",
   "manage_combat::configure_projectile": "interactive|low",
@@ -1574,4 +1576,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1561;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1563;

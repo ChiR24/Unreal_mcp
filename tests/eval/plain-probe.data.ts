@@ -524,4 +524,9 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'checkpoint', accepted: ['blueprint.add_behaviour'] },
   { query: 'respawn at checkpoint', accepted: ['blueprint.add_behaviour'] },
   { query: 'fall off the map', accepted: ['blueprint.add_behaviour'] },
+  { query: 'apply damage', accepted: ['manage_combat.apply_damage'] },
+  { query: 'hurt the player', accepted: ['manage_combat.apply_damage'] },
+  { query: 'level complete', accepted: ['blueprint.add_behaviour'] },
+  { query: 'finish line', accepted: ['blueprint.add_behaviour'] },
+  { query: 'goal zone', accepted: ['blueprint.add_behaviour'] },
 ];

@@ -54,6 +54,8 @@ bool HandleBlueprintAddRespawn(const FBlueprintActionContext &Context) {
   const McpBlueprintBehaviour::FSnapshot Before = McpBlueprintBehaviour::TakeSnapshot(Blueprint);
   TSharedPtr<FJsonObject> Report;
   double PreviousRemoved = 0;
+  // The members both parts made, not the last part's alone (the death part adds none, and read as if nothing was added).
+  TMap<FString, TArray<TSharedPtr<FJsonValue>>> Members;
   for (const TCHAR *Name : {TEXT("Respawn"), TEXT("RespawnOnDeath")}) {
     if (!bOnDeath && FCString::Strcmp(Name, TEXT("RespawnOnDeath")) == 0) {
       continue;
@@ -71,6 +73,15 @@ bool HandleBlueprintAddRespawn(const FBlueprintActionContext &Context) {
     }
     Report = Result.Report;
     PreviousRemoved += GetJsonNumberField(Report, TEXT("previousRemoved"));
+    for (const TCHAR *Field : {TEXT("variables"), TEXT("functions"), TEXT("dispatchers")}) {
+      const TArray<TSharedPtr<FJsonValue>> *Made = nullptr;
+      if (Report->TryGetArrayField(Field, Made)) {
+        Members.FindOrAdd(Field).Append(*Made);
+      }
+    }
+  }
+  for (const TPair<FString, TArray<TSharedPtr<FJsonValue>>> &Made : Members) {
+    Report->SetArrayField(Made.Key, Made.Value);
   }
   for (const TCHAR *Field : {TEXT("results"), TEXT("nodeIds"), TEXT("tag"), TEXT("stepCount"), TEXT("succeeded")}) {
     Report->RemoveField(Field);
