@@ -9,6 +9,8 @@ class UObject;
 
 namespace McpInputHandlers
 {
+// actionMappings: the keys InAction is still mapped to in Context. Named apart from get_input_info's mappingCount,
+// the whole context's count: after a remove_mapping, "mappingCount": 0 read as an emptied context.
 void AddInputMappingSummary(
     TSharedPtr<FJsonObject> Result,
     const UInputMappingContext* Context,

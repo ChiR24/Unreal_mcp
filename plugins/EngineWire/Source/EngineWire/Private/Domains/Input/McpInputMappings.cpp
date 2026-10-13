@@ -34,8 +34,7 @@ void AddInputMappingSummary(
         Mappings.Add(MakeShared<FJsonValueObject>(MappingObject));
     }
 
-    Result->SetNumberField(TEXT("mappingCount"), Mappings.Num());
-    Result->SetArrayField(TEXT("mappings"), Mappings);
+    Result->SetArrayField(TEXT("actionMappings"), Mappings);
 }
 
 void SetInputChangedAsset(const TSharedPtr<FJsonObject>& Result, const UObject* Asset, bool bSaved)
