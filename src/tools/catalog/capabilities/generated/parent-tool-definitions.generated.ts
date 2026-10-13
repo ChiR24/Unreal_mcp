@@ -12838,7 +12838,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "sprint",
             "shoot",
             "chase",
-            "controls"
+            "controls",
+            "respawn"
           ],
           "description": "Which add behaviour variant to run."
         },
@@ -12901,6 +12902,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "chaseRange": {
           "type": "number",
           "description": "Distance within which it chases, in units (default 2000)."
+        },
+        "checkpointTag": {
+          "type": "string",
+          "description": "Actor tag that marks a checkpoint (default Checkpoint)."
         },
         "clipping": {
           "type": "string",
@@ -13106,6 +13111,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "fadeTime": {
           "type": "number",
           "description": "Seconds of the fade: the damage flash (default 0.6) or the loading screen FadeIn animation (0 makes none)."
+        },
+        "fallHeight": {
+          "type": "number",
+          "description": "How far below its respawn point the pawn may fall before it respawns, in units (default 2000)."
         },
         "fillColorAndOpacity": {
           "type": "object",
@@ -14972,6 +14981,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "x-unreal-reflection-boundary": true,
           "description": "Links the new one replaced, each {nodeId, nodeTitle, pinName}: a pin that holds one link (an exec output, a data input) drops its old link to take the new one. Absent when nothing was replaced."
+        },
+        "respawnOnDeath": {
+          "type": "boolean",
+          "description": "The pawn has the health behaviour, so dying respawns it too; add health first, then respawn again, to get it."
         },
         "resultNodeGuid": {
           "type": "string",

@@ -1,6 +1,6 @@
 /**
  * Gameplay behaviours written into an Actor Blueprint from the plugin's recipe files
- * (McpBlueprintBehaviour::Author): health, damage on touch, pickups, sprint, shooting, chasing and player controls. Folded
+ * (McpBlueprintBehaviour::Author): health, damage on touch, pickups, sprint, shooting, chasing, player controls and respawning. Folded
  * into blueprint.add_behaviour (selector behaviour). Every one is all or nothing,
  * re-runnable (a second run replaces the first), compiled and saved.
  */
@@ -192,5 +192,28 @@ export const BEHAVIOURS_RECORDS: readonly CapabilityRecordSource[] = [
     resources: 'medium',
     plugins: BP_PLUGINS,
     exampleInput: { action: 'add_controls', blueprintPath: '/Game/Blueprints/BP_Player' },
+  }),
+  buildRecord({
+    id: 'blueprint.add_respawn',
+    action: 'add_respawn',
+    family: FAMILY,
+    domain: DOMAIN,
+    topics: ['respawn', 'respawn the player', 'checkpoint', 'respawn at checkpoint', 'fall off the map', 'respawn when falling', 'player falls off'],
+    summary: 'Make a pawn come back when it falls off the level or dies: to its start, or to where it last touched an actor tagged checkpointTag (a checkpoint), once it falls fallHeight below that point, and when it dies (back at full health) if it has the health behaviour. Respawn, SetRespawnPoint and OnRespawned are left for other logic.',
+    whenToUse: ['A player pawn must not be lost for good when it falls off the level or dies.', 'Checkpoints: tag a trigger actor (manage_interaction create_interactable trigger, or any actor that overlaps pawns) with checkpointTag; the pawn respawns where it stood when it touched it.'],
+    whenNotToUse: ['A pawn that should stay dead, such as an enemy: give it the health behaviour with destroyOnDeath instead.'],
+    inputProps: {
+      blueprintPath: P.blueprintPath,
+      fallHeight: { type: 'number', description: 'How far below its respawn point the pawn may fall before it respawns, in units (default 2000).' },
+      checkpointTag: { type: 'string', description: 'Actor tag that marks a checkpoint (default Checkpoint).' },
+    },
+    required: ['blueprintPath'],
+    outputProps: { ...BEHAVIOUR_OUTPUT, respawnOnDeath: { type: 'boolean', description: 'The pawn has the health behaviour, so dying respawns it too; add health first, then respawn again, to get it.' } },
+    effect: 'write',
+    behavior: { idempotency: 'idempotent' },
+    latency: 'interactive',
+    resources: 'medium',
+    plugins: BP_PLUGINS,
+    exampleInput: { action: 'add_respawn', blueprintPath: '/Game/Blueprints/BP_Player', fallHeight: 1500 },
   }),
 ];

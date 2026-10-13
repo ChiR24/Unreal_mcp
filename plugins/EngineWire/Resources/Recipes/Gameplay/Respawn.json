@@ -1,0 +1,96 @@
+{
+  "description": "Respawning for a pawn: BeginPlay keeps where it starts as RespawnLocation, and touching an actor tagged CheckpointTag moves that point to where the pawn stands. Falling FallHeight below the point (checked every 0.1 s) calls Respawn: the pawn is teleported back (to a free spot near it), its movement stops, and OnRespawned fires.",
+  "tag": "Respawn",
+  "placeholders": {
+    "FallHeight": "How far below its respawn point the pawn may fall before it respawns, in units.",
+    "CheckpointTag": "Actor tag that marks a checkpoint."
+  },
+  "variables": [
+    { "variableName": "RespawnLocation", "variableType": "Vector", "category": "Respawn" },
+    { "variableName": "FallHeight", "variableType": "Float", "defaultValue": "{{FallHeight}}", "category": "Respawn", "instanceEditable": true },
+    { "variableName": "FallZ", "variableType": "Float", "category": "Respawn" },
+    { "variableName": "CheckpointTag", "variableType": "Name", "defaultValue": "{{CheckpointTag}}", "category": "Respawn", "instanceEditable": true }
+  ],
+  "dispatchers": [
+    { "name": "OnRespawned", "parameters": [] }
+  ],
+  "functions": [
+    {
+      "id": "respawn",
+      "functionName": "Respawn",
+      "operations": [
+        { "edit": "create_node", "id": "respawnWhere", "nodeType": "VariableGet", "memberName": "RespawnLocation" },
+        { "edit": "create_node", "id": "respawnFacing", "nodeType": "CallFunction", "memberName": "K2_GetActorRotation", "memberClass": "/Script/Engine.Actor" },
+        { "edit": "create_node", "id": "respawnTeleport", "nodeType": "CallFunction", "memberName": "K2_TeleportTo", "memberClass": "/Script/Engine.Actor" },
+        { "edit": "create_node", "id": "respawnMover", "nodeType": "CallFunction", "memberName": "GetMovementComponent", "memberClass": "/Script/Engine.Pawn" },
+        { "edit": "create_node", "id": "respawnStill", "nodeType": "CallFunction", "memberName": "StopMovementImmediately", "memberClass": "/Script/Engine.MovementComponent" },
+        { "edit": "create_node", "id": "respawnNotify", "nodeType": "CallDelegate", "memberName": "OnRespawned" },
+        { "edit": "connect_pins", "from": "$respawnWhere.RespawnLocation", "to": "$respawnTeleport.DestLocation" },
+        { "edit": "connect_pins", "from": "$respawnFacing.ReturnValue", "to": "$respawnTeleport.DestRotation" },
+        { "edit": "connect_pins", "from": "$respawnMover.ReturnValue", "to": "$respawnStill.self" },
+        { "edit": "connect_pins", "from": "$respawn.then", "to": "$respawnTeleport.execute" },
+        { "edit": "connect_pins", "from": "$respawnTeleport.then", "to": "$respawnStill.execute" },
+        { "edit": "connect_pins", "from": "$respawnStill.then", "to": "$respawnNotify.execute" }
+      ]
+    },
+    {
+      "id": "fallCheck",
+      "functionName": "RespawnFallCheck",
+      "operations": [
+        { "edit": "create_node", "id": "fallWhere", "nodeType": "CallFunction", "memberName": "K2_GetActorLocation", "memberClass": "/Script/Engine.Actor" },
+        { "edit": "create_node", "id": "fallParts", "nodeType": "CallFunction", "memberName": "BreakVector", "memberClass": "/Script/Engine.KismetMathLibrary" },
+        { "edit": "create_node", "id": "fallLimit", "nodeType": "VariableGet", "memberName": "FallZ" },
+        { "edit": "create_node", "id": "fallBelow", "nodeType": "CallFunction", "memberName": "Less_DoubleDouble", "memberClass": "/Script/Engine.KismetMathLibrary" },
+        { "edit": "create_node", "id": "fallBranch", "nodeType": "Branch" },
+        { "edit": "create_node", "id": "fallRespawn", "nodeType": "CallFunction", "memberName": "Respawn" },
+        { "edit": "connect_pins", "from": "$fallWhere.ReturnValue", "to": "$fallParts.InVec" },
+        { "edit": "connect_pins", "from": "$fallParts.Z", "to": "$fallBelow.A" },
+        { "edit": "connect_pins", "from": "$fallLimit.FallZ", "to": "$fallBelow.B" },
+        { "edit": "connect_pins", "from": "$fallBelow.ReturnValue", "to": "$fallBranch.Condition" },
+        { "edit": "connect_pins", "from": "$fallCheck.then", "to": "$fallBranch.execute" },
+        { "edit": "connect_pins", "from": "$fallBranch.then", "to": "$fallRespawn.execute" }
+      ]
+    },
+    {
+      "id": "mark",
+      "functionName": "SetRespawnPoint",
+      "operations": [
+        { "edit": "create_node", "id": "markWhere", "nodeType": "CallFunction", "memberName": "K2_GetActorLocation", "memberClass": "/Script/Engine.Actor" },
+        { "edit": "create_node", "id": "markSet", "nodeType": "VariableSet", "memberName": "RespawnLocation" },
+        { "edit": "create_node", "id": "markParts", "nodeType": "CallFunction", "memberName": "BreakVector", "memberClass": "/Script/Engine.KismetMathLibrary" },
+        { "edit": "create_node", "id": "markDrop", "nodeType": "VariableGet", "memberName": "FallHeight" },
+        { "edit": "create_node", "id": "markLimit", "nodeType": "CallFunction", "memberName": "Subtract_DoubleDouble", "memberClass": "/Script/Engine.KismetMathLibrary" },
+        { "edit": "create_node", "id": "markFall", "nodeType": "VariableSet", "memberName": "FallZ" },
+        { "edit": "connect_pins", "from": "$markWhere.ReturnValue", "to": "$markSet.RespawnLocation" },
+        { "edit": "connect_pins", "from": "$markWhere.ReturnValue", "to": "$markParts.InVec" },
+        { "edit": "connect_pins", "from": "$markParts.Z", "to": "$markLimit.A" },
+        { "edit": "connect_pins", "from": "$markDrop.FallHeight", "to": "$markLimit.B" },
+        { "edit": "connect_pins", "from": "$markLimit.ReturnValue", "to": "$markFall.FallZ" },
+        { "edit": "connect_pins", "from": "$mark.then", "to": "$markSet.execute" },
+        { "edit": "connect_pins", "from": "$markSet.then", "to": "$markFall.execute" }
+      ]
+    }
+  ],
+  "hooks": [
+    { "id": "respawnBegin", "event": "BeginPlay" },
+    { "id": "respawnTouch", "event": "ActorBeginOverlap" }
+  ],
+  "eventGraph": [
+    { "edit": "create_node", "id": "beginMark", "nodeType": "CallFunction", "memberName": "SetRespawnPoint" },
+    { "edit": "create_node", "id": "beginSelf", "nodeType": "Self" },
+    { "edit": "create_node", "id": "beginTimer", "nodeType": "CallFunction", "memberName": "K2_SetTimer", "memberClass": "/Script/Engine.KismetSystemLibrary", "pinDefaults": { "FunctionName": "RespawnFallCheck", "Time": 0.1, "bLooping": true } },
+    { "edit": "connect_pins", "from": "$beginSelf.self", "to": "$beginTimer.Object" },
+    { "edit": "connect_pins", "from": "$respawnBegin.then", "to": "$beginMark.execute" },
+    { "edit": "connect_pins", "from": "$beginMark.then", "to": "$beginTimer.execute" },
+
+    { "edit": "create_node", "id": "touchTag", "nodeType": "VariableGet", "memberName": "CheckpointTag" },
+    { "edit": "create_node", "id": "touchHas", "nodeType": "CallFunction", "memberName": "ActorHasTag", "memberClass": "/Script/Engine.Actor" },
+    { "edit": "create_node", "id": "touchBranch", "nodeType": "Branch" },
+    { "edit": "create_node", "id": "touchMark", "nodeType": "CallFunction", "memberName": "SetRespawnPoint" },
+    { "edit": "connect_pins", "from": "$respawnTouch_event.OtherActor", "to": "$touchHas.self" },
+    { "edit": "connect_pins", "from": "$touchTag.CheckpointTag", "to": "$touchHas.Tag" },
+    { "edit": "connect_pins", "from": "$touchHas.ReturnValue", "to": "$touchBranch.Condition" },
+    { "edit": "connect_pins", "from": "$respawnTouch.then", "to": "$touchBranch.execute" },
+    { "edit": "connect_pins", "from": "$touchBranch.then", "to": "$touchMark.execute" }
+  ]
+}

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "b410c3137849dedb",
+  "catalogRevision": "282f914c94ee5e34",
   "recordCount": 415,
   "records": [
     {
@@ -12791,7 +12791,8 @@
         "blueprint.add_sprint",
         "blueprint.add_shoot",
         "blueprint.add_chase",
-        "blueprint.add_controls"
+        "blueprint.add_controls",
+        "blueprint.add_respawn"
       ],
       "legacyIds": [
         {
@@ -12846,6 +12847,13 @@
           "folded": {
             "behaviour": "controls"
           }
+        },
+        {
+          "tool": "manage_blueprint",
+          "action": "add_respawn",
+          "folded": {
+            "behaviour": "respawn"
+          }
         }
       ],
       "discovery": {
@@ -12894,9 +12902,16 @@
           "make the character jump",
           "third person controls",
           "first person controls",
-          "make the character playable"
+          "make the character playable",
+          "respawn",
+          "respawn the player",
+          "checkpoint",
+          "respawn at checkpoint",
+          "fall off the map",
+          "respawn when falling",
+          "player falls off"
         ],
-        "summary": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player, or walk, look and jump controls for a Character.",
+        "summary": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player, walk, look and jump controls for a Character, or a pawn that respawns when it falls or dies, with checkpoints.",
         "whenToUse": [
           "behaviour=health: A player, enemy or breakable object must take damage and die; bind OnHealthChanged to a health bar.",
           "behaviour=damage_on_touch: Spikes, lava, an enemy body or a fire must hurt what touches it.",
@@ -12904,7 +12919,9 @@
           "behaviour=sprint: The player must run faster while holding a key.",
           "behaviour=shoot: The player (or any possessed pawn) must shoot projectiles with a key; a projectile from manage_combat create_combat_asset damages what it hits and never hits its shooter.",
           "behaviour=chase: An enemy or creature must run after the player; with usePathfinding (default) the level needs a Nav Mesh Bounds Volume (manage_ai configure_navigation), without it the pawn heads straight for the player.",
-          "behaviour=controls: A Character made with manage_character create_character_blueprint (or any Character without input) must be playable: it has no input until this runs."
+          "behaviour=controls: A Character made with manage_character create_character_blueprint (or any Character without input) must be playable: it has no input until this runs.",
+          "behaviour=respawn: A player pawn must not be lost for good when it falls off the level or dies.",
+          "behaviour=respawn: Checkpoints: tag a trigger actor (manage_interaction create_interactable trigger, or any actor that overlaps pawns) with checkpointTag; the pawn respawns where it stood when it touched it."
         ],
         "whenNotToUse": [
           "behaviour=health: The project uses the Gameplay Ability System for attributes (use manage_gas).",
@@ -12913,7 +12930,8 @@
           "behaviour=sprint: The walk speed itself must change (use manage_character configure_character walkSpeed).",
           "behaviour=shoot: A weapon actor the pawn holds must do the shooting (use manage_combat configure_projectile for its Fire function).",
           "behaviour=chase: The pawn needs patrols, senses or decisions beyond chasing (use manage_ai with a Behavior Tree or State Tree).",
-          "behaviour=controls: Only one key or action must be added (use manage_networking configure_input for the asset and blueprint edit_graph for its node)."
+          "behaviour=controls: Only one key or action must be added (use manage_networking configure_input for the asset and blueprint edit_graph for its node).",
+          "behaviour=respawn: A pawn that should stay dead, such as an enemy: give it the health behaviour with destroyOnDeath instead."
         ]
       },
       "schemas": {
@@ -13009,6 +13027,14 @@
               "type": "boolean",
               "description": "Also turn the view with the mouse and the right stick (default true); false for a fixed camera."
             },
+            "fallHeight": {
+              "type": "number",
+              "description": "How far below its respawn point the pawn may fall before it respawns, in units (default 2000)."
+            },
+            "checkpointTag": {
+              "type": "string",
+              "description": "Actor tag that marks a checkpoint (default Checkpoint)."
+            },
             "behaviour": {
               "type": "string",
               "enum": [
@@ -13018,7 +13044,8 @@
                 "sprint",
                 "shoot",
                 "chase",
-                "controls"
+                "controls",
+                "respawn"
               ],
               "description": "Which add behaviour variant to run."
             }
@@ -13077,6 +13104,10 @@
                 "type": "string"
               },
               "description": "Event dispatchers it added, which other logic can bind."
+            },
+            "respawnOnDeath": {
+              "type": "boolean",
+              "description": "The pawn has the health behaviour, so dying respawns it too; add health first, then respawn again, to get it."
             }
           },
           "required": [
@@ -13087,7 +13118,7 @@
       },
       "examples": [
         {
-          "title": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player, or walk, look and jump controls for a Character.",
+          "title": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player, walk, look and jump controls for a Character, or a pawn that respawns when it falls or dies, with checkpoints.",
           "input": {
             "action": "add_behaviour",
             "blueprintPath": "/Game/Blueprints/BP_Enemy",
@@ -13135,7 +13166,8 @@
             "sprint": "add_sprint",
             "shoot": "add_shoot",
             "chase": "add_chase",
-            "controls": "add_controls"
+            "controls": "add_controls",
+            "respawn": "add_respawn"
           },
           "declaredBy": {
             "maxHealth": [
@@ -13201,14 +13233,20 @@
             ],
             "look": [
               "controls"
+            ],
+            "fallHeight": [
+              "respawn"
+            ],
+            "checkpointTag": [
+              "respawn"
             ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "09b29e8399d19136d2fc55857db759b898a4671c498d9a9f59a751d1fe5638ed",
-        "content": "3d630bdfdf6316bc608ada099c5948042bc421dfbfc71b249197dd4be0994d93"
+        "schema": "732f529fa3c5af9ab64eb793130c920dba8300b4d4e3cebf7068ed3f73052028",
+        "content": "913944f087ebb5b5efa3c8fdfb6302c4a7148a7ceab6cab569f97214a4cf1c01"
       }
     },
     {

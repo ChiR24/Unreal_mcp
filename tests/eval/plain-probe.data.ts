@@ -520,4 +520,8 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'remap a key', accepted: ['manage_networking.configure_input'] },
   { query: 'change the jump key', accepted: ['manage_networking.configure_input'] },
   { query: 'walk forward in the game', accepted: ['control_editor.simulate_input', 'control_actor.get_transform'] },
+  { query: 'respawn the player', accepted: ['blueprint.add_behaviour'] },
+  { query: 'checkpoint', accepted: ['blueprint.add_behaviour'] },
+  { query: 'respawn at checkpoint', accepted: ['blueprint.add_behaviour'] },
+  { query: 'fall off the map', accepted: ['blueprint.add_behaviour'] },
 ];

@@ -9274,6 +9274,7 @@
         "buttons",
         "category",
         "chaseRange",
+        "checkpointTag",
         "clipping",
         "collectorClass",
         "colorAndOpacity",
@@ -9304,6 +9305,7 @@
         "explicitWrapWidth",
         "exposeOnSpawn",
         "fadeTime",
+        "fallHeight",
         "fillColorAndOpacity",
         "fillValue",
         "filter",
@@ -9552,7 +9554,8 @@
               "sprint",
               "shoot",
               "chase",
-              "controls"
+              "controls",
+              "respawn"
             ],
             "description": "Which add behaviour variant to run."
           },
@@ -9615,6 +9618,10 @@
           "chaseRange": {
             "type": "number",
             "description": "Distance within which it chases, in units (default 2000)."
+          },
+          "checkpointTag": {
+            "type": "string",
+            "description": "Actor tag that marks a checkpoint (default Checkpoint)."
           },
           "clipping": {
             "type": "string",
@@ -9820,6 +9827,10 @@
           "fadeTime": {
             "type": "number",
             "description": "Seconds of the fade: the damage flash (default 0.6) or the loading screen FadeIn animation (0 makes none)."
+          },
+          "fallHeight": {
+            "type": "number",
+            "description": "How far below its respawn point the pawn may fall before it respawns, in units (default 2000)."
           },
           "fillColorAndOpacity": {
             "type": "object",
