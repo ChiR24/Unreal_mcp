@@ -439,8 +439,11 @@ export function scoreDocument(
   // missing from the query: "random number" dropped edit_graph, whose topic says exactly that, and found nothing.
   if (matchScore < RETRIEVAL_SCORE_CONSTANTS.minimumRelevanceScore && !fullyNamed) return null;
   const effect = document.record.behavior.effect;
+  // The phrase also outweighs a record that names the same words one by one, as native's McpSearchPhraseTopicBonus:
+  // "connect blueprint nodes" is an edit_graph topic, and the level Blueprint record took it word by word.
   const score = matchScore
     + (fullyNamed ? RETRIEVAL_SCORE_CONSTANTS.fullCoverageBonus : 0)
+    + (phraseTopic ? RETRIEVAL_SCORE_CONSTANTS.phraseTopicBonus : 0)
     + (context.readIntent && effect === 'read' ? RETRIEVAL_SCORE_CONSTANTS.readIntentBonus : 0)
     + (context.deleteIntent && effect === 'destructive' ? RETRIEVAL_SCORE_CONSTANTS.deleteIntentBonus : 0);
   contributions.sort((left, right) => {
