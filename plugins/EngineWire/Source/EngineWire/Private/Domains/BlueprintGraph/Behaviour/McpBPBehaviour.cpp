@@ -232,4 +232,25 @@ FAuthorResult Author(UEngineWireSubsystem& Bridge, const FString& RequestId,
     R.Message += GetJsonBoolField(Report, TEXT("saved")) ? TEXT(" and was saved.") : TEXT(" and was NOT saved.");
     return R;
 }
+
+bool AuthorRecipeFile(UEngineWireSubsystem& Bridge, const FString& RequestId, const TSharedPtr<FMcpBridgeWebSocket>& Socket,
+                      UBlueprint* Blueprint, const FString& Domain, const FString& Name,
+                      const TMap<FString, TSharedPtr<FJsonValue>>& Values, const TSharedPtr<FJsonObject>& Result)
+{
+    FString Error;
+    const TSharedPtr<FJsonObject> Recipe = LoadRecipe(Domain, Name, Values, Error);
+    if (!Recipe)
+    {
+        Bridge.SendAutomationResponse(Socket, RequestId, false, Error, nullptr, TEXT("INVALID_RECIPE"));
+        return false;
+    }
+    const FAuthorResult Authored = Author(Bridge, RequestId, Socket, Blueprint->GetPathName(), Recipe);
+    if (!Authored.bApplied)
+    {
+        Bridge.SendAutomationResponse(Socket, RequestId, false, Authored.Message, Authored.Report, Authored.ErrorCode);
+        return false;
+    }
+    Result->SetBoolField(TEXT("compiled"), GetJsonBoolField(Authored.Report, TEXT("compiled")));
+    return true;
+}
 } // namespace McpBlueprintBehaviour

@@ -37,17 +37,19 @@ const testCases = [
   { scenario: 'CONFIG: configure_weapon_mesh', toolName: 'manage_combat', arguments: { action: 'configure_weapon_mesh', blueprintPath: weaponPath, weaponMeshPath: '/Engine/BasicShapes/Cube.Cube' }, expected: 'success', assertions: [{ path: 'structuredContent.result.meshPath', equals: '/Engine/BasicShapes/Cube.Cube', label: 'weapon mesh path applied' }] },
 
   // === FIRING MODES ===
-  { scenario: 'CONFIG: configure_projectile', toolName: 'manage_combat', arguments: { action: 'configure_projectile', blueprintPath: weaponPath, projectileClass: '/Script/Engine.Actor', projectileSpeed: 4500 }, expected: 'success', assertions: [{ path: 'structuredContent.result.projectileSpeed', equals: 4500, label: 'weapon projectile speed applied' }] },
+  // The projectile it fires is made below; configure_projectile follows it.
 
   // === PROJECTILES ===
   {
     scenario: 'CREATE: create_projectile_blueprint',
     toolName: 'manage_combat',
-    arguments: { action: 'create_projectile_blueprint', name: PROJECTILE_NAME, path: TEST_FOLDER, projectileSpeed: 6000, projectileGravityScale: 0, collisionRadius: 8, projectileMeshPath: '/Engine/BasicShapes/Sphere.Sphere' },
+    arguments: { action: 'create_projectile_blueprint', name: PROJECTILE_NAME, path: TEST_FOLDER, projectileSpeed: 6000, projectileGravityScale: 0, collisionRadius: 8, projectileMeshPath: '/Engine/BasicShapes/Sphere.Sphere', damage: 35 },
     expected: 'success',
     captureResult: { key: 'projectilePath', fromField: 'result.blueprintPath' },
-    assertions: [{ path: 'structuredContent.result.projectileMeshPath', equals: '/Engine/BasicShapes/Sphere.Sphere', label: 'projectile mesh path consumed' }, { path: 'structuredContent.result.projectileMeshLoaded', equals: true, label: 'projectile mesh asset loaded' }, { path: 'structuredContent.result.existsAfter', equals: true, label: 'projectile blueprint exists after creation' }]
+    assertions: [{ path: 'structuredContent.result.damage', equals: 35, label: 'the projectile deals the damage asked for' }, { path: 'structuredContent.result.compiled', equals: true, label: 'the projectile compiles with its hit logic' }, { path: 'structuredContent.result.projectileMeshPath', equals: '/Engine/BasicShapes/Sphere.Sphere', label: 'projectile mesh path consumed' }, { path: 'structuredContent.result.projectileMeshLoaded', equals: true, label: 'projectile mesh asset loaded' }, { path: 'structuredContent.result.existsAfter', equals: true, label: 'projectile blueprint exists after creation' }]
   },
+  { scenario: 'CONFIG: configure_projectile', toolName: 'manage_combat', arguments: { action: 'configure_projectile', blueprintPath: weaponPath, projectileClass: projectilePath, projectileSpeed: 4500 }, expected: 'success', assertions: [{ path: 'structuredContent.result.projectileSpeed', equals: 4500, label: 'weapon projectile speed applied' }, { path: 'structuredContent.result.fireFunction', equals: 'Fire', label: 'the weapon shoots from Fire' }, { path: 'structuredContent.result.compiled', equals: true, label: 'the weapon compiles with Fire' }] },
+  { scenario: 'ERROR: configure_projectile refuses a class that is not an actor', toolName: 'manage_combat', arguments: { action: 'configure_projectile', blueprintPath: weaponPath, projectileClass: '/Script/Engine.StaticMesh' }, expected: 'error|INVALID_ARGUMENT' },
   { scenario: 'CONFIG: configure_projectile_movement', toolName: 'manage_combat', arguments: { action: 'configure_projectile_movement', blueprintPath: projectilePath, projectileSpeed: 6500, projectileGravityScale: 0.5, projectileLifespan: 4 }, expected: 'success', assertions: [{ path: 'structuredContent.result.existsAfter', equals: true, label: 'projectile exists after movement configuration' }] },
   { scenario: 'CONFIG: configure_projectile_collision', toolName: 'manage_combat', arguments: { action: 'configure_projectile_collision', blueprintPath: projectilePath, collisionRadius: 12, bounceEnabled: true, bounceVelocityRatio: 0.5 }, expected: 'success' },
   { scenario: 'CONFIG: configure_projectile_homing', toolName: 'manage_combat', arguments: { action: 'configure_projectile_homing', blueprintPath: projectilePath, homingEnabled: true, homingAcceleration: 15000 }, expected: 'success' },

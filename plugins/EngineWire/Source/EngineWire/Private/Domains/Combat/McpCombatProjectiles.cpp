@@ -1,6 +1,8 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 
 #include "Domains/Combat/McpCombatPrivate.h"
+#include "Domains/BlueprintGraph/Behaviour/McpBPBehaviour.h"
+#include "Engine/CollisionProfile.h"
 
 namespace McpCombatHandlers
 {
@@ -22,12 +24,17 @@ bool FCombatActionContext::HandleProjectileActions() const
             return true;
         }
 
+        // The engine has no "Projectile" profile (only a project can add one), and naming a missing one left the sphere
+        // overlapping everything: the projectile flew through walls and pawns and never hit. BlockAllDynamic stops it.
+        FCollisionResponseTemplate ProjectileProfile;
+        const FName Profile = UCollisionProfile::Get()->GetProfileTemplate(TEXT("Projectile"), ProjectileProfile)
+                                  ? FName(TEXT("Projectile")) : UCollisionProfile::BlockAllDynamic_ProfileName;
         USphereComponent* CollisionComp = GetOrCreateSCSComponent<USphereComponent>(Blueprint, TEXT("CollisionComponent"));
         if (CollisionComp)
         {
             double CollisionRadius = GetJsonNumberField(Payload, TEXT("collisionRadius"), 5.0);
             CollisionComp->SetSphereRadius(static_cast<float>(CollisionRadius));
-            CollisionComp->SetCollisionProfileName(TEXT("Projectile"));
+            CollisionComp->SetCollisionProfileName(Profile);
         }
 
         FString ProjectileMeshPath = GetJsonStringField(Payload, TEXT("projectileMeshPath"));
@@ -65,7 +72,18 @@ bool FCombatActionContext::HandleProjectileActions() const
             return true;
         }
 
+        // It damages what it hits and is gone (recipe Combat/ProjectileHit); it only flew before.
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+        const double Damage = GetJsonNumberField(Payload, TEXT("damage"), 20.0);
+        TMap<FString, TSharedPtr<FJsonValue>> Values;
+        Values.Add(TEXT("Damage"), MakeShared<FJsonValueNumber>(Damage));
+        if (!McpBlueprintBehaviour::AuthorRecipeFile(Bridge, RequestId, RequestingSocket, Blueprint, TEXT("Combat"),
+                                                     TEXT("ProjectileHit"), Values, Result))
+        {
+            return true;
+        }
+        Result->SetNumberField(TEXT("damage"), Damage);
+        Result->SetStringField(TEXT("collisionProfile"), Profile.ToString());
         Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
         Result->SetStringField(TEXT("projectileMeshPath"), ProjectileMeshPath);
         Result->SetBoolField(TEXT("projectileMeshLoaded"), bProjectileMeshLoaded);

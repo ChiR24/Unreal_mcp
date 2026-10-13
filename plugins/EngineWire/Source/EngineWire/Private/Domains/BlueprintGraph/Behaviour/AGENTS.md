@@ -56,6 +56,14 @@ FAuthorResult Author(UEngineWireSubsystem& Bridge, const FString& RequestId,
                      const TSharedPtr<FMcpBridgeWebSocket>& Socket, const FString& BlueprintPath,
                      const TSharedPtr<FJsonObject>& Recipe, const FSnapshot* Before = nullptr);
 
+// LoadRecipe + Author for a handler whose own reply carries the behaviour as one part (a created door that
+// also opens, a projectile that also hurts): sends the refusal itself and returns false, or sets compiled on
+// Result and returns true. The interaction and combat handlers use it.
+bool AuthorRecipeFile(UEngineWireSubsystem& Bridge, const FString& RequestId,
+                      const TSharedPtr<FMcpBridgeWebSocket>& Socket, UBlueprint* Blueprint, const FString& Domain,
+                      const FString& Name, const TMap<FString, TSharedPtr<FJsonValue>>& Values,
+                      const TSharedPtr<FJsonObject>& Result);
+
 struct FAuthorResult
 {
     bool bApplied;                   // in the Blueprint, and the Blueprint was saved

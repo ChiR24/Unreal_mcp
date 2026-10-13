@@ -9,29 +9,12 @@ namespace McpInteractionHandlers
 {
 namespace
 {
-// Recipe Interaction/<Name> into Blueprint; adds compiled to Result. False after sending the refusal itself.
 bool AuthorInteractionRecipe(UEngineWireSubsystem* Subsystem, const FString& RequestId,
                              TSharedPtr<FMcpBridgeWebSocket> Socket, UBlueprint* Blueprint, const TCHAR* Name,
                              const TMap<FString, TSharedPtr<FJsonValue>>& Values, const TSharedPtr<FJsonObject>& Result)
 {
-    FString Error;
-    const TSharedPtr<FJsonObject> Recipe = McpBlueprintBehaviour::LoadRecipe(TEXT("Interaction"), Name, Values, Error);
-    if (!Recipe)
-    {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false, Error, nullptr, TEXT("INVALID_RECIPE"));
-        return false;
-    }
-    const McpBlueprintBehaviour::FAuthorResult Authored =
-        McpBlueprintBehaviour::Author(*Subsystem, RequestId, Socket, Blueprint->GetPathName(), Recipe);
-    if (!Authored.bApplied)
-    {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false, Authored.Message, Authored.Report, Authored.ErrorCode);
-        return false;
-    }
-    bool bCompiled = false;
-    Authored.Report->TryGetBoolField(TEXT("compiled"), bCompiled);
-    Result->SetBoolField(TEXT("compiled"), bCompiled);
-    return true;
+    return McpBlueprintBehaviour::AuthorRecipeFile(*Subsystem, RequestId, Socket, Blueprint, TEXT("Interaction"), Name,
+                                                   Values, Result);
 }
 } // namespace
 

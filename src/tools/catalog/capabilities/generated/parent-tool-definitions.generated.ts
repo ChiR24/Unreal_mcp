@@ -15843,6 +15843,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Projectile collision sphere radius."
         },
+        "damage": {
+          "type": "number",
+          "description": "Damage dealt to the actor it hits (default 20); kept in its Damage variable, which a placed copy can change."
+        },
         "damageMultiplier": {
           "type": "number",
           "description": "Damage multiplier applied for this hitbox."
@@ -15939,7 +15943,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "projectileClass": {
           "type": "string",
-          "description": "Class path of the projectile the weapon spawns."
+          "description": "The projectile the weapon shoots: its Blueprint path (/Game/Weapons/BP_Bullet) or class path."
         },
         "projectileGravityScale": {
           "type": "number",
@@ -16042,6 +16046,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true
         },
+        "damage": {
+          "type": "number",
+          "description": "Damage it deals on a hit."
+        },
         "damageTypePath": {
           "type": "string",
           "description": "Canonical /Game damage type asset path."
@@ -16050,6 +16058,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "object",
           "x-unreal-reflection-boundary": true,
           "description": "Additional handler result fields not named by the contract."
+        },
+        "fireFunction": {
+          "type": "string",
+          "description": "The function that shoots: Fire."
         },
         "fireRate": {
           "type": "number",

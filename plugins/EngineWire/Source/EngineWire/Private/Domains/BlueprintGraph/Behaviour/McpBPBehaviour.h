@@ -111,6 +111,13 @@ FAuthorResult Author(UEngineWireSubsystem& Bridge, const FString& RequestId,
                      const TSharedPtr<FMcpBridgeWebSocket>& Socket, const FString& BlueprintPath,
                      const TSharedPtr<FJsonObject>& Recipe, const FSnapshot* Before = nullptr);
 
+/** LoadRecipe + Author for a handler whose own reply carries the behaviour as one part (a created door that also
+ *  opens): on failure it sends the refusal (INVALID_RECIPE, or Author's reply) and returns false; on success it sets
+ *  compiled on Result and returns true, and the caller sends its reply. */
+bool AuthorRecipeFile(UEngineWireSubsystem& Bridge, const FString& RequestId, const TSharedPtr<FMcpBridgeWebSocket>& Socket,
+                      UBlueprint* Blueprint, const FString& Domain, const FString& Name,
+                      const TMap<FString, TSharedPtr<FJsonValue>>& Values, const TSharedPtr<FJsonObject>& Result);
+
 /** "MCP behaviour: <Tag> #<NodeGuid>": the NodeComment that marks Node as owned by Tag.
  *  A pasted copy gets a new guid, so it no longer matches and is never removed. */
 FString OwnerTag(const FString& Tag, const UEdGraphNode& Node);

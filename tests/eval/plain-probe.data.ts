@@ -506,4 +506,6 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'pressure plate', accepted: ['manage_interaction.create_interactable'] },
   { query: 'button opens a door', accepted: ['manage_interaction.configure_interactable', 'manage_interaction.create_interactable'] },
   { query: 'bind event to dispatcher', accepted: ['blueprint.edit_graph'] },
+  { query: 'shoot bullets', accepted: ['manage_combat.configure_projectile'] },
+  { query: 'fire a weapon', accepted: ['manage_combat.configure_projectile'] },
 ];

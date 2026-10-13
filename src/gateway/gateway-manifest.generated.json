@@ -11271,6 +11271,7 @@
         "bounceEnabled",
         "bounceVelocityRatio",
         "collisionRadius",
+        "damage",
         "damageMultiplier",
         "fireRate",
         "hitboxBoneName",
@@ -11340,6 +11341,10 @@
           "collisionRadius": {
             "type": "number",
             "description": "Projectile collision sphere radius."
+          },
+          "damage": {
+            "type": "number",
+            "description": "Damage dealt to the actor it hits (default 20); kept in its Damage variable, which a placed copy can change."
           },
           "damageMultiplier": {
             "type": "number",
@@ -11437,7 +11442,7 @@
           },
           "projectileClass": {
             "type": "string",
-            "description": "Class path of the projectile the weapon spawns."
+            "description": "The projectile the weapon shoots: its Blueprint path (/Game/Weapons/BP_Bullet) or class path."
           },
           "projectileGravityScale": {
             "type": "number",

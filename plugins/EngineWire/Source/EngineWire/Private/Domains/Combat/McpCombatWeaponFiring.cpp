@@ -1,6 +1,8 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 
 #include "Domains/Combat/McpCombatPrivate.h"
+#include "Domains/BlueprintGraph/Behaviour/McpBPBehaviour.h"
+#include "Foundation/BridgeHelpers/Reflection/McpClassResolve.h"
 
 namespace McpCombatHandlers
 {
@@ -21,43 +23,45 @@ bool FCombatActionContext::HandleWeaponFiring() const
             return true;
         }
 
-        FString ProjectileClass = GetJsonStringField(Payload, TEXT("projectileClass"));
-        double ProjectileSpeed = GetJsonNumberField(Payload, TEXT("projectileSpeed"), 5000.0);
-
-        AddBlueprintVariableCombat(Blueprint, TEXT("ProjectileClassPath"), MakeStringPinType());
-        AddBlueprintVariableCombat(Blueprint, TEXT("ProjectileSpeed"), MakeFloatPinType());
-
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-        McpSafeCompileBlueprint(Blueprint);
-
-        if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
+        // A class the weapon fires, from a Blueprint path or a class path. It used to be stored as a string nothing read,
+        // and "firing configured" answered with no firing logic at all.
+        const FString ProjectileClass = GetJsonStringField(Payload, TEXT("projectileClass"));
+        const double ProjectileSpeed = GetJsonNumberField(Payload, TEXT("projectileSpeed"), 5000.0);
+        UClass* Fired = ResolveClassByName(ProjectileClass);
+        if (!Fired || !Fired->IsChildOf(AActor::StaticClass()))
         {
-            if (UObject* CDO = BPGC->GetDefaultObject())
-            {
-                if (FStrProperty* ClassProp = FindFProperty<FStrProperty>(BPGC, TEXT("ProjectileClassPath")))
-                {
-                    ClassProp->SetPropertyValue_InContainer(CDO, ProjectileClass);
-                }
-                if (FDoubleProperty* SpeedProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("ProjectileSpeed")))
-                {
-                    SpeedProp->SetPropertyValue_InContainer(CDO, ProjectileSpeed);
-                }
-            }
-        }
-
-        if (!McpSafeAssetSave(Blueprint))
-        {
-            SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("%s was changed in the editor but could not be saved to disk."), *Blueprint->GetPathName()), TEXT("SAVE_FAILED"));
+            SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("projectileClass '%s' is not an actor class: name a projectile Blueprint (create_combat_asset kind projectile_blueprint)."), *ProjectileClass),
+                TEXT("INVALID_ARGUMENT"));
             return true;
         }
-
+        const bool bHasMesh = Blueprint->SimpleConstructionScript && Blueprint->SimpleConstructionScript->GetAllNodes().ContainsByPredicate(
+            [](const USCS_Node* Node) { return Node && Node->GetVariableName() == TEXT("WeaponMesh"); });
+        if (!bHasMesh)
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                TEXT("The weapon needs the WeaponMesh component it fires from (create_combat_asset kind weapon_blueprint adds it)."),
+                TEXT("COMPONENT_NOT_FOUND"));
+            return true;
+        }
+        // Fire(): spawns the projectile at the WeaponMesh's Muzzle socket and launches it (recipe Combat/WeaponFire).
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+        TMap<FString, TSharedPtr<FJsonValue>> Values;
+        Values.Add(TEXT("ProjectileType"), MakeShared<FJsonValueString>(TEXT("Class:") + Fired->GetPathName()));
+        Values.Add(TEXT("ProjectileClass"), MakeShared<FJsonValueString>(Fired->GetPathName()));
+        Values.Add(TEXT("ProjectileSpeed"), MakeShared<FJsonValueNumber>(ProjectileSpeed));
+        if (!McpBlueprintBehaviour::AuthorRecipeFile(Bridge, RequestId, RequestingSocket, Blueprint, TEXT("Combat"),
+                                                     TEXT("WeaponFire"), Values, Result))
+        {
+            return true;
+        }
         Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
-        Result->SetStringField(TEXT("projectileClass"), ProjectileClass);
+        Result->SetStringField(TEXT("projectileClass"), Fired->GetPathName());
         Result->SetNumberField(TEXT("projectileSpeed"), ProjectileSpeed);
+        Result->SetStringField(TEXT("fireFunction"), TEXT("Fire"));
 
         McpHandlerUtils::AddVerification(Result, Blueprint);
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Projectile firing configured."), Result);
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Weapon fires its projectile from Fire()."), Result);
         return true;
     }
     return false;

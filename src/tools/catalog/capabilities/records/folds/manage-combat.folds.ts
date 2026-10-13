@@ -5,8 +5,8 @@ import type { FoldSpec } from '../shared/fold-types.js';
 export const MANAGE_COMBAT_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'create_combat_asset', selector: 'kind',
-    summary: 'Create a combat asset: weapon Blueprint, projectile Blueprint, or damage type.',
-    topics: ['weapon blueprint', 'projectile blueprint', 'damage type', 'create weapon'],
+    summary: 'Create a combat asset: weapon Blueprint, projectile Blueprint (it damages what it hits), or damage type.',
+    topics: ['weapon blueprint', 'projectile blueprint', 'damage type', 'create weapon', 'gun'],
     members: { weapon_blueprint: 'create_weapon_blueprint', projectile_blueprint: 'create_projectile_blueprint', damage_type: 'create_damage_type', damage_type_setup: 'setup_damage_type' },
   },
   {
@@ -19,8 +19,8 @@ export const MANAGE_COMBAT_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'configure_projectile', selector: 'setting',
-    summary: 'Configure a projectile Blueprint: class and speed, movement, collision, homing.',
-    topics: ['projectile', 'projectile movement', 'projectile collision', 'homing'],
+    summary: 'Configure projectiles: give a weapon a Fire function that shoots a projectile class, or set a projectile movement, collision or homing.',
+    topics: ['projectile', 'projectile movement', 'projectile collision', 'homing', 'weapon fires projectiles', 'gun that shoots'],
     members: { projectile: 'configure_projectile', movement: 'configure_projectile_movement', collision: 'configure_projectile_collision', homing: 'configure_projectile_homing' },
   },
   {
