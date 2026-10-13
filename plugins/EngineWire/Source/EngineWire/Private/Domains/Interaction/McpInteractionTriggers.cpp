@@ -27,6 +27,13 @@ bool HandleTriggerAction(
         return true;
     }
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    // On while a pawn is inside, firing OnSwitchChanged as a pressure plate does, so a door can follow it; the
+    // volume did nothing.
+    if (!AuthorSwitchLogic(Subsystem, RequestId, RequestingSocket, TriggerBP, TEXT("pressure_plate"), /*bTilt=*/false,
+                           Result))
+    {
+        return true;
+    }
     Result->SetStringField(TEXT("triggerPath"), TriggerBP->GetPathName());
     Result->SetStringField(TEXT("blueprintPath"), TriggerBP->GetPathName());
     Result->SetStringField(TEXT("triggerShape"), TriggerShape);

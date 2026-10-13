@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "e2021d816a76aadf",
+  "catalogRevision": "c528c33f515f3ce0",
   "recordCount": 415,
   "records": [
     {
@@ -68789,7 +68789,7 @@
             },
             "switchPath": {
               "type": "string",
-              "description": "The switch or lever Blueprint (from create_interactable) the door follows: on when switched on, shut when off. The door is then locked against opening when a pawn walks up, unless locked is given."
+              "description": "The switch, lever or trigger Blueprint (from create_interactable) the door follows: on when switched on, shut when off. The door is then locked against opening when a pawn walks up, unless locked is given."
             },
             "chestPath": {
               "type": "string",
@@ -68971,8 +68971,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "29179125b9f4e18d16f6f73c0a9be135f098841a8ee609455e761e73fbc5d110",
-        "content": "06f5df6609ad1ee65e31fde8c69e1f63890da827ae71bd6dcbbdc107e87c9f10"
+        "schema": "8f3465a285eaefa630d10b246380c294ff0500d395bedff47187c9f663455932",
+        "content": "0f9cbb4d20c5d0ec3d19225fc6e8532204245c9220f44694130aaee5b3721eaa"
       }
     },
     {
@@ -69070,7 +69070,7 @@
           "kind=door: A door Blueprint is needed with a pivot, a door mesh and a trigger box, plus open-angle, timing, lock and key variables; the door swings open (yaw, over openTime) while a pawn overlaps the trigger and it is unlocked, and autoClose shuts it autoCloseDelay seconds after the last pawn leaves. Calling it again on an existing door adds that opening logic.",
           "kind=chest: A chest Blueprint is needed with a base mesh, a lid mesh on a pivot, a trigger sphere and an optional locked state; its lid swings open (pitch, over openTime) while a pawn overlaps the trigger and the chest is unlocked.",
           "kind=switch|lever: A switch, button or lever needs an actor Blueprint with mesh parts and an overlap sphere as its trigger; a pawn walking into it switches it and OnSwitchChanged(bActivated) fires, which a door can follow (configure_interactable setting door, switchPath).",
-          "kind=trigger: A reusable overlap-volume Blueprint is needed with a box, sphere or capsule as its root shape.",
+          "kind=trigger: A reusable overlap-volume Blueprint is needed with a box, sphere or capsule as its root shape; it is on while a pawn is inside and fires OnSwitchChanged(bActivated), which a door can follow.",
           "kind=interface: A Blueprint interface is needed that defines Interact, CanInteract and GetInteractionPrompt for actors to implement.",
           "kind=component: An existing Blueprint, such as a player, needs a named overlap sphere whose radius is the interaction range."
         ],
@@ -69300,7 +69300,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "50961ef71f7f42e763b2cbf8cf89d65cf4bed6d5c1192ed65313e4ed85b1f0f9",
-        "content": "064d4bce711d378c1b1e0dc412e8b1507e86725c4ae2eaf3ed313940b101cebe"
+        "content": "bbcb5666b5ad867d722e525e6926ef3adc9ae06b4809a6331fbb05942667f958"
       }
     },
     {

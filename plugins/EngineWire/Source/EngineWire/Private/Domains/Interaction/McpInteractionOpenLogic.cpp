@@ -76,7 +76,7 @@ bool AuthorOpenFromSwitch(UEngineWireSubsystem* Subsystem, const FString& Reques
     {
         Subsystem->SendAutomationError(Socket, RequestId,
             Switch ? FString::Printf(TEXT("%s has no OnSwitchChanged dispatcher: make it with create_interactable kind "
-                                          "switch or lever."), *ResolvedPath)
+                                          "switch, lever or trigger."), *ResolvedPath)
                    : LoadError,
             Switch ? TEXT("DISPATCHER_NOT_FOUND") : TEXT("BLUEPRINT_NOT_FOUND"));
         return false;

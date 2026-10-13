@@ -48,7 +48,7 @@ export const INTERACTION_RECORDS: readonly CapabilityRecordSource[] = [
       openAngle: NP.openAngle,
       openTime: NP.openTime,
       locked: NP.locked,
-      switchPath: { ...NP.switchPath, description: 'The switch or lever Blueprint (from create_interactable) the door follows: on when switched on, shut when off. The door is then locked against opening when a pawn walks up, unless locked is given.' },
+      switchPath: { ...NP.switchPath, description: 'The switch, lever or trigger Blueprint (from create_interactable) the door follows: on when switched on, shut when off. The door is then locked against opening when a pawn walks up, unless locked is given.' },
     },
     required: ['doorPath'],
     exampleInput: {
@@ -223,7 +223,7 @@ export const INTERACTION_RECORDS: readonly CapabilityRecordSource[] = [
   interactionRecord({
     action: 'create_trigger_actor',
     summary: 'Create a trigger actor Blueprint asset.',
-    whenToUse: ['A reusable overlap-volume Blueprint is needed with a box, sphere or capsule as its root shape.'],
+    whenToUse: ['A reusable overlap-volume Blueprint is needed with a box, sphere or capsule as its root shape; it is on while a pawn is inside and fires OnSwitchChanged(bActivated), which a door can follow.'],
     whenNotToUse: [
       'An actor must be placed in the level from an existing Blueprint (use control_actor.spawn).',
       'A single trigger volume is wanted in the level with no Blueprint asset (use manage_level_structure.create_volume).',

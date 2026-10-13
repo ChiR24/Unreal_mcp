@@ -100,7 +100,7 @@ const testCases = [
     arguments: { action: 'create_trigger_actor', name: TRIGGER_NAME, folder: TEST_FOLDER, triggerShape: 'sphere' },
     expected: 'success',
     captureResult: { key: 'triggerPath', fromField: 'result.triggerPath' },
-    assertions: [{ path: 'structuredContent.result.triggerPath', equals: EXPECTED_TRIGGER_PATH, label: 'trigger path returned' }, { path: 'structuredContent.result.triggerShape', equals: 'sphere', label: 'trigger shape set at creation' }]
+    assertions: [{ path: 'structuredContent.result.triggerPath', equals: EXPECTED_TRIGGER_PATH, label: 'trigger path returned' }, { path: 'structuredContent.result.triggerShape', equals: 'sphere', label: 'trigger shape set at creation' }, { path: 'structuredContent.result.dispatcher', equals: 'OnSwitchChanged', label: 'the trigger fires OnSwitchChanged while a pawn is inside' }]
   },
 
   // === INFO ===
