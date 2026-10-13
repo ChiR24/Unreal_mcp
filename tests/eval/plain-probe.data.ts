@@ -472,4 +472,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'slippery floor', accepted: ['animation_physics.create_physical_material'] },
   { query: 'bounciness', accepted: ['animation_physics.create_physical_material'] },
   { query: 'physics material friction', accepted: ['animation_physics.create_physical_material'] },
+  { query: 'set start level', accepted: ['system_control.set_project_setting'] },
+  { query: 'change default map', accepted: ['system_control.set_project_setting'] },
+  { query: 'set the default map', accepted: ['system_control.set_project_setting'] },
 ];

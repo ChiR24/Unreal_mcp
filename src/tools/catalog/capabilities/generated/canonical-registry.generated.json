@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "00ac66a6802dd71c",
+  "catalogRevision": "b31961aa31bbaf7e",
   "recordCount": 412,
   "records": [
     {
@@ -94040,7 +94040,7 @@
             },
             "section": {
               "type": "string",
-              "description": "Settings section."
+              "description": "Settings section: a class path such as /Script/EngineSettings.GameMapsSettings, or its class name (GameMapsSettings)."
             },
             "category": {
               "type": "string",
@@ -94144,8 +94144,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "20a00229886138c003f09ce674b9576bdf5b5e0a5f2f87ef37bcb48d1ee0576b",
-        "content": "c07eb639f7b94c3fbfd7c889186957e52e5d6393ef6e4a3561d49f484e6fc9b7"
+        "schema": "6cb14ac9462f48eda3d48623d19a94a16e6341f97a8177310207dee59a53c2d5",
+        "content": "e9c7c635d07db466884fa72e8a97f49c3da0e45ac8f6d5d3ab23275ea48d18c2"
       }
     },
     {
@@ -96517,11 +96517,15 @@
         "domain": "project",
         "family": "project",
         "topics": [
-          "set_project_setting"
+          "set_project_setting",
+          "set start level",
+          "change default map",
+          "startup map"
         ],
         "summary": "Set one setting (section and key): applied to the live settings object and saved where the editor itself saves that class, the project Default<Config>.ini for a project setting, the user Saved config for a per-user one (EditorPerProjectUserSettings). configFile names the file written.",
         "whenToUse": [
-          "A single project setting value must be written."
+          "A single project setting value must be written.",
+          "The level the game or the editor opens first must change: section GameMapsSettings, key GameDefaultMap (the game and a packaged build) or EditorStartupMap (the editor), value the level as /Game/Maps/L_Main.L_Main."
         ],
         "whenNotToUse": [
           "The full settings document must be read (use get_project_settings)."
@@ -96538,7 +96542,7 @@
             },
             "section": {
               "type": "string",
-              "description": "Settings section: a settings class path such as /Script/EngineSettings.GeneralProjectSettings, or its short name."
+              "description": "Settings section: a settings class path such as /Script/EngineSettings.GameMapsSettings, its class name (GameMapsSettings), or a raw ini section in brackets ([SystemSettings]); a name that is none of these is refused."
             },
             "key": {
               "type": "string",
@@ -96621,8 +96625,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "f6329b5b74fac84fa0934153013f464c419dd7dc50fce3d3d1641a9abd114d4f",
-        "content": "5c44eeaebc110f1b40991ad67095899bf27f0cca670b05b6c52ce3d6ddb334cf"
+        "schema": "ebac35b79dda99a9b748e9df5cc12895f96a08f572cc0c883a5bff89225ea463",
+        "content": "f4d9bcc049f71738e024cad84334a09d389f7937f650949545fa596c4d7dec1d"
       }
     },
     {

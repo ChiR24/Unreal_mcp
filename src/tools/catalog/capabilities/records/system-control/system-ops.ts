@@ -489,10 +489,14 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
     domain: 'project',
     family: 'project',
     summary: 'Set one setting (section and key): applied to the live settings object and saved where the editor itself saves that class, the project Default<Config>.ini for a project setting, the user Saved config for a per-user one (EditorPerProjectUserSettings). configFile names the file written.',
-    whenToUse: ['A single project setting value must be written.'],
+    topics: ['set start level', 'change default map', 'startup map'],
+    whenToUse: [
+      'A single project setting value must be written.',
+      'The level the game or the editor opens first must change: section GameMapsSettings, key GameDefaultMap (the game and a packaged build) or EditorStartupMap (the editor), value the level as /Game/Maps/L_Main.L_Main.',
+    ],
     whenNotToUse: ['The full settings document must be read (use get_project_settings).'],
     inputProps: {
-      section: { type: 'string', description: 'Settings section: a settings class path such as /Script/EngineSettings.GeneralProjectSettings, or its short name.' },
+      section: { type: 'string', description: 'Settings section: a settings class path such as /Script/EngineSettings.GameMapsSettings, its class name (GameMapsSettings), or a raw ini section in brackets ([SystemSettings]); a name that is none of these is refused.' },
       key: { type: 'string', description: 'Setting key.' },
       value: { type: 'string', description: 'Setting value.' },
     },
@@ -513,7 +517,7 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['A single setting must be written (use set_project_setting).'],
     inputProps: {
       key: { type: 'string', description: 'Single config property to read from the section; the reply then carries key and value.' },
-      section: { type: 'string', description: 'Settings section.' },
+      section: { type: 'string', description: 'Settings section: a class path such as /Script/EngineSettings.GameMapsSettings, or its class name (GameMapsSettings).' },
       category: { type: 'string', description: 'A section by friendly name instead of section: general, maps, packaging, rendering, input, physics, collision, audio, engine, navigation.' },
     },
     required: [],

@@ -44,19 +44,20 @@ const TCHAR *SectionForCategory(const FString &Category) {
   return Found ? *Found : nullptr;
 }
 
-// "/Script/Module.Class" -> UClass, tolerating a bare "Module.Class".
+// "/Script/Module.Class", a bare "Module.Class", or the class name alone ("GameMapsSettings") -> UClass. A /Script
+// class is loaded or does not exist, so FindObject is enough; a LoadObject miss logged a warning into the reply.
 UClass *ResolveSettingsClass(const FString &Section) {
   FString Path = Section.TrimStartAndEnd();
   if (Path.IsEmpty()) {
     return nullptr;
   }
   if (!Path.StartsWith(TEXT("/"))) {
+    if (!Path.Contains(TEXT("."))) {
+      return McpFindTypeQuiet(Path);
+    }
     Path = TEXT("/Script/") + Path;
   }
   UClass *Class = FindObject<UClass>(nullptr, *Path);
-  if (!Class) {
-    Class = LoadObject<UClass>(nullptr, *Path);
-  }
   // Classes move between modules (UnrealEd.ProjectPackagingSettings is DeveloperToolSettings in UE5):
   // the class name alone still finds it.
   if (!Class) {
@@ -206,16 +207,18 @@ bool HandleProjectSettingsAction(const FString &LowerSub,
     return Refuse(Resp, Message, ErrorCode, TEXT("section and key are required for set_project_setting"), TEXT("INVALID_ARGUMENT"));
   }
 
-  FString NormalizedSection = Section;
-  if (!NormalizedSection.StartsWith(TEXT("/")) &&
-      !NormalizedSection.StartsWith(TEXT("["))) {
-    NormalizedSection = FString::Printf(TEXT("/Script/%s"), *Section);
+  // A settings class goes to the ini under its own path; [Name] is a raw ini section. Any other name was written
+  // under an invented "/Script/<name>" section that nothing reads, and answered success.
+  const bool bRawSection = Section.StartsWith(TEXT("[")) && Section.EndsWith(TEXT("]"));
+  UClass *Class = bRawSection ? nullptr : ResolveSettingsClass(Section);
+  if (!bRawSection && !Class) {
+    return Refuse(Resp, Message, ErrorCode, FString::Printf(TEXT("No settings class '%s'. Give a class path (/Script/EngineSettings.GameMapsSettings), its name (GameMapsSettings) or a raw ini section in brackets ([SystemSettings])."), *Section), TEXT("NOT_FOUND"));
   }
+  const FString NormalizedSection = Class ? Class->GetPathName() : Section.Mid(1, Section.Len() - 2);
 
   // The plugin's own settings live under this section; letting the automation
   // channel rewrite them could disable its own token authentication, so that
   // section is refused outright.
-  UClass *Class = ResolveSettingsClass(NormalizedSection);
   if (UEngineWireSettings::IsAutomationTarget(NormalizedSection, Class)) {
     return Refuse(Resp, Message, ErrorCode, TEXT("set_project_setting cannot target the EngineWire settings section"), TEXT("SETTING_NOT_PERMITTED"));
   }

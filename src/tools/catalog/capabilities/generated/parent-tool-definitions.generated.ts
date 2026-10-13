@@ -23602,7 +23602,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "section": {
           "type": "string",
-          "description": "Settings section."
+          "description": "Settings section: a class path such as /Script/EngineSettings.GameMapsSettings, or its class name (GameMapsSettings)."
         },
         "setting": {
           "type": "string",
