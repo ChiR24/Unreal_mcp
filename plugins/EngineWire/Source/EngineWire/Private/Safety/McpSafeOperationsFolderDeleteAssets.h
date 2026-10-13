@@ -152,7 +152,7 @@ inline bool DeleteRiskySpecialAssets(
     int32 DeletedRisky = 0;
     if (OrderedClusterAssets.Num() > 0)
     {
-        UE_LOG(LogMcpSafeOperations, Warning,
+        UE_LOG(LogMcpSafeOperations, Log,
             TEXT("McpSafeDeleteFolder: Mixed animation/rig cluster detected; deleting %d cluster assets in explicit order"),
             OrderedClusterAssets.Num());
         const int32 OrderedClusterDeleted = DeleteAnimationRigClusterOrdered(OrderedClusterAssets);
@@ -169,7 +169,7 @@ inline bool DeleteRiskySpecialAssets(
     const int32 TotalRisky = GenericRiskyAssets.Num();
     if (TotalRisky > 0)
     {
-        UE_LOG(LogMcpSafeOperations, Warning,
+        UE_LOG(LogMcpSafeOperations, Log,
             TEXT("McpSafeDeleteFolder: Deleting %d remaining risky special-delete assets via ordered engine-owned deletion"),
             TotalRisky);
 

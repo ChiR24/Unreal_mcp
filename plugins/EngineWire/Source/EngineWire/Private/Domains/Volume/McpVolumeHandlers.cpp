@@ -1,6 +1,8 @@
 #include "Domains/Volume/McpVolumeActionDecls.h"
 
+#include "Core/Requests/McpResponseCaptureRegistry.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 #include "EngineWireSubsystem.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 
@@ -100,6 +102,15 @@ bool UEngineWireSubsystem::HandleManageVolumesAction(
         LocationJson->SetNumberField(TEXT("y"), Location.Y);
         LocationJson->SetNumberField(TEXT("z"), Location.Z);
         Payload->SetObjectField(TEXT("location"), LocationJson);
+    }
+    // A volume made here is one undo step, as a spawned actor is: the spawn records the level under the
+    // transaction. A save in the same call writes the level to disk, which undo cannot take back, so then none
+    // is opened; a batch opens its own around every step.
+    TUniquePtr<FMcpScopedEditorTransaction> Transaction;
+    if (!ClassKey.IsEmpty() && !GetJsonBoolField(Payload, TEXT("save"), false) && !FMcpResponseCaptureRegistry::Get().IsCapturing(RequestId))
+    {
+        Transaction = MakeUnique<FMcpScopedEditorTransaction>(FText::FromString(TEXT("Create Volume")),
+            EMcpMutationDurability::EditorStateOnly, TArray<UObject*>());
     }
 
     if (SubAction == TEXT("create_trigger_volume")) { return HandleCreateTriggerVolume(this, RequestId, Payload, Socket); }
