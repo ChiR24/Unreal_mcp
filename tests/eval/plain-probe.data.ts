@@ -461,4 +461,9 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'hot reload', accepted: ['system_control.console_command'] },
   { query: 'dim the light', accepted: ['control_actor.edit_component'] },
   { query: 'add collision to mesh', accepted: ['asset.process_asset', 'manage_geometry.configure_mesh_collision'] },
+  { query: 'block the player', accepted: ['control_actor.set_actor_collision'] },
+  { query: 'ignore collision with player', accepted: ['control_actor.set_actor_collision'] },
+  { query: 'let the player walk through', accepted: ['control_actor.set_actor_collision'] },
+  { query: 'collision preset', accepted: ['control_actor.set_actor_collision'] },
+  { query: 'collision response', accepted: ['control_actor.set_actor_collision'] },
 ];

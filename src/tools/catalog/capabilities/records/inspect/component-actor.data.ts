@@ -62,7 +62,7 @@ export const COMPONENT_ACTOR_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['All components are needed; use get_components.'],
     inputProps: {
       objectPath: P.objectPath, actorName: P.actorName, name: P.name, componentName: P.componentName, blueprintPath: P.blueprintPath,
-      propertyNames: { type: 'array', items: { type: 'string' }, description: 'Property values to add to the reply, by name (Intensity, bIsActive), as text under properties; a name the class lacks is listed under missingProperties. Without propertyNames or detailed no property values come back.' },
+      propertyNames: { type: 'array', items: { type: 'string' }, description: 'Property values to add to the reply, by name (Intensity, bIsActive), as text under properties; a name the class lacks is listed under missingProperties. CollisionResponses reads every channel\'s response on a primitive component ({"Pawn": "Ignore", ...}). Without propertyNames or detailed no property values come back.' },
       detailed: { type: 'boolean', description: 'Every property the component\'s class declares, as text (up to 200): a Niagara or mesh component declares about 200, most of the reply. Prefer propertyNames.' },
     },
     required: ['componentName'],

@@ -244,6 +244,10 @@ bool UEngineWireSubsystem::HandleControlActorSetComponentProperties(
 
   TArray<FString> AppliedProperties;
   TArray<FString> PropertyWarnings;
+  // One undo step, as the actorNames form takes: Modify() with no transaction open recorded nothing.
+  TargetComponent->SetFlags(RF_Transactional);
+  FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Set Component Properties")),
+                                          EMcpMutationDurability::EditorStateOnly, TArray<UObject *>{TargetComponent});
   TargetComponent->Modify();
   McpApplyComponentProperties(TargetComponent, PropertiesObject, AppliedProperties, PropertyWarnings);
 
@@ -267,6 +271,7 @@ bool UEngineWireSubsystem::HandleControlActorSetComponentProperties(
       PropsArray.Add(MakeShared<FJsonValueString>(PropName));
     Data->SetArrayField(TEXT("applied"), PropsArray);
   }
+  Transaction.DescribeInto(Data);
   McpHandlerUtils::AddVerification(Data, Found);
 
   if (McpSendComponentPropertyShortfall(*this, Socket, RequestId, AppliedProperties, PropertyWarnings, Data)) {

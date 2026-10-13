@@ -76,6 +76,17 @@ void McpAppendPropertyDump(UObject *Object, const TArray<FString> &PropertyNames
         Properties->SetStringField(Name, McpPropertyReflection::GetPropertyValueAsString(Object, Property));
         ++Emitted;
     }
+    // Per-channel collision responses sit behind BodyInstance's setters, out of reflection's reach: asked for by
+    // name, they read as {channel: Block | Overlap | Ignore}.
+    const UPrimitiveComponent *Primitive = Cast<UPrimitiveComponent>(Object);
+    if (Primitive && (Wanted.Contains(TEXT("collisionresponses")) || Wanted.Contains(TEXT("bodyinstance.collisionresponses"))))
+    {
+        Properties->SetObjectField(TEXT("CollisionResponses"), McpCollisionResponsesOf(Primitive));
+        Found.Add(TEXT("collisionresponses"));
+        Found.Add(TEXT("bodyinstance.collisionresponses"));
+        ++Total;
+        ++Emitted;
+    }
     Resp->SetObjectField(TEXT("properties"), Properties);
     Resp->SetNumberField(TEXT("propertyCount"), Emitted);
     Resp->SetNumberField(TEXT("totalPropertyCount"), Total);

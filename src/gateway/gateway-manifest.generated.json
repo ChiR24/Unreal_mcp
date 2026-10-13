@@ -3534,6 +3534,7 @@
         "overlaps",
         "parentActor",
         "points",
+        "profile",
         "properties",
         "propertyName",
         "propertyNames",
@@ -3544,6 +3545,7 @@
         "relativeRotation",
         "renameObject",
         "report",
+        "responses",
         "rotation",
         "scale",
         "snapToTarget",
@@ -3586,6 +3588,13 @@
                 "items": {
                   "type": "string"
                 },
+                "description": "Several actors to change in one call and one undo step, in place of actorName; names not found are listed back under missing, and the actors changed under affectedActors (which the receipt lists as changes, with an actor handle each)."
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "Several actors to give the same material in one call and one undo step, in place of actorName; each is reported under results, and the actors changed under affectedActors (which the receipt lists as changes, with an actor handle each); the call fails naming any that did not take it."
               },
               {
@@ -3608,13 +3617,6 @@
                   "type": "string"
                 },
                 "description": "Several actors to tag in one call and one undo step, in place of actorName; names not found are listed back under missing, and the actors tagged under affectedActors (which the receipt lists as changes, with an actor handle each)."
-              },
-              {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                },
-                "description": "Several actors to toggle in one call and one undo step, in place of actorName; names not found are listed back under missing, and the actors changed under affectedActors (which the receipt lists as changes, with an actor handle each)."
               },
               {
                 "type": "array",
@@ -3756,7 +3758,7 @@
           },
           "collisionEnabled": {
             "type": "boolean",
-            "description": "Desired collision enabled state."
+            "description": "Turn collision on (true) or off (false). Omitted with profile or responses, the mode stays as the preset sets it."
           },
           "componentName": {
             "type": "string",
@@ -4031,9 +4033,13 @@
             "maxItems": 8,
             "description": "Places on the actor sampled with it (at most 8): a component by its name (LegL), a bone or socket of any of its components (foot_l, hand_r), or a component's own socket as Component.Socket (Weapon.Muzzle). Each sample's points gives each one's world location [x, y, z]; a name the actor lacks is refused with the names it has. Fewer samples are kept with points: 400 x 2 / (2 + points)."
           },
+          "profile": {
+            "type": "string",
+            "description": "A collision preset of the project (BlockAll, BlockAllDynamic, OverlapAll, OverlapAllDynamic, NoCollision, Pawn, Trigger, PhysicsActor...); an unknown name is refused with the list. The reply reads the preset back."
+          },
           "properties": {
             "type": "object",
-            "description": "Component property key-value pairs. Each key is a name or dotted path, as propertyName takes it (BodyInstance.CollisionEnabled works).",
+            "description": "Component property key-value pairs. Each key is a name or dotted path, as propertyName takes it (BodyInstance.CollisionEnabled works). Collision goes through the component setters: CollisionProfileName (a preset), CollisionEnabled, CollisionResponses ({\"Pawn\": \"Ignore\"}).",
             "additionalProperties": true,
             "x-unreal-reflection-boundary": true
           },
@@ -4107,6 +4113,12 @@
               "failures"
             ],
             "description": "Which items results lists: all, or failures only (items that failed to spawn or to take their material or variables, and items with a placementWarning); spawned and failed still count every item. Default all, or failures for a batch of more than 20 items once repeats are unrolled; the receipt still names every actor."
+          },
+          "responses": {
+            "type": "object",
+            "description": "How the components answer each named channel, {\"Pawn\": \"Ignore\", \"Visibility\": \"Block\"}: an engine channel (WorldStatic, WorldDynamic, Pawn, Visibility, Camera, PhysicsBody, Vehicle, Destructible) or one the project added, by its name; each Block, Overlap or Ignore. Applied after profile, so the preset then reads Custom; the reply reads each channel back.",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
           },
           "rotation": {
             "type": "array",
@@ -5150,7 +5162,7 @@
                 "items": {
                   "type": "string"
                 },
-                "description": "Property values to add to the reply, by name (Intensity, bIsActive), as text under properties; a name the class lacks is listed under missingProperties. Without propertyNames or detailed no property values come back."
+                "description": "Property values to add to the reply, by name (Intensity, bIsActive), as text under properties; a name the class lacks is listed under missingProperties. CollisionResponses reads every channel's response on a primitive component ({\"Pawn\": \"Ignore\", ...}). Without propertyNames or detailed no property values come back."
               },
               {
                 "type": "array",
@@ -5169,7 +5181,7 @@
                 "description": "Several properties of the same target in one call, in place of propertyName: each read as a single call would (dotted paths too, such as CharacterMovement.MaxWalkSpeed). Answered under properties; a name that does not resolve is listed under missingProperties with the reason, and the others still answer."
               }
             ],
-            "description": "Property values to add to the reply, by name (Intensity, bIsActive), as text under properties; a name the class lacks is listed under missingProperties. Without propertyNames or detailed no property values come back."
+            "description": "Property values to add to the reply, by name (Intensity, bIsActive), as text under properties; a name the class lacks is listed under missingProperties. CollisionResponses reads every channel's response on a primitive component ({\"Pawn\": \"Ignore\", ...}). Without propertyNames or detailed no property values come back."
           },
           "propertyPath": {
             "type": "string",

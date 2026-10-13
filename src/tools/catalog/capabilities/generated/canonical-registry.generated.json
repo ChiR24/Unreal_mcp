@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "fe790d7888c67f85",
+  "catalogRevision": "770e7d3d428d320b",
   "recordCount": 411,
   "records": [
     {
@@ -17039,6 +17039,7 @@
           "edit=modify: An SCS-owned component template needs property or transform updates.",
           "edit=reparent: An SCS component must move under a different parent node.",
           "edit=set_property: One property on an SCS component template must be changed.",
+          "edit=set_property: Collision of the template, for every placed copy: CollisionProfileName (a preset such as OverlapAllDynamic), CollisionEnabled, or CollisionResponses ({\"Pawn\": \"Ignore\"} lets a character walk through) go through the component setters.",
           "edit=set_transform: An SCS component template transform must be updated."
         ],
         "whenNotToUse": [
@@ -17373,7 +17374,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "3baadd9f06f47e55c0736ac9dda7779a9bde8268bfbca02aea60fc20f60c2291",
-        "content": "8b3a54729be1d2460cc908863836108ed30f716a566b36b9c9b8fd4340dfb095"
+        "content": "de6631c374164481f616be57f33bd308eb2584e8146ce2c33122b4576bd9d7df"
       }
     },
     {
@@ -32739,7 +32740,7 @@
             },
             "properties": {
               "type": "object",
-              "description": "Component property key-value pairs. Each key is a name or dotted path, as propertyName takes it (BodyInstance.CollisionEnabled works).",
+              "description": "Component property key-value pairs. Each key is a name or dotted path, as propertyName takes it (BodyInstance.CollisionEnabled works). Collision goes through the component setters: CollisionProfileName (a preset), CollisionEnabled, CollisionResponses ({\"Pawn\": \"Ignore\"}).",
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true
             },
@@ -32878,8 +32879,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "a53bd4b3024e95b704c17e00b15eba521603fcffb361c73f5daa71d435ea85af",
-        "content": "b63887b74296ec5d9ec4cb95a0f71b1226340697ba05eaf80791ca1c34ea05d7"
+        "schema": "983f30c347dc3a03da84654c35915889ec944ea04e719f59bca124bc95fa8843",
+        "content": "94313dd038a199edac30abb72f04e4cdf1180e57d7adff4722359c9a847c127c"
       }
     },
     {
@@ -34849,15 +34850,22 @@
         "domain": "actor",
         "family": "collision",
         "topics": [
-          "set_actor_collision"
+          "set_actor_collision",
+          "collision preset",
+          "collision response",
+          "walk through",
+          "block the player",
+          "ignore collision with player"
         ],
-        "summary": "Enable or disable collision on an actor, or on many actors at once with actorNames, as one undoable step; normalizes to set_collision.",
+        "summary": "Turn collision on or off for an actor, give its components a collision preset (BlockAll, OverlapAllDynamic, NoCollision...), or set how they answer one channel (Pawn Ignore lets a character walk through, Pawn Block stops it); many actors at once with actorNames, as one undoable step.",
         "whenToUse": [
           "Actor collision must be toggled.",
-          "Many actors must have collision toggled together (actorNames does them in one call)."
+          "Many actors must have collision toggled together (actorNames does them in one call).",
+          "A character must walk through an actor or be stopped by it (responses {\"Pawn\": \"Ignore\"} or {\"Pawn\": \"Block\"}), or the actor must only report overlaps, as a trigger does (profile OverlapAllDynamic)."
         ],
         "whenNotToUse": [
-          "One component only, or a mode other than on and off (QueryOnly, PhysicsOnly): use edit_component (edit set_properties) with CollisionEnabled, which takes the ECollisionEnabled names."
+          "A mode other than on and off (QueryOnly, PhysicsOnly): use edit_component (edit set_properties) with CollisionEnabled, which takes the ECollisionEnabled names.",
+          "Every placed copy of a class must change: use edit_scs set_property on its component with CollisionProfileName or CollisionResponses."
         ]
       },
       "schemas": {
@@ -34878,11 +34886,25 @@
               "items": {
                 "type": "string"
               },
-              "description": "Several actors to toggle in one call and one undo step, in place of actorName; names not found are listed back under missing, and the actors changed under affectedActors (which the receipt lists as changes, with an actor handle each)."
+              "description": "Several actors to change in one call and one undo step, in place of actorName; names not found are listed back under missing, and the actors changed under affectedActors (which the receipt lists as changes, with an actor handle each)."
             },
             "collisionEnabled": {
               "type": "boolean",
-              "description": "Desired collision enabled state."
+              "description": "Turn collision on (true) or off (false). Omitted with profile or responses, the mode stays as the preset sets it."
+            },
+            "profile": {
+              "type": "string",
+              "description": "A collision preset of the project (BlockAll, BlockAllDynamic, OverlapAll, OverlapAllDynamic, NoCollision, Pawn, Trigger, PhysicsActor...); an unknown name is refused with the list. The reply reads the preset back."
+            },
+            "responses": {
+              "type": "object",
+              "description": "How the components answer each named channel, {\"Pawn\": \"Ignore\", \"Visibility\": \"Block\"}: an engine channel (WorldStatic, WorldDynamic, Pawn, Visibility, Camera, PhysicsBody, Vehicle, Destructible) or one the project added, by its name; each Block, Overlap or Ignore. Applied after profile, so the preset then reads Custom; the reply reads each channel back.",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true
+            },
+            "componentName": {
+              "type": "string",
+              "description": "Only the primitive component of this name (the capsule of a character, not its mesh); every primitive component of the actor otherwise."
             }
           },
           "required": [
@@ -34920,7 +34942,7 @@
       },
       "examples": [
         {
-          "title": "Enable or disable collision on an actor, or on many actors at once with actorNames, as one undoable step; normalizes to set_collision.",
+          "title": "Turn collision on or off for an actor, give its components a collision preset (BlockAll, OverlapAllDynamic, NoCollision...), or set how they answer one channel (Pawn Ignore lets a character walk through, Pawn Block stops it); many actors at once with actorNames, as one undoable step.",
           "input": {
             "action": "set_actor_collision",
             "actorName": "Cube1",
@@ -34958,8 +34980,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "2a9198bfe38e9006c5187546c21827b63ecb4a9ae1e09a84aa1cb6f5f5d0e268",
-        "content": "dfcbc0812d87aec46baf5cafa5d9781d3da871075dce1abe3e437d0275455b78"
+        "schema": "e5bdc046ea22a9b604e57cd8fd5093b147607d65c672a63f4bc2a14e0a1d8366",
+        "content": "520fdabefd904f99fa25df035258af485fedf13517ea349b70254b6221531b15"
       }
     },
     {
@@ -43379,7 +43401,7 @@
               "items": {
                 "type": "string"
               },
-              "description": "Property values to add to the reply, by name (Intensity, bIsActive), as text under properties; a name the class lacks is listed under missingProperties. Without propertyNames or detailed no property values come back."
+              "description": "Property values to add to the reply, by name (Intensity, bIsActive), as text under properties; a name the class lacks is listed under missingProperties. CollisionResponses reads every channel's response on a primitive component ({\"Pawn\": \"Ignore\", ...}). Without propertyNames or detailed no property values come back."
             },
             "detailed": {
               "type": "boolean",
@@ -43507,8 +43529,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "98684e1409e8ae5419662d27ae73921dc7554f6889be401c96b7d62e3a8b7d1f",
-        "content": "6708a1f0eb2ef0c2e6e16d63a407683d4fea354f451dbfd95512386530637d03"
+        "schema": "c3a91d7febf742cd23c329b62e0340833c76a26be6835e5d05bfa94609508b71",
+        "content": "c1c9687e8973a8df211d41ac9174a56458f03fa625b7fdf61c7b40d4154e21d1"
       }
     },
     {

@@ -336,7 +336,10 @@ describe('set_visibility and set_actor_collision take many actors in one call, a
   it('set_actor_collision toggles every named actor and each of its primitive components, and lists the actors that have none', () => {
     const source = collision();
 
-    expect(source).toMatch(/for \(AActor\* Actor : Actors\)\s*\{\s*Actor->SetActorEnableCollision\(bCollisionEnabled\);\s*TInlineComponentArray<UPrimitiveComponent\*> PrimComponents\(Actor\);/u);
+    expect(source).toMatch(/for \(AActor\* Actor : Actors\)\s*\{\s*if \(bSetEnabled\)\s*\{\s*Actor->SetActorEnableCollision\(bCollisionEnabled\);\s*\}\s*TInlineComponentArray<UPrimitiveComponent\*> PrimComponents\(Actor\);/u);
+    // A preset or per-channel responses are read before any actor changes, then read back off a changed component.
+    expect(source).toMatch(/McpIsCollisionProfile\(Profile, ReadError\)[\s\S]*McpReadCollisionResponses\([\s\S]*FMcpScopedEditorTransaction Transaction/u);
+    expect(source).toContain('First->GetCollisionResponseToChannel(Entry.Key)');
     expect(source).toContain('Updated += OnActor;');
     expect(source).toContain('NoComponent.Add(McpActorRef(Actor));');
     expect(source).toContain('Data->SetArrayField(TEXT("noPrimitiveComponents")');

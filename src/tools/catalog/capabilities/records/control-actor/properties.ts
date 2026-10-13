@@ -35,7 +35,7 @@ export const P = {
   templateBlueprintPath: str('Canonical /Game Blueprint asset path. Reads the component template on the Blueprint CDO instead of a live actor, so a Blueprint with no instance in the level can still be inspected. Supply this or actorName.'),
   properties: {
     type: 'object',
-    description: 'Component property key-value pairs. Each key is a name or dotted path, as propertyName takes it (BodyInstance.CollisionEnabled works).',
+    description: 'Component property key-value pairs. Each key is a name or dotted path, as propertyName takes it (BodyInstance.CollisionEnabled works). Collision goes through the component setters: CollisionProfileName (a preset), CollisionEnabled, CollisionResponses ({"Pawn": "Ignore"}).',
     additionalProperties: true,
     'x-unreal-reflection-boundary': true,
   },

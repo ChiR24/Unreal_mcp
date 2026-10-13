@@ -102,11 +102,28 @@ bool UEngineWireSubsystem::HandleControlActorSetCollision(
 
   Payload->TryGetStringField(TEXT("actorName"), ActorName);
 
+  const bool bHasEnabled = Payload->HasField(TEXT("collisionEnabled")) || Payload->HasField(TEXT("collision_enabled"));
   if (Payload->HasField(TEXT("collisionEnabled"))) {
     bCollisionEnabled = GetJsonBoolField(Payload, TEXT("collisionEnabled"), true);
   } else if (Payload->HasField(TEXT("collision_enabled"))) {
     bCollisionEnabled = GetJsonBoolField(Payload, TEXT("collision_enabled"), true);
   }
+
+  // A preset and per-channel responses (Pawn: Ignore lets a character walk through) are read before anything
+  // changes, so a misspelt channel or preset leaves every actor as it was.
+  FString Profile, ComponentName, ReadError;
+  Payload->TryGetStringField(TEXT("profile"), Profile);
+  Payload->TryGetStringField(TEXT("componentName"), ComponentName);
+  const TSharedPtr<FJsonObject> *ResponsesObject = nullptr;
+  TArray<TPair<ECollisionChannel, ECollisionResponse>> Responses;
+  const bool bHasResponses = Payload->TryGetObjectField(TEXT("responses"), ResponsesObject) && ResponsesObject;
+  if ((!Profile.IsEmpty() && !McpIsCollisionProfile(Profile, ReadError)) ||
+      (bHasResponses && !McpReadCollisionResponses(*ResponsesObject, Responses, ReadError))) {
+    SendAutomationError(Socket, RequestId, ReadError + TEXT(". Nothing was changed."), TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+  // On or off when asked, or when nothing else is: a preset brings its own mode.
+  const bool bSetEnabled = bHasEnabled || (Profile.IsEmpty() && Responses.Num() == 0);
 
   // actorNames: many actors in one call (a level's trigger volumes took one call each). Names that
   // matched nothing are listed back, as add_tag lists them; the single-actor replies are unchanged.
@@ -150,21 +167,37 @@ bool UEngineWireSubsystem::HandleControlActorSetCollision(
   int32 Updated = 0;
   TArray<FString> Affected;
   TArray<FString> NoComponent;
+  UPrimitiveComponent* First = nullptr;
   for (AActor* Actor : Actors)
   {
-    Actor->SetActorEnableCollision(bCollisionEnabled);
+    if (bSetEnabled)
+    {
+      Actor->SetActorEnableCollision(bCollisionEnabled);
+    }
     TInlineComponentArray<UPrimitiveComponent*> PrimComponents(Actor);
     int32 OnActor = 0;
     for (UPrimitiveComponent* PrimComp : PrimComponents)
     {
-      if (!PrimComp)
+      if (!PrimComp || (!ComponentName.IsEmpty() && !PrimComp->GetName().Equals(ComponentName, ESearchCase::IgnoreCase)))
       {
         continue;
       }
-      PrimComp->SetCollisionEnabled(
-          bCollisionEnabled ? ECollisionEnabled::QueryAndPhysics
-                            : ECollisionEnabled::NoCollision);
+      if (!Profile.IsEmpty())
+      {
+        PrimComp->SetCollisionProfileName(FName(*Profile));
+      }
+      if (Responses.Num() > 0)
+      {
+        McpApplyCollisionResponses(PrimComp, Responses);
+      }
+      if (bSetEnabled)
+      {
+        PrimComp->SetCollisionEnabled(
+            bCollisionEnabled ? ECollisionEnabled::QueryAndPhysics
+                              : ECollisionEnabled::NoCollision);
+      }
       PrimComp->MarkRenderStateDirty();
+      First = First ? First : PrimComp;
       ++OnActor;
     }
     if (OnActor == 0)
@@ -181,15 +214,35 @@ bool UEngineWireSubsystem::HandleControlActorSetCollision(
   if (Updated == 0)
   {
     SendAutomationError(Socket, RequestId,
-        bMany ? FString::Printf(TEXT("No named actor has a primitive component to configure: %s"),
-                                *FString::Join(NoComponent, TEXT(", ")))
-              : FString::Printf(TEXT("Actor '%s' has no primitive components to configure"), *ActorName),
+        !ComponentName.IsEmpty() ? FString::Printf(TEXT("No primitive component named '%s' on %s"), *ComponentName,
+                                                   *FString::Join(NoComponent, TEXT(", ")))
+        : bMany ? FString::Printf(TEXT("No named actor has a primitive component to configure: %s"),
+                                  *FString::Join(NoComponent, TEXT(", ")))
+                : FString::Printf(TEXT("Actor '%s' has no primitive components to configure"), *ActorName),
         TEXT("NO_COMPONENT"));
     return true;
   }
 
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
-  Data->SetBoolField(TEXT("collisionEnabled"), bCollisionEnabled);
+  if (bSetEnabled)
+  {
+    Data->SetBoolField(TEXT("collisionEnabled"), bCollisionEnabled);
+  }
+  // Read back off the first component changed: a preset then responses reads Custom, as the details panel shows.
+  if (!Profile.IsEmpty())
+  {
+    Data->SetStringField(TEXT("profile"), First->GetCollisionProfileName().ToString());
+  }
+  if (Responses.Num() > 0)
+  {
+    TSharedPtr<FJsonObject> Now = MakeShared<FJsonObject>();
+    for (const TPair<ECollisionChannel, ECollisionResponse>& Entry : Responses)
+    {
+      Now->SetStringField(UCollisionProfile::Get()->ReturnChannelNameFromContainerIndex(Entry.Key).ToString(),
+                          McpCollisionResponseName(First->GetCollisionResponseToChannel(Entry.Key)));
+    }
+    Data->SetObjectField(TEXT("responses"), Now);
+  }
   Data->SetNumberField(TEXT("componentsUpdated"), Updated);
   Transaction.DescribeInto(Data);
   if (!bMany)
