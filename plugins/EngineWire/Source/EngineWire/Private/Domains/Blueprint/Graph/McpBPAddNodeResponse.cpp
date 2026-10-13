@@ -1,4 +1,5 @@
 #include "Domains/Blueprint/McpBPActionContext.h"
+#include "Domains/Blueprint/Timeline/McpBPTimeline.h"
 #include "Domains/BlueprintGraph/McpBPGraphCompatibility.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
@@ -28,6 +29,7 @@ void SendBlueprintAddNodeResult(
   if (!VariableName.IsEmpty()) {
     Result->SetStringField(TEXT("variableName"), VariableName);
   }
+  McpDescribeTimelineNode(NewNode, Result);
 
   Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                                 TEXT("Node added"), Result, FString());

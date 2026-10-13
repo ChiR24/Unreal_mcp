@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "6860c42ad2d2f1ad",
-  "recordCount": 413,
+  "catalogRevision": "c1ddcdd8a09108b8",
+  "recordCount": 414,
   "records": [
     {
       "id": "animation_physics.analyze_animation",
@@ -16525,7 +16525,7 @@
             },
             "nodeType": {
               "type": "string",
-              "description": "The node to create: CallFunction (memberName, plus memberClass for a function of another class), Event (eventName: BeginPlay, Tick), CustomEvent (customEventName), VariableGet or VariableSet (memberName), Cast (targetClass), InputAxisEvent (inputAxisName), Branch, Sequence, Select, Switch, SwitchOnInt, SwitchOnEnum, SwitchOnString, DoOnce, DoN, FlipFlop, Gate, MultiGate, ForLoop, ForEachLoop, WhileLoop (each also WithBreak), MakeArray, MakeStruct and BreakStruct (structPath), SpawnActorFromClass, GetAllActorsOfClass, Self, Timeline, Reroute, Comment, MathExpression (its formula goes in set_node_property Expression) (a Switch on Int is made with only Default: wire a case by its number, from \"$id.0\", \"$id.1\"..., and the case pin is added; a Sequence or a commutative math node grows its inputs the same way); a common function by name (PrintString, Delay, SetActorLocation, GetPlayerPawn, GetActorOfClass, IsValid, PlaySound2D); or a K2Node class name that inspect_graph info=node_types lists. In an Animation Blueprint's AnimGraph or a state's graph (graphName), any animation node by class: AnimGraphNode_TwoBoneIK, TwoBoneIK or Two Bone IK (info=node_types with filter IK lists them; animation_physics configure_anim_graph_node set_value sets its settings); a node the graph cannot hold is refused (NODE_NOT_ALLOWED_IN_GRAPH). For create_struct_make_break_nodes: make or break."
+              "description": "The node to create: CallFunction (memberName, plus memberClass for a function of another class), Event (eventName: BeginPlay, Tick), CustomEvent (customEventName), VariableGet or VariableSet (memberName), Cast (targetClass), InputAxisEvent (inputAxisName), Branch, Sequence, Select, Switch, SwitchOnInt, SwitchOnEnum, SwitchOnString, DoOnce, DoN, FlipFlop, Gate, MultiGate, ForLoop, ForEachLoop, WhileLoop (each also WithBreak), MakeArray, MakeStruct and BreakStruct (structPath), SpawnActorFromClass, GetAllActorsOfClass, Self, Timeline (timelineName; edit_timeline keys its tracks), Reroute, Comment, MathExpression (its formula goes in set_node_property Expression) (a Switch on Int is made with only Default: wire a case by its number, from \"$id.0\", \"$id.1\"..., and the case pin is added; a Sequence or a commutative math node grows its inputs the same way); a common function by name (PrintString, Delay, SetActorLocation, GetPlayerPawn, GetActorOfClass, IsValid, PlaySound2D); or a K2Node class name that inspect_graph info=node_types lists. In an Animation Blueprint's AnimGraph or a state's graph (graphName), any animation node by class: AnimGraphNode_TwoBoneIK, TwoBoneIK or Two Bone IK (info=node_types with filter IK lists them; animation_physics configure_anim_graph_node set_value sets its settings); a node the graph cannot hold is refused (NODE_NOT_ALLOWED_IN_GRAPH). For create_struct_make_break_nodes: make or break."
             },
             "posX": {
               "type": "number",
@@ -16554,6 +16554,10 @@
             "targetClass": {
               "type": "string",
               "description": "Target class for a node that carries one: a Cast target, a CreateWidget or SpawnActor class, the subsystem a Get Subsystem node returns, or the class GetAllActorsOfClass and GetActorOfClass look for (their result is then typed to it, so a ForEach element wires to its functions). Required for cast and subsystem nodes, whose type is stored on the node itself and cannot be set afterwards."
+            },
+            "timelineName": {
+              "type": "string",
+              "description": "For nodeType Timeline: the timeline it plays, which edit_timeline keys; a name the Blueprint lacks makes one (omitted, a new Timeline_N). One node plays a timeline, in the event graph of an Actor Blueprint."
             },
             "pure": {
               "type": "boolean",
@@ -16715,6 +16719,10 @@
             "graphName": {
               "type": "string",
               "description": "Target graph name (Event Graph, Construction Script, etc.)."
+            },
+            "timelineName": {
+              "type": "string",
+              "description": "For a Timeline node: the timeline it plays, the name edit_timeline takes."
             },
             "nodeClass": {
               "type": "string",
@@ -17037,6 +17045,10 @@
               "add_node",
               "create_node"
             ],
+            "timelineName": [
+              "add_node",
+              "create_node"
+            ],
             "pure": [
               "create_node"
             ],
@@ -17118,8 +17130,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "94c0ea494edc798f74362eae15b9e27322a94f458cbfd8da9421dbc147beaee0",
-        "content": "c0c7424cea54cf85c068c92cd3d6eb4673542e6080d4f23a2614814ee4887084"
+        "schema": "4639cfb6553e6b271fca3c28e563cbec79abe10bbfa6689dc7885ad4205db7ae",
+        "content": "a0ba4869a4e4b8681373c7f2a881a97b5bd88a0601c162131eb248f6178266ca"
       }
     },
     {
@@ -17546,6 +17558,217 @@
         "algorithm": "sha256",
         "schema": "3baadd9f06f47e55c0736ac9dda7779a9bde8268bfbca02aea60fc20f60c2291",
         "content": "c27ee3e4a63cf4873b93efc6b9f7a44a15b62a9ca98208512cc46d14f100e188"
+      }
+    },
+    {
+      "id": "blueprint.edit_timeline",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "manage_blueprint",
+          "action": "edit_timeline"
+        }
+      ],
+      "discovery": {
+        "domain": "blueprint",
+        "family": "graph",
+        "topics": [
+          "edit_timeline",
+          "timeline",
+          "add a timeline",
+          "timeline track",
+          "key a timeline",
+          "animate over time",
+          "open a door smoothly",
+          "change smoothly over time"
+        ],
+        "summary": "Make or change a Blueprint timeline, what a Timeline node plays: its length, autoplay and loop, and its float, vector, color and event tracks with their keys. The Timeline node gets a pin per track, and its Update pin fires every frame while it plays.",
+        "whenToUse": [
+          "Something must change smoothly over a set time from a Blueprint (a door swinging open, a platform sliding, a light fading): key a float track from 0 to 1 and feed it to a Lerp on the Timeline node's Update."
+        ],
+        "whenNotToUse": [
+          "A cinematic or a camera move is needed (use a level sequence).",
+          "A widget must animate (use edit_widget_animation)."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "blueprintPath": {
+              "type": "string",
+              "description": "Canonical /Game Blueprint asset path."
+            },
+            "timelineName": {
+              "type": "string",
+              "description": "The timeline, as its node is titled. A name the Blueprint lacks makes one; the node that plays it comes from edit_graph create_node nodeType Timeline with this timelineName, made before or after (either way it shows a pin per track)."
+            },
+            "length": {
+              "type": "number",
+              "description": "How long it plays, in seconds (a new timeline: 5)."
+            },
+            "useLastKeyframe": {
+              "type": "boolean",
+              "description": "End at the last key instead of at length."
+            },
+            "autoPlay": {
+              "type": "boolean",
+              "description": "Start when the game starts, without a Play call."
+            },
+            "loop": {
+              "type": "boolean",
+              "description": "Start over at the end, again and again."
+            },
+            "ignoreTimeDilation": {
+              "type": "boolean",
+              "description": "Play at real speed while the game is slowed down or sped up."
+            },
+            "tracks": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 50,
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "x-unreal-reflection-boundary": true,
+              "description": "Tracks to add, or whose keys to replace (a track keeps its type): each {name, type, keys, interpolation}. name is the node pin its value comes out of; type float (default), vector, color or event (an exec pin that fires at each key time); keys [{time in seconds, value}], value a number, {x, y, z} or {r, g, b, a} by type and none for an event; interpolation auto (smooth, default), linear or constant. Every track is checked before anything changes; a bad one is named by its index (tracks[1].keys[0])."
+            }
+          },
+          "required": [
+            "action",
+            "blueprintPath",
+            "timelineName"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "timelineName": {
+              "type": "string",
+              "description": "The timeline edited."
+            },
+            "created": {
+              "type": "boolean",
+              "description": "True when this call made the timeline."
+            },
+            "length": {
+              "type": "number",
+              "description": "Its length in seconds."
+            },
+            "useLastKeyframe": {
+              "type": "boolean",
+              "description": "Whether it ends at its last key."
+            },
+            "autoPlay": {
+              "type": "boolean",
+              "description": "Whether it starts on its own."
+            },
+            "loop": {
+              "type": "boolean",
+              "description": "Whether it loops."
+            },
+            "tracks": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Every track: name (its node pin), type and keys (the key count)."
+            },
+            "nodeGuid": {
+              "type": "string",
+              "description": "The Timeline node that plays it; absent until one is made."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Make or change a Blueprint timeline, what a Timeline node plays: its length, autoplay and loop, and its float, vector, color and event tracks with their keys. The Timeline node gets a pin per track, and its Update pin fires every frame while it plays.",
+          "input": {
+            "action": "edit_timeline",
+            "blueprintPath": "/Game/Blueprints/BP_Door",
+            "timelineName": "OpenDoor",
+            "length": 1,
+            "tracks": [
+              {
+                "name": "Alpha",
+                "keys": [
+                  {
+                    "time": 0,
+                    "value": 0
+                  },
+                  {
+                    "time": 1,
+                    "value": 1
+                  }
+                ]
+              }
+            ]
+          },
+          "output": {
+            "success": true
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [
+          "EditorScriptingUtilities"
+        ],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "write",
+        "idempotency": "idempotent",
+        "longRunning": false,
+        "safeToRetry": true
+      },
+      "policy": {
+        "requiredScope": "write",
+        "consent": "none",
+        "dataAccess": "project-write"
+      },
+      "cost": {
+        "latency": "interactive",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "manage_blueprint",
+        "dispatchAction": "edit_timeline"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "4fc7223837ffa99c352cb27a4f643d9af7f6d3888df671e93822f287c6965b24",
+        "content": "e8d6c49f8ba8359e28f8d4487470c3dafec7d88229b6dd99e971bbf6c55163cb"
       }
     },
     {

@@ -178,6 +178,7 @@ bool HandleBlueprintAddFunction(const FBlueprintActionContext &Context);
 bool HandleBlueprintAddEventDispatcher(const FBlueprintActionContext &Context);
 bool HandleBlueprintRemoveFunction(const FBlueprintActionContext &Context);
 bool HandleBlueprintImplementInterface(const FBlueprintActionContext &Context);
+bool HandleBlueprintEditTimeline(const FBlueprintActionContext &Context);
 bool HandleBlueprintCompile(const FBlueprintActionContext &Context);
 bool HandleBlueprintCreateExists(const FBlueprintActionContext &Context);
 bool HandleBlueprintGet(const FBlueprintActionContext &Context);

@@ -1,4 +1,5 @@
 #include "Domains/BlueprintGraph/McpBPGraphPrivate.h"
+#include "Domains/Blueprint/Timeline/McpBPTimeline.h"
 
 #include "AnimGraphNode_Base.h"
 #include "K2Node_CallArrayFunction.h"
@@ -305,6 +306,14 @@ void CreateDynamicNode(
             Context.SendErrorWithDetails(OverlapMessage, TEXT("NODE_OVERLAP"), OverlapDetails);
             return;
         }
+        // A Timeline gets its timeline once placed, so a refused placement leaves none behind.
+        FString TimelineName, TimelineError;
+        Context.Payload->TryGetStringField(TEXT("timelineName"), TimelineName);
+        if (!McpBlueprintHandlers::McpBindTimelineNode(NewNode, Context.Blueprint, TimelineName, TimelineError))
+        {
+            Context.SendError(TimelineError, TEXT("INVALID_ARGUMENT"));
+            return;
+        }
     }
     FBlueprintEditorUtils::MarkBlueprintAsModified(Context.Blueprint);
     SaveLoadedAssetThrottled(Context.Blueprint);
@@ -316,6 +325,7 @@ void CreateDynamicNode(
     Result->SetStringField(TEXT("nodeId"), NewNode->NodeGuid.ToString());
     Result->SetStringField(TEXT("nodeName"), NewNode->GetName());
     Result->SetStringField(TEXT("nodeClass"), NodeClass->GetName());
+    McpBlueprintHandlers::McpDescribeTimelineNode(NewNode, Result);
     Context.SendResponse(TEXT("Node created."), Result);
 }
 }

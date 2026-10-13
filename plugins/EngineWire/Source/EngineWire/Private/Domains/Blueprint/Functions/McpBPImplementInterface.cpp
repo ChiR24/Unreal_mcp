@@ -111,6 +111,9 @@ bool HandleBlueprintImplementInterface(const FBlueprintActionContext &Context) {
     Resp->SetArrayField(TEXT("functionGraphs"), McpHandlerUtils::ToJsonStringArray(FunctionGraphs));
     Resp->SetArrayField(TEXT("events"), McpHandlerUtils::ToJsonStringArray(Events));
   }
+  if (bChange) {
+    McpHandlerUtils::AddVerification(Resp, Blueprint);
+  }
   if (!bCompiled || !bSaved) {
     Resp->SetStringField(TEXT("warning"), !bCompiled ? TEXT("The Blueprint did not compile cleanly; compile it to read the errors.")
                                                      : TEXT("The Blueprint changed but could not be saved."));

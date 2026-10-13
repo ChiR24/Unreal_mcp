@@ -1,4 +1,5 @@
 #include "Domains/Blueprint/McpBPActionContext.h"
+#include "Domains/Blueprint/Timeline/McpBPTimeline.h"
 #include "Domains/BlueprintGraph/McpBPGraphCompatibility.h"
 #include "Core/Module/EngineWireGlobals.h"
 #include "Foundation/BridgeHelpers/Assets/McpAssetSaveRegistry.h"
@@ -170,6 +171,12 @@ bool HandleBlueprintAddNode(const FBlueprintActionContext &Context) {
                                TEXT("NODE_OVERLAP"));
         return true;
       }
+    }
+    FString TimelineName, TimelineError;
+    LocalPayload->TryGetStringField(TEXT("timelineName"), TimelineName);
+    if (!McpBindTimelineNode(NewNode, BP, TimelineName, TimelineError)) {
+      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false, TimelineError, nullptr, TEXT("INVALID_ARGUMENT"));
+      return true;
     }
     NewNode->Modify();
 

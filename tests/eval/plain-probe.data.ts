@@ -478,4 +478,10 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'implement interface', accepted: ['blueprint.implement_interface'] },
   { query: 'add interface to blueprint', accepted: ['blueprint.implement_interface'] },
   { query: 'make a blueprint interface', accepted: ['blueprint.create'] },
+  { query: 'add a timeline', accepted: ['blueprint.edit_timeline', 'blueprint.edit_graph'] },
+  { query: 'blueprint timeline', accepted: ['blueprint.edit_timeline', 'blueprint.edit_graph'] },
+  { query: 'timeline track', accepted: ['blueprint.edit_timeline'] },
+  { query: 'key a timeline', accepted: ['blueprint.edit_timeline'] },
+  { query: 'open a door smoothly', accepted: ['blueprint.edit_timeline'] },
+  { query: 'animate over time', accepted: ['blueprint.edit_timeline'] },
 ];

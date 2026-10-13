@@ -12799,6 +12799,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Socket or parent component to attach to: one of this Blueprint's own, a parent Blueprint's part, or a native one (Mesh, CapsuleComponent)."
         },
+        "autoPlay": {
+          "type": "boolean",
+          "description": "Start when the game starts, without a Play call."
+        },
         "autoWrap": {
           "type": "boolean",
           "description": "Enable text auto-wrap."
@@ -13117,6 +13121,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Sound a Button plays when the pointer moves onto it (SoundCue, SoundWave or MetaSound path); an empty string clears it."
         },
+        "ignoreTimeDilation": {
+          "type": "boolean",
+          "description": "Play at real speed while the game is slowed down or sped up."
+        },
         "includePins": {
           "type": "boolean",
           "description": "When true, graph details include per-node pins and links."
@@ -13287,6 +13295,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Left margin in slate units."
         },
+        "length": {
+          "type": "number",
+          "description": "How long it plays, in seconds (a new timeline: 5)."
+        },
         "letterSpacing": {
           "type": "number",
           "description": "Extra space between the letters of a TextBlock, in thousandths of an em (0 normal, 100 airy, negative tighter)."
@@ -13300,6 +13312,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Relative location {x, y, z} for an SCS component template.",
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true
+        },
+        "loop": {
+          "type": "boolean",
+          "description": "Start over at the end, again and again."
         },
         "mapSize": {
           "type": "number",
@@ -13416,7 +13432,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "nodeType": {
           "type": "string",
-          "description": "The node to create: CallFunction (memberName, plus memberClass for a function of another class), Event (eventName: BeginPlay, Tick), CustomEvent (customEventName), VariableGet or VariableSet (memberName), Cast (targetClass), InputAxisEvent (inputAxisName), Branch, Sequence, Select, Switch, SwitchOnInt, SwitchOnEnum, SwitchOnString, DoOnce, DoN, FlipFlop, Gate, MultiGate, ForLoop, ForEachLoop, WhileLoop (each also WithBreak), MakeArray, MakeStruct and BreakStruct (structPath), SpawnActorFromClass, GetAllActorsOfClass, Self, Timeline, Reroute, Comment, MathExpression (its formula goes in set_node_property Expression) (a Switch on Int is made with only Default: wire a case by its number, from \"$id.0\", \"$id.1\"..., and the case pin is added; a Sequence or a commutative math node grows its inputs the same way); a common function by name (PrintString, Delay, SetActorLocation, GetPlayerPawn, GetActorOfClass, IsValid, PlaySound2D); or a K2Node class name that inspect_graph info=node_types lists. In an Animation Blueprint's AnimGraph or a state's graph (graphName), any animation node by class: AnimGraphNode_TwoBoneIK, TwoBoneIK or Two Bone IK (info=node_types with filter IK lists them; animation_physics configure_anim_graph_node set_value sets its settings); a node the graph cannot hold is refused (NODE_NOT_ALLOWED_IN_GRAPH). For create_struct_make_break_nodes: make or break."
+          "description": "The node to create: CallFunction (memberName, plus memberClass for a function of another class), Event (eventName: BeginPlay, Tick), CustomEvent (customEventName), VariableGet or VariableSet (memberName), Cast (targetClass), InputAxisEvent (inputAxisName), Branch, Sequence, Select, Switch, SwitchOnInt, SwitchOnEnum, SwitchOnString, DoOnce, DoN, FlipFlop, Gate, MultiGate, ForLoop, ForEachLoop, WhileLoop (each also WithBreak), MakeArray, MakeStruct and BreakStruct (structPath), SpawnActorFromClass, GetAllActorsOfClass, Self, Timeline (timelineName; edit_timeline keys its tracks), Reroute, Comment, MathExpression (its formula goes in set_node_property Expression) (a Switch on Int is made with only Default: wire a case by its number, from \"$id.0\", \"$id.1\"..., and the case pin is added; a Sequence or a commutative math node grows its inputs the same way); a common function by name (PrintString, Delay, SetActorLocation, GetPlayerPawn, GetActorOfClass, IsValid, PlaySound2D); or a K2Node class name that inspect_graph info=node_types lists. In an Animation Blueprint's AnimGraph or a state's graph (graphName), any animation node by class: AnimGraphNode_TwoBoneIK, TwoBoneIK or Two Bone IK (info=node_types with filter IK lists them; animation_physics configure_anim_graph_node set_value sets its settings); a node the graph cannot hold is refused (NODE_NOT_ALLOWED_IN_GRAPH). For create_struct_make_break_nodes: make or break."
         },
         "offset": {
           "type": "number",
@@ -13824,6 +13840,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Keyframe time."
         },
+        "timelineName": {
+          "type": "string",
+          "description": "For nodeType Timeline: the timeline it plays, which edit_timeline keys; a name the Blueprint lacks makes one (omitted, a new Timeline_N). One node plays a timeline, in the event graph of an Actor Blueprint."
+        },
         "title": {
           "type": "string",
           "description": "Objective tracker heading (default OBJECTIVES) or the quest name (default Quest Name)."
@@ -13854,6 +13874,18 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Animation track type: opacity/renderOpacity (RenderOpacity), color (ColorAndOpacity), translation/scale/angle/shear or transform (RenderTransform)."
         },
+        "tracks": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 50,
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "x-unreal-reflection-boundary": true,
+          "description": "Tracks to add, or whose keys to replace (a track keeps its type): each {name, type, keys, interpolation}. name is the node pin its value comes out of; type float (default), vector, color or event (an exec pin that fires at each key time); keys [{time in seconds, value}], value a number, {x, y, z} or {r, g, b, a} by type and none for an event; interpolation auto (smooth, default), linear or constant. Every track is checked before anything changes; a bad one is named by its index (tracks[1].keys[0])."
+        },
         "translation": {
           "type": "object",
           "additionalProperties": true,
@@ -13873,6 +13905,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "unusedOnly": {
           "type": "boolean",
           "description": "Only nodes that do nothing: a call no exec wire reaches, or a getter, math or other pure node whose result nothing reads (what is left behind when the node that read it was deleted; the compiler says nothing). Events, input actions and function entries never count. Combines with filter."
+        },
+        "useLastKeyframe": {
+          "type": "boolean",
+          "description": "End at the last key instead of at length."
         },
         "userSpecifiedScale": {
           "type": "number",
@@ -14007,6 +14043,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "edit_variable",
             "remove_variable",
             "edit_graph",
+            "edit_timeline",
             "delete_node",
             "inspect_graph",
             "add_function",
@@ -14112,6 +14149,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "assetPath": {
           "type": "string",
           "description": "Asset path of the created node (verification)."
+        },
+        "autoPlay": {
+          "type": "boolean",
+          "description": "Whether it starts on its own."
         },
         "bindingGuid": {
           "type": "string",
@@ -14301,6 +14342,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "count": {
           "type": "number",
           "description": "Total number of node types listed."
+        },
+        "created": {
+          "type": "boolean",
+          "description": "True when this call made the timeline."
         },
         "createdBinding": {
           "type": "boolean",
@@ -14545,9 +14590,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Left margin in slate units."
         },
+        "length": {
+          "type": "number",
+          "description": "Its length in seconds."
+        },
         "literalNodeId": {
           "type": "string",
           "description": "Guid of the MakeLiteral node carrying the value when the pin itself takes no literal; setting the pin again updates that node."
+        },
+        "loop": {
+          "type": "boolean",
+          "description": "Whether it loops."
         },
         "message": {
           "type": "string",
@@ -14909,6 +14962,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Key time in seconds."
         },
+        "timelineName": {
+          "type": "string",
+          "description": "For a Timeline node: the timeline it plays, the name edit_timeline takes."
+        },
         "top": {
           "type": "number",
           "description": "Top margin in slate units."
@@ -14929,6 +14986,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Normalised track type."
         },
+        "tracks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Every track: name (its node pin), type and keys (the key count)."
+        },
         "truncated": {
           "type": "boolean",
           "description": "With path: true when the folder holds more than 300 Blueprints and the rest were not opened."
@@ -14939,6 +15005,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "string"
           },
           "description": "Ids of listed nodes that stayed where they were: wired to no node left in place, or no free slot near one."
+        },
+        "useLastKeyframe": {
+          "type": "boolean",
+          "description": "Whether it ends at its last key."
         },
         "value": {
           "description": "Property value re-read from the Class Default Object after the write. Emitted on the literal path only and omitted when the value cannot be exported to JSON."

@@ -25,13 +25,14 @@ export const GRAPH_NODES_RECORDS: readonly CapabilityRecordSource[] = [
     // `parameters` gives a CustomEvent typed inputs ([{name, type}]). The
     // handler always read it; the contract never declared it, so the gateway
     // refused the one way to make an event that takes arguments.
-    inputProps: { blueprintPath: P.blueprintPath, graphName: P.graphName, nodeType: P.nodeType, memberName: P.memberName, posX: P.posX, posY: P.posY, functionName: P.nodeFunctionName, pure: P.pure, eventName: P.eventName, customEventName: P.customEventName, memberClass: P.memberClass, targetClass: P.targetClass, inputAxisName: P.inputAxisName, inputActionPath: P.inputActionPath, inputActionAssetPath: P.inputActionAssetPath, actionPath: P.actionPath, structPath: { ...P.structPath, description: 'For MakeStruct or BreakStruct: the struct, a Blueprint Struct asset (/Game/Data/F_Item) or a native one (/Script/SlateCore.SlateColor, /Script/CoreUObject.Vector); without it the node is refused.' }, parameters: { ...P.parameters, description: 'CustomEvent inputs, each {name, type}: float, double, int, int64, bool, byte, string, name, text, object, class, softobject, an enum or struct name (Vector, Rotator, Transform, /Script/CoreUObject.Vector) or a class name (Actor) for an object of that class. An array, set or map parameter needs add_event. A nameless entry or another type is refused (TYPE_RESOLUTION_FAILED) before anything changes.' } },
+    inputProps: { blueprintPath: P.blueprintPath, graphName: P.graphName, nodeType: P.nodeType, memberName: P.memberName, posX: P.posX, posY: P.posY, functionName: P.nodeFunctionName, pure: P.pure, eventName: P.eventName, customEventName: P.customEventName, memberClass: P.memberClass, targetClass: P.targetClass, inputAxisName: P.inputAxisName, inputActionPath: P.inputActionPath, inputActionAssetPath: P.inputActionAssetPath, actionPath: P.actionPath, timelineName: { type: 'string', description: 'For nodeType Timeline: the timeline it plays, which edit_timeline keys; a name the Blueprint lacks makes one (omitted, a new Timeline_N). One node plays a timeline, in the event graph of an Actor Blueprint.' }, structPath: { ...P.structPath, description: 'For MakeStruct or BreakStruct: the struct, a Blueprint Struct asset (/Game/Data/F_Item) or a native one (/Script/SlateCore.SlateColor, /Script/CoreUObject.Vector); without it the node is refused.' }, parameters: { ...P.parameters, description: 'CustomEvent inputs, each {name, type}: float, double, int, int64, bool, byte, string, name, text, object, class, softobject, an enum or struct name (Vector, Rotator, Transform, /Script/CoreUObject.Vector) or a class name (Actor) for an object of that class. An array, set or map parameter needs add_event. A nameless entry or another type is refused (TYPE_RESOLUTION_FAILED) before anything changes.' } },
     required: ['blueprintPath', 'nodeType', 'posX', 'posY'],
     outputProps: {
       nodeGuid: { type: 'string', description: 'Unique node identifier for subsequent graph operations.' },
       graphName: P.graphName,
       nodeClass: { type: 'string', description: 'Resolved UK2Node class name.' },
       nodeName: P.nodeName,
+      timelineName: { type: 'string', description: 'For a Timeline node: the timeline it plays, the name edit_timeline takes.' },
       // Placement is echoed back because callers position nodes by coordinate
       // and previously got nothing to lay out against, so successive creates
       // silently stacked.
@@ -58,11 +59,12 @@ export const GRAPH_NODES_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Add a node to a Blueprint graph (alias of create_node with simplified type resolution).',
     whenToUse: ['A node must be added using a friendly type alias (e.g. Branch, Cast, GetVariable).'],
     whenNotToUse: ['Full member-class control is needed (use create_node).'],
-    inputProps: { blueprintPath: P.blueprintPath, graphName: P.graphName, nodeType: P.nodeType, posX: P.posX, posY: P.posY, memberName: P.memberName, functionName: P.nodeFunctionName, eventName: P.eventName, nodeName: P.nodeName, targetClass: P.targetClass },
+    inputProps: { blueprintPath: P.blueprintPath, graphName: P.graphName, nodeType: P.nodeType, posX: P.posX, posY: P.posY, memberName: P.memberName, functionName: P.nodeFunctionName, eventName: P.eventName, nodeName: P.nodeName, targetClass: P.targetClass, timelineName: { type: 'string', description: 'For nodeType Timeline: the timeline it plays, which edit_timeline keys; a name the Blueprint lacks makes one (omitted, a new Timeline_N). One node plays a timeline, in the event graph of an Actor Blueprint.' } },
     required: ['blueprintPath', 'nodeType'],
     outputProps: {
       nodeGuid: { type: 'string', description: 'Unique node identifier for subsequent graph operations.' },
       graphName: P.graphName,
+      timelineName: { type: 'string', description: 'For a Timeline node: the timeline it plays, the name edit_timeline takes.' },
     },
     outputRequired: ['nodeGuid'],
     effect: 'write',
@@ -71,6 +73,50 @@ export const GRAPH_NODES_RECORDS: readonly CapabilityRecordSource[] = [
     plugins: BP_PLUGINS,
     exampleInput: { action: 'add_node', blueprintPath: '/Game/Blueprints/BP_Test', graphName: 'EventGraph', nodeType: 'Branch', posX: 50, posY: 50 },
     exampleOutput: { success: true, nodeGuid: 'E5F6G7H8', graphName: 'EventGraph' },
+  }),
+  buildRecord({
+    id: 'blueprint.edit_timeline',
+    action: 'edit_timeline',
+    family: FAMILY,
+    domain: DOMAIN,
+    topics: ['timeline', 'add a timeline', 'timeline track', 'key a timeline', 'animate over time', 'open a door smoothly', 'change smoothly over time'],
+    summary: 'Make or change a Blueprint timeline, what a Timeline node plays: its length, autoplay and loop, and its float, vector, color and event tracks with their keys. The Timeline node gets a pin per track, and its Update pin fires every frame while it plays.',
+    whenToUse: ['Something must change smoothly over a set time from a Blueprint (a door swinging open, a platform sliding, a light fading): key a float track from 0 to 1 and feed it to a Lerp on the Timeline node\'s Update.'],
+    whenNotToUse: ['A cinematic or a camera move is needed (use a level sequence).', 'A widget must animate (use edit_widget_animation).'],
+    inputProps: {
+      blueprintPath: P.blueprintPath,
+      timelineName: { type: 'string', description: 'The timeline, as its node is titled. A name the Blueprint lacks makes one; the node that plays it comes from edit_graph create_node nodeType Timeline with this timelineName, made before or after (either way it shows a pin per track).' },
+      length: { type: 'number', description: 'How long it plays, in seconds (a new timeline: 5).' },
+      useLastKeyframe: { type: 'boolean', description: 'End at the last key instead of at length.' },
+      autoPlay: { type: 'boolean', description: 'Start when the game starts, without a Play call.' },
+      loop: { type: 'boolean', description: 'Start over at the end, again and again.' },
+      ignoreTimeDilation: { type: 'boolean', description: 'Play at real speed while the game is slowed down or sped up.' },
+      tracks: {
+        type: 'array',
+        minItems: 1,
+        maxItems: 50,
+        items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
+        'x-unreal-reflection-boundary': true,
+        description: 'Tracks to add, or whose keys to replace (a track keeps its type): each {name, type, keys, interpolation}. name is the node pin its value comes out of; type float (default), vector, color or event (an exec pin that fires at each key time); keys [{time in seconds, value}], value a number, {x, y, z} or {r, g, b, a} by type and none for an event; interpolation auto (smooth, default), linear or constant. Every track is checked before anything changes; a bad one is named by its index (tracks[1].keys[0]).',
+      },
+    },
+    required: ['blueprintPath', 'timelineName'],
+    outputProps: {
+      timelineName: { type: 'string', description: 'The timeline edited.' },
+      created: { type: 'boolean', description: 'True when this call made the timeline.' },
+      length: { type: 'number', description: 'Its length in seconds.' },
+      useLastKeyframe: { type: 'boolean', description: 'Whether it ends at its last key.' },
+      autoPlay: { type: 'boolean', description: 'Whether it starts on its own.' },
+      loop: { type: 'boolean', description: 'Whether it loops.' },
+      tracks: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Every track: name (its node pin), type and keys (the key count).' },
+      nodeGuid: { type: 'string', description: 'The Timeline node that plays it; absent until one is made.' },
+    },
+    effect: 'write',
+    behavior: { idempotency: 'idempotent' },
+    latency: 'interactive',
+    resources: 'low',
+    plugins: BP_PLUGINS,
+    exampleInput: { action: 'edit_timeline', blueprintPath: '/Game/Blueprints/BP_Door', timelineName: 'OpenDoor', length: 1, tracks: [{ name: 'Alpha', keys: [{ time: 0, value: 0 }, { time: 1, value: 1 }] }] },
   }),
   buildRecord({
     id: 'blueprint.delete_node',
