@@ -1,4 +1,5 @@
 #include "Domains/Volume/McpVolumeActionDecls.h"
+#include "Domains/Volume/McpVolumeWorldResolve.h"
 
 #include "Core/Requests/McpResponseCaptureRegistry.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
@@ -104,13 +105,26 @@ bool UEngineWireSubsystem::HandleManageVolumesAction(
         Payload->SetObjectField(TEXT("location"), LocationJson);
     }
     // A volume made here is one undo step, as a spawned actor is: the spawn records the level under the
-    // transaction. A save in the same call writes the level to disk, which undo cannot take back, so then none
-    // is opened; a batch opens its own around every step.
+    // transaction. An edit or a removal records the volume and its components first, so undo puts the old shape,
+    // settings or the whole volume back. A save in the same call writes the level to disk, which undo cannot take
+    // back, so then none is opened; a batch opens its own around every step.
     TUniquePtr<FMcpScopedEditorTransaction> Transaction;
-    if (!ClassKey.IsEmpty() && !GetJsonBoolField(Payload, TEXT("save"), false) && !FMcpResponseCaptureRegistry::Get().IsCapturing(RequestId))
+    const bool bEdit = SubAction.StartsWith(TEXT("set_volume_")) || SubAction == TEXT("remove_volume");
+    if ((!ClassKey.IsEmpty() || bEdit) && !GetJsonBoolField(Payload, TEXT("save"), false) &&
+        !FMcpResponseCaptureRegistry::Get().IsCapturing(RequestId))
     {
-        Transaction = MakeUnique<FMcpScopedEditorTransaction>(FText::FromString(TEXT("Create Volume")),
-            EMcpMutationDurability::EditorStateOnly, TArray<UObject*>());
+        TArray<UObject*> Undoable;
+        if (AActor* Target = bEdit ? VolumeHelpers::FindVolumeByName(VolumeHelpers::GetEditorWorld(), GetJsonStringField(Payload, TEXT("volumeName"), TEXT(""))) : nullptr)
+        {
+            Undoable.Add(Target);
+            for (UActorComponent* Component : Target->GetComponents()) { Undoable.Add(Component); }
+            for (UObject* Object : Undoable) { Object->SetFlags(RF_Transactional); }
+        }
+        if (!bEdit || Undoable.Num() > 0)
+        {
+            Transaction = MakeUnique<FMcpScopedEditorTransaction>(FText::FromString(bEdit ? TEXT("Edit Volume") : TEXT("Create Volume")),
+                EMcpMutationDurability::EditorStateOnly, Undoable);
+        }
     }
 
     if (SubAction == TEXT("create_trigger_volume")) { return HandleCreateTriggerVolume(this, RequestId, Payload, Socket); }
