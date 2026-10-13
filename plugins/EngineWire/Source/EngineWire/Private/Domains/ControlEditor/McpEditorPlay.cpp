@@ -44,14 +44,14 @@ bool UEngineWireSubsystem::HandleControlEditorPlay(
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), bStarted);
     if (World) { Resp->SetStringField(TEXT("pieWorld"), World->GetOutermost()->GetName()); }
-    // A minimized editor paints no widget, so a title or intro card that clears itself on a timer stood still and
+    // A minimized editor paints no widget, so a title screen that clears itself on a timer stood still and
     // the game it paused looked hung.
     const TSharedPtr<SWindow> Root = FGlobalTabmanager::Get()->GetRootWindow();
     if (bStarted && Root.IsValid() && Root->IsWindowMinimized()) {
       TArray<TSharedPtr<FJsonValue>> Warnings;
       Warnings.Add(MakeShared<FJsonValueString>(TEXT(
           "The editor window is minimized: the game runs at about 3 fps and its widgets are not painted, so a title "
-          "or intro card that clears itself on a timer stands still, and a game it paused stays paused. Restore it "
+          "screen that clears itself on a timer stands still, and a game it paused stays paused. Restore it "
           "(control_editor configure_editor setting window), or lift such a pause with resume unpauseGame.")));
       Resp->SetArrayField(TEXT("warnings"), Warnings);
     }
@@ -170,7 +170,7 @@ bool UEngineWireSubsystem::HandleControlEditorResume(
   }
 
   GEditor->PlayWorld->bDebugPauseExecution = false;
-  // The game can hold a pause of its own (SetGamePaused, from a pause menu or an intro card): the world then stays still
+  // The game can hold a pause of its own (SetGamePaused, from a pause menu or a title screen): the world then stays still
   // with the editor's pause off, and "resumed" was untrue. unpauseGame lifts it as the game's own unpause would.
   const AWorldSettings *Settings = GEditor->PlayWorld->GetWorldSettings();
   if (Settings && Settings->GetPauserPlayerState() && GetJsonBoolField(Payload, TEXT("unpauseGame"))) {
@@ -180,7 +180,7 @@ bool UEngineWireSubsystem::HandleControlEditorResume(
     TSharedPtr<FJsonObject> Paused = McpHandlerUtils::CreateResultObject();
     Paused->SetStringField(TEXT("pausedBy"), Pauser->GetName());
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("GAME_PAUSED"),
-                              TEXT("The editor's pause is off, but the game paused itself (a pause menu or an intro card), so "
+                              TEXT("The editor's pause is off, but the game paused itself (a pause menu or a title screen), so "
                                    "nothing ticks. Pass unpauseGame true to lift it, or let the game unpause: a widget's own "
                                    "timer runs only while the editor window is on screen."),
                               Paused);

@@ -149,7 +149,7 @@ static void McpAddPieWorldWarning(const FString& CapabilityId,
 	}
 	if (bPaused)
 	{
-		Out.AddUnique(TEXT("The game is paused (an intro card, a pause menu or control_editor pause): nothing it moves or simulates advances until play resumes (control_editor resume with unpauseGame)."));
+		Out.AddUnique(TEXT("The game is paused (a title screen, a pause menu or control_editor pause): nothing it moves or simulates advances until play resumes (control_editor resume with unpauseGame)."));
 	}
 }
 

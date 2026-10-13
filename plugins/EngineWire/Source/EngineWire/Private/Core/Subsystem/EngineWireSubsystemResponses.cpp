@@ -131,7 +131,7 @@ void UEngineWireSubsystem::SendAutomationResponse(
         }
 
         EffectiveResult = McpBuildEnrichedResponseResult(Result, WorldName, bTransientWorld, Captured);
-        // A play world paused by the game (an intro card, a pause menu) or by control_editor pause moves nothing: a
+        // A play world paused by the game (a title screen, a pause menu) or by control_editor pause moves nothing: a
         // character moved into it stayed in the air where it was put, which read as broken gravity.
         if (ContextWorld && ContextWorld->IsPlayInEditor() && ContextWorld->IsPaused())
         {

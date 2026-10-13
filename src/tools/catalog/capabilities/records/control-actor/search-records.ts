@@ -279,14 +279,14 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'audit_placement',
     domain: DOMAIN,
     family: FAMILY_FIND,
-    topics: ['placement problems', 'overlapping actors', 'sunk actors', 'floating actors', 'tilted actors', 'upside down actors', 'level audit', 'intersecting geometry', 'z-fighting', 'flickering surfaces', 'coplanar faces', 'texture flicker', 'check for floating actors', 'actors that overlap', 'sunk parts', 'parts buried in each other', 'legs inside the body', 'feet below the capsule', 'rider clipping through mount', 'blueprint part overlap'],
+    topics: ['placement problems', 'overlapping actors', 'sunk actors', 'floating actors', 'tilted actors', 'upside down actors', 'level audit', 'intersecting geometry', 'z-fighting', 'flickering surfaces', 'coplanar faces', 'texture flicker', 'check for floating actors', 'actors that overlap', 'sunk parts', 'parts buried in each other', 'legs inside the body', 'feet below the capsule', 'driver clipping through seat', 'blueprint part overlap'],
     summary: 'Sweep every actor in the level and report the ones that interpenetrate another actor, sit sunk below the surface under them, float above it, lean off vertical, or have a face in the same plane as another surface (z-fighting flicker); or, with blueprintPath, the mesh parts of one actor Blueprint that are buried in each other or sunk below its capsule.',
     whenToUse: [
       'A level was assembled programmatically and needs checking before anyone looks at it.',
       'Actors appear to clip through each other, stand in the ground, or lie on their side.',
       'A placement pass should be verified without flying the viewport around to eyeball it.',
       'Surfaces flicker, or another material shows through in ragged patches (z-fighting): the coplanar face pairs responsible are listed under coplanarFaces, with the direction to push each one; control_actor fix_coplanar fixes them all in one call.',
-      'A character, vehicle or prop is assembled from mesh components in a Blueprint (a rider on a mount, legs on a body): blueprintPath checks every part against every other on their real triangles and against the capsule bottom, so a leg sunk into the mount or a foot through the floor is named with its depth.',
+      'A character, vehicle or prop is assembled from mesh components in a Blueprint (a driver in a seat, legs on a body): blueprintPath checks every part against every other on their real triangles and against the capsule bottom, so a leg sunk into the seat or a foot through the floor is named with its depth.',
     ],
     whenNotToUse: [
       'One actor was just moved; spawn and set_transform already return placementWarning for it.',

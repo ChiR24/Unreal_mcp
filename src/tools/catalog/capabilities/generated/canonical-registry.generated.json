@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "d984aea10d90f070",
+  "catalogRevision": "cea3119b362a953d",
   "recordCount": 411,
   "records": [
     {
@@ -31747,7 +31747,7 @@
           "parts buried in each other",
           "legs inside the body",
           "feet below the capsule",
-          "rider clipping through mount",
+          "driver clipping through seat",
           "blueprint part overlap"
         ],
         "summary": "Sweep every actor in the level and report the ones that interpenetrate another actor, sit sunk below the surface under them, float above it, lean off vertical, or have a face in the same plane as another surface (z-fighting flicker); or, with blueprintPath, the mesh parts of one actor Blueprint that are buried in each other or sunk below its capsule.",
@@ -31756,7 +31756,7 @@
           "Actors appear to clip through each other, stand in the ground, or lie on their side.",
           "A placement pass should be verified without flying the viewport around to eyeball it.",
           "Surfaces flicker, or another material shows through in ragged patches (z-fighting): the coplanar face pairs responsible are listed under coplanarFaces, with the direction to push each one; control_actor fix_coplanar fixes them all in one call.",
-          "A character, vehicle or prop is assembled from mesh components in a Blueprint (a rider on a mount, legs on a body): blueprintPath checks every part against every other on their real triangles and against the capsule bottom, so a leg sunk into the mount or a foot through the floor is named with its depth."
+          "A character, vehicle or prop is assembled from mesh components in a Blueprint (a driver in a seat, legs on a body): blueprintPath checks every part against every other on their real triangles and against the capsule bottom, so a leg sunk into the seat or a foot through the floor is named with its depth."
         ],
         "whenNotToUse": [
           "One actor was just moved; spawn and set_transform already return placementWarning for it.",
@@ -31923,7 +31923,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "281bee05b2676e8052af31d843191e88a7a9f7ffcddb079b2e23481feebbfa97",
-        "content": "3b2b294fb9c0d7ccce30297a7703a5056a505c77d4ab24727e5c6a4733fdc087"
+        "content": "225f26322cc4436d6aed04e20ce64f4472079afeb0f831e6f75fd7dd2b624fd3"
       }
     },
     {
@@ -38587,7 +38587,7 @@
           "control=play: A PIE session must be started to test gameplay.",
           "control=pause: PIE must be paused without stopping.",
           "control=resume: A paused PIE session must resume.",
-          "control=resume: The running game paused itself (an intro card or a pause menu) and must run again for a test: pass unpauseGame.",
+          "control=resume: The running game paused itself (a title screen or a pause menu) and must run again for a test: pass unpauseGame.",
           "control=stop: The PIE session must be terminated.",
           "control=eject: The player must detach from the possessed pawn.",
           "control=eject: The view of a running game must be placed for a screenshot: eject, then set_camera.",
@@ -38617,7 +38617,7 @@
             },
             "unpauseGame": {
               "type": "boolean",
-              "description": "Also lift a pause the game holds itself (SetGamePaused from its pause menu or an intro card), as its own unpause does. Without it, a game that paused itself fails the call with GAME_PAUSED and pausedBy: the editor pause is off, but nothing ticks."
+              "description": "Also lift a pause the game holds itself (SetGamePaused from its pause menu or a title screen), as its own unpause does. Without it, a game that paused itself fails the call with GAME_PAUSED and pausedBy: the editor pause is off, but nothing ticks."
             },
             "actorName": {
               "type": "string",
@@ -38758,8 +38758,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "912dc2c19caf2455e7514ea063eb80c98387a8bc5039b125a0d15d537605ff10",
-        "content": "90dbf4290c006e60d9e24c65e80744415e2379679b2b5b8b1124834d56521be3"
+        "schema": "29027d1514c312ea0d317090167df9cc809e6f45f9b70b7e233de0338d165a06",
+        "content": "fd06361799506eef5dd52a4e78844005595b9321cf78fc7dc4ccb45880f11c2e"
       }
     },
     {
@@ -43839,7 +43839,7 @@
             },
             "isPaused": {
               "type": "boolean",
-              "description": "Whether game time stands still: control_editor pause, or the game paused itself (an intro card or a pause menu). Nothing moves or simulates until control_editor resume (unpauseGame for a pause the game holds)."
+              "description": "Whether game time stands still: control_editor pause, or the game paused itself (a title screen or a pause menu). Nothing moves or simulates until control_editor resume (unpauseGame for a pause the game holds)."
             },
             "killZ": {
               "type": "number",
@@ -43999,8 +43999,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "c634a4b6ee4620984c4ae25378372881911ab4803491067ea0ac1f7b7bc67371",
-        "content": "76a7a8a9f0d1a4f333e83e3f31a6164399ea294a9578ded9a550d184f590fac3"
+        "schema": "a2825cdd0580b7b92e248dc5596a0190a17a978a7b7eee9e24dad2f4f11304d4",
+        "content": "40d45729b867c168d5c1a52485a3c2a07f9efbd34c2362f260b6d4cb86610c67"
       }
     },
     {
@@ -74176,8 +74176,8 @@
             "success": true,
             "message": "Retrieved level structure information",
             "levelStructureInfo": {
-              "currentLevel": "L_Stage01",
-              "persistentLevel": "/Game/Maps/L_Stage01",
+              "currentLevel": "L_Main",
+              "persistentLevel": "/Game/Maps/L_Main",
               "actorCount": 412,
               "sublevelCount": 0,
               "sublevels": [],
@@ -74217,7 +74217,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "b03bbc9cec1beb418aa156bea186d8497bb6d3e31c37e68f66d4d7fdd35f070b",
-        "content": "8f3036ad25f83f5354543e864556cd32a96b28192a6537bc011b5935629eb79e"
+        "content": "66fbe5d3692b2f700351e66e2977f4c373de7d64d89d0e3c5dfaa1416701e3c3"
       }
     },
     {

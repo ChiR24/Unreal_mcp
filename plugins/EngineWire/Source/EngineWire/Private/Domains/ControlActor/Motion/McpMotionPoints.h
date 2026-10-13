@@ -39,7 +39,7 @@ void McpAddMotionPointStats(const FMcpMotionPoints &Points, FJsonObject &Data);
 /** The samples a run keeps: fewer with each point, so the reply stays within the response budget. */
 int32 McpMotionSampleCap(int32 Cap, const FMcpMotionPoints &Points);
 
-// sample_motion overlaps: the actors that touch the watched one. A rider that died the moment it respawned took twenty
+// sample_motion overlaps: the actors that touch the watched one. A character that died the moment it respawned took twenty
 // calls to pin on the enemy that walked into it; the sample of the death now names it. A touch begins through the
 // actor's own begin-overlap event (Probe), so one the same frame ends still counts; it ends by the per-frame check.
 struct FMcpMotionOverlaps {

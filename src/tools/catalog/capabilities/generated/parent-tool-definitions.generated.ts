@@ -5649,7 +5649,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "unpauseGame": {
           "type": "boolean",
-          "description": "Also lift a pause the game holds itself (SetGamePaused from its pause menu or an intro card), as its own unpause does. Without it, a game that paused itself fails the call with GAME_PAUSED and pausedBy: the editor pause is off, but nothing ticks."
+          "description": "Also lift a pause the game holds itself (SetGamePaused from its pause menu or a title screen), as its own unpause does. Without it, a game that paused itself fails the call with GAME_PAUSED and pausedBy: the editor pause is off, but nothing ticks."
         },
         "unthrottle": {
           "type": "boolean",
@@ -7256,7 +7256,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "isPaused": {
           "type": "boolean",
-          "description": "Whether game time stands still: control_editor pause, or the game paused itself (an intro card or a pause menu). Nothing moves or simulates until control_editor resume (unpauseGame for a pause the game holds)."
+          "description": "Whether game time stands still: control_editor pause, or the game paused itself (a title screen or a pause menu). Nothing moves or simulates until control_editor resume (unpauseGame for a pause the game holds)."
         },
         "isPieWorld": {
           "type": "boolean",

@@ -105,7 +105,7 @@ inline bool IsPathContinuationChar(TCHAR Character)
 }
 
 // True when Input[Start, End) ends in a file extension ('.' and 1-5 letters or digits). A space after a file name ends
-// the path: "<dir>/L_Stage01.umap would discard ..." ran on to the next comma and the sentence was redacted with it.
+// the path: "<dir>/L_Main.umap would discard ..." ran on to the next comma and the sentence was redacted with it.
 inline bool SegmentHasFileExtension(const FString& Input, int32 Start, int32 End)
 {
     int32 Dot = End - 1;

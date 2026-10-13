@@ -66,10 +66,10 @@ export const SESSION_RECORDS: readonly CapabilityRecordSource[] = [
     parentTool: 'control_editor', action: 'resume', domain: D, family: F,
     editorStates: ANY_EDITOR_STATE,
     summary: 'Resume a paused PIE session.',
-    whenToUse: ['A paused PIE session must resume.', 'The running game paused itself (an intro card or a pause menu) and must run again for a test: pass unpauseGame.'],
+    whenToUse: ['A paused PIE session must resume.', 'The running game paused itself (a title screen or a pause menu) and must run again for a test: pass unpauseGame.'],
     whenNotToUse: ['PIE is not paused.'],
     inputProps: {
-      unpauseGame: { type: 'boolean', description: 'Also lift a pause the game holds itself (SetGamePaused from its pause menu or an intro card), as its own unpause does. Without it, a game that paused itself fails the call with GAME_PAUSED and pausedBy: the editor pause is off, but nothing ticks.' },
+      unpauseGame: { type: 'boolean', description: 'Also lift a pause the game holds itself (SetGamePaused from its pause menu or a title screen), as its own unpause does. Without it, a game that paused itself fails the call with GAME_PAUSED and pausedBy: the editor pause is off, but nothing ticks.' },
     },
     required: [],
     effect: 'write', behavior: { idempotency: 'idempotent' },

@@ -191,7 +191,7 @@ describe('over the gateway: a preview lists no change, an edit still does, a man
 // A level save answered only details.verifiedPath (and save-as levelPath), neither of which the
 // receipt reads, so saving a level returned "handles": [] and "changes": [].
 describe('a level save names the level it saved', () => {
-  const LEVEL = '/Game/Maps/L_Stage01';
+  const LEVEL = '/Game/Maps/L_Main';
 
   it('savedAssetPath gives the receipt a handle and a change', () => {
     expect(extractChanges({ success: true, details: { savedAssetPath: LEVEL, verifiedPath: LEVEL } })).toEqual([LEVEL]);

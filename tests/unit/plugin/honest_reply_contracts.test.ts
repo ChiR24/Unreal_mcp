@@ -1952,13 +1952,13 @@ describe('save_all names the packages it left unsaved', () => {
     expect(source).toContain('Resp->SetArrayField(TEXT("leftDirtyPackages"), MakeStringArray(LeftDirtyPackages));');
   });
 
-  // resume answered "PIE session resumed" while the game held its own pause (an intro card): nothing ticked.
+  // resume answered "PIE session resumed" while the game held its own pause (a title screen): nothing ticked.
   it('resume fails GAME_PAUSED naming the pauser unless unpauseGame lifts the game pause', () => {
     const play = code('ControlEditor', 'McpEditorPlay.cpp');
     expect(play).toContain('if (Settings && Settings->GetPauserPlayerState() && GetJsonBoolField(Payload, TEXT("unpauseGame"))) {');
     expect(play).toContain('UGameplayStatics::SetGamePaused(GEditor->PlayWorld, false);');
     expect(play).toMatch(/Paused->SetStringField\(TEXT\("pausedBy"\), Pauser->GetName\(\)\);\s*SendStandardErrorResponse\(this, Socket, RequestId, TEXT\("GAME_PAUSED"\)/u);
-    // play answered "started" while the minimized editor froze the game's intro card, which held the game paused.
+    // play answered "started" while the minimized editor froze the game's title screen, which held the game paused.
     expect(play).toContain('if (bStarted && Root.IsValid() && Root->IsWindowMinimized()) {');
   });
 
@@ -2840,7 +2840,7 @@ describe('a world edit in a paused game says nothing will move', () => {
     expect(responses).toMatch(/ContextWorld->IsPlayInEditor\(\) && ContextWorld->IsPaused\(\)\)\s*\{\s*EffectiveResult->SetBoolField\(TEXT\("gamePaused"\), true\);/u);
     const native = code('..', 'MCP', 'Execute', 'McpNativeReceiptEnrichment.cpp');
     const stdio = readFileSync(join('src', 'server', 'gateway', 'gateway-execute-dispatch.ts'), 'utf8');
-    const warning = 'The game is paused (an intro card, a pause menu or control_editor pause): nothing it moves or simulates advances until play resumes (control_editor resume with unpauseGame).';
+    const warning = 'The game is paused (a title screen, a pause menu or control_editor pause): nothing it moves or simulates advances until play resumes (control_editor resume with unpauseGame).';
     expect(native).toContain(warning);
     expect(stdio).toContain(warning);
     expect(stdio).toContain('(isRecord(details) && details.gamePaused === true)');

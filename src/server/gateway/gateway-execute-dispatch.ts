@@ -119,9 +119,9 @@ function pieWorldWarnings(record: CapabilityRecord, result: unknown): readonly s
     ...(world?.includes('/UEDPIE_') === true
       ? [`Applied to the running Play-In-Editor world (${world}): the change is discarded when play stops and the editor level is unchanged. Stop PIE first to edit the level.`]
       : []),
-    // A character moved into a game its title card had paused stayed in the air, which read as broken gravity.
+    // A character moved into a game that had paused itself stayed in the air, which read as broken gravity.
     ...(paused
-      ? ['The game is paused (an intro card, a pause menu or control_editor pause): nothing it moves or simulates advances until play resumes (control_editor resume with unpauseGame).']
+      ? ['The game is paused (a title screen, a pause menu or control_editor pause): nothing it moves or simulates advances until play resumes (control_editor resume with unpauseGame).']
       : []),
   ];
 }

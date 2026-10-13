@@ -62,7 +62,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'check the checkbox in the running game', accepted: ['control_editor.simulate_input'] },
   { query: 'find text in project', accepted: ['asset.query_asset'] },
   { query: 'print string on screen', accepted: ['blueprint.edit_graph'] },
-  { query: 'get the rider to jump', accepted: ['control_editor.simulate_input'] },
+  { query: 'get the character to jump', accepted: ['control_editor.simulate_input'] },
   { query: 'list all levels', accepted: ['manage_level.list_levels'] },
   // get_summary answers unsaved and unsavedPackages; restart_editor validateOnly lists them too.
   { query: 'is the level saved', accepted: ['manage_level.get_summary', 'control_editor.restart_editor'] },
