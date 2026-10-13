@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "6dc9c75ee6dc1fef",
+  "catalogRevision": "2d85a9fcf76e6b10",
   "recordCount": 415,
   "records": [
     {
@@ -12889,6 +12889,7 @@
           "make the character move",
           "character controls",
           "mouse look",
+          "gamepad controls",
           "jump key",
           "make the character jump",
           "third person controls",
@@ -13207,7 +13208,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "09b29e8399d19136d2fc55857db759b898a4671c498d9a9f59a751d1fe5638ed",
-        "content": "ae931dd859c99219708484c25a59bf5bbcf31c92e44041bf268aeaf3d4fd70aa"
+        "content": "3d630bdfdf6316bc608ada099c5948042bc421dfbfc71b249197dd4be0994d93"
       }
     },
     {
@@ -39577,6 +39578,7 @@
           "resume game",
           "eject",
           "possess",
+          "possess a character",
           "quit game",
           "pie",
           "start game",
@@ -39763,7 +39765,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "29027d1514c312ea0d317090167df9cc809e6f45f9b70b7e233de0338d165a06",
-        "content": "d9012c71b14c42024c6940f0bacefa83c8733e84796fb666c156d5a382070290"
+        "content": "875fdaa434920974b6d5151aefe52e849c412b194463dd50c472a03a36396750"
       }
     },
     {
@@ -41177,6 +41179,7 @@
           "press space",
           "press spacebar",
           "hold key down",
+          "walk the player forward",
           "list open widgets in game"
         ],
         "summary": "Simulate a keyboard or mouse input event (key_down, key_up, key_tap, mouse_click, mouse_move), or list and press the live UMG widgets of a PIE session (widget_list, widget_click).",
@@ -41356,7 +41359,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "7f644f4abe3c853e5831f8a1e9b3884e6f756fc49e80ebb98f74bf3bc7006264",
-        "content": "3c5763a389f2a0b65cc33c201fd477ed02619219069478f39e8ddaa5f9d342ca"
+        "content": "eea4622661428f373937514d7406dd64cd20c4e9db4e7090b440619b5f91c2d8"
       }
     },
     {
@@ -56068,6 +56071,8 @@
           "crouch",
           "capsule",
           "character camera",
+          "third person camera",
+          "follow camera",
           "assign anim blueprint",
           "make the player run faster",
           "double jump"
@@ -56080,7 +56085,7 @@
           "setting=rotation: Rotation policy must change.",
           "setting=capsule_component: Capsule size must change.",
           "setting=mesh_component: Mesh must change.",
-          "setting=camera_component: Camera setup needed.",
+          "setting=camera_component: A Character needs a camera that follows it from behind; without one the game views from the eyes of the pawn.",
           "setting=nav_movement: AI movement needed."
         ],
         "whenNotToUse": [
@@ -56469,7 +56474,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "bcae2654a2de5b198c482ed9c60a5714ca0d0240bd522bffae79efd0967b8c74",
-        "content": "6793ee3534152016a1be9b4900da3cab16031f36582ceae8dc37a5cb9c5133a1"
+        "content": "fbae55a99cf419ecfb2f71c0bd958b85e627f48d3ce47f08f2a3b9874140dc26"
       }
     },
     {
@@ -76668,6 +76673,8 @@
           "input modifier",
           "bind space to jump",
           "wasd movement input",
+          "remap a key",
+          "change a key",
           "new input action",
           "key binding",
           "input mapping",
@@ -76679,8 +76686,8 @@
         "whenToUse": [
           "setting=create_action: Use it to create an Enhanced Input Action asset (valueType: digital, axis1d, axis2d, or axis3d — movement/look actions need axes).",
           "setting=create_mapping_context: Use it to create an Enhanced Input Mapping Context asset; its priority is chosen when it is enabled (enable_input_mapping).",
-          "setting=add_mapping: Use it to add an Enhanced Input mapping with optional trigger and modifier types.",
-          "setting=map_action: Use it to map an Enhanced Input Action to a key in a context, with an optional trigger and modifier on that mapping; mapping the same action and key again redefines it.",
+          "setting=add_mapping: Use it to add an Enhanced Input mapping with optional trigger and modifier types, or move one to another key (replaceKey) to remap a control with its modifiers.",
+          "setting=map_action: Use it to map an Enhanced Input Action to a key in a context, with an optional trigger and modifier on that mapping; mapping the same action and key again redefines it, and replaceKey moves the mapping of the action from that key to this one.",
           "setting=set_trigger: Use it to add a trigger to an Enhanced Input Action; a trigger of that class already on the action is kept, not stacked.",
           "setting=set_modifier: Use it to add a modifier to an Enhanced Input Action, or to one mapping when contextPath and key are given; a modifier of that class already there is kept, not stacked.",
           "setting=enable_mapping: Use it to enable an Enhanced Input Mapping Context on the PIE local player at a priority; outside PIE it fails with PIE_NOT_RUNNING."
@@ -76727,6 +76734,10 @@
             "modifierType": {
               "type": "string",
               "description": "Modifier type."
+            },
+            "replaceKey": {
+              "type": "string",
+              "description": "A key the action is already mapped to: its mapping moves to key (the remap of a control), keeping its triggers and modifiers unless triggerType or modifierType is sent, and that key stops firing the action. A key the action is not mapped to fails NOT_FOUND and lists the keys it is."
             },
             "priority": {
               "type": "number",
@@ -76872,6 +76883,10 @@
               "map_action",
               "set_modifier"
             ],
+            "replaceKey": [
+              "add_mapping",
+              "map_action"
+            ],
             "priority": [
               "enable_mapping"
             ]
@@ -76880,8 +76895,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "27f1ead38de13c5bb962f46d3fa2cfb5b4836fa1c5e2b6195331c4a74c6923a3",
-        "content": "a8edd0da5fe9a942dad2dd3d72e48bbfad471ece3020ed367c03a16e71c6012a"
+        "schema": "da1433c50e7d8500faf44a92e5bbe6d0f83112cb0b4e3c9429530cc6581735b3",
+        "content": "e95359edf317ce7193793a6dbad86b9c3cd1fe2fad1d8037834795be1f6d29d5"
       }
     },
     {

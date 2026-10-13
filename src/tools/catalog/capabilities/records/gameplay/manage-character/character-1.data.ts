@@ -32,7 +32,7 @@ export const CHARACTER_1: readonly CapabilityRecordSource[] = [
     effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'interactive', resources: 'low',
     exampleInput: { action: 'configure_mesh_component', blueprintPath: '/Game/BP_Char', skeletalMeshPath: '/Game/SM_Char', meshOffset: { x: 0, y: 0, z: -96 } } }),
   buildRecord({ parentTool: T, id: `${T}.configure_camera_component`, action: 'configure_camera_component', family: F,
-    summary: 'Configure the camera spring arm, creating a boom and camera when missing; an existing boom changes only in the fields sent.', whenToUse: ['Camera setup needed.'], whenNotToUse: ['Use configure_mesh_component.'],
+    summary: 'Give a Character a third-person follow camera: a spring arm behind it with a camera on its end, made when missing; an existing arm changes only in the fields sent.', whenToUse: ['A Character needs a camera that follows it from behind; without one the game views from the eyes of the pawn.'], whenNotToUse: ['Use configure_mesh_component.'],
     inputProps: { blueprintPath: P.blueprintPath, springArmLength: C.springArmLength, springArmLagEnabled: C.springArmLagEnabled, springArmLagSpeed: C.springArmLagSpeed, cameraUsePawnControlRotation: C.cameraUsePawnControlRotation }, required: ['blueprintPath'],
     effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'interactive', resources: 'low',
     exampleInput: { action: 'configure_camera_component', blueprintPath: '/Game/BP_Char', springArmLength: 300, cameraUsePawnControlRotation: true } }),

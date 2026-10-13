@@ -174,7 +174,7 @@ export const BEHAVIOURS_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'add_controls',
     family: FAMILY,
     domain: DOMAIN,
-    topics: ['player controls', 'wasd movement', 'move with wasd', 'make the character move', 'character controls', 'mouse look', 'jump key', 'make the character jump', 'third person controls', 'first person controls', 'make the character playable'],
+    topics: ['player controls', 'wasd movement', 'move with wasd', 'make the character move', 'character controls', 'mouse look', 'gamepad controls', 'jump key', 'make the character jump', 'third person controls', 'first person controls', 'make the character playable'],
     summary: 'Give a Character the controls a player steers it with: WASD or the left stick walk it relative to where the controller faces, the mouse or the right stick turn the view, and the jump key jumps (held longer, higher). It makes IA_Move and IA_Look (Axis2D) and IA_Jump next to the Blueprint, maps the keys and registers the context when the character is possessed.',
     whenToUse: ['A Character made with manage_character create_character_blueprint (or any Character without input) must be playable: it has no input until this runs.'],
     whenNotToUse: ['Only one key or action must be added (use manage_networking configure_input for the asset and blueprint edit_graph for its node).'],

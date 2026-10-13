@@ -108,23 +108,59 @@ bool HandleAddInputMapping(
         return true;
     }
 
+    // replaceKey moves the action's mapping off that key: its triggers and modifiers come along unless this call sends
+    // its own. A remove-then-add lost them, so W moved to Up dropped SwizzleAxis and Up strafed instead of walking.
+    const FString ReplaceName = GetJsonStringField(Payload, TEXT("replaceKey"));
+    const FKey ReplaceKey = InputKeyFromName(ReplaceName);
+    FEnhancedActionKeyMapping* Replaced = ReplaceName.IsEmpty() ? nullptr : FindInputMapping(Context, InAction, ReplaceKey);
+    if (!ReplaceName.IsEmpty() && !Replaced)
+    {
+        TArray<FString> Mapped;
+        for (const FEnhancedActionKeyMapping& Each : Context->GetMappings())
+        {
+            if (Each.Action == InAction)
+            {
+                Mapped.Add(Each.Key.ToString());
+            }
+        }
+        Bridge.SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("replaceKey '%s' is not mapped to %s in %s (its keys: %s); nothing was changed."),
+                *ReplaceName, *SanitizedActionPath, *SanitizedContextPath,
+                Mapped.Num() > 0 ? *FString::Join(Mapped, TEXT(", ")) : TEXT("none")),
+            TEXT("NOT_FOUND"));
+        return true;
+    }
+
     // MapKey always appends, and a second mapping of the same action+key fires the action twice, so naming the
     // pair again reuses that mapping and this call defines its triggers and modifiers.
     Context->Modify();
+    decltype(FEnhancedActionKeyMapping::Triggers) Triggers;
+    decltype(FEnhancedActionKeyMapping::Modifiers) Modifiers;
+    if (Replaced)
+    {
+        Triggers = Replaced->Triggers;
+        Modifiers = Replaced->Modifiers;
+        if (ReplaceKey != Key)
+        {
+            Context->UnmapKey(InAction, ReplaceKey); // Replaced dangles from here on
+        }
+    }
     FEnhancedActionKeyMapping* ExistingMapping = FindInputMapping(Context, InAction, Key);
     const bool bReusedExistingMapping = ExistingMapping != nullptr;
     FEnhancedActionKeyMapping& Mapping =
         bReusedExistingMapping ? *ExistingMapping : Context->MapKey(InAction, Key);
-    Mapping.Triggers.Reset();
-    Mapping.Modifiers.Reset();
     if (TriggerClass)
     {
-        Mapping.Triggers.Add(NewObject<UInputTrigger>(Context, TriggerClass));
+        Triggers.Reset();
+        Triggers.Add(NewObject<UInputTrigger>(Context, TriggerClass));
     }
     if (ModifierClass)
     {
-        Mapping.Modifiers.Add(NewObject<UInputModifier>(Context, ModifierClass));
+        Modifiers.Reset();
+        Modifiers.Add(NewObject<UInputModifier>(Context, ModifierClass));
     }
+    Mapping.Triggers = Triggers;
+    Mapping.Modifiers = Modifiers;
     const bool bSaved = SaveLoadedAssetThrottled(Context, true);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
@@ -134,13 +170,18 @@ bool HandleAddInputMapping(
     Result->SetNumberField(TEXT("triggerCount"), Mapping.Triggers.Num());
     Result->SetNumberField(TEXT("modifierCount"), Mapping.Modifiers.Num());
     Result->SetBoolField(TEXT("reusedExistingMapping"), bReusedExistingMapping);
+    if (!ReplaceName.IsEmpty())
+    {
+        Result->SetStringField(TEXT("replacedKey"), ReplaceKey.ToString());
+    }
     AddAssetVerificationNested(Result, TEXT("contextVerification"), Context);
     AddAssetVerificationNested(Result, TEXT("actionVerification"), InAction);
     SetInputChangedAsset(Result, Context, bSaved);
 
-    Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
-        SubAction == TEXT("map_input_action") ?
-        TEXT("Input action mapped to key.") : TEXT("Mapping added."), Result);
+    const FString Message = !ReplaceName.IsEmpty()
+        ? FString::Printf(TEXT("Mapping moved from %s to %s."), *ReplaceKey.ToString(), *Key.ToString())
+        : FString(SubAction == TEXT("map_input_action") ? TEXT("Input action mapped to key.") : TEXT("Mapping added."));
+    Bridge.SendAutomationResponse(RequestingSocket, RequestId, true, Message, Result);
     return true;
 }
 

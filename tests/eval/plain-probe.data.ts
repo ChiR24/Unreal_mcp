@@ -513,4 +513,11 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'make the character move with wasd', accepted: ['blueprint.add_behaviour'] },
   { query: 'character controls', accepted: ['blueprint.add_behaviour'] },
   { query: 'make my character playable', accepted: ['blueprint.add_behaviour'] },
+  { query: 'gamepad controls', accepted: ['blueprint.add_behaviour'] },
+  { query: 'third person camera', accepted: ['manage_character.configure_character'] },
+  { query: 'follow camera', accepted: ['manage_character.configure_character'] },
+  { query: 'possess the character', accepted: ['control_editor.play'] },
+  { query: 'remap a key', accepted: ['manage_networking.configure_input'] },
+  { query: 'change the jump key', accepted: ['manage_networking.configure_input'] },
+  { query: 'walk forward in the game', accepted: ['control_editor.simulate_input', 'control_actor.get_transform'] },
 ];

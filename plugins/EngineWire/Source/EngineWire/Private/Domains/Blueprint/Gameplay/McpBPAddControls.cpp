@@ -135,11 +135,12 @@ bool HandleBlueprintAddControls(const FBlueprintActionContext &Context) {
     Report->RemoveField(Field);
   }
   Report->SetNumberField(TEXT("previousRemoved"), PreviousRemoved);
-  Report->SetStringField(TEXT("moveAction"), MoveAction);
+  // Asset paths in one form: the context read back from Jump's input section was an object path, a given one not.
+  Report->SetStringField(TEXT("moveAction"), FPackageName::ObjectPathToPackageName(MoveAction));
   if (bLook) {
-    Report->SetStringField(TEXT("lookAction"), LookAction);
+    Report->SetStringField(TEXT("lookAction"), FPackageName::ObjectPathToPackageName(LookAction));
   }
-  Report->SetStringField(TEXT("mappingContextPath"), ContextPath);
+  Report->SetStringField(TEXT("mappingContextPath"), FPackageName::ObjectPathToPackageName(ContextPath));
   Report->SetBoolField(TEXT("keysMapped"), bMapped);
   Bridge.SendAutomationResponse(RequestingSocket, RequestId, bMapped,
                                 bMapped ? FString(TEXT("Controls written: WASD or the left stick walk, the mouse or the right "

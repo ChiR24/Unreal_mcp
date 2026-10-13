@@ -268,6 +268,7 @@ export const FIELD_DESCRIPTIONS: Readonly<Record<string, string>> = {
   actionPath: 'Action path (canonical /Game asset path).',
   triggerType: 'Trigger type.',
   modifierType: 'Modifier type.',
+  replaceKey: 'A key the action is already mapped to: its mapping moves to key (the remap of a control), keeping its triggers and modifiers unless triggerType or modifierType is sent, and that key stops firing the action. A key the action is not mapped to fails NOT_FOUND and lists the keys it is.',
   defaultPawnClass: 'Default pawn class.',
   playerControllerClass: 'Player controller class.',
   gameStateClass: 'Game state class.',

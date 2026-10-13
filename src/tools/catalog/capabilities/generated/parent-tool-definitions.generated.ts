@@ -20866,6 +20866,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Rep notify func."
         },
+        "replaceKey": {
+          "type": "string",
+          "description": "A key the action is already mapped to: its mapping moves to key (the remap of a control), keeping its triggers and modifiers unless triggerType or modifierType is sent, and that key stops firing the action. A key the action is not mapped to fails NOT_FOUND and lists the keys it is."
+        },
         "replicateMovement": {
           "type": "boolean",
           "description": "Replicate movement."
