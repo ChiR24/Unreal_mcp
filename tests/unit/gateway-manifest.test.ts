@@ -58,15 +58,18 @@ describe('gateway manifest', () => {
     expect(parents.size).toBe(getManifestToolDefinitions().length);
   });
 
-  it('native gateway tool definition mirrors the TS param selector schema', () => {
-    const props = (unrealGatewayToolDefinition.inputSchema.properties ?? {}) as Record<string, { description?: string }>;
-    expect(props.param).toBeDefined();
-    const tsDescription = props.param?.description ?? '';
-    expect(tsDescription.length).toBeGreaterThan(0);
+  // The native door once left out capability, so describe {capability} there answered with the tool list.
+  it.each(['capability', 'tool', 'action', 'param', 'query'])(
+    'native gateway tool definition mirrors the TS %s selector schema',
+    (field) => {
+      const props = (unrealGatewayToolDefinition.inputSchema.properties ?? {}) as Record<string, { description?: string }>;
+      const tsDescription = props[field]?.description ?? '';
+      expect(tsDescription.length).toBeGreaterThan(0);
 
-    const cpp = readFileSync(nativeGatewayDefinitionPath, 'utf8');
-    const match = cpp.match(/\.String\(\s*TEXT\("param"\),\s*TEXT\("([^"]*)"\)/);
-    expect(match, 'native gateway definition must declare a param field').not.toBeNull();
-    expect(match?.[1]).toBe(tsDescription);
-  });
+      const cpp = readFileSync(nativeGatewayDefinitionPath, 'utf8');
+      const match = cpp.match(new RegExp(`\\.String\\(\\s*TEXT\\("${field}"\\),\\s*TEXT\\("([^"]*)"\\)`));
+      expect(match, `native gateway definition must declare a ${field} field`).not.toBeNull();
+      expect(match?.[1]).toBe(tsDescription);
+    }
+  );
 });

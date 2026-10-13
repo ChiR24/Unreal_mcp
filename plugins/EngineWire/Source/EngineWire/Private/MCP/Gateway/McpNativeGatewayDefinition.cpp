@@ -17,6 +17,8 @@ TSharedPtr<FJsonObject> BuildUnrealGatewayToolDefinition()
 		.String(TEXT("family"), TEXT("Exact capability family to filter search results by."))
 		.StringEnum(TEXT("effect"), { TEXT("read"), TEXT("write"), TEXT("destructive") },
 			TEXT("Filter search results by declared behavior effect."))
+		// Read by describe and execute; undeclared here, the ID every search row and nextCall carries was no legal field.
+		.String(TEXT("capability"), TEXT("Exact canonical capability id (or declared alias) copied from a search row or describe response, e.g. blueprint.create. Preferred selector for describe and execute; never guessed."))
 		.String(TEXT("tool"), TEXT("Exact parent tool name copied from a search row (parentTool) or a describe response. Always paired with action; never guessed."))
 		.String(TEXT("action"), TEXT("Exact action name copied from a search row or describe response. For configure, this is a manage_tools action."))
 		.String(TEXT("param"), TEXT("Exact parameter name to inspect on one capability. Use with describe plus tool and action; returns that single parameter's schema plus the consent grant, when the capability needs one."))

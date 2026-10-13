@@ -8,6 +8,7 @@
 #include "MCP/Gateway/McpNativeGatewayDescribe.h"
 #include "MCP/Gateway/McpNativeGatewaySearch.h"
 #include "MCP/Gateway/McpNativeGatewayDirectCallMigration.h"
+#include "MCP/Gateway/McpNativeGatewayGuidance.h"
 #include "MCP/Execute/McpNativeGatewayCanonicalRecords.h"
 
 
@@ -121,6 +122,33 @@ void FMcpNativeTransport::HandleGatewayCall(
 		{
 			int32 O = 0;
 			if (Params->TryGetNumberField(TEXT("actionOffset"), O)) DiscoveryQuery.Offset = FMath::Max(0, O);
+		}
+		// describe takes a capability ID as execute does: it is the ID every search row and execute nextCall carries,
+		// and describe {capability} used to answer with the whole tool list.
+		FString Capability;
+		if (DiscoveryQuery.Tool.IsEmpty() && !DiscoveryQuery.bHasAction &&
+			Params->TryGetStringField(TEXT("capability"), Capability) && !Capability.IsEmpty())
+		{
+			const FMcpCanonicalRecordIndex& Index = FMcpCanonicalRecordIndex::Get();
+			const FMcpCapabilityRecord* Record = Index.FindById(Capability);
+			FString AliasTarget;
+			if (!Record && Index.ResolveAlias(Capability, AliasTarget) == EMcpAliasResolution::Unique)
+			{
+				Record = Index.FindById(AliasTarget);
+			}
+			if (!Record)
+			{
+				TSharedPtr<FJsonObject> Error = GatewayError(TEXT("describe"), TEXT("UNKNOWN_CAPABILITY"),
+					FString::Printf(TEXT("Unknown capability '%s'. Call search to find one."), *Capability));
+				Error->SetArrayField(TEXT("suggestions"),
+					GatewayStringArray(GatewayClosestMatches(Capability, Index.GetCapabilityIds(), 3)));
+				Error->SetObjectField(TEXT("nextCall"), GatewayBuildNextCall(TEXT("search"), FString(), FString(), FString()));
+				SendDiscoveryResult(Error);
+				return;
+			}
+			DiscoveryQuery.Tool = Record->Parent;
+			DiscoveryQuery.Action = McpCapabilityPublicAction(*Record);
+			DiscoveryQuery.bHasAction = true;
 		}
 		// As on execute, the namespace of a capability ID (asset for asset.list) names its parent tool.
 		const FString AskedTool = DiscoveryQuery.Tool;
