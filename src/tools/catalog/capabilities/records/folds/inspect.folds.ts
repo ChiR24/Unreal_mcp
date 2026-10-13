@@ -45,8 +45,8 @@ export const INSPECT_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'runtime_report',
-    summary: 'Report the live state of a running PIE game: up to 25 matching actors with class, transform, tags and components, plus the player controller, pawn, view target and camera; actors are reported only while PIE runs.',
-    topics: ['pie state', 'inspect running game', 'live actors'],
+    summary: 'Report the live state of a running PIE game: the player controller, pawn, view target and camera, plus up to 25 matching actors with class, transform, tags, components and the live values of the variables or properties named in propertyNames; actors are reported only while PIE runs.',
+    topics: ['pie state', 'inspect running game', 'live actors', 'player location during play', 'variable value during play', 'runtime value of a variable'],
     members: ['pie_report'],
   },
 ];

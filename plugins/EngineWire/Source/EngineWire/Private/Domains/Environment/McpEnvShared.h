@@ -204,7 +204,8 @@ bool McpApplyEnvironmentSnapshot(const TSharedPtr<FJsonObject> &Snapshot, TShare
 UWorld *McpGetRuntimeInspectionWorld();
 FString McpGetWorldTypeName(UWorld *World);
 void McpAddActorTags(TSharedPtr<FJsonObject> Obj, const AActor *Actor);
-TSharedPtr<FJsonObject> McpDescribeRuntimeComponent(UActorComponent *Component, const TArray<FString> &PropertyNames);
+TSharedPtr<FJsonObject> McpDescribeRuntimeComponent(UActorComponent *Component, const TArray<FString> &PropertyNames,
+                                                    TSet<FString> *FoundProperties = nullptr);
 TSharedPtr<FJsonObject> McpDescribeRuntimeActor(AActor *Actor, const TArray<FString> &ComponentNames, const TArray<FString> &PropertyNames);
 
 bool HandleBuildEnvironmentEditorAction(

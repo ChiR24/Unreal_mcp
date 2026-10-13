@@ -21,7 +21,7 @@ const RUNTIME_REPORT_OUTPUT = {
   worldPath: { type: 'string', description: 'Package path of that world.' },
   worldType: { type: 'string', description: 'World type, e.g. PIE or Editor.' },
   isPIE: { type: 'boolean', description: 'Whether a PIE session is active.' },
-  actors: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Matching runtime actors and their inspected components/properties, at most 25. Only when filter, actorName, componentNames or propertyNames selects them.' },
+  actors: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Matching runtime actors, at most 25, each with its components and, under propertyNames, the values found: properties on the actor itself, properties on each component, and propertiesNotFound for names found on neither. Only when filter, actorName, componentNames or propertyNames selects them.' },
   count: { type: 'number', description: 'Number of actors returned after filtering; absent with actors.' },
   totalActorCount: { type: 'number', description: 'Total actors in the inspected world.' },
   playerController: { type: 'string', description: 'Object path of the active PlayerController (inspect_object it for details).' },
@@ -40,7 +40,8 @@ export const RUNTIME_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: {
       filter: P.filter, actorName: P.actorName, name: P.name,
       componentName: P.componentName, componentNames: P.componentNames,
-      propertyName: P.propertyName, propertyPath: P.propertyPath, propertyNames: P.propertyNames,
+      propertyName: P.propertyName, propertyPath: P.propertyPath,
+      propertyNames: { ...P.propertyNames, description: 'Properties to read, each a name or dotted path: read on each matching actor itself (its Blueprint variables, such as bIsOpen, land in the actor properties) and on each reported component (in that component properties). A name found on none of them is listed in the actor propertiesNotFound.' },
     },
     required: [],
     effect: 'read',

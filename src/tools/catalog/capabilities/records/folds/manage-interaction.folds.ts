@@ -4,8 +4,8 @@ import type { FoldSpec } from '../shared/fold-types.js';
 export const MANAGE_INTERACTION_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'create_interactable', selector: 'kind',
-    summary: 'Create an interactable: door, chest, switch, lever or trigger actor, an interactable interface, or an interaction component.',
-    topics: ['door', 'chest', 'switch', 'lever', 'trigger actor', 'interactable interface', 'interaction component', 'create door', 'make a treasure chest', 'add a light switch'],
+    summary: 'Create an interactable: a door or chest that opens when a pawn comes near, a switch, lever or trigger actor, an interactable interface, or an interaction component.',
+    topics: ['door', 'chest', 'switch', 'lever', 'trigger actor', 'interactable interface', 'interaction component', 'create door', 'make a treasure chest', 'add a light switch', 'automatic door', 'door that opens when the player walks up'],
     members: { door: 'create_door_actor', chest: 'create_chest_actor', switch: 'create_switch_actor', lever: 'create_lever_actor', trigger: 'create_trigger_actor', interface: 'create_interactable_interface', component: 'create_interaction_component' },
   },
   {

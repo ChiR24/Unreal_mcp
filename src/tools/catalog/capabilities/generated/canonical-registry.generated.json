@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "63ed9ec26ccfcf00",
+  "catalogRevision": "a986a95a3eca0d53",
   "recordCount": 415,
   "records": [
     {
@@ -46930,9 +46930,12 @@
           "runtime_report",
           "pie state",
           "inspect running game",
-          "live actors"
+          "live actors",
+          "player location during play",
+          "variable value during play",
+          "runtime value of a variable"
         ],
-        "summary": "Report the live state of a running PIE game: up to 25 matching actors with class, transform, tags and components, plus the player controller, pawn, view target and camera; actors are reported only while PIE runs.",
+        "summary": "Report the live state of a running PIE game: the player controller, pawn, view target and camera, plus up to 25 matching actors with class, transform, tags, components and the live values of the variables or properties named in propertyNames; actors are reported only while PIE runs.",
         "whenToUse": [
           "Runtime state of actors/components/properties must be inspected during PIE.",
           "PIE-only runtime state must be inspected."
@@ -46986,7 +46989,7 @@
               "items": {
                 "type": "string"
               },
-              "description": "Specific property names to include."
+              "description": "Properties to read, each a name or dotted path: read on each matching actor itself (its Blueprint variables, such as bIsOpen, land in the actor properties) and on each reported component (in that component properties). A name found on none of them is listed in the actor propertiesNotFound."
             }
           },
           "required": [
@@ -47034,7 +47037,7 @@
                 "additionalProperties": true,
                 "x-unreal-reflection-boundary": true
               },
-              "description": "Matching runtime actors and their inspected components/properties, at most 25. Only when filter, actorName, componentNames or propertyNames selects them."
+              "description": "Matching runtime actors, at most 25, each with its components and, under propertyNames, the values found: properties on the actor itself, properties on each component, and propertiesNotFound for names found on neither. Only when filter, actorName, componentNames or propertyNames selects them."
             },
             "count": {
               "type": "number",
@@ -47071,7 +47074,7 @@
       },
       "examples": [
         {
-          "title": "Report the live state of a running PIE game: up to 25 matching actors with class, transform, tags and components, plus the player controller, pawn, view target and camera; actors are reported only while PIE runs.",
+          "title": "Report the live state of a running PIE game: the player controller, pawn, view target and camera, plus up to 25 matching actors with class, transform, tags, components and the live values of the variables or properties named in propertyNames; actors are reported only while PIE runs.",
           "input": {
             "action": "runtime_report",
             "actorName": "PlayerStart_1"
@@ -47116,8 +47119,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "099dc7de870fc5352daf0508a5ac826ec1f89296adf93e2d2310506fe2ad0af1",
-        "content": "4e61f82d6c56425788b381fc2bc5b2159310c4cc971752747c61dbb40efe0858"
+        "schema": "50277af8e330b9fd85528fed7db6a5fdb95052f6c23462a426b0cfceb695926e",
+        "content": "603cb699b00a3c354afbc8d3278be9f8d02cf8d96f6ad6b81154ac47bcb59de3"
       }
     },
     {
@@ -68770,11 +68773,11 @@
             },
             "openAngle": {
               "type": "number",
-              "description": "Open angle in degrees."
+              "description": "Open angle in degrees (a new door gets 90, a new chest lid 100)."
             },
             "openTime": {
               "type": "number",
-              "description": "Open animation duration in seconds."
+              "description": "Seconds the door or lid takes to swing fully open or shut (a new door gets 0.5, a new chest 0.6)."
             },
             "locked": {
               "type": "boolean",
@@ -68963,8 +68966,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "7cbfc7ae311e69a1b7ad09ec4380697f20704f051cb814c94243e8b162c5261c",
-        "content": "9f1c880e80d255808317405d4ee9e40a0ed84cac86ba57552c9afbb5b77cbe42"
+        "schema": "d262c79fafcb99ce1251db5ef41b1465c3fd715b2f78ecdad20630286cf5d7c6",
+        "content": "fb5edd99bdb6046417ca9cd2fee589420379b287a52f9ef5b452674da7a1b867"
       }
     },
     {
@@ -69048,15 +69051,17 @@
           "create door",
           "make a treasure chest",
           "add a light switch",
+          "automatic door",
+          "door that opens when the player walks up",
           "new door",
           "door actor",
           "openable door",
           "door that opens"
         ],
-        "summary": "Create an interactable: door, chest, switch, lever or trigger actor, an interactable interface, or an interaction component.",
+        "summary": "Create an interactable: a door or chest that opens when a pawn comes near, a switch, lever or trigger actor, an interactable interface, or an interaction component.",
         "whenToUse": [
-          "kind=door: A door Blueprint is needed with a pivot, a door mesh and a trigger box, plus open-angle, timing, lock and key variables.",
-          "kind=chest: A chest Blueprint is needed with a base mesh, a lid mesh on a pivot, a trigger sphere and an optional locked state.",
+          "kind=door: A door Blueprint is needed with a pivot, a door mesh and a trigger box, plus open-angle, timing, lock and key variables; the door swings open (yaw, over openTime) while a pawn overlaps the trigger and it is unlocked, and autoClose shuts it autoCloseDelay seconds after the last pawn leaves. Calling it again on an existing door adds that opening logic.",
+          "kind=chest: A chest Blueprint is needed with a base mesh, a lid mesh on a pivot, a trigger sphere and an optional locked state; its lid swings open (pitch, over openTime) while a pawn overlaps the trigger and the chest is unlocked.",
           "kind=switch|lever: A switch, button or lever needs an actor Blueprint with mesh parts and an overlap sphere as its trigger.",
           "kind=trigger: A reusable overlap-volume Blueprint is needed with a box, sphere or capsule as its root shape.",
           "kind=interface: A Blueprint interface is needed that defines Interact, CanInteract and GetInteractionPrompt for actors to implement.",
@@ -69086,19 +69091,19 @@
             },
             "openAngle": {
               "type": "number",
-              "description": "Open angle in degrees."
+              "description": "Open angle in degrees (a new door gets 90, a new chest lid 100)."
             },
             "openTime": {
               "type": "number",
-              "description": "Open animation duration in seconds."
+              "description": "Seconds the door or lid takes to swing fully open or shut (a new door gets 0.5, a new chest 0.6)."
             },
             "autoClose": {
               "type": "boolean",
-              "description": "Whether the door closes automatically."
+              "description": "Whether it closes by itself after the last pawn leaves (default false: it stays open)."
             },
             "autoCloseDelay": {
               "type": "number",
-              "description": "Delay in seconds before the door auto-closes."
+              "description": "Seconds after the last pawn leaves before an autoClose door or lid shuts (default 3)."
             },
             "requiresKey": {
               "type": "boolean",
@@ -69177,7 +69182,7 @@
       },
       "examples": [
         {
-          "title": "Create an interactable: door, chest, switch, lever or trigger actor, an interactable interface, or an interaction component.",
+          "title": "Create an interactable: a door or chest that opens when a pawn comes near, a switch, lever or trigger actor, an interactable interface, or an interaction component.",
           "input": {
             "action": "create_interactable",
             "name": "BP_Door",
@@ -69245,16 +69250,20 @@
               "interface"
             ],
             "openAngle": [
-              "door"
+              "door",
+              "chest"
             ],
             "openTime": [
-              "door"
+              "door",
+              "chest"
             ],
             "autoClose": [
-              "door"
+              "door",
+              "chest"
             ],
             "autoCloseDelay": [
-              "door"
+              "door",
+              "chest"
             ],
             "requiresKey": [
               "door"
@@ -69283,8 +69292,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "4992c4887a2ead1e11b980caa80da0cc22456e92602a9b5b9be7208785ad304d",
-        "content": "97f9700692cb1edbddb8cd8be1aaa3cff62efd162db99f157714976185b70b60"
+        "schema": "50961ef71f7f42e763b2cbf8cf89d65cf4bed6d5c1192ed65313e4ed85b1f0f9",
+        "content": "ed8ead6951edd65435556219ca7b61f25e540cd160f5148ca8d7a560fb280d2a"
       }
     },
     {

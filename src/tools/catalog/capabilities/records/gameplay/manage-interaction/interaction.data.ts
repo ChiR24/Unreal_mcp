@@ -103,13 +103,21 @@ export const INTERACTION_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   interactionRecord({
     action: 'create_chest_actor',
-    summary: 'Create a chest actor Blueprint asset.',
-    whenToUse: ['A chest Blueprint is needed with a base mesh, a lid mesh on a pivot, a trigger sphere and an optional locked state.'],
+    summary: 'Create a chest actor Blueprint asset whose lid opens when a pawn comes near.',
+    whenToUse: ['A chest Blueprint is needed with a base mesh, a lid mesh on a pivot, a trigger sphere and an optional locked state; its lid swings open (pitch, over openTime) while a pawn overlaps the trigger and the chest is unlocked.'],
     whenNotToUse: [
       'An actor must be placed in the level from an existing Blueprint (use control_actor.spawn).',
       'An existing door, chest or switch only needs new settings (use manage_interaction.configure_interactable).',
     ],
-    inputProps: { name: NP.name, folder: NP.folder, locked: NP.locked },
+    inputProps: {
+      name: NP.name,
+      folder: NP.folder,
+      locked: NP.locked,
+      openAngle: NP.openAngle,
+      openTime: NP.openTime,
+      autoClose: NP.autoClose,
+      autoCloseDelay: NP.autoCloseDelay,
+    },
     required: ['name'],
     exampleInput: {
       action: 'create_chest_actor',
@@ -121,8 +129,8 @@ export const INTERACTION_RECORDS: readonly CapabilityRecordSource[] = [
   interactionRecord({
     action: 'create_door_actor',
     topics: ['door', 'new door', 'door actor', 'openable door', 'door that opens'],
-    summary: 'Create a door actor Blueprint asset.',
-    whenToUse: ['A door Blueprint is needed with a pivot, a door mesh and a trigger box, plus open-angle, timing, lock and key variables.'],
+    summary: 'Create a door actor Blueprint asset that opens when a pawn comes near.',
+    whenToUse: ['A door Blueprint is needed with a pivot, a door mesh and a trigger box, plus open-angle, timing, lock and key variables; the door swings open (yaw, over openTime) while a pawn overlaps the trigger and it is unlocked, and autoClose shuts it autoCloseDelay seconds after the last pawn leaves. Calling it again on an existing door adds that opening logic.'],
     whenNotToUse: [
       'An actor must be placed in the level from an existing Blueprint (use control_actor.spawn).',
       'An existing door, chest or switch only needs new settings (use manage_interaction.configure_interactable).',

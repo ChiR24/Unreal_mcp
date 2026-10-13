@@ -33,7 +33,40 @@ void McpAddActorTags(TSharedPtr<FJsonObject> Obj, const AActor *Actor)
     }
     Obj->SetArrayField(TEXT("tags"), TagsArray);
 }
-TSharedPtr<FJsonObject> McpDescribeRuntimeComponent(UActorComponent *Component, const TArray<FString> &PropertyNames)
+// The values of the named properties (names or dotted paths) found on Object, or null when it has none of them;
+// each name found is added to Found.
+static TSharedPtr<FJsonObject> McpReadRuntimeNamedProperties(UObject *Object, const TArray<FString> &PropertyNames,
+                                                             TSet<FString> *Found)
+{
+    TSharedPtr<FJsonObject> Values;
+    for (const FString &PropertyName : PropertyNames)
+    {
+        if (PropertyName.IsEmpty())
+        {
+            continue;
+        }
+        McpHandlerUtils::FPropertyResolveResult PropResult = McpHandlerUtils::ResolveProperty(Object, PropertyName);
+        if (!PropResult.IsValid())
+        {
+            continue;
+        }
+        if (TSharedPtr<FJsonValue> Value = McpPropertyReflection::ExportPropertyToJsonValue(PropResult.Container, PropResult.Property))
+        {
+            if (!Values)
+            {
+                Values = McpHandlerUtils::CreateResultObject();
+            }
+            Values->SetField(PropertyName, Value);
+            if (Found)
+            {
+                Found->Add(PropertyName);
+            }
+        }
+    }
+    return Values;
+}
+TSharedPtr<FJsonObject> McpDescribeRuntimeComponent(UActorComponent *Component, const TArray<FString> &PropertyNames,
+                                                    TSet<FString> *FoundProperties)
 {
     TSharedPtr<FJsonObject> Obj = McpHandlerUtils::CreateResultObject();
     if (!Component)
@@ -69,25 +102,10 @@ TSharedPtr<FJsonObject> McpDescribeRuntimeComponent(UActorComponent *Component, 
         Obj->SetBoolField(TEXT("usePawnControlRotation"), SpringArm->bUsePawnControlRotation);
     }
 
-    if (PropertyNames.Num() > 0)
+    // A component carrying none of the names gets no properties field (it used to get an empty one each).
+    if (TSharedPtr<FJsonObject> Values = McpReadRuntimeNamedProperties(Component, PropertyNames, FoundProperties))
     {
-        TSharedPtr<FJsonObject> PropertiesObj = McpHandlerUtils::CreateResultObject();
-        for (const FString &PropertyName : PropertyNames)
-        {
-            if (PropertyName.IsEmpty())
-            {
-                continue;
-            }
-            McpHandlerUtils::FPropertyResolveResult PropResult = McpHandlerUtils::ResolveProperty(Component, PropertyName);
-            if (PropResult.IsValid())
-            {
-                if (TSharedPtr<FJsonValue> Value = McpPropertyReflection::ExportPropertyToJsonValue(PropResult.Container, PropResult.Property))
-                {
-                    PropertiesObj->SetField(PropertyName, Value);
-                }
-            }
-        }
-        Obj->SetObjectField(TEXT("properties"), PropertiesObj);
+        Obj->SetObjectField(TEXT("properties"), Values);
     }
 
     return Obj;
@@ -107,6 +125,14 @@ TSharedPtr<FJsonObject> McpDescribeRuntimeActor(AActor *Actor, const TArray<FStr
     Obj->SetStringField(TEXT("classPath"), Actor->GetClass() ? Actor->GetClass()->GetPathName() : TEXT(""));
     Obj->SetObjectField(TEXT("transform"), McpHandlerUtils::TransformToJson(Actor->GetActorTransform()));
     McpAddActorTags(Obj, Actor);
+
+    // propertyNames were read on the components only, so an actor's own variables (a Blueprint's bIsOpen) answered
+    // with nothing. They are read on the actor too, and a name found nowhere is listed instead of left out.
+    TSet<FString> FoundProperties;
+    if (TSharedPtr<FJsonObject> Values = McpReadRuntimeNamedProperties(Actor, PropertyNames, &FoundProperties))
+    {
+        Obj->SetObjectField(TEXT("properties"), Values);
+    }
 
     TArray<TSharedPtr<FJsonValue>> ComponentsArray;
     TInlineComponentArray<UActorComponent *> Components;
@@ -138,7 +164,7 @@ TSharedPtr<FJsonObject> McpDescribeRuntimeActor(AActor *Actor, const TArray<FStr
                 ++OmittedComponents;
                 continue;
             }
-            TSharedPtr<FJsonObject> ComponentObj = McpDescribeRuntimeComponent(Component, PropertyNames);
+            TSharedPtr<FJsonObject> ComponentObj = McpDescribeRuntimeComponent(Component, PropertyNames, &FoundProperties);
             if (!bNamedComponents)
             {
                 ComponentObj->RemoveField(TEXT("transform"));
@@ -151,6 +177,18 @@ TSharedPtr<FJsonObject> McpDescribeRuntimeActor(AActor *Actor, const TArray<FStr
     if (OmittedComponents > 0)
     {
         Obj->SetNumberField(TEXT("componentsOmitted"), OmittedComponents);
+    }
+    TArray<TSharedPtr<FJsonValue>> NotFound;
+    for (const FString &PropertyName : PropertyNames)
+    {
+        if (!PropertyName.IsEmpty() && !FoundProperties.Contains(PropertyName))
+        {
+            NotFound.Add(MakeShared<FJsonValueString>(PropertyName));
+        }
+    }
+    if (NotFound.Num() > 0)
+    {
+        Obj->SetArrayField(TEXT("propertiesNotFound"), NotFound);
     }
     return Obj;
 }

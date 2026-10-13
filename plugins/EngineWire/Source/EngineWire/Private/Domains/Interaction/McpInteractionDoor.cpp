@@ -39,9 +39,15 @@ bool HandleDoorAction(
                     McpAssetExists(PackageName)
                 ? LoadObject<UBlueprint>(nullptr, *(PackageName + TEXT(".") + FPackageName::GetShortName(PackageName)))
                 : nullptr;
+        // An existing door gets the opening logic too (it is re-runnable), so one made before it existed opens.
         if (ExistingDoorBP)
         {
             Result->SetBoolField(TEXT("alreadyExisted"), true);
+            if (!AuthorOpenOnApproach(Subsystem, RequestId, RequestingSocket, ExistingDoorBP, TEXT("DoorPivot"),
+                                      TEXT("OpenAngle"), TEXT("Yaw"), Result))
+            {
+                return true;
+            }
             McpHandlerUtils::AddVerification(Result, ExistingDoorBP);
             Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Door actor already exists"), Result);
             return true;
@@ -65,6 +71,11 @@ bool HandleDoorAction(
             {TEXT("bRequiresKey"), EType::Bool, MakeShared<FJsonValueBoolean>(RequiresKey)},
             {TEXT("bIsLocked"), EType::Bool, MakeShared<FJsonValueBoolean>(Locked)}});
         Result->SetBoolField(TEXT("propertiesApplied"), NotApplied == 0);
+        if (!AuthorOpenOnApproach(Subsystem, RequestId, RequestingSocket, DoorBP, TEXT("DoorPivot"), TEXT("OpenAngle"),
+                                  TEXT("Yaw"), Result))
+        {
+            return true;
+        }
         SendInteractableResult(Subsystem, RequestId, RequestingSocket, DoorBP, Result,
                                {TEXT("created door blueprint"), TEXT("added door components")}, TEXT("Door actor created"));
         return true;

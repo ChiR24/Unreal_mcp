@@ -132,4 +132,11 @@ void SendInteractableResult(
     UEngineWireSubsystem* Subsystem, const FString& RequestId,
     TSharedPtr<FMcpBridgeWebSocket> Socket, UBlueprint* Blueprint,
     TSharedPtr<FJsonObject> Result, TArray<FString> Changes, const FString& Message);
+
+// Writes the open-on-approach logic (recipe Interaction/OpenOnApproach) into a door or chest Blueprint: Pivot turns
+// by AngleVariable about RotatorPin while a pawn is near. Adds opensOnApproach and compiled to Result; false after
+// sending the refusal itself.
+bool AuthorOpenOnApproach(UEngineWireSubsystem* Subsystem, const FString& RequestId,
+                          TSharedPtr<FMcpBridgeWebSocket> Socket, UBlueprint* Blueprint, const TCHAR* Pivot,
+                          const TCHAR* AngleVariable, const TCHAR* RotatorPin, const TSharedPtr<FJsonObject>& Result);
 }

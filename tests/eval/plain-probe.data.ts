@@ -500,4 +500,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'add health to the enemy', accepted: ['blueprint.add_behaviour'] },
   { query: 'enemy takes damage and dies', accepted: ['blueprint.add_behaviour'] },
   { query: 'player health', accepted: ['blueprint.add_behaviour'] },
+  { query: 'player location during play', accepted: ['inspect.runtime_report'] },
+  { query: 'live value of a variable', accepted: ['inspect.runtime_report'] },
+  { query: 'door opens when player walks up', accepted: ['manage_interaction.create_interactable'] },
 ];

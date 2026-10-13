@@ -6580,6 +6580,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "items": {
                 "type": "string"
               },
+              "description": "Properties to read, each a name or dotted path: read on each matching actor itself (its Blueprint variables, such as bIsOpen, land in the actor properties) and on each reported component (in that component properties). A name found on none of them is listed in the actor propertiesNotFound."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
               "description": "Property values to add to the reply, by name (Intensity, bIsActive), as text under properties; a name the class lacks is listed under missingProperties. CollisionResponses reads every channel's response on a primitive component ({\"Pawn\": \"Ignore\", ...}). Without propertyNames or detailed no property values come back."
             },
             {
@@ -6599,7 +6606,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "description": "Several properties of the same target in one call, in place of propertyName: each read as a single call would (dotted paths too, such as CharacterMovement.MaxWalkSpeed). Answered under properties; a name that does not resolve is listed under missingProperties with the reason, and the others still answer."
             }
           ],
-          "description": "Property values to add to the reply, by name (Intensity, bIsActive), as text under properties; a name the class lacks is listed under missingProperties. CollisionResponses reads every channel's response on a primitive component ({\"Pawn\": \"Ignore\", ...}). Without propertyNames or detailed no property values come back."
+          "description": "Properties to read, each a name or dotted path: read on each matching actor itself (its Blueprint variables, such as bIsOpen, land in the actor properties) and on each reported component (in that component properties). A name found on none of them is listed in the actor propertiesNotFound."
         },
         "propertyPath": {
           "type": "string",
@@ -6825,7 +6832,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "additionalProperties": true,
                 "x-unreal-reflection-boundary": true
               },
-              "description": "Matching runtime actors and their inspected components/properties, at most 25. Only when filter, actorName, componentNames or propertyNames selects them."
+              "description": "Matching runtime actors, at most 25, each with its components and, under propertyNames, the values found: properties on the actor itself, properties on each component, and propertiesNotFound for names found on neither. Only when filter, actorName, componentNames or propertyNames selects them."
             },
             {
               "type": "array",
@@ -18878,11 +18885,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "autoClose": {
           "type": "boolean",
-          "description": "Whether the door closes automatically."
+          "description": "Whether it closes by itself after the last pawn leaves (default false: it stays open)."
         },
         "autoCloseDelay": {
           "type": "number",
-          "description": "Delay in seconds before the door auto-closes."
+          "description": "Seconds after the last pawn leaves before an autoClose door or lid shuts (default 3)."
         },
         "blueprintPath": {
           "type": "string",
@@ -18935,11 +18942,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "openAngle": {
           "type": "number",
-          "description": "Open angle in degrees."
+          "description": "Open angle in degrees (a new door gets 90, a new chest lid 100)."
         },
         "openTime": {
           "type": "number",
-          "description": "Open animation duration in seconds."
+          "description": "Seconds the door or lid takes to swing fully open or shut (a new door gets 0.5, a new chest 0.6)."
         },
         "requiresKey": {
           "type": "boolean",

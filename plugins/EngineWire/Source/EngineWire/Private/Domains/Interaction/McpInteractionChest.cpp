@@ -24,9 +24,19 @@ bool HandleChestAction(
             return true;
         }
         // create_chest_actor used to echo `locked` and store it nowhere, so every chest came out unlocked.
+        // The lid opens when a pawn comes near and stays open (bAutoClose false), over OpenTime.
         const int32 NotApplied = ApplyInteractionVars(ChestBP, {
-            {TEXT("bIsLocked"), EType::Bool, MakeShared<FJsonValueBoolean>(Locked)}});
+            {TEXT("bIsLocked"), EType::Bool, MakeShared<FJsonValueBoolean>(Locked)},
+            {TEXT("LidOpenAngle"), EType::Float, MakeShared<FJsonValueNumber>(GetJsonNumberField(Payload, TEXT("openAngle"), 100.0))},
+            {TEXT("OpenTime"), EType::Float, MakeShared<FJsonValueNumber>(GetJsonNumberField(Payload, TEXT("openTime"), 0.6))},
+            {TEXT("bAutoClose"), EType::Bool, MakeShared<FJsonValueBoolean>(GetJsonBoolField(Payload, TEXT("autoClose"), false))},
+            {TEXT("AutoCloseDelay"), EType::Float, MakeShared<FJsonValueNumber>(GetJsonNumberField(Payload, TEXT("autoCloseDelay"), 3.0))}});
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+        if (!AuthorOpenOnApproach(Subsystem, RequestId, RequestingSocket, ChestBP, TEXT("LidPivot"), TEXT("LidOpenAngle"),
+                                  TEXT("Pitch"), Result))
+        {
+            return true;
+        }
         Result->SetStringField(TEXT("chestPath"), ChestBP->GetPathName());
         Result->SetStringField(TEXT("blueprintPath"), ChestBP->GetPathName());
         Result->SetBoolField(TEXT("locked"), Locked);
