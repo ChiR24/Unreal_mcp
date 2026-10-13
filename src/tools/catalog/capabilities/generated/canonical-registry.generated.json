@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "2d85a9fcf76e6b10",
+  "catalogRevision": "b410c3137849dedb",
   "recordCount": 415,
   "records": [
     {
@@ -36746,7 +36746,7 @@
             },
             "placementWarning": {
               "type": "string",
-              "description": "Present when the placement looks wrong: it intersects other actors, is sunk below the surface under it (the bottom of its bounds is under it, wherever its pivot is; suggestedLocation rests it), floats more than 50 units above it, has nothing below it (an actor held up from the side is mounted, never floating: see mountedOn), or has a face in the same plane as another actor's, pointing the same way, which flickers where they overlap (z-fighting: see coplanarFaces). A water body is a surface, not a solid: an actor partly under water (a buoy, a hull, a wading pawn) is neither intersecting nor sunk, and groundZ is the water level. Tag the actor mcp.placement.ok when the placement is deliberate and it is never reported; the tag does not hide a shared plane, which always flickers."
+              "description": "Present when the placement looks wrong: it intersects other actors, is sunk below the surface under it (the bottom of its bounds is under it, wherever its pivot is; suggestedLocation rests it), floats more than 50 units above it, has nothing below it (an actor held up from the side is mounted, never floating: see mountedOn; a floor or platform, four times wider than tall, is ground itself and never reported for it), or has a face in the same plane as another actor's, pointing the same way, which flickers where they overlap (z-fighting: see coplanarFaces). A water body is a surface, not a solid: an actor partly under water (a buoy, a hull, a wading pawn) is neither intersecting nor sunk, and groundZ is the water level. Tag the actor mcp.placement.ok when the placement is deliberate and it is never reported; the tag does not hide a shared plane, which always flickers."
             },
             "mountedOn": {
               "type": "string",
@@ -36876,8 +36876,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "e1f1f4536fc02680a670cf44ce900be30bd14498c9a5a741c6f32476e1b80f7e",
-        "content": "a125430e96eb46a07aeede566d96739b0cba6c13f57cf23be80df7d16dde7501"
+        "schema": "28ef25fcf2f61da3e604e060f2764bde6d4a7e22ce0833e7bf1e6305e2e1e82a",
+        "content": "384505660187e2820802b95a684d341fed100389caf6973dd1ddd11a79275611"
       }
     },
     {
@@ -37244,7 +37244,7 @@
             },
             "placementWarning": {
               "type": "string",
-              "description": "Present when the placement looks wrong: it intersects other actors, is sunk below the surface under it (the bottom of its bounds is under it, wherever its pivot is; suggestedLocation rests it), floats more than 50 units above it, has nothing below it (an actor held up from the side is mounted, never floating: see mountedOn), or has a face in the same plane as another actor's, pointing the same way, which flickers where they overlap (z-fighting: see coplanarFaces). A water body is a surface, not a solid: an actor partly under water (a buoy, a hull, a wading pawn) is neither intersecting nor sunk, and groundZ is the water level. Tag the actor mcp.placement.ok when the placement is deliberate and it is never reported; the tag does not hide a shared plane, which always flickers."
+              "description": "Present when the placement looks wrong: it intersects other actors, is sunk below the surface under it (the bottom of its bounds is under it, wherever its pivot is; suggestedLocation rests it), floats more than 50 units above it, has nothing below it (an actor held up from the side is mounted, never floating: see mountedOn; a floor or platform, four times wider than tall, is ground itself and never reported for it), or has a face in the same plane as another actor's, pointing the same way, which flickers where they overlap (z-fighting: see coplanarFaces). A water body is a surface, not a solid: an actor partly under water (a buoy, a hull, a wading pawn) is neither intersecting nor sunk, and groundZ is the water level. Tag the actor mcp.placement.ok when the placement is deliberate and it is never reported; the tag does not hide a shared plane, which always flickers."
             },
             "mountedOn": {
               "type": "string",
@@ -37433,8 +37433,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "0ab1dd65e7c8bfcea541631356247c07874f6e160f535b4f80c38381ccfaf4fd",
-        "content": "f715c431de14be3f7bbfe7dc3f4b2b51e163f8a22275721c323c13e431cd0b01"
+        "schema": "6372721f57d4b4cbaf986ec4394019f606c80f98ac95846dcf9b41a841c7d495",
+        "content": "11d30a743c2933050a21e14deed6e9a4e10bbbf5a95060ed6ef41d246ba392c2"
       }
     },
     {

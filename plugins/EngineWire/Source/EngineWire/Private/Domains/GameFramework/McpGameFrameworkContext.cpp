@@ -14,7 +14,15 @@ void FActionContext::SendError(const FString& Message, const FString& ErrorCode)
 
 void FActionContext::SendSuccess(const TSharedPtr<FJsonObject>& Response) const
 {
-    Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Success"), Response);
+    // The handler's own sentence is the reply's message: it read "Success" with "Created GameMode blueprint: ..."
+    // repeated inside the data.
+    FString Message;
+    if (Response.IsValid() && Response->TryGetStringField(TEXT("message"), Message))
+    {
+        Response->RemoveField(TEXT("message"));
+    }
+    Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true,
+        Message.IsEmpty() ? FString(TEXT("Success")) : Message, Response);
 }
 
 FActionContext MakeActionContext(

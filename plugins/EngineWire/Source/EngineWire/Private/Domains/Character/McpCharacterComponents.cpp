@@ -216,11 +216,11 @@ bool HandleConfigureCameraComponent(UEngineWireSubsystem* Self, const FString& R
     if (!CommitCharacterEdit(Self, RequestId, Blueprint, Socket)) return true;
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+    // Named as the parameters are, each once: the arm's flag went out three times, once as a constant false for the
+    // camera that read as if cameraUsePawnControlRotation had been ignored.
     Result->SetNumberField(TEXT("springArmLength"), ConfiguredArm->TargetArmLength);
-    Result->SetBoolField(TEXT("usePawnControlRotation"), ConfiguredArm->bUsePawnControlRotation);
     Result->SetBoolField(TEXT("springArmUsePawnControlRotation"), ConfiguredArm->bUsePawnControlRotation);
-    Result->SetBoolField(TEXT("cameraUsePawnControlRotation"), false);
-    Result->SetBoolField(TEXT("lagEnabled"), ConfiguredArm->bEnableCameraLag);
+    Result->SetBoolField(TEXT("springArmLagEnabled"), ConfiguredArm->bEnableCameraLag);
     Result->SetNumberField(TEXT("springArmLagSpeed"), ConfiguredArm->CameraLagSpeed);
     McpHandlerUtils::AddVerification(Result, Blueprint);
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Camera configured"), Result);

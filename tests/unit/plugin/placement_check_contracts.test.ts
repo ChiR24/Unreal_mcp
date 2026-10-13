@@ -121,7 +121,10 @@ describe('the placement check does not call a wall-mounted actor floating', () =
     expect(source).toContain('#include "Domains/ControlActor/Placement/McpPlacementMount.h"');
     expect(source).toContain('} else if (Clearance > 50.0) {');
     expect(source).toContain('if (AActor *Mount = FindMount(World, Actor, SelfBox, IgnoreBelow)) { Data->SetStringField(TEXT("mountedOn"), McpActorRef(Mount)); } else { Notes.Add(FString::Printf( TEXT("floating %.0f units above the surface under it"), Clearance)); }');
-    expect(source).toContain('} else if (AActor *Mount = FindMount(World, Actor, SelfBox, IgnoreBelow)) { Data->SetStringField(TEXT("mountedOn"), McpActorRef(Mount)); } else { Notes.Add(TEXT("nothing below it - it may be outside the playable area")); }');
+    // A floor or a platform over a pit (slab-shaped) is ground itself: the first floor of every new level read
+    // "nothing below it - it may be outside the playable area".
+    expect(source).toContain('} else if (AActor *Mount = FindMount(World, Actor, SelfBox, IgnoreBelow)) { Data->SetStringField(TEXT("mountedOn"), McpActorRef(Mount)); } else if (!McpIsGroundLike(Actor)) {');
+    expect(source).toContain('Notes.Add(TEXT("nothing below it - it may be outside the playable area")); }');
     expect(source, 'the volume-only predicate moved beside the mount search').not.toContain('McpIsBoundsOnlyActor');
   });
 

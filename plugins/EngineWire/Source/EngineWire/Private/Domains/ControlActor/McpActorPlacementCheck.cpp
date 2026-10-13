@@ -300,7 +300,9 @@ void DescribePlacement(AActor *Actor, const TSharedPtr<FJsonObject> &Data) {
     }
   } else if (AActor *Mount = FindMount(World, Actor, SelfBox, IgnoreBelow)) {
     Data->SetStringField(TEXT("mountedOn"), McpActorRef(Mount));
-  } else {
+  } else if (!McpIsGroundLike(Actor)) {
+    // A floor or a platform over a pit is what things stand on: nothing under it is how a level is built, and the
+    // first floor of every new level was reported "outside the playable area".
     Notes.Add(TEXT("nothing below it - it may be outside the playable area"));
   }
 
