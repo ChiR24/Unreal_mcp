@@ -34,8 +34,11 @@ export const INTERACTION_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   interactionRecord({
     action: 'configure_door_properties',
-    summary: 'Configure persistent door properties.',
-    whenToUse: ['An existing door needs a new open angle, open time or locked state; fields left out keep their value.'],
+    summary: 'Configure persistent door properties, or make the door follow a switch.',
+    whenToUse: [
+      'An existing door needs a new open angle, open time or locked state; fields left out keep their value.',
+      'A door must open and shut with a switch or lever (switchPath); each placed door then gets its placed switch as LinkedSwitch (control_actor.set_blueprint_variables).',
+    ],
     whenNotToUse: [
       'The Blueprint does not exist yet or lacks the components its create step adds (use manage_interaction.create_interactable).',
       'One placed actor needs its own values, not the Blueprint default (use control_actor.set_blueprint_variables).',
@@ -45,6 +48,7 @@ export const INTERACTION_RECORDS: readonly CapabilityRecordSource[] = [
       openAngle: NP.openAngle,
       openTime: NP.openTime,
       locked: NP.locked,
+      switchPath: { ...NP.switchPath, description: 'The switch or lever Blueprint (from create_interactable) the door follows: on when switched on, shut when off. The door is then locked against opening when a pawn walks up, unless locked is given.' },
     },
     required: ['doorPath'],
     exampleInput: {
@@ -82,7 +86,7 @@ export const INTERACTION_RECORDS: readonly CapabilityRecordSource[] = [
   interactionRecord({
     action: 'configure_switch_properties',
     summary: 'Configure persistent switch properties.',
-    whenToUse: ['An existing switch needs a different type, a toggle-back rule or a reset delay; fields left out keep their value.'],
+    whenToUse: ['An existing switch needs a different type (a pressure_plate is on while stood on, a button or lever flips per press), a toggle-back rule or a reset delay; fields left out keep their value.'],
     whenNotToUse: [
       'The Blueprint does not exist yet or lacks the components its create step adds (use manage_interaction.create_interactable).',
       'One placed actor needs its own values, not the Blueprint default (use control_actor.set_blueprint_variables).',
@@ -190,7 +194,7 @@ export const INTERACTION_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Create a lever actor Blueprint asset.',
     // Same whenToUse line as create_switch_actor on purpose: the fold merges them, and a seventh
     // distinct line would push create_interaction_component's out of the six a folded list keeps.
-    whenToUse: ['A switch, button or lever needs an actor Blueprint with mesh parts and an overlap sphere as its trigger.'],
+    whenToUse: ['A switch, button or lever needs an actor Blueprint with mesh parts and an overlap sphere as its trigger; a pawn walking into it switches it and OnSwitchChanged(bActivated) fires, which a door can follow (configure_interactable setting door, switchPath).'],
     whenNotToUse: [
       'An actor must be placed in the level from an existing Blueprint (use control_actor.spawn).',
       'Switch type, toggle and reset settings must be editable later, which only a switch Blueprint allows.',
@@ -202,7 +206,7 @@ export const INTERACTION_RECORDS: readonly CapabilityRecordSource[] = [
   interactionRecord({
     action: 'create_switch_actor',
     summary: 'Create a switch actor Blueprint asset.',
-    whenToUse: ['A switch, button or lever needs an actor Blueprint with mesh parts and an overlap sphere as its trigger.'],
+    whenToUse: ['A switch, button or lever needs an actor Blueprint with mesh parts and an overlap sphere as its trigger; a pawn walking into it switches it and OnSwitchChanged(bActivated) fires, which a door can follow (configure_interactable setting door, switchPath).'],
     whenNotToUse: [
       'An actor must be placed in the level from an existing Blueprint (use control_actor.spawn).',
       'An existing door, chest or switch only needs new settings (use manage_interaction.configure_interactable).',

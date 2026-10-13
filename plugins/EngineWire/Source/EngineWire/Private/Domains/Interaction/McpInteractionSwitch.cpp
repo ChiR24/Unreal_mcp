@@ -24,6 +24,10 @@ bool HandleSwitchAction(
         const int32 NotApplied = ApplyInteractionVars(SwitchBP, {
             {TEXT("SwitchType"), EInteractionVarType::Name, MakeShared<FJsonValueString>(SwitchType)}});
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+        if (!AuthorSwitchLogic(Subsystem, RequestId, RequestingSocket, SwitchBP, SwitchType, /*bTilt=*/false, Result))
+        {
+            return true;
+        }
         Result->SetStringField(TEXT("switchPath"), SwitchBP->GetPathName());
         Result->SetStringField(TEXT("blueprintPath"), SwitchBP->GetPathName());
         Result->SetStringField(TEXT("switchType"), SwitchType);
@@ -53,6 +57,12 @@ bool HandleSwitchAction(
         {TEXT("bIsActivated"), EType::Bool, nullptr},
         {TEXT("ResetTime"), EType::Float, Payload->TryGetField(TEXT("resetTime"))}});
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    // Another type swaps the logic (a pressure plate holds while stood on, a button or lever flips per press).
+    if (Payload->HasField(TEXT("switchType")) &&
+        !AuthorSwitchLogic(Subsystem, RequestId, RequestingSocket, Blueprint, SwitchType, /*bTilt=*/false, Result))
+    {
+        return true;
+    }
     if (Payload->HasField(TEXT("switchType"))) { Result->SetStringField(TEXT("switchType"), SwitchType); }
     if (Payload->HasField(TEXT("canToggle"))) { Result->SetBoolField(TEXT("canToggle"), CanToggle); }
     if (Payload->HasField(TEXT("resetTime"))) { Result->SetNumberField(TEXT("resetTime"), ResetTime); }

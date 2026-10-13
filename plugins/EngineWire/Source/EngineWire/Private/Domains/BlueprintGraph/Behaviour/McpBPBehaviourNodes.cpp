@@ -11,6 +11,30 @@
 
 namespace McpBlueprintGraphHandlers
 {
+UClass* ResolveBehaviourClass(const FString& Name)
+{
+    UClass* Class = Name.IsEmpty() ? nullptr : ResolveUClass(Name);
+    return Class ? Class : ResolveTargetClassFromString(Name);
+}
+
+// A dispatcher on Owner, else this Blueprint's own (on the skeleton class, where a
+// dispatcher added earlier in the same batch already is).
+FMulticastDelegateProperty* FindBehaviourDispatcher(UBlueprint* Blueprint, const FString& Name, UClass* Owner)
+{
+    UClass* Skeleton = Blueprint->SkeletonGeneratedClass;
+    UClass* Generated = Blueprint->GeneratedClass;
+    for (UClass* Class : {Owner, Owner ? nullptr : Skeleton, Owner ? nullptr : Generated})
+    {
+        FMulticastDelegateProperty* Found = Class && !Name.IsEmpty()
+            ? FindFProperty<FMulticastDelegateProperty>(Class, FName(*Name)) : nullptr;
+        if (Found)
+        {
+            return Found;
+        }
+    }
+    return nullptr;
+}
+
 namespace
 {
 bool IsBehaviourKind(const FString& NodeType, std::initializer_list<const TCHAR*> Names)
@@ -43,12 +67,6 @@ bool IsAsyncTaskKind(const FString& NodeType)
                                       TEXT("K2Node_LatentAbilityCall"), TEXT("K2Node_LatentGameplayTaskCall")});
 }
 
-UClass* ResolveBehaviourClass(const FString& Name)
-{
-    UClass* Class = Name.IsEmpty() ? nullptr : ResolveUClass(Name);
-    return Class ? Class : ResolveTargetClassFromString(Name);
-}
-
 // The function a Message step (an interface's) or an AsyncTask step (a static factory)
 // names. Node creation and the build_graph pre-check both ask here, so they agree.
 UFunction* FindBehaviourFunction(UClass* Owner, bool bAsync, const FString& Member)
@@ -56,24 +74,6 @@ UFunction* FindBehaviourFunction(UClass* Owner, bool bAsync, const FString& Memb
     UFunction* Function = Owner && (bAsync || Owner->HasAnyClassFlags(CLASS_Interface))
         ? Owner->FindFunctionByName(FName(*Member)) : nullptr;
     return Function && (!bAsync || Function->HasAnyFunctionFlags(FUNC_Static)) ? Function : nullptr;
-}
-
-// A dispatcher on Owner, else this Blueprint's own (on the skeleton class, where a
-// dispatcher added earlier in the same batch already is).
-FMulticastDelegateProperty* FindBehaviourDispatcher(UBlueprint* Blueprint, const FString& Name, UClass* Owner)
-{
-    UClass* Skeleton = Blueprint->SkeletonGeneratedClass;
-    UClass* Generated = Blueprint->GeneratedClass;
-    for (UClass* Class : {Owner, Owner ? nullptr : Skeleton, Owner ? nullptr : Generated})
-    {
-        FMulticastDelegateProperty* Found = Class && !Name.IsEmpty()
-            ? FindFProperty<FMulticastDelegateProperty>(Class, FName(*Name)) : nullptr;
-        if (Found)
-        {
-            return Found;
-        }
-    }
-    return nullptr;
 }
 
 // The spawner the editor's own palette uses for this factory. Several node classes
@@ -161,6 +161,10 @@ bool TryCreateBehaviourNode(FActionContext& Context, const FString& NodeType, fl
     {
         return CreateAsyncTaskNode(Context, X, Y);
     }
+    if (IsBindEventKind(NodeType))
+    {
+        return CreateBindEventNode(Context, X, Y);
+    }
     const FString Member = GetJsonStringField(Context.Payload, TEXT("memberName"));
     const FString MemberClass = McpGetFirstStringField(Context.Payload, {TEXT("memberClass"), TEXT("targetClass")});
     if (IsCallDelegateKind(NodeType))
@@ -204,7 +208,7 @@ bool TryCreateBehaviourNode(FActionContext& Context, const FString& NodeType, fl
 FString PrecheckBehaviourNode(const FActionContext& Context, const FString& NodeType, const FString& Member,
                               const FString& MemberClass, const TSet<FName>& Declared, FString& OutCode)
 {
-    if (IsCallDelegateKind(NodeType))
+    if (IsCallDelegateKind(NodeType) || IsBindEventKind(NodeType))
     {
         UClass* Owner = MemberClass.IsEmpty() ? nullptr : ResolveBehaviourClass(MemberClass);
         if ((MemberClass.IsEmpty() && Declared.Contains(FName(*Member))) ||

@@ -387,6 +387,19 @@ const testCases = [
     { path: 'structuredContent.result.compiled', equals: true, label: 'the Blueprint compiles with the new dispatcher' },
     { path: 'structuredContent.result.results.0.pins', includes: 'Count', label: 'the call carries the dispatcher parameter (the dispatcher step itself is only counted)' },
   ] },
+  // Bind Event to a dispatcher: the custom event it wires is "$id_event" and runs when the dispatcher fires.
+  { scenario: 'BATCH: build_graph binds an event to a dispatcher', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: BP_PATH, graphName: 'EventGraph', operations: [
+    { edit: 'create_node', id: 'bindPing', nodeType: 'BindEvent', memberName: 'OnBatchPing', eventName: 'OnBatchPinged' },
+    { edit: 'create_node', id: 'pingSay', nodeType: 'CallFunction', memberName: 'PrintString' },
+    { edit: 'connect_pins', from: '$bindPing_event.then', to: '$pingSay.execute' },
+  ] }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.compiled', equals: true, label: 'the Blueprint compiles with the bound event' },
+    { path: 'structuredContent.result.results.0.eventName', equals: 'OnBatchPinged', label: 'the custom event takes the name asked for' },
+    { path: 'structuredContent.result.results.0.pins', includes: 'Delegate', label: 'the step made the Bind Event node' },
+  ] },
+  { scenario: 'ERROR: build_graph refuses a Bind Event on a dispatcher nothing declares', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: BP_PATH, operations: [
+    { edit: 'create_node', nodeType: 'BindEvent', memberName: 'OnNoSuchDispatcher' },
+  ] }, expected: 'error|DISPATCHER_NOT_FOUND' },
   // A second return node mirrors the first one's outputs, and its pins take defaults.
   { scenario: 'BATCH: build_graph gives a function a second return node', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: BP_PATH, graphName: 'EventGraph', operations: [
     { edit: 'add_function', id: 'find', functionName: 'BatchFindSomething', outputs: [{ name: 'Found', type: 'Bool' }] },

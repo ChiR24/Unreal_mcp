@@ -192,8 +192,11 @@ bool UEngineWireSubsystem::HandleControlActorSpawn(
   if (SpawnParams.bDeferConstruction && IsValid(Spawned)) {
     for (const TPair<FString, TSharedPtr<FJsonValue>> &Pair : (*Variables)->Values) {
       FString Unapplied; // reported by the batch's own pass
+      // An actor reference by name resolves here too: it was set only by the batch's pass, after BeginPlay.
       if (FProperty *Property = Spawned->GetClass()->FindPropertyByName(*Pair.Key)) {
-        ApplyJsonValueToProperty(Spawned, Property, Pair.Value, Unapplied);
+        ApplyJsonValueToProperty(Spawned, Property,
+            McpActorRefsToPaths(Pair.Value, Property, [this](const FString &Name) { return FindActorByName(Name); }),
+            Unapplied);
       }
     }
     Spawned->FinishSpawning(FTransform(Rotation, Location));

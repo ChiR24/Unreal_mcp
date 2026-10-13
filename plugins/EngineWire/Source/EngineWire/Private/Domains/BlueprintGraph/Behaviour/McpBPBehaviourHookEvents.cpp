@@ -209,7 +209,9 @@ bool CheckRecipeIds(const FPlan& Plan, FString& OutError)
     for (int32 Index = 0; Index < Plan.Ops.Num(); ++Index)
     {
         const FString Id = GetJsonStringField(Plan.Ops[Index]->AsObject(), TEXT("id"));
-        if (!Id.IsEmpty() && (!Claim(Id, Plan.Labels[Index]) || !Claim(Id + TEXT("_return"), Plan.Labels[Index])))
+        // A step also names its add_function return node ("$<id>_return") or its BindEvent custom event ("$<id>_event").
+        if (!Id.IsEmpty() && (!Claim(Id, Plan.Labels[Index]) || !Claim(Id + TEXT("_return"), Plan.Labels[Index]) ||
+                              !Claim(Id + TEXT("_event"), Plan.Labels[Index])))
         {
             return false;
         }

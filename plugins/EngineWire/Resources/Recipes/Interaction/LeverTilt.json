@@ -1,0 +1,42 @@
+{
+  "description": "Tilts a lever's handle with its switch: every frame LeverPivot turns toward LeverAngle degrees of pitch while bIsActivated is on, and back to 0 when it is off, over LeverTime seconds. The Blueprint holds bIsActivated (its switch logic) before this runs.",
+  "tag": "LeverTilt",
+  "variables": [
+    { "variableName": "LeverAngle", "variableType": "Float", "defaultValue": 50, "category": "Interaction", "keepExisting": true },
+    { "variableName": "LeverTime", "variableType": "Float", "defaultValue": 0.25, "category": "Interaction", "keepExisting": true },
+    { "variableName": "LeverAmount", "variableType": "Float", "defaultValue": 0, "category": "Interaction" }
+  ],
+  "hooks": [
+    { "id": "leverTick", "event": "Tick" }
+  ],
+  "eventGraph": [
+    { "edit": "create_node", "id": "tiltOn", "nodeType": "VariableGet", "memberName": "bIsActivated" },
+    { "edit": "create_node", "id": "tiltTarget", "nodeType": "CallFunction", "memberName": "SelectFloat", "memberClass": "/Script/Engine.KismetMathLibrary", "pinDefaults": { "A": 1, "B": 0 } },
+    { "edit": "create_node", "id": "tiltAmount", "nodeType": "VariableGet", "memberName": "LeverAmount" },
+    { "edit": "create_node", "id": "tiltTime", "nodeType": "VariableGet", "memberName": "LeverTime" },
+    { "edit": "create_node", "id": "tiltTimeFloor", "nodeType": "CallFunction", "memberName": "FMax", "memberClass": "/Script/Engine.KismetMathLibrary", "pinDefaults": { "B": 0.05 } },
+    { "edit": "create_node", "id": "tiltSpeed", "nodeType": "CallFunction", "memberName": "Divide_DoubleDouble", "memberClass": "/Script/Engine.KismetMathLibrary", "pinDefaults": { "A": 1 } },
+    { "edit": "create_node", "id": "tiltInterp", "nodeType": "CallFunction", "memberName": "FInterpTo_Constant", "memberClass": "/Script/Engine.KismetMathLibrary" },
+    { "edit": "create_node", "id": "tiltStore", "nodeType": "VariableSet", "memberName": "LeverAmount" },
+    { "edit": "create_node", "id": "tiltAngleValue", "nodeType": "VariableGet", "memberName": "LeverAngle" },
+    { "edit": "create_node", "id": "tiltAngle", "nodeType": "CallFunction", "memberName": "Multiply_DoubleDouble", "memberClass": "/Script/Engine.KismetMathLibrary" },
+    { "edit": "create_node", "id": "tiltRotation", "nodeType": "CallFunction", "memberName": "MakeRotator", "memberClass": "/Script/Engine.KismetMathLibrary" },
+    { "edit": "create_node", "id": "tiltPivot", "nodeType": "VariableGet", "memberName": "LeverPivot" },
+    { "edit": "create_node", "id": "tiltTurn", "nodeType": "CallFunction", "memberName": "K2_SetRelativeRotation", "memberClass": "/Script/Engine.SceneComponent" },
+    { "edit": "connect_pins", "from": "$tiltOn.bIsActivated", "to": "$tiltTarget.bPickA" },
+    { "edit": "connect_pins", "from": "$tiltTime.LeverTime", "to": "$tiltTimeFloor.A" },
+    { "edit": "connect_pins", "from": "$tiltTimeFloor.ReturnValue", "to": "$tiltSpeed.B" },
+    { "edit": "connect_pins", "from": "$tiltAmount.LeverAmount", "to": "$tiltInterp.Current" },
+    { "edit": "connect_pins", "from": "$tiltTarget.ReturnValue", "to": "$tiltInterp.Target" },
+    { "edit": "connect_pins", "from": "$leverTick_event.DeltaSeconds", "to": "$tiltInterp.DeltaTime" },
+    { "edit": "connect_pins", "from": "$tiltSpeed.ReturnValue", "to": "$tiltInterp.InterpSpeed" },
+    { "edit": "connect_pins", "from": "$tiltInterp.ReturnValue", "to": "$tiltStore.LeverAmount" },
+    { "edit": "connect_pins", "from": "$tiltStore.Output_Get", "to": "$tiltAngle.A" },
+    { "edit": "connect_pins", "from": "$tiltAngleValue.LeverAngle", "to": "$tiltAngle.B" },
+    { "edit": "connect_pins", "from": "$tiltAngle.ReturnValue", "to": "$tiltRotation.Pitch" },
+    { "edit": "connect_pins", "from": "$tiltPivot.LeverPivot", "to": "$tiltTurn.self" },
+    { "edit": "connect_pins", "from": "$tiltRotation.ReturnValue", "to": "$tiltTurn.NewRotation" },
+    { "edit": "connect_pins", "from": "$leverTick.then", "to": "$tiltStore.execute" },
+    { "edit": "connect_pins", "from": "$tiltStore.then", "to": "$tiltTurn.execute" }
+  ]
+}

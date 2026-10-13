@@ -24,6 +24,11 @@ bool HandleLeverAction(
         return true;
     }
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    // Each press flips it, fires OnSwitchChanged and tilts the handle; it was components only.
+    if (!AuthorSwitchLogic(Subsystem, RequestId, RequestingSocket, LeverBP, TEXT("lever"), /*bTilt=*/true, Result))
+    {
+        return true;
+    }
     Result->SetStringField(TEXT("leverPath"), LeverBP->GetPathName());
     Result->SetStringField(TEXT("blueprintPath"), LeverBP->GetPathName());
     SendInteractableResult(Subsystem, RequestId, RequestingSocket, LeverBP, Result,

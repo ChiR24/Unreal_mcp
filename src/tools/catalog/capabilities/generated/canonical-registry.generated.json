@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "a986a95a3eca0d53",
+  "catalogRevision": "e2021d816a76aadf",
   "recordCount": 415,
   "records": [
     {
@@ -16781,6 +16781,7 @@
           "loop over an array",
           "cast to player",
           "event dispatcher",
+          "bind event to dispatcher",
           "add node",
           "place node",
           "graph node",
@@ -16838,7 +16839,7 @@
             },
             "nodeType": {
               "type": "string",
-              "description": "The node to create: CallFunction (memberName, plus memberClass for a function of another class), Event (eventName: BeginPlay, Tick), CustomEvent (customEventName), VariableGet or VariableSet (memberName), Cast (targetClass), InputAxisEvent (inputAxisName), Branch, Sequence, Select, Switch, SwitchOnInt, SwitchOnEnum, SwitchOnString, DoOnce, DoN, FlipFlop, Gate, MultiGate, ForLoop, ForEachLoop, WhileLoop (each also WithBreak), MakeArray, MakeStruct and BreakStruct (structPath), SpawnActorFromClass, GetAllActorsOfClass, Self, Timeline (timelineName; edit_timeline keys its tracks), Reroute, Comment, MathExpression (its formula goes in set_node_property Expression) (a Switch on Int is made with only Default: wire a case by its number, from \"$id.0\", \"$id.1\"..., and the case pin is added; a Sequence or a commutative math node grows its inputs the same way); a common function by name (PrintString, Delay, SetActorLocation, GetPlayerPawn, GetActorOfClass, IsValid, PlaySound2D); or a K2Node class name that inspect_graph info=node_types lists. In an Animation Blueprint's AnimGraph or a state's graph (graphName), any animation node by class: AnimGraphNode_TwoBoneIK, TwoBoneIK or Two Bone IK (info=node_types with filter IK lists them; animation_physics configure_anim_graph_node set_value sets its settings); a node the graph cannot hold is refused (NODE_NOT_ALLOWED_IN_GRAPH). For create_struct_make_break_nodes: make or break."
+              "description": "The node to create: CallFunction (memberName, plus memberClass for a function of another class), Event (eventName: BeginPlay, Tick), CustomEvent (customEventName), VariableGet or VariableSet (memberName), Cast (targetClass), InputAxisEvent (inputAxisName), Branch, Sequence, Select, Switch, SwitchOnInt, SwitchOnEnum, SwitchOnString, DoOnce, DoN, FlipFlop, Gate, MultiGate, ForLoop, ForEachLoop, WhileLoop (each also WithBreak), MakeArray, MakeStruct and BreakStruct (structPath), SpawnActorFromClass, GetAllActorsOfClass, Self, CallDelegate (memberName: an event dispatcher, memberClass: another class's), BindEvent (the same, plus eventName: a Bind Event node and a custom event with the dispatcher's inputs wired to it, eventNodeGuid in the reply),Timeline (timelineName; edit_timeline keys its tracks), Reroute, Comment, MathExpression (its formula goes in set_node_property Expression) (a Switch on Int is made with only Default: wire a case by its number, from \"$id.0\", \"$id.1\"..., and the case pin is added; a Sequence or a commutative math node grows its inputs the same way); a common function by name (PrintString, Delay, SetActorLocation, GetPlayerPawn, GetActorOfClass, IsValid, PlaySound2D); or a K2Node class name that inspect_graph info=node_types lists. In an Animation Blueprint's AnimGraph or a state's graph (graphName), any animation node by class: AnimGraphNode_TwoBoneIK, TwoBoneIK or Two Bone IK (info=node_types with filter IK lists them; animation_physics configure_anim_graph_node set_value sets its settings); a node the graph cannot hold is refused (NODE_NOT_ALLOWED_IN_GRAPH). For create_struct_make_break_nodes: make or break."
             },
             "posX": {
               "type": "number",
@@ -16982,7 +16983,7 @@
                 "x-unreal-reflection-boundary": true
               },
               "x-unreal-reflection-boundary": true,
-              "description": "Steps run in order, 1-200. Each is {edit, ...that edit's own params}. Member steps come before the nodes that use them: add_variable (variableName, variableType as add_variable takes it: basic, class, struct, enum and container types, defaultValue, isPublic, exposeOnSpawn, category), add_function (functionName, inputs, outputs, pure, isPublic; its body steps set graphName to the function name; with an id, \"$id\" is its entry node and \"$id_return\" its return node, which exists when outputs are declared), add_event (customEventName and parameters, or componentName plus eventName for a component or Widget Blueprint widget delegate, e.g. PlayButton with OnClicked) and add_event_dispatcher (dispatcherName, parameters [{name, type}]). Node steps: create_node, connect_pins, set_pin_default_value, set_node_property, create_reroute_node. create_node also takes nodeType CallDelegate (memberName: a dispatcher), Message (memberClass: an interface, memberName: its function), AsyncTask (memberClass: the task or async-action class, memberName: its static factory; event graphs only), FunctionResult (one more return node in a function graph) and MathExpression with expression (the formula, checked and set as set_node_property Expression sets it, before pinDefaults, which can then name its inputs). Optional per step: id (names the created node; later steps use \"$id\" in fromNodeId, toNodeId and nodeId), from and to (\"$id.PinName\" shorthand for connect_pins), pinDefaults (create_node only: {PinName: value} applied to the new node; a read-only pin such as Set Text's Value gets a MakeLiteral node wired into it). \"$entry\" is the graph's own entry node (a Construction Script or function graph starts there: from \"$entry.then\"). A create step without posX and posY is auto-placed, and once every step ran it moves beside a node it is wired to (right of what runs it, below-left of what reads it); one whose posX and posY overlap an existing node is placed at the nearest free position instead, and its result says where in placementWarning, so a crowded row never stops the batch (a single create_node call still refuses an overlap). Every function, variable, dispatcher and async factory a step names is checked before any step runs, so a misspelled one fails the batch with nothing applied; any other failure stops the batch at that step and undoes the steps before it (members, nodes, links and pin defaults, in every graph), so a failed batch leaves the Blueprint as it was: fix that step and send the whole batch again. Only a set_node_property on a node that was already there stays, and the error names it."
+              "description": "Steps run in order, 1-200. Each is {edit, ...that edit's own params}. Member steps come before the nodes that use them: add_variable (variableName, variableType as add_variable takes it: basic, class, struct, enum and container types, defaultValue, isPublic, exposeOnSpawn, category), add_function (functionName, inputs, outputs, pure, isPublic; its body steps set graphName to the function name; with an id, \"$id\" is its entry node and \"$id_return\" its return node, which exists when outputs are declared), add_event (customEventName and parameters, or componentName plus eventName for a component or Widget Blueprint widget delegate, e.g. PlayButton with OnClicked) and add_event_dispatcher (dispatcherName, parameters [{name, type}]). Node steps: create_node, connect_pins, set_pin_default_value, set_node_property, create_reroute_node. create_node also takes nodeType CallDelegate (memberName: a dispatcher, memberClass: another class's), BindEvent (the same: a Bind Event node and a custom event, eventName, wired to it; with an id, \"$id_event\" is that event, whose then pin runs when the dispatcher fires, and the object bound goes to \"$id.self\"), Message (memberClass: an interface, memberName: its function), AsyncTask (memberClass: the task or async-action class, memberName: its static factory; event graphs only), FunctionResult (one more return node in a function graph) and MathExpression with expression (the formula, checked and set as set_node_property Expression sets it, before pinDefaults, which can then name its inputs). Optional per step: id (names the created node; later steps use \"$id\" in fromNodeId, toNodeId and nodeId), from and to (\"$id.PinName\" shorthand for connect_pins), pinDefaults (create_node only: {PinName: value} applied to the new node; a read-only pin such as Set Text's Value gets a MakeLiteral node wired into it). \"$entry\" is the graph's own entry node (a Construction Script or function graph starts there: from \"$entry.then\"). A create step without posX and posY is auto-placed, and once every step ran it moves beside a node it is wired to (right of what runs it, below-left of what reads it); one whose posX and posY overlap an existing node is placed at the nearest free position instead, and its result says where in placementWarning, so a crowded row never stops the batch (a single create_node call still refuses an overlap). Every function, variable, dispatcher and async factory a step names is checked before any step runs, so a misspelled one fails the batch with nothing applied; any other failure stops the batch at that step and undoes the steps before it (members, nodes, links and pin defaults, in every graph), so a failed batch leaves the Blueprint as it was: fix that step and send the whole batch again. Only a set_node_property on a node that was already there stays, and the error names it."
             },
             "edit": {
               "type": "string",
@@ -17443,8 +17444,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "4639cfb6553e6b271fca3c28e563cbec79abe10bbfa6689dc7885ad4205db7ae",
-        "content": "a0ba4869a4e4b8681373c7f2a881a97b5bd88a0601c162131eb248f6178266ca"
+        "schema": "e6d9c54a30a79b17dbcc43df4b689b15ab46737d7d1dc14bb4d8c209997f8e8e",
+        "content": "1bf38920cb0c417b4572f182efb938ddc8b6ae2b63ac95d5104e609406a7459c"
       }
     },
     {
@@ -68745,13 +68746,16 @@
           "chest properties",
           "switch properties",
           "interaction trace",
-          "set door open speed"
+          "set door open speed",
+          "button opens a door",
+          "door opened by a switch"
         ],
-        "summary": "Configure an interactable: door, chest or switch properties, or its interaction trace.",
+        "summary": "Configure an interactable: door, chest or switch properties, a door that follows a switch, or its interaction trace.",
         "whenToUse": [
           "setting=door: An existing door needs a new open angle, open time or locked state; fields left out keep their value.",
+          "setting=door: A door must open and shut with a switch or lever (switchPath); each placed door then gets its placed switch as LinkedSwitch (control_actor.set_blueprint_variables).",
           "setting=chest: An existing chest needs its locked state, lid open angle, open time or loot table path changed; fields left out keep their value.",
-          "setting=switch: An existing switch needs a different type, a toggle-back rule or a reset delay; fields left out keep their value.",
+          "setting=switch: An existing switch needs a different type (a pressure_plate is on while stood on, a button or lever flips per press), a toggle-back rule or a reset delay; fields left out keep their value.",
           "setting=trace: The trigger of an interactable Blueprint must be resized: every sphere gets radius traceDistance, every box gets extent traceDistance by traceRadius.",
           "setting=trace: Give traceDistance, traceRadius and traceType together, since an omitted one resets to 200, 50 or sphere; traceType only stores a name."
         ],
@@ -68783,6 +68787,10 @@
               "type": "boolean",
               "description": "Whether the interactable starts locked."
             },
+            "switchPath": {
+              "type": "string",
+              "description": "The switch or lever Blueprint (from create_interactable) the door follows: on when switched on, shut when off. The door is then locked against opening when a pawn walks up, unless locked is given."
+            },
             "chestPath": {
               "type": "string",
               "description": "Canonical /Game chest actor Blueprint asset path."
@@ -68790,10 +68798,6 @@
             "lootTablePath": {
               "type": "string",
               "description": "Canonical /Game loot table asset path."
-            },
-            "switchPath": {
-              "type": "string",
-              "description": "Canonical /Game switch actor Blueprint asset path."
             },
             "switchType": {
               "type": "string",
@@ -68869,7 +68873,7 @@
       },
       "examples": [
         {
-          "title": "Configure an interactable: door, chest or switch properties, or its interaction trace.",
+          "title": "Configure an interactable: door, chest or switch properties, a door that follows a switch, or its interaction trace.",
           "input": {
             "action": "configure_interactable",
             "doorPath": "/Game/Interactables/BP_Door",
@@ -68931,14 +68935,15 @@
               "door",
               "chest"
             ],
+            "switchPath": [
+              "door",
+              "switch"
+            ],
             "chestPath": [
               "chest"
             ],
             "lootTablePath": [
               "chest"
-            ],
-            "switchPath": [
-              "switch"
             ],
             "switchType": [
               "switch"
@@ -68966,8 +68971,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "d262c79fafcb99ce1251db5ef41b1465c3fd715b2f78ecdad20630286cf5d7c6",
-        "content": "fb5edd99bdb6046417ca9cd2fee589420379b287a52f9ef5b452674da7a1b867"
+        "schema": "29179125b9f4e18d16f6f73c0a9be135f098841a8ee609455e761e73fbc5d110",
+        "content": "06f5df6609ad1ee65e31fde8c69e1f63890da827ae71bd6dcbbdc107e87c9f10"
       }
     },
     {
@@ -69053,16 +69058,18 @@
           "add a light switch",
           "automatic door",
           "door that opens when the player walks up",
+          "pressure plate",
+          "floor button",
           "new door",
           "door actor",
           "openable door",
           "door that opens"
         ],
-        "summary": "Create an interactable: a door or chest that opens when a pawn comes near, a switch, lever or trigger actor, an interactable interface, or an interaction component.",
+        "summary": "Create an interactable: a door or chest that opens when a pawn comes near, a switch or lever a pawn presses (it fires OnSwitchChanged), a trigger actor, an interactable interface, or an interaction component.",
         "whenToUse": [
           "kind=door: A door Blueprint is needed with a pivot, a door mesh and a trigger box, plus open-angle, timing, lock and key variables; the door swings open (yaw, over openTime) while a pawn overlaps the trigger and it is unlocked, and autoClose shuts it autoCloseDelay seconds after the last pawn leaves. Calling it again on an existing door adds that opening logic.",
           "kind=chest: A chest Blueprint is needed with a base mesh, a lid mesh on a pivot, a trigger sphere and an optional locked state; its lid swings open (pitch, over openTime) while a pawn overlaps the trigger and the chest is unlocked.",
-          "kind=switch|lever: A switch, button or lever needs an actor Blueprint with mesh parts and an overlap sphere as its trigger.",
+          "kind=switch|lever: A switch, button or lever needs an actor Blueprint with mesh parts and an overlap sphere as its trigger; a pawn walking into it switches it and OnSwitchChanged(bActivated) fires, which a door can follow (configure_interactable setting door, switchPath).",
           "kind=trigger: A reusable overlap-volume Blueprint is needed with a box, sphere or capsule as its root shape.",
           "kind=interface: A Blueprint interface is needed that defines Interact, CanInteract and GetInteractionPrompt for actors to implement.",
           "kind=component: An existing Blueprint, such as a player, needs a named overlap sphere whose radius is the interaction range."
@@ -69182,7 +69189,7 @@
       },
       "examples": [
         {
-          "title": "Create an interactable: a door or chest that opens when a pawn comes near, a switch, lever or trigger actor, an interactable interface, or an interaction component.",
+          "title": "Create an interactable: a door or chest that opens when a pawn comes near, a switch or lever a pawn presses (it fires OnSwitchChanged), a trigger actor, an interactable interface, or an interaction component.",
           "input": {
             "action": "create_interactable",
             "name": "BP_Door",
@@ -69293,7 +69300,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "50961ef71f7f42e763b2cbf8cf89d65cf4bed6d5c1192ed65313e4ed85b1f0f9",
-        "content": "ed8ead6951edd65435556219ca7b61f25e540cd160f5148ca8d7a560fb280d2a"
+        "content": "064d4bce711d378c1b1e0dc412e8b1507e86725c4ae2eaf3ed313940b101cebe"
       }
     },
     {

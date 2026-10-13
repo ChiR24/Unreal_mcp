@@ -91,17 +91,29 @@ bool HandleDoorAction(
     {
         return true;
     }
+    // A door a switch opens stays shut when a pawn walks up (locked), unless locked is given.
+    const FString SwitchPath = GetJsonStringField(Payload, TEXT("switchPath"));
+    TSharedPtr<FJsonValue> LockedValue = Payload->TryGetField(TEXT("locked"));
+    if (!SwitchPath.IsEmpty() && !LockedValue.IsValid())
+    {
+        LockedValue = MakeShared<FJsonValueBoolean>(true);
+    }
+    // The link first: a refused switchPath changes nothing.
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    if (!SwitchPath.IsEmpty() && !AuthorOpenFromSwitch(Subsystem, RequestId, RequestingSocket, Blueprint, SwitchPath, Result))
+    {
+        return true;
+    }
     // Only the fields the caller passed are written (a null Value only ensures the variable): defaulting
     // the rest used to reset them, so changing openAngle alone unlocked a locked door.
     const int32 NotApplied = ApplyInteractionVars(Blueprint, {
         {TEXT("OpenAngle"), EType::Float, Payload->TryGetField(TEXT("openAngle"))},
         {TEXT("OpenTime"), EType::Float, Payload->TryGetField(TEXT("openTime"))},
-        {TEXT("bIsLocked"), EType::Bool, Payload->TryGetField(TEXT("locked"))},
+        {TEXT("bIsLocked"), EType::Bool, LockedValue},
         {TEXT("bIsOpen"), EType::Bool, nullptr}});
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     if (Payload->HasField(TEXT("openAngle"))) { Result->SetNumberField(TEXT("openAngle"), OpenAngle); }
     if (Payload->HasField(TEXT("openTime"))) { Result->SetNumberField(TEXT("openTime"), OpenTime); }
-    if (Payload->HasField(TEXT("locked"))) { Result->SetBoolField(TEXT("locked"), Locked); }
+    if (LockedValue.IsValid()) { Result->SetBoolField(TEXT("locked"), LockedValue->AsBool()); }
     Result->SetBoolField(TEXT("configured"), true);
     Result->SetBoolField(TEXT("propertiesApplied"), NotApplied == 0);
     Result->SetStringField(TEXT("doorPath"), GetJsonStringField(Payload, TEXT("doorPath")));

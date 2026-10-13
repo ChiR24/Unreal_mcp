@@ -82,7 +82,7 @@ void CopyStepFields(const FMcpCapturedResponse& Reply, const TSharedPtr<FJsonObj
     static const TCHAR* const Keep[] = {
         TEXT("nodeGuid"), TEXT("nodeName"), TEXT("connected"), TEXT("appliedValue"),
         TEXT("conversionInserted"), TEXT("conversionNodeId"), TEXT("placementWarning"), TEXT("resultNodeGuid"),
-        TEXT("replacedLinks"), TEXT("warnings"), TEXT("inputPins"), TEXT("boundToMembers")};
+        TEXT("replacedLinks"), TEXT("warnings"), TEXT("inputPins"), TEXT("boundToMembers"), TEXT("eventNodeGuid"), TEXT("eventName")};
     for (const TCHAR* Key : Keep)
     {
         const TSharedPtr<FJsonValue> Value = Reply.Result.IsValid() ? Reply.Result->TryGetField(Key)
@@ -178,10 +178,7 @@ FString RunBatchStep(const FActionContext& Context, FBatchState& State,
     const TSharedPtr<FJsonObject> Step = *StepPtr;
     Entry->SetStringField(TEXT("edit"), Edit);
     FString Alias;
-    if (Step->TryGetStringField(TEXT("id"), Alias))
-    {
-        Entry->SetStringField(TEXT("id"), Alias);
-    }
+    if (Step->TryGetStringField(TEXT("id"), Alias)) Entry->SetStringField(TEXT("id"), Alias);
     const TSharedPtr<FJsonObject> Payload = BuildStepPayload(Context.Payload, Step, Edit);
     FString Error;
     if (!ResolveStepAliases(State, Payload, Error))
@@ -238,12 +235,16 @@ FString RunBatchStep(const FActionContext& Context, FBatchState& State,
     {
         State.Aliases.Add(Alias, Guid);
         NodeIds->SetStringField(Alias, Guid);
-        // add_function also names its return node: "$<id>_return".
-        FString ReturnGuid;
-        if (Reply.Result->TryGetStringField(TEXT("resultNodeGuid"), ReturnGuid))
+        // add_function also names its return node ("$<id>_return"), a BindEvent step the custom event it wired ("$<id>_event").
+        for (const TPair<const TCHAR*, const TCHAR*>& Second : {TPair<const TCHAR*, const TCHAR*>(TEXT("resultNodeGuid"), TEXT("_return")),
+                                                                TPair<const TCHAR*, const TCHAR*>(TEXT("eventNodeGuid"), TEXT("_event"))})
         {
-            State.Aliases.Add(Alias + TEXT("_return"), ReturnGuid);
-            NodeIds->SetStringField(Alias + TEXT("_return"), ReturnGuid);
+            FString SecondGuid;
+            if (Reply.Result->TryGetStringField(Second.Key, SecondGuid))
+            {
+                State.Aliases.Add(Alias + Second.Value, SecondGuid);
+                NodeIds->SetStringField(Alias + Second.Value, SecondGuid);
+            }
         }
     }
     return FString();

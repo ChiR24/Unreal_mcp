@@ -68,9 +68,11 @@ const testCases = [
     arguments: { action: 'create_switch_actor', name: SWITCH_NAME, folder: TEST_FOLDER, switchType: 'lever' },
     expected: 'success',
     captureResult: { key: 'switchPath', fromField: 'result.switchPath' },
-    assertions: [{ path: 'structuredContent.result.switchPath', equals: EXPECTED_SWITCH_PATH, label: 'switch path returned' }, { path: 'structuredContent.result.switchType', equals: 'lever', label: 'switch type set at creation' }]
+    assertions: [{ path: 'structuredContent.result.switchPath', equals: EXPECTED_SWITCH_PATH, label: 'switch path returned' }, { path: 'structuredContent.result.switchType', equals: 'lever', label: 'switch type set at creation' }, { path: 'structuredContent.result.dispatcher', equals: 'OnSwitchChanged', label: 'the switch fires OnSwitchChanged' }, { path: 'structuredContent.result.compiled', equals: true, label: 'the switch compiles with its logic' }]
   },
-  { scenario: 'CONFIG: configure_switch_properties', toolName: 'manage_interaction', arguments: { action: 'configure_switch_properties', switchPath, switchType: 'pressure_plate', canToggle: false, resetTime: 3.5 }, expected: 'success', assertions: [{ path: 'structuredContent.result.switchPath', equals: EXPECTED_SWITCH_PATH, label: 'switch config target returned' }, { path: 'structuredContent.result.switchType', equals: 'pressure_plate', label: 'switch config type applied' }, { path: 'structuredContent.result.canToggle', equals: false, label: 'switch toggle flag applied' }, { path: 'structuredContent.result.resetTime', equals: 3.5, label: 'switch reset time applied' }] },
+  { scenario: 'CONFIG: configure_switch_properties', toolName: 'manage_interaction', arguments: { action: 'configure_switch_properties', switchPath, switchType: 'pressure_plate', canToggle: false, resetTime: 3.5 }, expected: 'success', assertions: [{ path: 'structuredContent.result.switchPath', equals: EXPECTED_SWITCH_PATH, label: 'switch config target returned' }, { path: 'structuredContent.result.switchType', equals: 'pressure_plate', label: 'switch config type applied' }, { path: 'structuredContent.result.canToggle', equals: false, label: 'switch toggle flag applied' }, { path: 'structuredContent.result.resetTime', equals: 3.5, label: 'switch reset time applied' }, { path: 'structuredContent.result.dispatcher', equals: 'OnSwitchChanged', label: 'the plate logic replaced the press logic' }] },
+  { scenario: 'CONFIG: configure_door_properties makes the door follow the switch', toolName: 'manage_interaction', arguments: { action: 'configure_door_properties', doorPath, switchPath }, expected: 'success', assertions: [{ path: 'structuredContent.result.followsSwitch', equals: EXPECTED_SWITCH_PATH, label: 'the door follows that switch' }, { path: 'structuredContent.result.locked', equals: true, label: 'walking up no longer opens it' }, { path: 'structuredContent.result.compiled', equals: true, label: 'the door compiles with the link' }] },
+  { scenario: 'ERROR: configure_door_properties refuses a switchPath without OnSwitchChanged', toolName: 'manage_interaction', arguments: { action: 'configure_door_properties', doorPath, switchPath: blueprintPath }, expected: 'error|DISPATCHER_NOT_FOUND' },
   {
     scenario: 'CREATE: create_chest_actor',
     toolName: 'manage_interaction',
@@ -86,7 +88,7 @@ const testCases = [
     arguments: { action: 'create_lever_actor', name: LEVER_NAME, folder: TEST_FOLDER },
     expected: 'success',
     captureResult: { key: 'leverPath', fromField: 'result.leverPath' },
-    assertions: [{ path: 'structuredContent.result.leverPath', equals: EXPECTED_LEVER_PATH, label: 'lever path returned' }, { path: 'structuredContent.result.blueprintPath', equals: EXPECTED_LEVER_PATH, label: 'lever blueprint path returned' }]
+    assertions: [{ path: 'structuredContent.result.leverPath', equals: EXPECTED_LEVER_PATH, label: 'lever path returned' }, { path: 'structuredContent.result.blueprintPath', equals: EXPECTED_LEVER_PATH, label: 'lever blueprint path returned' }, { path: 'structuredContent.result.dispatcher', equals: 'OnSwitchChanged', label: 'the lever fires OnSwitchChanged' }]
   },
 
   // === DESTRUCTIBLES ===

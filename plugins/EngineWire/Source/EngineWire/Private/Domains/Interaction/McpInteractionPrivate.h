@@ -139,4 +139,17 @@ void SendInteractableResult(
 bool AuthorOpenOnApproach(UEngineWireSubsystem* Subsystem, const FString& RequestId,
                           TSharedPtr<FMcpBridgeWebSocket> Socket, UBlueprint* Blueprint, const TCHAR* Pivot,
                           const TCHAR* AngleVariable, const TCHAR* RotatorPin, const TSharedPtr<FJsonObject>& Result);
+
+// Writes a switch's logic (tag SwitchLogic, so another type replaces it): pressure_plate is on while a pawn stands
+// on it (Interaction/SwitchPlate), any other type flips on each press (Interaction/SwitchToggle); both fire
+// OnSwitchChanged(bActivated). bTilt also tilts LeverPivot with it (Interaction/LeverTilt). Adds dispatcher and
+// compiled to Result; false after sending the refusal itself.
+bool AuthorSwitchLogic(UEngineWireSubsystem* Subsystem, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket,
+                       UBlueprint* Blueprint, const FString& SwitchType, bool bTilt, const TSharedPtr<FJsonObject>& Result);
+
+// Makes a door follow the switch Blueprint at SwitchPath (Interaction/OpenFromSwitch, on top of its opening logic):
+// LinkedSwitch, set on each placed door, opens and shuts it. Adds followsSwitch and compiled to Result; false after
+// sending the refusal itself.
+bool AuthorOpenFromSwitch(UEngineWireSubsystem* Subsystem, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket,
+                          UBlueprint* Door, const FString& SwitchPath, const TSharedPtr<FJsonObject>& Result);
 }

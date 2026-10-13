@@ -1,0 +1,55 @@
+{
+  "description": "A switch a pawn presses by walking into it: each time a pawn starts overlapping it, bIsActivated flips (or turns on when bCanToggle is false) and OnSwitchChanged(bActivated) reports the new state. With ResetTime above 0 it turns itself off again that many seconds after turning on. Other actors follow it by binding OnSwitchChanged.",
+  "tag": "SwitchLogic",
+  "variables": [
+    { "variableName": "bIsActivated", "variableType": "Bool", "defaultValue": false, "category": "Interaction", "keepExisting": true },
+    { "variableName": "bCanToggle", "variableType": "Bool", "defaultValue": true, "category": "Interaction", "keepExisting": true },
+    { "variableName": "ResetTime", "variableType": "Float", "defaultValue": 0, "category": "Interaction", "keepExisting": true }
+  ],
+  "dispatchers": [
+    { "name": "OnSwitchChanged", "parameters": [{ "name": "bActivated", "type": "Bool" }] }
+  ],
+  "hooks": [
+    { "id": "pressEnter", "event": "ActorBeginOverlap" }
+  ],
+  "eventGraph": [
+    { "edit": "create_node", "id": "pressPawn", "nodeType": "Cast", "targetClass": "/Script/Engine.Pawn" },
+    { "edit": "create_node", "id": "pressCanToggle", "nodeType": "VariableGet", "memberName": "bCanToggle" },
+    { "edit": "create_node", "id": "pressBranch", "nodeType": "Branch" },
+    { "edit": "create_node", "id": "pressWas", "nodeType": "VariableGet", "memberName": "bIsActivated" },
+    { "edit": "create_node", "id": "pressFlip", "nodeType": "CallFunction", "memberName": "Not_PreBool", "memberClass": "/Script/Engine.KismetMathLibrary" },
+    { "edit": "create_node", "id": "pressSetFlip", "nodeType": "VariableSet", "memberName": "bIsActivated" },
+    { "edit": "create_node", "id": "pressSetOn", "nodeType": "VariableSet", "memberName": "bIsActivated", "pinDefaults": { "bIsActivated": true } },
+    { "edit": "create_node", "id": "pressNow", "nodeType": "VariableGet", "memberName": "bIsActivated" },
+    { "edit": "create_node", "id": "pressNotify", "nodeType": "CallDelegate", "memberName": "OnSwitchChanged" },
+    { "edit": "create_node", "id": "pressResetTime", "nodeType": "VariableGet", "memberName": "ResetTime" },
+    { "edit": "create_node", "id": "pressTimed", "nodeType": "CallFunction", "memberName": "Greater_DoubleDouble", "memberClass": "/Script/Engine.KismetMathLibrary", "pinDefaults": { "B": 0 } },
+    { "edit": "create_node", "id": "pressOnNow", "nodeType": "VariableGet", "memberName": "bIsActivated" },
+    { "edit": "create_node", "id": "pressBoth", "nodeType": "CallFunction", "memberName": "BooleanAND", "memberClass": "/Script/Engine.KismetMathLibrary" },
+    { "edit": "create_node", "id": "pressResetBranch", "nodeType": "Branch" },
+    { "edit": "create_node", "id": "pressWaitTime", "nodeType": "VariableGet", "memberName": "ResetTime" },
+    { "edit": "create_node", "id": "pressWait", "nodeType": "CallFunction", "memberName": "Delay" },
+    { "edit": "create_node", "id": "pressSetOff", "nodeType": "VariableSet", "memberName": "bIsActivated", "pinDefaults": { "bIsActivated": false } },
+    { "edit": "create_node", "id": "pressNotifyOff", "nodeType": "CallDelegate", "memberName": "OnSwitchChanged", "pinDefaults": { "bActivated": false } },
+    { "edit": "connect_pins", "from": "$pressEnter_event.OtherActor", "to": "$pressPawn.Object" },
+    { "edit": "connect_pins", "from": "$pressCanToggle.bCanToggle", "to": "$pressBranch.Condition" },
+    { "edit": "connect_pins", "from": "$pressWas.bIsActivated", "to": "$pressFlip.A" },
+    { "edit": "connect_pins", "from": "$pressFlip.ReturnValue", "to": "$pressSetFlip.bIsActivated" },
+    { "edit": "connect_pins", "from": "$pressNow.bIsActivated", "to": "$pressNotify.bActivated" },
+    { "edit": "connect_pins", "from": "$pressResetTime.ResetTime", "to": "$pressTimed.A" },
+    { "edit": "connect_pins", "from": "$pressTimed.ReturnValue", "to": "$pressBoth.A" },
+    { "edit": "connect_pins", "from": "$pressOnNow.bIsActivated", "to": "$pressBoth.B" },
+    { "edit": "connect_pins", "from": "$pressBoth.ReturnValue", "to": "$pressResetBranch.Condition" },
+    { "edit": "connect_pins", "from": "$pressWaitTime.ResetTime", "to": "$pressWait.Duration" },
+    { "edit": "connect_pins", "from": "$pressEnter.then", "to": "$pressPawn.execute" },
+    { "edit": "connect_pins", "from": "$pressPawn.then", "to": "$pressBranch.execute" },
+    { "edit": "connect_pins", "from": "$pressBranch.then", "to": "$pressSetFlip.execute" },
+    { "edit": "connect_pins", "from": "$pressBranch.else", "to": "$pressSetOn.execute" },
+    { "edit": "connect_pins", "from": "$pressSetFlip.then", "to": "$pressNotify.execute" },
+    { "edit": "connect_pins", "from": "$pressSetOn.then", "to": "$pressNotify.execute" },
+    { "edit": "connect_pins", "from": "$pressNotify.then", "to": "$pressResetBranch.execute" },
+    { "edit": "connect_pins", "from": "$pressResetBranch.then", "to": "$pressWait.execute" },
+    { "edit": "connect_pins", "from": "$pressWait.then", "to": "$pressSetOff.execute" },
+    { "edit": "connect_pins", "from": "$pressSetOff.then", "to": "$pressNotifyOff.execute" }
+  ]
+}
