@@ -1,6 +1,6 @@
 /**
  * Gameplay behaviours written into an Actor Blueprint from the plugin's recipe files
- * (McpBlueprintBehaviour::Author): health, damage on touch, pickups, sprint, shooting, chasing, player controls, respawning and a goal. Folded
+ * (McpBlueprintBehaviour::Author): health, damage on touch, pickups, sprint, shooting, chasing, player controls, respawning, a goal and a spawner. Folded
  * into blueprint.add_behaviour (selector behaviour). Every one is all or nothing,
  * re-runnable (a second run replaces the first), compiled and saved.
  */
@@ -241,5 +241,30 @@ export const BEHAVIOURS_RECORDS: readonly CapabilityRecordSource[] = [
     resources: 'medium',
     plugins: BP_PLUGINS,
     exampleInput: { action: 'add_goal', blueprintPath: '/Game/Blueprints/BP_Flag', nextLevel: '/Game/Maps/L_Level2' },
+  }),
+  buildRecord({
+    id: 'blueprint.add_spawner',
+    action: 'add_spawner',
+    family: FAMILY,
+    domain: DOMAIN,
+    topics: ['spawner', 'enemy spawner', 'spawn enemies every few seconds', 'spawn actors over time', 'wave of enemies', 'keep spawning enemies'],
+    summary: 'Make an actor a spawner: every interval seconds, while fewer than maxAlive of the actors it spawned are alive, it spawns spawnClass at a random point up to radius across from itself, counts each until it is destroyed, and fires OnSpawned with it. A pawn class set to be possessed by AI when spawned (the chase behaviour sets that) moves on its own.',
+    whenToUse: ['Enemies, pickups or obstacles must keep appearing while the game runs.'],
+    whenNotToUse: ['Actors must be placed once, before play (use control_actor spawn).'],
+    inputProps: {
+      blueprintPath: P.blueprintPath,
+      spawnClass: { type: 'string', description: 'The actor it spawns: a Blueprint path (/Game/Enemies/BP_Slime) or class path; not the spawner itself.' },
+      interval: { type: 'number', description: 'Seconds between spawns (default 3).' },
+      maxAlive: { type: 'number', description: 'Most of its spawned actors alive at once (default 5); a destroyed one frees its place.' },
+      radius: { type: 'number', description: 'How far across from the spawner an actor may appear, in units (default 0: on the spawner).' },
+    },
+    required: ['blueprintPath', 'spawnClass'],
+    outputProps: BEHAVIOUR_OUTPUT,
+    effect: 'write',
+    behavior: { idempotency: 'idempotent' },
+    latency: 'interactive',
+    resources: 'medium',
+    plugins: BP_PLUGINS,
+    exampleInput: { action: 'add_spawner', blueprintPath: '/Game/Blueprints/BP_SlimeSpawner', spawnClass: '/Game/Enemies/BP_Slime', interval: 5, maxAlive: 4, radius: 300 },
   }),
 ];

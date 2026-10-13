@@ -12840,7 +12840,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "chase",
             "controls",
             "respawn",
-            "goal"
+            "goal",
+            "spawner"
           ],
           "description": "Which add behaviour variant to run."
         },
@@ -13284,6 +13285,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Keyframe interpolation."
         },
+        "interval": {
+          "type": "number",
+          "description": "Seconds between spawns (default 3)."
+        },
         "isChecked": {
           "type": "boolean",
           "description": "Checkbox checked state."
@@ -13409,6 +13414,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "materialPath": {
           "type": "string",
           "description": "Material asset path for a component."
+        },
+        "maxAlive": {
+          "type": "number",
+          "description": "Most of its spawned actors alive at once (default 5); a destroyed one frees its place."
         },
         "maxDesiredHeight": {
           "type": "number",
@@ -13729,6 +13738,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Build a Cast node pure (no exec pins, as in the editor's Convert to pure cast); default false."
         },
+        "radius": {
+          "type": "number",
+          "description": "How far across from the spawner an actor may appear, in units (default 0: on the spawner)."
+        },
         "remove": {
           "type": "boolean",
           "description": "Drop the interface instead (its function graphs go with it)."
@@ -13873,6 +13886,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "sourcePin": {
           "type": "string",
           "description": "Source pin name on the originating node."
+        },
+        "spawnClass": {
+          "type": "string",
+          "description": "The actor it spawns: a Blueprint path (/Game/Enemies/BP_Slime) or class path; not the spawner itself."
         },
         "sprintSpeed": {
           "type": "number",

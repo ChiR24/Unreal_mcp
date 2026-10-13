@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "922fd9067dde7709",
+  "catalogRevision": "9ce81859d1b976ab",
   "recordCount": 416,
   "records": [
     {
@@ -12793,7 +12793,8 @@
         "blueprint.add_chase",
         "blueprint.add_controls",
         "blueprint.add_respawn",
-        "blueprint.add_goal"
+        "blueprint.add_goal",
+        "blueprint.add_spawner"
       ],
       "legacyIds": [
         {
@@ -12862,6 +12863,13 @@
           "folded": {
             "behaviour": "goal"
           }
+        },
+        {
+          "tool": "manage_blueprint",
+          "action": "add_spawner",
+          "folded": {
+            "behaviour": "spawner"
+          }
         }
       ],
       "discovery": {
@@ -12924,9 +12932,15 @@
           "finish line",
           "end of the level",
           "win when the player reaches the goal",
-          "go to the next level"
+          "go to the next level",
+          "spawner",
+          "enemy spawner",
+          "spawn enemies every few seconds",
+          "spawn actors over time",
+          "wave of enemies",
+          "keep spawning enemies"
         ],
-        "summary": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player, walk, look and jump controls for a Character, a pawn that respawns when it falls or dies (with checkpoints), or a goal that ends the level when the player reaches it.",
+        "summary": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player, walk, look and jump controls for a Character, a pawn that respawns when it falls or dies (with checkpoints), a goal that ends the level when the player reaches it, or a spawner that keeps spawning an actor class.",
         "whenToUse": [
           "behaviour=health: A player, enemy or breakable object must take damage and die; bind OnHealthChanged to a health bar.",
           "behaviour=damage_on_touch: Spikes, lava, an enemy body or a fire must hurt what touches it.",
@@ -12937,7 +12951,8 @@
           "behaviour=controls: A Character made with manage_character create_character_blueprint (or any Character without input) must be playable: it has no input until this runs.",
           "behaviour=respawn: A player pawn must not be lost for good when it falls off the level or dies.",
           "behaviour=respawn: Checkpoints: tag a trigger actor (manage_interaction create_interactable trigger, or any actor that overlaps pawns) with checkpointTag; the pawn respawns where it stood when it touched it.",
-          "behaviour=goal: A level needs an end: a finish line, an exit door, a flag the player reaches."
+          "behaviour=goal: A level needs an end: a finish line, an exit door, a flag the player reaches.",
+          "behaviour=spawner: Enemies, pickups or obstacles must keep appearing while the game runs."
         ],
         "whenNotToUse": [
           "behaviour=health: The project uses the Gameplay Ability System for attributes (use manage_gas).",
@@ -12948,7 +12963,8 @@
           "behaviour=chase: The pawn needs patrols, senses or decisions beyond chasing (use manage_ai with a Behavior Tree or State Tree).",
           "behaviour=controls: Only one key or action must be added (use manage_networking configure_input for the asset and blueprint edit_graph for its node).",
           "behaviour=respawn: A pawn that should stay dead, such as an enemy: give it the health behaviour with destroyOnDeath instead.",
-          "behaviour=goal: Something must happen on every touch, by any actor (use a trigger actor from manage_interaction create_interactable)."
+          "behaviour=goal: Something must happen on every touch, by any actor (use a trigger actor from manage_interaction create_interactable).",
+          "behaviour=spawner: Actors must be placed once, before play (use control_actor spawn)."
         ]
       },
       "schemas": {
@@ -13060,6 +13076,22 @@
               "type": "number",
               "description": "Seconds between reaching the goal and opening nextLevel (default 2)."
             },
+            "spawnClass": {
+              "type": "string",
+              "description": "The actor it spawns: a Blueprint path (/Game/Enemies/BP_Slime) or class path; not the spawner itself."
+            },
+            "interval": {
+              "type": "number",
+              "description": "Seconds between spawns (default 3)."
+            },
+            "maxAlive": {
+              "type": "number",
+              "description": "Most of its spawned actors alive at once (default 5); a destroyed one frees its place."
+            },
+            "radius": {
+              "type": "number",
+              "description": "How far across from the spawner an actor may appear, in units (default 0: on the spawner)."
+            },
             "behaviour": {
               "type": "string",
               "enum": [
@@ -13071,7 +13103,8 @@
                 "chase",
                 "controls",
                 "respawn",
-                "goal"
+                "goal",
+                "spawner"
               ],
               "description": "Which add behaviour variant to run."
             }
@@ -13144,7 +13177,7 @@
       },
       "examples": [
         {
-          "title": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player, walk, look and jump controls for a Character, a pawn that respawns when it falls or dies (with checkpoints), or a goal that ends the level when the player reaches it.",
+          "title": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player, walk, look and jump controls for a Character, a pawn that respawns when it falls or dies (with checkpoints), a goal that ends the level when the player reaches it, or a spawner that keeps spawning an actor class.",
           "input": {
             "action": "add_behaviour",
             "blueprintPath": "/Game/Blueprints/BP_Enemy",
@@ -13194,7 +13227,8 @@
             "chase": "add_chase",
             "controls": "add_controls",
             "respawn": "add_respawn",
-            "goal": "add_goal"
+            "goal": "add_goal",
+            "spawner": "add_spawner"
           },
           "declaredBy": {
             "maxHealth": [
@@ -13273,14 +13307,26 @@
             ],
             "delay": [
               "goal"
+            ],
+            "spawnClass": [
+              "spawner"
+            ],
+            "interval": [
+              "spawner"
+            ],
+            "maxAlive": [
+              "spawner"
+            ],
+            "radius": [
+              "spawner"
             ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "32e9f8642213096108e435af103c3838dfb185f31072f080f972c55d6a723115",
-        "content": "b4f4b761aaf4788d274c151eb572bc19f951e0ac3103dd5fd1f817d279600710"
+        "schema": "82589f6f06b5fed018d506385079fc7461605791ebc03f9fa5ae82b5bc7f5fe4",
+        "content": "2fea93711633ccf9001b849020fba6e69f98e9f4933911edd59f40acf91ab24a"
       }
     },
     {

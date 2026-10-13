@@ -529,4 +529,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'level complete', accepted: ['blueprint.add_behaviour'] },
   { query: 'finish line', accepted: ['blueprint.add_behaviour'] },
   { query: 'goal zone', accepted: ['blueprint.add_behaviour'] },
+  { query: 'enemy spawner', accepted: ['blueprint.add_behaviour'] },
+  { query: 'spawn enemies every few seconds', accepted: ['blueprint.add_behaviour'] },
+  { query: 'wave of enemies', accepted: ['blueprint.add_behaviour'] },
 ];

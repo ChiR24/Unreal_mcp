@@ -1,4 +1,4 @@
-// add_health, add_damage_on_touch, add_pickup, add_sprint, add_shoot, add_chase and add_goal (blueprint.add_behaviour): gameplay logic written into an
+// add_health, add_damage_on_touch, add_pickup, add_sprint, add_shoot, add_chase, add_goal and add_spawner (blueprint.add_behaviour): gameplay logic written into an
 // Actor Blueprint from a recipe (Resources/Recipes/Gameplay and Character) through McpBlueprintBehaviour::Author, so
 // the Blueprint holds plain engine nodes. Each was a hand-built graph of ten to forty nodes and pins to get right.
 #include "Domains/Blueprint/McpBPActionContext.h"
@@ -129,6 +129,31 @@ bool PlanGoal(const TSharedPtr<FJsonObject> &Payload, FBehaviourPlan &Plan, FStr
   return OutError.IsEmpty();
 }
 
+// An actor that spawns spawnClass on a timer (recipe Gameplay/Spawner); never its own class, which would spawn spawners.
+bool PlanSpawner(const TSharedPtr<FJsonObject> &Payload, const UBlueprint *Blueprint, FBehaviourPlan &Plan, FString &OutError) {
+  const FString ClassText = GetJsonStringField(Payload, TEXT("spawnClass")).TrimStartAndEnd();
+  UClass *Spawned = ResolveClassByName(ClassText);
+  const double Interval = GetJsonNumberField(Payload, TEXT("interval"), 3.0);
+  const double MaxAlive = GetJsonNumberField(Payload, TEXT("maxAlive"), 5.0);
+  const double Radius = GetJsonNumberField(Payload, TEXT("radius"), 0.0);
+  OutError = !Spawned || !Spawned->IsChildOf(AActor::StaticClass())
+                 ? FString::Printf(TEXT("spawnClass %s is not an actor class or Blueprint"), *ClassText)
+             : Spawned == Blueprint->GeneratedClass ? FString(TEXT("A spawner cannot spawn its own class"))
+             : Interval <= 0.0 || MaxAlive < 1.0 || Radius < 0.0
+                 ? FString(TEXT("interval must be above 0, maxAlive 1 or more and radius 0 or more"))
+                 : FString();
+  if (!OutError.IsEmpty()) {
+    return false;
+  }
+  Plan.Recipe = TEXT("Spawner");
+  SetString(Plan, TEXT("SpawnType"), TEXT("Class:") + Spawned->GetPathName());
+  SetString(Plan, TEXT("SpawnClass"), Spawned->GetPathName());
+  SetNumber(Plan, TEXT("Interval"), Interval);
+  SetNumber(Plan, TEXT("MaxAlive"), FMath::FloorToDouble(MaxAlive));
+  SetNumber(Plan, TEXT("Radius"), Radius);
+  return true;
+}
+
 // A chasing pawn moves only under an AI controller: placed or spawned, it gets one.
 void PossessByAI(UBlueprint *Blueprint, const TSharedPtr<FJsonObject> &Report) {
   APawn *Pawn = Blueprint->GeneratedClass ? Cast<APawn>(Blueprint->GeneratedClass->GetDefaultObject()) : nullptr;
@@ -180,6 +205,8 @@ bool PlanBehaviour(const FString &Action, const TSharedPtr<FJsonObject> &Payload
     return PlanChase(Payload, Blueprint, Plan, OutError);
   } else if (Action == TEXT("add_goal")) {
     return PlanGoal(Payload, Plan, OutError);
+  } else if (Action == TEXT("add_spawner")) {
+    return PlanSpawner(Payload, Blueprint, Plan, OutError);
   } else {
     const UClass *Parent = Blueprint->GeneratedClass ? Blueprint->GeneratedClass.Get() : Blueprint->ParentClass.Get();
     const double SprintSpeed = GetJsonNumberField(Payload, TEXT("sprintSpeed"), 1000.0);
@@ -200,7 +227,7 @@ bool PlanBehaviour(const FString &Action, const TSharedPtr<FJsonObject> &Payload
 bool HandleBlueprintAddBehaviour(const FBlueprintActionContext &Context) {
   MCP_BLUEPRINT_ACTION_LOCALS(Context);
   static const TCHAR *const Actions[] = {TEXT("add_health"), TEXT("add_damage_on_touch"), TEXT("add_pickup"),
-                                         TEXT("add_sprint"), TEXT("add_shoot"), TEXT("add_chase"), TEXT("add_goal")};
+                                         TEXT("add_sprint"), TEXT("add_shoot"), TEXT("add_chase"), TEXT("add_goal"), TEXT("add_spawner")};
   const TCHAR *Matched = nullptr;
   for (const TCHAR *Each : Actions) {
     Matched = Matched ? Matched : (ActionMatchesPattern(Each) ? Each : nullptr);
