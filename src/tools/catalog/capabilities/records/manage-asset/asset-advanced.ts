@@ -103,7 +103,7 @@ export const ASSET_ADVANCED_RECORDS: readonly RecordSpec[] = [
       details: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Operation details.' },
     }, ['success']),
     WRITE, WRITE_POLICY, MEDIUM,
-    { topics: ['mesh collision', 'static mesh collision', 'add box collision', 'complex as simple', 'remove collision', 'player falls through mesh', 'walk on imported mesh'],
+    { topics: ['mesh collision', 'static mesh collision', 'add box collision', 'complex as simple', 'remove collision', 'player falls through mesh', 'walk on imported mesh', 'add collision to mesh'],
       whenToUse: [
         'An imported or Fab mesh has no simple collision, so pawns fall through it or walk through it.',
         'A decorative mesh (grass, flowers, small debris) must stop blocking the player.',

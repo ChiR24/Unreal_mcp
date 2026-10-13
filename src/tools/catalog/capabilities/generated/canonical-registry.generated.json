@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "cea3119b362a953d",
+  "catalogRevision": "fe790d7888c67f85",
   "recordCount": 411,
   "records": [
     {
@@ -10603,7 +10603,8 @@
           "complex as simple",
           "remove collision",
           "player falls through mesh",
-          "walk on imported mesh"
+          "walk on imported mesh",
+          "add collision to mesh"
         ],
         "summary": "Process an asset: render a thumbnail, generate mesh LODs, set the materials in the slots of a static or skeletal mesh asset (mesh_materials), or set a static mesh asset's collision (mesh_collision), so every placement shows or uses them.",
         "whenToUse": [
@@ -10878,7 +10879,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "00968496d1ade57e1578d0e7cb04c7dbe04d5197d65195478f1cc7caef4f2d3e",
-        "content": "cf3f8922f6bfe4082497cfe895e7ad15722ac3a7e6a02fdfd85cbc02f7494864"
+        "content": "e657b68dc4f0f8ce852ac69df570a00c82231d269a7ff1013ea99076ce1e9e03"
       }
     },
     {
@@ -16292,6 +16293,10 @@
           "is valid",
           "do once",
           "gate node",
+          "branch on a condition",
+          "loop over an array",
+          "cast to player",
+          "event dispatcher",
           "add node",
           "place node",
           "graph node",
@@ -16943,7 +16948,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "94c0ea494edc798f74362eae15b9e27322a94f458cbfd8da9421dbc147beaee0",
-        "content": "7d45b888b4bfbcd7e214736414c8ddc9c35c5d689914d395a9e5de929c1c26ce"
+        "content": "0bc5f615df5107fcd4d4731c8e98692372205c06107fe55aac489dc2982f11fd"
       }
     },
     {
@@ -32685,6 +32690,7 @@
           "change sign text",
           "set light intensity",
           "turn off a light",
+          "dim the light",
           "rotating platform",
           "moving platform",
           "light color",
@@ -32873,7 +32879,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "a53bd4b3024e95b704c17e00b15eba521603fcffb361c73f5daa71d435ea85af",
-        "content": "debf977d1316d4734a11291f40370096a2e7e3a3d3350e7cd892e81ec10fd856"
+        "content": "b63887b74296ec5d9ec4cb95a0f71b1226340697ba05eaf80791ca1c34ea05d7"
       }
     },
     {
@@ -92639,7 +92645,10 @@
         "topics": [
           "console_command",
           "active sounds",
-          "live coding"
+          "live coding",
+          "compile c++",
+          "recompile code",
+          "hot reload"
         ],
         "summary": "Run a validated console command.",
         "whenToUse": [
@@ -92752,7 +92761,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "60f83cf067f4f83dc8a574e8e06158c13fab777b793f916986a18de69d179b39",
-        "content": "0b6533449203accee5ff80325d24ea666786c5d246b1957948d57023c78cac27"
+        "content": "23fee7a1aa9b6d80c4330af2e4b90ca73da158479448b49b43a4365e2a60ebfa"
       }
     },
     {

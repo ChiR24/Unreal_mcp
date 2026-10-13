@@ -88,6 +88,8 @@ export type ScoreContext = {
   readonly queryTokens: readonly string[];
   /** `queryTokens` less closed-class glue, which no identifier can ever spell. */
   readonly contentTokens: readonly string[];
+  /** The query as typed, lower-cased with single spaces, when it has two words or more; empty otherwise. */
+  readonly queryPhrase: string;
   readonly querySet: ReadonlySet<string>;
   /** The query opens with a read word ("get actor location"): read-effect capabilities rank ahead. */
   readonly readIntent: boolean;
@@ -398,6 +400,11 @@ function adjacencyScore(
   return score;
 }
 
+function phraseOf(query: string): string {
+  const words = query.toLowerCase().trim().split(/\s+/u);
+  return words.length >= 2 ? words.join(' ') : '';
+}
+
 function rounded(value: number, precision: number): number {
   const factor = 10 ** precision;
   return Math.round(value * factor) / factor;
@@ -422,7 +429,12 @@ export function scoreDocument(
   const named = new Set(contributions
     .filter((entry) => RETRIEVAL_COVERAGE_FIELDS.has(entry.field))
     .flatMap((entry) => entry.allMatchedTokens));
-  const fullyNamed = context.contentTokens.length >= 2 && context.contentTokens.every((token) => named.has(token));
+  // A topic holding the whole query as typed names it outright, as the native door's phrase rule reads it: "is
+  // valid" and "do once" have one content word each, and found nothing although edit_graph's topics say exactly that.
+  const phraseTopic = context.queryPhrase !== ''
+    && (document.record.discovery.topics ?? []).some((topic) => topic.toLowerCase().includes(context.queryPhrase));
+  const fullyNamed = (context.contentTokens.length >= 2 || phraseTopic)
+    && context.contentTokens.every((token) => named.has(token));
   // A record whose own names and topics hold every content word stays a result although its action words are
   // missing from the query: "random number" dropped edit_graph, whose topic says exactly that, and found nothing.
   if (matchScore < RETRIEVAL_SCORE_CONSTANTS.minimumRelevanceScore && !fullyNamed) return null;
@@ -473,6 +485,7 @@ export function rankCapabilityRecords(
     index,
     queryTokens,
     contentTokens: queryTokens.filter((token) => !RETRIEVAL_FUNCTION_WORDS.has(token)),
+    queryPhrase: phraseOf(query),
     querySet: new Set(queryTokens),
     readIntent: RETRIEVAL_READ_INTENT_WORDS.has(firstWord),
     deleteIntent: RETRIEVAL_DELETE_INTENT_WORDS.has(firstWord),
