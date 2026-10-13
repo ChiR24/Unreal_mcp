@@ -72,13 +72,17 @@ void SendBlueprintAddEventResult(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, UBlueprint *BP,
     const FString &RegistryKey, const FName &EventName,
     const FString &FinalType, const TArray<TSharedPtr<FJsonValue>> &Params,
-    bool bSaved) {
+    bool bSaved, const FString &Overrides) {
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("blueprintPath"), RegistryKey);
   Resp->SetStringField(TEXT("eventName"), EventName.ToString());
   Resp->SetStringField(TEXT("eventType"), FinalType);
   Resp->SetBoolField(TEXT("saved"), bSaved);
+  // The class whose event the node implements (a parent class, or an interface the Blueprint implements).
+  if (!Overrides.IsEmpty()) {
+    Resp->SetStringField(TEXT("overrides"), Overrides);
+  }
   const FString EventNodeGuid = FindEventNodeGuid(BP, EventName);
   if (!EventNodeGuid.IsEmpty()) {
     Resp->SetStringField(TEXT("nodeGuid"), EventNodeGuid);

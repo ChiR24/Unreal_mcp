@@ -9222,6 +9222,7 @@
         "inspect_graph",
         "add_function",
         "remove_function",
+        "implement_interface",
         "probe_handle",
         "edit_widget_blueprint",
         "preview_widget",
@@ -9312,6 +9313,7 @@
         "inputAxisName",
         "inputType",
         "inputs",
+        "interfacePath",
         "interpolation",
         "isChecked",
         "isEnabled",
@@ -9384,6 +9386,7 @@
         "propertyName",
         "propertyValue",
         "pure",
+        "remove",
         "renderOpacity",
         "resolution",
         "responseCount",
@@ -9524,7 +9527,7 @@
           },
           "blueprintType": {
             "type": "string",
-            "description": "Picks the parent class when parentClass is absent: Actor, Pawn, Character or FunctionLibrary."
+            "description": "Picks the parent class when parentClass is absent: Actor, Pawn, Character or FunctionLibrary; Interface makes a Blueprint Interface (its functions with add_function, taken on with implement_interface)."
           },
           "bottom": {
             "type": "number",
@@ -9884,6 +9887,10 @@
               "x-unreal-reflection-boundary": true
             },
             "x-unreal-reflection-boundary": true
+          },
+          "interfacePath": {
+            "type": "string",
+            "description": "The interface: a Blueprint Interface asset path (/Game/Interfaces/BPI_Interactable) or a native interface class path or name."
           },
           "interpolation": {
             "type": "string",
@@ -10303,6 +10310,10 @@
             "type": "boolean",
             "description": "Build a Cast node pure (no exec pins, as in the editor's Convert to pure cast); default false."
           },
+          "remove": {
+            "type": "boolean",
+            "description": "Drop the interface instead (its function graphs go with it)."
+          },
           "renderOpacity": {
             "type": "number",
             "description": "Render opacity (0-1) applied to the widget and everything under it."
@@ -10698,6 +10709,7 @@
               "inspect_graph",
               "add_function",
               "remove_function",
+              "implement_interface",
               "probe_handle",
               "edit_widget_blueprint",
               "preview_widget",

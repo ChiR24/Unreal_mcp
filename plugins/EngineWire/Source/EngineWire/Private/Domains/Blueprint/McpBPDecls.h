@@ -121,7 +121,7 @@ void SendBlueprintAddEventResult(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, UBlueprint *BP,
     const FString &RegistryKey, const FName &EventName,
     const FString &FinalType, const TArray<TSharedPtr<FJsonValue>> &Params,
-    bool bSaved);
+    bool bSaved, const FString &Overrides = FString());
 // The event graph page named GraphName, or the main event graph when it is
 // empty; null with OutError set when a named page does not exist.
 UEdGraph *FindBlueprintEventGraph(UBlueprint *BP, const FString &GraphName,
@@ -140,6 +140,8 @@ bool McpBlueprintAddEventStandard(
     const FBlueprintActionContext &Context, UBlueprint *BP, UEdGraph *EventGraph,
     int32 EventPosX, int32 EventPosY, const FString &RegistryKey,
     const FString &FinalType, const TArray<TSharedPtr<FJsonValue>> &Params);
+// An event the parent class chain or an implemented interface declares under Name, or null.
+UFunction *McpFindOverridableEvent(const UBlueprint *BP, const FString &Name);
 // EntryNodeGuid goes out as nodeGuid, ResultNodeGuid (when the function has a
 // return node) as resultNodeGuid: build_graph aliases them "$id" and "$id_return".
 // OverrideClass names the parent function the new one overrides, as overrides.
@@ -175,6 +177,7 @@ bool HandleBlueprintAddFunction(const FBlueprintActionContext &Context);
 // build_graph member step only (no standalone action): {dispatcherName, parameters}.
 bool HandleBlueprintAddEventDispatcher(const FBlueprintActionContext &Context);
 bool HandleBlueprintRemoveFunction(const FBlueprintActionContext &Context);
+bool HandleBlueprintImplementInterface(const FBlueprintActionContext &Context);
 bool HandleBlueprintCompile(const FBlueprintActionContext &Context);
 bool HandleBlueprintCreateExists(const FBlueprintActionContext &Context);
 bool HandleBlueprintGet(const FBlueprintActionContext &Context);

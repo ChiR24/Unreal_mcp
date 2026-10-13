@@ -73,6 +73,11 @@ bool ExecuteBlueprintCreation(UEngineWireSubsystem *Self,
   }
 
   UBlueprint *CreatedBlueprint = Cast<UBlueprint>(NewObject);
+  // A 5.0 factory has no BlueprintType to set, so the interface type is set on the asset it made.
+  if (CreatedBlueprint && Context.BlueprintTypeSpec.Equals(TEXT("Interface"), ESearchCase::IgnoreCase) &&
+      Context.ParentClassSpec.IsEmpty()) {
+    CreatedBlueprint->BlueprintType = BPTYPE_Interface;
+  }
   TArray<FString> AppliedProperties, FailedProperties;
   ApplyBlueprintProperties(CreatedBlueprint, Context.Payload, AppliedProperties, FailedProperties);
 

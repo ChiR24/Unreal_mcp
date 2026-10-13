@@ -31,6 +31,7 @@ bool UEngineWireSubsystem::HandleBlueprintAction(
       McpBlueprintHandlers::HandleBlueprintRemoveEvent,
       McpBlueprintHandlers::HandleBlueprintAddFunction,
       McpBlueprintHandlers::HandleBlueprintRemoveFunction,
+      McpBlueprintHandlers::HandleBlueprintImplementInterface,
       McpBlueprintHandlers::HandleBlueprintCompile,
       McpBlueprintHandlers::HandleBlueprintCreateExists,
       McpBlueprintHandlers::HandleBlueprintGet,

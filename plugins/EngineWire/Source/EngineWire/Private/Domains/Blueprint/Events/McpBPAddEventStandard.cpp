@@ -5,10 +5,29 @@
 #include "Foundation/BridgeHelpers/Blueprints/McpBPCompileHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
+#include "EdGraphSchema_K2.h"
 #include "Engine/Blueprint.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 
 namespace McpBlueprintHandlers {
+UFunction *McpFindOverridableEvent(const UBlueprint *BP, const FString &Name) {
+  const auto IsEvent = [](UFunction *Function) {
+    return Function && Function->HasAnyFunctionFlags(FUNC_BlueprintEvent) && UEdGraphSchema_K2::FunctionCanBePlacedAsEvent(Function);
+  };
+  for (UClass *Search = BP->ParentClass; Search; Search = Search->GetSuperClass()) {
+    if (UFunction *Function = Search->FindFunctionByName(*Name, EIncludeSuperFlag::ExcludeSuper)) {
+      return IsEvent(Function) ? Function : nullptr;
+    }
+  }
+  for (const FBPInterfaceDescription &Description : BP->ImplementedInterfaces) {
+    UFunction *Function = Description.Interface ? Description.Interface->FindFunctionByName(*Name) : nullptr;
+    if (IsEvent(Function)) {
+      return Function;
+    }
+  }
+  return nullptr;
+}
+
 bool McpBlueprintAddEventStandard(
     const FBlueprintActionContext &Context, UBlueprint *BP, UEdGraph *EventGraph,
     int32 EventPosX, int32 EventPosY, const FString &RegistryKey,
@@ -42,6 +61,10 @@ bool McpBlueprintAddEventStandard(
       break;
     }
     SearchClass = SearchClass->GetSuperClass();
+  }
+  // An interface the Blueprint implements declares its own events (Interact on BPI_Interactable).
+  if (!EventFunc) {
+    EventFunc = McpFindOverridableEvent(BP, TargetEventName);
   }
 
   if (!EventFunc) {
@@ -86,7 +109,8 @@ bool McpBlueprintAddEventStandard(
   const bool bSaved = SaveLoadedAssetThrottled(BP);
 
   SendBlueprintAddEventResult(Bridge, RequestId, RequestingSocket, BP,
-                              RegistryKey, EventName, FinalType, Params, bSaved);
+                              RegistryKey, EventName, FinalType, Params, bSaved,
+                              EventFunc->GetOwnerClass()->GetPathName());
   return true;
 }
 } // namespace McpBlueprintHandlers

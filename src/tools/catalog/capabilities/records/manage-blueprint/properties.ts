@@ -23,7 +23,7 @@ export const P = {
   name: S('Name for the new Blueprint or asset.'),
   newName: S('New name for a renamed variable, function, or component.'),
   parentClass: S('Parent class path for Blueprint creation (e.g. /Script/Engine.Actor).'),
-  blueprintType: S('Picks the parent class when parentClass is absent: Actor, Pawn, Character or FunctionLibrary.'),
+  blueprintType: S('Picks the parent class when parentClass is absent: Actor, Pawn, Character or FunctionLibrary; Interface makes a Blueprint Interface (its functions with add_function, taken on with implement_interface).'),
   // SCS / components
   componentType: S('Component class name to add.'),
   componentClass: S('Component class path for SCS node creation.'),

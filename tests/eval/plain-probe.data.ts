@@ -475,4 +475,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'set start level', accepted: ['system_control.set_project_setting'] },
   { query: 'change default map', accepted: ['system_control.set_project_setting'] },
   { query: 'set the default map', accepted: ['system_control.set_project_setting'] },
+  { query: 'implement interface', accepted: ['blueprint.implement_interface'] },
+  { query: 'add interface to blueprint', accepted: ['blueprint.implement_interface'] },
+  { query: 'make a blueprint interface', accepted: ['blueprint.create'] },
 ];

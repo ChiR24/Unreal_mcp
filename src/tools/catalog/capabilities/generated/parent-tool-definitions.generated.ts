@@ -12829,7 +12829,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "blueprintType": {
           "type": "string",
-          "description": "Picks the parent class when parentClass is absent: Actor, Pawn, Character or FunctionLibrary."
+          "description": "Picks the parent class when parentClass is absent: Actor, Pawn, Character or FunctionLibrary; Interface makes a Blueprint Interface (its functions with add_function, taken on with implement_interface)."
         },
         "bottom": {
           "type": "number",
@@ -13189,6 +13189,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "x-unreal-reflection-boundary": true
           },
           "x-unreal-reflection-boundary": true
+        },
+        "interfacePath": {
+          "type": "string",
+          "description": "The interface: a Blueprint Interface asset path (/Game/Interfaces/BPI_Interactable) or a native interface class path or name."
         },
         "interpolation": {
           "type": "string",
@@ -13608,6 +13612,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Build a Cast node pure (no exec pins, as in the editor's Convert to pure cast); default false."
         },
+        "remove": {
+          "type": "boolean",
+          "description": "Drop the interface instead (its function graphs go with it)."
+        },
         "renderOpacity": {
           "type": "number",
           "description": "Render opacity (0-1) applied to the widget and everything under it."
@@ -14003,6 +14011,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "inspect_graph",
             "add_function",
             "remove_function",
+            "implement_interface",
             "probe_handle",
             "edit_widget_blueprint",
             "preview_widget",
@@ -14230,6 +14239,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "With followExec: each node the exec wires reach, in walk order: nodeId, nodeTitle, via (the \"Title.Pin\" exec output that led to it) and inputs (each input pin as its literal value, or \"<- Title.Pin\" for the node feeding it)."
         },
+        "changed": {
+          "type": "boolean",
+          "description": "False when the Blueprint was already in the asked state."
+        },
         "channelCount": {
           "type": "number",
           "description": "Channels that received a key."
@@ -14365,13 +14378,25 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Custom event name."
         },
         "events": {
-          "type": "array",
-          "description": "Event graph entry points.",
-          "items": {
-            "type": "object",
-            "x-unreal-reflection-boundary": true,
-            "description": "Event entry: name, eventType."
-          }
+          "oneOf": [
+            {
+              "type": "array",
+              "description": "Event graph entry points.",
+              "items": {
+                "type": "object",
+                "x-unreal-reflection-boundary": true,
+                "description": "Event entry: name, eventType."
+              }
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Interface functions without outputs: events to handle in the event graph."
+            }
+          ],
+          "description": "Event graph entry points."
         },
         "exists": {
           "type": "boolean",
@@ -14401,13 +14426,25 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Key position in MovieScene tick-resolution frames."
         },
         "functionGraphs": {
-          "type": "array",
-          "description": "Names of function graphs.",
-          "items": {
-            "type": "object",
-            "x-unreal-reflection-boundary": true,
-            "description": "Graph entry."
-          }
+          "oneOf": [
+            {
+              "type": "array",
+              "description": "Names of function graphs.",
+              "items": {
+                "type": "object",
+                "x-unreal-reflection-boundary": true,
+                "description": "Graph entry."
+              }
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Interface functions with outputs: graphs to fill (edit_graph graphName)."
+            }
+          ],
+          "description": "Interface functions with outputs: graphs to fill (edit_graph graphName)."
         },
         "functionName": {
           "type": "string",
@@ -14474,6 +14511,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "instancesUpdated": {
           "type": "number",
           "description": "Placed actors (in loaded levels) that still held the old default and took the new value, as the Details panel propagates a class default; an actor that overrides the value keeps it. Save the level to keep them."
+        },
+        "interfaces": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Every interface the Blueprint implements now."
         },
         "isVisible": {
           "type": "boolean",

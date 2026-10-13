@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "b31961aa31bbaf7e",
-  "recordCount": 412,
+  "catalogRevision": "6860c42ad2d2f1ad",
+  "recordCount": 413,
   "records": [
     {
       "id": "animation_physics.analyze_animation",
@@ -15203,6 +15203,8 @@
           "camera shake class",
           "camera shake blueprint",
           "screen shake",
+          "make a blueprint interface",
+          "create an interface",
           "get or create blueprint",
           "idempotent create",
           "create if missing"
@@ -15247,7 +15249,7 @@
             },
             "blueprintType": {
               "type": "string",
-              "description": "Picks the parent class when parentClass is absent: Actor, Pawn, Character or FunctionLibrary."
+              "description": "Picks the parent class when parentClass is absent: Actor, Pawn, Character or FunctionLibrary; Interface makes a Blueprint Interface (its functions with add_function, taken on with implement_interface)."
             },
             "createIfMissing": {
               "type": "boolean",
@@ -15380,8 +15382,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "2cde3b92c2122d3f6cb9ad32fe85205a5ec70017743c873cd38909722901e5bb",
-        "content": "a13574e215c78312cc1ba1f0b947b0de5a8a6e0e26b0849b56960e9c6e3cf5d8"
+        "schema": "3b5b2f9168f97b345a91c9b63fd5080c189651f1d95b85f9207dd06db8401b6b",
+        "content": "19d2663da7058c3413c5547ce393013c35b3f3daf912e7680bdf565922edaf68"
       }
     },
     {
@@ -16455,6 +16457,7 @@
           "animation blueprint node",
           "math expression node",
           "blueprint math expression",
+          "add a math expression",
           "for each loop",
           "set timer",
           "random number",
@@ -17116,7 +17119,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "94c0ea494edc798f74362eae15b9e27322a94f458cbfd8da9421dbc147beaee0",
-        "content": "0bc5f615df5107fcd4d4731c8e98692372205c06107fe55aac489dc2982f11fd"
+        "content": "c0c7424cea54cf85c068c92cd3d6eb4673542e6080d4f23a2614814ee4887084"
       }
     },
     {
@@ -19483,6 +19486,156 @@
         "algorithm": "sha256",
         "schema": "b9aa334dfde18107695d6157528909655eec8b061466888a0145a924d7922a46",
         "content": "e213d44965e8163d1b60a43cd5712e447fd48a13bf97a783903f7604e64f0c94"
+      }
+    },
+    {
+      "id": "blueprint.implement_interface",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "manage_blueprint",
+          "action": "implement_interface"
+        }
+      ],
+      "discovery": {
+        "domain": "blueprint",
+        "family": "functions",
+        "topics": [
+          "implement_interface",
+          "implement interface",
+          "add interface",
+          "interface function"
+        ],
+        "summary": "Make a Blueprint implement an interface (a Blueprint Interface asset or a native interface class), or drop it with remove. The reply lists the interface functions that became graphs to fill and the ones that are events to handle.",
+        "whenToUse": [
+          "Actors must talk without casting to each other: make the interface (create with blueprintType Interface, its functions with add_function), then implement it on each class that answers."
+        ],
+        "whenNotToUse": [
+          "Only one known class is ever called: a cast node is simpler (edit_graph)."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "blueprintPath": {
+              "type": "string",
+              "description": "Canonical /Game Blueprint asset path."
+            },
+            "interfacePath": {
+              "type": "string",
+              "description": "The interface: a Blueprint Interface asset path (/Game/Interfaces/BPI_Interactable) or a native interface class path or name."
+            },
+            "remove": {
+              "type": "boolean",
+              "description": "Drop the interface instead (its function graphs go with it)."
+            }
+          },
+          "required": [
+            "action",
+            "blueprintPath",
+            "interfacePath"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "interfaces": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Every interface the Blueprint implements now."
+            },
+            "functionGraphs": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Interface functions with outputs: graphs to fill (edit_graph graphName)."
+            },
+            "events": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Interface functions without outputs: events to handle in the event graph."
+            },
+            "changed": {
+              "type": "boolean",
+              "description": "False when the Blueprint was already in the asked state."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Make a Blueprint implement an interface (a Blueprint Interface asset or a native interface class), or drop it with remove. The reply lists the interface functions that became graphs to fill and the ones that are events to handle.",
+          "input": {
+            "action": "implement_interface",
+            "blueprintPath": "/Game/Blueprints/BP_Door",
+            "interfacePath": "/Game/Interfaces/BPI_Interactable"
+          },
+          "output": {
+            "success": true
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [
+          "EditorScriptingUtilities"
+        ],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "write",
+        "idempotency": "idempotent",
+        "longRunning": false,
+        "safeToRetry": true
+      },
+      "policy": {
+        "requiredScope": "write",
+        "consent": "none",
+        "dataAccess": "project-write"
+      },
+      "cost": {
+        "latency": "interactive",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "manage_blueprint",
+        "dispatchAction": "implement_interface"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "44c385ccf5efebe7716d25024e769abe93d3ac268edfdd14015bdd85a2a92bcb",
+        "content": "f6493d4dfe542e19058588b20aadcdd3bf61c7ad6f3d50edfd1cca97a72f2215"
       }
     },
     {

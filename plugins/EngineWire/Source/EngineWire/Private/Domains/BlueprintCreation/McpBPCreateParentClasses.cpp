@@ -8,6 +8,7 @@
 #include "GameFramework/Character.h"
 #include "GameFramework/Pawn.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
+#include "UObject/Interface.h"
 #include "UObject/UObjectIterator.h"
 
 namespace McpBlueprintCreationHandlers {
@@ -84,6 +85,16 @@ UFactory *CreateBlueprintFactory(const FRequestContext &Context, FString &OutErr
       LowerType == TEXT("functionlibrary") ||
       LowerType == TEXT("function_library") ||
       LowerType == TEXT("function library");
+
+  // blueprintType Interface makes a Blueprint Interface: functions only, which other Blueprints implement.
+  if (LowerType == TEXT("interface") && Context.ParentClassSpec.IsEmpty()) {
+    UBlueprintFactory *Factory = NewObject<UBlueprintFactory>();
+    Factory->ParentClass = UInterface::StaticClass();
+#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 1
+    Factory->BlueprintType = BPTYPE_Interface;
+#endif
+    return Factory;
+  }
 
   UClass *ResolvedParent = ResolveExplicitParentClass(Context.ParentClassSpec);
   if (!ResolvedParent && bFunctionLibraryByParent) {

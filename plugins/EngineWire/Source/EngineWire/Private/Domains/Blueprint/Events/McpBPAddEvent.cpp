@@ -185,14 +185,17 @@ bool HandleBlueprintAddEvent(const FBlueprintActionContext &Context) {
           Context, BP, EventGraph, EventPosX, EventPosY, RegistryKey,
           ComponentName, DelegateEventName, FinalType, Params);
     }
-    if (bIsCustomEvent) {
+    // A name an implemented interface or the parent class already declares as an event is that event: a custom
+    // event under it collided with it, and the Blueprint stopped compiling ("more than one function").
+    const bool bInheritedEvent = bIsCustomEvent && !CustomName.IsEmpty() && McpFindOverridableEvent(BP, CustomName);
+    if (bIsCustomEvent && !bInheritedEvent) {
       return McpBlueprintAddEventCustom(Context, BP, EventGraph, EventPosX,
                                         EventPosY, RegistryKey, FinalType,
                                         CustomName, Params);
     }
     return McpBlueprintAddEventStandard(Context, BP, EventGraph, EventPosX,
-                                        EventPosY, RegistryKey, FinalType,
-                                        Params);
+                                        EventPosY, RegistryKey,
+                                        bInheritedEvent ? CustomName : FinalType, Params);
   }
 
   return false;
