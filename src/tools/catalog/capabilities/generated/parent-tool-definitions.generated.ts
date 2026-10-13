@@ -12841,7 +12841,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "controls",
             "respawn",
             "goal",
-            "spawner"
+            "spawner",
+            "dash"
           ],
           "description": "Which add behaviour variant to run."
         },
@@ -12967,6 +12968,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true,
           "description": "Tint (0-1 values) a border applies to its content."
         },
+        "cooldown": {
+          "type": "number",
+          "description": "Seconds before it can dash again (default 1)."
+        },
         "copyStyleFrom": {
           "type": "string",
           "description": "Name of another TextBlock in the same Widget Blueprint whose font, colour and shadow this one takes; the other fields in the call then apply on top."
@@ -12996,6 +13001,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "damage": {
           "type": "number",
           "description": "Damage on each touch (default 10; negative heals)."
+        },
+        "dashSpeed": {
+          "type": "number",
+          "description": "Launch speed along the facing, units per second (default 1500)."
         },
         "defaultValue": {
           "description": "Default value for the variable or property."
@@ -13248,7 +13257,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "inputActionPath": {
           "type": "string",
-          "description": "An Input Action to use instead of a new IA_Sprint next to the Blueprint."
+          "description": "An Input Action to use instead of the one the behaviour makes next to the Blueprint (IA_Sprint, IA_Shoot, IA_Dash)."
         },
         "inputAxisName": {
           "type": "string",
@@ -13331,7 +13340,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "key": {
           "type": "string",
-          "description": "Key held to sprint (default LeftShift; Gamepad_LeftThumbstick and other key names work)."
+          "description": "Localization key assigned to the text widget."
         },
         "keyLabel": {
           "type": "string",
@@ -13409,7 +13418,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "mappingContextPath": {
           "type": "string",
-          "description": "The Input Mapping Context the key goes in (the project's own); default the one the character already registers, else /Game/Input/IMC_MCP."
+          "description": "The Input Mapping Context its keys go in (the project's own); default the one the pawn already registers, else /Game/Input/IMC_MCP."
         },
         "materialPath": {
           "type": "string",

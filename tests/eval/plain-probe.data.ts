@@ -532,4 +532,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'enemy spawner', accepted: ['blueprint.add_behaviour'] },
   { query: 'spawn enemies every few seconds', accepted: ['blueprint.add_behaviour'] },
   { query: 'wave of enemies', accepted: ['blueprint.add_behaviour'] },
+  { query: 'dash', accepted: ['blueprint.add_behaviour'] },
+  { query: 'air dash', accepted: ['blueprint.add_behaviour'] },
+  { query: 'make the character dash', accepted: ['blueprint.add_behaviour'] },
 ];

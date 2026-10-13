@@ -1,6 +1,6 @@
 /**
  * Gameplay behaviours written into an Actor Blueprint from the plugin's recipe files
- * (McpBlueprintBehaviour::Author): health, damage on touch, pickups, sprint, shooting, chasing, player controls, respawning, a goal and a spawner. Folded
+ * (McpBlueprintBehaviour::Author): health, damage on touch, pickups, sprint, shooting, chasing, player controls, respawning, a goal, a spawner and a dash. Folded
  * into blueprint.add_behaviour (selector behaviour). Every one is all or nothing,
  * re-runnable (a second run replaces the first), compiled and saved.
  */
@@ -20,6 +20,11 @@ const BEHAVIOUR_OUTPUT = {
 } as const;
 
 const SOUND_PATH = { type: 'string', description: 'Sound asset played at the actor: where a pickup was collected, or a goal when the player reaches it.' } as const;
+
+// A folded family keeps one description per shared parameter, so the key-driven behaviours share these texts.
+const KEY = { type: 'string', description: 'The key that drives it: held to sprint (default LeftShift), pressed to shoot (default LeftMouseButton) or to dash (default Q). Any key name works: SpaceBar, Gamepad_RightTrigger, Gamepad_FaceButton_Right.' } as const;
+const INPUT_ACTION = { type: 'string', description: 'An Input Action to use instead of the one the behaviour makes next to the Blueprint (IA_Sprint, IA_Shoot, IA_Dash).' } as const;
+const MAPPING_CONTEXT = { type: 'string', description: 'The Input Mapping Context its keys go in (the project\'s own); default the one the pawn already registers, else /Game/Input/IMC_MCP.' } as const;
 
 const OVERLAP_NOTE = 'It fires on overlap, so the actor needs a component that overlaps pawns (a sphere or box with the Trigger or OverlapAllDynamic profile).';
 
@@ -107,9 +112,9 @@ export const BEHAVIOURS_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: {
       blueprintPath: P.blueprintPath,
       sprintSpeed: { type: 'number', description: 'MaxWalkSpeed while sprinting, cm/s (default 1000).' },
-      key: { type: 'string', description: 'Key held to sprint (default LeftShift; Gamepad_LeftThumbstick and other key names work).' },
-      inputActionPath: { type: 'string', description: 'An Input Action to use instead of a new IA_Sprint next to the Blueprint.' },
-      mappingContextPath: { type: 'string', description: 'The Input Mapping Context the key goes in (the project\'s own); default the one the character already registers, else /Game/Input/IMC_MCP.' },
+      key: KEY,
+      inputActionPath: INPUT_ACTION,
+      mappingContextPath: MAPPING_CONTEXT,
     },
     required: ['blueprintPath'],
     outputProps: BEHAVIOUR_OUTPUT,
@@ -134,9 +139,9 @@ export const BEHAVIOURS_RECORDS: readonly CapabilityRecordSource[] = [
       projectileClass: { type: 'string', description: 'The projectile it shoots: a Blueprint path (/Game/Weapons/BP_Fireball) or class path.' },
       projectileSpeed: { type: 'number', description: 'Launch speed, units per second (default 3000).' },
       fireRate: { type: 'number', description: 'Most shots a minute (default 300).' },
-      key: { type: 'string', description: 'Key pressed to shoot (default LeftMouseButton; SpaceBar, Gamepad_RightTrigger and other key names work).' },
-      inputActionPath: { type: 'string', description: 'An Input Action to use instead of a new IA_Shoot next to the Blueprint.' },
-      mappingContextPath: { type: 'string', description: 'The Input Mapping Context the key goes in (the project\'s own); default the one the pawn already registers, else /Game/Input/IMC_MCP.' },
+      key: KEY,
+      inputActionPath: INPUT_ACTION,
+      mappingContextPath: MAPPING_CONTEXT,
     },
     required: ['blueprintPath', 'projectileClass'],
     outputProps: BEHAVIOUR_OUTPUT,
@@ -184,7 +189,7 @@ export const BEHAVIOURS_RECORDS: readonly CapabilityRecordSource[] = [
       blueprintPath: P.blueprintPath,
       jumpKey: { type: 'string', description: 'Key that jumps (default SpaceBar).' },
       look: { type: 'boolean', description: 'Also turn the view with the mouse and the right stick (default true); false for a fixed camera.' },
-      mappingContextPath: { type: 'string', description: 'The Input Mapping Context the keys go in (the project\'s own); default the one the character already registers, else /Game/Input/IMC_MCP.' },
+      mappingContextPath: MAPPING_CONTEXT,
     },
     required: ['blueprintPath'],
     outputProps: BEHAVIOUR_OUTPUT,
@@ -266,5 +271,31 @@ export const BEHAVIOURS_RECORDS: readonly CapabilityRecordSource[] = [
     resources: 'medium',
     plugins: BP_PLUGINS,
     exampleInput: { action: 'add_spawner', blueprintPath: '/Game/Blueprints/BP_SlimeSpawner', spawnClass: '/Game/Enemies/BP_Slime', interval: 5, maxAlive: 4, radius: 300 },
+  }),
+  buildRecord({
+    id: 'blueprint.add_dash',
+    action: 'add_dash',
+    family: FAMILY,
+    domain: DOMAIN,
+    topics: ['dash', 'dash key', 'quick dash', 'dodge', 'air dash', 'burst of speed'],
+    summary: 'Give a Character a dash: each press of the key launches it dashSpeed along where it faces, with a small lift so the dash carries before the ground slows it, at most once every cooldown seconds. The key gets an Input Action and a mapping, and the context is registered when the character is possessed.',
+    whenToUse: ['A player Character needs a quick burst of movement on a key: a dash, a dodge, an air dash.'],
+    whenNotToUse: ['It must run faster while a key is held (use behaviour sprint).'],
+    inputProps: {
+      blueprintPath: P.blueprintPath,
+      dashSpeed: { type: 'number', description: 'Launch speed along the facing, units per second (default 1500).' },
+      cooldown: { type: 'number', description: 'Seconds before it can dash again (default 1).' },
+      key: KEY,
+      inputActionPath: INPUT_ACTION,
+      mappingContextPath: MAPPING_CONTEXT,
+    },
+    required: ['blueprintPath'],
+    outputProps: BEHAVIOUR_OUTPUT,
+    effect: 'write',
+    behavior: { idempotency: 'idempotent' },
+    latency: 'interactive',
+    resources: 'medium',
+    plugins: BP_PLUGINS,
+    exampleInput: { action: 'add_dash', blueprintPath: '/Game/Blueprints/BP_Player', dashSpeed: 1800, cooldown: 0.8, key: 'Q' },
   }),
 ];

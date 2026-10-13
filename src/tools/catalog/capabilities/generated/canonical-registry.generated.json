@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "9ce81859d1b976ab",
+  "catalogRevision": "1697e8fab1243f1a",
   "recordCount": 416,
   "records": [
     {
@@ -12794,7 +12794,8 @@
         "blueprint.add_controls",
         "blueprint.add_respawn",
         "blueprint.add_goal",
-        "blueprint.add_spawner"
+        "blueprint.add_spawner",
+        "blueprint.add_dash"
       ],
       "legacyIds": [
         {
@@ -12870,6 +12871,13 @@
           "folded": {
             "behaviour": "spawner"
           }
+        },
+        {
+          "tool": "manage_blueprint",
+          "action": "add_dash",
+          "folded": {
+            "behaviour": "dash"
+          }
         }
       ],
       "discovery": {
@@ -12938,9 +12946,15 @@
           "spawn enemies every few seconds",
           "spawn actors over time",
           "wave of enemies",
-          "keep spawning enemies"
+          "keep spawning enemies",
+          "dash",
+          "dash key",
+          "quick dash",
+          "dodge",
+          "air dash",
+          "burst of speed"
         ],
-        "summary": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player, walk, look and jump controls for a Character, a pawn that respawns when it falls or dies (with checkpoints), a goal that ends the level when the player reaches it, or a spawner that keeps spawning an actor class.",
+        "summary": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player, walk, look and jump controls for a Character, a pawn that respawns when it falls or dies (with checkpoints), a goal that ends the level when the player reaches it, a spawner that keeps spawning an actor class, or a dash key for a Character.",
         "whenToUse": [
           "behaviour=health: A player, enemy or breakable object must take damage and die; bind OnHealthChanged to a health bar.",
           "behaviour=damage_on_touch: Spikes, lava, an enemy body or a fire must hurt what touches it.",
@@ -12952,7 +12966,8 @@
           "behaviour=respawn: A player pawn must not be lost for good when it falls off the level or dies.",
           "behaviour=respawn: Checkpoints: tag a trigger actor (manage_interaction create_interactable trigger, or any actor that overlaps pawns) with checkpointTag; the pawn respawns where it stood when it touched it.",
           "behaviour=goal: A level needs an end: a finish line, an exit door, a flag the player reaches.",
-          "behaviour=spawner: Enemies, pickups or obstacles must keep appearing while the game runs."
+          "behaviour=spawner: Enemies, pickups or obstacles must keep appearing while the game runs.",
+          "behaviour=dash: A player Character needs a quick burst of movement on a key: a dash, a dodge, an air dash."
         ],
         "whenNotToUse": [
           "behaviour=health: The project uses the Gameplay Ability System for attributes (use manage_gas).",
@@ -12964,7 +12979,8 @@
           "behaviour=controls: Only one key or action must be added (use manage_networking configure_input for the asset and blueprint edit_graph for its node).",
           "behaviour=respawn: A pawn that should stay dead, such as an enemy: give it the health behaviour with destroyOnDeath instead.",
           "behaviour=goal: Something must happen on every touch, by any actor (use a trigger actor from manage_interaction create_interactable).",
-          "behaviour=spawner: Actors must be placed once, before play (use control_actor spawn)."
+          "behaviour=spawner: Actors must be placed once, before play (use control_actor spawn).",
+          "behaviour=dash: It must run faster while a key is held (use behaviour sprint)."
         ]
       },
       "schemas": {
@@ -13018,15 +13034,15 @@
             },
             "key": {
               "type": "string",
-              "description": "Key held to sprint (default LeftShift; Gamepad_LeftThumbstick and other key names work)."
+              "description": "The key that drives it: held to sprint (default LeftShift), pressed to shoot (default LeftMouseButton) or to dash (default Q). Any key name works: SpaceBar, Gamepad_RightTrigger, Gamepad_FaceButton_Right."
             },
             "inputActionPath": {
               "type": "string",
-              "description": "An Input Action to use instead of a new IA_Sprint next to the Blueprint."
+              "description": "An Input Action to use instead of the one the behaviour makes next to the Blueprint (IA_Sprint, IA_Shoot, IA_Dash)."
             },
             "mappingContextPath": {
               "type": "string",
-              "description": "The Input Mapping Context the key goes in (the project's own); default the one the character already registers, else /Game/Input/IMC_MCP."
+              "description": "The Input Mapping Context its keys go in (the project's own); default the one the pawn already registers, else /Game/Input/IMC_MCP."
             },
             "projectileClass": {
               "type": "string",
@@ -13092,6 +13108,14 @@
               "type": "number",
               "description": "How far across from the spawner an actor may appear, in units (default 0: on the spawner)."
             },
+            "dashSpeed": {
+              "type": "number",
+              "description": "Launch speed along the facing, units per second (default 1500)."
+            },
+            "cooldown": {
+              "type": "number",
+              "description": "Seconds before it can dash again (default 1)."
+            },
             "behaviour": {
               "type": "string",
               "enum": [
@@ -13104,7 +13128,8 @@
                 "controls",
                 "respawn",
                 "goal",
-                "spawner"
+                "spawner",
+                "dash"
               ],
               "description": "Which add behaviour variant to run."
             }
@@ -13177,7 +13202,7 @@
       },
       "examples": [
         {
-          "title": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player, walk, look and jump controls for a Character, a pawn that respawns when it falls or dies (with checkpoints), a goal that ends the level when the player reaches it, or a spawner that keeps spawning an actor class.",
+          "title": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player, walk, look and jump controls for a Character, a pawn that respawns when it falls or dies (with checkpoints), a goal that ends the level when the player reaches it, a spawner that keeps spawning an actor class, or a dash key for a Character.",
           "input": {
             "action": "add_behaviour",
             "blueprintPath": "/Game/Blueprints/BP_Enemy",
@@ -13228,7 +13253,8 @@
             "controls": "add_controls",
             "respawn": "add_respawn",
             "goal": "add_goal",
-            "spawner": "add_spawner"
+            "spawner": "add_spawner",
+            "dash": "add_dash"
           },
           "declaredBy": {
             "maxHealth": [
@@ -13261,16 +13287,19 @@
             ],
             "key": [
               "sprint",
-              "shoot"
+              "shoot",
+              "dash"
             ],
             "inputActionPath": [
               "sprint",
-              "shoot"
+              "shoot",
+              "dash"
             ],
             "mappingContextPath": [
               "sprint",
               "shoot",
-              "controls"
+              "controls",
+              "dash"
             ],
             "projectileClass": [
               "shoot"
@@ -13319,14 +13348,20 @@
             ],
             "radius": [
               "spawner"
+            ],
+            "dashSpeed": [
+              "dash"
+            ],
+            "cooldown": [
+              "dash"
             ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "82589f6f06b5fed018d506385079fc7461605791ebc03f9fa5ae82b5bc7f5fe4",
-        "content": "2fea93711633ccf9001b849020fba6e69f98e9f4933911edd59f40acf91ab24a"
+        "schema": "a1a2cd3878812f43c42c2183e1f2884d23da3690c52051c5291ae08fb9e62e3d",
+        "content": "47b7f55c0f9d2ad944398ad66eafd48d31085d503fe69fa4196381b37f7cbdb2"
       }
     },
     {
