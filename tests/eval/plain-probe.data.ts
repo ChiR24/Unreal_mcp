@@ -484,4 +484,12 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'key a timeline', accepted: ['blueprint.edit_timeline'] },
   { query: 'open a door smoothly', accepted: ['blueprint.edit_timeline'] },
   { query: 'animate over time', accepted: ['blueprint.edit_timeline'] },
+  { query: 'enemy that follows the player', accepted: ['manage_ai.edit_behavior_tree'] },
+  { query: 'enemy follows the player', accepted: ['manage_ai.edit_behavior_tree'] },
+  { query: 'collectible coin', accepted: ['blueprint.create'] },
+  { query: 'coin pickup', accepted: ['blueprint.create'] },
+  { query: 'kill zone', accepted: ['manage_level_structure.create_volume'] },
+  { query: 'damage zone', accepted: ['manage_level_structure.create_volume'] },
+  { query: 'double jump', accepted: ['manage_character.configure_character'] },
+  { query: 'rotate an object forever', accepted: ['control_actor.edit_component'] },
 ];

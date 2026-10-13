@@ -24,10 +24,10 @@ export const BLUEPRINT_LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'create',
     family: FAMILY,
     domain: DOMAIN,
-    topics: ['new blueprint', 'blueprint class', 'actor blueprint', 'make blueprint', 'blueprint asset', 'subclass', 'derive from', 'parent class', 'blueprint from parent class', 'child blueprint', 'camera shake class', 'camera shake blueprint', 'screen shake', 'make a blueprint interface', 'create an interface'],
+    topics: ['new blueprint', 'blueprint class', 'actor blueprint', 'make blueprint', 'blueprint asset', 'subclass', 'derive from', 'parent class', 'blueprint from parent class', 'child blueprint', 'camera shake class', 'camera shake blueprint', 'screen shake', 'make a blueprint interface', 'create an interface', 'pickup', 'collectible', 'coin'],
     aliases: ['blueprint.make_blueprint', 'blueprint.new_blueprint'],
     summary: 'Create a new Blueprint asset from a parent class.',
-    whenToUse: ['A new Blueprint of a known parent class is needed.'],
+    whenToUse: ['A new Blueprint of a known parent class is needed.', 'A pickup or hazard is needed; its parts come from edit_scs, its logic from build_graph.'],
     whenNotToUse: ['An existing Blueprint should be opened or modified instead.'],
     // blueprint-core-actions.ts:87 forwards `properties` into blueprint_create and
     // native ApplyBlueprintProperties writes each entry onto the generated CDO, so

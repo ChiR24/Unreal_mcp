@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "c1ddcdd8a09108b8",
+  "catalogRevision": "a90cfe8631acef88",
   "recordCount": 414,
   "records": [
     {
@@ -15205,6 +15205,9 @@
           "screen shake",
           "make a blueprint interface",
           "create an interface",
+          "pickup",
+          "collectible",
+          "coin",
           "get or create blueprint",
           "idempotent create",
           "create if missing"
@@ -15212,6 +15215,7 @@
         "summary": "Create a Blueprint asset from a parent class; optionally typed, or only if it does not exist yet.",
         "whenToUse": [
           "createMode=create: A new Blueprint of a known parent class is needed.",
+          "createMode=create: A pickup or hazard is needed; its parts come from edit_scs, its logic from build_graph.",
           "createMode=blueprint: A Blueprint must be created with a specific type hint.",
           "createMode=ensure: Idempotent setup requires a Blueprint to exist without failing on duplicates."
         ],
@@ -15383,7 +15387,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "3b5b2f9168f97b345a91c9b63fd5080c189651f1d95b85f9207dd06db8401b6b",
-        "content": "19d2663da7058c3413c5547ce393013c35b3f3daf912e7680bdf565922edaf68"
+        "content": "7d2f361e5755a716ea29e8b6e1b9f25c21fd3f6bc0bf6e82112cf2fc318297ed"
       }
     },
     {
@@ -33238,6 +33242,8 @@
           "dim the light",
           "rotating platform",
           "moving platform",
+          "spin an object",
+          "rotate an object forever",
           "light color",
           "light radius",
           "change light color",
@@ -33424,7 +33430,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "a7b8c3d8565d3f8b5e493d6d58d8a13d9719b3c6056efdbf3e8aa31f987fb8fd",
-        "content": "344e51e73de7de7f9311ab4f004a8e0350b91decc85ac1c1813751b252f1b571"
+        "content": "b3737f2419854c7e5e124054f6d93b7f0087dbf5f9083860ee2be4a16b557ac8"
       }
     },
     {
@@ -48465,7 +48471,8 @@
           "service",
           "bt node",
           "enemy chases player",
-          "chase the player"
+          "chase the player",
+          "enemy that follows the player"
         ],
         "summary": "Edit a Behavior Tree graph: add composite, task, decorator, service or generic nodes and subnodes, connect or break connections, configure or remove nodes.",
         "whenToUse": [
@@ -48797,7 +48804,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "38033c07cf28e73a9264761aa23843caad7e4fc03d924b5ec467bc1b04a23e98",
-        "content": "d522b47cb4a36d2fb7738b867f845b7db74d074b3c264ac0ac13930d94fee4f2"
+        "content": "37a26a6404ff38a91f899cb4bd914b4e616f698bf3849305f40f30061f1a7048"
       }
     },
     {
@@ -55622,7 +55629,8 @@
           "capsule",
           "character camera",
           "assign anim blueprint",
-          "make the player run faster"
+          "make the player run faster",
+          "double jump"
         ],
         "summary": "Configure a Character Blueprint: movement speeds, jump, crouch, rotation, capsule, mesh, camera, nav movement.",
         "whenToUse": [
@@ -56021,7 +56029,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "bcae2654a2de5b198c482ed9c60a5714ca0d0240bd522bffae79efd0967b8c74",
-        "content": "6f7688d79c2c25383b35946b817e4a2016c3be4dc6b32ec917b843e20628224d"
+        "content": "6793ee3534152016a1be9b4900da3cab16031f36582ceae8dc37a5cb9c5133a1"
       }
     },
     {
@@ -74061,7 +74069,9 @@
           "trigger capsule",
           "blocking volume",
           "kill z volume",
-          "post process volume"
+          "post process volume",
+          "kill zone",
+          "damage zone"
         ],
         "summary": "Create a volume actor of the chosen class in the level, or attach it to an actor when actorPath is given.",
         "whenToUse": [
@@ -74401,7 +74411,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "a32f86d0821ce12e07016e5d6ab88999f6828db65c2e31d817ad68db1eec7271",
-        "content": "a8378cb8c23b6be070f090b4003cb1588d8dd65f8d418307473e809a40cb6df6"
+        "content": "8a031acbd73ab50a9b533f59ada2e23e258c5dcf8130012e97bd86ae0804e9df"
       }
     },
     {
