@@ -57,6 +57,17 @@ describe('version source consistency', () => {
     expect(Version).toBe(Number(major) * 10000 + Number(minor) * 100 + Number(patch));
   });
 
+  it('keeps the .uplugin SupportedTargetPlatforms in step with its modules', () => {
+    // Without the top-level list UBT walks this editor-only plugin's dependencies when
+    // building for Android and stops at the first desktop-only one (Interchange).
+    const { SupportedTargetPlatforms, Modules } = JSON.parse(readText(UPLUGIN)) as {
+      SupportedTargetPlatforms?: string[];
+      Modules: Array<{ PlatformAllowList?: string[] }>;
+    };
+    expect(SupportedTargetPlatforms).toBeDefined();
+    for (const { PlatformAllowList } of Modules) expect(PlatformAllowList).toEqual(SupportedTargetPlatforms);
+  });
+
   it('bump-version.yml rewrites every source', () => {
     const workflow = readText('.github/workflows/bump-version.yml');
     for (const source of SOURCES) {
