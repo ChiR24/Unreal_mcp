@@ -15,6 +15,11 @@
   "IsExperimentalVersion": true,
   "EnabledByDefault": true,
   "SupportsUEBuildSystem": true,
+  "SupportedTargetPlatforms": [
+    "Win64",
+    "Mac",
+    "Linux"
+  ],
   "Modules": [
     {
       "Name": "EngineWire",
