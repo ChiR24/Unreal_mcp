@@ -255,6 +255,7 @@ bool FCombatActionContext::HandleDamageExecution() const
         Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
         Result->SetStringField(TEXT("hitboxType"), HitboxType);
         Result->SetNumberField(TEXT("damageMultiplier"), DamageMultiplier);
+        McpHandlerUtils::AddVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Hit detection configured."), Result);
         return true;
     }

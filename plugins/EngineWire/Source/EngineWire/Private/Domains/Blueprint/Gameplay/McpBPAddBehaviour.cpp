@@ -1,4 +1,4 @@
-// add_health, add_damage_on_touch, add_pickup, add_sprint and add_shoot (blueprint.add_behaviour): gameplay logic written into an
+// add_health, add_damage_on_touch, add_pickup, add_sprint, add_shoot and add_chase (blueprint.add_behaviour): gameplay logic written into an
 // Actor Blueprint from a recipe (Resources/Recipes/Gameplay and Character) through McpBlueprintBehaviour::Author, so
 // the Blueprint holds plain engine nodes. Each was a hand-built graph of ten to forty nodes and pins to get right.
 #include "Domains/Blueprint/McpBPActionContext.h"
@@ -6,7 +6,9 @@
 #include "Foundation/BridgeHelpers/Reflection/McpClassResolve.h"
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
 
+#include "AIController.h"
 #include "Engine/Blueprint.h"
+#include "Safety/McpSafeOperations.h"
 #include "GameFramework/Character.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Sound/SoundBase.h"
@@ -92,6 +94,42 @@ bool PlanShoot(const TSharedPtr<FJsonObject> &Payload, const UBlueprint *Bluepri
   return true;
 }
 
+// A pawn its AI controller moves toward the player (recipe Gameplay/Chase).
+bool PlanChase(const TSharedPtr<FJsonObject> &Payload, const UBlueprint *Blueprint, FBehaviourPlan &Plan, FString &OutError) {
+  const UClass *Parent = Blueprint->GeneratedClass ? Blueprint->GeneratedClass.Get() : Blueprint->ParentClass.Get();
+  const double Range = GetJsonNumberField(Payload, TEXT("chaseRange"), 2000.0);
+  const double Stop = GetJsonNumberField(Payload, TEXT("stopDistance"), 100.0);
+  OutError = !Parent || !Parent->IsChildOf(APawn::StaticClass()) ? FString(TEXT("Chasing needs a Pawn or Character Blueprint"))
+             : Range <= 0.0 || Stop < 0.0 ? FString(TEXT("chaseRange must be above 0 and stopDistance 0 or more")) : FString();
+  if (!OutError.IsEmpty()) {
+    return false;
+  }
+  Plan.Recipe = TEXT("Chase");
+  SetNumber(Plan, TEXT("ChaseRange"), Range);
+  SetNumber(Plan, TEXT("StopDistance"), Stop);
+  Plan.Values.Add(TEXT("UsePathfinding"), MakeShared<FJsonValueBoolean>(GetJsonBoolField(Payload, TEXT("usePathfinding"), true)));
+  return true;
+}
+
+// A chasing pawn moves only under an AI controller: placed or spawned, it gets one.
+void PossessByAI(UBlueprint *Blueprint, const TSharedPtr<FJsonObject> &Report) {
+  APawn *Pawn = Blueprint->GeneratedClass ? Cast<APawn>(Blueprint->GeneratedClass->GetDefaultObject()) : nullptr;
+  if (!Pawn) {
+    return;
+  }
+  if (!Pawn->AIControllerClass || !Pawn->AIControllerClass->IsChildOf(AAIController::StaticClass())) {
+    Pawn->AIControllerClass = AAIController::StaticClass();
+  }
+  if (Pawn->AutoPossessAI == EAutoPossessAI::Disabled || Pawn->AutoPossessAI == EAutoPossessAI::PlacedInWorld) {
+    Pawn->AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
+  }
+  Pawn->MarkPackageDirty();
+  Report->SetBoolField(TEXT("saved"), McpSafeAssetSave(Blueprint));
+  Report->SetStringField(TEXT("aiControllerClass"), Pawn->AIControllerClass->GetPathName());
+  Report->SetStringField(TEXT("autoPossessAI"),
+                         StaticEnum<EAutoPossessAI>()->GetNameStringByValue(static_cast<int64>(Pawn->AutoPossessAI)));
+}
+
 // The recipe and its values for the action, checked against what the Blueprint is; false with OutError otherwise.
 bool PlanBehaviour(const FString &Action, const TSharedPtr<FJsonObject> &Payload, const UBlueprint *Blueprint,
                    FBehaviourPlan &Plan, FString &OutError) {
@@ -120,6 +158,8 @@ bool PlanBehaviour(const FString &Action, const TSharedPtr<FJsonObject> &Payload
     OutError = Heal >= 0.0 ? FString() : FString(TEXT("heal must be 0 or more"));
   } else if (Action == TEXT("add_shoot")) {
     return PlanShoot(Payload, Blueprint, Plan, OutError);
+  } else if (Action == TEXT("add_chase")) {
+    return PlanChase(Payload, Blueprint, Plan, OutError);
   } else {
     const UClass *Parent = Blueprint->GeneratedClass ? Blueprint->GeneratedClass.Get() : Blueprint->ParentClass.Get();
     const double SprintSpeed = GetJsonNumberField(Payload, TEXT("sprintSpeed"), 1000.0);
@@ -140,7 +180,7 @@ bool PlanBehaviour(const FString &Action, const TSharedPtr<FJsonObject> &Payload
 bool HandleBlueprintAddBehaviour(const FBlueprintActionContext &Context) {
   MCP_BLUEPRINT_ACTION_LOCALS(Context);
   static const TCHAR *const Actions[] = {TEXT("add_health"), TEXT("add_damage_on_touch"), TEXT("add_pickup"),
-                                         TEXT("add_sprint"), TEXT("add_shoot")};
+                                         TEXT("add_sprint"), TEXT("add_shoot"), TEXT("add_chase")};
   const TCHAR *Matched = nullptr;
   for (const TCHAR *Each : Actions) {
     Matched = Matched ? Matched : (ActionMatchesPattern(Each) ? Each : nullptr);
@@ -175,6 +215,9 @@ bool HandleBlueprintAddBehaviour(const FBlueprintActionContext &Context) {
   if (Result.bApplied && Result.Report.IsValid()) {
     Result.Report->RemoveField(TEXT("results"));
     Result.Report->RemoveField(TEXT("nodeIds"));
+    if (FCString::Strcmp(Matched, TEXT("add_chase")) == 0) {
+      PossessByAI(Blueprint, Result.Report);
+    }
   }
   Bridge.SendAutomationResponse(RequestingSocket, RequestId, Result.bApplied, Result.Message, Result.Report,
                                 Result.ErrorCode);

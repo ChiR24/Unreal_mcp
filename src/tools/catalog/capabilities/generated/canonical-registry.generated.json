@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "727b143b7e0e12e7",
+  "catalogRevision": "6d97f4aceb8ccef7",
   "recordCount": 415,
   "records": [
     {
@@ -12789,7 +12789,8 @@
         "blueprint.add_damage_on_touch",
         "blueprint.add_pickup",
         "blueprint.add_sprint",
-        "blueprint.add_shoot"
+        "blueprint.add_shoot",
+        "blueprint.add_chase"
       ],
       "legacyIds": [
         {
@@ -12830,6 +12831,13 @@
           "folded": {
             "behaviour": "shoot"
           }
+        },
+        {
+          "tool": "manage_blueprint",
+          "action": "add_chase",
+          "folded": {
+            "behaviour": "chase"
+          }
         }
       ],
       "discovery": {
@@ -12862,22 +12870,28 @@
           "player shoots",
           "fire projectiles",
           "shoot fireballs",
-          "click to shoot"
+          "click to shoot",
+          "chase the player",
+          "enemy chases the player",
+          "enemy follows the player",
+          "follow the player"
         ],
-        "summary": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, or a key that shoots projectiles for a pawn.",
+        "summary": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, or a pawn that chases the player.",
         "whenToUse": [
           "behaviour=health: A player, enemy or breakable object must take damage and die; bind OnHealthChanged to a health bar.",
           "behaviour=damage_on_touch: Spikes, lava, an enemy body or a fire must hurt what touches it.",
           "behaviour=pickup: A health pack, coin, key or ammo box must be collected by walking into it.",
           "behaviour=sprint: The player must run faster while holding a key.",
-          "behaviour=shoot: The player (or any possessed pawn) must shoot projectiles with a key; a projectile from manage_combat create_combat_asset damages what it hits and never hits its shooter."
+          "behaviour=shoot: The player (or any possessed pawn) must shoot projectiles with a key; a projectile from manage_combat create_combat_asset damages what it hits and never hits its shooter.",
+          "behaviour=chase: An enemy or creature must run after the player; with usePathfinding (default) the level needs a Nav Mesh Bounds Volume (manage_ai configure_navigation), without it the pawn heads straight for the player."
         ],
         "whenNotToUse": [
           "behaviour=health: The project uses the Gameplay Ability System for attributes (use manage_gas).",
           "behaviour=damage_on_touch: A whole area must hurt or kill (use manage_level_structure create_volume with a pain causing or kill Z volume).",
           "behaviour=pickup: The item must go into an inventory system (use manage_inventory).",
           "behaviour=sprint: The walk speed itself must change (use manage_character configure_character walkSpeed).",
-          "behaviour=shoot: A weapon actor the pawn holds must do the shooting (use manage_combat configure_projectile for its Fire function)."
+          "behaviour=shoot: A weapon actor the pawn holds must do the shooting (use manage_combat configure_projectile for its Fire function).",
+          "behaviour=chase: The pawn needs patrols, senses or decisions beyond chasing (use manage_ai with a Behavior Tree or State Tree)."
         ]
       },
       "schemas": {
@@ -12953,6 +12967,18 @@
               "type": "number",
               "description": "Most shots a minute (default 300)."
             },
+            "chaseRange": {
+              "type": "number",
+              "description": "Distance within which it chases, in units (default 2000)."
+            },
+            "stopDistance": {
+              "type": "number",
+              "description": "How close it gets before it stops, in units (default 100)."
+            },
+            "usePathfinding": {
+              "type": "boolean",
+              "description": "Follow the navigation mesh (default true; the level needs a Nav Mesh Bounds Volume); false heads straight for the player."
+            },
             "behaviour": {
               "type": "string",
               "enum": [
@@ -12960,7 +12986,8 @@
                 "damage_on_touch",
                 "pickup",
                 "sprint",
-                "shoot"
+                "shoot",
+                "chase"
               ],
               "description": "Which add behaviour variant to run."
             }
@@ -13029,7 +13056,7 @@
       },
       "examples": [
         {
-          "title": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, or a key that shoots projectiles for a pawn.",
+          "title": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, or a pawn that chases the player.",
           "input": {
             "action": "add_behaviour",
             "blueprintPath": "/Game/Blueprints/BP_Enemy",
@@ -13075,7 +13102,8 @@
             "damage_on_touch": "add_damage_on_touch",
             "pickup": "add_pickup",
             "sprint": "add_sprint",
-            "shoot": "add_shoot"
+            "shoot": "add_shoot",
+            "chase": "add_chase"
           },
           "declaredBy": {
             "maxHealth": [
@@ -13125,14 +13153,23 @@
             ],
             "fireRate": [
               "shoot"
+            ],
+            "chaseRange": [
+              "chase"
+            ],
+            "stopDistance": [
+              "chase"
+            ],
+            "usePathfinding": [
+              "chase"
             ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "befe36adea4e36dc82b587fae1adf0a9f14cff0483497a66a9263aefaf106a20",
-        "content": "238881c353a6a920c690cb9810538e24e1bd605db004f73ef184c373ce198106"
+        "schema": "870d595797919e738d204714c451101bd9089dbdafd339518fda0ddd9e795638",
+        "content": "d1c181096de5741d30f6b2b3f798d0c70a81d9e41cbdf2d3f6bb89efc1600c05"
       }
     },
     {

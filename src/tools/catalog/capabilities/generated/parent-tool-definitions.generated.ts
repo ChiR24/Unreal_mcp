@@ -12832,7 +12832,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "damage_on_touch",
             "pickup",
             "sprint",
-            "shoot"
+            "shoot",
+            "chase"
           ],
           "description": "Which add behaviour variant to run."
         },
@@ -12891,6 +12892,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "category": {
           "type": "string",
           "description": "Category folder for the variable."
+        },
+        "chaseRange": {
+          "type": "number",
+          "description": "Distance within which it chases, in units (default 2000)."
         },
         "clipping": {
           "type": "string",
@@ -13846,6 +13851,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Value step size for slider."
         },
+        "stopDistance": {
+          "type": "number",
+          "description": "How close it gets before it stops, in units (default 100)."
+        },
         "stretch": {
           "type": "string",
           "enum": [
@@ -13982,6 +13991,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "useLastKeyframe": {
           "type": "boolean",
           "description": "End at the last key instead of at length."
+        },
+        "usePathfinding": {
+          "type": "boolean",
+          "description": "Follow the navigation mesh (default true; the level needs a Nav Mesh Bounds Volume); false heads straight for the player."
         },
         "userSpecifiedScale": {
           "type": "number",

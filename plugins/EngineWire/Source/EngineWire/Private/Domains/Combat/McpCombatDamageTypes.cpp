@@ -103,6 +103,7 @@ bool FCombatActionContext::HandleDamageTypes() const
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("damageTypePath"), Blueprint->GetPathName());
+        McpHandlerUtils::AddVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Damage type created successfully."), Result);
         return true;
     }

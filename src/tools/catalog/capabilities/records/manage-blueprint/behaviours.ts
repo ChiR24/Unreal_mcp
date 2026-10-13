@@ -1,6 +1,6 @@
 /**
  * Gameplay behaviours written into an Actor Blueprint from the plugin's recipe files
- * (McpBlueprintBehaviour::Author): health, damage on touch, pickups, sprint and shooting. Folded
+ * (McpBlueprintBehaviour::Author): health, damage on touch, pickups, sprint, shooting and chasing. Folded
  * into blueprint.add_behaviour (selector behaviour). Every one is all or nothing,
  * re-runnable (a second run replaces the first), compiled and saved.
  */
@@ -144,5 +144,29 @@ export const BEHAVIOURS_RECORDS: readonly CapabilityRecordSource[] = [
     resources: 'medium',
     plugins: BP_PLUGINS,
     exampleInput: { action: 'add_shoot', blueprintPath: '/Game/Blueprints/BP_Player', projectileClass: '/Game/Weapons/BP_Fireball', key: 'LeftMouseButton' },
+  }),
+  buildRecord({
+    id: 'blueprint.add_chase',
+    action: 'add_chase',
+    family: FAMILY,
+    domain: DOMAIN,
+    topics: ['chase the player', 'enemy chases the player', 'enemy follows the player', 'follow the player'],
+    summary: 'Make a pawn chase the player: every quarter second, while the player is within chaseRange, its AI controller moves it toward the player and stops stopDistance away; out of range it stops. The pawn is set to be possessed by an AI controller when placed or spawned.',
+    whenToUse: ['An enemy or creature must run after the player; with usePathfinding (default) the level needs a Nav Mesh Bounds Volume (manage_ai configure_navigation), without it the pawn heads straight for the player.'],
+    whenNotToUse: ['The pawn needs patrols, senses or decisions beyond chasing (use manage_ai with a Behavior Tree or State Tree).'],
+    inputProps: {
+      blueprintPath: P.blueprintPath,
+      chaseRange: { type: 'number', description: 'Distance within which it chases, in units (default 2000).' },
+      stopDistance: { type: 'number', description: 'How close it gets before it stops, in units (default 100).' },
+      usePathfinding: { type: 'boolean', description: 'Follow the navigation mesh (default true; the level needs a Nav Mesh Bounds Volume); false heads straight for the player.' },
+    },
+    required: ['blueprintPath'],
+    outputProps: BEHAVIOUR_OUTPUT,
+    effect: 'write',
+    behavior: { idempotency: 'idempotent' },
+    latency: 'interactive',
+    resources: 'medium',
+    plugins: BP_PLUGINS,
+    exampleInput: { action: 'add_chase', blueprintPath: '/Game/Blueprints/BP_Enemy', chaseRange: 1500, stopDistance: 120 },
   }),
 ];

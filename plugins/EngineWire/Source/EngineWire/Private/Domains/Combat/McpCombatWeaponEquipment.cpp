@@ -113,6 +113,7 @@ bool FCombatActionContext::HandleWeaponEquipment() const
         }
         Result->SetArrayField(TEXT("componentsCreated"), ComponentsJsonArray);
 
+        McpHandlerUtils::AddVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Attachment system configured with SceneComponent attach points."), Result);
         return true;
     }

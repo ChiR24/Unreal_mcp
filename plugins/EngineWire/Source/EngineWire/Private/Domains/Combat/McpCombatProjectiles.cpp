@@ -195,6 +195,7 @@ bool FCombatActionContext::HandleProjectileActions() const
         Result->SetNumberField(TEXT("collisionRadius"), GetJsonNumberField(Payload, TEXT("collisionRadius"), 5.0));
         Result->SetBoolField(TEXT("bounceEnabled"), GetJsonBoolField(Payload, TEXT("bounceEnabled"), false));
         Result->SetNumberField(TEXT("bounceVelocityRatio"), GetJsonNumberField(Payload, TEXT("bounceVelocityRatio"), 0.6));
+        McpHandlerUtils::AddVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Projectile collision configured."), Result);
         return true;
     }
@@ -235,6 +236,7 @@ bool FCombatActionContext::HandleProjectileActions() const
 
         Result->SetBoolField(TEXT("homingEnabled"), GetJsonBoolField(Payload, TEXT("homingEnabled"), true));
         Result->SetNumberField(TEXT("homingAcceleration"), GetJsonNumberField(Payload, TEXT("homingAcceleration"), 20000.0));
+        McpHandlerUtils::AddVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Projectile homing configured."), Result);
         return true;
     }
