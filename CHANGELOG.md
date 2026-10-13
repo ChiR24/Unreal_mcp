@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The HTTP door takes capability IDs as the stdio door does**: `describe` takes `capability` (alone or with `param`), which its tool schema now lists, and execute and describe resolve `asset`, `material`, `blueprint`, `sequence` and the other namespaces to the parent tool that owns them. `describe {capability}` answered with the parent tool list, and a call built from a search row's `asset.list` (`tool: "asset"`) was refused UNKNOWN_TOOL over HTTP.
 - **A spawn batch of more than 20 items lists only what needs a look**: `report` defaults to `failures` past 20 items once repeats are unrolled, and the receipt still names every actor (`report: "all"` brings every row back). 117 hung ceiling parts answered 45K characters, mostly rows saying they float as intended; the batch's text now says to tag such parts `mcp.placement.ok`.
 - **Transforms read as they were typed**: every location, rotation and scale a reply carries rounds to ten significant digits. A 90 degree yaw read 89.99999999999999 and a camera y 1710.5776600334307.
+- **A held key's reply says the key is still down, and names the pawn it drives**: `simulate_input` with `holdSeconds` answers at once and lets go later, but said "released after 1.00s" as if it had waited, so a position read straight after landed mid-hold. In Play In Editor the reply names `pawn`, to read once the hold is over, in place of `inputDiagnostics` (legacy axis bindings, and a key value of 0 for a key that was moving the pawn).
 
 </details>
 

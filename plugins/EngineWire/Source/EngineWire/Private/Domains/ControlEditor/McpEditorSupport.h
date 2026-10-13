@@ -76,8 +76,7 @@ void SimulateEditorInputForMcp(const FString &InputType, const FString &Key,
                                bool &bSuccess, bool &bRoutedToPIE,
                                bool &bHandledByPIE, bool &bHandledBySlate,
                                FString &Message);
-void AddSimulatedInputDiagnosticsForMcp(
-    const FString &Key, const TSharedPtr<FJsonObject> &Resp);
+void AddInputPawnForMcp(const TSharedPtr<FJsonObject> &Resp);
 // widget_list / widget_click: drive the PIE session's live UMG by reflection
 // instead of the OS cursor. Fills Resp and returns whether the call succeeded.
 bool SimulateLiveWidgetInputForMcp(const FString &InputType,

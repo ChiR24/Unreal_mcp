@@ -5467,7 +5467,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "holdSeconds": {
           "type": "number",
-          "description": "Keep injecting inputAction, or keep a raw key_down/key_tap key pressed, for this many seconds of GAME time so the pawn actually travels (default 0: an action lasts one frame, a key_down stays down until key_up, a key_tap lets go after 0.1s). Game time, not wall time: under set_game_speed 0.05 a 2s hold still delivers 2s of in-game input, which takes 40s of real time. A key_up for the same action or key stops the hold early."
+          "description": "Keep injecting inputAction, or keep a raw key_down/key_tap key pressed, for this many seconds of GAME time so the pawn actually travels (default 0: an action lasts one frame, a key_down stays down until key_up, a key_tap lets go after 0.1s). Game time, not wall time: under set_game_speed 0.05 a 2s hold still delivers 2s of in-game input, which takes 40s of real time. A key_up for the same action or key stops the hold early. The reply comes back at once, while the key is still down: read the pawn after the hold, or press and watch in one call with control_actor sample_motion inputs."
         },
         "id": {
           "type": "integer",
@@ -6131,6 +6131,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "object",
           "x-unreal-reflection-boundary": true,
           "description": "Return value and out parameters, keyed by parameter name."
+        },
+        "pawn": {
+          "type": "string",
+          "description": "In PIE, the pawn the player controls, by the name actor calls take: read it (control_actor get_transform) once a hold is over to see what the input did."
         },
         "possessed": {
           "type": "string",

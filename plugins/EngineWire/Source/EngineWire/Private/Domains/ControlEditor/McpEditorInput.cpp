@@ -275,7 +275,8 @@ bool UEngineWireSubsystem::HandleControlEditorSimulateInput(
                               bSuccess, bRoutedToPIE, bHandledByPIE, bHandledBySlate, Message);
     if (bSuccess && bPress && HoldSeconds > 0.0) {
       ScheduleKeyReleaseForMcp(Key, HoldSeconds, Payload);
-      Message += FString::Printf(TEXT(", released after %.2fs"), HoldSeconds);
+      // The release is scheduled, not waited for: this reply leaves with the key still down.
+      Message += FString::Printf(TEXT(", released %.2fs from now (this reply does not wait for it)"), HoldSeconds);
     }
   }
 
@@ -296,7 +297,7 @@ bool UEngineWireSubsystem::HandleControlEditorSimulateInput(
                              "game only if a mapping context maps it."),
                         *ActionPath));
   }
-  AddSimulatedInputDiagnosticsForMcp(Key, Resp);
+  AddInputPawnForMcp(Resp);
 
   if (bSuccess) {
     SendAutomationResponse(Socket, RequestId, true, Message, Resp, FString());

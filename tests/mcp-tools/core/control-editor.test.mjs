@@ -27,6 +27,8 @@ const testCases = [
   { scenario: 'ACTION: set_view_target', toolName: 'control_editor', arguments: { action: 'set_view_target', actorName: FOCUS_ACTOR, blendTime: 0 }, expected: 'success' },
   { scenario: 'ACTION: set_game_view_target objectPath', toolName: 'control_editor', arguments: { action: 'set_game_view_target', objectPath: FOCUS_ACTOR, blendTime: 0.1 }, expected: 'success' },
   { scenario: 'ACTION: possess', toolName: 'control_editor', arguments: { action: 'possess', actorName: PIE_PAWN }, expected: 'success|NOT_IN_PIE' },
+  // The reply leaves while a held key is still down, so it names the pawn to read once the key is released.
+  { scenario: 'ACTION: simulate_input in PIE names the pawn the key drives', toolName: 'control_editor', arguments: { action: 'simulate_input', type: 'key_tap', key: 'W' }, expected: 'success', assertions: [{ path: 'structuredContent.result.pawn', equals: PIE_PAWN, label: 'the possessed pawn is named' }] },
   // The game draws its view target's camera until the player is ejected: there is no free camera to move, and the refusal names the fix.
   { scenario: 'ERROR: set_camera while the player is not ejected', toolName: 'control_editor', arguments: { action: 'set_camera', location: cameraLocation, rotation: cameraRotation }, expected: 'error|PIE_VIEW_NOT_EJECTED' },
   { scenario: 'ERROR: screenshot from a camera while the player is not ejected', toolName: 'control_editor', arguments: { action: 'screenshot', mode: 'editor_viewport', resolution: '320x180', location: cameraLocation, rotation: cameraRotation }, expected: 'error|PIE_VIEW_NOT_EJECTED' },

@@ -58,6 +58,7 @@ export const INPUT_RECORDS: readonly CapabilityRecordSource[] = [
       },
       widget: { type: 'string', description: 'widget_click: the widget that was driven, as Owner.Name.' },
       widgetType: { type: 'string', description: 'widget_click: the driven widget\'s class (Button, CheckBox, Slider).' },
+      pawn: { type: 'string', description: 'In PIE, the pawn the player controls, by the name actor calls take: read it (control_actor get_transform) once a hold is over to see what the input did.' },
     },
     effect: 'write',
    

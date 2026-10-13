@@ -89,6 +89,7 @@ bool HandleBlueprintAddControls(const FBlueprintActionContext &Context) {
   const McpBlueprintBehaviour::FSnapshot Before = McpBlueprintBehaviour::TakeSnapshot(Blueprint);
   FString ContextPath = GetJsonStringField(LocalPayload, TEXT("mappingContextPath"));
   TSharedPtr<FJsonObject> Report;
+  double PreviousRemoved = 0; // a re-run's nodes of all three parts, not the last part's alone
   struct FPart { const TCHAR *Recipe; FString Action; FString Key; };
   for (const FPart &Part : {FPart{TEXT("Jump"), FString(), GetJsonStringField(LocalPayload, TEXT("jumpKey"), TEXT("SpaceBar"))},
                             FPart{TEXT("Move"), MoveAction, FString()}, FPart{TEXT("Look"), LookAction, FString()}}) {
@@ -113,6 +114,7 @@ bool HandleBlueprintAddControls(const FBlueprintActionContext &Context) {
       return true;
     }
     Report = Result.Report;
+    PreviousRemoved += GetJsonNumberField(Report, TEXT("previousRemoved"));
     const TSharedPtr<FJsonObject> *Input = nullptr;
     if (ContextPath.IsEmpty() && Report->TryGetObjectField(TEXT("input"), Input)) {
       ContextPath = GetJsonStringField(*Input, TEXT("mappingContextPath"));
@@ -128,8 +130,11 @@ bool HandleBlueprintAddControls(const FBlueprintActionContext &Context) {
       MapKey(Bridge, Id + TEXT("L"), ContextPath, MoveAction, TEXT("Gamepad_Left2D"), {}) &&
       (!bLook || (MapKey(Bridge, Id + TEXT("M"), ContextPath, LookAction, TEXT("Mouse2D"), {}) &&
                   MapKey(Bridge, Id + TEXT("R"), ContextPath, LookAction, TEXT("Gamepad_Right2D"), {})));
-  Report->RemoveField(TEXT("results"));
-  Report->RemoveField(TEXT("nodeIds"));
+  // The last part's own fields (its tag, input, step counts) would describe Look alone.
+  for (const TCHAR *Field : {TEXT("results"), TEXT("nodeIds"), TEXT("tag"), TEXT("input"), TEXT("stepCount"), TEXT("succeeded")}) {
+    Report->RemoveField(Field);
+  }
+  Report->SetNumberField(TEXT("previousRemoved"), PreviousRemoved);
   Report->SetStringField(TEXT("moveAction"), MoveAction);
   if (bLook) {
     Report->SetStringField(TEXT("lookAction"), LookAction);
