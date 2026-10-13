@@ -12833,7 +12833,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "pickup",
             "sprint",
             "shoot",
-            "chase"
+            "chase",
+            "controls"
           ],
           "description": "Which add behaviour variant to run."
         },
@@ -13297,6 +13298,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Rows the objective or quest tracker lists, top to bottom."
         },
+        "jumpKey": {
+          "type": "string",
+          "description": "Key that jumps (default SpaceBar)."
+        },
         "justification": {
           "type": "string",
           "description": "Text justification of a TextBlock or RichTextBlock: left, center or right. To centre the widget itself in its slot use set_alignment."
@@ -13366,6 +13371,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Relative location {x, y, z} for an SCS component template.",
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true
+        },
+        "look": {
+          "type": "boolean",
+          "description": "Also turn the view with the mouse and the right stick (default true); false for a fixed camera."
         },
         "loop": {
           "type": "boolean",

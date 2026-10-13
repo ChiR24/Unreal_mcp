@@ -180,6 +180,7 @@ bool HandleBlueprintRemoveFunction(const FBlueprintActionContext &Context);
 bool HandleBlueprintImplementInterface(const FBlueprintActionContext &Context);
 bool HandleBlueprintEditTimeline(const FBlueprintActionContext &Context);
 bool HandleBlueprintAddBehaviour(const FBlueprintActionContext &Context);
+bool HandleBlueprintAddControls(const FBlueprintActionContext &Context);
 bool HandleBlueprintCompile(const FBlueprintActionContext &Context);
 bool HandleBlueprintCreateExists(const FBlueprintActionContext &Context);
 bool HandleBlueprintGet(const FBlueprintActionContext &Context);

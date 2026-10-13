@@ -150,10 +150,19 @@ void TagNew(UBlueprint* Blueprint, const FSnapshot& Before, const FString& Tag, 
     {
         for (UEdGraphNode* Node : Graph->Nodes)
         {
-            if (Node && !Before.NodeGuids.Contains(Node->NodeGuid))
+            if (!Node || Before.NodeGuids.Contains(Node->NodeGuid))
             {
-                const FString* Shared = SharedTags.Find(Node->NodeGuid);
-                Node->NodeComment = Shared ? *Shared : OwnerTag(Tag, *Node);
+                continue;
+            }
+            // Several recipes may share one Before (one call, one rollback): a node an earlier
+            // recipe already tagged keeps that tag, or the last recipe would own them all.
+            if (const FString* Shared = SharedTags.Find(Node->NodeGuid))
+            {
+                Node->NodeComment = *Shared;
+            }
+            else if (!IsBehaviourOwned(*Node) && Node->NodeComment != HubTag && Node->NodeComment != InputContextTag)
+            {
+                Node->NodeComment = OwnerTag(Tag, *Node);
             }
         }
     }

@@ -1,6 +1,6 @@
 /**
  * Gameplay behaviours written into an Actor Blueprint from the plugin's recipe files
- * (McpBlueprintBehaviour::Author): health, damage on touch, pickups, sprint, shooting and chasing. Folded
+ * (McpBlueprintBehaviour::Author): health, damage on touch, pickups, sprint, shooting, chasing and player controls. Folded
  * into blueprint.add_behaviour (selector behaviour). Every one is all or nothing,
  * re-runnable (a second run replaces the first), compiled and saved.
  */
@@ -168,5 +168,29 @@ export const BEHAVIOURS_RECORDS: readonly CapabilityRecordSource[] = [
     resources: 'medium',
     plugins: BP_PLUGINS,
     exampleInput: { action: 'add_chase', blueprintPath: '/Game/Blueprints/BP_Enemy', chaseRange: 1500, stopDistance: 120 },
+  }),
+  buildRecord({
+    id: 'blueprint.add_controls',
+    action: 'add_controls',
+    family: FAMILY,
+    domain: DOMAIN,
+    topics: ['player controls', 'wasd movement', 'move with wasd', 'make the character move', 'character controls', 'mouse look', 'jump key', 'make the character jump', 'third person controls', 'first person controls', 'make the character playable'],
+    summary: 'Give a Character the controls a player steers it with: WASD or the left stick walk it relative to where the controller faces, the mouse or the right stick turn the view, and the jump key jumps (held longer, higher). It makes IA_Move and IA_Look (Axis2D) and IA_Jump next to the Blueprint, maps the keys and registers the context when the character is possessed.',
+    whenToUse: ['A Character made with manage_character create_character_blueprint (or any Character without input) must be playable: it has no input until this runs.'],
+    whenNotToUse: ['Only one key or action must be added (use manage_networking configure_input for the asset and blueprint edit_graph for its node).'],
+    inputProps: {
+      blueprintPath: P.blueprintPath,
+      jumpKey: { type: 'string', description: 'Key that jumps (default SpaceBar).' },
+      look: { type: 'boolean', description: 'Also turn the view with the mouse and the right stick (default true); false for a fixed camera.' },
+      mappingContextPath: { type: 'string', description: 'The Input Mapping Context the keys go in (the project\'s own); default the one the character already registers, else /Game/Input/IMC_MCP.' },
+    },
+    required: ['blueprintPath'],
+    outputProps: BEHAVIOUR_OUTPUT,
+    effect: 'write',
+    behavior: { idempotency: 'idempotent' },
+    latency: 'interactive',
+    resources: 'medium',
+    plugins: BP_PLUGINS,
+    exampleInput: { action: 'add_controls', blueprintPath: '/Game/Blueprints/BP_Player' },
   }),
 ];

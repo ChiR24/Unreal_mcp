@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "6d97f4aceb8ccef7",
+  "catalogRevision": "172702f7738bc534",
   "recordCount": 415,
   "records": [
     {
@@ -12790,7 +12790,8 @@
         "blueprint.add_pickup",
         "blueprint.add_sprint",
         "blueprint.add_shoot",
-        "blueprint.add_chase"
+        "blueprint.add_chase",
+        "blueprint.add_controls"
       ],
       "legacyIds": [
         {
@@ -12838,6 +12839,13 @@
           "folded": {
             "behaviour": "chase"
           }
+        },
+        {
+          "tool": "manage_blueprint",
+          "action": "add_controls",
+          "folded": {
+            "behaviour": "controls"
+          }
         }
       ],
       "discovery": {
@@ -12874,16 +12882,28 @@
           "chase the player",
           "enemy chases the player",
           "enemy follows the player",
-          "follow the player"
+          "follow the player",
+          "player controls",
+          "wasd movement",
+          "move with wasd",
+          "make the character move",
+          "character controls",
+          "mouse look",
+          "jump key",
+          "make the character jump",
+          "third person controls",
+          "first person controls",
+          "make the character playable"
         ],
-        "summary": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, or a pawn that chases the player.",
+        "summary": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player, or walk, look and jump controls for a Character.",
         "whenToUse": [
           "behaviour=health: A player, enemy or breakable object must take damage and die; bind OnHealthChanged to a health bar.",
           "behaviour=damage_on_touch: Spikes, lava, an enemy body or a fire must hurt what touches it.",
           "behaviour=pickup: A health pack, coin, key or ammo box must be collected by walking into it.",
           "behaviour=sprint: The player must run faster while holding a key.",
           "behaviour=shoot: The player (or any possessed pawn) must shoot projectiles with a key; a projectile from manage_combat create_combat_asset damages what it hits and never hits its shooter.",
-          "behaviour=chase: An enemy or creature must run after the player; with usePathfinding (default) the level needs a Nav Mesh Bounds Volume (manage_ai configure_navigation), without it the pawn heads straight for the player."
+          "behaviour=chase: An enemy or creature must run after the player; with usePathfinding (default) the level needs a Nav Mesh Bounds Volume (manage_ai configure_navigation), without it the pawn heads straight for the player.",
+          "behaviour=controls: A Character made with manage_character create_character_blueprint (or any Character without input) must be playable: it has no input until this runs."
         ],
         "whenNotToUse": [
           "behaviour=health: The project uses the Gameplay Ability System for attributes (use manage_gas).",
@@ -12891,7 +12911,8 @@
           "behaviour=pickup: The item must go into an inventory system (use manage_inventory).",
           "behaviour=sprint: The walk speed itself must change (use manage_character configure_character walkSpeed).",
           "behaviour=shoot: A weapon actor the pawn holds must do the shooting (use manage_combat configure_projectile for its Fire function).",
-          "behaviour=chase: The pawn needs patrols, senses or decisions beyond chasing (use manage_ai with a Behavior Tree or State Tree)."
+          "behaviour=chase: The pawn needs patrols, senses or decisions beyond chasing (use manage_ai with a Behavior Tree or State Tree).",
+          "behaviour=controls: Only one key or action must be added (use manage_networking configure_input for the asset and blueprint edit_graph for its node)."
         ]
       },
       "schemas": {
@@ -12979,6 +13000,14 @@
               "type": "boolean",
               "description": "Follow the navigation mesh (default true; the level needs a Nav Mesh Bounds Volume); false heads straight for the player."
             },
+            "jumpKey": {
+              "type": "string",
+              "description": "Key that jumps (default SpaceBar)."
+            },
+            "look": {
+              "type": "boolean",
+              "description": "Also turn the view with the mouse and the right stick (default true); false for a fixed camera."
+            },
             "behaviour": {
               "type": "string",
               "enum": [
@@ -12987,7 +13016,8 @@
                 "pickup",
                 "sprint",
                 "shoot",
-                "chase"
+                "chase",
+                "controls"
               ],
               "description": "Which add behaviour variant to run."
             }
@@ -13056,7 +13086,7 @@
       },
       "examples": [
         {
-          "title": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, or a pawn that chases the player.",
+          "title": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player, or walk, look and jump controls for a Character.",
           "input": {
             "action": "add_behaviour",
             "blueprintPath": "/Game/Blueprints/BP_Enemy",
@@ -13103,7 +13133,8 @@
             "pickup": "add_pickup",
             "sprint": "add_sprint",
             "shoot": "add_shoot",
-            "chase": "add_chase"
+            "chase": "add_chase",
+            "controls": "add_controls"
           },
           "declaredBy": {
             "maxHealth": [
@@ -13143,7 +13174,8 @@
             ],
             "mappingContextPath": [
               "sprint",
-              "shoot"
+              "shoot",
+              "controls"
             ],
             "projectileClass": [
               "shoot"
@@ -13162,14 +13194,20 @@
             ],
             "usePathfinding": [
               "chase"
+            ],
+            "jumpKey": [
+              "controls"
+            ],
+            "look": [
+              "controls"
             ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "870d595797919e738d204714c451101bd9089dbdafd339518fda0ddd9e795638",
-        "content": "d1c181096de5741d30f6b2b3f798d0c70a81d9e41cbdf2d3f6bb89efc1600c05"
+        "schema": "09b29e8399d19136d2fc55857db759b898a4671c498d9a9f59a751d1fe5638ed",
+        "content": "ae931dd859c99219708484c25a59bf5bbcf31c92e44041bf268aeaf3d4fd70aa"
       }
     },
     {

@@ -1,0 +1,16 @@
+{
+  "description": "Jumping for a Character: pressing the key jumps (Jump) and releasing it ends the jump early (StopJumping), so a tap jumps lower than a hold up to the character's JumpMaxHoldTime. The key gets its own Input Action and mapping, and the context is registered when the character is possessed.",
+  "tag": "Jump",
+  "placeholders": {
+    "Key": "Key pressed to jump, e.g. SpaceBar.",
+    "InputAction": "Input Action asset to use, or empty for IA_Jump next to the Blueprint.",
+    "MappingContext": "Input Mapping Context the key goes in, or empty for the one the character registers (else /Game/Input/IMC_MCP)."
+  },
+  "input": { "id": "jumpInput", "key": "{{Key}}", "inputActionPath": "{{InputAction}}", "mappingContextPath": "{{MappingContext}}" },
+  "eventGraph": [
+    { "edit": "create_node", "id": "jumpUp", "nodeType": "CallFunction", "memberName": "Jump", "memberClass": "/Script/Engine.Character" },
+    { "edit": "create_node", "id": "jumpDown", "nodeType": "CallFunction", "memberName": "StopJumping", "memberClass": "/Script/Engine.Character" },
+    { "edit": "connect_pins", "from": "$jumpInput.Started", "to": "$jumpUp.execute" },
+    { "edit": "connect_pins", "from": "$jumpInput.Completed", "to": "$jumpDown.execute" }
+  ]
+}

@@ -380,6 +380,11 @@ undoes your edits too. Author compiles a dirty Blueprint first so its checks see
 cannot undo them when it cannot load the Blueprint (PIE started, or the load failed); the message
 then says your edits were NOT undone and `rolledBack` is false.
 
+Several recipes in one call (`add_controls`: Jump, Move, Look): take ONE snapshot and pass it to every
+`Author`, so a failure in the last puts back the first two as well. Each recipe's own tag still
+holds: `TagNew` tags only nodes no earlier recipe tagged, so a re-run's replace removes each part's
+own nodes (Look's five, not all seventeen) and never the input registration.
+
 Not covered:
 - A replace that fails after removing the previous version cannot bring it back in memory: the
   Blueprint is left without either, unsaved, and the message says so (`previousRemoved` > 0).

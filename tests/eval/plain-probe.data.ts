@@ -510,4 +510,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'fire a weapon', accepted: ['manage_combat.configure_projectile'] },
   { query: 'player shoots', accepted: ['blueprint.add_behaviour'] },
   { query: 'click to shoot', accepted: ['blueprint.add_behaviour'] },
+  { query: 'make the character move with wasd', accepted: ['blueprint.add_behaviour'] },
+  { query: 'character controls', accepted: ['blueprint.add_behaviour'] },
+  { query: 'make my character playable', accepted: ['blueprint.add_behaviour'] },
 ];
