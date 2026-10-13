@@ -6580,7 +6580,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "items": {
                 "type": "string"
               },
-              "description": "Properties to read, each a name or dotted path: read on each matching actor itself (its Blueprint variables, such as bIsOpen, land in the actor properties) and on each reported component (in that component properties). A name found on none of them is listed in the actor propertiesNotFound."
+              "description": "Properties to read, each a name or dotted path: read on each matching actor itself (its Blueprint variables, such as bIsOpen, land in the actor properties) and on each reported component (in that component properties). A name found on none of the listed actors is listed once in propertiesNotFound."
             },
             {
               "type": "array",
@@ -6606,7 +6606,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "description": "Several properties of the same target in one call, in place of propertyName: each read as a single call would (dotted paths too, such as CharacterMovement.MaxWalkSpeed). Answered under properties; a name that does not resolve is listed under missingProperties with the reason, and the others still answer."
             }
           ],
-          "description": "Properties to read, each a name or dotted path: read on each matching actor itself (its Blueprint variables, such as bIsOpen, land in the actor properties) and on each reported component (in that component properties). A name found on none of them is listed in the actor propertiesNotFound."
+          "description": "Properties to read, each a name or dotted path: read on each matching actor itself (its Blueprint variables, such as bIsOpen, land in the actor properties) and on each reported component (in that component properties). A name found on none of the listed actors is listed once in propertiesNotFound."
         },
         "propertyPath": {
           "type": "string",
@@ -6832,7 +6832,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "additionalProperties": true,
                 "x-unreal-reflection-boundary": true
               },
-              "description": "Matching runtime actors, at most 25, each with its components and, under propertyNames, the values found: properties on the actor itself, properties on each component, and propertiesNotFound for names found on neither. Only when filter, actorName, componentNames or propertyNames selects them."
+              "description": "Matching runtime actors, at most 25, each with its components and, under propertyNames, the values found: properties on the actor itself and properties on each component. Only when filter, actorName, componentNames or propertyNames selects them."
             },
             {
               "type": "array",
@@ -7571,6 +7571,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             }
           ],
           "description": "With properties: each write as {propertyName, applied, value read back}."
+        },
+        "propertiesNotFound": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The propertyNames found on none of the listed actors or their components (a misspelt or missing variable)."
         },
         "propertiesTruncated": {
           "type": "boolean",
@@ -12824,7 +12831,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "health",
             "damage_on_touch",
             "pickup",
-            "sprint"
+            "sprint",
+            "shoot"
           ],
           "description": "Which add behaviour variant to run."
         },
@@ -13103,6 +13111,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "filter": {
           "type": "string",
           "description": "Only nodes whose title or name, or whose pin default value or default object path, contains this text (case-insensitive, spaces ignored), e.g. \"IA_Move\", \"Set bLocked\", or \"WBP_MainMenu\" for the Create Widget node whose Class pin holds /Game/UI/WBP_MainMenu.WBP_MainMenu_C; or whose input is wired from a variable or component of that name, so \"Arm\" lists every node that reads or moves the Arm component (find each writer before driving it from Tick)."
+        },
+        "fireRate": {
+          "type": "number",
+          "description": "Most shots a minute (default 300)."
         },
         "folder": {
           "type": "string",
@@ -13644,6 +13656,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "pressSoundPath": {
           "type": "string",
           "description": "Sound a Button plays when it is pressed (SoundCue, SoundWave or MetaSound path); an empty string clears it."
+        },
+        "projectileClass": {
+          "type": "string",
+          "description": "The projectile it shoots: a Blueprint path (/Game/Weapons/BP_Fireball) or class path."
+        },
+        "projectileSpeed": {
+          "type": "number",
+          "description": "Launch speed, units per second (default 3000)."
         },
         "properties": {
           "type": "object",

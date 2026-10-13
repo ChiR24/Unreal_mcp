@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "e28eea6b8601613e",
+  "catalogRevision": "727b143b7e0e12e7",
   "recordCount": 415,
   "records": [
     {
@@ -12788,7 +12788,8 @@
         "blueprint.add_health",
         "blueprint.add_damage_on_touch",
         "blueprint.add_pickup",
-        "blueprint.add_sprint"
+        "blueprint.add_sprint",
+        "blueprint.add_shoot"
       ],
       "legacyIds": [
         {
@@ -12822,6 +12823,13 @@
           "folded": {
             "behaviour": "sprint"
           }
+        },
+        {
+          "tool": "manage_blueprint",
+          "action": "add_shoot",
+          "folded": {
+            "behaviour": "shoot"
+          }
         }
       ],
       "discovery": {
@@ -12849,20 +12857,27 @@
           "sprint",
           "hold shift to sprint",
           "sprint key",
-          "faster while a key is held"
+          "faster while a key is held",
+          "shoot",
+          "player shoots",
+          "fire projectiles",
+          "shoot fireballs",
+          "click to shoot"
         ],
-        "summary": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), or a sprint key for a Character.",
+        "summary": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, or a key that shoots projectiles for a pawn.",
         "whenToUse": [
           "behaviour=health: A player, enemy or breakable object must take damage and die; bind OnHealthChanged to a health bar.",
           "behaviour=damage_on_touch: Spikes, lava, an enemy body or a fire must hurt what touches it.",
           "behaviour=pickup: A health pack, coin, key or ammo box must be collected by walking into it.",
-          "behaviour=sprint: The player must run faster while holding a key."
+          "behaviour=sprint: The player must run faster while holding a key.",
+          "behaviour=shoot: The player (or any possessed pawn) must shoot projectiles with a key; a projectile from manage_combat create_combat_asset damages what it hits and never hits its shooter."
         ],
         "whenNotToUse": [
           "behaviour=health: The project uses the Gameplay Ability System for attributes (use manage_gas).",
           "behaviour=damage_on_touch: A whole area must hurt or kill (use manage_level_structure create_volume with a pain causing or kill Z volume).",
           "behaviour=pickup: The item must go into an inventory system (use manage_inventory).",
-          "behaviour=sprint: The walk speed itself must change (use manage_character configure_character walkSpeed)."
+          "behaviour=sprint: The walk speed itself must change (use manage_character configure_character walkSpeed).",
+          "behaviour=shoot: A weapon actor the pawn holds must do the shooting (use manage_combat configure_projectile for its Fire function)."
         ]
       },
       "schemas": {
@@ -12926,13 +12941,26 @@
               "type": "string",
               "description": "The Input Mapping Context the key goes in (the project's own); default the one the character already registers, else /Game/Input/IMC_MCP."
             },
+            "projectileClass": {
+              "type": "string",
+              "description": "The projectile it shoots: a Blueprint path (/Game/Weapons/BP_Fireball) or class path."
+            },
+            "projectileSpeed": {
+              "type": "number",
+              "description": "Launch speed, units per second (default 3000)."
+            },
+            "fireRate": {
+              "type": "number",
+              "description": "Most shots a minute (default 300)."
+            },
             "behaviour": {
               "type": "string",
               "enum": [
                 "health",
                 "damage_on_touch",
                 "pickup",
-                "sprint"
+                "sprint",
+                "shoot"
               ],
               "description": "Which add behaviour variant to run."
             }
@@ -13001,7 +13029,7 @@
       },
       "examples": [
         {
-          "title": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), or a sprint key for a Character.",
+          "title": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, or a key that shoots projectiles for a pawn.",
           "input": {
             "action": "add_behaviour",
             "blueprintPath": "/Game/Blueprints/BP_Enemy",
@@ -13046,7 +13074,8 @@
             "health": "add_health",
             "damage_on_touch": "add_damage_on_touch",
             "pickup": "add_pickup",
-            "sprint": "add_sprint"
+            "sprint": "add_sprint",
+            "shoot": "add_shoot"
           },
           "declaredBy": {
             "maxHealth": [
@@ -13077,21 +13106,33 @@
               "sprint"
             ],
             "key": [
-              "sprint"
+              "sprint",
+              "shoot"
             ],
             "inputActionPath": [
-              "sprint"
+              "sprint",
+              "shoot"
             ],
             "mappingContextPath": [
-              "sprint"
+              "sprint",
+              "shoot"
+            ],
+            "projectileClass": [
+              "shoot"
+            ],
+            "projectileSpeed": [
+              "shoot"
+            ],
+            "fireRate": [
+              "shoot"
             ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "85bedb00b2a3fe5304122e9bf0d57318b913a622394cb0238ac255b78e4a4546",
-        "content": "5f5677a9302a887b709e4b700b976e2d3b36e2a6706c0a928b22365f7f0a86d5"
+        "schema": "befe36adea4e36dc82b587fae1adf0a9f14cff0483497a66a9263aefaf106a20",
+        "content": "238881c353a6a920c690cb9810538e24e1bd605db004f73ef184c373ce198106"
       }
     },
     {
@@ -46990,7 +47031,7 @@
               "items": {
                 "type": "string"
               },
-              "description": "Properties to read, each a name or dotted path: read on each matching actor itself (its Blueprint variables, such as bIsOpen, land in the actor properties) and on each reported component (in that component properties). A name found on none of them is listed in the actor propertiesNotFound."
+              "description": "Properties to read, each a name or dotted path: read on each matching actor itself (its Blueprint variables, such as bIsOpen, land in the actor properties) and on each reported component (in that component properties). A name found on none of the listed actors is listed once in propertiesNotFound."
             }
           },
           "required": [
@@ -47038,7 +47079,14 @@
                 "additionalProperties": true,
                 "x-unreal-reflection-boundary": true
               },
-              "description": "Matching runtime actors, at most 25, each with its components and, under propertyNames, the values found: properties on the actor itself, properties on each component, and propertiesNotFound for names found on neither. Only when filter, actorName, componentNames or propertyNames selects them."
+              "description": "Matching runtime actors, at most 25, each with its components and, under propertyNames, the values found: properties on the actor itself and properties on each component. Only when filter, actorName, componentNames or propertyNames selects them."
+            },
+            "propertiesNotFound": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "The propertyNames found on none of the listed actors or their components (a misspelt or missing variable)."
             },
             "count": {
               "type": "number",
@@ -47120,8 +47168,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "50277af8e330b9fd85528fed7db6a5fdb95052f6c23462a426b0cfceb695926e",
-        "content": "603cb699b00a3c354afbc8d3278be9f8d02cf8d96f6ad6b81154ac47bcb59de3"
+        "schema": "60f6b745a2afa9b114093261528f632ae1f0f08630aaec678e4d5c091f8bdb81",
+        "content": "c642e45cff4005fb4bbda3b547ec5d778fb07c75c2fac4b7f47b693c7560a0a4"
       }
     },
     {

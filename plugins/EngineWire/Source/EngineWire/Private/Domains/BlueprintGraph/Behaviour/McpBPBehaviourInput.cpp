@@ -84,9 +84,14 @@ bool PlanInput(UBlueprint* Blueprint, const TSharedPtr<FJsonObject>& Recipe, FPl
     UInputAction* Action = ActionArg.IsEmpty() ? nullptr : McpInputHandlers::LoadInputActionAsset(ActionArg, Normalized);
     UInputMappingContext* Context =
         ContextArg.IsEmpty() ? nullptr : McpInputHandlers::LoadInputMappingContextAsset(ContextArg, Normalized);
+    // Names only the path that is wrong ("'' is not an Input Action" blamed an action left out on purpose) and the fix.
     OutCode = TEXT("ASSET_NOT_FOUND");
-    OutError = FString::Printf(TEXT("input: '%s' is not an Input Action or '%s' is not an Input Mapping Context."),
-                               *ActionArg, *ContextArg);
+    OutError = !ActionArg.IsEmpty() && !Action
+        ? FString::Printf(TEXT("input: '%s' is not an Input Action; leave it out to make one, or create it with "
+                               "manage_networking configure_input create_action."), *ActionArg)
+        : FString::Printf(TEXT("input: '%s' is not an Input Mapping Context; leave it out to use the one the Blueprint "
+                               "registers (else %s), or create it with manage_networking configure_input "
+                               "create_mapping_context."), *ContextArg, DefaultInputContext);
     if ((!ActionArg.IsEmpty() && !Action) || (!ContextArg.IsEmpty() && !Context))
     {
         return false;

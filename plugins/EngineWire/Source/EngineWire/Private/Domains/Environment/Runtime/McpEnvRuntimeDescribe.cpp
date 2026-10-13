@@ -110,7 +110,8 @@ TSharedPtr<FJsonObject> McpDescribeRuntimeComponent(UActorComponent *Component, 
 
     return Obj;
 }
-TSharedPtr<FJsonObject> McpDescribeRuntimeActor(AActor *Actor, const TArray<FString> &ComponentNames, const TArray<FString> &PropertyNames)
+TSharedPtr<FJsonObject> McpDescribeRuntimeActor(AActor *Actor, const TArray<FString> &ComponentNames, const TArray<FString> &PropertyNames,
+                                                TSet<FString> *FoundProperties)
 {
     TSharedPtr<FJsonObject> Obj = McpHandlerUtils::CreateResultObject();
     if (!Actor)
@@ -127,9 +128,8 @@ TSharedPtr<FJsonObject> McpDescribeRuntimeActor(AActor *Actor, const TArray<FStr
     McpAddActorTags(Obj, Actor);
 
     // propertyNames were read on the components only, so an actor's own variables (a Blueprint's bIsOpen) answered
-    // with nothing. They are read on the actor too, and a name found nowhere is listed instead of left out.
-    TSet<FString> FoundProperties;
-    if (TSharedPtr<FJsonObject> Values = McpReadRuntimeNamedProperties(Actor, PropertyNames, &FoundProperties))
+    // with nothing. They are read on the actor too; the names found go in FoundProperties for the report.
+    if (TSharedPtr<FJsonObject> Values = McpReadRuntimeNamedProperties(Actor, PropertyNames, FoundProperties))
     {
         Obj->SetObjectField(TEXT("properties"), Values);
     }
@@ -164,7 +164,7 @@ TSharedPtr<FJsonObject> McpDescribeRuntimeActor(AActor *Actor, const TArray<FStr
                 ++OmittedComponents;
                 continue;
             }
-            TSharedPtr<FJsonObject> ComponentObj = McpDescribeRuntimeComponent(Component, PropertyNames, &FoundProperties);
+            TSharedPtr<FJsonObject> ComponentObj = McpDescribeRuntimeComponent(Component, PropertyNames, FoundProperties);
             if (!bNamedComponents)
             {
                 ComponentObj->RemoveField(TEXT("transform"));
@@ -177,18 +177,6 @@ TSharedPtr<FJsonObject> McpDescribeRuntimeActor(AActor *Actor, const TArray<FStr
     if (OmittedComponents > 0)
     {
         Obj->SetNumberField(TEXT("componentsOmitted"), OmittedComponents);
-    }
-    TArray<TSharedPtr<FJsonValue>> NotFound;
-    for (const FString &PropertyName : PropertyNames)
-    {
-        if (!PropertyName.IsEmpty() && !FoundProperties.Contains(PropertyName))
-        {
-            NotFound.Add(MakeShared<FJsonValueString>(PropertyName));
-        }
-    }
-    if (NotFound.Num() > 0)
-    {
-        Obj->SetArrayField(TEXT("propertiesNotFound"), NotFound);
     }
     return Obj;
 }

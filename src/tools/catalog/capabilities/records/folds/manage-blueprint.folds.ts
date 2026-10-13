@@ -53,9 +53,9 @@ export const MANAGE_BLUEPRINT_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'add_behaviour', selector: 'behaviour',
-    summary: 'Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), or a sprint key for a Character.',
+    summary: 'Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, or a key that shoots projectiles for a pawn.',
     topics: ['gameplay behaviour', 'add behaviour', 'gameplay logic'],
-    members: { health: 'add_health', damage_on_touch: 'add_damage_on_touch', pickup: 'add_pickup', sprint: 'add_sprint' },
+    members: { health: 'add_health', damage_on_touch: 'add_damage_on_touch', pickup: 'add_pickup', sprint: 'add_sprint', shoot: 'add_shoot' },
   },
   {
     primary: 'remove_function', selector: 'kind',

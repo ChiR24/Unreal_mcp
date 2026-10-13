@@ -1,6 +1,6 @@
 /**
  * Gameplay behaviours written into an Actor Blueprint from the plugin's recipe files
- * (McpBlueprintBehaviour::Author): health, damage on touch, pickups and sprint. Folded
+ * (McpBlueprintBehaviour::Author): health, damage on touch, pickups, sprint and shooting. Folded
  * into blueprint.add_behaviour (selector behaviour). Every one is all or nothing,
  * re-runnable (a second run replaces the first), compiled and saved.
  */
@@ -117,5 +117,32 @@ export const BEHAVIOURS_RECORDS: readonly CapabilityRecordSource[] = [
     resources: 'medium',
     plugins: BP_PLUGINS,
     exampleInput: { action: 'add_sprint', blueprintPath: '/Game/Blueprints/BP_Player', sprintSpeed: 900 },
+  }),
+  buildRecord({
+    id: 'blueprint.add_shoot',
+    action: 'add_shoot',
+    family: FAMILY,
+    domain: DOMAIN,
+    topics: ['shoot', 'player shoots', 'fire projectiles', 'shoot fireballs', 'click to shoot'],
+    summary: 'Give a pawn a key that shoots: each press spawns projectileClass in front of it, facing its way and owned by it, and launches it at projectileSpeed, at most fireRate shots a minute. The key gets an Input Action and a mapping, registered when the pawn is possessed.',
+    whenToUse: ['The player (or any possessed pawn) must shoot projectiles with a key; a projectile from manage_combat create_combat_asset damages what it hits and never hits its shooter.'],
+    whenNotToUse: ['A weapon actor the pawn holds must do the shooting (use manage_combat configure_projectile for its Fire function).'],
+    inputProps: {
+      blueprintPath: P.blueprintPath,
+      projectileClass: { type: 'string', description: 'The projectile it shoots: a Blueprint path (/Game/Weapons/BP_Fireball) or class path.' },
+      projectileSpeed: { type: 'number', description: 'Launch speed, units per second (default 3000).' },
+      fireRate: { type: 'number', description: 'Most shots a minute (default 300).' },
+      key: { type: 'string', description: 'Key pressed to shoot (default LeftMouseButton; SpaceBar, Gamepad_RightTrigger and other key names work).' },
+      inputActionPath: { type: 'string', description: 'An Input Action to use instead of a new IA_Shoot next to the Blueprint.' },
+      mappingContextPath: { type: 'string', description: 'The Input Mapping Context the key goes in (the project\'s own); default the one the pawn already registers, else /Game/Input/IMC_MCP.' },
+    },
+    required: ['blueprintPath', 'projectileClass'],
+    outputProps: BEHAVIOUR_OUTPUT,
+    effect: 'write',
+    behavior: { idempotency: 'idempotent' },
+    latency: 'interactive',
+    resources: 'medium',
+    plugins: BP_PLUGINS,
+    exampleInput: { action: 'add_shoot', blueprintPath: '/Game/Blueprints/BP_Player', projectileClass: '/Game/Weapons/BP_Fireball', key: 'LeftMouseButton' },
   }),
 ];

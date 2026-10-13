@@ -80,6 +80,7 @@ bool HandleInspectRuntimeReportAction(
             const bool bListActors = !ActorName.IsEmpty() || !Filter.IsEmpty() || ComponentNames.Num() > 0 || PropertyNames.Num() > 0;
             constexpr int32 MaxReportedActors = 25;
             TArray<TSharedPtr<FJsonValue>> ActorsArray;
+            TSet<FString> FoundProperties;
             int32 TotalActorCount = 0;
             int32 OmittedActorCount = 0;
             for (TActorIterator<AActor> It(World); It; ++It)
@@ -110,7 +111,7 @@ bool HandleInspectRuntimeReportAction(
                 {
                     if (ActorsArray.Num() < MaxReportedActors)
                     {
-                        ActorsArray.Add(MakeShared<FJsonValueObject>(McpDescribeRuntimeActor(Actor, ComponentNames, PropertyNames)));
+                        ActorsArray.Add(MakeShared<FJsonValueObject>(McpDescribeRuntimeActor(Actor, ComponentNames, PropertyNames, &FoundProperties)));
                     }
                     else
                     {
@@ -122,6 +123,19 @@ bool HandleInspectRuntimeReportAction(
             {
                 Report->SetArrayField(TEXT("actors"), ActorsArray);
                 Report->SetNumberField(TEXT("count"), ActorsArray.Num());
+                // Once for the report: listed on every actor, a broad filter repeated each name for each unrelated actor.
+                TArray<TSharedPtr<FJsonValue>> NotFound;
+                for (const FString &Name : PropertyNames)
+                {
+                    if (!Name.IsEmpty() && ActorsArray.Num() > 0 && !FoundProperties.Contains(Name))
+                    {
+                        NotFound.Add(MakeShared<FJsonValueString>(Name));
+                    }
+                }
+                if (NotFound.Num() > 0)
+                {
+                    Report->SetArrayField(TEXT("propertiesNotFound"), NotFound);
+                }
             }
             Report->SetNumberField(TEXT("totalActorCount"), TotalActorCount);
             if (!bIsPIE || OmittedActorCount > 0)

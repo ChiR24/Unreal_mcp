@@ -1,4 +1,4 @@
-// add_health, add_damage_on_touch, add_pickup and add_sprint (blueprint.add_behaviour): gameplay logic written into an
+// add_health, add_damage_on_touch, add_pickup, add_sprint and add_shoot (blueprint.add_behaviour): gameplay logic written into an
 // Actor Blueprint from a recipe (Resources/Recipes/Gameplay and Character) through McpBlueprintBehaviour::Author, so
 // the Blueprint holds plain engine nodes. Each was a hand-built graph of ten to forty nodes and pins to get right.
 #include "Domains/Blueprint/McpBPActionContext.h"
@@ -65,6 +65,33 @@ bool PlanCountingPickup(const TSharedPtr<FJsonObject> &Payload, FBehaviourPlan &
   return true;
 }
 
+// A pawn that shoots the projectileClass actor on a key press (recipe Character/Shoot).
+bool PlanShoot(const TSharedPtr<FJsonObject> &Payload, const UBlueprint *Blueprint, FBehaviourPlan &Plan, FString &OutError) {
+  const UClass *Parent = Blueprint->GeneratedClass ? Blueprint->GeneratedClass.Get() : Blueprint->ParentClass.Get();
+  const FString ClassText = GetJsonStringField(Payload, TEXT("projectileClass")).TrimStartAndEnd();
+  UClass *Fired = ResolveClassByName(ClassText);
+  const double Speed = GetJsonNumberField(Payload, TEXT("projectileSpeed"), 3000.0);
+  const double Rate = GetJsonNumberField(Payload, TEXT("fireRate"), 300.0);
+  OutError = !Parent || !Parent->IsChildOf(APawn::StaticClass()) ? FString(TEXT("Shooting needs a Pawn or Character Blueprint"))
+             : !Fired || !Fired->IsChildOf(AActor::StaticClass())
+                 ? FString::Printf(TEXT("projectileClass %s is not an actor class or Blueprint (make one with manage_combat "
+                                        "create_combat_asset kind projectile_blueprint)"), *ClassText)
+             : Speed <= 0.0 || Rate <= 0.0 ? FString(TEXT("projectileSpeed and fireRate must be above 0")) : FString();
+  if (!OutError.IsEmpty()) {
+    return false;
+  }
+  Plan.Domain = TEXT("Character");
+  Plan.Recipe = TEXT("Shoot");
+  SetString(Plan, TEXT("Key"), GetJsonStringField(Payload, TEXT("key"), TEXT("LeftMouseButton")));
+  SetString(Plan, TEXT("ProjectileType"), TEXT("Class:") + Fired->GetPathName());
+  SetString(Plan, TEXT("ProjectileClass"), Fired->GetPathName());
+  SetNumber(Plan, TEXT("ProjectileSpeed"), Speed);
+  SetNumber(Plan, TEXT("FireRate"), Rate);
+  SetString(Plan, TEXT("InputAction"), GetJsonStringField(Payload, TEXT("inputActionPath")));
+  SetString(Plan, TEXT("MappingContext"), GetJsonStringField(Payload, TEXT("mappingContextPath")));
+  return true;
+}
+
 // The recipe and its values for the action, checked against what the Blueprint is; false with OutError otherwise.
 bool PlanBehaviour(const FString &Action, const TSharedPtr<FJsonObject> &Payload, const UBlueprint *Blueprint,
                    FBehaviourPlan &Plan, FString &OutError) {
@@ -91,6 +118,8 @@ bool PlanBehaviour(const FString &Action, const TSharedPtr<FJsonObject> &Payload
     Plan.Recipe = TEXT("Pickup");
     SetNumber(Plan, TEXT("Heal"), Heal);
     OutError = Heal >= 0.0 ? FString() : FString(TEXT("heal must be 0 or more"));
+  } else if (Action == TEXT("add_shoot")) {
+    return PlanShoot(Payload, Blueprint, Plan, OutError);
   } else {
     const UClass *Parent = Blueprint->GeneratedClass ? Blueprint->GeneratedClass.Get() : Blueprint->ParentClass.Get();
     const double SprintSpeed = GetJsonNumberField(Payload, TEXT("sprintSpeed"), 1000.0);
@@ -111,7 +140,7 @@ bool PlanBehaviour(const FString &Action, const TSharedPtr<FJsonObject> &Payload
 bool HandleBlueprintAddBehaviour(const FBlueprintActionContext &Context) {
   MCP_BLUEPRINT_ACTION_LOCALS(Context);
   static const TCHAR *const Actions[] = {TEXT("add_health"), TEXT("add_damage_on_touch"), TEXT("add_pickup"),
-                                         TEXT("add_sprint")};
+                                         TEXT("add_sprint"), TEXT("add_shoot")};
   const TCHAR *Matched = nullptr;
   for (const TCHAR *Each : Actions) {
     Matched = Matched ? Matched : (ActionMatchesPattern(Each) ? Each : nullptr);

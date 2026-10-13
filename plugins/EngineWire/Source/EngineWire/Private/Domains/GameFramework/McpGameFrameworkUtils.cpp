@@ -4,29 +4,10 @@ namespace McpGameFrameworkHandlers
 {
 UClass* LoadClassFromPath(const FString& ClassPath)
 {
-    if (ClassPath.IsEmpty()) return nullptr;
-    // A short name ("GameModeBase", "BP_MyGameMode") resolves as every other class parameter
-    // does; the path lookups below answered NOT_FOUND for it.
-    if (!ClassPath.Contains(TEXT("/"))) return ResolveClassByName(ClassPath);
-
-    if (UClass* NativeClass = FindObject<UClass>(nullptr, *ClassPath))
-    {
-        return NativeClass;
-    }
-
-    FString BPPath = ClassPath;
-    if (!BPPath.EndsWith(TEXT("_C")))
-    {
-        BPPath += TEXT("_C");
-    }
-
-    if (UClass* BPClass = LoadClass<UObject>(nullptr, *BPPath))
-    {
-        return BPClass;
-    }
-
-    UBlueprint* Blueprint = LoadBlueprintFromPath(ClassPath);
-    return Blueprint ? Blueprint->GeneratedClass : nullptr;
+    // A short name, a class path or a Blueprint path (with or without _C), resolved without logging a miss: appending
+    // _C to a Blueprint asset path looked up '/Game/X/BP_Y_C', which never exists, and the reply carried "Failed to
+    // find object" although the class then resolved.
+    return ResolveClassByName(ClassPath);
 }
 
 bool SetClassProperty(UBlueprint* Blueprint, const FName& PropertyName, UClass* ClassToSet, FString& OutError)

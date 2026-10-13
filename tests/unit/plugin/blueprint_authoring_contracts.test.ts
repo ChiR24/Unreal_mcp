@@ -644,9 +644,12 @@ describe('graph edits that used to answer success while doing nothing useful', (
   });
 
   // create_framework_class documents short class names, but "GameModeBase" answered NOT_FOUND.
-  it('a framework class parent given by short name resolves like every other class parameter', () => {
+  // A short name, a class path or a Blueprint path all resolve as every other class parameter does; appending _C to a
+  // Blueprint asset path looked up a path that never exists and put "Failed to find object" in a working reply.
+  it('a framework class given by short name or Blueprint path resolves like every other class parameter', () => {
     const utilities = read('Domains', 'GameFramework', 'McpGameFrameworkUtils.cpp');
-    expect(utilities).toContain('if (!ClassPath.Contains(TEXT("/"))) return ResolveClassByName(ClassPath);');
+    expect(utilities).toContain('    return ResolveClassByName(ClassPath);');
+    expect(utilities).not.toContain('BPPath += TEXT("_C");');
   });
 });
 
