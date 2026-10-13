@@ -229,6 +229,29 @@ inline TUniquePtr<FMcpScopedEditorTransaction> McpBeginSpawnTransaction(const FS
                                                   EMcpMutationDurability::EditorStateOnly, TArray<UObject *>());
 }
 
+// SpawnActor for the spawn handlers, noting whether the actor began to spawn: one whose BeginPlay, or an overlap where
+// it appeared, destroys it at once (a pickup collected on the spot) leaves SpawnActor null exactly like a spawn that
+// never started, and was reported as a failed spawn.
+inline AActor *McpSpawnActorNoting(UWorld *World, UClass *Class, const FVector &Location, const FRotator &Rotation,
+                                   const FActorSpawnParameters &Params, bool &bOutStarted) {
+  bOutStarted = false;
+  const FDelegateHandle Seen = World->AddOnActorPreSpawnInitialization(
+      FOnActorSpawned::FDelegate::CreateLambda([&bOutStarted](AActor *) { bOutStarted = true; }));
+  AActor *Spawned = World->SpawnActor(Class, &Location, &Rotation, Params);
+  World->RemoveOnActorPreSpawnInitialization(Seen);
+  return Spawned;
+}
+
+inline FString McpSpawnFailureCode(bool bStarted) {
+  return bStarted ? TEXT("SPAWNED_THEN_DESTROYED") : TEXT("SPAWN_FAILED");
+}
+
+inline FString McpSpawnFailureMessage(bool bStarted, const TCHAR *NeverStarted) {
+  return bStarted ? FString(TEXT("The actor spawned and destroyed itself at once: its BeginPlay, or an overlap where "
+                                 "it was spawned (a pickup collected on the spot), ended it"))
+                  : FString(NeverStarted);
+}
+
 // sample_motion's timeline (McpActorMotionInputs.cpp).
 // A caller timing a jump over two calls lost 1-2 game seconds to its own delay
 // between them, so the timing has to live inside the run: keys pressed at game

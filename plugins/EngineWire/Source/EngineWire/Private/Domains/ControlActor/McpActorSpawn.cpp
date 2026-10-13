@@ -154,12 +154,7 @@ bool UEngineWireSubsystem::HandleControlActorSpawn(
   // Use direct world spawning for both PIE and editor worlds. EditorActorSubsystem
   // routes through viewport placement and hit-proxy rendering, which crashes
   // under NullRHI even when automation provides an explicit transform.
-  UWorld *TargetWorld = nullptr;
-  if (GEditor->PlayWorld) {
-    TargetWorld = GEditor->PlayWorld.Get();
-  } else {
-    TargetWorld = GEditor->GetEditorWorldContext().World();
-  }
+  UWorld *TargetWorld = GEditor->PlayWorld ? GEditor->PlayWorld.Get() : GEditor->GetEditorWorldContext().World();
 
   if (!TargetWorld) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("WORLD_NOT_FOUND"),
@@ -192,8 +187,8 @@ bool UEngineWireSubsystem::HandleControlActorSpawn(
   const TSharedPtr<FJsonObject> *Variables = nullptr;
   SpawnParams.bDeferConstruction = GEditor->PlayWorld && Payload->TryGetObjectField(TEXT("variables"), Variables) &&
                                    Variables && Variables->IsValid() && (*Variables)->Values.Num() > 0;
-  Spawned = TargetWorld->SpawnActor(ClassToSpawn, &Location, &Rotation,
-                                    SpawnParams);
+  bool bSpawnStarted = false;
+  Spawned = McpSpawnActorNoting(TargetWorld, ClassToSpawn, Location, Rotation, SpawnParams, bSpawnStarted);
   if (SpawnParams.bDeferConstruction && IsValid(Spawned)) {
     for (const TPair<FString, TSharedPtr<FJsonValue>> &Pair : (*Variables)->Values) {
       FString Unapplied; // reported by the batch's own pass
@@ -207,8 +202,8 @@ bool UEngineWireSubsystem::HandleControlActorSpawn(
   if (!IsValid(Spawned)) {
     // SpawnActor returned null / an invalid object — nothing was added to the
     // world, so there is nothing to roll back.
-    SendStandardErrorResponse(this, Socket, RequestId, TEXT("SPAWN_FAILED"),
-                              TEXT("Failed to spawn actor"));
+    SendStandardErrorResponse(this, Socket, RequestId, McpSpawnFailureCode(bSpawnStarted),
+                              McpSpawnFailureMessage(bSpawnStarted, TEXT("Failed to spawn actor")));
     return true;
   }
 

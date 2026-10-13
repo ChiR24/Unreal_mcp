@@ -118,6 +118,13 @@ bool ResolvePropertyTarget(UEngineWireSubsystem& Bridge, const FString& RequestI
           McpHandlerUtils::DescribeObjectNotFound(Out.ObjectPath), TEXT("OBJECT_NOT_FOUND"));
       return false;
     }
+    // A destroyed actor stays findable by path until garbage collection, and read as if it were still in the game.
+    const AActor* Gone = Cast<AActor>(Out.RootObject);
+    if (Gone && (!IsValid(Gone) || Gone->IsActorBeingDestroyed())) {
+      Bridge.SendAutomationError(Socket, RequestId, FString::Printf(TEXT("%s was destroyed; what it held went with it"),
+          *Out.ObjectPath), TEXT("ACTOR_DESTROYED"));
+      return false;
+    }
     if (!ResolvedPath.IsEmpty()) {
       Out.ObjectPath = ResolvedPath;
     }

@@ -82,8 +82,8 @@ bool UEngineWireSubsystem::HandleControlActorSpawnBlueprint(
     SpawnParams.OverrideLevel = TargetWorld->GetCurrentLevel();
     TargetWorld->Modify();
   }
-  Spawned = TargetWorld->SpawnActor(ResolvedClass, &Location, &Rotation,
-                                    SpawnParams);
+  bool bSpawnStarted = false;
+  Spawned = McpSpawnActorNoting(TargetWorld, ResolvedClass, Location, Rotation, SpawnParams, bSpawnStarted);
   if (Spawned) {
     Spawned->Modify();
     Spawned->SetActorLocationAndRotation(Location, Rotation, false, nullptr,
@@ -91,8 +91,8 @@ bool UEngineWireSubsystem::HandleControlActorSpawnBlueprint(
   }
 
   if (!Spawned) {
-    SendStandardErrorResponse(this, Socket, RequestId, TEXT("SPAWN_FAILED"),
-                              TEXT("Failed to spawn blueprint"), nullptr);
+    SendStandardErrorResponse(this, Socket, RequestId, McpSpawnFailureCode(bSpawnStarted),
+                              McpSpawnFailureMessage(bSpawnStarted, TEXT("Failed to spawn blueprint")), nullptr);
     return true;
   }
 

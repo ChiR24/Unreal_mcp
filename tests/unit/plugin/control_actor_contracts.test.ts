@@ -761,9 +761,9 @@ describe('every spawn is one undo step, "Spawn Actors", and the reply says so', 
 
       expect(opened, file).toBeGreaterThan(-1);
       expect(opened, `${file}: before the world is modified`).toBeLessThan(source.indexOf('TargetWorld->Modify();'));
-      expect(opened, `${file}: before the spawn`).toBeLessThan(source.indexOf('TargetWorld->SpawnActor('));
+      expect(opened, `${file}: before the spawn`).toBeLessThan(source.indexOf('McpSpawnActorNoting(TargetWorld'));
       expect(source.split(/\s+/u).join(' '), file).toContain(`if (Transaction) { Transaction->DescribeInto(${reply}); }`);
-      expect(source.indexOf(`Transaction->DescribeInto(${reply});`), `${file}: after the spawn`).toBeGreaterThan(source.indexOf('TargetWorld->SpawnActor('));
+      expect(source.indexOf(`Transaction->DescribeInto(${reply});`), `${file}: after the spawn`).toBeGreaterThan(source.indexOf('McpSpawnActorNoting(TargetWorld'));
     }
   });
 
