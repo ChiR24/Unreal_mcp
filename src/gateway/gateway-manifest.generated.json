@@ -9224,6 +9224,7 @@
         "add_function",
         "remove_function",
         "implement_interface",
+        "add_behaviour",
         "probe_handle",
         "edit_widget_blueprint",
         "preview_widget",
@@ -9246,6 +9247,7 @@
         "activeIndex",
         "alignment",
         "alwaysShowScrollbar",
+        "amount",
         "anchorMax",
         "anchorMin",
         "angle",
@@ -9254,6 +9256,7 @@
         "attachTo",
         "autoPlay",
         "autoWrap",
+        "behaviour",
         "bindingKind",
         "bindingSource",
         "blueprintPath",
@@ -9264,6 +9267,7 @@
         "buttons",
         "category",
         "clipping",
+        "collectorClass",
         "colorAndOpacity",
         "columnCount",
         "columns",
@@ -9278,9 +9282,11 @@
         "createIfMissing",
         "createMode",
         "customEventName",
+        "damage",
         "defaultValue",
         "deleteScope",
         "delta",
+        "destroyOnDeath",
         "duration",
         "edit",
         "elements",
@@ -9302,6 +9308,7 @@
         "fromPinName",
         "functionName",
         "graphName",
+        "heal",
         "heightOverride",
         "hintText",
         "hoverSoundPath",
@@ -9338,9 +9345,11 @@
         "location",
         "loop",
         "mapSize",
+        "mappingContextPath",
         "materialPath",
         "maxDesiredHeight",
         "maxDesiredWidth",
+        "maxHealth",
         "maxValue",
         "maxVisibleObjectives",
         "memberClass",
@@ -9416,8 +9425,10 @@
         "sizeY",
         "slotName",
         "slotPadding",
+        "soundPath",
         "sourceNode",
         "sourcePin",
+        "sprintSpeed",
         "stepSize",
         "stretch",
         "stretchDirection",
@@ -9477,6 +9488,10 @@
             "type": "boolean",
             "description": "Always show scrollbar."
           },
+          "amount": {
+            "type": "number",
+            "description": "With collectorClass: added each time (default 1)."
+          },
           "anchorMax": {
             "type": "object",
             "additionalProperties": true,
@@ -9512,6 +9527,16 @@
           "autoWrap": {
             "type": "boolean",
             "description": "Enable text auto-wrap."
+          },
+          "behaviour": {
+            "type": "string",
+            "enum": [
+              "health",
+              "damage_on_touch",
+              "pickup",
+              "sprint"
+            ],
+            "description": "Which add behaviour variant to run."
           },
           "bindingKind": {
             "type": "string",
@@ -9579,6 +9604,10 @@
               "OnDemand"
             ],
             "description": "Widget clipping mode."
+          },
+          "collectorClass": {
+            "type": "string",
+            "description": "Instead of heal: the class that collects it (a Blueprint path such as /Game/Blueprints/BP_Player), whose variableName goes up by amount."
           },
           "colorAndOpacity": {
             "type": "object",
@@ -9649,6 +9678,10 @@
             "type": "string",
             "description": "Custom event name to create."
           },
+          "damage": {
+            "type": "number",
+            "description": "Damage on each touch (default 10; negative heals)."
+          },
           "defaultValue": {
             "description": "Default value for the variable or property."
           },
@@ -9664,6 +9697,10 @@
           "delta": {
             "type": "number",
             "description": "Spinbox increment."
+          },
+          "destroyOnDeath": {
+            "type": "boolean",
+            "description": "Destroy the actor when its health reaches 0 (default false; OnDied fires either way)."
           },
           "duration": {
             "type": "number",
@@ -9815,6 +9852,10 @@
             "type": "string",
             "description": "Event graph page to add the event to; omitted, the main EventGraph."
           },
+          "heal": {
+            "type": "number",
+            "description": "Health given to the pawn that collects it; it reaches an actor with health (add_health) as negative damage."
+          },
           "heightOverride": {
             "type": "number",
             "description": "Height override for size box."
@@ -9880,7 +9921,7 @@
           },
           "inputActionPath": {
             "type": "string",
-            "description": "Enhanced Input action asset path for an EnhancedInputAction node."
+            "description": "An Input Action to use instead of a new IA_Sprint next to the Blueprint."
           },
           "inputAxisName": {
             "type": "string",
@@ -9955,7 +9996,7 @@
           },
           "key": {
             "type": "string",
-            "description": "Localization key assigned to the text widget."
+            "description": "Key held to sprint (default LeftShift; Gamepad_LeftThumbstick and other key names work)."
           },
           "keyLabel": {
             "type": "string",
@@ -10027,6 +10068,10 @@
             "type": "number",
             "description": "Minimap width and height in pixels (default 220)."
           },
+          "mappingContextPath": {
+            "type": "string",
+            "description": "The Input Mapping Context the key goes in (the project's own); default the one the character already registers, else /Game/Input/IMC_MCP."
+          },
           "materialPath": {
             "type": "string",
             "description": "Material asset path for a component."
@@ -10038,6 +10083,10 @@
           "maxDesiredWidth": {
             "type": "number",
             "description": "Maximum desired width of a size box."
+          },
+          "maxHealth": {
+            "type": "number",
+            "description": "Starting and largest health (default 100)."
           },
           "maxValue": {
             "type": "number",
@@ -10467,6 +10516,10 @@
             "x-unreal-reflection-boundary": true,
             "description": "Padding between uniform grid slots."
           },
+          "soundPath": {
+            "type": "string",
+            "description": "Sound asset played where the pickup was."
+          },
           "sourceNode": {
             "type": "string",
             "description": "Source node id accepted in place of fromNodeId."
@@ -10474,6 +10527,10 @@
           "sourcePin": {
             "type": "string",
             "description": "Source pin name on the originating node."
+          },
+          "sprintSpeed": {
+            "type": "number",
+            "description": "MaxWalkSpeed while sprinting, cm/s (default 1000)."
           },
           "stepSize": {
             "type": "number",
@@ -10755,6 +10812,7 @@
               "add_function",
               "remove_function",
               "implement_interface",
+              "add_behaviour",
               "probe_handle",
               "edit_widget_blueprint",
               "preview_widget",

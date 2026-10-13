@@ -1,6 +1,7 @@
 // manage_blueprint capability records (core blueprint + widget authoring),
 // folded by MANAGE_BLUEPRINT_FOLDS into MANAGE_BLUEPRINT_SOURCES.
 import type { CapabilityRecordSource } from '../../model.js';
+import { BEHAVIOURS_RECORDS } from './behaviours.js';
 import { BLUEPRINT_LIFECYCLE_RECORDS } from './blueprint-lifecycle.js';
 import { FUNCTIONS_EVENTS_RECORDS } from './functions-events.js';
 import { GRAPH_BATCH_RECORDS } from './graph-batch.js';
@@ -30,6 +31,7 @@ export const MANAGE_BLUEPRINT_UNFOLDED_SOURCES: readonly CapabilityRecordSource[
   ...GRAPH_PINS_RECORDS,
   ...GRAPH_BATCH_RECORDS,
   ...FUNCTIONS_EVENTS_RECORDS,
+  ...BEHAVIOURS_RECORDS,
   ...PROBE_RECORDS,
   ...WIDGET_LIFECYCLE_RECORDS,
   ...WIDGET_PANELS_RECORDS,

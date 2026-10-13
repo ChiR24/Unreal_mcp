@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "a90cfe8631acef88",
-  "recordCount": 414,
+  "catalogRevision": "44c256864724274a",
+  "recordCount": 415,
   "records": [
     {
       "id": "animation_physics.analyze_animation",
@@ -12783,6 +12783,318 @@
       }
     },
     {
+      "id": "blueprint.add_behaviour",
+      "aliases": [
+        "blueprint.add_health",
+        "blueprint.add_damage_on_touch",
+        "blueprint.add_pickup",
+        "blueprint.add_sprint"
+      ],
+      "legacyIds": [
+        {
+          "tool": "manage_blueprint",
+          "action": "add_behaviour"
+        },
+        {
+          "tool": "manage_blueprint",
+          "action": "add_health",
+          "folded": {
+            "behaviour": "health"
+          }
+        },
+        {
+          "tool": "manage_blueprint",
+          "action": "add_damage_on_touch",
+          "folded": {
+            "behaviour": "damage_on_touch"
+          }
+        },
+        {
+          "tool": "manage_blueprint",
+          "action": "add_pickup",
+          "folded": {
+            "behaviour": "pickup"
+          }
+        },
+        {
+          "tool": "manage_blueprint",
+          "action": "add_sprint",
+          "folded": {
+            "behaviour": "sprint"
+          }
+        }
+      ],
+      "discovery": {
+        "domain": "blueprint",
+        "family": "behaviour",
+        "topics": [
+          "add_behaviour",
+          "gameplay behaviour",
+          "add behaviour",
+          "gameplay logic",
+          "health",
+          "take damage",
+          "player health",
+          "enemy health",
+          "die when health is zero",
+          "damage on touch",
+          "hazard",
+          "spikes",
+          "pickup",
+          "health pickup",
+          "collectible",
+          "coin",
+          "collect coins",
+          "item pickup",
+          "sprint",
+          "hold shift to sprint",
+          "sprint key",
+          "faster while a key is held"
+        ],
+        "summary": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), or a sprint key for a Character.",
+        "whenToUse": [
+          "behaviour=health: A player, enemy or breakable object must take damage and die; bind OnHealthChanged to a health bar.",
+          "behaviour=damage_on_touch: Spikes, lava, an enemy body or a fire must hurt what touches it.",
+          "behaviour=pickup: A health pack, coin, key or ammo box must be collected by walking into it.",
+          "behaviour=sprint: The player must run faster while holding a key."
+        ],
+        "whenNotToUse": [
+          "behaviour=health: The project uses the Gameplay Ability System for attributes (use manage_gas).",
+          "behaviour=damage_on_touch: A whole area must hurt or kill (use manage_level_structure create_volume with a pain causing or kill Z volume).",
+          "behaviour=pickup: The item must go into an inventory system (use manage_inventory).",
+          "behaviour=sprint: The walk speed itself must change (use manage_character configure_character walkSpeed)."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "blueprintPath": {
+              "type": "string",
+              "description": "Canonical /Game Blueprint asset path."
+            },
+            "maxHealth": {
+              "type": "number",
+              "description": "Starting and largest health (default 100)."
+            },
+            "destroyOnDeath": {
+              "type": "boolean",
+              "description": "Destroy the actor when its health reaches 0 (default false; OnDied fires either way)."
+            },
+            "damage": {
+              "type": "number",
+              "description": "Damage on each touch (default 10; negative heals)."
+            },
+            "heal": {
+              "type": "number",
+              "description": "Health given to the pawn that collects it; it reaches an actor with health (add_health) as negative damage."
+            },
+            "collectorClass": {
+              "type": "string",
+              "description": "Instead of heal: the class that collects it (a Blueprint path such as /Game/Blueprints/BP_Player), whose variableName goes up by amount."
+            },
+            "variableName": {
+              "type": "string",
+              "description": "With collectorClass: the collector's Int or Float variable (Coins)."
+            },
+            "amount": {
+              "type": "number",
+              "description": "With collectorClass: added each time (default 1)."
+            },
+            "soundPath": {
+              "type": "string",
+              "description": "Sound asset played where the pickup was."
+            },
+            "sprintSpeed": {
+              "type": "number",
+              "description": "MaxWalkSpeed while sprinting, cm/s (default 1000)."
+            },
+            "key": {
+              "type": "string",
+              "description": "Key held to sprint (default LeftShift; Gamepad_LeftThumbstick and other key names work)."
+            },
+            "inputActionPath": {
+              "type": "string",
+              "description": "An Input Action to use instead of a new IA_Sprint next to the Blueprint."
+            },
+            "mappingContextPath": {
+              "type": "string",
+              "description": "The Input Mapping Context the key goes in (the project's own); default the one the character already registers, else /Game/Input/IMC_MCP."
+            },
+            "behaviour": {
+              "type": "string",
+              "enum": [
+                "health",
+                "damage_on_touch",
+                "pickup",
+                "sprint"
+              ],
+              "description": "Which add behaviour variant to run."
+            }
+          },
+          "required": [
+            "action",
+            "behaviour",
+            "blueprintPath"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "compiled": {
+              "type": "boolean",
+              "description": "The Blueprint compiled with the behaviour."
+            },
+            "saved": {
+              "type": "boolean",
+              "description": "The Blueprint was saved."
+            },
+            "variables": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "The variables it uses: {name, status added, redefaulted or kept}."
+            },
+            "functions": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Functions it added, which other logic can call."
+            },
+            "dispatchers": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Event dispatchers it added, which other logic can bind."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), or a sprint key for a Character.",
+          "input": {
+            "action": "add_behaviour",
+            "blueprintPath": "/Game/Blueprints/BP_Enemy",
+            "maxHealth": 50,
+            "destroyOnDeath": true,
+            "behaviour": "health"
+          },
+          "output": {
+            "success": true
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [
+          "EditorScriptingUtilities"
+        ],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "write",
+        "idempotency": "idempotent",
+        "longRunning": false,
+        "safeToRetry": true
+      },
+      "policy": {
+        "requiredScope": "write",
+        "consent": "none",
+        "dataAccess": "project-write"
+      },
+      "cost": {
+        "latency": "interactive",
+        "resources": "medium"
+      },
+      "routing": {
+        "parentTool": "manage_blueprint",
+        "dispatchAction": "add_health",
+        "dispatchBy": {
+          "param": "behaviour",
+          "actions": {
+            "health": "add_health",
+            "damage_on_touch": "add_damage_on_touch",
+            "pickup": "add_pickup",
+            "sprint": "add_sprint"
+          },
+          "declaredBy": {
+            "maxHealth": [
+              "health"
+            ],
+            "destroyOnDeath": [
+              "health"
+            ],
+            "damage": [
+              "damage_on_touch"
+            ],
+            "heal": [
+              "pickup"
+            ],
+            "collectorClass": [
+              "pickup"
+            ],
+            "variableName": [
+              "pickup"
+            ],
+            "amount": [
+              "pickup"
+            ],
+            "soundPath": [
+              "pickup"
+            ],
+            "sprintSpeed": [
+              "sprint"
+            ],
+            "key": [
+              "sprint"
+            ],
+            "inputActionPath": [
+              "sprint"
+            ],
+            "mappingContextPath": [
+              "sprint"
+            ]
+          }
+        }
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "85bedb00b2a3fe5304122e9bf0d57318b913a622394cb0238ac255b78e4a4546",
+        "content": "5f5677a9302a887b709e4b700b976e2d3b36e2a6706c0a928b22365f7f0a86d5"
+      }
+    },
+    {
       "id": "blueprint.add_content_widget",
       "aliases": [
         "blueprint.add_text_block",
@@ -15205,9 +15517,6 @@
           "screen shake",
           "make a blueprint interface",
           "create an interface",
-          "pickup",
-          "collectible",
-          "coin",
           "get or create blueprint",
           "idempotent create",
           "create if missing"
@@ -15215,7 +15524,7 @@
         "summary": "Create a Blueprint asset from a parent class; optionally typed, or only if it does not exist yet.",
         "whenToUse": [
           "createMode=create: A new Blueprint of a known parent class is needed.",
-          "createMode=create: A pickup or hazard is needed; its parts come from edit_scs, its logic from build_graph.",
+          "createMode=create: A pickup or hazard is needed; its parts come from edit_scs, its logic from add_behaviour.",
           "createMode=blueprint: A Blueprint must be created with a specific type hint.",
           "createMode=ensure: Idempotent setup requires a Blueprint to exist without failing on duplicates."
         ],
@@ -15387,7 +15696,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "3b5b2f9168f97b345a91c9b63fd5080c189651f1d95b85f9207dd06db8401b6b",
-        "content": "7d2f361e5755a716ea29e8b6e1b9f25c21fd3f6bc0bf6e82112cf2fc318297ed"
+        "content": "beaee51fadd95474c1d5a0ff6f7e4c625db858d17b95f82b084ef3906b04b01c"
       }
     },
     {

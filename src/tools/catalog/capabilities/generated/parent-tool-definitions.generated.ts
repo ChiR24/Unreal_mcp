@@ -12771,6 +12771,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Always show scrollbar."
         },
+        "amount": {
+          "type": "number",
+          "description": "With collectorClass: added each time (default 1)."
+        },
         "anchorMax": {
           "type": "object",
           "additionalProperties": true,
@@ -12806,6 +12810,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "autoWrap": {
           "type": "boolean",
           "description": "Enable text auto-wrap."
+        },
+        "behaviour": {
+          "type": "string",
+          "enum": [
+            "health",
+            "damage_on_touch",
+            "pickup",
+            "sprint"
+          ],
+          "description": "Which add behaviour variant to run."
         },
         "bindingKind": {
           "type": "string",
@@ -12873,6 +12887,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "OnDemand"
           ],
           "description": "Widget clipping mode."
+        },
+        "collectorClass": {
+          "type": "string",
+          "description": "Instead of heal: the class that collects it (a Blueprint path such as /Game/Blueprints/BP_Player), whose variableName goes up by amount."
         },
         "colorAndOpacity": {
           "type": "object",
@@ -12943,6 +12961,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Custom event name to create."
         },
+        "damage": {
+          "type": "number",
+          "description": "Damage on each touch (default 10; negative heals)."
+        },
         "defaultValue": {
           "description": "Default value for the variable or property."
         },
@@ -12958,6 +12980,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "delta": {
           "type": "number",
           "description": "Spinbox increment."
+        },
+        "destroyOnDeath": {
+          "type": "boolean",
+          "description": "Destroy the actor when its health reaches 0 (default false; OnDied fires either way)."
         },
         "duration": {
           "type": "number",
@@ -13109,6 +13135,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Event graph page to add the event to; omitted, the main EventGraph."
         },
+        "heal": {
+          "type": "number",
+          "description": "Health given to the pawn that collects it; it reaches an actor with health (add_health) as negative damage."
+        },
         "heightOverride": {
           "type": "number",
           "description": "Height override for size box."
@@ -13174,7 +13204,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "inputActionPath": {
           "type": "string",
-          "description": "Enhanced Input action asset path for an EnhancedInputAction node."
+          "description": "An Input Action to use instead of a new IA_Sprint next to the Blueprint."
         },
         "inputAxisName": {
           "type": "string",
@@ -13249,7 +13279,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "key": {
           "type": "string",
-          "description": "Localization key assigned to the text widget."
+          "description": "Key held to sprint (default LeftShift; Gamepad_LeftThumbstick and other key names work)."
         },
         "keyLabel": {
           "type": "string",
@@ -13321,6 +13351,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Minimap width and height in pixels (default 220)."
         },
+        "mappingContextPath": {
+          "type": "string",
+          "description": "The Input Mapping Context the key goes in (the project's own); default the one the character already registers, else /Game/Input/IMC_MCP."
+        },
         "materialPath": {
           "type": "string",
           "description": "Material asset path for a component."
@@ -13332,6 +13366,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "maxDesiredWidth": {
           "type": "number",
           "description": "Maximum desired width of a size box."
+        },
+        "maxHealth": {
+          "type": "number",
+          "description": "Starting and largest health (default 100)."
         },
         "maxValue": {
           "type": "number",
@@ -13761,6 +13799,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true,
           "description": "Padding between uniform grid slots."
         },
+        "soundPath": {
+          "type": "string",
+          "description": "Sound asset played where the pickup was."
+        },
         "sourceNode": {
           "type": "string",
           "description": "Source node id accepted in place of fromNodeId."
@@ -13768,6 +13810,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "sourcePin": {
           "type": "string",
           "description": "Source pin name on the originating node."
+        },
+        "sprintSpeed": {
+          "type": "number",
+          "description": "MaxWalkSpeed while sprinting, cm/s (default 1000)."
         },
         "stepSize": {
           "type": "number",
@@ -14049,6 +14095,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "add_function",
             "remove_function",
             "implement_interface",
+            "add_behaviour",
             "probe_handle",
             "edit_widget_blueprint",
             "preview_widget",
@@ -14294,7 +14341,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "compiled": {
           "type": "boolean",
-          "description": "True when the Blueprint is up-to-date (warnings allowed)."
+          "description": "The Blueprint compiled with the behaviour."
         },
         "compilerStatus": {
           "type": "string",
@@ -14388,6 +14435,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Compile messages: { severity, message }.",
           "x-unreal-reflection-boundary": true
+        },
+        "dispatchers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Event dispatchers it added, which other logic can bind."
         },
         "duration": {
           "type": "number",
@@ -14496,13 +14550,25 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Function name to add or remove."
         },
         "functions": {
-          "type": "array",
-          "description": "User function graphs with parameters.",
-          "items": {
-            "type": "object",
-            "x-unreal-reflection-boundary": true,
-            "description": "Function entry: name, parameters, nodeCount."
-          }
+          "oneOf": [
+            {
+              "type": "array",
+              "description": "User function graphs with parameters.",
+              "items": {
+                "type": "object",
+                "x-unreal-reflection-boundary": true,
+                "description": "Function entry: name, parameters, nodeCount."
+              }
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Functions it added, which other logic can call."
+            }
+          ],
+          "description": "Functions it added, which other logic can call."
         },
         "generatedGetter": {
           "type": "boolean",
@@ -14874,7 +14940,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "saved": {
           "type": "boolean",
-          "description": "Whether the Widget Blueprint was saved."
+          "description": "The Blueprint was saved."
         },
         "scanned": {
           "type": "number",
@@ -15037,13 +15103,27 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Every variable removed, in the Blueprint's own spelling."
         },
         "variables": {
-          "type": "array",
-          "description": "Blueprint variables (NewVariables).",
-          "items": {
-            "type": "object",
-            "x-unreal-reflection-boundary": true,
-            "description": "Variable entry: name, type, category, replication, default value."
-          }
+          "oneOf": [
+            {
+              "type": "array",
+              "description": "Blueprint variables (NewVariables).",
+              "items": {
+                "type": "object",
+                "x-unreal-reflection-boundary": true,
+                "description": "Variable entry: name, type, category, replication, default value."
+              }
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "The variables it uses: {name, status added, redefaulted or kept}."
+            }
+          ],
+          "description": "Blueprint variables (NewVariables)."
         },
         "verifiedValue": {
           "description": "Value to assign to the property. An object or class reference takes a path (a Blueprint class path ends in _C); null or \"None\" clears it."

@@ -795,6 +795,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_blueprint::add_ammo_counter": "interactive|low",
   "manage_blueprint::add_animation_keyframe": "interactive|low",
   "manage_blueprint::add_animation_track": "interactive|low",
+  "manage_blueprint::add_behaviour": "interactive|medium",
   "manage_blueprint::add_border": "interactive|low",
   "manage_blueprint::add_button": "interactive|low",
   "manage_blueprint::add_canvas_panel": "interactive|low",
@@ -806,10 +807,12 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_blueprint::add_content_widget": "interactive|low",
   "manage_blueprint::add_crosshair": "interactive|low",
   "manage_blueprint::add_damage_indicator": "interactive|low",
+  "manage_blueprint::add_damage_on_touch": "interactive|medium",
   "manage_blueprint::add_event": "interactive|low",
   "manage_blueprint::add_function": "interactive|low",
   "manage_blueprint::add_game_widget": "interactive|low",
   "manage_blueprint::add_grid_panel": "interactive|low",
+  "manage_blueprint::add_health": "interactive|medium",
   "manage_blueprint::add_health_bar": "interactive|low",
   "manage_blueprint::add_horizontal_box": "interactive|low",
   "manage_blueprint::add_image": "interactive|low",
@@ -820,6 +823,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_blueprint::add_objective_tracker": "interactive|low",
   "manage_blueprint::add_overlay": "interactive|low",
   "manage_blueprint::add_panel_widget": "interactive|low",
+  "manage_blueprint::add_pickup": "interactive|medium",
   "manage_blueprint::add_progress_bar": "interactive|low",
   "manage_blueprint::add_quest_tracker": "interactive|low",
   "manage_blueprint::add_rich_text_block": "interactive|low",
@@ -831,6 +835,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_blueprint::add_slider": "interactive|low",
   "manage_blueprint::add_spacer": "interactive|low",
   "manage_blueprint::add_spin_box": "interactive|low",
+  "manage_blueprint::add_sprint": "interactive|medium",
   "manage_blueprint::add_text_block": "interactive|low",
   "manage_blueprint::add_text_input": "interactive|low",
   "manage_blueprint::add_tree_view": "interactive|low",
@@ -1565,4 +1570,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1552;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1557;

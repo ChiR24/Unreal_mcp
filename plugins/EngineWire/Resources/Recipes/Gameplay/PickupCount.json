@@ -1,0 +1,39 @@
+{
+  "description": "A pickup that counts: when an actor of the collector class touches it, Amount is added to that actor's number variable (coins, keys, ammo), PickupSound plays where the pickup was, and the pickup is destroyed. Other actors pass through it. The actor needs a component that overlaps pawns.",
+  "tag": "Pickup",
+  "placeholders": {
+    "CollectorClass": "Class path of the actor that collects it, e.g. /Game/Blueprints/BP_Player.BP_Player_C.",
+    "CastPin": "The Cast node's output pin for that class, As<display name>.",
+    "VariableName": "The collector's Int or Float variable the amount is added to.",
+    "AddFunction": "Add_IntInt for an Int variable, Add_DoubleDouble for a Float one.",
+    "Amount": "Number added each time, e.g. 1.",
+    "Sound": "Object path of the sound to play when collected, or None."
+  },
+  "variables": [
+    { "variableName": "PickupSound", "variableType": "Object:/Script/Engine.SoundBase", "defaultValue": "{{Sound}}", "category": "Pickup", "instanceEditable": true }
+  ],
+  "hooks": [
+    { "id": "pick", "event": "ActorBeginOverlap" }
+  ],
+  "eventGraph": [
+    { "edit": "create_node", "id": "pickCollector", "nodeType": "Cast", "targetClass": "{{CollectorClass}}" },
+    { "edit": "create_node", "id": "pickCount", "nodeType": "VariableGet", "memberName": "{{VariableName}}", "memberClass": "{{CollectorClass}}" },
+    { "edit": "create_node", "id": "pickAdd", "nodeType": "CallFunction", "memberName": "{{AddFunction}}", "memberClass": "/Script/Engine.KismetMathLibrary", "pinDefaults": { "B": "{{Amount}}" } },
+    { "edit": "create_node", "id": "pickStore", "nodeType": "VariableSet", "memberName": "{{VariableName}}", "memberClass": "{{CollectorClass}}" },
+    { "edit": "create_node", "id": "pickSound", "nodeType": "VariableGet", "memberName": "PickupSound" },
+    { "edit": "create_node", "id": "pickWhere", "nodeType": "CallFunction", "memberName": "K2_GetActorLocation", "memberClass": "/Script/Engine.Actor" },
+    { "edit": "create_node", "id": "pickPlay", "nodeType": "CallFunction", "memberName": "PlaySoundAtLocation", "memberClass": "/Script/Engine.GameplayStatics" },
+    { "edit": "create_node", "id": "pickDestroy", "nodeType": "CallFunction", "memberName": "K2_DestroyActor", "memberClass": "/Script/Engine.Actor" },
+    { "edit": "connect_pins", "from": "$pick_event.OtherActor", "to": "$pickCollector.Object" },
+    { "edit": "connect_pins", "fromNodeId": "$pickCollector", "fromPinName": "{{CastPin}}", "toNodeId": "$pickCount", "toPinName": "self" },
+    { "edit": "connect_pins", "fromNodeId": "$pickCollector", "fromPinName": "{{CastPin}}", "toNodeId": "$pickStore", "toPinName": "self" },
+    { "edit": "connect_pins", "fromNodeId": "$pickCount", "fromPinName": "{{VariableName}}", "toNodeId": "$pickAdd", "toPinName": "A" },
+    { "edit": "connect_pins", "fromNodeId": "$pickAdd", "fromPinName": "ReturnValue", "toNodeId": "$pickStore", "toPinName": "{{VariableName}}" },
+    { "edit": "connect_pins", "from": "$pickSound.PickupSound", "to": "$pickPlay.Sound" },
+    { "edit": "connect_pins", "from": "$pickWhere.ReturnValue", "to": "$pickPlay.Location" },
+    { "edit": "connect_pins", "from": "$pick.then", "to": "$pickCollector.execute" },
+    { "edit": "connect_pins", "from": "$pickCollector.then", "to": "$pickStore.execute" },
+    { "edit": "connect_pins", "from": "$pickStore.then", "to": "$pickPlay.execute" },
+    { "edit": "connect_pins", "from": "$pickPlay.then", "to": "$pickDestroy.execute" }
+  ]
+}

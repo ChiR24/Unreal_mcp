@@ -52,6 +52,12 @@ export const MANAGE_BLUEPRINT_FOLDS: readonly FoldSpec[] = [
     members: { function: 'add_function', event: 'add_event' },
   },
   {
+    primary: 'add_behaviour', selector: 'behaviour',
+    summary: 'Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), or a sprint key for a Character.',
+    topics: ['gameplay behaviour', 'add behaviour', 'gameplay logic'],
+    members: { health: 'add_health', damage_on_touch: 'add_damage_on_touch', pickup: 'add_pickup', sprint: 'add_sprint' },
+  },
+  {
     primary: 'remove_function', selector: 'kind',
     summary: 'Remove a function or an event from a Blueprint.',
     members: { function: 'remove_function', event: 'remove_event' },
