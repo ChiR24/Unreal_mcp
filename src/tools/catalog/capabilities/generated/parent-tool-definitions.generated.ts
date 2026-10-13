@@ -12829,6 +12829,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Enable text auto-wrap."
         },
+        "barName": {
+          "type": "string",
+          "description": "The ProgressBar in the widget that shows the health (default HealthBar_Bar, the bar of the health bar piece). A bar named here must already be in the widget."
+        },
         "behaviour": {
           "type": "string",
           "enum": [
@@ -12842,7 +12846,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "respawn",
             "goal",
             "spawner",
-            "dash"
+            "dash",
+            "health_hud"
           ],
           "description": "Which add behaviour variant to run."
         },
@@ -14160,7 +14165,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "widgetPath": {
           "type": "string",
-          "description": "Canonical /Game Widget Blueprint asset path."
+          "description": "A Widget Blueprint to show instead of the one made next to the Blueprint (UI/WBP_HealthBar). One without the bar gets the health bar HUD piece (add_game_widget)."
         },
         "widthOverride": {
           "type": "number",
@@ -14490,6 +14495,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "created": {
           "type": "boolean",
           "description": "True when this call made the timeline."
+        },
+        "createdAssets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The Widget Blueprint this call made; it stays if the Blueprint is rolled back."
         },
         "createdBinding": {
           "type": "boolean",

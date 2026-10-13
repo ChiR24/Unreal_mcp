@@ -9,6 +9,7 @@
 #include "Foundation/BridgeHelpers/Blueprints/McpBPDiag.h"
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Misc/PackageName.h"
 
 // Author: check the whole recipe, then remove the previous run's nodes, make the
 // hooks, run every step as ONE build_graph batch under a save deferral, compile once,
@@ -148,6 +149,23 @@ void ListMembers(const TSharedPtr<FJsonObject>& Report, const Detail::FPlan& Pla
     Report->SetArrayField(TEXT("dispatchers"), Dispatchers);
     Report->SetArrayField(TEXT("customEvents"), Events);
 }
+
+// What the receipt lists as changed: the Blueprint, the input assets the run made, and the context a key went into.
+void ListChangedAssets(const TSharedPtr<FJsonObject>& Report, const Detail::FPlan& Plan, const UBlueprint* Blueprint)
+{
+    TArray<TSharedPtr<FJsonValue>> Changed = {MakeShared<FJsonValueString>(Blueprint->GetOutermost()->GetName())};
+    const TArray<TSharedPtr<FJsonValue>>* Created = nullptr;
+    if (Plan.Input.IsValid() && Plan.Input->TryGetArrayField(TEXT("createdAssets"), Created))
+    {
+        Changed.Append(*Created);
+    }
+    if (Plan.Input.IsValid() && GetJsonBoolField(Plan.Input, TEXT("keyMapped")))
+    {
+        Changed.Add(MakeShared<FJsonValueString>(
+            FPackageName::ObjectPathToPackageName(GetJsonStringField(Plan.Input, TEXT("mappingContextPath")))));
+    }
+    Report->SetArrayField(TEXT("changedAssets"), Changed);
+}
 } // namespace
 
 FAuthorResult Author(UEngineWireSubsystem& Bridge, const FString& RequestId,
@@ -223,6 +241,7 @@ FAuthorResult Author(UEngineWireSubsystem& Bridge, const FString& RequestId,
     }
     Report->SetBoolField(TEXT("saved"), SaveLoadedAssetThrottled(Blueprint, true));
     ListMembers(Report, Plan);
+    ListChangedAssets(Report, Plan, Blueprint);
     R.bApplied = true;
     R.Message = FString::Printf(TEXT("Behaviour '%s' applied to %s: %d steps, %d hooks"), *Plan.Tag, *Blueprint->GetName(),
                                 Plan.Ops.Num(), Plan.Hooks.Num());

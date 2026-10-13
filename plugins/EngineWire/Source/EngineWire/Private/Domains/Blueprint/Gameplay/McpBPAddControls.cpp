@@ -89,6 +89,7 @@ bool HandleBlueprintAddControls(const FBlueprintActionContext &Context) {
   const McpBlueprintBehaviour::FSnapshot Before = McpBlueprintBehaviour::TakeSnapshot(Blueprint);
   FString ContextPath = GetJsonStringField(LocalPayload, TEXT("mappingContextPath"));
   TSharedPtr<FJsonObject> Report;
+  TArray<FString> Changed; // every part's changed assets, not the last part's alone
   double PreviousRemoved = 0; // a re-run's nodes of all three parts, not the last part's alone
   struct FPart { const TCHAR *Recipe; FString Action; FString Key; };
   for (const FPart &Part : {FPart{TEXT("Jump"), FString(), GetJsonStringField(LocalPayload, TEXT("jumpKey"), TEXT("SpaceBar"))},
@@ -114,6 +115,12 @@ bool HandleBlueprintAddControls(const FBlueprintActionContext &Context) {
       return true;
     }
     Report = Result.Report;
+    const TArray<TSharedPtr<FJsonValue>> *PartChanged = nullptr;
+    if (Report->TryGetArrayField(TEXT("changedAssets"), PartChanged)) {
+      for (const TSharedPtr<FJsonValue> &Asset : *PartChanged) {
+        Changed.AddUnique(Asset->AsString());
+      }
+    }
     PreviousRemoved += GetJsonNumberField(Report, TEXT("previousRemoved"));
     const TSharedPtr<FJsonObject> *Input = nullptr;
     if (ContextPath.IsEmpty() && Report->TryGetObjectField(TEXT("input"), Input)) {
@@ -142,6 +149,17 @@ bool HandleBlueprintAddControls(const FBlueprintActionContext &Context) {
   }
   Report->SetStringField(TEXT("mappingContextPath"), FPackageName::ObjectPathToPackageName(ContextPath));
   Report->SetBoolField(TEXT("keysMapped"), bMapped);
+  // The actions made or turned Axis2D and the context the keys went into changed as well.
+  for (const FString &Asset : {MoveAction, bLook ? LookAction : FString(), ContextPath}) {
+    if (!Asset.IsEmpty()) {
+      Changed.AddUnique(FPackageName::ObjectPathToPackageName(Asset));
+    }
+  }
+  TArray<TSharedPtr<FJsonValue>> ChangedValues;
+  for (const FString &Asset : Changed) {
+    ChangedValues.Add(MakeShared<FJsonValueString>(Asset));
+  }
+  Report->SetArrayField(TEXT("changedAssets"), ChangedValues);
   Bridge.SendAutomationResponse(RequestingSocket, RequestId, bMapped,
                                 bMapped ? FString(TEXT("Controls written: WASD or the left stick walk, the mouse or the right "
                                                        "stick look, and the jump key jumps."))

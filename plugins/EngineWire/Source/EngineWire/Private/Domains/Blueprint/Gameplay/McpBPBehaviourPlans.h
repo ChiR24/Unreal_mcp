@@ -5,6 +5,7 @@
 #include "Dom/JsonValue.h"
 
 class UBlueprint;
+class UClass;
 
 namespace McpBlueprintHandlers {
 // One behaviour: its recipe (Resources/Recipes/<Domain>/<Recipe>.json) and the values of its placeholders.
@@ -18,4 +19,7 @@ struct FBehaviourPlan {
 // OutError otherwise.
 bool PlanBehaviour(const FString &Action, const TSharedPtr<FJsonObject> &Payload, const UBlueprint *Blueprint,
                    FBehaviourPlan &Plan, FString &OutError);
+
+// The class has the members the Health recipe (Resources/Recipes/Gameplay/Health.json) gives it.
+bool HasHealthBehaviour(const UClass *Class);
 } // namespace McpBlueprintHandlers

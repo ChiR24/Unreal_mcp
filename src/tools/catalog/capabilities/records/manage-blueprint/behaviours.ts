@@ -1,6 +1,6 @@
 /**
  * Gameplay behaviours written into an Actor Blueprint from the plugin's recipe files
- * (McpBlueprintBehaviour::Author): health, damage on touch, pickups, sprint, shooting, chasing, player controls, respawning, a goal, a spawner and a dash. Folded
+ * (McpBlueprintBehaviour::Author): health, damage on touch, pickups, sprint, shooting, chasing, player controls, respawning, a goal, a spawner, a dash and a health bar on screen. Folded
  * into blueprint.add_behaviour (selector behaviour). Every one is all or nothing,
  * re-runnable (a second run replaces the first), compiled and saved.
  */
@@ -36,7 +36,7 @@ export const BEHAVIOURS_RECORDS: readonly CapabilityRecordSource[] = [
     domain: DOMAIN,
     topics: ['health', 'take damage', 'player health', 'enemy health', 'die when health is zero'],
     summary: 'Give an actor health: Health and MaxHealth variables, damage from any source (ApplyDamage, a pain causing volume, a projectile) lowers it and negative damage heals, a Heal function, OnHealthChanged and OnDied dispatchers, and optional destroy on death.',
-    whenToUse: ['A player, enemy or breakable object must take damage and die; bind OnHealthChanged to a health bar.'],
+    whenToUse: ['A player, enemy or breakable object must take damage and die; behaviour health_hud shows it on screen.'],
     whenNotToUse: ['The project uses the Gameplay Ability System for attributes (use manage_gas).'],
     inputProps: {
       blueprintPath: P.blueprintPath,
@@ -297,5 +297,32 @@ export const BEHAVIOURS_RECORDS: readonly CapabilityRecordSource[] = [
     resources: 'medium',
     plugins: BP_PLUGINS,
     exampleInput: { action: 'add_dash', blueprintPath: '/Game/Blueprints/BP_Player', dashSpeed: 1800, cooldown: 0.8, key: 'Q' },
+  }),
+  buildRecord({
+    id: 'blueprint.add_health_hud',
+    action: 'add_health_hud',
+    family: FAMILY,
+    domain: DOMAIN,
+    topics: ['health bar', 'show health on screen', 'health hud', 'player health bar', 'hp bar', 'display the player health'],
+    summary: 'Show the health of a pawn on screen: while a local player controls it, a widget is on the screen with a bar filled to Health / MaxHealth, refilled whenever OnHealthChanged fires, and taken off when the pawn loses that player or is destroyed. Needs the health behaviour. With no widgetPath it makes UI/WBP_HealthBar next to the Blueprint.',
+    whenToUse: ['The player must see their own health: a health bar on the HUD.'],
+    whenNotToUse: ['A bar floating over an actor in the world, such as over an enemy.'],
+    inputProps: {
+      blueprintPath: P.blueprintPath,
+      widgetPath: { type: 'string', description: 'A Widget Blueprint to show instead of the one made next to the Blueprint (UI/WBP_HealthBar). One without the bar gets the health bar HUD piece (add_game_widget).' },
+      barName: { type: 'string', description: 'The ProgressBar in the widget that shows the health (default HealthBar_Bar, the bar of the health bar piece). A bar named here must already be in the widget.' },
+    },
+    required: ['blueprintPath'],
+    outputProps: {
+      ...BEHAVIOUR_OUTPUT,
+      widgetPath: { type: 'string', description: 'The Widget Blueprint shown.' },
+      createdAssets: { type: 'array', items: { type: 'string' }, description: 'The Widget Blueprint this call made; it stays if the Blueprint is rolled back.' },
+    },
+    effect: 'write',
+    behavior: { idempotency: 'idempotent' },
+    latency: 'interactive',
+    resources: 'medium',
+    plugins: BP_PLUGINS,
+    exampleInput: { action: 'add_health_hud', blueprintPath: '/Game/Blueprints/BP_Player' },
   }),
 ];

@@ -215,4 +215,14 @@ bool PlanBehaviour(const FString &Action, const TSharedPtr<FJsonObject> &Payload
   }
   return OutError.IsEmpty();
 }
+
+bool HasHealthBehaviour(const UClass *Class) {
+  for (const TCHAR *Name : {TEXT("Health"), TEXT("MaxHealth"), TEXT("bIsDead"), TEXT("bDestroyOnDeath"),
+                            TEXT("OnDied"), TEXT("OnHealthChanged")}) {
+    if (!Class || !FindFProperty<FProperty>(Class, Name)) {
+      return false;
+    }
+  }
+  return true;
+}
 } // namespace McpBlueprintHandlers

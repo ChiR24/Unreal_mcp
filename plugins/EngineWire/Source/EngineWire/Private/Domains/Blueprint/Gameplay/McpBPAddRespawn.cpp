@@ -3,6 +3,7 @@
 // there when it falls fallHeight below that point; on a pawn with the Health behaviour, RespawnOnDeath also brings it
 // back at full health when it dies. A pawn that fell off a level or died stayed gone: nothing put it back.
 #include "Domains/Blueprint/McpBPActionContext.h"
+#include "Domains/Blueprint/Gameplay/McpBPBehaviourPlans.h"
 #include "Domains/BlueprintGraph/Behaviour/McpBPBehaviour.h"
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
 
@@ -11,19 +12,6 @@
 #include "UObject/UnrealType.h"
 
 namespace McpBlueprintHandlers {
-namespace {
-// The members the Health recipe (Resources/Recipes/Gameplay/Health.json) gives the class.
-bool HasHealthBehaviour(const UClass *Class) {
-  for (const TCHAR *Name : {TEXT("Health"), TEXT("MaxHealth"), TEXT("bIsDead"), TEXT("bDestroyOnDeath"),
-                            TEXT("OnDied"), TEXT("OnHealthChanged")}) {
-    if (!FindFProperty<FProperty>(Class, Name)) {
-      return false;
-    }
-  }
-  return true;
-}
-} // namespace
-
 bool HandleBlueprintAddRespawn(const FBlueprintActionContext &Context) {
   MCP_BLUEPRINT_ACTION_LOCALS(Context);
   if (!ActionMatchesPattern(TEXT("add_respawn"))) {

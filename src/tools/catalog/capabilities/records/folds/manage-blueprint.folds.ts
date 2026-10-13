@@ -53,9 +53,9 @@ export const MANAGE_BLUEPRINT_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'add_behaviour', selector: 'behaviour',
-    summary: 'Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player, walk, look and jump controls for a Character, a pawn that respawns when it falls or dies (with checkpoints), a goal that ends the level when the player reaches it, a spawner that keeps spawning an actor class, or a dash key for a Character.',
+    summary: 'Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player, walk, look and jump controls for a Character, a pawn that respawns when it falls or dies (with checkpoints), a goal that ends the level when the player reaches it, a spawner that keeps spawning an actor class, a dash key for a Character, or the health of the player on screen.',
     topics: ['gameplay behaviour', 'add behaviour', 'gameplay logic'],
-    members: { health: 'add_health', damage_on_touch: 'add_damage_on_touch', pickup: 'add_pickup', sprint: 'add_sprint', shoot: 'add_shoot', chase: 'add_chase', controls: 'add_controls', respawn: 'add_respawn', goal: 'add_goal', spawner: 'add_spawner', dash: 'add_dash' },
+    members: { health: 'add_health', damage_on_touch: 'add_damage_on_touch', pickup: 'add_pickup', sprint: 'add_sprint', shoot: 'add_shoot', chase: 'add_chase', controls: 'add_controls', respawn: 'add_respawn', goal: 'add_goal', spawner: 'add_spawner', dash: 'add_dash', health_hud: 'add_health_hud' },
   },
   {
     primary: 'remove_function', selector: 'kind',

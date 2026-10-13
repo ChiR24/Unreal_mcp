@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "1697e8fab1243f1a",
+  "catalogRevision": "725de3ecd5ca28d3",
   "recordCount": 416,
   "records": [
     {
@@ -12795,7 +12795,8 @@
         "blueprint.add_respawn",
         "blueprint.add_goal",
         "blueprint.add_spawner",
-        "blueprint.add_dash"
+        "blueprint.add_dash",
+        "blueprint.add_health_hud"
       ],
       "legacyIds": [
         {
@@ -12878,6 +12879,13 @@
           "folded": {
             "behaviour": "dash"
           }
+        },
+        {
+          "tool": "manage_blueprint",
+          "action": "add_health_hud",
+          "folded": {
+            "behaviour": "health_hud"
+          }
         }
       ],
       "discovery": {
@@ -12952,11 +12960,17 @@
           "quick dash",
           "dodge",
           "air dash",
-          "burst of speed"
+          "burst of speed",
+          "health bar",
+          "show health on screen",
+          "health hud",
+          "player health bar",
+          "hp bar",
+          "display the player health"
         ],
-        "summary": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player, walk, look and jump controls for a Character, a pawn that respawns when it falls or dies (with checkpoints), a goal that ends the level when the player reaches it, a spawner that keeps spawning an actor class, or a dash key for a Character.",
+        "summary": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player, walk, look and jump controls for a Character, a pawn that respawns when it falls or dies (with checkpoints), a goal that ends the level when the player reaches it, a spawner that keeps spawning an actor class, a dash key for a Character, or the health of the player on screen.",
         "whenToUse": [
-          "behaviour=health: A player, enemy or breakable object must take damage and die; bind OnHealthChanged to a health bar.",
+          "behaviour=health: A player, enemy or breakable object must take damage and die; behaviour health_hud shows it on screen.",
           "behaviour=damage_on_touch: Spikes, lava, an enemy body or a fire must hurt what touches it.",
           "behaviour=pickup: A health pack, coin, key or ammo box must be collected by walking into it.",
           "behaviour=sprint: The player must run faster while holding a key.",
@@ -12967,7 +12981,8 @@
           "behaviour=respawn: Checkpoints: tag a trigger actor (manage_interaction create_interactable trigger, or any actor that overlaps pawns) with checkpointTag; the pawn respawns where it stood when it touched it.",
           "behaviour=goal: A level needs an end: a finish line, an exit door, a flag the player reaches.",
           "behaviour=spawner: Enemies, pickups or obstacles must keep appearing while the game runs.",
-          "behaviour=dash: A player Character needs a quick burst of movement on a key: a dash, a dodge, an air dash."
+          "behaviour=dash: A player Character needs a quick burst of movement on a key: a dash, a dodge, an air dash.",
+          "behaviour=health_hud: The player must see their own health: a health bar on the HUD."
         ],
         "whenNotToUse": [
           "behaviour=health: The project uses the Gameplay Ability System for attributes (use manage_gas).",
@@ -12980,7 +12995,8 @@
           "behaviour=respawn: A pawn that should stay dead, such as an enemy: give it the health behaviour with destroyOnDeath instead.",
           "behaviour=goal: Something must happen on every touch, by any actor (use a trigger actor from manage_interaction create_interactable).",
           "behaviour=spawner: Actors must be placed once, before play (use control_actor spawn).",
-          "behaviour=dash: It must run faster while a key is held (use behaviour sprint)."
+          "behaviour=dash: It must run faster while a key is held (use behaviour sprint).",
+          "behaviour=health_hud: A bar floating over an actor in the world, such as over an enemy."
         ]
       },
       "schemas": {
@@ -13116,6 +13132,14 @@
               "type": "number",
               "description": "Seconds before it can dash again (default 1)."
             },
+            "widgetPath": {
+              "type": "string",
+              "description": "A Widget Blueprint to show instead of the one made next to the Blueprint (UI/WBP_HealthBar). One without the bar gets the health bar HUD piece (add_game_widget)."
+            },
+            "barName": {
+              "type": "string",
+              "description": "The ProgressBar in the widget that shows the health (default HealthBar_Bar, the bar of the health bar piece). A bar named here must already be in the widget."
+            },
             "behaviour": {
               "type": "string",
               "enum": [
@@ -13129,7 +13153,8 @@
                 "respawn",
                 "goal",
                 "spawner",
-                "dash"
+                "dash",
+                "health_hud"
               ],
               "description": "Which add behaviour variant to run."
             }
@@ -13192,6 +13217,17 @@
             "respawnOnDeath": {
               "type": "boolean",
               "description": "The pawn has the health behaviour, so dying respawns it too; add health first, then respawn again, to get it."
+            },
+            "widgetPath": {
+              "type": "string",
+              "description": "The Widget Blueprint shown."
+            },
+            "createdAssets": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "The Widget Blueprint this call made; it stays if the Blueprint is rolled back."
             }
           },
           "required": [
@@ -13202,7 +13238,7 @@
       },
       "examples": [
         {
-          "title": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player, walk, look and jump controls for a Character, a pawn that respawns when it falls or dies (with checkpoints), a goal that ends the level when the player reaches it, a spawner that keeps spawning an actor class, or a dash key for a Character.",
+          "title": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player, walk, look and jump controls for a Character, a pawn that respawns when it falls or dies (with checkpoints), a goal that ends the level when the player reaches it, a spawner that keeps spawning an actor class, a dash key for a Character, or the health of the player on screen.",
           "input": {
             "action": "add_behaviour",
             "blueprintPath": "/Game/Blueprints/BP_Enemy",
@@ -13254,7 +13290,8 @@
             "respawn": "add_respawn",
             "goal": "add_goal",
             "spawner": "add_spawner",
-            "dash": "add_dash"
+            "dash": "add_dash",
+            "health_hud": "add_health_hud"
           },
           "declaredBy": {
             "maxHealth": [
@@ -13354,14 +13391,20 @@
             ],
             "cooldown": [
               "dash"
+            ],
+            "widgetPath": [
+              "health_hud"
+            ],
+            "barName": [
+              "health_hud"
             ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "a1a2cd3878812f43c42c2183e1f2884d23da3690c52051c5291ae08fb9e62e3d",
-        "content": "47b7f55c0f9d2ad944398ad66eafd48d31085d503fe69fa4196381b37f7cbdb2"
+        "schema": "7ebe2bb364c20716301398025684988059fa9bb7f2d03874ad5cc143e33236d6",
+        "content": "84a3782aff7021768fba0eb537edce45bd8c684c2cc66ced4479741f6288dbb9"
       }
     },
     {
