@@ -19,6 +19,8 @@ bool HandleAnimationConfigureVehicleAction(FActionContext &Context,
                const TSharedPtr<FJsonObject> &Payload);
 bool HandleAnimationSetupPhysicsSimulationAction(FActionContext &Context,
                const TSharedPtr<FJsonObject> &Payload);
+bool HandleAnimationCreatePhysicalMaterialAction(FActionContext &Context,
+               const TSharedPtr<FJsonObject> &Payload);
 bool HandleAnimationCreateAnimationAssetAction(FActionContext &Context,
                const TSharedPtr<FJsonObject> &Payload);
 bool HandleAnimationCreatePoseLibraryAction(FActionContext &Context,

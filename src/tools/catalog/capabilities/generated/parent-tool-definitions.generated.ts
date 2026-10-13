@@ -294,6 +294,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Per-vertex morph target position deltas."
         },
+        "density": {
+          "type": "number",
+          "description": "Density in g/cm3, which sets mass from volume (water is 1)."
+        },
         "depth": {
           "type": "number",
           "description": "Box extent along Y (default 10)."
@@ -429,6 +433,20 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "frameRate": {
           "type": "number",
           "description": "Frames per second (default 30)."
+        },
+        "friction": {
+          "type": "number",
+          "description": "Kinetic friction, 0 (ice) to 1 and above (rubber); the engine default is 0.7."
+        },
+        "frictionCombineMode": {
+          "type": "string",
+          "enum": [
+            "Average",
+            "Min",
+            "Multiply",
+            "Max"
+          ],
+          "description": "How this surface and the one it touches combine their friction: Min lets the slipperier (or deader) one win, Max the grippier (or bouncier) one; Average when not set."
         },
         "from": {
           "type": "string",
@@ -822,6 +840,20 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether child bones are removed with the target bone."
         },
+        "restitution": {
+          "type": "number",
+          "description": "Bounce, 0 (none) to 1 (keeps all its speed)."
+        },
+        "restitutionCombineMode": {
+          "type": "string",
+          "enum": [
+            "Average",
+            "Min",
+            "Multiply",
+            "Max"
+          ],
+          "description": "How this surface and the one it touches combine their bounce: Min lets the slipperier (or deader) one win, Max the grippier (or bouncier) one; Average when not set."
+        },
         "retargeterPath": {
           "type": "string",
           "description": "An existing IK Retargeter to bake through. Omit to auto-build one by characterizing both skeletons and mapping their chains."
@@ -1005,6 +1037,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             ]
           },
           "description": "States to create, as [{ name }]."
+        },
+        "staticFriction": {
+          "type": "number",
+          "description": "Friction at rest, before a body starts to slide."
         },
         "staticMeshPath": {
           "type": "string",
@@ -1232,6 +1268,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "setup_ragdoll",
             "configure_vehicle",
             "setup_physics_simulation",
+            "create_physical_material",
             "edit_blend_space",
             "setup_retargeting",
             "skin_mesh_to_skeleton",
@@ -1466,6 +1503,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "count": {
           "type": "number",
           "description": "Number of bones listed."
+        },
+        "created": {
+          "type": "boolean",
+          "description": "True when this call made it; false when it tuned one already there."
         },
         "deleted": {
           "type": "boolean",
@@ -1744,6 +1785,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "parentIndex": {
           "type": "number",
           "description": "Index of the parent bone, -1 for the root."
+        },
+        "physicalMaterialPath": {
+          "type": "string",
+          "description": "Object path of the physical material."
         },
         "physicsAssetName": {
           "type": "string",
@@ -4317,7 +4362,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "properties": {
           "type": "object",
-          "description": "Component property key-value pairs. Each key is a name or dotted path, as propertyName takes it (BodyInstance.CollisionEnabled works). Collision goes through the component setters: CollisionProfileName (a preset), CollisionEnabled, CollisionResponses ({\"Pawn\": \"Ignore\"}).",
+          "description": "Component property key-value pairs. Each key is a name or dotted path, as propertyName takes it (BodyInstance.CollisionEnabled works). Collision goes through the component setters: CollisionProfileName (a preset), CollisionEnabled, CollisionResponses ({\"Pawn\": \"Ignore\"}), PhysMaterialOverride (a physical material path, None to clear).",
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true
         },

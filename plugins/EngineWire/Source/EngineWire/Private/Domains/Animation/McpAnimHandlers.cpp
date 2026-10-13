@@ -71,6 +71,7 @@ bool UEngineWireSubsystem::HandleAnimationPhysicsAction(
       {TEXT("setup_ik"), McpAnimationHandlers::HandleAnimationSetupIKAction},
       {TEXT("configure_vehicle"), McpAnimationHandlers::HandleAnimationConfigureVehicleAction},
       {TEXT("setup_physics_simulation"), McpAnimationHandlers::HandleAnimationSetupPhysicsSimulationAction},
+      {TEXT("create_physical_material"), McpAnimationHandlers::HandleAnimationCreatePhysicalMaterialAction},
       {TEXT("create_animation_asset"), McpAnimationHandlers::HandleAnimationCreateAnimationAssetAction},
       {TEXT("create_pose_library"), McpAnimationHandlers::HandleAnimationCreatePoseLibraryAction},
       {TEXT("setup_retargeting"), McpAnimationHandlers::HandleAnimationSetupRetargetingAction},

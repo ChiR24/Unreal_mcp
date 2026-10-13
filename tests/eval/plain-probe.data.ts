@@ -466,4 +466,10 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'let the player walk through', accepted: ['control_actor.set_actor_collision'] },
   { query: 'collision preset', accepted: ['control_actor.set_actor_collision'] },
   { query: 'collision response', accepted: ['control_actor.set_actor_collision'] },
+  { query: 'make it bouncy', accepted: ['animation_physics.create_physical_material'] },
+  { query: 'bouncy ball', accepted: ['animation_physics.create_physical_material'] },
+  { query: 'physical material', accepted: ['animation_physics.create_physical_material'] },
+  { query: 'slippery floor', accepted: ['animation_physics.create_physical_material'] },
+  { query: 'bounciness', accepted: ['animation_physics.create_physical_material'] },
+  { query: 'physics material friction', accepted: ['animation_physics.create_physical_material'] },
 ];

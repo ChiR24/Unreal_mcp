@@ -221,7 +221,7 @@ export const SCS_COMPONENTS_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Set a single property on an SCS-owned component template; placed actors that still had the old value take the new one (instancesUpdated), one changed by hand keeps its own. For RelativeScale3D/RelativeLocation, note that a child inherits its parent\'s scale: Unreal multiplies parent and child scale COMPONENT-WISE in the child\'s own local axes, and rotation does NOT permute which axis each factor lands on. World size = ParentScale * ChildScale * MeshExtent per local axis, and world offset = ParentScale * RelativeLocation. Under a parent scaled non-uniformly, divide the offset you want by the parent scale on that axis.',
     whenToUse: [
       'One property on an SCS component template must be changed.',
-      'Collision of the template, for every placed copy: CollisionProfileName (a preset such as OverlapAllDynamic), CollisionEnabled, or CollisionResponses ({"Pawn": "Ignore"} lets a character walk through) go through the component setters.',
+      'Collision of the template, for every placed copy: CollisionProfileName (a preset such as OverlapAllDynamic), CollisionEnabled, or CollisionResponses ({"Pawn": "Ignore"} lets a character walk through) go through the component setters, as does PhysMaterialOverride (a physical material path).',
     ],
     whenNotToUse: ['Multiple properties need batch updates (use modify_scs).'],
     inputProps: { blueprintPath: P.blueprintPath, componentName: P.componentName, propertyName: P.propertyName, propertyValue: P.propertyValue },

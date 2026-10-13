@@ -13,6 +13,7 @@
 #include "Engine/CollisionProfile.h"
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
+#include "PhysicalMaterials/PhysicalMaterial.h"
 
 static inline UActorComponent *
 FindComponentByName(AActor *Actor, const FString &ComponentName) {
@@ -180,13 +181,28 @@ static inline bool McpIsCollisionSetterKey(const UActorComponent *Component, con
            Name.Equals(FString(TEXT("BodyInstance.")) + Field, ESearchCase::IgnoreCase);
   };
   return Cast<UPrimitiveComponent>(Component) &&
-         (Is(TEXT("CollisionProfileName")) || Is(TEXT("CollisionEnabled")) || Is(TEXT("CollisionResponses")));
+         (Is(TEXT("CollisionProfileName")) || Is(TEXT("CollisionEnabled")) || Is(TEXT("CollisionResponses")) ||
+          Is(TEXT("PhysMaterialOverride")));
 }
 
 /** Applies a key McpIsCollisionSetterKey accepted; false with OutError on a bad value. */
 static inline bool McpApplyCollisionSetterKey(UActorComponent *Component, const FString &Name,
                                               const TSharedPtr<FJsonValue> &Value, FString &OutError) {
   UPrimitiveComponent *Primitive = Cast<UPrimitiveComponent>(Component);
+  // A physical material path, or None or null to clear: the setter rebuilds the body's materials, a raw write does not.
+  if (Primitive && Name.EndsWith(TEXT("PhysMaterialOverride"), ESearchCase::IgnoreCase)) {
+    const FString Path = Value.IsValid() && Value->Type == EJson::String ? Value->AsString() : FString();
+    UPhysicalMaterial *Material = nullptr;
+    if (!Path.IsEmpty() && !Path.Equals(TEXT("None"), ESearchCase::IgnoreCase)) {
+      Material = LoadObject<UPhysicalMaterial>(nullptr, *Path);
+      if (!Material) {
+        OutError = FString::Printf(TEXT("no physical material at '%s'"), *Path);
+        return false;
+      }
+    }
+    Primitive->SetPhysMaterialOverride(Material);
+    return true;
+  }
   if (Primitive && Name.EndsWith(TEXT("CollisionResponses"), ESearchCase::IgnoreCase)) {
     const TSharedPtr<FJsonObject> *Object = nullptr;
     TArray<TPair<ECollisionChannel, ECollisionResponse>> Responses;

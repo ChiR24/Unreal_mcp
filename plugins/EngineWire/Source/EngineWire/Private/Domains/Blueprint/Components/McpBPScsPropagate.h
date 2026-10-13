@@ -60,7 +60,7 @@ struct FDefaults
   {
     for (const TCHAR *Path : {TEXT("BodyInstance.CollisionProfileName"), TEXT("BodyInstance.CollisionEnabled"),
                               TEXT("BodyInstance.ObjectType"), TEXT("BodyInstance.CollisionResponses"),
-                              TEXT("bUseDefaultCollision")})
+                              TEXT("BodyInstance.PhysMaterialOverride"), TEXT("bUseDefaultCollision")})
       Capture(Path);
   }
 

@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "770e7d3d428d320b",
-  "recordCount": 411,
+  "catalogRevision": "00ac66a6802dd71c",
+  "recordCount": 412,
   "records": [
     {
       "id": "animation_physics.analyze_animation",
@@ -1966,6 +1966,174 @@
         "algorithm": "sha256",
         "schema": "4fdefd7b4494f5b89ffbb5619b3fb0fba183eed4ff83d39a03c816dd1966316b",
         "content": "9f162f6365cb276e6ce00cd1dd20d17833d7ba9015ec53724bb177603d05dd0d"
+      }
+    },
+    {
+      "id": "animation_physics.create_physical_material",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "animation_physics",
+          "action": "create_physical_material"
+        }
+      ],
+      "discovery": {
+        "domain": "animation physics",
+        "family": "physics",
+        "topics": [
+          "create_physical_material",
+          "physical material",
+          "make it bouncy",
+          "bouncy ball",
+          "bounciness",
+          "slippery surface",
+          "restitution",
+          "surface friction"
+        ],
+        "summary": "Create or tune a physical material: friction, bounce (restitution), density and how two touching surfaces combine them. A mesh takes it through control_actor edit_component property PhysMaterialOverride (edit_scs set_property on a class template).",
+        "whenToUse": [
+          "An object must bounce, slide or grip differently: a bouncy ball (restitution 0.9, restitutionCombineMode Max), an ice floor (friction 0.05, frictionCombineMode Min).",
+          "A physical material must be adjusted: the same name and path tune it in place."
+        ],
+        "whenNotToUse": [
+          "A character slides or grips the ground: use manage_character set_movement_property (ground friction, braking)."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Asset name, e.g. PM_Bouncy."
+            },
+            "path": {
+              "type": "string",
+              "description": "Folder for the asset (default /Game/Physics)."
+            },
+            "friction": {
+              "type": "number",
+              "description": "Kinetic friction, 0 (ice) to 1 and above (rubber); the engine default is 0.7."
+            },
+            "staticFriction": {
+              "type": "number",
+              "description": "Friction at rest, before a body starts to slide."
+            },
+            "restitution": {
+              "type": "number",
+              "description": "Bounce, 0 (none) to 1 (keeps all its speed)."
+            },
+            "density": {
+              "type": "number",
+              "description": "Density in g/cm3, which sets mass from volume (water is 1)."
+            },
+            "frictionCombineMode": {
+              "type": "string",
+              "enum": [
+                "Average",
+                "Min",
+                "Multiply",
+                "Max"
+              ],
+              "description": "How this surface and the one it touches combine their friction: Min lets the slipperier (or deader) one win, Max the grippier (or bouncier) one; Average when not set."
+            },
+            "restitutionCombineMode": {
+              "type": "string",
+              "enum": [
+                "Average",
+                "Min",
+                "Multiply",
+                "Max"
+              ],
+              "description": "How this surface and the one it touches combine their bounce: Min lets the slipperier (or deader) one win, Max the grippier (or bouncier) one; Average when not set."
+            }
+          },
+          "required": [
+            "name"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "physicalMaterialPath": {
+              "type": "string",
+              "description": "Object path of the physical material."
+            },
+            "created": {
+              "type": "boolean",
+              "description": "True when this call made it; false when it tuned one already there."
+            }
+          },
+          "required": [
+            "success",
+            "physicalMaterialPath"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Create or tune a physical material: friction, bounce (restitution), density and how two touching surfaces combine them. A mesh takes it through control_actor edit_component property PhysMaterialOverride (edit_scs set_property on a class template).",
+          "input": {
+            "action": "create_physical_material",
+            "name": "PM_Bouncy",
+            "path": "/Game/Physics",
+            "restitution": 0.9,
+            "restitutionCombineMode": "Max"
+          },
+          "output": {
+            "success": true,
+            "message": "Physical material created",
+            "physicalMaterialPath": "/Game/Physics/PM_Bouncy.PM_Bouncy",
+            "created": true
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "write",
+        "idempotency": "idempotent",
+        "longRunning": false,
+        "safeToRetry": true
+      },
+      "policy": {
+        "requiredScope": "write",
+        "consent": "none",
+        "dataAccess": "project-write"
+      },
+      "cost": {
+        "latency": "interactive",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "animation_physics",
+        "dispatchAction": "create_physical_material"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "8fc12fe57a87d5606b19d0d2839598bf362c09b8576d999dab20e9571ffe3aae",
+        "content": "d049ed431c0da5343cf0de470c4a23d5ba7b7a4fe7e3664cb93e03dd689a7194"
       }
     },
     {
@@ -17039,7 +17207,7 @@
           "edit=modify: An SCS-owned component template needs property or transform updates.",
           "edit=reparent: An SCS component must move under a different parent node.",
           "edit=set_property: One property on an SCS component template must be changed.",
-          "edit=set_property: Collision of the template, for every placed copy: CollisionProfileName (a preset such as OverlapAllDynamic), CollisionEnabled, or CollisionResponses ({\"Pawn\": \"Ignore\"} lets a character walk through) go through the component setters.",
+          "edit=set_property: Collision of the template, for every placed copy: CollisionProfileName (a preset such as OverlapAllDynamic), CollisionEnabled, or CollisionResponses ({\"Pawn\": \"Ignore\"} lets a character walk through) go through the component setters, as does PhysMaterialOverride (a physical material path).",
           "edit=set_transform: An SCS component template transform must be updated."
         ],
         "whenNotToUse": [
@@ -17374,7 +17542,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "3baadd9f06f47e55c0736ac9dda7779a9bde8268bfbca02aea60fc20f60c2291",
-        "content": "de6631c374164481f616be57f33bd308eb2584e8146ce2c33122b4576bd9d7df"
+        "content": "c27ee3e4a63cf4873b93efc6b9f7a44a15b62a9ca98208512cc46d14f100e188"
       }
     },
     {
@@ -32740,7 +32908,7 @@
             },
             "properties": {
               "type": "object",
-              "description": "Component property key-value pairs. Each key is a name or dotted path, as propertyName takes it (BodyInstance.CollisionEnabled works). Collision goes through the component setters: CollisionProfileName (a preset), CollisionEnabled, CollisionResponses ({\"Pawn\": \"Ignore\"}).",
+              "description": "Component property key-value pairs. Each key is a name or dotted path, as propertyName takes it (BodyInstance.CollisionEnabled works). Collision goes through the component setters: CollisionProfileName (a preset), CollisionEnabled, CollisionResponses ({\"Pawn\": \"Ignore\"}), PhysMaterialOverride (a physical material path, None to clear).",
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true
             },
@@ -32879,8 +33047,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "983f30c347dc3a03da84654c35915889ec944ea04e719f59bca124bc95fa8843",
-        "content": "94313dd038a199edac30abb72f04e4cdf1180e57d7adff4722359c9a847c127c"
+        "schema": "a7b8c3d8565d3f8b5e493d6d58d8a13d9719b3c6056efdbf3e8aa31f987fb8fd",
+        "content": "344e51e73de7de7f9311ab4f004a8e0350b91decc85ac1c1813751b252f1b571"
       }
     },
     {

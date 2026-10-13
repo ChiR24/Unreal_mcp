@@ -25,6 +25,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 
 ### Added
 - **Animation graph nodes by class**: the node-class lookup falls back to `AnimGraphNode_<name>` (spaces ignored) after every Blueprint spelling; `list_node_types` takes `filter`.
+- **`create_physical_material`** (`Animation/Physics/McpAnimPhysicalMaterial.cpp`, UE 5.0-5.8 checked): every value is read before the asset is made or changed; a material already at the path is tuned in place, and `PostEditChange` refreshes the bodies using it. The collision setter keys take `PhysMaterialOverride` (`SetPhysMaterialOverride`), and SCS propagation captures `BodyInstance.PhysMaterialOverride`.
 - **`analyze_animation`**: samples a sequence through the AnimPose API, root motion left on the root, for its root travel, foot contacts, loop seam and rotation spikes.
 - **Skeletal mesh import options**: the FBX factory binds the mesh to a named skeleton with `importMesh`, and takes the physics-asset and morph-target choices.
 - **`remove_variable` `variableNames`** (`McpBPVariableRemovalRename.cpp`): the names are read and matched by the helpers `set_variable_metadata` now shares (`McpReadVariableNames`, `McpMatchVariableNames` in `McpBPVariableMetadata.cpp`); a missing name refuses before anything is removed.

@@ -58,6 +58,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "animation_physics::create_ik_rig": "interactive|medium",
   "animation_physics::create_montage": "interactive|low",
   "animation_physics::create_morph_target": "long-running|high",
+  "animation_physics::create_physical_material": "interactive|low",
   "animation_physics::create_physics_asset": "interactive|medium",
   "animation_physics::create_pose_library": "interactive|low",
   "animation_physics::create_procedural_anim": "interactive|low",
@@ -1562,4 +1563,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1549;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1550;
