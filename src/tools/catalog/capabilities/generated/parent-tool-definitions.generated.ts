@@ -12851,7 +12851,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "spawner",
             "dash",
             "health_hud",
-            "counter_hud"
+            "counter_hud",
+            "game_over"
           ],
           "description": "Which add behaviour variant to run."
         },
@@ -13482,6 +13483,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Static/Skeletal mesh asset path for a mesh component."
         },
+        "message": {
+          "type": "string",
+          "description": "The text shown (default GAME OVER)."
+        },
         "metadata": {
           "type": "object",
           "description": "Arbitrary metadata key-value pairs.",
@@ -13805,6 +13810,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Response buttons under the dialog line (0-6, default 3)."
         },
+        "restartDelay": {
+          "type": "number",
+          "description": "Seconds before the level opens again (default 3); 0 never restarts it."
+        },
         "right": {
           "type": "number",
           "description": "Right margin in slate units."
@@ -14002,7 +14011,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "textName": {
           "type": "string",
-          "description": "The TextBlock in the widget that shows the number (default <variable>Counter). A text named here must already be in the widget."
+          "description": "The TextBlock in the widget that the behaviour writes: the count of counter_hud (default <variable>Counter) or the message of game_over (default GameOver_Text). A text named here must already be in the widget."
         },
         "textStyle": {
           "type": "string",
@@ -14206,7 +14215,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "widgetPath": {
           "type": "string",
-          "description": "A Widget Blueprint to show instead of the one made next to the Blueprint under UI/ (WBP_HealthBar, WBP_<variable>Counter). One without the bar or the text gets it: the health bar HUD piece (add_game_widget), or a text at the top right."
+          "description": "A Widget Blueprint to show instead of the one made next to the Blueprint under UI/ (WBP_HealthBar, WBP_<variable>Counter, WBP_GameOver). One without the bar or the text gets it: the health bar HUD piece (add_game_widget), a text at the top right, or a full-screen shade with the message."
         },
         "widthOverride": {
           "type": "number",
@@ -15079,7 +15088,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "respawnOnDeath": {
           "type": "boolean",
-          "description": "The pawn has the health behaviour, so dying respawns it too; add health first, then respawn again, to get it."
+          "description": "The pawn has the health behaviour, so dying respawns it too; add health first, then respawn again, to get it. False on a pawn with a game over, which restarts the level when it dies."
         },
         "resultNodeGuid": {
           "type": "string",

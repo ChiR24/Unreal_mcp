@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "d3ca4411470564df",
+  "catalogRevision": "16f60cf04e47786f",
   "recordCount": 416,
   "records": [
     {
@@ -12800,7 +12800,8 @@
         "blueprint.add_spawner",
         "blueprint.add_dash",
         "blueprint.add_health_hud",
-        "blueprint.add_counter_hud"
+        "blueprint.add_counter_hud",
+        "blueprint.add_game_over"
       ],
       "legacyIds": [
         {
@@ -12918,6 +12919,13 @@
           "folded": {
             "behaviour": "counter_hud"
           }
+        },
+        {
+          "tool": "manage_blueprint",
+          "action": "add_game_over",
+          "folded": {
+            "behaviour": "game_over"
+          }
         }
       ],
       "discovery": {
@@ -13029,9 +13037,15 @@
           "display the score",
           "show the score",
           "count coins",
-          "how many coins"
+          "how many coins",
+          "game over",
+          "game over screen",
+          "show game over when the player dies",
+          "restart the level when the player dies",
+          "player death screen",
+          "you died"
         ],
-        "summary": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player or patrols a route, walk, look and jump controls for a Character, a pawn that respawns when it falls or dies (with checkpoints), a goal that ends the level when the player reaches it, a pad that launches a Character, a teleporter, a spawner that keeps spawning an actor class, a dash key for a Character, or the health of the player or a count such as coins or score on screen.",
+        "summary": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player or patrols a route, walk, look and jump controls for a Character, a pawn that respawns when it falls or dies (with checkpoints), a goal that ends the level when the player reaches it, a pad that launches a Character, a teleporter, a spawner that keeps spawning an actor class, a dash key for a Character, the health of the player or a count such as coins or score on screen, or a game over screen that restarts the level when the player dies.",
         "whenToUse": [
           "behaviour=health: A player, enemy or breakable object must take damage and die; behaviour health_hud shows it on screen.",
           "behaviour=damage_on_touch: Spikes, lava, an enemy body or a fire must hurt what touches it.",
@@ -13049,7 +13063,8 @@
           "behaviour=spawner: Enemies, pickups or obstacles must keep appearing while the game runs.",
           "behaviour=dash: A player Character needs a quick burst of movement on a key: a dash, a dodge, an air dash.",
           "behaviour=health_hud: The player must see their own health: a health bar on the HUD.",
-          "behaviour=counter_hud: The player must see a count: coins collected, score, keys, kills."
+          "behaviour=counter_hud: The player must see a count: coins collected, score, keys, kills.",
+          "behaviour=game_over: The player death must end the run: a game over screen, then the level starts again."
         ],
         "whenNotToUse": [
           "behaviour=health: The project uses the Gameplay Ability System for attributes (use manage_gas).",
@@ -13068,7 +13083,8 @@
           "behaviour=spawner: Actors must be placed once, before play (use control_actor spawn).",
           "behaviour=dash: It must run faster while a key is held (use behaviour sprint).",
           "behaviour=health_hud: A bar floating over an actor in the world, such as over an enemy.",
-          "behaviour=counter_hud: Health as a bar (behaviour health_hud)."
+          "behaviour=counter_hud: Health as a bar (behaviour health_hud).",
+          "behaviour=game_over: The player must come back where it died or at a checkpoint (behaviour respawn; a pawn that respawns when it dies is refused here)."
         ]
       },
       "schemas": {
@@ -13235,7 +13251,7 @@
             },
             "widgetPath": {
               "type": "string",
-              "description": "A Widget Blueprint to show instead of the one made next to the Blueprint under UI/ (WBP_HealthBar, WBP_<variable>Counter). One without the bar or the text gets it: the health bar HUD piece (add_game_widget), or a text at the top right."
+              "description": "A Widget Blueprint to show instead of the one made next to the Blueprint under UI/ (WBP_HealthBar, WBP_<variable>Counter, WBP_GameOver). One without the bar or the text gets it: the health bar HUD piece (add_game_widget), a text at the top right, or a full-screen shade with the message."
             },
             "barName": {
               "type": "string",
@@ -13247,7 +13263,15 @@
             },
             "textName": {
               "type": "string",
-              "description": "The TextBlock in the widget that shows the number (default <variable>Counter). A text named here must already be in the widget."
+              "description": "The TextBlock in the widget that the behaviour writes: the count of counter_hud (default <variable>Counter) or the message of game_over (default GameOver_Text). A text named here must already be in the widget."
+            },
+            "message": {
+              "type": "string",
+              "description": "The text shown (default GAME OVER)."
+            },
+            "restartDelay": {
+              "type": "number",
+              "description": "Seconds before the level opens again (default 3); 0 never restarts it."
             },
             "behaviour": {
               "type": "string",
@@ -13267,7 +13291,8 @@
                 "spawner",
                 "dash",
                 "health_hud",
-                "counter_hud"
+                "counter_hud",
+                "game_over"
               ],
               "description": "Which add behaviour variant to run."
             }
@@ -13336,7 +13361,7 @@
             },
             "respawnOnDeath": {
               "type": "boolean",
-              "description": "The pawn has the health behaviour, so dying respawns it too; add health first, then respawn again, to get it."
+              "description": "The pawn has the health behaviour, so dying respawns it too; add health first, then respawn again, to get it. False on a pawn with a game over, which restarts the level when it dies."
             },
             "widgetPath": {
               "type": "string",
@@ -13358,7 +13383,7 @@
       },
       "examples": [
         {
-          "title": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player or patrols a route, walk, look and jump controls for a Character, a pawn that respawns when it falls or dies (with checkpoints), a goal that ends the level when the player reaches it, a pad that launches a Character, a teleporter, a spawner that keeps spawning an actor class, a dash key for a Character, or the health of the player or a count such as coins or score on screen.",
+          "title": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player or patrols a route, walk, look and jump controls for a Character, a pawn that respawns when it falls or dies (with checkpoints), a goal that ends the level when the player reaches it, a pad that launches a Character, a teleporter, a spawner that keeps spawning an actor class, a dash key for a Character, the health of the player or a count such as coins or score on screen, or a game over screen that restarts the level when the player dies.",
           "input": {
             "action": "add_behaviour",
             "blueprintPath": "/Game/Blueprints/BP_Enemy",
@@ -13415,7 +13440,8 @@
             "spawner": "add_spawner",
             "dash": "add_dash",
             "health_hud": "add_health_hud",
-            "counter_hud": "add_counter_hud"
+            "counter_hud": "add_counter_hud",
+            "game_over": "add_game_over"
           },
           "declaredBy": {
             "maxHealth": [
@@ -13537,7 +13563,8 @@
             ],
             "widgetPath": [
               "health_hud",
-              "counter_hud"
+              "counter_hud",
+              "game_over"
             ],
             "barName": [
               "health_hud"
@@ -13546,15 +13573,22 @@
               "counter_hud"
             ],
             "textName": [
-              "counter_hud"
+              "counter_hud",
+              "game_over"
+            ],
+            "message": [
+              "game_over"
+            ],
+            "restartDelay": [
+              "game_over"
             ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "5eed5e61362355d04c9cc220aa4eb54a51d8490d40c08bafe2813ded82b053bf",
-        "content": "b074b167987a6fe10a80a509f88db3a61a17a592f23db4928bd00bbae437e7b3"
+        "schema": "9d51d9aced410fac1d6983ef43fb7320fb8ec83a52c79b2fa1629533e77b4397",
+        "content": "1b78577ed98a5cccb37154647590cf6ff73da45f58daadd2e2c0ea19598b3a54"
       }
     },
     {

@@ -1,6 +1,6 @@
 /**
  * Gameplay behaviours written into an Actor Blueprint from the plugin's recipe files
- * (McpBlueprintBehaviour::Author): health, damage on touch, pickups, sprint, shooting, chasing, patrolling, player controls, respawning, a goal, a launch pad, a teleporter, a spawner, a dash, a health bar and counters on screen. Folded
+ * (McpBlueprintBehaviour::Author): health, damage on touch, pickups, sprint, shooting, chasing, patrolling, player controls, respawning, a goal, a launch pad, a teleporter, a spawner, a dash, a health bar and counters on screen, and a game over. Folded
  * into blueprint.add_behaviour (selector behaviour). Every one is all or nothing,
  * re-runnable (a second run replaces the first), compiled and saved.
  */
@@ -28,7 +28,8 @@ const INPUT_ACTION = { type: 'string', description: 'An Input Action to use inst
 const MAPPING_CONTEXT = { type: 'string', description: 'The Input Mapping Context its keys go in (the project\'s own); default the one the pawn already registers, else /Game/Input/IMC_MCP.' } as const;
 
 // The HUD behaviours share these: a folded family keeps one description per shared parameter and output.
-const WIDGET_PATH = { type: 'string', description: 'A Widget Blueprint to show instead of the one made next to the Blueprint under UI/ (WBP_HealthBar, WBP_<variable>Counter). One without the bar or the text gets it: the health bar HUD piece (add_game_widget), or a text at the top right.' } as const;
+const WIDGET_PATH = { type: 'string', description: 'A Widget Blueprint to show instead of the one made next to the Blueprint under UI/ (WBP_HealthBar, WBP_<variable>Counter, WBP_GameOver). One without the bar or the text gets it: the health bar HUD piece (add_game_widget), a text at the top right, or a full-screen shade with the message.' } as const;
+const TEXT_NAME = { type: 'string', description: 'The TextBlock in the widget that the behaviour writes: the count of counter_hud (default <variable>Counter) or the message of game_over (default GameOver_Text). A text named here must already be in the widget.' } as const;
 const HUD_OUTPUT = {
   ...BEHAVIOUR_OUTPUT,
   widgetPath: { type: 'string', description: 'The Widget Blueprint shown.' },
@@ -255,7 +256,7 @@ export const BEHAVIOURS_RECORDS: readonly CapabilityRecordSource[] = [
       checkpointTag: { type: 'string', description: 'Actor tag that marks a checkpoint (default Checkpoint).' },
     },
     required: ['blueprintPath'],
-    outputProps: { ...BEHAVIOUR_OUTPUT, respawnOnDeath: { type: 'boolean', description: 'The pawn has the health behaviour, so dying respawns it too; add health first, then respawn again, to get it.' } },
+    outputProps: { ...BEHAVIOUR_OUTPUT, respawnOnDeath: { type: 'boolean', description: 'The pawn has the health behaviour, so dying respawns it too; add health first, then respawn again, to get it. False on a pawn with a game over, which restarts the level when it dies.' } },
     effect: 'write',
     behavior: { idempotency: 'idempotent' },
     latency: 'interactive',
@@ -422,7 +423,7 @@ export const BEHAVIOURS_RECORDS: readonly CapabilityRecordSource[] = [
       variableName: { type: 'string', description: 'The Int or Float variable of the Blueprint to show, such as Coins (the variable a counting pickup raises).' },
       label: { type: 'string', description: 'Text before the number (default the variable name; empty for the number alone).' },
       widgetPath: WIDGET_PATH,
-      textName: { type: 'string', description: 'The TextBlock in the widget that shows the number (default <variable>Counter). A text named here must already be in the widget.' },
+      textName: TEXT_NAME,
     },
     required: ['blueprintPath', 'variableName'],
     outputProps: HUD_OUTPUT,
@@ -432,5 +433,30 @@ export const BEHAVIOURS_RECORDS: readonly CapabilityRecordSource[] = [
     resources: 'medium',
     plugins: BP_PLUGINS,
     exampleInput: { action: 'add_counter_hud', blueprintPath: '/Game/Blueprints/BP_Player', variableName: 'Coins' },
+  }),
+  buildRecord({
+    id: 'blueprint.add_game_over',
+    action: 'add_game_over',
+    family: FAMILY,
+    domain: DOMAIN,
+    topics: ['game over', 'game over screen', 'show game over when the player dies', 'restart the level when the player dies', 'player death screen', 'you died'],
+    summary: 'Give the player a game over: when the pawn dies (health behaviour) while a local player controls it, that player input stops, a widget shows message over a dark shade, and the current level opens again restartDelay seconds later. The pawn stays when it dies, so the restart can run. With no widgetPath it makes UI/WBP_GameOver next to the Blueprint.',
+    whenToUse: ['The player death must end the run: a game over screen, then the level starts again.'],
+    whenNotToUse: ['The player must come back where it died or at a checkpoint (behaviour respawn; a pawn that respawns when it dies is refused here).'],
+    inputProps: {
+      blueprintPath: P.blueprintPath,
+      message: { type: 'string', description: 'The text shown (default GAME OVER).' },
+      restartDelay: { type: 'number', description: 'Seconds before the level opens again (default 3); 0 never restarts it.' },
+      widgetPath: WIDGET_PATH,
+      textName: TEXT_NAME,
+    },
+    required: ['blueprintPath'],
+    outputProps: HUD_OUTPUT,
+    effect: 'write',
+    behavior: { idempotency: 'idempotent' },
+    latency: 'interactive',
+    resources: 'medium',
+    plugins: BP_PLUGINS,
+    exampleInput: { action: 'add_game_over', blueprintPath: '/Game/Blueprints/BP_Player', message: 'YOU DIED', restartDelay: 4 },
   }),
 ];

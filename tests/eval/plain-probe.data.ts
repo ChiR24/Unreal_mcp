@@ -555,4 +555,8 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'teleporter', accepted: ['blueprint.add_behaviour'] },
   { query: 'portal', accepted: ['blueprint.add_behaviour'] },
   { query: 'spike trap', accepted: ['blueprint.add_behaviour'] },
+  { query: 'game over screen', accepted: ['blueprint.add_behaviour'] },
+  { query: 'show game over when the player dies', accepted: ['blueprint.add_behaviour'] },
+  { query: 'game over', accepted: ['blueprint.add_behaviour'] },
+  { query: 'restart the level when the player dies', accepted: ['blueprint.add_behaviour'] },
 ];

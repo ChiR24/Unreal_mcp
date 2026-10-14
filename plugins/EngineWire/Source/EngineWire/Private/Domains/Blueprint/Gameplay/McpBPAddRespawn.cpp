@@ -34,7 +34,9 @@ bool HandleBlueprintAddRespawn(const FBlueprintActionContext &Context) {
     return true;
   }
   // With the Health behaviour, death respawns it too. One snapshot for both, so a failure leaves the Blueprint as it was.
-  const bool bOnDeath = HasHealthBehaviour(Class);
+  // A pawn with a game over restarts the level when it dies, so only falling respawns it.
+  const bool bGameOver = McpBlueprintBehaviour::FindOwned(Blueprint, TEXT("GameOver")).Num() > 0;
+  const bool bOnDeath = HasHealthBehaviour(Class) && !bGameOver;
   TMap<FString, TSharedPtr<FJsonValue>> Values;
   Values.Add(TEXT("FallHeight"), MakeShared<FJsonValueNumber>(FallHeight));
   Values.Add(TEXT("CheckpointTag"), MakeShared<FJsonValueString>(Tag));
@@ -76,8 +78,9 @@ bool HandleBlueprintAddRespawn(const FBlueprintActionContext &Context) {
   }
   Report->SetNumberField(TEXT("previousRemoved"), PreviousRemoved);
   Report->SetBoolField(TEXT("respawnOnDeath"), bOnDeath);
-  const TCHAR *Death = bOnDeath ? TEXT(" or dies (back at full health).")
-                                : TEXT(". Add the health behaviour, then this again, to respawn it when it dies too.");
+  const TCHAR *Death = bOnDeath    ? TEXT(" or dies (back at full health).")
+                       : bGameOver ? TEXT(". When it dies, its game over restarts the level instead.")
+                                   : TEXT(". Add the health behaviour, then this again, to respawn it when it dies too.");
   const FString Message = FString::Printf(
       TEXT("Respawn written: the pawn comes back to its start, or to where it last touched an actor tagged %s, when it "
            "falls %.0f units below that point%s"),
