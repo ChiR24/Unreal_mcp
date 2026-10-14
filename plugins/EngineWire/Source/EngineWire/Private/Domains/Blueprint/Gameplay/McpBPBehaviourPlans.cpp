@@ -85,23 +85,6 @@ bool PlanShoot(const TSharedPtr<FJsonObject> &Payload, const UBlueprint *Bluepri
   return true;
 }
 
-// A pawn its AI controller moves toward the player (recipe Gameplay/Chase).
-bool PlanChase(const TSharedPtr<FJsonObject> &Payload, const UBlueprint *Blueprint, FBehaviourPlan &Plan, FString &OutError) {
-  const UClass *Parent = Blueprint->GeneratedClass ? Blueprint->GeneratedClass.Get() : Blueprint->ParentClass.Get();
-  const double Range = GetJsonNumberField(Payload, TEXT("chaseRange"), 2000.0);
-  const double Stop = GetJsonNumberField(Payload, TEXT("stopDistance"), 100.0);
-  OutError = !Parent || !Parent->IsChildOf(APawn::StaticClass()) ? FString(TEXT("Chasing needs a Pawn or Character Blueprint"))
-             : Range <= 0.0 || Stop < 0.0 ? FString(TEXT("chaseRange must be above 0 and stopDistance 0 or more")) : FString();
-  if (!OutError.IsEmpty()) {
-    return false;
-  }
-  Plan.Recipe = TEXT("Chase");
-  SetNumber(Plan, TEXT("ChaseRange"), Range);
-  SetNumber(Plan, TEXT("StopDistance"), Stop);
-  Plan.Values.Add(TEXT("UsePathfinding"), MakeShared<FJsonValueBoolean>(GetJsonBoolField(Payload, TEXT("usePathfinding"), true)));
-  return true;
-}
-
 // The player reaching the actor (recipe Gameplay/Goal); a nextLevel given as a path must be an asset that exists.
 bool PlanGoal(const TSharedPtr<FJsonObject> &Payload, FBehaviourPlan &Plan, FString &OutError) {
   const FString Level = GetJsonStringField(Payload, TEXT("nextLevel")).TrimStartAndEnd();
@@ -194,6 +177,8 @@ bool PlanBehaviour(const FString &Action, const TSharedPtr<FJsonObject> &Payload
     return PlanShoot(Payload, Blueprint, Plan, OutError);
   } else if (Action == TEXT("add_chase")) {
     return PlanChase(Payload, Blueprint, Plan, OutError);
+  } else if (Action == TEXT("add_patrol")) {
+    return PlanPatrol(Payload, Blueprint, Plan, OutError);
   } else if (Action == TEXT("add_goal")) {
     return PlanGoal(Payload, Plan, OutError);
   } else if (Action == TEXT("add_spawner")) {

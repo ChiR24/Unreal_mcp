@@ -1,6 +1,6 @@
 /**
  * Gameplay behaviours written into an Actor Blueprint from the plugin's recipe files
- * (McpBlueprintBehaviour::Author): health, damage on touch, pickups, sprint, shooting, chasing, player controls, respawning, a goal, a spawner, a dash, a health bar and counters on screen. Folded
+ * (McpBlueprintBehaviour::Author): health, damage on touch, pickups, sprint, shooting, chasing, patrolling, player controls, respawning, a goal, a spawner, a dash, a health bar and counters on screen. Folded
  * into blueprint.add_behaviour (selector behaviour). Every one is all or nothing,
  * re-runnable (a second run replaces the first), compiled and saved.
  */
@@ -33,6 +33,11 @@ const HUD_OUTPUT = {
   widgetPath: { type: 'string', description: 'The Widget Blueprint shown.' },
   createdAssets: { type: 'array', items: { type: 'string' }, description: 'The Widget Blueprint this call made; it stays if the Blueprint is rolled back.' },
 } as const;
+
+// Chase and patrol share these: a pawn patrols and chases with one behaviour, and both read the same variables.
+const CHASE_RANGE = { type: 'number', description: 'Distance within which the pawn chases the player, in units: chase defaults to 2000, and a patrol chases only when given one (default 0, or the range of a chase it takes over).' } as const;
+const STOP_DISTANCE = { type: 'number', description: 'How close it gets to the player before it stops, in units (default 100).' } as const;
+const USE_PATHFINDING = { type: 'boolean', description: 'Follow the navigation mesh (default true; the level needs a Nav Mesh Bounds Volume); false heads straight for the player or the next point.' } as const;
 
 const OVERLAP_NOTE = 'It fires on overlap, so the actor needs a component that overlaps pawns (a sphere or box with the Trigger or OverlapAllDynamic profile).';
 
@@ -168,12 +173,12 @@ export const BEHAVIOURS_RECORDS: readonly CapabilityRecordSource[] = [
     topics: ['chase the player', 'enemy chases the player', 'enemy follows the player', 'follow the player'],
     summary: 'Make a pawn chase the player: every quarter second, while the player is within chaseRange, its AI controller moves it toward the player and stops stopDistance away; out of range it stops. The pawn is set to be possessed by an AI controller when placed or spawned.',
     whenToUse: ['An enemy or creature must run after the player; with usePathfinding (default) the level needs a Nav Mesh Bounds Volume (manage_ai configure_navigation), without it the pawn heads straight for the player.'],
-    whenNotToUse: ['The pawn needs patrols, senses or decisions beyond chasing (use manage_ai with a Behavior Tree or State Tree).'],
+    whenNotToUse: ['The pawn walks a route too (behaviour patrol, which chases with chaseRange; chase refuses a pawn that patrols).', 'Senses, cover or decisions beyond chasing (use manage_ai with a Behavior Tree or State Tree).'],
     inputProps: {
       blueprintPath: P.blueprintPath,
-      chaseRange: { type: 'number', description: 'Distance within which it chases, in units (default 2000).' },
-      stopDistance: { type: 'number', description: 'How close it gets before it stops, in units (default 100).' },
-      usePathfinding: { type: 'boolean', description: 'Follow the navigation mesh (default true; the level needs a Nav Mesh Bounds Volume); false heads straight for the player.' },
+      chaseRange: CHASE_RANGE,
+      stopDistance: STOP_DISTANCE,
+      usePathfinding: USE_PATHFINDING,
     },
     required: ['blueprintPath'],
     outputProps: BEHAVIOUR_OUTPUT,
@@ -183,6 +188,32 @@ export const BEHAVIOURS_RECORDS: readonly CapabilityRecordSource[] = [
     resources: 'medium',
     plugins: BP_PLUGINS,
     exampleInput: { action: 'add_chase', blueprintPath: '/Game/Blueprints/BP_Enemy', chaseRange: 1500, stopDistance: 120 },
+  }),
+  buildRecord({
+    id: 'blueprint.add_patrol',
+    action: 'add_patrol',
+    family: FAMILY,
+    domain: DOMAIN,
+    topics: ['patrol', 'enemy patrol', 'patrol between points', 'guard patrol', 'patrol route', 'walk back and forth', 'patrol and chase the player', 'waypoints', 'walk between waypoints'],
+    summary: 'Make a pawn patrol: its AI controller walks it to each of points in turn (offsets from where it starts), it waits waitTime at each and the route loops; with chaseRange it chases the player who comes that close and goes back to its route after. A chase the pawn already has is taken over. The pawn is set to be possessed by an AI controller when placed or spawned.',
+    whenToUse: ['An enemy or guard must walk a route, and may chase the player who comes close.'],
+    whenNotToUse: ['Senses, cover or decisions beyond walking a route and chasing (use manage_ai with a Behavior Tree or State Tree).'],
+    inputProps: {
+      blueprintPath: P.blueprintPath,
+      points: { type: 'array', items: { type: 'array', items: { type: 'number' }, minItems: 3, maxItems: 3 }, description: 'The route: [x, y, z] offsets from where the pawn starts, in world axes, walked in turn and looped (default [[500, 0, 0], [0, 0, 0]], back and forth). Each placed pawn walks its own copy (PatrolPoints is instance editable).' },
+      waitTime: { type: 'number', description: 'Seconds it waits at each point (default 1).' },
+      chaseRange: CHASE_RANGE,
+      stopDistance: STOP_DISTANCE,
+      usePathfinding: USE_PATHFINDING,
+    },
+    required: ['blueprintPath'],
+    outputProps: { ...BEHAVIOUR_OUTPUT, replaced: { type: 'array', items: { type: 'string' }, description: 'Behaviours this one took over and removed first (Chase).' } },
+    effect: 'write',
+    behavior: { idempotency: 'idempotent' },
+    latency: 'interactive',
+    resources: 'medium',
+    plugins: BP_PLUGINS,
+    exampleInput: { action: 'add_patrol', blueprintPath: '/Game/Blueprints/BP_Guard', points: [[600, 0, 0], [600, 400, 0], [0, 0, 0]], chaseRange: 1200 },
   }),
   buildRecord({
     id: 'blueprint.add_controls',

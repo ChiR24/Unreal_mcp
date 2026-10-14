@@ -12842,6 +12842,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "sprint",
             "shoot",
             "chase",
+            "patrol",
             "controls",
             "respawn",
             "goal",
@@ -12910,7 +12911,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "chaseRange": {
           "type": "number",
-          "description": "Distance within which it chases, in units (default 2000)."
+          "description": "Distance within which the pawn chases the player, in units: chase defaults to 2000, and a patrol chases only when given one (default 0, or the range of a chase it takes over)."
         },
         "checkpointTag": {
           "type": "string",
@@ -13691,6 +13692,18 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Pin name on a graph node."
         },
+        "points": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3
+          },
+          "description": "The route: [x, y, z] offsets from where the pawn starts, in world axes, walked in turn and looped (default [[500, 0, 0], [0, 0, 0]], back and forth). Each placed pawn walks its own copy (PatrolPoints is instance editable)."
+        },
         "posX": {
           "type": "number",
           "description": "X coordinate for node placement."
@@ -13920,7 +13933,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "stopDistance": {
           "type": "number",
-          "description": "How close it gets before it stops, in units (default 100)."
+          "description": "How close it gets to the player before it stops, in units (default 100)."
         },
         "stretch": {
           "type": "string",
@@ -14065,7 +14078,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "usePathfinding": {
           "type": "boolean",
-          "description": "Follow the navigation mesh (default true; the level needs a Nav Mesh Bounds Volume); false heads straight for the player."
+          "description": "Follow the navigation mesh (default true; the level needs a Nav Mesh Bounds Volume); false heads straight for the player or the next point."
         },
         "userSpecifiedScale": {
           "type": "number",
@@ -14128,6 +14141,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "waitForShaders": {
           "type": "boolean",
           "description": "true: when the drawing left shaders compiling (the editor compiles a material's UI shaders the first time it is drawn: right after the editor starts, or after a material edit), wait for them, at most 25 seconds, and draw again; shaderWait in the reply says how long it waited. Default false: draw once and report shadersCompiling."
+        },
+        "waitTime": {
+          "type": "number",
+          "description": "Seconds it waits at each point (default 1)."
         },
         "widgetKind": {
           "type": "string",
@@ -15027,6 +15044,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "removedWidget": {
           "type": "string",
           "description": "Name of the widget that was removed from the widget tree."
+        },
+        "replaced": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Behaviours this one took over and removed first (Chase)."
         },
         "replacedLinks": {
           "type": "array",

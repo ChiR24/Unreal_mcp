@@ -544,4 +544,9 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'score counter', accepted: ['blueprint.add_behaviour'] },
   { query: 'show the score', accepted: ['blueprint.add_behaviour'] },
   { query: 'count coins on the screen', accepted: ['blueprint.add_behaviour'] },
+  { query: 'make an enemy patrol', accepted: ['blueprint.add_behaviour'] },
+  { query: 'patrol between two points', accepted: ['blueprint.add_behaviour'] },
+  { query: 'guard walks back and forth', accepted: ['blueprint.add_behaviour'] },
+  { query: 'enemy patrols and chases the player', accepted: ['blueprint.add_behaviour'] },
+  { query: 'walk between waypoints', accepted: ['blueprint.add_behaviour'] },
 ];

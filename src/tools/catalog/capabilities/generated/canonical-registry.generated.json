@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "d2c67d08dcb86da6",
+  "catalogRevision": "3d10cca5931c4f0d",
   "recordCount": 416,
   "records": [
     {
@@ -12791,6 +12791,7 @@
         "blueprint.add_sprint",
         "blueprint.add_shoot",
         "blueprint.add_chase",
+        "blueprint.add_patrol",
         "blueprint.add_controls",
         "blueprint.add_respawn",
         "blueprint.add_goal",
@@ -12844,6 +12845,13 @@
           "action": "add_chase",
           "folded": {
             "behaviour": "chase"
+          }
+        },
+        {
+          "tool": "manage_blueprint",
+          "action": "add_patrol",
+          "folded": {
+            "behaviour": "patrol"
           }
         },
         {
@@ -12931,6 +12939,15 @@
           "enemy chases the player",
           "enemy follows the player",
           "follow the player",
+          "patrol",
+          "enemy patrol",
+          "patrol between points",
+          "guard patrol",
+          "patrol route",
+          "walk back and forth",
+          "patrol and chase the player",
+          "waypoints",
+          "walk between waypoints",
           "player controls",
           "wasd movement",
           "move with wasd",
@@ -12986,7 +13003,7 @@
           "count coins",
           "how many coins"
         ],
-        "summary": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player, walk, look and jump controls for a Character, a pawn that respawns when it falls or dies (with checkpoints), a goal that ends the level when the player reaches it, a spawner that keeps spawning an actor class, a dash key for a Character, or the health of the player or a count such as coins or score on screen.",
+        "summary": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player or patrols a route, walk, look and jump controls for a Character, a pawn that respawns when it falls or dies (with checkpoints), a goal that ends the level when the player reaches it, a spawner that keeps spawning an actor class, a dash key for a Character, or the health of the player or a count such as coins or score on screen.",
         "whenToUse": [
           "behaviour=health: A player, enemy or breakable object must take damage and die; behaviour health_hud shows it on screen.",
           "behaviour=damage_on_touch: Spikes, lava, an enemy body or a fire must hurt what touches it.",
@@ -12994,6 +13011,7 @@
           "behaviour=sprint: The player must run faster while holding a key.",
           "behaviour=shoot: The player (or any possessed pawn) must shoot projectiles with a key; a projectile from manage_combat create_combat_asset damages what it hits and never hits its shooter.",
           "behaviour=chase: An enemy or creature must run after the player; with usePathfinding (default) the level needs a Nav Mesh Bounds Volume (manage_ai configure_navigation), without it the pawn heads straight for the player.",
+          "behaviour=patrol: An enemy or guard must walk a route, and may chase the player who comes close.",
           "behaviour=controls: A Character made with manage_character create_character_blueprint (or any Character without input) must be playable: it has no input until this runs.",
           "behaviour=respawn: A player pawn must not be lost for good when it falls off the level or dies.",
           "behaviour=respawn: Checkpoints: tag a trigger actor (manage_interaction create_interactable trigger, or any actor that overlaps pawns) with checkpointTag; the pawn respawns where it stood when it touched it.",
@@ -13009,7 +13027,9 @@
           "behaviour=pickup: The item must go into an inventory system (use manage_inventory).",
           "behaviour=sprint: The walk speed itself must change (use manage_character configure_character walkSpeed).",
           "behaviour=shoot: A weapon actor the pawn holds must do the shooting (use manage_combat configure_projectile for its Fire function).",
-          "behaviour=chase: The pawn needs patrols, senses or decisions beyond chasing (use manage_ai with a Behavior Tree or State Tree).",
+          "behaviour=chase: The pawn walks a route too (behaviour patrol, which chases with chaseRange; chase refuses a pawn that patrols).",
+          "behaviour=chase: Senses, cover or decisions beyond chasing (use manage_ai with a Behavior Tree or State Tree).",
+          "behaviour=patrol: Senses, cover or decisions beyond walking a route and chasing (use manage_ai with a Behavior Tree or State Tree).",
           "behaviour=controls: Only one key or action must be added (use manage_networking configure_input for the asset and blueprint edit_graph for its node).",
           "behaviour=respawn: A pawn that should stay dead, such as an enemy: give it the health behaviour with destroyOnDeath instead.",
           "behaviour=goal: Something must happen on every touch, by any actor (use a trigger actor from manage_interaction create_interactable).",
@@ -13094,15 +13114,31 @@
             },
             "chaseRange": {
               "type": "number",
-              "description": "Distance within which it chases, in units (default 2000)."
+              "description": "Distance within which the pawn chases the player, in units: chase defaults to 2000, and a patrol chases only when given one (default 0, or the range of a chase it takes over)."
             },
             "stopDistance": {
               "type": "number",
-              "description": "How close it gets before it stops, in units (default 100)."
+              "description": "How close it gets to the player before it stops, in units (default 100)."
             },
             "usePathfinding": {
               "type": "boolean",
-              "description": "Follow the navigation mesh (default true; the level needs a Nav Mesh Bounds Volume); false heads straight for the player."
+              "description": "Follow the navigation mesh (default true; the level needs a Nav Mesh Bounds Volume); false heads straight for the player or the next point."
+            },
+            "points": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 3,
+                "maxItems": 3
+              },
+              "description": "The route: [x, y, z] offsets from where the pawn starts, in world axes, walked in turn and looped (default [[500, 0, 0], [0, 0, 0]], back and forth). Each placed pawn walks its own copy (PatrolPoints is instance editable)."
+            },
+            "waitTime": {
+              "type": "number",
+              "description": "Seconds it waits at each point (default 1)."
             },
             "jumpKey": {
               "type": "string",
@@ -13177,6 +13213,7 @@
                 "sprint",
                 "shoot",
                 "chase",
+                "patrol",
                 "controls",
                 "respawn",
                 "goal",
@@ -13243,6 +13280,13 @@
               },
               "description": "Event dispatchers it added, which other logic can bind."
             },
+            "replaced": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Behaviours this one took over and removed first (Chase)."
+            },
             "respawnOnDeath": {
               "type": "boolean",
               "description": "The pawn has the health behaviour, so dying respawns it too; add health first, then respawn again, to get it."
@@ -13267,7 +13311,7 @@
       },
       "examples": [
         {
-          "title": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player, walk, look and jump controls for a Character, a pawn that respawns when it falls or dies (with checkpoints), a goal that ends the level when the player reaches it, a spawner that keeps spawning an actor class, a dash key for a Character, or the health of the player or a count such as coins or score on screen.",
+          "title": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player or patrols a route, walk, look and jump controls for a Character, a pawn that respawns when it falls or dies (with checkpoints), a goal that ends the level when the player reaches it, a spawner that keeps spawning an actor class, a dash key for a Character, or the health of the player or a count such as coins or score on screen.",
           "input": {
             "action": "add_behaviour",
             "blueprintPath": "/Game/Blueprints/BP_Enemy",
@@ -13315,6 +13359,7 @@
             "sprint": "add_sprint",
             "shoot": "add_shoot",
             "chase": "add_chase",
+            "patrol": "add_patrol",
             "controls": "add_controls",
             "respawn": "add_respawn",
             "goal": "add_goal",
@@ -13379,13 +13424,22 @@
               "shoot"
             ],
             "chaseRange": [
-              "chase"
+              "chase",
+              "patrol"
             ],
             "stopDistance": [
-              "chase"
+              "chase",
+              "patrol"
             ],
             "usePathfinding": [
-              "chase"
+              "chase",
+              "patrol"
+            ],
+            "points": [
+              "patrol"
+            ],
+            "waitTime": [
+              "patrol"
             ],
             "jumpKey": [
               "controls"
@@ -13441,8 +13495,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "c152876d22a91af6d6f85df6c246b6b294e8568f8fcaff4ac6f8de8b60df7016",
-        "content": "e1c80ffc33b9bc6bbc14b2f3f82774a64e86e3b6b73be939a0ba3935335f81b6"
+        "schema": "1fc23f7944c16690a2e349b740bfc7b3d9573df2f10e5f68728eda66d1f02f16",
+        "content": "73069c40189122730e86e1d6ae633cc65c4aefbc713366245ab0758c2669a459"
       }
     },
     {
