@@ -37,6 +37,7 @@ bool UEngineWireSubsystem::HandleBlueprintAction(
       McpBlueprintHandlers::HandleBlueprintAddControls,
       McpBlueprintHandlers::HandleBlueprintAddRespawn,
       McpBlueprintHandlers::HandleBlueprintAddHealthHud,
+      McpBlueprintHandlers::HandleBlueprintAddCounterHud,
       McpBlueprintHandlers::HandleBlueprintCompile,
       McpBlueprintHandlers::HandleBlueprintCreateExists,
       McpBlueprintHandlers::HandleBlueprintGet,

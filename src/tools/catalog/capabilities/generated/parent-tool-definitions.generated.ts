@@ -12847,7 +12847,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "goal",
             "spawner",
             "dash",
-            "health_hud"
+            "health_hud",
+            "counter_hud"
           ],
           "description": "Which add behaviour variant to run."
         },
@@ -13370,6 +13371,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "event"
           ],
           "description": "Which add function variant to run; omit for 'function'."
+        },
+        "label": {
+          "type": "string",
+          "description": "Text before the number (default the variable name; empty for the number alone)."
         },
         "layoutProperty": {
           "type": "string",
@@ -13967,6 +13972,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Text content for a text block or button."
         },
+        "textName": {
+          "type": "string",
+          "description": "The TextBlock in the widget that shows the number (default <variable>Counter). A text named here must already be in the widget."
+        },
         "textStyle": {
           "type": "string",
           "enum": [
@@ -14165,7 +14174,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "widgetPath": {
           "type": "string",
-          "description": "A Widget Blueprint to show instead of the one made next to the Blueprint (UI/WBP_HealthBar). One without the bar gets the health bar HUD piece (add_game_widget)."
+          "description": "A Widget Blueprint to show instead of the one made next to the Blueprint under UI/ (WBP_HealthBar, WBP_<variable>Counter). One without the bar or the text gets it: the health bar HUD piece (add_game_widget), or a text at the top right."
         },
         "widthOverride": {
           "type": "number",

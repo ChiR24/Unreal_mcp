@@ -539,4 +539,9 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'show the player health', accepted: ['blueprint.add_behaviour', 'blueprint.add_game_widget'] },
   { query: 'player health bar', accepted: ['blueprint.add_behaviour', 'blueprint.add_game_widget'] },
   { query: 'health hud', accepted: ['blueprint.add_behaviour', 'blueprint.add_game_widget'] },
+  { query: 'show coins on screen', accepted: ['blueprint.add_behaviour'] },
+  { query: 'coin counter', accepted: ['blueprint.add_behaviour'] },
+  { query: 'score counter', accepted: ['blueprint.add_behaviour'] },
+  { query: 'show the score', accepted: ['blueprint.add_behaviour'] },
+  { query: 'count coins on the screen', accepted: ['blueprint.add_behaviour'] },
 ];

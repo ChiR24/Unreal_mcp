@@ -1,6 +1,6 @@
 /**
  * Gameplay behaviours written into an Actor Blueprint from the plugin's recipe files
- * (McpBlueprintBehaviour::Author): health, damage on touch, pickups, sprint, shooting, chasing, player controls, respawning, a goal, a spawner, a dash and a health bar on screen. Folded
+ * (McpBlueprintBehaviour::Author): health, damage on touch, pickups, sprint, shooting, chasing, player controls, respawning, a goal, a spawner, a dash, a health bar and counters on screen. Folded
  * into blueprint.add_behaviour (selector behaviour). Every one is all or nothing,
  * re-runnable (a second run replaces the first), compiled and saved.
  */
@@ -25,6 +25,14 @@ const SOUND_PATH = { type: 'string', description: 'Sound asset played at the act
 const KEY = { type: 'string', description: 'The key that drives it: held to sprint (default LeftShift), pressed to shoot (default LeftMouseButton) or to dash (default Q). Any key name works: SpaceBar, Gamepad_RightTrigger, Gamepad_FaceButton_Right.' } as const;
 const INPUT_ACTION = { type: 'string', description: 'An Input Action to use instead of the one the behaviour makes next to the Blueprint (IA_Sprint, IA_Shoot, IA_Dash).' } as const;
 const MAPPING_CONTEXT = { type: 'string', description: 'The Input Mapping Context its keys go in (the project\'s own); default the one the pawn already registers, else /Game/Input/IMC_MCP.' } as const;
+
+// The HUD behaviours share these: a folded family keeps one description per shared parameter and output.
+const WIDGET_PATH = { type: 'string', description: 'A Widget Blueprint to show instead of the one made next to the Blueprint under UI/ (WBP_HealthBar, WBP_<variable>Counter). One without the bar or the text gets it: the health bar HUD piece (add_game_widget), or a text at the top right.' } as const;
+const HUD_OUTPUT = {
+  ...BEHAVIOUR_OUTPUT,
+  widgetPath: { type: 'string', description: 'The Widget Blueprint shown.' },
+  createdAssets: { type: 'array', items: { type: 'string' }, description: 'The Widget Blueprint this call made; it stays if the Blueprint is rolled back.' },
+} as const;
 
 const OVERLAP_NOTE = 'It fires on overlap, so the actor needs a component that overlaps pawns (a sphere or box with the Trigger or OverlapAllDynamic profile).';
 
@@ -309,20 +317,41 @@ export const BEHAVIOURS_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['A bar floating over an actor in the world, such as over an enemy.'],
     inputProps: {
       blueprintPath: P.blueprintPath,
-      widgetPath: { type: 'string', description: 'A Widget Blueprint to show instead of the one made next to the Blueprint (UI/WBP_HealthBar). One without the bar gets the health bar HUD piece (add_game_widget).' },
+      widgetPath: WIDGET_PATH,
       barName: { type: 'string', description: 'The ProgressBar in the widget that shows the health (default HealthBar_Bar, the bar of the health bar piece). A bar named here must already be in the widget.' },
     },
     required: ['blueprintPath'],
-    outputProps: {
-      ...BEHAVIOUR_OUTPUT,
-      widgetPath: { type: 'string', description: 'The Widget Blueprint shown.' },
-      createdAssets: { type: 'array', items: { type: 'string' }, description: 'The Widget Blueprint this call made; it stays if the Blueprint is rolled back.' },
-    },
+    outputProps: HUD_OUTPUT,
     effect: 'write',
     behavior: { idempotency: 'idempotent' },
     latency: 'interactive',
     resources: 'medium',
     plugins: BP_PLUGINS,
     exampleInput: { action: 'add_health_hud', blueprintPath: '/Game/Blueprints/BP_Player' },
+  }),
+  buildRecord({
+    id: 'blueprint.add_counter_hud',
+    action: 'add_counter_hud',
+    family: FAMILY,
+    domain: DOMAIN,
+    topics: ['coin counter', 'score counter', 'show score on screen', 'show coins on screen', 'score hud', 'coin hud', 'display the score', 'show the score', 'count coins', 'how many coins'],
+    summary: 'Show a number of a pawn on screen (Coins, Score): while a local player controls it, a text at the top right reads label: value, the variable rounded to a whole number and refreshed every 0.1 seconds, taken off when the pawn loses that player or is destroyed. With no widgetPath it makes UI/WBP_<variable>Counter next to the Blueprint; each further counter sits a row lower.',
+    whenToUse: ['The player must see a count: coins collected, score, keys, kills.'],
+    whenNotToUse: ['Health as a bar (behaviour health_hud).'],
+    inputProps: {
+      blueprintPath: P.blueprintPath,
+      variableName: { type: 'string', description: 'The Int or Float variable of the Blueprint to show, such as Coins (the variable a counting pickup raises).' },
+      label: { type: 'string', description: 'Text before the number (default the variable name; empty for the number alone).' },
+      widgetPath: WIDGET_PATH,
+      textName: { type: 'string', description: 'The TextBlock in the widget that shows the number (default <variable>Counter). A text named here must already be in the widget.' },
+    },
+    required: ['blueprintPath', 'variableName'],
+    outputProps: HUD_OUTPUT,
+    effect: 'write',
+    behavior: { idempotency: 'idempotent' },
+    latency: 'interactive',
+    resources: 'medium',
+    plugins: BP_PLUGINS,
+    exampleInput: { action: 'add_counter_hud', blueprintPath: '/Game/Blueprints/BP_Player', variableName: 'Coins' },
   }),
 ];
