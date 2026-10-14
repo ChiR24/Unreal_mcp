@@ -12846,6 +12846,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "controls",
             "respawn",
             "goal",
+            "launch_pad",
+            "teleporter",
             "spawner",
             "dash",
             "health_hud",
@@ -12977,7 +12979,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "cooldown": {
           "type": "number",
-          "description": "Seconds before it can dash again (default 1)."
+          "description": "Seconds before it works again: before a Character can dash again, or before a teleporter takes a pawn after one arrived on it (default 1)."
         },
         "copyStyleFrom": {
           "type": "string",
@@ -13377,6 +13379,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Text before the number (default the variable name; empty for the number alone)."
         },
+        "launchVelocity": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "description": "Launch velocity [x, y, z] in units per second, world axes (default [0, 0, 1200], straight up)."
+        },
         "layoutProperty": {
           "type": "string",
           "enum": [
@@ -13636,6 +13647,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "x-unreal-reflection-boundary": true
           },
           "x-unreal-reflection-boundary": true
+        },
+        "overrideXY": {
+          "type": "boolean",
+          "description": "Replace the horizontal speed of the Character instead of adding to it (default false)."
         },
         "padding": {
           "type": "object",
@@ -13909,7 +13924,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "soundPath": {
           "type": "string",
-          "description": "Sound asset played at the actor: where a pickup was collected, or a goal when the player reaches it."
+          "description": "Sound asset played at the actor: where a pickup was collected, a goal when the player reaches it, a pad on each launch, or where a teleported pawn arrives."
         },
         "sourceNode": {
           "type": "string",

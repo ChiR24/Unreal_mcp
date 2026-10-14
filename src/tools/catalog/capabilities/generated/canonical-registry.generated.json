@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "3d10cca5931c4f0d",
+  "catalogRevision": "d3ca4411470564df",
   "recordCount": 416,
   "records": [
     {
@@ -12795,6 +12795,8 @@
         "blueprint.add_controls",
         "blueprint.add_respawn",
         "blueprint.add_goal",
+        "blueprint.add_launch_pad",
+        "blueprint.add_teleporter",
         "blueprint.add_spawner",
         "blueprint.add_dash",
         "blueprint.add_health_hud",
@@ -12877,6 +12879,20 @@
         },
         {
           "tool": "manage_blueprint",
+          "action": "add_launch_pad",
+          "folded": {
+            "behaviour": "launch_pad"
+          }
+        },
+        {
+          "tool": "manage_blueprint",
+          "action": "add_teleporter",
+          "folded": {
+            "behaviour": "teleporter"
+          }
+        },
+        {
+          "tool": "manage_blueprint",
           "action": "add_spawner",
           "folded": {
             "behaviour": "spawner"
@@ -12920,6 +12936,7 @@
           "damage on touch",
           "hazard",
           "spikes",
+          "spike trap",
           "pickup",
           "health pickup",
           "collectible",
@@ -12974,6 +12991,17 @@
           "end of the level",
           "win when the player reaches the goal",
           "go to the next level",
+          "jump pad",
+          "launch pad",
+          "bounce pad",
+          "trampoline",
+          "launch the player up",
+          "boost pad",
+          "teleporter",
+          "teleport pad",
+          "teleport the player",
+          "portal",
+          "warp pad",
           "spawner",
           "enemy spawner",
           "spawn enemies every few seconds",
@@ -13003,7 +13031,7 @@
           "count coins",
           "how many coins"
         ],
-        "summary": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player or patrols a route, walk, look and jump controls for a Character, a pawn that respawns when it falls or dies (with checkpoints), a goal that ends the level when the player reaches it, a spawner that keeps spawning an actor class, a dash key for a Character, or the health of the player or a count such as coins or score on screen.",
+        "summary": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player or patrols a route, walk, look and jump controls for a Character, a pawn that respawns when it falls or dies (with checkpoints), a goal that ends the level when the player reaches it, a pad that launches a Character, a teleporter, a spawner that keeps spawning an actor class, a dash key for a Character, or the health of the player or a count such as coins or score on screen.",
         "whenToUse": [
           "behaviour=health: A player, enemy or breakable object must take damage and die; behaviour health_hud shows it on screen.",
           "behaviour=damage_on_touch: Spikes, lava, an enemy body or a fire must hurt what touches it.",
@@ -13016,6 +13044,8 @@
           "behaviour=respawn: A player pawn must not be lost for good when it falls off the level or dies.",
           "behaviour=respawn: Checkpoints: tag a trigger actor (manage_interaction create_interactable trigger, or any actor that overlaps pawns) with checkpointTag; the pawn respawns where it stood when it touched it.",
           "behaviour=goal: A level needs an end: a finish line, an exit door, a flag the player reaches.",
+          "behaviour=launch_pad: A jump pad, bounce pad, trampoline or boost pad for the player or any Character.",
+          "behaviour=teleporter: Portals, warp pads, or a pair of teleporters between two places.",
           "behaviour=spawner: Enemies, pickups or obstacles must keep appearing while the game runs.",
           "behaviour=dash: A player Character needs a quick burst of movement on a key: a dash, a dodge, an air dash.",
           "behaviour=health_hud: The player must see their own health: a health bar on the HUD.",
@@ -13033,6 +13063,8 @@
           "behaviour=controls: Only one key or action must be added (use manage_networking configure_input for the asset and blueprint edit_graph for its node).",
           "behaviour=respawn: A pawn that should stay dead, such as an enemy: give it the health behaviour with destroyOnDeath instead.",
           "behaviour=goal: Something must happen on every touch, by any actor (use a trigger actor from manage_interaction create_interactable).",
+          "behaviour=launch_pad: A Character must jump higher by itself (manage_character set_movement_property JumpZVelocity).",
+          "behaviour=teleporter: Moving an actor from the editor or a test (control_actor set_transform).",
           "behaviour=spawner: Actors must be placed once, before play (use control_actor spawn).",
           "behaviour=dash: It must run faster while a key is held (use behaviour sprint).",
           "behaviour=health_hud: A bar floating over an actor in the world, such as over an enemy.",
@@ -13082,7 +13114,7 @@
             },
             "soundPath": {
               "type": "string",
-              "description": "Sound asset played at the actor: where a pickup was collected, or a goal when the player reaches it."
+              "description": "Sound asset played at the actor: where a pickup was collected, a goal when the player reaches it, a pad on each launch, or where a teleported pawn arrives."
             },
             "sprintSpeed": {
               "type": "number",
@@ -13164,6 +13196,23 @@
               "type": "number",
               "description": "Seconds between reaching the goal and opening nextLevel (default 2)."
             },
+            "launchVelocity": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 3,
+              "maxItems": 3,
+              "description": "Launch velocity [x, y, z] in units per second, world axes (default [0, 0, 1200], straight up)."
+            },
+            "overrideXY": {
+              "type": "boolean",
+              "description": "Replace the horizontal speed of the Character instead of adding to it (default false)."
+            },
+            "cooldown": {
+              "type": "number",
+              "description": "Seconds before it works again: before a Character can dash again, or before a teleporter takes a pawn after one arrived on it (default 1)."
+            },
             "spawnClass": {
               "type": "string",
               "description": "The actor it spawns: a Blueprint path (/Game/Enemies/BP_Slime) or class path; not the spawner itself."
@@ -13183,10 +13232,6 @@
             "dashSpeed": {
               "type": "number",
               "description": "Launch speed along the facing, units per second (default 1500)."
-            },
-            "cooldown": {
-              "type": "number",
-              "description": "Seconds before it can dash again (default 1)."
             },
             "widgetPath": {
               "type": "string",
@@ -13217,6 +13262,8 @@
                 "controls",
                 "respawn",
                 "goal",
+                "launch_pad",
+                "teleporter",
                 "spawner",
                 "dash",
                 "health_hud",
@@ -13311,7 +13358,7 @@
       },
       "examples": [
         {
-          "title": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player or patrols a route, walk, look and jump controls for a Character, a pawn that respawns when it falls or dies (with checkpoints), a goal that ends the level when the player reaches it, a spawner that keeps spawning an actor class, a dash key for a Character, or the health of the player or a count such as coins or score on screen.",
+          "title": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player or patrols a route, walk, look and jump controls for a Character, a pawn that respawns when it falls or dies (with checkpoints), a goal that ends the level when the player reaches it, a pad that launches a Character, a teleporter, a spawner that keeps spawning an actor class, a dash key for a Character, or the health of the player or a count such as coins or score on screen.",
           "input": {
             "action": "add_behaviour",
             "blueprintPath": "/Game/Blueprints/BP_Enemy",
@@ -13363,6 +13410,8 @@
             "controls": "add_controls",
             "respawn": "add_respawn",
             "goal": "add_goal",
+            "launch_pad": "add_launch_pad",
+            "teleporter": "add_teleporter",
             "spawner": "add_spawner",
             "dash": "add_dash",
             "health_hud": "add_health_hud",
@@ -13393,7 +13442,9 @@
             ],
             "soundPath": [
               "pickup",
-              "goal"
+              "goal",
+              "launch_pad",
+              "teleporter"
             ],
             "sprintSpeed": [
               "sprint"
@@ -13459,6 +13510,16 @@
             "delay": [
               "goal"
             ],
+            "launchVelocity": [
+              "launch_pad"
+            ],
+            "overrideXY": [
+              "launch_pad"
+            ],
+            "cooldown": [
+              "teleporter",
+              "dash"
+            ],
             "spawnClass": [
               "spawner"
             ],
@@ -13472,9 +13533,6 @@
               "spawner"
             ],
             "dashSpeed": [
-              "dash"
-            ],
-            "cooldown": [
               "dash"
             ],
             "widgetPath": [
@@ -13495,8 +13553,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "1fc23f7944c16690a2e349b740bfc7b3d9573df2f10e5f68728eda66d1f02f16",
-        "content": "73069c40189122730e86e1d6ae633cc65c4aefbc713366245ab0758c2669a459"
+        "schema": "5eed5e61362355d04c9cc220aa4eb54a51d8490d40c08bafe2813ded82b053bf",
+        "content": "b074b167987a6fe10a80a509f88db3a61a17a592f23db4928bd00bbae437e7b3"
       }
     },
     {

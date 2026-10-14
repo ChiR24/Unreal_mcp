@@ -549,4 +549,10 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'guard walks back and forth', accepted: ['blueprint.add_behaviour'] },
   { query: 'enemy patrols and chases the player', accepted: ['blueprint.add_behaviour'] },
   { query: 'walk between waypoints', accepted: ['blueprint.add_behaviour'] },
+  { query: 'jump pad', accepted: ['blueprint.add_behaviour'] },
+  { query: 'bounce pad', accepted: ['blueprint.add_behaviour'] },
+  { query: 'trampoline', accepted: ['blueprint.add_behaviour'] },
+  { query: 'teleporter', accepted: ['blueprint.add_behaviour'] },
+  { query: 'portal', accepted: ['blueprint.add_behaviour'] },
+  { query: 'spike trap', accepted: ['blueprint.add_behaviour'] },
 ];

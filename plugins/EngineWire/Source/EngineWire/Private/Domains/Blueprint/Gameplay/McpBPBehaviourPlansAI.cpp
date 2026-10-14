@@ -5,7 +5,6 @@
 
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
 
-#include "Algo/AllOf.h"
 #include "EdGraph/EdGraph.h"
 #include "Engine/Blueprint.h"
 #include "GameFramework/Pawn.h"
@@ -41,14 +40,13 @@ bool ReadRoute(const TSharedPtr<FJsonObject> &Payload, TArray<TSharedPtr<FJsonVa
     Points = &Back; // to 500 units along X and back
   }
   for (const TSharedPtr<FJsonValue> &Point : *Points) {
-    const TArray<TSharedPtr<FJsonValue>> *Xyz = nullptr;
-    if (!Point.IsValid() || !Point->TryGetArray(Xyz) || Xyz->Num() != 3 ||
-        !Algo::AllOf(*Xyz, [](const TSharedPtr<FJsonValue> &N) { return N.IsValid() && N->Type == EJson::Number; })) {
+    static const TCHAR *const Keys[3] = {TEXT("x"), TEXT("y"), TEXT("z")};
+    double Xyz[3] = {0.0, 0.0, 0.0};
+    if (!ReadJsonTriple(Point, Keys, Xyz)) {
       OutError = TEXT("points must be [x, y, z] offsets from where the pawn starts, such as [[500, 0, 0], [0, 0, 0]]");
       return false;
     }
-    OutPoints.Add(MakeShared<FJsonValueString>(FString::Printf(
-        TEXT("(X=%f,Y=%f,Z=%f)"), (*Xyz)[0]->AsNumber(), (*Xyz)[1]->AsNumber(), (*Xyz)[2]->AsNumber())));
+    OutPoints.Add(MakeShared<FJsonValueString>(FString::Printf(TEXT("(X=%f,Y=%f,Z=%f)"), Xyz[0], Xyz[1], Xyz[2])));
   }
   OutError = OutPoints.Num() > 0 ? FString() : FString(TEXT("points must hold at least one point"));
   return OutError.IsEmpty();

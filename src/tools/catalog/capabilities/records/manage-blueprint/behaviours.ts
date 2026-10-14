@@ -1,6 +1,6 @@
 /**
  * Gameplay behaviours written into an Actor Blueprint from the plugin's recipe files
- * (McpBlueprintBehaviour::Author): health, damage on touch, pickups, sprint, shooting, chasing, patrolling, player controls, respawning, a goal, a spawner, a dash, a health bar and counters on screen. Folded
+ * (McpBlueprintBehaviour::Author): health, damage on touch, pickups, sprint, shooting, chasing, patrolling, player controls, respawning, a goal, a launch pad, a teleporter, a spawner, a dash, a health bar and counters on screen. Folded
  * into blueprint.add_behaviour (selector behaviour). Every one is all or nothing,
  * re-runnable (a second run replaces the first), compiled and saved.
  */
@@ -19,7 +19,8 @@ const BEHAVIOUR_OUTPUT = {
   dispatchers: { type: 'array', items: { type: 'string' }, description: 'Event dispatchers it added, which other logic can bind.' },
 } as const;
 
-const SOUND_PATH = { type: 'string', description: 'Sound asset played at the actor: where a pickup was collected, or a goal when the player reaches it.' } as const;
+const SOUND_PATH = { type: 'string', description: 'Sound asset played at the actor: where a pickup was collected, a goal when the player reaches it, a pad on each launch, or where a teleported pawn arrives.' } as const;
+const COOLDOWN = { type: 'number', description: 'Seconds before it works again: before a Character can dash again, or before a teleporter takes a pawn after one arrived on it (default 1).' } as const;
 
 // A folded family keeps one description per shared parameter, so the key-driven behaviours share these texts.
 const KEY = { type: 'string', description: 'The key that drives it: held to sprint (default LeftShift), pressed to shoot (default LeftMouseButton) or to dash (default Q). Any key name works: SpaceBar, Gamepad_RightTrigger, Gamepad_FaceButton_Right.' } as const;
@@ -70,7 +71,7 @@ export const BEHAVIOURS_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'add_damage_on_touch',
     family: FAMILY,
     domain: DOMAIN,
-    topics: ['damage on touch', 'hazard', 'spikes'],
+    topics: ['damage on touch', 'hazard', 'spikes', 'spike trap'],
     summary: `Make an actor damage whatever touches it: ApplyDamage with TouchDamage on each overlap, which an actor with health loses (a negative amount heals). ${OVERLAP_NOTE}`,
     whenToUse: ['Spikes, lava, an enemy body or a fire must hurt what touches it.'],
     whenNotToUse: ['A whole area must hurt or kill (use manage_level_structure create_volume with a pain causing or kill Z volume).'],
@@ -287,6 +288,53 @@ export const BEHAVIOURS_RECORDS: readonly CapabilityRecordSource[] = [
     exampleInput: { action: 'add_goal', blueprintPath: '/Game/Blueprints/BP_Flag', nextLevel: '/Game/Maps/L_Level2' },
   }),
   buildRecord({
+    id: 'blueprint.add_launch_pad',
+    action: 'add_launch_pad',
+    family: FAMILY,
+    domain: DOMAIN,
+    topics: ['jump pad', 'launch pad', 'bounce pad', 'trampoline', 'launch the player up', 'boost pad'],
+    summary: `Make an actor launch a Character that touches it: LaunchCharacter with launchVelocity, replacing its vertical speed so every bounce reaches the same height (overrideXY replaces its horizontal speed too), and soundPath plays at the pad. ${OVERLAP_NOTE}`,
+    whenToUse: ['A jump pad, bounce pad, trampoline or boost pad for the player or any Character.'],
+    whenNotToUse: ['A Character must jump higher by itself (manage_character set_movement_property JumpZVelocity).'],
+    inputProps: {
+      blueprintPath: P.blueprintPath,
+      launchVelocity: { type: 'array', items: { type: 'number' }, minItems: 3, maxItems: 3, description: 'Launch velocity [x, y, z] in units per second, world axes (default [0, 0, 1200], straight up).' },
+      overrideXY: { type: 'boolean', description: 'Replace the horizontal speed of the Character instead of adding to it (default false).' },
+      soundPath: SOUND_PATH,
+    },
+    required: ['blueprintPath'],
+    outputProps: BEHAVIOUR_OUTPUT,
+    effect: 'write',
+    behavior: { idempotency: 'idempotent' },
+    latency: 'interactive',
+    resources: 'medium',
+    plugins: BP_PLUGINS,
+    exampleInput: { action: 'add_launch_pad', blueprintPath: '/Game/Blueprints/BP_JumpPad', launchVelocity: [0, 0, 1600] },
+  }),
+  buildRecord({
+    id: 'blueprint.add_teleporter',
+    action: 'add_teleporter',
+    family: FAMILY,
+    domain: DOMAIN,
+    topics: ['teleporter', 'teleport pad', 'teleport the player', 'portal', 'warp pad'],
+    summary: `Make an actor a teleporter: a pawn that touches it is moved to TeleportTarget, keeping its rotation, and soundPath plays where it arrives. Set TeleportTarget on each placed teleporter to the actor to arrive at (control_actor spawn variables, or set_blueprint_variables, with that actor name); a target that is a teleporter of the same class ignores pawns for cooldown seconds first, so a pair of pads does not send the pawn straight back. ${OVERLAP_NOTE}`,
+    whenToUse: ['Portals, warp pads, or a pair of teleporters between two places.'],
+    whenNotToUse: ['Moving an actor from the editor or a test (control_actor set_transform).'],
+    inputProps: {
+      blueprintPath: P.blueprintPath,
+      cooldown: COOLDOWN,
+      soundPath: SOUND_PATH,
+    },
+    required: ['blueprintPath'],
+    outputProps: BEHAVIOUR_OUTPUT,
+    effect: 'write',
+    behavior: { idempotency: 'idempotent' },
+    latency: 'interactive',
+    resources: 'medium',
+    plugins: BP_PLUGINS,
+    exampleInput: { action: 'add_teleporter', blueprintPath: '/Game/Blueprints/BP_Teleporter', cooldown: 1 },
+  }),
+  buildRecord({
     id: 'blueprint.add_spawner',
     action: 'add_spawner',
     family: FAMILY,
@@ -323,7 +371,7 @@ export const BEHAVIOURS_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: {
       blueprintPath: P.blueprintPath,
       dashSpeed: { type: 'number', description: 'Launch speed along the facing, units per second (default 1500).' },
-      cooldown: { type: 'number', description: 'Seconds before it can dash again (default 1).' },
+      cooldown: COOLDOWN,
       key: KEY,
       inputActionPath: INPUT_ACTION,
       mappingContextPath: MAPPING_CONTEXT,

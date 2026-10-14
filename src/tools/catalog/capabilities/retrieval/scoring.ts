@@ -435,9 +435,14 @@ export function scoreDocument(
     && (document.record.discovery.topics ?? []).some((topic) => topic.toLowerCase().includes(context.queryPhrase));
   const fullyNamed = (context.contentTokens.length >= 2 || phraseTopic)
     && context.contentTokens.every((token) => named.has(token));
+  // A one-word query a topic says exactly stays a result too, with no bonus, as the native door keeps it: once the
+  // folded add_behaviour record grew, "checkpoint" fell under the floor on its missing action words and found nothing.
+  const topicIsQuery = context.queryTokens.length === 1 && context.contentTokens.length === 1
+    && (document.record.discovery.topics ?? []).some((topic) =>
+      tokensEqual(tokenizeCapabilityText(topic), context.contentTokens));
   // A record whose own names and topics hold every content word stays a result although its action words are
   // missing from the query: "random number" dropped edit_graph, whose topic says exactly that, and found nothing.
-  if (matchScore < RETRIEVAL_SCORE_CONSTANTS.minimumRelevanceScore && !fullyNamed) return null;
+  if (matchScore < RETRIEVAL_SCORE_CONSTANTS.minimumRelevanceScore && !fullyNamed && !topicIsQuery) return null;
   const effect = document.record.behavior.effect;
   // The phrase also outweighs a record that names the same words one by one, as native's McpSearchPhraseTopicBonus:
   // "connect blueprint nodes" is an edit_graph topic, and the level Blueprint record took it word by word.

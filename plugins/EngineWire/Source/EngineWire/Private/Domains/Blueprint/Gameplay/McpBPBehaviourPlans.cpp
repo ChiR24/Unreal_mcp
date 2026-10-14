@@ -85,6 +85,39 @@ bool PlanShoot(const TSharedPtr<FJsonObject> &Payload, const UBlueprint *Bluepri
   return true;
 }
 
+// A pad that launches a Character touching it (recipe Gameplay/LaunchPad).
+bool PlanLaunchPad(const TSharedPtr<FJsonObject> &Payload, FBehaviourPlan &Plan, FString &OutError) {
+  const FVector Launch = ExtractVectorField(Payload, TEXT("launchVelocity"), FVector(0.0, 0.0, 1200.0));
+  if (!ReadSound(Payload, Plan, OutError)) {
+    return false;
+  }
+  Plan.Recipe = TEXT("LaunchPad");
+  SetString(Plan, TEXT("Velocity"), FString::Printf(TEXT("(X=%f,Y=%f,Z=%f)"), Launch.X, Launch.Y, Launch.Z));
+  Plan.Values.Add(TEXT("OverrideXY"), MakeShared<FJsonValueBoolean>(GetJsonBoolField(Payload, TEXT("overrideXY"), false)));
+  OutError = Launch.IsNearlyZero() ? FString(TEXT("launchVelocity must not be zero")) : FString();
+  return OutError.IsEmpty();
+}
+
+// A teleporter (recipe Gameplay/Teleporter); its own class and Cast pin tell a target that is a teleporter too.
+bool PlanTeleporter(const TSharedPtr<FJsonObject> &Payload, const UBlueprint *Blueprint, FBehaviourPlan &Plan,
+                    FString &OutError) {
+  const UClass *Self = Blueprint->GeneratedClass.Get();
+  const double Cooldown = GetJsonNumberField(Payload, TEXT("cooldown"), 1.0);
+  if (!ReadSound(Payload, Plan, OutError)) {
+    return false;
+  }
+  OutError = !Self ? FString(TEXT("The Blueprint has no compiled class yet: compile it, then add the teleporter"))
+             : Cooldown < 0.0 ? FString(TEXT("cooldown must be 0 or more")) : FString();
+  if (!OutError.IsEmpty()) {
+    return false;
+  }
+  Plan.Recipe = TEXT("Teleporter");
+  SetNumber(Plan, TEXT("Cooldown"), Cooldown);
+  SetString(Plan, TEXT("SelfClass"), Self->GetPathName());
+  SetString(Plan, TEXT("CastPin"), TEXT("As") + Self->GetDisplayNameText().ToString());
+  return true;
+}
+
 // The player reaching the actor (recipe Gameplay/Goal); a nextLevel given as a path must be an asset that exists.
 bool PlanGoal(const TSharedPtr<FJsonObject> &Payload, FBehaviourPlan &Plan, FString &OutError) {
   const FString Level = GetJsonStringField(Payload, TEXT("nextLevel")).TrimStartAndEnd();
@@ -179,6 +212,10 @@ bool PlanBehaviour(const FString &Action, const TSharedPtr<FJsonObject> &Payload
     return PlanChase(Payload, Blueprint, Plan, OutError);
   } else if (Action == TEXT("add_patrol")) {
     return PlanPatrol(Payload, Blueprint, Plan, OutError);
+  } else if (Action == TEXT("add_launch_pad")) {
+    return PlanLaunchPad(Payload, Plan, OutError);
+  } else if (Action == TEXT("add_teleporter")) {
+    return PlanTeleporter(Payload, Blueprint, Plan, OutError);
   } else if (Action == TEXT("add_goal")) {
     return PlanGoal(Payload, Plan, OutError);
   } else if (Action == TEXT("add_spawner")) {
