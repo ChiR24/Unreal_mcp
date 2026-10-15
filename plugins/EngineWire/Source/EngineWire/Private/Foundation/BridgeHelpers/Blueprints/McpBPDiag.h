@@ -3,7 +3,7 @@
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPSoundCheck.h"
-#include "Foundation/BridgeHelpers/Blueprints/McpBPStaleReadCheck.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpBPGraphChecks.h"
 
 #include "Engine/Blueprint.h"
 #include "Engine/BlueprintGeneratedClass.h"
@@ -132,6 +132,8 @@ inline bool McpCompileBlueprintWithDiagnostics(
     const int32 FirstCheck = Diagnostics.Num();
     McpAddSoundNodeWarnings(Blueprint, Diagnostics, MaxDiagnostics);
     McpAddStaleReadWarnings(Blueprint, Diagnostics, MaxDiagnostics);
+    McpAddRandomReadWarnings(Blueprint, Diagnostics, MaxDiagnostics);
+    McpAddTimerNameWarnings(Blueprint, Diagnostics, MaxDiagnostics);
     if (Diagnostics.Num() > 0) {
       Out->SetArrayField(TEXT("diagnostics"), Diagnostics);
     }

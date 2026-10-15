@@ -391,8 +391,9 @@ const testCases = [
     { edit: 'connect_pins', from: '$delay.then', to: '$print.execute' },
   ] }, expected: 'success', assertions: [{ path: 'structuredContent.result.succeeded', equals: 3, label: 'build_graph ran all three steps' }, { path: 'structuredContent.receipt.handles.0.kind', equals: 'asset', label: 'the receipt names the Blueprint the batch edited' }, { path: 'structuredContent.receipt.changes', length: 1, label: 'and lists it once as changed' }] },
 
-  // === BATCH: math that reads a variable, wired into its Set and into a node after the Set, is named with the fix ===
-  { scenario: 'BATCH: build_graph warns about a value worked on twice', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: BP_PATH, graphName: 'EventGraph', operations: [
+  // === BATCH: graphs the compiler accepts that misbehave are named with the fix, each on its own Blueprint ===
+  { scenario: 'ADD: create a Blueprint for the stale value check', toolName: 'manage_blueprint', arguments: { action: 'create', name: `BP_StaleCheck_${ts}`, savePath: TEST_FOLDER, parentClass: '/Script/Engine.Actor' }, expected: 'success' },
+  { scenario: 'BATCH: build_graph warns about a value worked on twice', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: `${TEST_FOLDER}/BP_StaleCheck_${ts}`, graphName: 'EventGraph', operations: [
     { edit: 'add_variable', variableName: 'StaleCount', variableType: 'int' },
     { edit: 'create_node', id: 'go', nodeType: 'CustomEvent', customEventName: 'CountUp' },
     { edit: 'create_node', id: 'get', nodeType: 'VariableGet', memberName: 'StaleCount' },
@@ -407,6 +408,27 @@ const testCases = [
     { edit: 'connect_pins', from: '$show.ReturnValue', to: '$print.InString' },
     { edit: 'connect_pins', from: '$set.then', to: '$print.execute' },
   ] }, expected: 'success', assertions: [{ path: 'structuredContent.receipt.warnings.0', includes: 'Output_Get', label: 'the receipt names the Set node pin to read instead' }] },
+  { scenario: 'ADD: create a Blueprint for the random value check', toolName: 'manage_blueprint', arguments: { action: 'create', name: `BP_RandomCheck_${ts}`, savePath: TEST_FOLDER, parentClass: '/Script/Engine.Actor' }, expected: 'success' },
+  { scenario: 'BATCH: build_graph warns about one random value read twice', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: `${TEST_FOLDER}/BP_RandomCheck_${ts}`, graphName: 'EventGraph', operations: [
+    { edit: 'add_variable', variableName: 'Roll', variableType: 'int' },
+    { edit: 'create_node', id: 'go', nodeType: 'CustomEvent', customEventName: 'RollDie' },
+    { edit: 'create_node', id: 'pick', nodeType: 'CallFunction', memberName: 'RandomInteger', memberClass: 'KismetMathLibrary', pinDefaults: { Max: 6 } },
+    { edit: 'create_node', id: 'set', nodeType: 'VariableSet', memberName: 'Roll' },
+    { edit: 'create_node', id: 'show', nodeType: 'CallFunction', memberName: 'Conv_IntToString', memberClass: 'KismetStringLibrary' },
+    { edit: 'create_node', id: 'print', nodeType: 'CallFunction', memberName: 'PrintString' },
+    { edit: 'connect_pins', from: '$go.then', to: '$set.execute' },
+    { edit: 'connect_pins', from: '$pick.ReturnValue', to: '$set.Roll' },
+    { edit: 'connect_pins', from: '$pick.ReturnValue', to: '$show.InInt' },
+    { edit: 'connect_pins', from: '$show.ReturnValue', to: '$print.InString' },
+    { edit: 'connect_pins', from: '$set.then', to: '$print.execute' },
+  ] }, expected: 'success', assertions: [{ path: 'structuredContent.receipt.warnings.0', includes: 'store it with a Set node first', label: 'the receipt says each reader gets its own random value' }] },
+  { scenario: 'ADD: create a Blueprint for the timer name check', toolName: 'manage_blueprint', arguments: { action: 'create', name: `BP_TimerCheck_${ts}`, savePath: TEST_FOLDER, parentClass: '/Script/Engine.Actor' }, expected: 'success' },
+  { scenario: 'BATCH: build_graph warns about a timer that names nothing', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: `${TEST_FOLDER}/BP_TimerCheck_${ts}`, graphName: 'EventGraph', operations: [
+    { edit: 'create_node', id: 'go', nodeType: 'CustomEvent', customEventName: 'StartTicking' },
+    { edit: 'create_node', id: 'tick', nodeType: 'CustomEvent', customEventName: 'Tick_Once' },
+    { edit: 'create_node', id: 'timer', nodeType: 'CallFunction', memberName: 'K2_SetTimer', memberClass: 'KismetSystemLibrary', pinDefaults: { FunctionName: 'TickOnce', Time: 1, bLooping: true } },
+    { edit: 'connect_pins', from: '$go.then', to: '$timer.execute' },
+  ] }, expected: 'success', assertions: [{ path: 'structuredContent.receipt.warnings.0', includes: 'never runs', label: 'the receipt says the misnamed timer never runs' }] },
 
   // === BATCH: "$entry" addresses the Construction Script's entry node without a lookup ===
   { scenario: 'BATCH: build_graph from the construction script entry', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: BP_PATH, graphName: 'UserConstructionScript', operations: [

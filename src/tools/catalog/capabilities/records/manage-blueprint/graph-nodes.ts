@@ -315,7 +315,7 @@ export const GRAPH_NODES_RECORDS: readonly CapabilityRecordSource[] = [
     domain: DOMAIN,
     summary: 'Find the functions a Blueprint node can call by what they do, in plain words (game time, random number in range, distance between actors): each with the memberName and memberClass create_node takes, its input and output pins, and the class it acts on.',
     whenToUse: ['A graph needs a node whose function name or class is not known: get memberName, memberClass and the pin names before create_node or a batch.', 'A create_node or batch step failed with FUNCTION_NOT_FOUND: find the function by what it does.', 'What an object of a class can do must be listed (memberClass Character, words jump).'],
-    whenNotToUse: ['The function name and class are already known (create_node directly).', 'The node is not a function call (Branch, Cast, a loop, a timeline): node_types lists those.'],
+    whenNotToUse: ['The function name and class are already known (create_node directly).', 'The node is not a function call (Branch, Cast, a loop, an array\'s Get, which is nodeType GetArrayItem, a timeline): node_types lists those.'],
     inputProps: {
       words: { type: 'string', description: 'A few plain words for what the node does (game time, random number in range, distance between actors); a function matches on its name, keywords, category and description, best first, at most 10.' },
       memberClass: { type: 'string', description: 'Only functions an object of this class calls on itself (Character, or a Blueprint path), no library functions.' },

@@ -68,7 +68,7 @@ bool IsFinderStopWord(const FString& Word)
     static const TSet<FString> Stop = {TEXT("a"), TEXT("an"), TEXT("the"), TEXT("of"), TEXT("to"), TEXT("for"),
         TEXT("in"), TEXT("on"), TEXT("at"), TEXT("by"), TEXT("with"), TEXT("from"), TEXT("and"), TEXT("or"),
         TEXT("is"), TEXT("it"), TEXT("my"), TEXT("that"), TEXT("which"), TEXT("node"), TEXT("function"),
-        TEXT("blueprint")};
+        TEXT("blueprint"), TEXT("few"), TEXT("some")};
     return Stop.Contains(Word);
 }
 
@@ -91,7 +91,18 @@ void ScoreFoundFunction(FFoundFunction& Found, const TArray<FString>& Wanted)
     Found.NameWords = Name.Num();
     SplitFinderWords(Function.GetMetaData(TEXT("Keywords")), Keywords);
     SplitFinderWords(Function.GetMetaData(TEXT("Category")), Category);
-    SplitFinderWords(Function.GetToolTipText().ToString(), Tip);
+    // The tooltip without the names after @param: InItem made every getter that takes an item key match "item".
+    TArray<FString> TipTokens;
+    Function.GetToolTipText().ToString().ParseIntoArrayWS(TipTokens);
+    for (int32 Index = 0; Index < TipTokens.Num(); ++Index)
+    {
+        if (TipTokens[Index] == TEXT("@param"))
+        {
+            ++Index;
+            continue;
+        }
+        SplitFinderWords(TipTokens[Index], Tip);
+    }
     for (const FString& Word : Wanted)
     {
         const int32 InName = FinderWordHits(Name, Word), InKeywords = FinderWordHits(Keywords, Word);
@@ -207,8 +218,9 @@ bool HandleFindFunctions(FActionContext& Context)
             return true;
         }
     }
-    // Two thirds of the wanted words must hit (both of two), so one common word ("game") does not list everything with it.
-    const int32 Needed = (2 * Wanted.Num() + 2) / 3;
+    // Two thirds of up to three wanted words must hit (both of two), so one common word ("game") does not list
+    // everything with it; half of a longer request, which carries words no function says ("repeat every few seconds").
+    const int32 Needed = Wanted.Num() <= 3 ? (2 * Wanted.Num() + 2) / 3 : (Wanted.Num() + 1) / 2;
     TArray<FFoundFunction> Found;
     for (TObjectIterator<UClass> It; It; ++It)
     {
