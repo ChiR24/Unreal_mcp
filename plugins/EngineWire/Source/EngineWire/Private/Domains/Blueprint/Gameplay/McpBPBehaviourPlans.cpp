@@ -22,7 +22,8 @@ void SetString(FBehaviourPlan &Plan, const TCHAR *Name, const FString &Value) {
   Plan.Values.Add(Name, MakeShared<FJsonValueString>(Value));
 }
 
-// soundPath as the object path a variable default takes, or None when it is not given.
+} // namespace
+
 bool ReadSound(const TSharedPtr<FJsonObject> &Payload, FBehaviourPlan &Plan, FString &OutError) {
   const FString SoundPath = GetJsonStringField(Payload, TEXT("soundPath")).TrimStartAndEnd();
   USoundBase *Sound = SoundPath.IsEmpty() ? nullptr : Cast<USoundBase>(McpLoadAsset(SoundPath));
@@ -33,6 +34,8 @@ bool ReadSound(const TSharedPtr<FJsonObject> &Payload, FBehaviourPlan &Plan, FSt
   SetString(Plan, TEXT("Sound"), Sound ? Sound->GetPathName() : FString(TEXT("None")));
   return true;
 }
+
+namespace {
 
 // A counting pickup: the collector class, its Int or Float variable, and the pin the Cast node gives that class.
 bool PlanCountingPickup(const TSharedPtr<FJsonObject> &Payload, FBehaviourPlan &Plan, FString &OutError) {
@@ -221,6 +224,8 @@ bool PlanBehaviour(const FString &Action, const TSharedPtr<FJsonObject> &Payload
     return PlanPatrol(Payload, Blueprint, Plan, OutError);
   } else if (Action == TEXT("add_moving_platform")) {
     return PlanMovingPlatform(Payload, Plan, OutError);
+  } else if (Action == TEXT("add_explosive")) {
+    return PlanExplosive(Payload, Blueprint, Plan, OutError);
   } else if (Action == TEXT("add_stomp")) {
     return PlanStomp(Payload, Blueprint, Plan, OutError);
   } else if (Action == TEXT("add_turret")) {
@@ -249,27 +254,6 @@ bool PlanBehaviour(const FString &Action, const TSharedPtr<FJsonObject> &Payload
                : SprintSpeed <= 0.0 ? FString(TEXT("sprintSpeed must be above 0")) : FString();
   }
   return OutError.IsEmpty();
-}
-
-bool ReadProjectile(const TSharedPtr<FJsonObject> &Payload, const UBlueprint *Blueprint, double DefaultRate,
-                    FBehaviourPlan &Plan, FString &OutError) {
-  const FString ClassText = GetJsonStringField(Payload, TEXT("projectileClass")).TrimStartAndEnd();
-  UClass *Fired = ResolveClassByName(ClassText);
-  const double Speed = GetJsonNumberField(Payload, TEXT("projectileSpeed"), 3000.0);
-  const double Rate = GetJsonNumberField(Payload, TEXT("fireRate"), DefaultRate);
-  OutError = !Fired || !Fired->IsChildOf(AActor::StaticClass())
-                 ? FString::Printf(TEXT("projectileClass %s is not an actor class or Blueprint (make one with manage_combat "
-                                        "create_combat_asset kind projectile_blueprint)"), *ClassText)
-             : Speed <= 0.0 || Rate <= 0.0 ? FString(TEXT("projectileSpeed and fireRate must be above 0")) : FString();
-  if (!OutError.IsEmpty()) {
-    return false;
-  }
-  SetString(Plan, TEXT("ProjectileType"),
-            McpBlueprintBehaviour::ClassVariableType(Blueprint, TEXT("ProjectileClass"), Fired, AActor::StaticClass()));
-  SetString(Plan, TEXT("ProjectileClass"), Fired->GetPathName());
-  SetNumber(Plan, TEXT("ProjectileSpeed"), Speed);
-  SetNumber(Plan, TEXT("FireRate"), Rate);
-  return true;
 }
 
 bool HasHealthBehaviour(const UClass *Class) {

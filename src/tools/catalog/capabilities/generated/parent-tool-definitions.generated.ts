@@ -12845,6 +12845,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "patrol",
             "turret",
             "stomp",
+            "explosive",
             "moving_platform",
             "controls",
             "respawn",
@@ -13087,6 +13088,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Which edit graph variant to run."
         },
+        "effectPath": {
+          "type": "string",
+          "description": "A Niagara system played at the blast (none by default)."
+        },
         "elements": {
           "type": "array",
           "items": {
@@ -13138,6 +13143,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "explicitWrapWidth": {
           "type": "boolean",
           "description": "Use explicit wrap width."
+        },
+        "explosionDamage": {
+          "type": "number",
+          "description": "Damage at the centre of the blast, less toward its edge (default 50)."
+        },
+        "explosionRadius": {
+          "type": "number",
+          "description": "Radius of the blast in units (default 400); walls between it and an actor shield that actor."
         },
         "exposeOnSpawn": {
           "type": "boolean",
@@ -13975,7 +13988,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "soundPath": {
           "type": "string",
-          "description": "Sound asset played at the actor: where a pickup was collected, a goal when the player reaches it, a pad on each launch, or where a teleported pawn arrives."
+          "description": "Sound asset played at the actor: where a pickup was collected, a goal when the player reaches it, a pad on each launch, where a teleported pawn arrives, or an explosive blows up."
         },
         "sourceNode": {
           "type": "string",

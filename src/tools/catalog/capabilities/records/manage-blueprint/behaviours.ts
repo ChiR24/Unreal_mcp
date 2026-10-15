@@ -1,6 +1,6 @@
 /**
  * Gameplay behaviours written into an Actor Blueprint from the plugin's recipe files
- * (McpBlueprintBehaviour::Author): health, damage on touch, pickups, sprint, shooting, chasing, patrolling, a turret, a stomp, a moving platform, player controls, respawning, a goal, a launch pad, a teleporter, a falling platform, a time limit, a spawner, a dash, a health bar and counters on screen, a hint on screen, and a game over. Folded
+ * (McpBlueprintBehaviour::Author): health, damage on touch, pickups, sprint, shooting, chasing, patrolling, a turret, a stomp, an explosive, a moving platform, player controls, respawning, a goal, a launch pad, a teleporter, a falling platform, a time limit, a spawner, a dash, a health bar and counters on screen, a hint on screen, and a game over. Folded
  * into blueprint.add_behaviour (selector behaviour). Every one is all or nothing,
  * re-runnable (a second run replaces the first), compiled and saved.
  */
@@ -19,7 +19,7 @@ const BEHAVIOUR_OUTPUT = {
   dispatchers: { type: 'array', items: { type: 'string' }, description: 'Event dispatchers it added, which other logic can bind.' },
 } as const;
 
-const SOUND_PATH = { type: 'string', description: 'Sound asset played at the actor: where a pickup was collected, a goal when the player reaches it, a pad on each launch, or where a teleported pawn arrives.' } as const;
+const SOUND_PATH = { type: 'string', description: 'Sound asset played at the actor: where a pickup was collected, a goal when the player reaches it, a pad on each launch, where a teleported pawn arrives, or an explosive blows up.' } as const;
 const COOLDOWN = { type: 'number', description: 'Seconds before it works again: before a Character can dash again, or before a teleporter takes a pawn after one arrived on it (default 1).' } as const;
 
 // A folded family keeps one description per shared parameter, so the key-driven behaviours share these texts.
@@ -274,6 +274,31 @@ export const BEHAVIOURS_RECORDS: readonly CapabilityRecordSource[] = [
     resources: 'medium',
     plugins: BP_PLUGINS,
     exampleInput: { action: 'add_stomp', blueprintPath: '/Game/Blueprints/BP_Walker', sideDamage: 20 },
+  }),
+  buildRecord({
+    id: 'blueprint.add_explosive',
+    action: 'add_explosive',
+    family: FAMILY,
+    domain: DOMAIN,
+    topics: ['explosive barrel', 'explosion', 'blow up', 'barrel that explodes', 'explode when destroyed', 'chain reaction'],
+    summary: 'Make an actor with health explode when it dies: every actor within explosionRadius with a clear line to it takes up to explosionDamage (less with distance), effectPath plays and soundPath sounds at the spot, and the actor is gone. An explosive the blast kills explodes in turn.',
+    whenToUse: ['A barrel, crate or mine must blow up when shot or hit, hurting what stands near; it needs the health behaviour, so damage from any source sets it off.'],
+    whenNotToUse: ['Damage must happen on touch (behaviour damage_on_touch).'],
+    inputProps: {
+      blueprintPath: P.blueprintPath,
+      explosionDamage: { type: 'number', description: 'Damage at the centre of the blast, less toward its edge (default 50).' },
+      explosionRadius: { type: 'number', description: 'Radius of the blast in units (default 400); walls between it and an actor shield that actor.' },
+      effectPath: { type: 'string', description: 'A Niagara system played at the blast (none by default).' },
+      soundPath: SOUND_PATH,
+    },
+    required: ['blueprintPath'],
+    outputProps: BEHAVIOUR_OUTPUT,
+    effect: 'write',
+    behavior: { idempotency: 'idempotent' },
+    latency: 'interactive',
+    resources: 'medium',
+    plugins: BP_PLUGINS,
+    exampleInput: { action: 'add_explosive', blueprintPath: '/Game/Blueprints/BP_Barrel', explosionDamage: 80, explosionRadius: 500 },
   }),
   buildRecord({
     id: 'blueprint.add_turret',

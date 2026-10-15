@@ -1,0 +1,59 @@
+{
+  "description": "An actor that explodes when it dies (the Health behaviour's OnDied, bound at BeginPlay): every actor within ExplosionRadius whose line to the blast is clear takes up to ExplosionDamage (ApplyRadialDamage, less with distance), ExplosionEffect plays and ExplosionSound sounds at the spot when set, and the actor is gone. Another explosive the blast kills explodes in turn.",
+  "tag": "Explosive",
+  "placeholders": {
+    "Damage": "Damage at the centre of the blast.",
+    "Radius": "Radius of the blast in units.",
+    "Effect": "Niagara system played at the blast, or None.",
+    "Sound": "Sound played at the blast, or None.",
+    "SelfClass": "The Blueprint's own generated class path; it declares OnDied."
+  },
+  "variables": [
+    { "variableName": "ExplosionDamage", "variableType": "Float", "defaultValue": "{{Damage}}", "category": "Explosive", "instanceEditable": true },
+    { "variableName": "ExplosionRadius", "variableType": "Float", "defaultValue": "{{Radius}}", "category": "Explosive", "instanceEditable": true },
+    { "variableName": "ExplosionEffect", "variableType": "Object:/Script/Niagara.NiagaraSystem", "defaultValue": "{{Effect}}", "category": "Explosive", "instanceEditable": true },
+    { "variableName": "ExplosionSound", "variableType": "Object:/Script/Engine.SoundBase", "defaultValue": "{{Sound}}", "category": "Explosive", "instanceEditable": true }
+  ],
+  "hooks": [
+    { "id": "exBegin", "event": "BeginPlay" }
+  ],
+  "eventGraph": [
+    { "edit": "create_node", "id": "exSelf", "nodeType": "Self" },
+    { "edit": "create_node", "id": "exBind", "nodeType": "BindEvent", "memberName": "OnDied", "memberClass": "{{SelfClass}}", "eventName": "OnDiedExplode" },
+    { "edit": "create_node", "id": "exHere", "nodeType": "CallFunction", "memberName": "K2_GetActorLocation", "memberClass": "/Script/Engine.Actor" },
+    { "edit": "create_node", "id": "exDamage", "nodeType": "VariableGet", "memberName": "ExplosionDamage" },
+    { "edit": "create_node", "id": "exRadius", "nodeType": "VariableGet", "memberName": "ExplosionRadius" },
+    { "edit": "create_node", "id": "exBlast", "nodeType": "CallFunction", "memberName": "ApplyRadialDamage", "memberClass": "/Script/Engine.GameplayStatics", "pinDefaults": { "bDoFullDamage": false } },
+    { "edit": "create_node", "id": "exEffect", "nodeType": "VariableGet", "memberName": "ExplosionEffect" },
+    { "edit": "create_node", "id": "exHasEffect", "nodeType": "CallFunction", "memberName": "IsValid", "memberClass": "/Script/Engine.KismetSystemLibrary" },
+    { "edit": "create_node", "id": "exEffectBranch", "nodeType": "Branch" },
+    { "edit": "create_node", "id": "exPlay", "nodeType": "CallFunction", "memberName": "SpawnSystemAtLocation", "memberClass": "/Script/Niagara.NiagaraFunctionLibrary" },
+    { "edit": "create_node", "id": "exSound", "nodeType": "VariableGet", "memberName": "ExplosionSound" },
+    { "edit": "create_node", "id": "exHasSound", "nodeType": "CallFunction", "memberName": "IsValid", "memberClass": "/Script/Engine.KismetSystemLibrary" },
+    { "edit": "create_node", "id": "exSoundBranch", "nodeType": "Branch" },
+    { "edit": "create_node", "id": "exBoom", "nodeType": "CallFunction", "memberName": "PlaySoundAtLocation", "memberClass": "/Script/Engine.GameplayStatics" },
+    { "edit": "create_node", "id": "exGone", "nodeType": "CallFunction", "memberName": "K2_DestroyActor", "memberClass": "/Script/Engine.Actor" },
+    { "edit": "connect_pins", "from": "$exSelf.self", "to": "$exBind.self" },
+    { "edit": "connect_pins", "from": "$exDamage.ExplosionDamage", "to": "$exBlast.BaseDamage" },
+    { "edit": "connect_pins", "from": "$exHere.ReturnValue", "to": "$exBlast.Origin" },
+    { "edit": "connect_pins", "from": "$exRadius.ExplosionRadius", "to": "$exBlast.DamageRadius" },
+    { "edit": "connect_pins", "from": "$exSelf.self", "to": "$exBlast.DamageCauser" },
+    { "edit": "connect_pins", "from": "$exEffect.ExplosionEffect", "to": "$exHasEffect.Object" },
+    { "edit": "connect_pins", "from": "$exHasEffect.ReturnValue", "to": "$exEffectBranch.Condition" },
+    { "edit": "connect_pins", "from": "$exEffect.ExplosionEffect", "to": "$exPlay.SystemTemplate" },
+    { "edit": "connect_pins", "from": "$exHere.ReturnValue", "to": "$exPlay.Location" },
+    { "edit": "connect_pins", "from": "$exSound.ExplosionSound", "to": "$exHasSound.Object" },
+    { "edit": "connect_pins", "from": "$exHasSound.ReturnValue", "to": "$exSoundBranch.Condition" },
+    { "edit": "connect_pins", "from": "$exSound.ExplosionSound", "to": "$exBoom.Sound" },
+    { "edit": "connect_pins", "from": "$exHere.ReturnValue", "to": "$exBoom.Location" },
+    { "edit": "connect_pins", "from": "$exBegin.then", "to": "$exBind.execute" },
+    { "edit": "connect_pins", "from": "$exBind_event.then", "to": "$exBlast.execute" },
+    { "edit": "connect_pins", "from": "$exBlast.then", "to": "$exEffectBranch.execute" },
+    { "edit": "connect_pins", "from": "$exEffectBranch.then", "to": "$exPlay.execute" },
+    { "edit": "connect_pins", "from": "$exPlay.then", "to": "$exSoundBranch.execute" },
+    { "edit": "connect_pins", "from": "$exEffectBranch.else", "to": "$exSoundBranch.execute" },
+    { "edit": "connect_pins", "from": "$exSoundBranch.then", "to": "$exBoom.execute" },
+    { "edit": "connect_pins", "from": "$exBoom.then", "to": "$exGone.execute" },
+    { "edit": "connect_pins", "from": "$exSoundBranch.else", "to": "$exGone.execute" }
+  ]
+}

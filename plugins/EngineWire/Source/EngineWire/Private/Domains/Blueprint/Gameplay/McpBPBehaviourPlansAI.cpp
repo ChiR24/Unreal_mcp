@@ -1,16 +1,20 @@
-// The plans of the behaviours that act on the player or travel a route: chase (recipe Gameplay/Chase), patrol
-// (Gameplay/Patrol), turret (Gameplay/Turret), stomp (Gameplay/Stomp) and moving platform (Gameplay/MovingPlatform).
+// The plans of the behaviours that act on other actors or travel a route: chase (recipe Gameplay/Chase), patrol
+// (Gameplay/Patrol), turret (Gameplay/Turret), stomp (Gameplay/Stomp), explosive (Gameplay/Explosive) and moving
+// platform (Gameplay/MovingPlatform).
 // Chase and patrol run a timer that moves the pawn through its AI controller, so they would fight over one pawn: patrol
 // chases too (chaseRange) and takes over a chase the pawn has, and chase refuses a pawn that patrols.
 // McpBPAddBehaviour.cpp runs the plans.
 #include "Domains/Blueprint/Gameplay/McpBPBehaviourPlans.h"
 
 #include "Domains/BlueprintGraph/Behaviour/McpBPBehaviour.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
+#include "Foundation/BridgeHelpers/Reflection/McpClassResolve.h"
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
 
 #include "EdGraph/EdGraph.h"
 #include "Engine/Blueprint.h"
 #include "GameFramework/Pawn.h"
+#include "NiagaraSystem.h"
 #include "UObject/UnrealType.h"
 
 namespace McpBlueprintHandlers {
@@ -119,6 +123,51 @@ bool PlanMovingPlatform(const TSharedPtr<FJsonObject> &Payload, FBehaviourPlan &
   Plan.Values.Add(TEXT("Points"), MakeShared<FJsonValueArray>(Points));
   Plan.Values.Add(TEXT("Speed"), MakeShared<FJsonValueNumber>(Speed));
   Plan.Values.Add(TEXT("Wait"), MakeShared<FJsonValueNumber>(Wait));
+  return true;
+}
+
+bool ReadProjectile(const TSharedPtr<FJsonObject> &Payload, const UBlueprint *Blueprint, double DefaultRate,
+                    FBehaviourPlan &Plan, FString &OutError) {
+  const FString ClassText = GetJsonStringField(Payload, TEXT("projectileClass")).TrimStartAndEnd();
+  UClass *Fired = ResolveClassByName(ClassText);
+  const double Speed = GetJsonNumberField(Payload, TEXT("projectileSpeed"), 3000.0);
+  const double Rate = GetJsonNumberField(Payload, TEXT("fireRate"), DefaultRate);
+  OutError = !Fired || !Fired->IsChildOf(AActor::StaticClass())
+                 ? FString::Printf(TEXT("projectileClass %s is not an actor class or Blueprint (make one with manage_combat "
+                                        "create_combat_asset kind projectile_blueprint)"), *ClassText)
+             : Speed <= 0.0 || Rate <= 0.0 ? FString(TEXT("projectileSpeed and fireRate must be above 0")) : FString();
+  if (!OutError.IsEmpty()) {
+    return false;
+  }
+  Plan.Values.Add(TEXT("ProjectileType"), MakeShared<FJsonValueString>(McpBlueprintBehaviour::ClassVariableType(
+                                              Blueprint, TEXT("ProjectileClass"), Fired, AActor::StaticClass())));
+  Plan.Values.Add(TEXT("ProjectileClass"), MakeShared<FJsonValueString>(Fired->GetPathName()));
+  Plan.Values.Add(TEXT("ProjectileSpeed"), MakeShared<FJsonValueNumber>(Speed));
+  Plan.Values.Add(TEXT("FireRate"), MakeShared<FJsonValueNumber>(Rate));
+  return true;
+}
+
+// An actor with health that blows up when it dies (recipe Gameplay/Explosive); effectPath must name a Niagara system.
+bool PlanExplosive(const TSharedPtr<FJsonObject> &Payload, const UBlueprint *Blueprint, FBehaviourPlan &Plan,
+                   FString &OutError) {
+  const double Damage = GetJsonNumberField(Payload, TEXT("explosionDamage"), 50.0);
+  const double Radius = GetJsonNumberField(Payload, TEXT("explosionRadius"), 400.0);
+  const FString EffectPath = GetJsonStringField(Payload, TEXT("effectPath")).TrimStartAndEnd();
+  const UNiagaraSystem *Effect = EffectPath.IsEmpty() ? nullptr : Cast<UNiagaraSystem>(McpLoadAsset(EffectPath));
+  const UClass *Self = Blueprint->GeneratedClass;
+  OutError = !HasHealthBehaviour(Self)
+                 ? FString(TEXT("An explosive blows up when it dies: add_behaviour behaviour=health first"))
+             : Damage <= 0.0 || Radius <= 0.0 ? FString(TEXT("explosionDamage and explosionRadius must be above 0"))
+             : !EffectPath.IsEmpty() && !Effect ? FString::Printf(TEXT("effectPath %s is not a Niagara system"), *EffectPath)
+                                                : FString();
+  if (!OutError.IsEmpty() || !ReadSound(Payload, Plan, OutError)) {
+    return false;
+  }
+  Plan.Recipe = TEXT("Explosive");
+  Plan.Values.Add(TEXT("Damage"), MakeShared<FJsonValueNumber>(Damage));
+  Plan.Values.Add(TEXT("Radius"), MakeShared<FJsonValueNumber>(Radius));
+  Plan.Values.Add(TEXT("Effect"), MakeShared<FJsonValueString>(Effect ? Effect->GetPathName() : FString(TEXT("None"))));
+  Plan.Values.Add(TEXT("SelfClass"), MakeShared<FJsonValueString>(Self->GetPathName()));
   return true;
 }
 

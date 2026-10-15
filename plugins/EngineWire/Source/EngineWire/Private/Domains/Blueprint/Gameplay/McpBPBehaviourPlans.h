@@ -28,6 +28,8 @@ bool PlanBehaviour(const FString &Action, const TSharedPtr<FJsonObject> &Payload
 bool PlanChase(const TSharedPtr<FJsonObject> &Payload, const UBlueprint *Blueprint, FBehaviourPlan &Plan, FString &OutError);
 bool PlanPatrol(const TSharedPtr<FJsonObject> &Payload, const UBlueprint *Blueprint, FBehaviourPlan &Plan, FString &OutError);
 bool PlanMovingPlatform(const TSharedPtr<FJsonObject> &Payload, FBehaviourPlan &Plan, FString &OutError);
+bool PlanExplosive(const TSharedPtr<FJsonObject> &Payload, const UBlueprint *Blueprint, FBehaviourPlan &Plan,
+                   FString &OutError);
 bool PlanStomp(const TSharedPtr<FJsonObject> &Payload, const UBlueprint *Blueprint, FBehaviourPlan &Plan, FString &OutError);
 bool PlanTurret(const TSharedPtr<FJsonObject> &Payload, const UBlueprint *Blueprint, FBehaviourPlan &Plan, FString &OutError);
 
@@ -35,6 +37,10 @@ bool PlanTurret(const TSharedPtr<FJsonObject> &Payload, const UBlueprint *Bluepr
 // ProjectileClass, ProjectileSpeed and FireRate that the Shoot and Turret recipes take; false with OutError.
 bool ReadProjectile(const TSharedPtr<FJsonObject> &Payload, const UBlueprint *Blueprint, double DefaultRate,
                     FBehaviourPlan &Plan, FString &OutError);
+
+// soundPath as the Sound value the recipes take (an object path, or None when it is not given); false with OutError
+// when it names no sound asset.
+bool ReadSound(const TSharedPtr<FJsonObject> &Payload, FBehaviourPlan &Plan, FString &OutError);
 
 // The class has the members the Health recipe (Resources/Recipes/Gameplay/Health.json) gives it.
 bool HasHealthBehaviour(const UClass *Class);

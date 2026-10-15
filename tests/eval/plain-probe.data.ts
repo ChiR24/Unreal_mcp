@@ -591,4 +591,6 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'show a message on screen', accepted: ['blueprint.add_behaviour'] },
   { query: 'tutorial hint', accepted: ['blueprint.add_behaviour'] },
   { query: 'sign that shows text', accepted: ['blueprint.add_behaviour'] },
+  { query: 'explosive barrel', accepted: ['blueprint.add_behaviour'] },
+  { query: 'make a barrel explode', accepted: ['blueprint.add_behaviour'] },
 ];
