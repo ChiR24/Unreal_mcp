@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "919d6fdf66892875",
+  "catalogRevision": "56dd1527fde05308",
   "recordCount": 416,
   "records": [
     {
@@ -85784,7 +85784,7 @@
             },
             "orphansOnly": {
               "type": "boolean",
-              "description": "Report only orphaned nodes; accepted in place of nodeId."
+              "description": "Report only the nodes whose result reaches no output of the material or function: nothing wired to them, or a branch that ends in a node nothing reads (left behind when the node it fed was rewired). Accepted in place of nodeId."
             },
             "info": {
               "type": "string",
@@ -86059,8 +86059,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "c3a8ea1d029f8faaa5fdb3288e8a06568fbac33c9c96d8b3fffd8f729f34fc27",
-        "content": "ced4b71976eaa3899a0e85afd041144c5d439486fc286c82a56751c58274fd3c"
+        "schema": "5a3c7d7e69cda3c39242bb59b6c5f33eae94dcd81e9f2973a2b6b388d010924a",
+        "content": "63bd59df48e676f8095fde4e5522956481048cdb7f5201fe9dbb222ef29987fb"
       }
     },
     {

@@ -10044,7 +10044,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "orphansOnly": {
           "type": "boolean",
-          "description": "Report only orphaned nodes; accepted in place of nodeId."
+          "description": "Report only the nodes whose result reaches no output of the material or function: nothing wired to them, or a branch that ends in a node nothing reads (left behind when the node it fed was rewired). Accepted in place of nodeId."
         },
         "otherStructPath": {
           "type": "string",

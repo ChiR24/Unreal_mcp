@@ -2905,3 +2905,14 @@ describe('a transform reads as it was typed', () => {
     }
   });
 });
+
+describe('a material dead branch lists as orphaned', () => {
+  // A Multiply left behind when the node it fed was rewired still read its live input, so the both-ways walk
+  // marked it live and the material carried it unseen.
+  it('walks from the outputs through what each node reads only', () => {
+    const subgraph = code('MaterialAuthoring', 'Queries', 'McpMatGetConnectedSubgraph.cpp');
+    expect(subgraph).toContain('Reads.Add(Expr, Input.Expression);');
+    expect(subgraph).toContain('Reads.MultiFind(Cur, Neighbors);');
+    expect(subgraph).toContain('Cast<UMaterialExpressionCustomOutput>(Expr)');
+  });
+});

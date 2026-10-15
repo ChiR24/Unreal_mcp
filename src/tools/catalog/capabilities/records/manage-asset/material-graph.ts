@@ -145,7 +145,7 @@ export const MATERIAL_GRAPH_RECORDS: readonly RecordSpec[] = [
     { whenToUse: ['The wiring of a node must be traced across the graph, for example to see where its result ends up at the material output.'],
       whenNotToUse: ['A wire must be added, cut or rerouted, not traced (use material.connect_nodes or material.disconnect_nodes).'],
       examples: [ex('Walk the chain feeding BaseColor', { materialPath: M, nodeId: SAMPLE, endPin: 'BaseColor' }, DONE)] }),
-  r('get_connected_subgraph', 'material', 'Retrieve the connected subgraph from a starting node.', schema({ materialPath: MAT, assetPath: MAT_ALIAS, nodeId: str('Starting node ID.'), orphansOnly: bool('Report only orphaned nodes; accepted in place of nodeId.') }, ['nodeId'], ['materialPath', 'assetPath']), OK, READ, READ_POLICY, LOW,
+  r('get_connected_subgraph', 'material', 'Retrieve the connected subgraph from a starting node.', schema({ materialPath: MAT, assetPath: MAT_ALIAS, nodeId: str('Starting node ID.'), orphansOnly: bool('Report only the nodes whose result reaches no output of the material or function: nothing wired to them, or a branch that ends in a node nothing reads (left behind when the node it fed was rewired). Accepted in place of nodeId.') }, ['nodeId'], ['materialPath', 'assetPath']), OK, READ, READ_POLICY, LOW,
     { whenToUse: ['Nodes not wired to any output (orphans) must be found, or the connected island around one node listed.'],
       whenNotToUse: ['Orphaned nodes are to be removed (use material.delete_node once their ids are known).'],
       examples: [ex('Collect the subgraph under a node', { materialPath: M, nodeId: SAMPLE, orphansOnly: false }, DONE)] }),
