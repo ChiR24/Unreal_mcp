@@ -1,6 +1,7 @@
-// The AI-moved behaviours' plans: chase (recipe Gameplay/Chase) and patrol (Gameplay/Patrol). Both run a timer that
-// moves the pawn through its AI controller, so they would fight over one pawn: patrol chases too (chaseRange) and
-// takes over a chase the pawn has, and chase refuses a pawn that patrols. McpBPAddBehaviour.cpp runs the plans.
+// The plans of the behaviours that act on the player: chase (recipe Gameplay/Chase), patrol (Gameplay/Patrol) and
+// turret (Gameplay/Turret). Chase and patrol run a timer that moves the pawn through its AI controller, so they would
+// fight over one pawn: patrol chases too (chaseRange) and takes over a chase the pawn has, and chase refuses a pawn
+// that patrols. McpBPAddBehaviour.cpp runs the plans.
 #include "Domains/Blueprint/Gameplay/McpBPBehaviourPlans.h"
 
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
@@ -97,6 +98,17 @@ bool PlanPatrol(const TSharedPtr<FJsonObject> &Payload, const UBlueprint *Bluepr
   if (HasBehaviourFunction(Blueprint, TEXT("ChaseUpdate"))) {
     Plan.Replaces.Add(TEXT("Chase"));
   }
+  return true;
+}
+
+bool PlanTurret(const TSharedPtr<FJsonObject> &Payload, FBehaviourPlan &Plan, FString &OutError) {
+  const double Range = GetJsonNumberField(Payload, TEXT("range"), 2000.0);
+  OutError = Range > 0.0 ? FString() : FString(TEXT("range must be above 0"));
+  if (!OutError.IsEmpty() || !ReadProjectile(Payload, 60.0, Plan, OutError)) {
+    return false;
+  }
+  Plan.Recipe = TEXT("Turret");
+  Plan.Values.Add(TEXT("Range"), MakeShared<FJsonValueNumber>(Range));
   return true;
 }
 } // namespace McpBlueprintHandlers

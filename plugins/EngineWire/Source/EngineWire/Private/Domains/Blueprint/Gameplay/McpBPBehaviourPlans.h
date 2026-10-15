@@ -21,10 +21,16 @@ struct FBehaviourPlan {
 bool PlanBehaviour(const FString &Action, const TSharedPtr<FJsonObject> &Payload, const UBlueprint *Blueprint,
                    FBehaviourPlan &Plan, FString &OutError);
 
-// The AI behaviours (McpBPBehaviourPlansAI.cpp): a pawn that chases the player (recipe Gameplay/Chase), and one that
-// patrols a route and may chase as well (Gameplay/Patrol), which takes over a chase the pawn already has.
+// The AI behaviours (McpBPBehaviourPlansAI.cpp): a pawn that chases the player (recipe Gameplay/Chase), one that
+// patrols a route and may chase as well (Gameplay/Patrol), which takes over a chase the pawn already has, and an actor
+// that turns to the player and fires at them (Gameplay/Turret).
 bool PlanChase(const TSharedPtr<FJsonObject> &Payload, const UBlueprint *Blueprint, FBehaviourPlan &Plan, FString &OutError);
 bool PlanPatrol(const TSharedPtr<FJsonObject> &Payload, const UBlueprint *Blueprint, FBehaviourPlan &Plan, FString &OutError);
+bool PlanTurret(const TSharedPtr<FJsonObject> &Payload, FBehaviourPlan &Plan, FString &OutError);
+
+// projectileClass, projectileSpeed and fireRate (default DefaultRate shots a minute) as the values ProjectileType,
+// ProjectileClass, ProjectileSpeed and FireRate that the Shoot and Turret recipes take; false with OutError.
+bool ReadProjectile(const TSharedPtr<FJsonObject> &Payload, double DefaultRate, FBehaviourPlan &Plan, FString &OutError);
 
 // The class has the members the Health recipe (Resources/Recipes/Gameplay/Health.json) gives it.
 bool HasHealthBehaviour(const UClass *Class);

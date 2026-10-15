@@ -563,4 +563,8 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'time limit', accepted: ['blueprint.add_behaviour'] },
   { query: 'knockback', accepted: ['blueprint.add_behaviour'] },
   { query: 'knock the player back', accepted: ['blueprint.add_behaviour'] },
+  { query: 'turret', accepted: ['blueprint.add_behaviour'] },
+  { query: 'turret that shoots the player', accepted: ['blueprint.add_behaviour'] },
+  { query: 'sentry gun', accepted: ['blueprint.add_behaviour'] },
+  { query: 'enemy shoots at the player', accepted: ['blueprint.add_behaviour'] },
 ];

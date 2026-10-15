@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "4f56691a73a2c896",
+  "catalogRevision": "e3b5ed3e1bc22e73",
   "recordCount": 416,
   "records": [
     {
@@ -12792,6 +12792,7 @@
         "blueprint.add_shoot",
         "blueprint.add_chase",
         "blueprint.add_patrol",
+        "blueprint.add_turret",
         "blueprint.add_controls",
         "blueprint.add_respawn",
         "blueprint.add_goal",
@@ -12856,6 +12857,13 @@
           "action": "add_patrol",
           "folded": {
             "behaviour": "patrol"
+          }
+        },
+        {
+          "tool": "manage_blueprint",
+          "action": "add_turret",
+          "folded": {
+            "behaviour": "turret"
           }
         },
         {
@@ -12983,6 +12991,12 @@
           "patrol and chase the player",
           "waypoints",
           "walk between waypoints",
+          "turret",
+          "enemy turret",
+          "sentry gun",
+          "tower that shoots the player",
+          "cannon that fires at the player",
+          "enemy shoots at the player",
           "player controls",
           "wasd movement",
           "move with wasd",
@@ -13061,7 +13075,7 @@
           "player death screen",
           "you died"
         ],
-        "summary": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player or patrols a route, walk, look and jump controls for a Character, a pawn that respawns when it falls or dies (with checkpoints), a goal that ends the level when the player reaches it, a pad that launches a Character, a teleporter, a time limit, a spawner that keeps spawning an actor class, a dash key for a Character, the health of the player or a count such as coins or score on screen, or a game over screen that restarts the level when the player dies.",
+        "summary": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player or patrols a route, a turret that turns to the player and fires at them, walk, look and jump controls for a Character, a pawn that respawns when it falls or dies (with checkpoints), a goal that ends the level when the player reaches it, a pad that launches a Character, a teleporter, a time limit, a spawner that keeps spawning an actor class, a dash key for a Character, the health of the player or a count such as coins or score on screen, or a game over screen that restarts the level when the player dies.",
         "whenToUse": [
           "behaviour=health: A player, enemy or breakable object must take damage and die; behaviour health_hud shows it on screen.",
           "behaviour=damage_on_touch: Spikes, lava, an enemy body or a fire must hurt what touches it.",
@@ -13070,6 +13084,7 @@
           "behaviour=shoot: The player (or any possessed pawn) must shoot projectiles with a key; a projectile from manage_combat create_combat_asset damages what it hits and never hits its shooter.",
           "behaviour=chase: An enemy or creature must run after the player; with usePathfinding (default) the level needs a Nav Mesh Bounds Volume (manage_ai configure_navigation), without it the pawn heads straight for the player.",
           "behaviour=patrol: An enemy or guard must walk a route, and may chase the player who comes close.",
+          "behaviour=turret: A tower, cannon or enemy must shoot at the player who comes close; a projectile from manage_combat create_combat_asset damages what it hits. With behaviour chase too, a pawn runs at the player and shoots.",
           "behaviour=controls: A Character made with manage_character create_character_blueprint (or any Character without input) must be playable: it has no input until this runs.",
           "behaviour=respawn: A player pawn must not be lost for good when it falls off the level or dies.",
           "behaviour=respawn: Checkpoints: tag a trigger actor (manage_interaction create_interactable trigger, or any actor that overlaps pawns) with checkpointTag; the pawn respawns where it stood when it touched it.",
@@ -13092,6 +13107,7 @@
           "behaviour=chase: The pawn walks a route too (behaviour patrol, which chases with chaseRange; chase refuses a pawn that patrols).",
           "behaviour=chase: Senses, cover or decisions beyond chasing (use manage_ai with a Behavior Tree or State Tree).",
           "behaviour=patrol: Senses, cover or decisions beyond walking a route and chasing (use manage_ai with a Behavior Tree or State Tree).",
+          "behaviour=turret: The player shoots with a key (behaviour shoot).",
           "behaviour=controls: Only one key or action must be added (use manage_networking configure_input for the asset and blueprint edit_graph for its node).",
           "behaviour=respawn: A pawn that should stay dead, such as an enemy: give it the health behaviour with destroyOnDeath instead.",
           "behaviour=goal: Something must happen on every touch, by any actor (use a trigger actor from manage_interaction create_interactable).",
@@ -13180,7 +13196,7 @@
             },
             "fireRate": {
               "type": "number",
-              "description": "Most shots a minute (default 300)."
+              "description": "Most shots a minute (default 300 for shoot, 60 for turret)."
             },
             "chaseRange": {
               "type": "number",
@@ -13209,6 +13225,10 @@
             "waitTime": {
               "type": "number",
               "description": "Seconds it waits at each point (default 1)."
+            },
+            "range": {
+              "type": "number",
+              "description": "Distance within which it turns to the player and fires, in units (default 2000)."
             },
             "jumpKey": {
               "type": "string",
@@ -13313,6 +13333,7 @@
                 "shoot",
                 "chase",
                 "patrol",
+                "turret",
                 "controls",
                 "respawn",
                 "goal",
@@ -13414,7 +13435,7 @@
       },
       "examples": [
         {
-          "title": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player or patrols a route, walk, look and jump controls for a Character, a pawn that respawns when it falls or dies (with checkpoints), a goal that ends the level when the player reaches it, a pad that launches a Character, a teleporter, a time limit, a spawner that keeps spawning an actor class, a dash key for a Character, the health of the player or a count such as coins or score on screen, or a game over screen that restarts the level when the player dies.",
+          "title": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player or patrols a route, a turret that turns to the player and fires at them, walk, look and jump controls for a Character, a pawn that respawns when it falls or dies (with checkpoints), a goal that ends the level when the player reaches it, a pad that launches a Character, a teleporter, a time limit, a spawner that keeps spawning an actor class, a dash key for a Character, the health of the player or a count such as coins or score on screen, or a game over screen that restarts the level when the player dies.",
           "input": {
             "action": "add_behaviour",
             "blueprintPath": "/Game/Blueprints/BP_Enemy",
@@ -13463,6 +13484,7 @@
             "shoot": "add_shoot",
             "chase": "add_chase",
             "patrol": "add_patrol",
+            "turret": "add_turret",
             "controls": "add_controls",
             "respawn": "add_respawn",
             "goal": "add_goal",
@@ -13527,13 +13549,16 @@
               "dash"
             ],
             "projectileClass": [
-              "shoot"
+              "shoot",
+              "turret"
             ],
             "projectileSpeed": [
-              "shoot"
+              "shoot",
+              "turret"
             ],
             "fireRate": [
-              "shoot"
+              "shoot",
+              "turret"
             ],
             "chaseRange": [
               "chase",
@@ -13552,6 +13577,9 @@
             ],
             "waitTime": [
               "patrol"
+            ],
+            "range": [
+              "turret"
             ],
             "jumpKey": [
               "controls"
@@ -13628,8 +13656,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "b3776226146c316f82ddbb9b76add676ec147afd65b279a6515ec1ad6ca95d24",
-        "content": "fe3fd6d098004e029352ead860770ee04ec4c8aaf708667cde47c23fc17a063e"
+        "schema": "7918743f30bcc8945bc13da6f9cbd8f083504565d8db76939cd01163e769acc8",
+        "content": "bc474816d8b38dec6099e03b3414aaec4983dbbd2ac4c50612843fcfc5e239e2"
       }
     },
     {

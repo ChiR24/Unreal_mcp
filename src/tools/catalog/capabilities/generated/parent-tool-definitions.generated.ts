@@ -12843,6 +12843,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "shoot",
             "chase",
             "patrol",
+            "turret",
             "controls",
             "respawn",
             "goal",
@@ -13159,7 +13160,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "fireRate": {
           "type": "number",
-          "description": "Most shots a minute (default 300)."
+          "description": "Most shots a minute (default 300 for shoot, 60 for turret)."
         },
         "folder": {
           "type": "string",
@@ -13802,6 +13803,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "radius": {
           "type": "number",
           "description": "How far across from the spawner an actor may appear, in units (default 0: on the spawner)."
+        },
+        "range": {
+          "type": "number",
+          "description": "Distance within which it turns to the player and fires, in units (default 2000)."
         },
         "remove": {
           "type": "boolean",

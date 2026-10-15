@@ -1,6 +1,6 @@
 /**
  * Gameplay behaviours written into an Actor Blueprint from the plugin's recipe files
- * (McpBlueprintBehaviour::Author): health, damage on touch, pickups, sprint, shooting, chasing, patrolling, player controls, respawning, a goal, a launch pad, a teleporter, a time limit, a spawner, a dash, a health bar and counters on screen, and a game over. Folded
+ * (McpBlueprintBehaviour::Author): health, damage on touch, pickups, sprint, shooting, chasing, patrolling, a turret, player controls, respawning, a goal, a launch pad, a teleporter, a time limit, a spawner, a dash, a health bar and counters on screen, and a game over. Folded
  * into blueprint.add_behaviour (selector behaviour). Every one is all or nothing,
  * re-runnable (a second run replaces the first), compiled and saved.
  */
@@ -35,6 +35,11 @@ const HUD_OUTPUT = {
   widgetPath: { type: 'string', description: 'The Widget Blueprint shown.' },
   createdAssets: { type: 'array', items: { type: 'string' }, description: 'The Widget Blueprint this call made; it stays if the Blueprint is rolled back.' },
 } as const;
+
+// Shoot and turret share these: a folded family keeps one description per shared parameter.
+const PROJECTILE_CLASS = { type: 'string', description: 'The projectile it shoots: a Blueprint path (/Game/Weapons/BP_Fireball) or class path.' } as const;
+const PROJECTILE_SPEED = { type: 'number', description: 'Launch speed, units per second (default 3000).' } as const;
+const FIRE_RATE = { type: 'number', description: 'Most shots a minute (default 300 for shoot, 60 for turret).' } as const;
 
 // Chase and patrol share these: a pawn patrols and chases with one behaviour, and both read the same variables.
 const CHASE_RANGE = { type: 'number', description: 'Distance within which the pawn chases the player, in units: chase defaults to 2000, and a patrol chases only when given one (default 0, or the range of a chase it takes over).' } as const;
@@ -152,9 +157,9 @@ export const BEHAVIOURS_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['A weapon actor the pawn holds must do the shooting (use manage_combat configure_projectile for its Fire function).'],
     inputProps: {
       blueprintPath: P.blueprintPath,
-      projectileClass: { type: 'string', description: 'The projectile it shoots: a Blueprint path (/Game/Weapons/BP_Fireball) or class path.' },
-      projectileSpeed: { type: 'number', description: 'Launch speed, units per second (default 3000).' },
-      fireRate: { type: 'number', description: 'Most shots a minute (default 300).' },
+      projectileClass: PROJECTILE_CLASS,
+      projectileSpeed: PROJECTILE_SPEED,
+      fireRate: FIRE_RATE,
       key: KEY,
       inputActionPath: INPUT_ACTION,
       mappingContextPath: MAPPING_CONTEXT,
@@ -217,6 +222,31 @@ export const BEHAVIOURS_RECORDS: readonly CapabilityRecordSource[] = [
     resources: 'medium',
     plugins: BP_PLUGINS,
     exampleInput: { action: 'add_patrol', blueprintPath: '/Game/Blueprints/BP_Guard', points: [[600, 0, 0], [600, 400, 0], [0, 0, 0]], chaseRange: 1200 },
+  }),
+  buildRecord({
+    id: 'blueprint.add_turret',
+    action: 'add_turret',
+    family: FAMILY,
+    domain: DOMAIN,
+    topics: ['turret', 'enemy turret', 'sentry gun', 'tower that shoots the player', 'cannon that fires at the player', 'enemy shoots at the player'],
+    summary: 'Make an actor a turret: every frame, while the player is within range, it turns about its vertical axis to face the player and fires projectileClass at them at projectileSpeed, at most fireRate shots a minute; each projectile is owned by the actor, so it never hits it. Nothing checks line of sight: a wall between them stops the shots.',
+    whenToUse: ['A tower, cannon or enemy must shoot at the player who comes close; a projectile from manage_combat create_combat_asset damages what it hits. With behaviour chase too, a pawn runs at the player and shoots.'],
+    whenNotToUse: ['The player shoots with a key (behaviour shoot).'],
+    inputProps: {
+      blueprintPath: P.blueprintPath,
+      projectileClass: PROJECTILE_CLASS,
+      projectileSpeed: PROJECTILE_SPEED,
+      fireRate: FIRE_RATE,
+      range: { type: 'number', description: 'Distance within which it turns to the player and fires, in units (default 2000).' },
+    },
+    required: ['blueprintPath', 'projectileClass'],
+    outputProps: BEHAVIOUR_OUTPUT,
+    effect: 'write',
+    behavior: { idempotency: 'idempotent' },
+    latency: 'interactive',
+    resources: 'medium',
+    plugins: BP_PLUGINS,
+    exampleInput: { action: 'add_turret', blueprintPath: '/Game/Blueprints/BP_Turret', projectileClass: '/Game/Weapons/BP_Fireball', range: 1500 },
   }),
   buildRecord({
     id: 'blueprint.add_controls',
