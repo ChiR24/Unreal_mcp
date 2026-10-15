@@ -24,7 +24,7 @@ bool HandleBlueprintAddHealthHud(const FBlueprintActionContext &Context) {
     return false;
   }
   FString Path;
-  UBlueprint *Blueprint = LoadPawnBlueprint(Context, TEXT("A health bar"), Path);
+  UBlueprint *Blueprint = LoadScreenBlueprint(Context, TEXT("A health bar"), Path);
   if (!Blueprint) {
     return true;
   }
@@ -57,7 +57,7 @@ bool HandleBlueprintAddCounterHud(const FBlueprintActionContext &Context) {
     return false;
   }
   FString Path;
-  UBlueprint *Blueprint = LoadPawnBlueprint(Context, TEXT("A counter"), Path);
+  UBlueprint *Blueprint = LoadScreenBlueprint(Context, TEXT("A counter"), Path);
   if (!Blueprint) {
     return true;
   }

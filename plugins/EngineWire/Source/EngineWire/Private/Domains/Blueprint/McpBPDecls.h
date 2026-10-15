@@ -185,6 +185,7 @@ bool HandleBlueprintAddRespawn(const FBlueprintActionContext &Context);
 bool HandleBlueprintAddHealthHud(const FBlueprintActionContext &Context);
 bool HandleBlueprintAddCounterHud(const FBlueprintActionContext &Context);
 bool HandleBlueprintAddGameOver(const FBlueprintActionContext &Context);
+bool HandleBlueprintAddHint(const FBlueprintActionContext &Context);
 bool HandleBlueprintCompile(const FBlueprintActionContext &Context);
 bool HandleBlueprintCreateExists(const FBlueprintActionContext &Context);
 bool HandleBlueprintGet(const FBlueprintActionContext &Context);

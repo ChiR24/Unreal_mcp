@@ -1,6 +1,6 @@
 /**
  * Gameplay behaviours written into an Actor Blueprint from the plugin's recipe files
- * (McpBlueprintBehaviour::Author): health, damage on touch, pickups, sprint, shooting, chasing, patrolling, a turret, a stomp, a moving platform, player controls, respawning, a goal, a launch pad, a teleporter, a falling platform, a time limit, a spawner, a dash, a health bar and counters on screen, and a game over. Folded
+ * (McpBlueprintBehaviour::Author): health, damage on touch, pickups, sprint, shooting, chasing, patrolling, a turret, a stomp, a moving platform, player controls, respawning, a goal, a launch pad, a teleporter, a falling platform, a time limit, a spawner, a dash, a health bar and counters on screen, a hint on screen, and a game over. Folded
  * into blueprint.add_behaviour (selector behaviour). Every one is all or nothing,
  * re-runnable (a second run replaces the first), compiled and saved.
  */
@@ -28,8 +28,9 @@ const INPUT_ACTION = { type: 'string', description: 'An Input Action to use inst
 const MAPPING_CONTEXT = { type: 'string', description: 'The Input Mapping Context its keys go in (the project\'s own); default the one the pawn already registers, else /Game/Input/IMC_MCP.' } as const;
 
 // The HUD behaviours share these: a folded family keeps one description per shared parameter and output.
-const WIDGET_PATH = { type: 'string', description: 'A Widget Blueprint to show instead of the one made next to the Blueprint under UI/ (WBP_HealthBar, WBP_<variable>Counter, WBP_GameOver). One without the bar or the text gets it: the health bar HUD piece (add_game_widget), a text at the top right, or a full-screen shade with the message.' } as const;
-const TEXT_NAME = { type: 'string', description: 'The TextBlock in the widget that the behaviour writes: the count of counter_hud (default <variable>Counter) or the message of game_over (default GameOver_Text). A text named here must already be in the widget.' } as const;
+const WIDGET_PATH = { type: 'string', description: 'A Widget Blueprint to show instead of the one made next to the Blueprint under UI/ (WBP_HealthBar, WBP_<variable>Counter, WBP_GameOver, WBP_Hint). One without the bar or the text gets it: the health bar HUD piece (add_game_widget), a text at the top right, a full-screen shade with the message, or a dark box at the bottom with the hint.' } as const;
+const TEXT_NAME = { type: 'string', description: 'The TextBlock in the widget that the behaviour writes: the count of counter_hud (default <variable>Counter), or the message of game_over (default GameOver_Text) or of a hint (default Hint_Text). A text named here must already be in the widget.' } as const;
+const MESSAGE = { type: 'string', description: 'The text shown: a game over\'s message (default GAME OVER), or the hint itself (required for hint).' } as const;
 const HUD_OUTPUT = {
   ...BEHAVIOUR_OUTPUT,
   widgetPath: { type: 'string', description: 'The Widget Blueprint shown.' },
@@ -563,6 +564,31 @@ export const BEHAVIOURS_RECORDS: readonly CapabilityRecordSource[] = [
     exampleInput: { action: 'add_counter_hud', blueprintPath: '/Game/Blueprints/BP_Player', variableName: 'Coins' },
   }),
   buildRecord({
+    id: 'blueprint.add_hint',
+    action: 'add_hint',
+    family: FAMILY,
+    domain: DOMAIN,
+    topics: ['hint', 'tutorial hint', 'show a message on screen', 'show text on screen', 'sign that shows text', 'message when the player walks up'],
+    summary: `Show a message on the player's screen while the player is in the actor's area: when a locally controlled pawn starts to overlap the actor, a widget shows message at the bottom of that player's view, and it goes when the pawn leaves, or hideAfter seconds later. Each placed copy can say its own text (HintMessage is instance editable). ${OVERLAP_NOTE}`,
+    whenToUse: ['A sign, a tutorial area or a talking spot must tell the player something (Press Space to jump).'],
+    whenNotToUse: ['A value such as coins or a timer must stay on screen (behaviour counter_hud).'],
+    inputProps: {
+      blueprintPath: P.blueprintPath,
+      message: MESSAGE,
+      hideAfter: { type: 'number', description: 'Seconds the hint stays once shown (default 0: while the pawn stays in the area).' },
+      widgetPath: WIDGET_PATH,
+      textName: TEXT_NAME,
+    },
+    required: ['blueprintPath', 'message'],
+    outputProps: HUD_OUTPUT,
+    effect: 'write',
+    behavior: { idempotency: 'idempotent' },
+    latency: 'interactive',
+    resources: 'medium',
+    plugins: BP_PLUGINS,
+    exampleInput: { action: 'add_hint', blueprintPath: '/Game/Blueprints/BP_Sign', message: 'Press Space to jump' },
+  }),
+  buildRecord({
     id: 'blueprint.add_game_over',
     action: 'add_game_over',
     family: FAMILY,
@@ -573,7 +599,7 @@ export const BEHAVIOURS_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['The player must come back where it died or at a checkpoint (behaviour respawn; a pawn that respawns when it dies is refused here).'],
     inputProps: {
       blueprintPath: P.blueprintPath,
-      message: { type: 'string', description: 'The text shown (default GAME OVER).' },
+      message: MESSAGE,
       restartDelay: { type: 'number', description: 'Seconds before the level opens again (default 3); 0 never restarts it.' },
       widgetPath: WIDGET_PATH,
       textName: TEXT_NAME,

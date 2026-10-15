@@ -23,7 +23,7 @@ bool HandleBlueprintAddGameOver(const FBlueprintActionContext &Context) {
     return false;
   }
   FString Path;
-  UBlueprint *Blueprint = LoadPawnBlueprint(Context, TEXT("A game over"), Path);
+  UBlueprint *Blueprint = LoadScreenBlueprint(Context, TEXT("A game over"), Path);
   if (!Blueprint) {
     return true;
   }

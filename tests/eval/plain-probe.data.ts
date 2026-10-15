@@ -588,4 +588,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'push a box', accepted: ['animation_physics.setup_physics_simulation', 'control_actor.edit_component'] },
   { query: 'restart button', accepted: ['blueprint.add_content_widget', 'blueprint.create_widget_template'] },
   { query: 'quit button', accepted: ['blueprint.add_content_widget', 'blueprint.create_widget_template'] },
+  { query: 'show a message on screen', accepted: ['blueprint.add_behaviour'] },
+  { query: 'tutorial hint', accepted: ['blueprint.add_behaviour'] },
+  { query: 'sign that shows text', accepted: ['blueprint.add_behaviour'] },
 ];

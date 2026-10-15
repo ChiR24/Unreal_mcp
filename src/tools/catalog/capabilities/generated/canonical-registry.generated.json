@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "4a611d6c89aca6e9",
+  "catalogRevision": "7d20d35db450774e",
   "recordCount": 416,
   "records": [
     {
@@ -12808,6 +12808,7 @@
         "blueprint.add_dash",
         "blueprint.add_health_hud",
         "blueprint.add_counter_hud",
+        "blueprint.add_hint",
         "blueprint.add_game_over"
       ],
       "legacyIds": [
@@ -12964,6 +12965,13 @@
         },
         {
           "tool": "manage_blueprint",
+          "action": "add_hint",
+          "folded": {
+            "behaviour": "hint"
+          }
+        },
+        {
+          "tool": "manage_blueprint",
           "action": "add_game_over",
           "folded": {
             "behaviour": "game_over"
@@ -13114,6 +13122,12 @@
           "show the score",
           "count coins",
           "how many coins",
+          "hint",
+          "tutorial hint",
+          "show a message on screen",
+          "show text on screen",
+          "sign that shows text",
+          "message when the player walks up",
           "game over",
           "game over screen",
           "show game over when the player dies",
@@ -13121,7 +13135,7 @@
           "player death screen",
           "you died"
         ],
-        "summary": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player or patrols a route, a turret that turns to the player and fires at them, an enemy the player defeats by jumping on it, a moving platform or elevator, walk, look and jump controls for a Character, a pawn that respawns when it falls or dies (with checkpoints), a goal that ends the level when the player reaches it, a pad that launches a Character, a teleporter, a platform that falls when a pawn lands on it, a time limit, a spawner that keeps spawning an actor class, a dash key for a Character, the health of the player or a count such as coins or score on screen, or a game over screen that restarts the level when the player dies.",
+        "summary": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player or patrols a route, a turret that turns to the player and fires at them, an enemy the player defeats by jumping on it, a moving platform or elevator, walk, look and jump controls for a Character, a pawn that respawns when it falls or dies (with checkpoints), a goal that ends the level when the player reaches it, a pad that launches a Character, a teleporter, a platform that falls when a pawn lands on it, a time limit, a spawner that keeps spawning an actor class, a dash key for a Character, the health of the player or a count such as coins or score on screen, a hint on screen while the player is in an area, or a game over screen that restarts the level when the player dies.",
         "whenToUse": [
           "behaviour=health: A player, enemy or breakable object must take damage and die; behaviour health_hud shows it on screen.",
           "behaviour=damage_on_touch: Spikes, lava, an enemy body or a fire must hurt what touches it.",
@@ -13145,6 +13159,7 @@
           "behaviour=dash: A player Character needs a quick burst of movement on a key: a dash, a dodge, an air dash.",
           "behaviour=health_hud: The player must see their own health: a health bar on the HUD.",
           "behaviour=counter_hud: The player must see a count: coins collected, score, keys, kills.",
+          "behaviour=hint: A sign, a tutorial area or a talking spot must tell the player something (Press Space to jump).",
           "behaviour=game_over: The player death must end the run: a game over screen, then the level starts again."
         ],
         "whenNotToUse": [
@@ -13171,6 +13186,7 @@
           "behaviour=dash: It must run faster while a key is held (use behaviour sprint).",
           "behaviour=health_hud: A bar floating over an actor in the world, such as over an enemy.",
           "behaviour=counter_hud: Health as a bar (behaviour health_hud).",
+          "behaviour=hint: A value such as coins or a timer must stay on screen (behaviour counter_hud).",
           "behaviour=game_over: The player must come back where it died or at a checkpoint (behaviour respawn; a pawn that respawns when it dies is refused here)."
         ]
       },
@@ -13374,7 +13390,7 @@
             },
             "widgetPath": {
               "type": "string",
-              "description": "A Widget Blueprint to show instead of the one made next to the Blueprint under UI/ (WBP_HealthBar, WBP_<variable>Counter, WBP_GameOver). One without the bar or the text gets it: the health bar HUD piece (add_game_widget), a text at the top right, or a full-screen shade with the message."
+              "description": "A Widget Blueprint to show instead of the one made next to the Blueprint under UI/ (WBP_HealthBar, WBP_<variable>Counter, WBP_GameOver, WBP_Hint). One without the bar or the text gets it: the health bar HUD piece (add_game_widget), a text at the top right, a full-screen shade with the message, or a dark box at the bottom with the hint."
             },
             "barName": {
               "type": "string",
@@ -13386,11 +13402,15 @@
             },
             "textName": {
               "type": "string",
-              "description": "The TextBlock in the widget that the behaviour writes: the count of counter_hud (default <variable>Counter) or the message of game_over (default GameOver_Text). A text named here must already be in the widget."
+              "description": "The TextBlock in the widget that the behaviour writes: the count of counter_hud (default <variable>Counter), or the message of game_over (default GameOver_Text) or of a hint (default Hint_Text). A text named here must already be in the widget."
             },
             "message": {
               "type": "string",
-              "description": "The text shown (default GAME OVER)."
+              "description": "The text shown: a game over's message (default GAME OVER), or the hint itself (required for hint)."
+            },
+            "hideAfter": {
+              "type": "number",
+              "description": "Seconds the hint stays once shown (default 0: while the pawn stays in the area)."
             },
             "restartDelay": {
               "type": "number",
@@ -13420,6 +13440,7 @@
                 "dash",
                 "health_hud",
                 "counter_hud",
+                "hint",
                 "game_over"
               ],
               "description": "Which add behaviour variant to run."
@@ -13511,7 +13532,7 @@
       },
       "examples": [
         {
-          "title": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player or patrols a route, a turret that turns to the player and fires at them, an enemy the player defeats by jumping on it, a moving platform or elevator, walk, look and jump controls for a Character, a pawn that respawns when it falls or dies (with checkpoints), a goal that ends the level when the player reaches it, a pad that launches a Character, a teleporter, a platform that falls when a pawn lands on it, a time limit, a spawner that keeps spawning an actor class, a dash key for a Character, the health of the player or a count such as coins or score on screen, or a game over screen that restarts the level when the player dies.",
+          "title": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player or patrols a route, a turret that turns to the player and fires at them, an enemy the player defeats by jumping on it, a moving platform or elevator, walk, look and jump controls for a Character, a pawn that respawns when it falls or dies (with checkpoints), a goal that ends the level when the player reaches it, a pad that launches a Character, a teleporter, a platform that falls when a pawn lands on it, a time limit, a spawner that keeps spawning an actor class, a dash key for a Character, the health of the player or a count such as coins or score on screen, a hint on screen while the player is in an area, or a game over screen that restarts the level when the player dies.",
           "input": {
             "action": "add_behaviour",
             "blueprintPath": "/Game/Blueprints/BP_Enemy",
@@ -13574,6 +13595,7 @@
             "dash": "add_dash",
             "health_hud": "add_health_hud",
             "counter_hud": "add_counter_hud",
+            "hint": "add_hint",
             "game_over": "add_game_over"
           },
           "declaredBy": {
@@ -13729,6 +13751,7 @@
             "widgetPath": [
               "health_hud",
               "counter_hud",
+              "hint",
               "game_over"
             ],
             "barName": [
@@ -13739,10 +13762,15 @@
             ],
             "textName": [
               "counter_hud",
+              "hint",
               "game_over"
             ],
             "message": [
+              "hint",
               "game_over"
+            ],
+            "hideAfter": [
+              "hint"
             ],
             "restartDelay": [
               "game_over"
@@ -13752,8 +13780,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "5349f9a9595668961f1deffded71dcd53517b4c8447347cc62ff2b49684844dc",
-        "content": "21d2298b9d72ecf26e9e3b59599e7b1df2eb49c60c935a3d2e18c8be170ed6d5"
+        "schema": "10924fe8e2b14d8f4090158c373695ac804db14f6e0cc13c06173faaa399f0dd",
+        "content": "93ccebd2fbb003297571f7f4319d754792db182e5d629a3edd462cddf4a37c7b"
       }
     },
     {

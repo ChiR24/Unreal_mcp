@@ -12857,6 +12857,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "dash",
             "health_hud",
             "counter_hud",
+            "hint",
             "game_over"
           ],
           "description": "Which add behaviour variant to run."
@@ -13219,6 +13220,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Height override for size box."
         },
+        "hideAfter": {
+          "type": "number",
+          "description": "Seconds the hint stays once shown (default 0: while the pawn stays in the area)."
+        },
         "hintText": {
           "type": "string",
           "description": "Placeholder hint text."
@@ -13506,7 +13511,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "message": {
           "type": "string",
-          "description": "The text shown (default GAME OVER)."
+          "description": "The text shown: a game over's message (default GAME OVER), or the hint itself (required for hint)."
         },
         "metadata": {
           "type": "object",
@@ -14052,7 +14057,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "textName": {
           "type": "string",
-          "description": "The TextBlock in the widget that the behaviour writes: the count of counter_hud (default <variable>Counter) or the message of game_over (default GameOver_Text). A text named here must already be in the widget."
+          "description": "The TextBlock in the widget that the behaviour writes: the count of counter_hud (default <variable>Counter), or the message of game_over (default GameOver_Text) or of a hint (default Hint_Text). A text named here must already be in the widget."
         },
         "textStyle": {
           "type": "string",
@@ -14256,7 +14261,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "widgetPath": {
           "type": "string",
-          "description": "A Widget Blueprint to show instead of the one made next to the Blueprint under UI/ (WBP_HealthBar, WBP_<variable>Counter, WBP_GameOver). One without the bar or the text gets it: the health bar HUD piece (add_game_widget), a text at the top right, or a full-screen shade with the message."
+          "description": "A Widget Blueprint to show instead of the one made next to the Blueprint under UI/ (WBP_HealthBar, WBP_<variable>Counter, WBP_GameOver, WBP_Hint). One without the bar or the text gets it: the health bar HUD piece (add_game_widget), a text at the top right, a full-screen shade with the message, or a dark box at the bottom with the hint."
         },
         "widthOverride": {
           "type": "number",
