@@ -34,3 +34,8 @@ void McpAddTimerNameWarnings(const UBlueprint* Blueprint, TArray<TSharedPtr<FJso
 // Blueprint, so the later passes start no wait of their own and what follows the node runs once, after the loop: a
 // wave of enemies spawned one second apart spawned one enemy, a second after the loop.
 void McpAddLoopLatentWarnings(const UBlueprint* Blueprint, TArray<TSharedPtr<FJsonValue>>& Diagnostics, int32 MaxDiagnostics);
+
+// A timer set again, or a Retriggerable Delay called again, starts its wait over. Reached from Event Tick with no
+// branch, switch or gate between, it runs every frame, so a wait longer than a frame never ends: a one-second timer
+// set from Tick never fired.
+void McpAddTickRestartWarnings(const UBlueprint* Blueprint, TArray<TSharedPtr<FJsonValue>>& Diagnostics, int32 MaxDiagnostics);

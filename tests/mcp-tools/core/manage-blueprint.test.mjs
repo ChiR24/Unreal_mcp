@@ -468,6 +468,14 @@ const testCases = [
     { edit: 'connect_pins', from: '$loop.LoopBody', to: '$wait.execute' },
     { edit: 'connect_pins', from: '$wait.then', to: '$print.execute' },
   ] }, expected: 'success', assertions: [{ path: 'structuredContent.receipt.warnings.0', includes: 'waits inside the loop body', label: 'the receipt says the delay in the loop waits once' }] },
+  { scenario: 'ADD: create a Blueprint for the every-frame timer check', toolName: 'manage_blueprint', arguments: { action: 'create', name: `BP_TickCheck_${ts}`, savePath: TEST_FOLDER, parentClass: '/Script/Engine.Actor' }, expected: 'success' },
+  { scenario: 'BATCH: build_graph warns about a timer set on every frame', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: `${TEST_FOLDER}/BP_TickCheck_${ts}`, graphName: 'EventGraph', operations: [
+    { edit: 'create_node', id: 'tick', nodeType: 'Event', eventName: 'Tick' },
+    { edit: 'create_node', id: 'done', nodeType: 'CustomEvent', customEventName: 'Fired' },
+    { edit: 'create_node', id: 'timer', nodeType: 'CallFunction', memberName: 'K2_SetTimerDelegate', memberClass: 'KismetSystemLibrary', pinDefaults: { Time: 1 } },
+    { edit: 'connect_pins', from: '$tick.then', to: '$timer.execute' },
+    { edit: 'connect_pins', from: '$done.OutputDelegate', to: '$timer.Delegate' },
+  ] }, expected: 'success', assertions: [{ path: 'structuredContent.receipt.warnings.0', includes: 'runs on every frame', label: 'the receipt says the timer starts over every frame' }] },
 
   // === BATCH: "$entry" addresses the Construction Script's entry node without a lookup ===
   { scenario: 'BATCH: build_graph from the construction script entry', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: BP_PATH, graphName: 'UserConstructionScript', operations: [

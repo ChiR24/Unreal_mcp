@@ -135,6 +135,7 @@ inline bool McpCompileBlueprintWithDiagnostics(
     McpAddRandomReadWarnings(Blueprint, Diagnostics, MaxDiagnostics);
     McpAddTimerNameWarnings(Blueprint, Diagnostics, MaxDiagnostics);
     McpAddLoopLatentWarnings(Blueprint, Diagnostics, MaxDiagnostics);
+    McpAddTickRestartWarnings(Blueprint, Diagnostics, MaxDiagnostics);
     if (Diagnostics.Num() > 0) {
       Out->SetArrayField(TEXT("diagnostics"), Diagnostics);
     }
