@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/wiki/ChiR24/Unreal_mcp/assets/banner.svg" alt="EngineWire: let any AI assistant work inside the Unreal Editor" width="100%">
+  <img src="Public/banner.svg" alt="EngineWire: let any AI assistant work inside the Unreal Editor" width="100%">
 </p>
 
 <h1 align="center">EngineWire</h1>
@@ -93,7 +93,7 @@ Nearly 400 capabilities in all, behind a single MCP tool. The assistant finds th
 ## How it works
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/wiki/ChiR24/Unreal_mcp/assets/diagrams/architecture.svg" alt="Architecture: an AI client reaches the EngineWire plugin inside the Unreal Editor either over Streamable HTTP on port 3000 (Route A) or through the Node.js server over stdio and a WebSocket on port 8090 (Route B); the plugin drives the editor APIs on the game thread" width="100%">
+  <img src="Public/architecture.svg" alt="Architecture: an AI client reaches the EngineWire plugin inside the Unreal Editor either over Streamable HTTP on port 3000 (Route A) or through the Node.js server over stdio and a WebSocket on port 8090 (Route B); the plugin drives the editor APIs on the game thread" width="100%">
 </p>
 
 The **EngineWire** plugin runs inside the editor and does all the work, on the editor's game thread. Clients reach it in one of two ways, and both expose the same single tool, `unreal`:
@@ -234,7 +234,7 @@ Both routes expose exactly **one** MCP tool, `unreal`, with four operations. Onl
 | `configure` | Enables or disables groups of internal tools; never touches the editor |
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/wiki/ChiR24/Unreal_mcp/assets/diagrams/gateway.svg" alt="The gateway flow: search with a query returns rows with a nextCall; describe with tool and action returns the contract; execute with params, and consent when needed, returns data and a receipt listing changes, handles and warnings" width="100%">
+  <img src="Public/gateway.svg" alt="The gateway flow: search with a query returns rows with a nextCall; describe with tool and action returns the contract; execute with params, and consent when needed, returns data and a receipt listing changes, handles and warnings" width="100%">
 </p>
 
 A typical exchange:

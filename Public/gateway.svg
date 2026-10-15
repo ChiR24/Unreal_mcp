@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="330" viewBox="0 0 1280 330">
+  <defs>
+    <style>
+      text { font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif; }
+      .nt { font-size: 19px; font-weight: 700; fill: #f4fbe6; }
+      .nd { font-size: 19px; font-weight: 700; fill: #0a0c05; }
+      .pl { font-size: 16px; fill: #b9c0ad; }
+      .pv { font-size: 16px; fill: #e9f0de; font-family: "Cascadia Mono", Consolas, "SFMono-Regular", Menlo, monospace; }
+      .frame { font-size: 15px; font-weight: 700; letter-spacing: 2px; fill: #9aa38c; }
+      .cap { font-size: 15px; fill: #8a9180; }
+    </style>
+    <pattern id="gMinor" width="16" height="16" patternUnits="userSpaceOnUse"><path d="M16 0H0V16" fill="none" stroke="#e8ffd0" stroke-opacity="0.03"/></pattern>
+    <pattern id="gMajor" width="128" height="128" patternUnits="userSpaceOnUse"><path d="M128 0H0V128" fill="none" stroke="#e8ffd0" stroke-opacity="0.06"/></pattern>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#9dff2e" stop-opacity="0.18"/><stop offset="1" stop-color="#9dff2e" stop-opacity="0"/></radialGradient>
+    <clipPath id="card"><rect width="1280" height="330" rx="18"/></clipPath>
+  </defs>
+  <g clip-path="url(#card)">
+    <rect width="1280" height="330" fill="#0a0b0a"/>
+    <rect width="1280" height="330" fill="url(#gMinor)"/>
+    <rect width="1280" height="330" fill="url(#gMajor)"/>
+    <ellipse cx="640" cy="170" rx="460.8" ry="198" fill="url(#glow)"/>
+    <path d="M310 107 H 350" fill="none" stroke="#f3ffc2" stroke-width="3" stroke-linecap="round"/>
+    <path d="M620 107 H 660" fill="none" stroke="#f3ffc2" stroke-width="3" stroke-linecap="round"/>
+    <path d="M930 107 H 970" fill="none" stroke="#f3ffc2" stroke-width="3" stroke-linecap="round"/>
+    <path d="M295 214 C 335 214, 325 150, 365 150" fill="none" stroke="#d4ff3a" stroke-width="3" stroke-linecap="round"/>
+    <path d="M605 214 C 645 214, 635 150, 675 150" fill="none" stroke="#d4ff3a" stroke-width="3" stroke-linecap="round"/>
+    <path d="M915 214 C 955 214, 945 150, 985 150" fill="none" stroke="#d4ff3a" stroke-width="3" stroke-linecap="round"/>
+    <rect x="40" y="88" width="270" height="152" rx="11" fill="#111311" fill-opacity="0.96" stroke="#2c3329"/>
+    <path d="M40 99a11 11 0 0 1 11 -11h248a11 11 0 0 1 11 11v27h-270z" fill="#1f5a35"/>
+    <path d="M284 100h9l6 7l-6 7h-9z" fill="#f4fbe6"/>
+    <text class="nt" x="55" y="113.5">search</text>
+    <circle cx="55" cy="150" r="6.5" fill="#6be4ff"/><text class="pl" x="70" y="155.5">query</text>
+    <text class="pv" x="70" y="187.5">"spawn actor"</text>
+    <circle cx="295" cy="214" r="6.5" fill="#d4ff3a"/><text class="pl" x="280" y="219.5" text-anchor="end">nextCall</text>
+    <rect x="350" y="88" width="270" height="152" rx="11" fill="#111311" fill-opacity="0.96" stroke="#2c3329"/>
+    <path d="M350 99a11 11 0 0 1 11 -11h248a11 11 0 0 1 11 11v27h-270z" fill="#45520f"/>
+    <path d="M360 100h9l6 7l-6 7h-9z" fill="#f4fbe6"/><path d="M594 100h9l6 7l-6 7h-9z" fill="#f4fbe6"/>
+    <text class="nt" x="384" y="113.5">describe</text>
+    <circle cx="365" cy="150" r="6.5" fill="#d4ff3a"/><text class="pl" x="380" y="155.5">tool + action</text>
+    <text class="pv" x="380" y="187.5">control_actor · spawn</text>
+    <circle cx="605" cy="214" r="6.5" fill="#d4ff3a"/><text class="pl" x="590" y="219.5" text-anchor="end">contract</text>
+    <rect x="660" y="88" width="270" height="152" rx="11" fill="#111311" fill-opacity="0.96" stroke="#2c3329"/>
+    <path d="M660 99a11 11 0 0 1 11 -11h248a11 11 0 0 1 11 11v27h-270z" fill="#d4ff3a"/>
+    <path d="M670 100h9l6 7l-6 7h-9z" fill="#0a0c05"/><path d="M904 100h9l6 7l-6 7h-9z" fill="#0a0c05"/>
+    <text class="nd" x="694" y="113.5">execute</text>
+    <circle cx="675" cy="150" r="6.5" fill="#d4ff3a"/><text class="pl" x="690" y="155.5">params</text>
+    <circle cx="675" cy="182" r="6" fill="none" stroke="#ff6b5e" stroke-width="2.4"/><text class="pl" x="690" y="187.5">consent (if needed)</text>
+    <circle cx="915" cy="214" r="6.5" fill="#d4ff3a"/><text class="pl" x="900" y="219.5" text-anchor="end">result</text>
+    <rect x="970" y="88" width="270" height="152" rx="11" fill="#111311" fill-opacity="0.96" stroke="#2c3329"/>
+    <path d="M970 99a11 11 0 0 1 11 -11h248a11 11 0 0 1 11 11v27h-270z" fill="#155e63"/>
+    <path d="M980 100h9l6 7l-6 7h-9z" fill="#f4fbe6"/>
+    <text class="nt" x="1004" y="113.5">data + receipt</text>
+    <circle cx="985" cy="150" r="6.5" fill="#3dff7a"/><text class="pl" x="1000" y="155.5">changes</text>
+    <circle cx="985" cy="182" r="6.5" fill="#3dff7a"/><text class="pl" x="1000" y="187.5">handles</text>
+    <circle cx="985" cy="214" r="6.5" fill="#3dff7a"/><text class="pl" x="1000" y="219.5">warnings</text>
+    <text class="frame" x="40" y="58">ONE TOOL · FOUR OPERATIONS</text>
+    <text class="cap" x="40" y="302">Search rows and errors carry a ready-to-send nextCall. configure, the fourth operation, enables or disables internal tools.</text>
+  </g>
+</svg>
