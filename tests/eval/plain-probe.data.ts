@@ -578,4 +578,8 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'lava kills the player', accepted: ['manage_level_structure.create_volume'] },
   { query: 'death zone', accepted: ['manage_level_structure.create_volume'] },
   { query: 'spikes kill the player', accepted: ['blueprint.add_behaviour', 'manage_level_structure.create_volume'] },
+  { query: 'jump on enemies to kill them', accepted: ['blueprint.add_behaviour'] },
+  { query: 'stomp on enemies', accepted: ['blueprint.add_behaviour'] },
+  { query: 'enemy dies when the player jumps on it', accepted: ['blueprint.add_behaviour'] },
+  { query: 'hurt the player on contact', accepted: ['blueprint.add_behaviour'] },
 ];

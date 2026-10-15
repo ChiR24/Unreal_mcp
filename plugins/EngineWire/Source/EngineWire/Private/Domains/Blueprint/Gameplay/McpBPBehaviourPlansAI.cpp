@@ -1,15 +1,17 @@
 // The plans of the behaviours that act on the player or travel a route: chase (recipe Gameplay/Chase), patrol
-// (Gameplay/Patrol), turret (Gameplay/Turret) and moving platform (Gameplay/MovingPlatform). Chase and patrol run a
-// timer that moves the pawn through its AI controller, so they would fight over one pawn: patrol chases too
-// (chaseRange) and takes over a chase the pawn has, and chase refuses a pawn that patrols. McpBPAddBehaviour.cpp runs
-// the plans.
+// (Gameplay/Patrol), turret (Gameplay/Turret), stomp (Gameplay/Stomp) and moving platform (Gameplay/MovingPlatform).
+// Chase and patrol run a timer that moves the pawn through its AI controller, so they would fight over one pawn: patrol
+// chases too (chaseRange) and takes over a chase the pawn has, and chase refuses a pawn that patrols.
+// McpBPAddBehaviour.cpp runs the plans.
 #include "Domains/Blueprint/Gameplay/McpBPBehaviourPlans.h"
 
+#include "Domains/BlueprintGraph/Behaviour/McpBPBehaviour.h"
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
 
 #include "EdGraph/EdGraph.h"
 #include "Engine/Blueprint.h"
 #include "GameFramework/Pawn.h"
+#include "UObject/UnrealType.h"
 
 namespace McpBlueprintHandlers {
 namespace {
@@ -117,6 +119,29 @@ bool PlanMovingPlatform(const TSharedPtr<FJsonObject> &Payload, FBehaviourPlan &
   Plan.Values.Add(TEXT("Points"), MakeShared<FJsonValueArray>(Points));
   Plan.Values.Add(TEXT("Speed"), MakeShared<FJsonValueNumber>(Speed));
   Plan.Values.Add(TEXT("Wait"), MakeShared<FJsonValueNumber>(Wait));
+  return true;
+}
+
+bool PlanStomp(const TSharedPtr<FJsonObject> &Payload, const UBlueprint *Blueprint, FBehaviourPlan &Plan, FString &OutError) {
+  // A damage_on_touch would hurt the player landing on the actor too: stomp takes it over, its damage the side damage.
+  // Its default lives on the class defaults; the variable description's DefaultValue is not kept up to date.
+  const UClass *Class = Blueprint->GeneratedClass;
+  const FNumericProperty *Touch = Class ? FindFProperty<FNumericProperty>(Class, TEXT("TouchDamage")) : nullptr;
+  const double TouchDamage =
+      Touch ? Touch->GetFloatingPointPropertyValue(Touch->ContainerPtrToValuePtr<void>(Class->GetDefaultObject())) : 0.0;
+  const double Bounce = GetJsonNumberField(Payload, TEXT("bounceSpeed"), 600.0);
+  const double Side = GetJsonNumberField(Payload, TEXT("sideDamage"), FMath::Max(TouchDamage, 0.0));
+  OutError = Bounce > 0.0 && Side >= 0.0 ? FString() : FString(TEXT("bounceSpeed must be above 0 and sideDamage 0 or more"));
+  if (!OutError.IsEmpty()) {
+    return false;
+  }
+  Plan.Recipe = TEXT("Stomp");
+  Plan.Values.Add(TEXT("Bounce"), MakeShared<FJsonValueNumber>(Bounce));
+  Plan.Values.Add(TEXT("SideDamage"), MakeShared<FJsonValueNumber>(Side));
+  Plan.Values.Add(TEXT("Destroys"), MakeShared<FJsonValueBoolean>(!HasHealthBehaviour(Blueprint->GeneratedClass)));
+  if (McpBlueprintBehaviour::FindOwned(Blueprint, TEXT("DamageOnTouch")).Num() > 0) {
+    Plan.Replaces.Add(TEXT("DamageOnTouch"));
+  }
   return true;
 }
 

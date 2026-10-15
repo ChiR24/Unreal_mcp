@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "95ffe65a4a7465ff",
+  "catalogRevision": "4ca5b4a4919c0c65",
   "recordCount": 416,
   "records": [
     {
@@ -12793,6 +12793,7 @@
         "blueprint.add_chase",
         "blueprint.add_patrol",
         "blueprint.add_turret",
+        "blueprint.add_stomp",
         "blueprint.add_moving_platform",
         "blueprint.add_controls",
         "blueprint.add_respawn",
@@ -12866,6 +12867,13 @@
           "action": "add_turret",
           "folded": {
             "behaviour": "turret"
+          }
+        },
+        {
+          "tool": "manage_blueprint",
+          "action": "add_stomp",
+          "folded": {
+            "behaviour": "stomp"
           }
         },
         {
@@ -12978,6 +12986,7 @@
           "spikes",
           "spike trap",
           "spikes kill the player",
+          "hurts the player on contact",
           "knockback",
           "knock the player back",
           "pickup",
@@ -13014,6 +13023,11 @@
           "tower that shoots the player",
           "cannon that fires at the player",
           "enemy shoots at the player",
+          "stomp",
+          "jump on enemies",
+          "enemy dies when jumped on",
+          "jump on enemies to kill them",
+          "bounce off enemies",
           "moving platform",
           "elevator",
           "lift",
@@ -13102,7 +13116,7 @@
           "player death screen",
           "you died"
         ],
-        "summary": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player or patrols a route, a turret that turns to the player and fires at them, a moving platform or elevator, walk, look and jump controls for a Character, a pawn that respawns when it falls or dies (with checkpoints), a goal that ends the level when the player reaches it, a pad that launches a Character, a teleporter, a platform that falls when a pawn lands on it, a time limit, a spawner that keeps spawning an actor class, a dash key for a Character, the health of the player or a count such as coins or score on screen, or a game over screen that restarts the level when the player dies.",
+        "summary": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player or patrols a route, a turret that turns to the player and fires at them, an enemy the player defeats by jumping on it, a moving platform or elevator, walk, look and jump controls for a Character, a pawn that respawns when it falls or dies (with checkpoints), a goal that ends the level when the player reaches it, a pad that launches a Character, a teleporter, a platform that falls when a pawn lands on it, a time limit, a spawner that keeps spawning an actor class, a dash key for a Character, the health of the player or a count such as coins or score on screen, or a game over screen that restarts the level when the player dies.",
         "whenToUse": [
           "behaviour=health: A player, enemy or breakable object must take damage and die; behaviour health_hud shows it on screen.",
           "behaviour=damage_on_touch: Spikes, lava, an enemy body or a fire must hurt what touches it.",
@@ -13112,6 +13126,7 @@
           "behaviour=chase: An enemy or creature must run after the player; with usePathfinding (default) the level needs a Nav Mesh Bounds Volume (manage_ai configure_navigation), without it the pawn heads straight for the player.",
           "behaviour=patrol: An enemy or guard must walk a route, and may chase the player who comes close.",
           "behaviour=turret: A tower, cannon or enemy must shoot at the player who comes close; a projectile from manage_combat create_combat_asset damages what it hits. With behaviour chase too, a pawn runs at the player and shoots.",
+          "behaviour=stomp: A platformer enemy must die when the player jumps on it, and hurt the player who walks into it. A damage_on_touch the actor has is taken over (it would hurt the stomping player too); its damage becomes sideDamage when none is given.",
           "behaviour=moving_platform: A platform, lift or elevator must travel a route by itself, every placed copy of a Blueprint alike (each copy keeps its own PlatformPoints).",
           "behaviour=controls: A Character made with manage_character create_character_blueprint (or any Character without input) must be playable: it has no input until this runs.",
           "behaviour=respawn: A player pawn must not be lost for good when it falls off the level or dies.",
@@ -13137,6 +13152,7 @@
           "behaviour=chase: Senses, cover or decisions beyond chasing (use manage_ai with a Behavior Tree or State Tree).",
           "behaviour=patrol: Senses, cover or decisions beyond walking a route and chasing (use manage_ai with a Behavior Tree or State Tree).",
           "behaviour=turret: The player shoots with a key (behaviour shoot).",
+          "behaviour=stomp: A hazard must hurt whatever touches it, from above too (behaviour damage_on_touch).",
           "behaviour=moving_platform: One placed actor must spin or travel (control_actor edit_component with a RotatingMovement or InterpToMovement component).",
           "behaviour=moving_platform: A pawn must walk a route (behaviour patrol).",
           "behaviour=controls: Only one key or action must be added (use manage_networking configure_input for the asset and blueprint edit_graph for its node).",
@@ -13262,6 +13278,14 @@
               "type": "number",
               "description": "Distance within which it turns to the player and fires, in units (default 2000)."
             },
+            "bounceSpeed": {
+              "type": "number",
+              "description": "Upward speed the stomping Character bounces off at, units per second (default 600)."
+            },
+            "sideDamage": {
+              "type": "number",
+              "description": "Damage to a player Character that bumps it from the side or below, at most once a second (default 0, none, or the damage of a damage_on_touch it takes over)."
+            },
             "speed": {
               "type": "number",
               "description": "Units per second it travels between points (default 200)."
@@ -13378,6 +13402,7 @@
                 "chase",
                 "patrol",
                 "turret",
+                "stomp",
                 "moving_platform",
                 "controls",
                 "respawn",
@@ -13455,7 +13480,7 @@
               "items": {
                 "type": "string"
               },
-              "description": "Behaviours this one took over and removed first (Chase)."
+              "description": "Behaviours this one took over and removed first: a patrol takes over a chase (Chase), a stomp a damage on touch (DamageOnTouch)."
             },
             "respawnOnDeath": {
               "type": "boolean",
@@ -13481,7 +13506,7 @@
       },
       "examples": [
         {
-          "title": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player or patrols a route, a turret that turns to the player and fires at them, a moving platform or elevator, walk, look and jump controls for a Character, a pawn that respawns when it falls or dies (with checkpoints), a goal that ends the level when the player reaches it, a pad that launches a Character, a teleporter, a platform that falls when a pawn lands on it, a time limit, a spawner that keeps spawning an actor class, a dash key for a Character, the health of the player or a count such as coins or score on screen, or a game over screen that restarts the level when the player dies.",
+          "title": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player or patrols a route, a turret that turns to the player and fires at them, an enemy the player defeats by jumping on it, a moving platform or elevator, walk, look and jump controls for a Character, a pawn that respawns when it falls or dies (with checkpoints), a goal that ends the level when the player reaches it, a pad that launches a Character, a teleporter, a platform that falls when a pawn lands on it, a time limit, a spawner that keeps spawning an actor class, a dash key for a Character, the health of the player or a count such as coins or score on screen, or a game over screen that restarts the level when the player dies.",
           "input": {
             "action": "add_behaviour",
             "blueprintPath": "/Game/Blueprints/BP_Enemy",
@@ -13531,6 +13556,7 @@
             "chase": "add_chase",
             "patrol": "add_patrol",
             "turret": "add_turret",
+            "stomp": "add_stomp",
             "moving_platform": "add_moving_platform",
             "controls": "add_controls",
             "respawn": "add_respawn",
@@ -13631,6 +13657,12 @@
             "range": [
               "turret"
             ],
+            "bounceSpeed": [
+              "stomp"
+            ],
+            "sideDamage": [
+              "stomp"
+            ],
             "speed": [
               "moving_platform"
             ],
@@ -13715,8 +13747,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "9a103d66f657d70456dd1bb467f87840f61d3a44490c6cabe6096e6fcd03011e",
-        "content": "309dd09798fbdcd913383d609e86b06dd6253d64938fec0ca8d7ac14c64dcad2"
+        "schema": "5349f9a9595668961f1deffded71dcd53517b4c8447347cc62ff2b49684844dc",
+        "content": "5d513d69b88b3ecdb6732f5f3e98da8cd6101db9b8d75b1f1cfaa14a54c7e691"
       }
     },
     {

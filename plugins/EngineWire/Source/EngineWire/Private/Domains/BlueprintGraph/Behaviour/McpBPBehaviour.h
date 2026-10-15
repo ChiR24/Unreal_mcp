@@ -128,7 +128,7 @@ FString ClassVariableType(const UBlueprint* Blueprint, const TCHAR* Name, const 
 FString OwnerTag(const FString& Tag, const UEdGraphNode& Node);
 
 /** Every node the behaviour Tag owns; FindOwned(BP, Tag).Num() > 0 means it is installed. */
-TArray<UEdGraphNode*> FindOwned(UBlueprint* Blueprint, const FString& Tag);
+TArray<UEdGraphNode*> FindOwned(const UBlueprint* Blueprint, const FString& Tag);
 
 /** The one input-asset resolver every caller shares; creates what is missing.
  *  InOutActionPath empty: <BlueprintFolder>/Input/IA_<Tag> (Digital), created or reused.

@@ -1,6 +1,6 @@
 /**
  * Gameplay behaviours written into an Actor Blueprint from the plugin's recipe files
- * (McpBlueprintBehaviour::Author): health, damage on touch, pickups, sprint, shooting, chasing, patrolling, a turret, a moving platform, player controls, respawning, a goal, a launch pad, a teleporter, a falling platform, a time limit, a spawner, a dash, a health bar and counters on screen, and a game over. Folded
+ * (McpBlueprintBehaviour::Author): health, damage on touch, pickups, sprint, shooting, chasing, patrolling, a turret, a stomp, a moving platform, player controls, respawning, a goal, a launch pad, a teleporter, a falling platform, a time limit, a spawner, a dash, a health bar and counters on screen, and a game over. Folded
  * into blueprint.add_behaviour (selector behaviour). Every one is all or nothing,
  * re-runnable (a second run replaces the first), compiled and saved.
  */
@@ -47,6 +47,7 @@ const STOP_DISTANCE = { type: 'number', description: 'How close it gets to the p
 // Patrol and moving platform share these: a folded family keeps one description per shared parameter.
 const ROUTE_POINTS = { type: 'array', items: { type: 'array', items: { type: 'number' }, minItems: 3, maxItems: 3 }, description: 'The route: [x, y, z] offsets from where the actor starts, in world axes, visited in turn and looped (default [[500, 0, 0], [0, 0, 0]], back and forth). Each placed copy keeps its own route (PatrolPoints or PlatformPoints is instance editable).' } as const;
 const WAIT_TIME = { type: 'number', description: 'Seconds it waits at each point (default 1).' } as const;
+const REPLACED = { type: 'array', items: { type: 'string' }, description: 'Behaviours this one took over and removed first: a patrol takes over a chase (Chase), a stomp a damage on touch (DamageOnTouch).' } as const;
 const USE_PATHFINDING = { type: 'boolean', description: 'Follow the navigation mesh (default true; the level needs a Nav Mesh Bounds Volume); false heads straight for the player or the next point.' } as const;
 
 const OVERLAP_NOTE = 'It fires on overlap, so the actor needs a component that overlaps pawns (a sphere or box with the Trigger or OverlapAllDynamic profile).';
@@ -80,7 +81,7 @@ export const BEHAVIOURS_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'add_damage_on_touch',
     family: FAMILY,
     domain: DOMAIN,
-    topics: ['damage on touch', 'hazard', 'spikes', 'spike trap', 'spikes kill the player', 'knockback', 'knock the player back'],
+    topics: ['damage on touch', 'hazard', 'spikes', 'spike trap', 'spikes kill the player', 'hurts the player on contact', 'knockback', 'knock the player back'],
     summary: `Make an actor damage whatever touches it: ApplyDamage with TouchDamage on each overlap, which an actor with health loses (a negative amount heals); with knockback a touching Character is also launched away from it. ${OVERLAP_NOTE}`,
     whenToUse: ['Spikes, lava, an enemy body or a fire must hurt what touches it.'],
     whenNotToUse: ['A whole area must hurt or kill (use manage_level_structure create_volume with a pain causing or kill Z volume).'],
@@ -218,7 +219,7 @@ export const BEHAVIOURS_RECORDS: readonly CapabilityRecordSource[] = [
       usePathfinding: USE_PATHFINDING,
     },
     required: ['blueprintPath'],
-    outputProps: { ...BEHAVIOUR_OUTPUT, replaced: { type: 'array', items: { type: 'string' }, description: 'Behaviours this one took over and removed first (Chase).' } },
+    outputProps: { ...BEHAVIOUR_OUTPUT, replaced: REPLACED },
     effect: 'write',
     behavior: { idempotency: 'idempotent' },
     latency: 'interactive',
@@ -249,6 +250,29 @@ export const BEHAVIOURS_RECORDS: readonly CapabilityRecordSource[] = [
     resources: 'medium',
     plugins: BP_PLUGINS,
     exampleInput: { action: 'add_moving_platform', blueprintPath: '/Game/Blueprints/BP_Lift', points: [[0, 0, 400], [0, 0, 0]], speed: 250, waitTime: 2 },
+  }),
+  buildRecord({
+    id: 'blueprint.add_stomp',
+    action: 'add_stomp',
+    family: FAMILY,
+    domain: DOMAIN,
+    topics: ['stomp', 'jump on enemies', 'enemy dies when jumped on', 'jump on enemies to kill them', 'bounce off enemies'],
+    summary: 'Make an enemy the player defeats by landing on it: a player-controlled Character that lands on top of the actor bounces up at bounceSpeed and the actor dies (with the health behaviour it takes damage enough to die, else it is destroyed); one that bumps it from the side or below takes sideDamage, at most once a second.',
+    whenToUse: ['A platformer enemy must die when the player jumps on it, and hurt the player who walks into it. A damage_on_touch the actor has is taken over (it would hurt the stomping player too); its damage becomes sideDamage when none is given.'],
+    whenNotToUse: ['A hazard must hurt whatever touches it, from above too (behaviour damage_on_touch).'],
+    inputProps: {
+      blueprintPath: P.blueprintPath,
+      bounceSpeed: { type: 'number', description: 'Upward speed the stomping Character bounces off at, units per second (default 600).' },
+      sideDamage: { type: 'number', description: 'Damage to a player Character that bumps it from the side or below, at most once a second (default 0, none, or the damage of a damage_on_touch it takes over).' },
+    },
+    required: ['blueprintPath'],
+    outputProps: { ...BEHAVIOUR_OUTPUT, replaced: REPLACED },
+    effect: 'write',
+    behavior: { idempotency: 'idempotent' },
+    latency: 'interactive',
+    resources: 'medium',
+    plugins: BP_PLUGINS,
+    exampleInput: { action: 'add_stomp', blueprintPath: '/Game/Blueprints/BP_Walker', sideDamage: 20 },
   }),
   buildRecord({
     id: 'blueprint.add_turret',

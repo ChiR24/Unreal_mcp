@@ -12844,6 +12844,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "chase",
             "patrol",
             "turret",
+            "stomp",
             "moving_platform",
             "controls",
             "respawn",
@@ -12891,6 +12892,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "bottom": {
           "type": "number",
           "description": "Bottom margin in slate units."
+        },
+        "bounceSpeed": {
+          "type": "number",
+          "description": "Upward speed the stomping Character bounces off at, units per second (default 600)."
         },
         "brushColor": {
           "type": "object",
@@ -13930,6 +13935,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "showSpeakerName": {
           "type": "boolean",
           "description": "Whether the dialog shows the speaker name line (default true)."
+        },
+        "sideDamage": {
+          "type": "number",
+          "description": "Damage to a player Character that bumps it from the side or below, at most once a second (default 0, none, or the damage of a damage_on_touch it takes over)."
         },
         "size": {
           "type": "object",
@@ -15106,7 +15115,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "items": {
             "type": "string"
           },
-          "description": "Behaviours this one took over and removed first (Chase)."
+          "description": "Behaviours this one took over and removed first: a patrol takes over a chase (Chase), a stomp a damage on touch (DamageOnTouch)."
         },
         "replacedLinks": {
           "type": "array",

@@ -1,4 +1,4 @@
-// add_health, add_damage_on_touch, add_pickup, add_sprint, add_shoot, add_chase, add_patrol, add_turret,
+// add_health, add_damage_on_touch, add_pickup, add_sprint, add_shoot, add_chase, add_patrol, add_turret, add_stomp,
 // add_launch_pad, add_teleporter, add_falling_platform, add_moving_platform, add_countdown, add_goal, add_spawner and
 // add_dash
 // (blueprint.add_behaviour): gameplay logic written into an Actor Blueprint from a recipe (Resources/Recipes/Gameplay and
@@ -41,7 +41,7 @@ bool HandleBlueprintAddBehaviour(const FBlueprintActionContext &Context) {
   MCP_BLUEPRINT_ACTION_LOCALS(Context);
   static const TCHAR *const Actions[] = {TEXT("add_health"), TEXT("add_damage_on_touch"), TEXT("add_pickup"),
                                          TEXT("add_sprint"), TEXT("add_shoot"), TEXT("add_chase"), TEXT("add_patrol"),
-                                         TEXT("add_turret"), TEXT("add_launch_pad"), TEXT("add_teleporter"),
+                                         TEXT("add_turret"), TEXT("add_stomp"), TEXT("add_launch_pad"), TEXT("add_teleporter"),
                                          TEXT("add_falling_platform"), TEXT("add_moving_platform"), TEXT("add_countdown"),
                                          TEXT("add_goal"), TEXT("add_spawner"), TEXT("add_dash")};
   const TCHAR *Matched = nullptr;
