@@ -39,3 +39,10 @@ void McpAddLoopLatentWarnings(const UBlueprint* Blueprint, TArray<TSharedPtr<FJs
 // branch, switch or gate between, it runs every frame, so a wait longer than a frame never ends: a one-second timer
 // set from Tick never fired.
 void McpAddTickRestartWarnings(const UBlueprint* Blueprint, TArray<TSharedPtr<FJsonValue>>& Diagnostics, int32 MaxDiagnostics);
+
+// An event's own values (its parameters, a Cast's result, a spawned actor) live in one slot each, and every run of the
+// event writes them anew. Read after a wait (a Delay, a timeline, an async task's later output), they hold whatever
+// the latest run wrote: a coin payout read its cast after a two-second delay, a second overlap failed that cast, and
+// every payout read None. A variable the event sets on every run before the wait is no safer. A node behind a wait
+// that reads what the event's every-run prefix writes, its outputs or its variable Sets, gets the warning.
+void McpAddWaitRereadWarnings(const UBlueprint* Blueprint, TArray<TSharedPtr<FJsonValue>>& Diagnostics, int32 MaxDiagnostics);
