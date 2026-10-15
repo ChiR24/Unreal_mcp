@@ -1,5 +1,6 @@
 #include "Domains/ControlActor/McpActorSupport.h"
 #include "Domains/ControlActor/Motion/McpMotionPoints.h"
+#include "Domains/ControlActor/Motion/McpMotionSpawnWatch.h"
 #include "Containers/Ticker.h"
 #include "Domains/ControlEditor/McpEditorScreenshotSupport.h"
 #include "Foundation/Reflection/McpPropertyReflection.h"
@@ -43,28 +44,20 @@ struct FMcpMotionRun {
 
 double McpRoundTo(double Value, double Scale) { return FMath::RoundToDouble(Value * Scale) / Scale; }
 
-TArray<TSharedPtr<FJsonValue>> McpMotionVec(const FVector &V) {
-  TArray<TSharedPtr<FJsonValue>> Out;
-  Out.Add(MakeShared<FJsonValueNumber>(McpRoundTo(V.X, 10.0)));
-  Out.Add(MakeShared<FJsonValueNumber>(McpRoundTo(V.Y, 10.0)));
-  Out.Add(MakeShared<FJsonValueNumber>(McpRoundTo(V.Z, 10.0)));
-  return Out;
-}
-
 void McpTakeMotionSample(FMcpMotionRun &Run, AActor *Actor, double GameTime) {
   const FVector Location = Actor->GetActorLocation();
   TSharedPtr<FJsonObject> Sample = MakeShared<FJsonObject>();
   Sample->SetNumberField(TEXT("t"), McpRoundTo(GameTime - Run.StartGame, 1000.0));
-  Sample->SetArrayField(TEXT("location"), McpMotionVec(Location));
+  Sample->SetArrayField(TEXT("location"), McpPointVec(Location));
   // GetVelocity reads a movement component or a physics body, so an actor moved by setting its location (a scripted
   // cart, a tweened platform) read as standing still while it crossed 570 cm/s; it takes what its positions show.
   const FVector Moved = Run.Samples.Num() > 0 && GameTime > Run.LastSampleGame ? (Location - Run.Last) / (GameTime - Run.LastSampleGame) : FVector::ZeroVector;
-  Sample->SetArrayField(TEXT("velocity"), McpMotionVec(Actor->GetVelocity().IsNearlyZero() ? Moved : Actor->GetVelocity()));
+  Sample->SetArrayField(TEXT("velocity"), McpPointVec(Actor->GetVelocity().IsNearlyZero() ? Moved : Actor->GetVelocity()));
   // A floating hull's roll or a turning pawn's heading was unreadable over time. The rotation rides on the first
   // sample and on each one where it moved, so an actor that never turns adds nothing.
   const FRotator Rotation = Actor->GetActorRotation();
   if (!Run.LastRotation.IsSet() || !Rotation.Equals(Run.LastRotation.GetValue(), 0.05)) {
-    Sample->SetArrayField(TEXT("rotation"), McpMotionVec(FVector(Rotation.Pitch, Rotation.Yaw, Rotation.Roll)));
+    Sample->SetArrayField(TEXT("rotation"), McpPointVec(FVector(Rotation.Pitch, Rotation.Yaw, Rotation.Roll)));
     Run.LastRotation = Rotation;
   }
   if (Run.Properties.Num() > 0) {
@@ -98,10 +91,10 @@ TSharedPtr<FJsonObject> McpMotionResult(const FMcpMotionRun &Run, const FString 
   Data->SetNumberField(TEXT("realSeconds"), McpRoundTo(FPlatformTime::Seconds() - Run.StartReal, 100.0));
   Data->SetStringField(TEXT("endedBecause"), Ended);
   if (Run.Samples.Num() > 0) {
-    Data->SetArrayField(TEXT("start"), McpMotionVec(Run.First));
-    Data->SetArrayField(TEXT("end"), McpMotionVec(Run.Last));
-    Data->SetArrayField(TEXT("min"), McpMotionVec(Run.Extent.Min));
-    Data->SetArrayField(TEXT("max"), McpMotionVec(Run.Extent.Max));
+    Data->SetArrayField(TEXT("start"), McpPointVec(Run.First));
+    Data->SetArrayField(TEXT("end"), McpPointVec(Run.Last));
+    Data->SetArrayField(TEXT("min"), McpPointVec(Run.Extent.Min));
+    Data->SetArrayField(TEXT("max"), McpPointVec(Run.Extent.Max));
   }
   if (Run.Missing.Num() > 0) {
     Data->SetArrayField(TEXT("missingProperties"), Run.Missing);
@@ -185,9 +178,14 @@ bool UEngineWireSubsystem::HandleControlActorSampleMotion(
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
   FString TargetName;
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
+  // spawnOf: the actor does not exist yet; the first one of that class the game spawns is watched.
+  if (TargetName.IsEmpty() && Payload->HasField(TEXT("spawnOf"))) {
+    McpSampleMotionOfNextSpawn(this, RequestId, Payload, Socket);
+    return true;
+  }
   if (TargetName.IsEmpty()) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
-                              TEXT("actorName required"));
+                              TEXT("actorName or spawnOf required"));
     return true;
   }
   AActor *Found = FindActorByName(TargetName);

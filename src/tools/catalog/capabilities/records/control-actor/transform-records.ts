@@ -192,7 +192,10 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
     whenToUse: ['The current transform of an actor must be inspected.'],
     whenNotToUse: ['The transform should be changed (use set_transform).'],
     inputProps: { actorName: P.pieActorName },
-    required: ['actorName'],
+    // A group of one is required actorName. The fold with sample_motion keeps a group only when every member
+    // has one, so this keeps the folded record refusing a call with neither actorName nor spawnOf.
+    required: [],
+    requiredOneOf: ['actorName'],
     outputProps: { location: P.location, rotation: P.rotation, scale: P.scale },
     outputRequired: [],
     effect: 'read',
@@ -210,7 +213,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
       editorStates: ANY_EDITOR_STATE,
       domain: DOMAIN,
       family: FAMILY_TRANSFORM,
-      topics: ['sample motion', 'record trajectory', 'track actor over time', 'watch actor move', 'jump height', 'foot sliding', 'bone position over time'],
+      topics: ['sample motion', 'record trajectory', 'track actor over time', 'watch actor move', 'jump height', 'foot sliding', 'bone position over time', 'watch spawned actor', 'track projectile'],
       summary: 'Watch an actor over game time in Play-In-Editor and return its location, velocity, rotation and chosen properties at every interval, plus start/end and min/max extents, in one call; it can also follow points on the actor (bones, sockets, components) with their height over the ground, press keys at exact game times (inputs) and wait for another actor\'s property to change before it starts (startWhen).',
       whenToUse: [
         'A jump, spring launch, moving platform, enemy patrol or fall must be proven in PIE without a sleep-and-poll loop.',
@@ -218,10 +221,13 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
         'An input must land at an exact moment (jump when a platform appears): inputs and startWhen run the whole timeline inside one call, so the caller\'s own delay between calls cannot shift it.',
         'Feet must be proven to plant without sliding, sinking or floating, or a hand or muzzle must be followed: points with groundTrace measure it per point.',
         'A pawn dies, or a trigger fires, and what touched it is unknown: overlaps names every actor that began touching it, sample by sample.',
+        'An actor that does not exist yet must be watched from its first frame (a projectile, a thrown or dropped object, an enemy of a wave): spawnOf names its class, and the first one the game spawns after the call is watched.',
       ],
       whenNotToUse: ['Only the current transform is needed (use get_transform).', 'Nothing is playing: the editor world does not simulate (start PIE with control_editor.play).'],
       inputProps: {
         actorName: P.pieActorName,
+        spawnOf: { type: 'string', description: 'In place of actorName, for an actor the game has not spawned yet: its class (a Blueprint as BP_Thing or its _C path, a native class by its short name; a subclass counts too). The call waits for the first one spawned after it and watches it from its first frame; actorName in the reply names it.' },
+        spawnWaitSeconds: { type: 'number', description: 'With spawnOf: game seconds to wait for the spawn (default 10, at most 30); nothing spawned ends with endedBecause spawnTimeout and no samples. The wait comes out of maxRealSeconds, so the wait and the run still answer inside it.' },
         durationSeconds: { type: 'number', description: 'Game seconds to watch (default 2, at most 30). Game time, so a clock slowed with set_game_speed still covers the same span of play; a run that needs more wall-clock time than maxRealSeconds stops there (endedBecause realTimeCap).' },
         intervalSeconds: { type: 'number', description: 'Game seconds between samples (default 0.05; 0 samples every frame). At most 400 samples are kept.' },
         propertyNames: { type: 'array', items: { type: 'string' }, description: 'Actor properties read at every sample, each as JSON (a number, true or false, the name of an enum value, the path of an object, or an array of them), e.g. ["bDead", "HP"], or a component\'s as "Component.Property" ("Visual.RelativeScale3D" catches a squash on landing), the component by its name or by the actor property that holds it ("CharacterMovement.MaxWalkSpeed"); a name that resolves to nothing is listed under missingProperties.' },
@@ -261,7 +267,8 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
           description: 'Hold the run (samples and inputs) until another actor\'s property takes a value, so the timeline starts on a game event instead of whenever the call arrived.',
         },
       },
-      required: ['actorName'],
+      required: [],
+      requiredOneOf: ['actorName', 'spawnOf'],
       outputProps: {
         actorName: { type: 'string', description: 'The actor watched.' },
         samples: {
@@ -272,12 +279,12 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
         sampleCount: { type: 'number', description: 'How many samples were taken.' },
         gameSeconds: { type: 'number', description: 'Game time covered.' },
         realSeconds: { type: 'number', description: 'Wall-clock time the run took.' },
-        endedBecause: { type: 'string', description: 'duration, realTimeCap, sampleCap, actorDestroyed (the actor was destroyed while its level kept running), levelChanged (the game loaded a level and PIE runs on in it: a death that reloads the level, or travel to the next one), worldEnded (PIE stopped),startWhenTimeout (startWhen never happened within maxWaitSeconds) or gamePaused (game time stood still for 3 s: a title or pause menu holds the game; the warning says how to get past it).' },
+        endedBecause: { type: 'string', description: 'duration, realTimeCap, sampleCap, actorDestroyed (the actor was destroyed while its level kept running), levelChanged (the game loaded a level and PIE runs on in it: a death that reloads the level, or travel to the next one), worldEnded (PIE stopped), startWhenTimeout (startWhen never happened within maxWaitSeconds), spawnTimeout (spawnOf: nothing of the class spawned within spawnWaitSeconds) or gamePaused (game time stood still for 3 s: a title or pause menu holds the game; the warning says how to get past it).' },
         inputsApplied: {
           type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
           description: 'One entry per input: key, at, hold, and down/up, the game seconds since the start when it was pressed and released (up is when the run ended for a key still held).',
         },
-        waitedSeconds: { type: 'number', description: 'Game seconds spent waiting for startWhen before the run began.' },
+        waitedSeconds: { type: 'number', description: 'Game seconds spent waiting for startWhen before the run began, or for a spawnOf spawn that never came.' },
         start: { type: 'array', items: { type: 'number' }, description: 'First sampled location.' },
         end: { type: 'array', items: { type: 'number' }, description: 'Last sampled location.' },
         min: { type: 'array', items: { type: 'number' }, description: 'Smallest x, y and z sampled (the lowest point is min[2]).' },

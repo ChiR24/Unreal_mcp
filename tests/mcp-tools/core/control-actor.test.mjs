@@ -146,6 +146,10 @@ const testCases = [
   { scenario: 'ERROR: sample_motion with startWhen refuses the editor world', toolName: 'control_actor', arguments: actorArgs('sample_motion', { durationSeconds: 0.2, startWhen: { actorName: MAIN_ACTOR, propertyName: 'bHidden', equals: false, waitForChange: false, maxWaitSeconds: 1 } }), expected: 'error|NOT_SIMULATING' },
   { scenario: 'ERROR: sample_motion with points refuses the editor world', toolName: 'control_actor', arguments: actorArgs('sample_motion', { durationSeconds: 0.2, points: ['StaticMeshComponent0'], groundTrace: true, contactCm: 3 }), expected: 'error|NOT_SIMULATING' },
   { scenario: 'ERROR: sample_motion watching overlaps refuses the editor world', toolName: 'control_actor', arguments: actorArgs('sample_motion', { durationSeconds: 0.2, overlaps: true }), expected: 'error|NOT_SIMULATING' },
+  // spawnOf waits for an actor the running game spawns: the editor world spawns nothing, so it refuses too.
+  { scenario: 'ERROR: sample_motion spawnOf refuses the editor world', toolName: 'control_actor', arguments: { action: 'sample_motion', spawnOf: 'StaticMeshActor', spawnWaitSeconds: 1, durationSeconds: 0.2 }, expected: 'error|NOT_SIMULATING' },
+  { scenario: 'ERROR: sample_motion spawnOf names no actor class', toolName: 'control_actor', arguments: { action: 'sample_motion', spawnOf: `BP_NoSuchClass_${ts}`, spawnWaitSeconds: 1 }, expected: 'error|CLASS_NOT_FOUND' },
+  { scenario: 'ERROR: sample_motion needs actorName or spawnOf', toolName: 'control_actor', arguments: { action: 'sample_motion', durationSeconds: 0.2 }, expected: 'error|MISSING_REQUIRED_ONEOF' },
   { scenario: 'CONFIG: set_visibility', toolName: 'control_actor', arguments: actorArgs('set_visibility', { visible: true }), expected: 'success' },
   { scenario: 'CONFIG: set_actor_visible', toolName: 'control_actor', arguments: actorArgs('set_actor_visible', { visible: true }), expected: 'success' },
   // actorNames: hiding seventeen actors took thirty-four calls; now one call, one undo step, and the misses come back.

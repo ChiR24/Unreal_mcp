@@ -26,6 +26,9 @@ struct FMcpMotionPoints {
   double ContactCm = 2.0;
 };
 
+/** A location as [x, y, z] rounded to a tenth of a centimetre, as every sample_motion reply writes one. */
+TArray<TSharedPtr<FJsonValue>> McpPointVec(const FVector &V);
+
 /** Reads points, groundTrace and contactCm. False, with Error naming what the actor has, for a point it lacks. */
 bool McpParseMotionPoints(AActor *Actor, const TSharedPtr<FJsonObject> &Payload, FMcpMotionPoints &Out,
                           FString &Error);

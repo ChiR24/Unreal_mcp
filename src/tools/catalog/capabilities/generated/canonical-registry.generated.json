@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "7c89832883bd73bc",
+  "catalogRevision": "919d6fdf66892875",
   "recordCount": 416,
   "records": [
     {
@@ -35828,7 +35828,9 @@
           "bone position over time",
           "actor rotation",
           "watch actor move",
-          "jump height"
+          "jump height",
+          "watch spawned actor",
+          "track projectile"
         ],
         "summary": "Read where an actor is (the player's pawn too): its transform now, or watch it over game time in PIE (motion): location, velocity, rotation, chosen properties and points on it (bones, sockets, components, with their height over the ground) at every interval, to prove a jump, launch, patrol, fall, foot plant or a rocking hull in one call.",
         "whenToUse": [
@@ -35837,7 +35839,8 @@
           "readMode=motion: The peak height, landing point or path of a moving actor is needed.",
           "readMode=motion: An input must land at an exact moment (jump when a platform appears): inputs and startWhen run the whole timeline inside one call, so the caller's own delay between calls cannot shift it.",
           "readMode=motion: Feet must be proven to plant without sliding, sinking or floating, or a hand or muzzle must be followed: points with groundTrace measure it per point.",
-          "readMode=motion: A pawn dies, or a trigger fires, and what touched it is unknown: overlaps names every actor that began touching it, sample by sample."
+          "readMode=motion: A pawn dies, or a trigger fires, and what touched it is unknown: overlaps names every actor that began touching it, sample by sample.",
+          "readMode=motion: An actor that does not exist yet must be watched from its first frame (a projectile, a thrown or dropped object, an enemy of a wave): spawnOf names its class, and the first one the game spawns after the call is watched."
         ],
         "whenNotToUse": [
           "readMode=transform: The transform should be changed (use set_transform).",
@@ -35856,6 +35859,14 @@
             "actorName": {
               "type": "string",
               "description": "Target actor name in the current level; while PIE runs, PlayerPawn names the player's pawn (PlayerController, GameMode, GameState, PlayerState and HUD work too)."
+            },
+            "spawnOf": {
+              "type": "string",
+              "description": "In place of actorName, for an actor the game has not spawned yet: its class (a Blueprint as BP_Thing or its _C path, a native class by its short name; a subclass counts too). The call waits for the first one spawned after it and watches it from its first frame; actorName in the reply names it."
+            },
+            "spawnWaitSeconds": {
+              "type": "number",
+              "description": "With spawnOf: game seconds to wait for the spawn (default 10, at most 30); nothing spawned ends with endedBecause spawnTimeout and no samples. The wait comes out of maxRealSeconds, so the wait and the run still answer inside it."
             },
             "durationSeconds": {
               "type": "number",
@@ -35963,10 +35974,13 @@
             }
           },
           "required": [
-            "action",
-            "actorName"
+            "action"
           ],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "requiredOneOf": [
+            "actorName",
+            "spawnOf"
+          ]
         },
         "output": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -36046,7 +36060,7 @@
             },
             "endedBecause": {
               "type": "string",
-              "description": "duration, realTimeCap, sampleCap, actorDestroyed (the actor was destroyed while its level kept running), levelChanged (the game loaded a level and PIE runs on in it: a death that reloads the level, or travel to the next one), worldEnded (PIE stopped),startWhenTimeout (startWhen never happened within maxWaitSeconds) or gamePaused (game time stood still for 3 s: a title or pause menu holds the game; the warning says how to get past it)."
+              "description": "duration, realTimeCap, sampleCap, actorDestroyed (the actor was destroyed while its level kept running), levelChanged (the game loaded a level and PIE runs on in it: a death that reloads the level, or travel to the next one), worldEnded (PIE stopped), startWhenTimeout (startWhen never happened within maxWaitSeconds), spawnTimeout (spawnOf: nothing of the class spawned within spawnWaitSeconds) or gamePaused (game time stood still for 3 s: a title or pause menu holds the game; the warning says how to get past it)."
             },
             "inputsApplied": {
               "type": "array",
@@ -36059,7 +36073,7 @@
             },
             "waitedSeconds": {
               "type": "number",
-              "description": "Game seconds spent waiting for startWhen before the run began."
+              "description": "Game seconds spent waiting for startWhen before the run began, or for a spawnOf spawn that never came."
             },
             "start": {
               "type": "array",
@@ -36175,6 +36189,12 @@
             "motion": "sample_motion"
           },
           "declaredBy": {
+            "spawnOf": [
+              "motion"
+            ],
+            "spawnWaitSeconds": [
+              "motion"
+            ],
             "durationSeconds": [
               "motion"
             ],
@@ -36210,8 +36230,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "7e937842c86ef82583e8d36de1b6c0f7788bb0d69cbce2db32e2b8ca0d5137f0",
-        "content": "427f5067b4ed028797f108160f0ba79f05b577aa4ad27683c0de603b28f8899d"
+        "schema": "2ea5382de68785138924a1262a8bd0e3b002f73de5e9bf2271f5bd67e071ddac",
+        "content": "1365c5d432018f6f194124ecf909d50a2dfc031e5c466d9ef27113af0bfb9027"
       }
     },
     {

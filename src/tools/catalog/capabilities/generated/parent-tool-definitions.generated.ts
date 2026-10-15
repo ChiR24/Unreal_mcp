@@ -4483,6 +4483,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Which spawn variant to run; omit for 'class'.",
           "default": "class"
         },
+        "spawnOf": {
+          "type": "string",
+          "description": "In place of actorName, for an actor the game has not spawned yet: its class (a Blueprint as BP_Thing or its _C path, a native class by its short name; a subclass counts too). The call waits for the first one spawned after it and watches it from its first frame; actorName in the reply names it."
+        },
+        "spawnWaitSeconds": {
+          "type": "number",
+          "description": "With spawnOf: game seconds to wait for the spawn (default 10, at most 30); nothing spawned ends with endedBecause spawnTimeout and no samples. The wait comes out of maxRealSeconds, so the wait and the run still answer inside it."
+        },
         "startWhen": {
           "type": "object",
           "properties": {
@@ -4914,7 +4922,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "endedBecause": {
           "type": "string",
-          "description": "duration, realTimeCap, sampleCap, actorDestroyed (the actor was destroyed while its level kept running), levelChanged (the game loaded a level and PIE runs on in it: a death that reloads the level, or travel to the next one), worldEnded (PIE stopped),startWhenTimeout (startWhen never happened within maxWaitSeconds) or gamePaused (game time stood still for 3 s: a title or pause menu holds the game; the warning says how to get past it)."
+          "description": "duration, realTimeCap, sampleCap, actorDestroyed (the actor was destroyed while its level kept running), levelChanged (the game loaded a level and PIE runs on in it: a death that reloads the level, or travel to the next one), worldEnded (PIE stopped), startWhenTimeout (startWhen never happened within maxWaitSeconds), spawnTimeout (spawnOf: nothing of the class spawned within spawnWaitSeconds) or gamePaused (game time stood still for 3 s: a title or pause menu holds the game; the warning says how to get past it)."
         },
         "examined": {
           "type": "number",
@@ -5317,7 +5325,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "waitedSeconds": {
           "type": "number",
-          "description": "Game seconds spent waiting for startWhen before the run began."
+          "description": "Game seconds spent waiting for startWhen before the run began, or for a spawnOf spawn that never came."
         },
         "windowRestored": {
           "type": "boolean",

@@ -2039,7 +2039,7 @@ describe('motion samples carry rotation when it changes', () => {
   it('writes rotation on the first sample and on each one where it moved', () => {
     const source = code('ControlActor', 'McpActorMotionSample.cpp');
     expect(source).toContain('if (!Run.LastRotation.IsSet() || !Rotation.Equals(Run.LastRotation.GetValue(), 0.05)) {');
-    expect(source).toContain('Sample->SetArrayField(TEXT("rotation"), McpMotionVec(FVector(Rotation.Pitch, Rotation.Yaw, Rotation.Roll)));');
+    expect(source).toContain('Sample->SetArrayField(TEXT("rotation"), McpPointVec(FVector(Rotation.Pitch, Rotation.Yaw, Rotation.Roll)));');
   });
 });
 
@@ -2783,7 +2783,21 @@ describe('a motion sample reports the velocity an actor moves at', () => {
   it('falls back to the velocity the sampled positions show when the engine reports none', () => {
     const sample = code('ControlActor', 'McpActorMotionSample.cpp');
     expect(sample).toContain('(Location - Run.Last) / (GameTime - Run.LastSampleGame)');
-    expect(sample).toContain('McpMotionVec(Actor->GetVelocity().IsNearlyZero() ? Moved : Actor->GetVelocity())');
+    expect(sample).toContain('McpPointVec(Actor->GetVelocity().IsNearlyZero() ? Moved : Actor->GetVelocity())');
+  });
+});
+
+describe('a motion read waits for an actor the game spawns', () => {
+  // A thrown block lived two seconds: by the time a call could name it, it was gone or not born yet.
+  it('spawnOf listens to the world spawn event and hands the run the first actor of the class', () => {
+    const sample = code('ControlActor', 'McpActorMotionSample.cpp');
+    expect(sample).toMatch(/if \(TargetName\.IsEmpty\(\) && Payload->HasField\(TEXT\("spawnOf"\)\)\) \{\s*McpSampleMotionOfNextSpawn\(this, RequestId, Payload, Socket\);\s*return true;/u);
+    const watch = code('ControlActor', 'Motion', 'McpMotionSpawnWatch.cpp');
+    expect(watch).toContain('World->AddOnActorSpawnedHandler(');
+    expect(watch).toContain('Now->RemoveOnActorSpawnedHandler(Watch->Handle);');
+    expect(watch).toContain('Actor->IsA(Pinned->Class.Get())');
+    expect(watch).toContain('Named->SetNumberField(TEXT("maxRealSeconds"), FMath::Max(1.0, RealLeft));');
+    expect(watch).toContain('Self->HandleControlActorSampleMotion(RequestId, Named, Socket);');
   });
 });
 
