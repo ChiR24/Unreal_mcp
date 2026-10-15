@@ -48,7 +48,7 @@ export const ASSET_LIFECYCLE_RECORDS: readonly RecordSpec[] = [
       depth: num('Maximum recursion depth.'),
       includeTags: bool('When true, include asset tags in the listing response.'),
       includeMetadata: bool('When true, include the file size and modification date of each asset.'),
-      filter: str('Substring filter. Listing assets: a case-insensitive match on the asset name. Listing content sources: a case-sensitive match on the source id and, for plugins, the category.')
+      filter: str('Substring filter. Listing assets: a case-insensitive match on the asset name, and on the own name of each folder listed. Listing content sources: a case-sensitive match on the source id and, for plugins, the category.')
     }, ['path']),
     PAGINATED_OUTPUT, READ, READ_POLICY, MEDIUM,
     { topics: ['list assets', 'browse folder', 'content browser', 'assets in folder', 'directory listing', 'folder contents'], dispatchAction: 'list', examples: [ex('List first page', { path: '/Game' }, { success: true, assets: [], hasMore: false, nextCursor: null })] }

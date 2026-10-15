@@ -9,6 +9,7 @@
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "HAL/FileManager.h"
 #include "Misc/PackageName.h"
+#include "Misc/Paths.h"
 #include "Foundation/BridgeHelpers/Assets/McpAssetResolve.h"
 #include "Domains/AssetWorkflow/Operations/EngineWireAssetListCursor.h"
 
@@ -309,7 +310,10 @@ bool UEngineWireSubsystem::HandleListAssets(
 
   TArray<TSharedPtr<FJsonValue>> FoldersJson;
   for (const FString &SubPath : SubPathList) {
-    FoldersJson.Add(MakeShared<FJsonValueString>(SubPath));
+    // A name filter narrows the folders as it does the assets: every subfolder of /Game buried five matches.
+    if (NameFilter.IsEmpty() || FPaths::GetCleanFilename(SubPath).Contains(NameFilter, ESearchCase::IgnoreCase)) {
+      FoldersJson.Add(MakeShared<FJsonValueString>(SubPath));
+    }
   }
 
   const bool bHasMore = (Offset + Page.Num()) < TotalCount;

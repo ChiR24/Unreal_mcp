@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "eb97e0c5660600c5",
+  "catalogRevision": "51eddb8896dae900",
   "recordCount": 416,
   "records": [
     {
@@ -9862,7 +9862,7 @@
             },
             "filter": {
               "type": "string",
-              "description": "Substring filter. Listing assets: a case-insensitive match on the asset name. Listing content sources: a case-sensitive match on the source id and, for plugins, the category."
+              "description": "Substring filter. Listing assets: a case-insensitive match on the asset name, and on the own name of each folder listed. Listing content sources: a case-sensitive match on the source id and, for plugins, the category."
             },
             "sourceRoot": {
               "type": "string",
@@ -10084,8 +10084,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "de4ab8fde42d42ea6acee51c99ab2cb081f1fc70d7e5ee7db8ec96eb43e09856",
-        "content": "bb1dac12072d93d9d67e61f904f74a2019723ddc5e178cbafe141da04329d144"
+        "schema": "9d1a473aa2b9f3157816b1b44cd7f5828633cd8b9ca2074e89dd8269d91ac461",
+        "content": "b73ae91402da7ecff56b88af0a9893ce966c006a6908e78e57e197286864439d"
       }
     },
     {

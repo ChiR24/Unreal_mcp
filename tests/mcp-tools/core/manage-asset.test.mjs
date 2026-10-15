@@ -82,6 +82,7 @@ const testCases = [
   // === CORE ASSET ACTIONS ===
   { scenario: 'ACTION: list', toolName: 'manage_asset', arguments: { action: 'list', path: TEST_FOLDER, recursive: true }, expected: 'success' },
   { scenario: 'OPTIONAL: list with includeMetadata', toolName: 'manage_asset', arguments: { action: 'list', path: TEST_FOLDER, recursive: true, includeMetadata: true }, expected: 'success' },
+  { scenario: 'ACTION: list with a name filter narrows the folders too', toolName: 'manage_asset', arguments: { action: 'list', path: '/Game/MCPTest', filter: 'TestMesh' }, expected: 'success', assertions: [{ path: 'structuredContent.result.folders', length: 0, label: 'no subfolder is named like the filter, so none is listed' }] },
   { scenario: 'ACTION: import', toolName: 'manage_asset', arguments: { action: 'import', sourcePath: relativeImportSource, destinationPath: IMPORTED_MESH, overwrite: true, save: true }, expected: 'success' },
   { scenario: 'ACTION: import with importAnimations on a mesh-only source', toolName: 'manage_asset', arguments: { action: 'import', sourcePath: relativeImportSource, destinationPath: asset(`SM_ImportedAnim_${ts}`), importAnimations: true, save: false }, expected: 'error' },
   { scenario: 'ACTION: import refuses an unresolvable skeletonPath', toolName: 'manage_asset', arguments: { action: 'import', sourcePath: relativeImportSource, destinationPath: asset(`SM_ImportedSkel_${ts}`), skeletonPath: '/Game/DoesNotExist/SK_Missing', save: false }, expected: 'error|skeleton' },
