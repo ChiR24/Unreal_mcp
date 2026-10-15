@@ -180,7 +180,10 @@ bool UEngineWireSubsystem::HandleControlActorSampleMotion(
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
   // spawnOf: the actor does not exist yet; the first one of that class the game spawns is watched.
   if (TargetName.IsEmpty() && Payload->HasField(TEXT("spawnOf"))) {
-    McpSampleMotionOfNextSpawn(this, RequestId, Payload, Socket);
+    TWeakObjectPtr<UEngineWireSubsystem> Weak(this);
+    McpSampleMotionOfNextSpawn(this, RequestId, Payload, Socket, [Weak, RequestId, Socket](const TSharedPtr<FJsonObject> &Named) {
+      if (Weak.IsValid()) Weak->HandleControlActorSampleMotion(RequestId, Named, Socket);
+    });
     return true;
   }
   if (TargetName.IsEmpty()) {

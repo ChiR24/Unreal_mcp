@@ -2791,13 +2791,14 @@ describe('a motion read waits for an actor the game spawns', () => {
   // A thrown block lived two seconds: by the time a call could name it, it was gone or not born yet.
   it('spawnOf listens to the world spawn event and hands the run the first actor of the class', () => {
     const sample = code('ControlActor', 'McpActorMotionSample.cpp');
-    expect(sample).toMatch(/if \(TargetName\.IsEmpty\(\) && Payload->HasField\(TEXT\("spawnOf"\)\)\) \{\s*McpSampleMotionOfNextSpawn\(this, RequestId, Payload, Socket\);\s*return true;/u);
+    // The handler is a private member: the run starts through a callback the handler hands over.
+    expect(sample).toMatch(/if \(TargetName\.IsEmpty\(\) && Payload->HasField\(TEXT\("spawnOf"\)\)\) \{[\s\S]*?McpSampleMotionOfNextSpawn\(this, RequestId, Payload, Socket, \[Weak, RequestId, Socket\][\s\S]*?Weak->HandleControlActorSampleMotion\(RequestId, Named, Socket\);\s*\}\);\s*return true;/u);
     const watch = code('ControlActor', 'Motion', 'McpMotionSpawnWatch.cpp');
     expect(watch).toContain('World->AddOnActorSpawnedHandler(');
     expect(watch).toContain('Now->RemoveOnActorSpawnedHandler(Watch->Handle);');
     expect(watch).toContain('Actor->IsA(Pinned->Class.Get())');
     expect(watch).toContain('Named->SetNumberField(TEXT("maxRealSeconds"), FMath::Max(1.0, RealLeft));');
-    expect(watch).toContain('Self->HandleControlActorSampleMotion(RequestId, Named, Socket);');
+    expect(watch).toContain('Run(Named);');
   });
 });
 

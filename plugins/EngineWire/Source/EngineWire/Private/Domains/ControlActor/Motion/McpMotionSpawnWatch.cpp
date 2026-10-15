@@ -1,6 +1,7 @@
 #include "Domains/ControlActor/Motion/McpMotionSpawnWatch.h"
 #include "Containers/Ticker.h"
 #include "Domains/ControlActor/McpActorSupport.h"
+#include "Domains/ControlEditor/McpEditorScreenshotSupport.h"
 #include "Foundation/BridgeHelpers/Reflection/McpClassResolve.h"
 
 // A thrown block, a projectile or an enemy of a wave lives a second or two: by the time a call could name it, it was
@@ -13,6 +14,8 @@ struct FMcpSpawnWatch {
   TWeakObjectPtr<AActor> Spawned;
   FDelegateHandle Handle;
   double StartGame = 0.0, WaitFor = 10.0, StartReal = 0.0, MaxReal = 25.0;
+  // A minimized editor steps PIE at about 3 fps, so the game the wait counts on runs on screen, as the run does.
+  FMcpEditorRunHold Hold;
 };
 
 // Nothing spawned: answered as a startWhen that never fired is, a run with no samples that says why it ended.
@@ -36,7 +39,8 @@ void McpAnswerNoSpawn(UEngineWireSubsystem *Self, TSharedPtr<FMcpBridgeWebSocket
 } // namespace
 
 void McpSampleMotionOfNextSpawn(UEngineWireSubsystem *Subsystem, const FString &RequestId,
-                                const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FMcpBridgeWebSocket> Socket) {
+                                const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FMcpBridgeWebSocket> Socket,
+                                TFunction<void(const TSharedPtr<FJsonObject> &)> Run) {
   FString ClassName;
   Payload->TryGetStringField(TEXT("spawnOf"), ClassName);
   UClass *Class = ResolveClassByName(ClassName);
@@ -67,6 +71,7 @@ void McpSampleMotionOfNextSpawn(UEngineWireSubsystem *Subsystem, const FString &
   Watch->MaxReal = FMath::Clamp(Watch->MaxReal, 1.0, 50.0);
   Watch->StartGame = World->GetTimeSeconds();
   Watch->StartReal = FPlatformTime::Seconds();
+  Watch->Hold = BeginEditorRunForMcp();
   const TWeakPtr<FMcpSpawnWatch> WeakWatch = Watch;
   Watch->Handle = World->AddOnActorSpawnedHandler(FOnActorSpawned::FDelegate::CreateLambda([WeakWatch](AActor *Actor) {
     const TSharedPtr<FMcpSpawnWatch> Pinned = WeakWatch.Pin();
@@ -76,7 +81,7 @@ void McpSampleMotionOfNextSpawn(UEngineWireSubsystem *Subsystem, const FString &
   }));
   const TWeakObjectPtr<UEngineWireSubsystem> WeakSubsystem(Subsystem);
   FTSTicker::GetCoreTicker().AddTicker(
-      FTickerDelegate::CreateLambda([Watch, WeakSubsystem, RequestId, Payload, Socket, ClassName](float) -> bool {
+      FTickerDelegate::CreateLambda([Watch, WeakSubsystem, RequestId, Payload, Socket, ClassName, Run](float) -> bool {
         UWorld *Now = Watch->World.Get();
         AActor *Actor = Watch->Spawned.Get();
         // Born and gone between two frames: wait for the next one.
@@ -89,6 +94,9 @@ void McpSampleMotionOfNextSpawn(UEngineWireSubsystem *Subsystem, const FString &
         if (Now) {
           Now->RemoveOnActorSpawnedHandler(Watch->Handle);
         }
+        // Given back before the run starts: the run holds the window itself, and a hold it found taken it would
+        // never give back (a window left on screen, the background throttle left off).
+        EndEditorRunForMcp(Watch->Hold);
         UEngineWireSubsystem *Self = WeakSubsystem.Get();
         if (!Self) {
           return false;
@@ -105,7 +113,7 @@ void McpSampleMotionOfNextSpawn(UEngineWireSubsystem *Subsystem, const FString &
         Named->RemoveField(TEXT("spawnOf"));
         Named->SetStringField(TEXT("actorName"), McpActorRef(Actor));
         Named->SetNumberField(TEXT("maxRealSeconds"), FMath::Max(1.0, RealLeft));
-        Self->HandleControlActorSampleMotion(RequestId, Named, Socket);
+        Run(Named);
         return false;
       }),
       0.0f);
