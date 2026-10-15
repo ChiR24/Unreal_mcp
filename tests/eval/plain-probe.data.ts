@@ -604,4 +604,11 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'find a blueprint function', accepted: ['blueprint.inspect_graph'] },
   { query: 'which function to call', accepted: ['blueprint.inspect_graph'] },
   { query: 'find function by what it does', accepted: ['blueprint.inspect_graph'] },
+  { query: 'write my own logic', accepted: ['blueprint.edit_graph'] },
+  { query: 'my own game mechanic', accepted: ['blueprint.edit_graph'] },
+  { query: 'blueprint code', accepted: ['blueprint.edit_graph'] },
+  { query: 'write blueprint code', accepted: ['blueprint.edit_graph'] },
+  { query: 'code a mechanic in blueprint', accepted: ['blueprint.edit_graph'] },
+  { query: 'add code to blueprint', accepted: ['blueprint.edit_graph'] },
+  { query: 'c++ code for an actor', accepted: ['system_control.create_cpp_class'] },
 ];

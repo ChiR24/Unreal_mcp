@@ -54,7 +54,7 @@ export const RETRIEVAL_FUNCTION_WORDS: ReadonlySet<string> = Object.freeze(new S
   'a', 'an', 'the', 'this', 'that', 'these', 'those', 'of', 'in', 'on', 'at',
   'to', 'for', 'from', 'by', 'with', 'into', 'onto', 'and', 'or', 'but', 'it',
   'its', 'is', 'are', 'be', 'as', 'all', 'every', 'any', 'some', 'my', 'our',
-  'their', 'his', 'her', 'you', 'me', 'we', 'i', 'please', 'then', 'so',
+  'their', 'his', 'her', 'own', 'you', 'me', 'we', 'i', 'please', 'then', 'so',
   // Interrogatives and auxiliaries: a question ('what is the current level',
   // 'how do i spawn an actor') carries the same content words as the imperative.
   'what', 'which', 'how', 'where', 'who', 'when', 'why', 'do', 'does', 'did',

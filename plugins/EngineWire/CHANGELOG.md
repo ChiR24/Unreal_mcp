@@ -8,7 +8,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 
 ### Changed
 - **Dialog template** (`BuildDialog` in `Templates/McpWidgetScreensMore.cpp`): `buttons` (at most 6) are the responses, each `NameStem(Label) + "Button"` as `BuildMenu` names them, in place of `responseCount`'s placeholders; `text` is the DialogText line.
-- **Search ignores "if" and "whether"** (`FunctionWords` in `McpNativeGatewaySearchMatch.cpp`), as the TypeScript door now does. A search that matches nothing (`McpNativeGatewaySearch.cpp`) says game logic is built as a Blueprint graph, as the TypeScript door does.
+- **Search ignores "if", "whether" and "own"** (`FunctionWords` in `McpNativeGatewaySearchMatch.cpp`), as the TypeScript door now does. A search that matches nothing (`McpNativeGatewaySearch.cpp`) says game logic is built as a Blueprint graph, as the TypeScript door does.
 - **Bare `runtime_report`** (`McpEnvInspectRuntime.cpp`): no actor descriptions without a selector; the message says how to ask for them. The camera pose only inside `playerCameraManager`.
 - **Dead parameter aliases removed** (`McpEditorLevel.cpp`, `McpEditorCameraFocus.cpp`, `McpLevelDelete.cpp`, `McpLevelValidate.cpp`, `McpLevelMetadata.cpp`, `McpLevelDuplicate.cpp`): each handler reads only the parameter its record declares; the delete handler's one-entry `levelPaths` branch is gone.
 - **`set_camera` reply** (`McpEditorCamera.cpp`): `requestedLocation` and `requestedRotation` only when the viewport did not take them.

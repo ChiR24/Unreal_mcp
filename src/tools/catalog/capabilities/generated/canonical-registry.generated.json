@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "ebc7aa6d6959efa0",
+  "catalogRevision": "3b75845fc259761a",
   "recordCount": 416,
   "records": [
     {
@@ -17495,6 +17495,7 @@
           "edit_graph",
           "blueprint logic",
           "write blueprint logic",
+          "blueprint code",
           "custom logic",
           "game mechanic",
           "new game mechanic",
@@ -18296,7 +18297,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "82582721bd8a08708ad34f7746bb9711603e18f0bcd2f0f1b6e79e8896513710",
-        "content": "50f14348fa23e1ee037af9aa007fa648df93c66ab0e1e3dbfdad80d12c8861ec"
+        "content": "d59d31acf53054a02e3a464889db6c83a58a99a546cf4e8a3efeea6794770601"
       }
     },
     {
@@ -94884,7 +94885,8 @@
           "c++ header file",
           "native class",
           "c++ actor class",
-          "c++ component"
+          "c++ component",
+          "c++ code"
         ],
         "summary": "Create a new C++ class in a project module, as the editor's New C++ Class does: a header and a .cpp from a parent class (Actor, Character, ActorComponent, Object ..., or None for a plain class), then the editor's own compile.",
         "whenToUse": [
@@ -95037,7 +95039,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "600314501a4aeca82e644a36a6505a13ce12de4ddf1473f9377d56b252b7e521",
-        "content": "fba3e964397f4c231daff4ca5d4459b5558f2c6b6229816bffb4720d2c7b5a7b"
+        "content": "b1edb27d9e676c7851ee52b9f94403e2c1bd6fcd326821d7211ad9dde1b07190"
       }
     },
     {
