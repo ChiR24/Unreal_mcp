@@ -1,6 +1,6 @@
 /**
  * Gameplay behaviours written into an Actor Blueprint from the plugin's recipe files
- * (McpBlueprintBehaviour::Author): health, damage on touch, pickups, sprint, shooting, chasing, patrolling, a turret, player controls, respawning, a goal, a launch pad, a teleporter, a time limit, a spawner, a dash, a health bar and counters on screen, and a game over. Folded
+ * (McpBlueprintBehaviour::Author): health, damage on touch, pickups, sprint, shooting, chasing, patrolling, a turret, player controls, respawning, a goal, a launch pad, a teleporter, a falling platform, a time limit, a spawner, a dash, a health bar and counters on screen, and a game over. Folded
  * into blueprint.add_behaviour (selector behaviour). Every one is all or nothing,
  * re-runnable (a second run replaces the first), compiled and saved.
  */
@@ -365,6 +365,29 @@ export const BEHAVIOURS_RECORDS: readonly CapabilityRecordSource[] = [
     resources: 'medium',
     plugins: BP_PLUGINS,
     exampleInput: { action: 'add_teleporter', blueprintPath: '/Game/Blueprints/BP_Teleporter', cooldown: 1 },
+  }),
+  buildRecord({
+    id: 'blueprint.add_falling_platform',
+    action: 'add_falling_platform',
+    family: FAMILY,
+    domain: DOMAIN,
+    topics: ['falling platform', 'crumbling platform', 'platform falls when stepped on', 'collapsing floor', 'platform that drops'],
+    summary: 'Make an actor a falling platform: the first pawn that lands on top of it starts it shaking, fallDelay seconds later it drops with gravity, and respawnTime seconds after the drop began it is back in place and ready again. A bump from the side or below does not set it off. The actor must block pawns, and its root must be movable (a Blueprint made with manage_blueprint create is).',
+    whenToUse: ['A ledge or bridge must give way under the player a moment after they land on it.'],
+    whenNotToUse: ['A platform must keep moving on its own (add an InterpToMovement component with its control points).'],
+    inputProps: {
+      blueprintPath: P.blueprintPath,
+      fallDelay: { type: 'number', description: 'Seconds it shakes before it drops (default 0.5).' },
+      respawnTime: { type: 'number', description: 'Seconds after it starts to drop until it is back in place (default 3); 0 never: it is destroyed 5 seconds into its fall.' },
+    },
+    required: ['blueprintPath'],
+    outputProps: BEHAVIOUR_OUTPUT,
+    effect: 'write',
+    behavior: { idempotency: 'idempotent' },
+    latency: 'interactive',
+    resources: 'medium',
+    plugins: BP_PLUGINS,
+    exampleInput: { action: 'add_falling_platform', blueprintPath: '/Game/Blueprints/BP_CrumblingLedge', fallDelay: 0.8, respawnTime: 4 },
   }),
   buildRecord({
     id: 'blueprint.add_countdown',

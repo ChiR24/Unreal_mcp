@@ -814,6 +814,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_blueprint::add_damage_on_touch": "interactive|medium",
   "manage_blueprint::add_dash": "interactive|medium",
   "manage_blueprint::add_event": "interactive|low",
+  "manage_blueprint::add_falling_platform": "interactive|medium",
   "manage_blueprint::add_function": "interactive|low",
   "manage_blueprint::add_game_over": "interactive|medium",
   "manage_blueprint::add_game_widget": "interactive|low",
@@ -1586,4 +1587,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1573;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1574;

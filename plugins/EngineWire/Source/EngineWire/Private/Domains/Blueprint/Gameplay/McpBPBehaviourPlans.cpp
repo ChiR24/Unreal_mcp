@@ -194,6 +194,13 @@ bool PlanBehaviour(const FString &Action, const TSharedPtr<FJsonObject> &Payload
     SetNumber(Plan, TEXT("Seconds"), Seconds);
     Plan.Values.Add(TEXT("Kill"), MakeShared<FJsonValueBoolean>(GetJsonBoolField(Payload, TEXT("killAtZero"), true)));
     OutError = Seconds >= 1.0 ? FString() : FString(TEXT("seconds must be 1 or more"));
+  } else if (Action == TEXT("add_falling_platform")) {
+    const double Delay = GetJsonNumberField(Payload, TEXT("fallDelay"), 0.5);
+    const double Respawn = GetJsonNumberField(Payload, TEXT("respawnTime"), 3.0);
+    Plan.Recipe = TEXT("FallingPlatform");
+    SetNumber(Plan, TEXT("Delay"), Delay);
+    SetNumber(Plan, TEXT("Respawn"), Respawn);
+    OutError = Delay >= 0.0 && Respawn >= 0.0 ? FString() : FString(TEXT("fallDelay and respawnTime must be 0 or more"));
   } else if (Action == TEXT("add_pickup")) {
     const double Heal = GetJsonNumberField(Payload, TEXT("heal"), 0.0);
     if (!ReadSound(Payload, Plan, OutError)) {

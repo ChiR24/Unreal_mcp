@@ -567,4 +567,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'turret that shoots the player', accepted: ['blueprint.add_behaviour'] },
   { query: 'sentry gun', accepted: ['blueprint.add_behaviour'] },
   { query: 'enemy shoots at the player', accepted: ['blueprint.add_behaviour'] },
+  { query: 'falling platform', accepted: ['blueprint.add_behaviour'] },
+  { query: 'crumbling platform', accepted: ['blueprint.add_behaviour'] },
+  { query: 'platform falls when the player stands on it', accepted: ['blueprint.add_behaviour'] },
 ];

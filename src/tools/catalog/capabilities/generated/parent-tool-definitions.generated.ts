@@ -12849,6 +12849,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "goal",
             "launch_pad",
             "teleporter",
+            "falling_platform",
             "countdown",
             "spawner",
             "dash",
@@ -13138,6 +13139,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "fadeTime": {
           "type": "number",
           "description": "Seconds of the fade: the damage flash (default 0.6) or the loading screen FadeIn animation (0 makes none)."
+        },
+        "fallDelay": {
+          "type": "number",
+          "description": "Seconds it shakes before it drops (default 0.5)."
         },
         "fallHeight": {
           "type": "number",
@@ -13819,6 +13824,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "resolution": {
           "type": "string",
           "description": "Screen size the widget is drawn for, \"WxH\" (default \"1280x720\"); the project DPI scaling for that size applies, as in the game."
+        },
+        "respawnTime": {
+          "type": "number",
+          "description": "Seconds after it starts to drop until it is back in place (default 3); 0 never: it is destroyed 5 seconds into its fall."
         },
         "responseCount": {
           "type": "number",

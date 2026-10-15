@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "90b401bfddba4cdb",
+  "catalogRevision": "2d663729d4a3c2bc",
   "recordCount": 416,
   "records": [
     {
@@ -12798,6 +12798,7 @@
         "blueprint.add_goal",
         "blueprint.add_launch_pad",
         "blueprint.add_teleporter",
+        "blueprint.add_falling_platform",
         "blueprint.add_countdown",
         "blueprint.add_spawner",
         "blueprint.add_dash",
@@ -12899,6 +12900,13 @@
           "action": "add_teleporter",
           "folded": {
             "behaviour": "teleporter"
+          }
+        },
+        {
+          "tool": "manage_blueprint",
+          "action": "add_falling_platform",
+          "folded": {
+            "behaviour": "falling_platform"
           }
         },
         {
@@ -13034,6 +13042,11 @@
           "teleport the player",
           "portal",
           "warp pad",
+          "falling platform",
+          "crumbling platform",
+          "platform falls when stepped on",
+          "collapsing floor",
+          "platform that drops",
           "countdown",
           "countdown timer",
           "time limit",
@@ -13075,7 +13088,7 @@
           "player death screen",
           "you died"
         ],
-        "summary": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player or patrols a route, a turret that turns to the player and fires at them, walk, look and jump controls for a Character, a pawn that respawns when it falls or dies (with checkpoints), a goal that ends the level when the player reaches it, a pad that launches a Character, a teleporter, a time limit, a spawner that keeps spawning an actor class, a dash key for a Character, the health of the player or a count such as coins or score on screen, or a game over screen that restarts the level when the player dies.",
+        "summary": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player or patrols a route, a turret that turns to the player and fires at them, walk, look and jump controls for a Character, a pawn that respawns when it falls or dies (with checkpoints), a goal that ends the level when the player reaches it, a pad that launches a Character, a teleporter, a platform that falls when a pawn lands on it, a time limit, a spawner that keeps spawning an actor class, a dash key for a Character, the health of the player or a count such as coins or score on screen, or a game over screen that restarts the level when the player dies.",
         "whenToUse": [
           "behaviour=health: A player, enemy or breakable object must take damage and die; behaviour health_hud shows it on screen.",
           "behaviour=damage_on_touch: Spikes, lava, an enemy body or a fire must hurt what touches it.",
@@ -13091,6 +13104,7 @@
           "behaviour=goal: A level needs an end: a finish line, an exit door, a flag the player reaches.",
           "behaviour=launch_pad: A jump pad, bounce pad, trampoline or boost pad for the player or any Character.",
           "behaviour=teleporter: Portals, warp pads, or a pair of teleporters between two places.",
+          "behaviour=falling_platform: A ledge or bridge must give way under the player a moment after they land on it.",
           "behaviour=countdown: A level or a run must be finished within a time limit.",
           "behaviour=spawner: Enemies, pickups or obstacles must keep appearing while the game runs.",
           "behaviour=dash: A player Character needs a quick burst of movement on a key: a dash, a dodge, an air dash.",
@@ -13113,6 +13127,7 @@
           "behaviour=goal: Something must happen on every touch, by any actor (use a trigger actor from manage_interaction create_interactable).",
           "behaviour=launch_pad: A Character must jump higher by itself (manage_character set_movement_property JumpZVelocity).",
           "behaviour=teleporter: Moving an actor from the editor or a test (control_actor set_transform).",
+          "behaviour=falling_platform: A platform must keep moving on its own (add an InterpToMovement component with its control points).",
           "behaviour=countdown: Something must happen once after a delay (edit_graph with a Delay or a timer node).",
           "behaviour=spawner: Actors must be placed once, before play (use control_actor spawn).",
           "behaviour=dash: It must run faster while a key is held (use behaviour sprint).",
@@ -13271,6 +13286,14 @@
               "type": "number",
               "description": "Seconds before it works again: before a Character can dash again, or before a teleporter takes a pawn after one arrived on it (default 1)."
             },
+            "fallDelay": {
+              "type": "number",
+              "description": "Seconds it shakes before it drops (default 0.5)."
+            },
+            "respawnTime": {
+              "type": "number",
+              "description": "Seconds after it starts to drop until it is back in place (default 3); 0 never: it is destroyed 5 seconds into its fall."
+            },
             "seconds": {
               "type": "number",
               "description": "The time limit in whole seconds (default 60)."
@@ -13339,6 +13362,7 @@
                 "goal",
                 "launch_pad",
                 "teleporter",
+                "falling_platform",
                 "countdown",
                 "spawner",
                 "dash",
@@ -13435,7 +13459,7 @@
       },
       "examples": [
         {
-          "title": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player or patrols a route, a turret that turns to the player and fires at them, walk, look and jump controls for a Character, a pawn that respawns when it falls or dies (with checkpoints), a goal that ends the level when the player reaches it, a pad that launches a Character, a teleporter, a time limit, a spawner that keeps spawning an actor class, a dash key for a Character, the health of the player or a count such as coins or score on screen, or a game over screen that restarts the level when the player dies.",
+          "title": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player or patrols a route, a turret that turns to the player and fires at them, walk, look and jump controls for a Character, a pawn that respawns when it falls or dies (with checkpoints), a goal that ends the level when the player reaches it, a pad that launches a Character, a teleporter, a platform that falls when a pawn lands on it, a time limit, a spawner that keeps spawning an actor class, a dash key for a Character, the health of the player or a count such as coins or score on screen, or a game over screen that restarts the level when the player dies.",
           "input": {
             "action": "add_behaviour",
             "blueprintPath": "/Game/Blueprints/BP_Enemy",
@@ -13490,6 +13514,7 @@
             "goal": "add_goal",
             "launch_pad": "add_launch_pad",
             "teleporter": "add_teleporter",
+            "falling_platform": "add_falling_platform",
             "countdown": "add_countdown",
             "spawner": "add_spawner",
             "dash": "add_dash",
@@ -13609,6 +13634,12 @@
               "teleporter",
               "dash"
             ],
+            "fallDelay": [
+              "falling_platform"
+            ],
+            "respawnTime": [
+              "falling_platform"
+            ],
             "seconds": [
               "countdown"
             ],
@@ -13656,8 +13687,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "7918743f30bcc8945bc13da6f9cbd8f083504565d8db76939cd01163e769acc8",
-        "content": "bc474816d8b38dec6099e03b3414aaec4983dbbd2ac4c50612843fcfc5e239e2"
+        "schema": "ec4d19186a5b56795bafae34143c822226709448d64071b3fa7204e75b45b943",
+        "content": "e93a44b5f180f133871bfb239cd8c68ee2b28d41fd9a202cdebee3778a0ccd04"
       }
     },
     {
