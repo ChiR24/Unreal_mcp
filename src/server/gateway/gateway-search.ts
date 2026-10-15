@@ -86,7 +86,7 @@ function envelope(
   if (rows.length === 0 && page.total === 0) {
     result.message = filters.query.length === 0
       ? 'No capability matches these filters. Remove a filter, or call describe with no selector to browse domains.'
-      : `No capability matched '${filters.query}'. Use 2-4 plain words naming the verb and the object (e.g. 'spawn actor'), drop any filter, or call describe with no selector to browse domains.`;
+      : `No capability matched '${filters.query}'. Use 2-4 plain words naming the verb and the object (e.g. 'spawn actor'), drop any filter, or call describe with no selector to browse domains. Game logic no capability makes in one call is built as a Blueprint graph: search 'blueprint logic'.`;
     result.nextCall = { operation: 'describe' };
   }
   if (coercions.length > 0) result.coercions = coercions;

@@ -594,4 +594,11 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'explosive barrel', accepted: ['blueprint.add_behaviour'] },
   { query: 'make a barrel explode', accepted: ['blueprint.add_behaviour'] },
   { query: 'invincible after getting hit', accepted: ['blueprint.add_behaviour'] },
+  { query: 'blueprint logic', accepted: ['blueprint.edit_graph'] },
+  { query: 'write blueprint logic', accepted: ['blueprint.edit_graph'] },
+  { query: 'custom game logic', accepted: ['blueprint.edit_graph'] },
+  { query: 'custom game mechanic', accepted: ['blueprint.edit_graph'] },
+  { query: 'make a new mechanic', accepted: ['blueprint.edit_graph'] },
+  { query: 'logic in a blueprint', accepted: ['blueprint.edit_graph'] },
+  { query: 'script my own mechanic', accepted: ['blueprint.edit_graph'] },
 ];

@@ -183,7 +183,7 @@ TSharedPtr<FJsonObject> McpGatewaySearchCapabilities(
 	{
 		Out->SetStringField(TEXT("message"), Query.IsEmpty()
 			? FString(TEXT("No capability matches these filters. Remove a filter, or call describe with no selector to browse."))
-			: FString::Printf(TEXT("No capability matched '%s'. Use 2-4 plain words naming the verb and the object (e.g. 'spawn actor'), drop any filter, or call describe with no selector to browse."), *Query));
+			: FString::Printf(TEXT("No capability matched '%s'. Use 2-4 plain words naming the verb and the object (e.g. 'spawn actor'), drop any filter, or call describe with no selector to browse. Game logic no capability makes in one call is built as a Blueprint graph: search 'blueprint logic'."), *Query));
 		Out->SetObjectField(TEXT("nextCall"), GatewayBuildNextCall(TEXT("describe"), FString(), FString(), FString()));
 	}
 	if (Input.bHasDomain) Out->SetStringField(TEXT("domain"), Input.Domain);

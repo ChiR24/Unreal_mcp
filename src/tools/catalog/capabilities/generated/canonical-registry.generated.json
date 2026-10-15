@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "caabd9a965cfef1c",
+  "catalogRevision": "7d7d3ecfef867290",
   "recordCount": 416,
   "records": [
     {
@@ -13150,7 +13150,7 @@
           "player death screen",
           "you died"
         ],
-        "summary": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player or patrols a route, a turret that turns to the player and fires at them, an enemy the player defeats by jumping on it, a barrel that explodes when it dies, a moving platform or elevator, walk, look and jump controls for a Character, a pawn that respawns when it falls or dies (with checkpoints), a goal that ends the level when the player reaches it, a pad that launches a Character, a teleporter, a platform that falls when a pawn lands on it, a time limit, a spawner that keeps spawning an actor class, a dash key for a Character, the health of the player or a count such as coins or score on screen, a hint on screen while the player is in an area, or a game over screen that restarts the level when the player dies.",
+        "summary": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player or patrols a route, a turret that turns to the player and fires at them, an enemy the player defeats by jumping on it, a barrel that explodes when it dies, a moving platform or elevator, walk, look and jump controls for a Character, a pawn that respawns when it falls or dies (with checkpoints), a goal that ends the level when the player reaches it, a pad that launches a Character, a teleporter, a platform that falls when a pawn lands on it, a time limit, a spawner that keeps spawning an actor class, a dash key for a Character, the health of the player or a count such as coins or score on screen, a hint on screen while the player is in an area, or a game over screen that restarts the level when the player dies. Logic none of these covers is written with edit_graph.",
         "whenToUse": [
           "behaviour=health: A player, enemy or breakable object must take damage and die; behaviour health_hud shows it on screen.",
           "behaviour=damage_on_touch: Spikes, lava, an enemy body or a fire must hurt what touches it.",
@@ -13566,7 +13566,7 @@
       },
       "examples": [
         {
-          "title": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player or patrols a route, a turret that turns to the player and fires at them, an enemy the player defeats by jumping on it, a barrel that explodes when it dies, a moving platform or elevator, walk, look and jump controls for a Character, a pawn that respawns when it falls or dies (with checkpoints), a goal that ends the level when the player reaches it, a pad that launches a Character, a teleporter, a platform that falls when a pawn lands on it, a time limit, a spawner that keeps spawning an actor class, a dash key for a Character, the health of the player or a count such as coins or score on screen, a hint on screen while the player is in an area, or a game over screen that restarts the level when the player dies.",
+          "title": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player or patrols a route, a turret that turns to the player and fires at them, an enemy the player defeats by jumping on it, a barrel that explodes when it dies, a moving platform or elevator, walk, look and jump controls for a Character, a pawn that respawns when it falls or dies (with checkpoints), a goal that ends the level when the player reaches it, a pad that launches a Character, a teleporter, a platform that falls when a pawn lands on it, a time limit, a spawner that keeps spawning an actor class, a dash key for a Character, the health of the player or a count such as coins or score on screen, a hint on screen while the player is in an area, or a game over screen that restarts the level when the player dies. Logic none of these covers is written with edit_graph.",
           "input": {
             "action": "add_behaviour",
             "blueprintPath": "/Game/Blueprints/BP_Enemy",
@@ -13829,7 +13829,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "3b20d59b553a1190173705b32a59fb4e8416da983be7d9c203d68d154ab233e4",
-        "content": "e619c2ec44c9339a97f195ad04c514aa547347abc673bbd8a2c2f7803418b3e8"
+        "content": "aea86985c95f812e1663cd07b40dab3adabf1189d3d2db201002d4ddfffdb7d3"
       }
     },
     {
@@ -17485,6 +17485,12 @@
         "family": "graph",
         "topics": [
           "edit_graph",
+          "blueprint logic",
+          "write blueprint logic",
+          "custom logic",
+          "game mechanic",
+          "new game mechanic",
+          "repeat every few seconds",
           "blueprint node",
           "create node",
           "connect pins in blueprint",
@@ -17538,7 +17544,7 @@
           "blueprint graph batch",
           "function with body"
         ],
-        "summary": "Edit a Blueprint graph: add or create nodes (including reroute and struct make/break nodes), connect pins, set node properties and pin defaults, add a construction script, arrange nodes beside what they are wired to, or run many of those edits, variables included, in one batch.",
+        "summary": "Write Blueprint logic of any kind, or edit a graph: add or create nodes (including reroute and struct make/break nodes), connect pins, set node properties and pin defaults, add a construction script, arrange nodes beside what they are wired to, or run many of those edits, variables included, in one batch.",
         "whenToUse": [
           "edit=add_node: A node must be added using a friendly type alias (e.g. Branch, Cast, GetVariable).",
           "edit=create_node: A new node must be placed in a Blueprint event or function graph.",
@@ -17994,7 +18000,7 @@
       },
       "examples": [
         {
-          "title": "Edit a Blueprint graph: add or create nodes (including reroute and struct make/break nodes), connect pins, set node properties and pin defaults, add a construction script, arrange nodes beside what they are wired to, or run many of those edits, variables included, in one batch.",
+          "title": "Write Blueprint logic of any kind, or edit a graph: add or create nodes (including reroute and struct make/break nodes), connect pins, set node properties and pin defaults, add a construction script, arrange nodes beside what they are wired to, or run many of those edits, variables included, in one batch.",
           "input": {
             "action": "edit_graph",
             "blueprintPath": "/Game/Blueprints/BP_Test",
@@ -18185,7 +18191,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "e6d9c54a30a79b17dbcc43df4b689b15ab46737d7d1dc14bb4d8c209997f8e8e",
-        "content": "1bf38920cb0c417b4572f182efb938ddc8b6ae2b63ac95d5104e609406a7459c"
+        "content": "06af6bdac54e39cfe330e3a587a940b9c0b11668aabd1b273803730e80955186"
       }
     },
     {
