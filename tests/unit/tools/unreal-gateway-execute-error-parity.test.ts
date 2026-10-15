@@ -16,15 +16,15 @@ const handleConsolidatedToolCall = vi.fn(async (_tool: string, _payload: Record<
 
 const NATIVE_CATALOG_HEADER_PATH = path.resolve(
   __dirname,
-  '../../../plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Gateway/McpNativeGatewayCatalog.h'
+  '../../../plugins/EngineWire/Source/EngineWire/Private/MCP/Gateway/McpNativeGatewayCatalog.h'
 );
 const NATIVE_GUIDANCE_PATH = path.resolve(
   __dirname,
-  '../../../plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Gateway/McpNativeGatewayGuidance.cpp'
+  '../../../plugins/EngineWire/Source/EngineWire/Private/MCP/Gateway/McpNativeGatewayGuidance.cpp'
 );
 const NATIVE_GUIDANCE_HEADER_PATH = path.resolve(
   __dirname,
-  '../../../plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Gateway/McpNativeGatewayGuidance.h'
+  '../../../plugins/EngineWire/Source/EngineWire/Private/MCP/Gateway/McpNativeGatewayGuidance.h'
 );
 // Task 27 split the single pre-split validation file into a staged pipeline
 // (parse/resolve -> orchestrate -> schema). Guided-error parity is a property of
@@ -42,7 +42,7 @@ const NATIVE_EXECUTE_PIPELINE = [
     readFileSync(
       path.resolve(
         __dirname,
-        `../../../plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/${module}`,
+        `../../../plugins/EngineWire/Source/EngineWire/Private/${module}`,
       ),
       'utf8',
     ),
@@ -51,6 +51,8 @@ const NATIVE_EXECUTE_PIPELINE = [
 const NATIVE_CATALOG_HEADER = readFileSync(NATIVE_CATALOG_HEADER_PATH, 'utf8');
 const NATIVE_GUIDANCE = readFileSync(NATIVE_GUIDANCE_PATH, 'utf8');
 const NATIVE_GUIDANCE_HEADER = readFileSync(NATIVE_GUIDANCE_HEADER_PATH, 'utf8');
+const nativeSource = (module: string): string =>
+  readFileSync(path.resolve(__dirname, `../../../plugins/EngineWire/Source/EngineWire/Private/${module}`), 'utf8');
 
 function makeContext(ensureConnected: () => Promise<boolean> = async () => true): GatewayContext {
   const tools = {
@@ -154,5 +156,21 @@ describe('native GatewayClosestMatches empty-target matches TS first-3 slice', (
   it('keeps one closest-match implementation, reachable from the catalog header', () => {
     expect(NATIVE_CATALOG_HEADER).toContain('#include "MCP/Gateway/McpNativeGatewayGuidance.h"');
     expect(NATIVE_CATALOG_HEADER).not.toContain('GatewayClosestMatches(');
+  });
+});
+
+describe('a capability namespace names its parent tool on both doors', () => {
+  // A search row's capability ID (asset.list) leads callers to send its namespace as the tool: asset is dispatched
+  // by manage_asset. The TypeScript door resolved it; the native door answered UNKNOWN_TOOL.
+  it('TS describe resolves tool asset with action list to manage_asset', async () => {
+    const described = (await handleUnrealGatewayCall({ operation: 'describe', tool: 'asset', action: 'list' }, makeContext())) as Record<string, unknown>;
+    expect(described.capability).toBe('asset.list');
+    expect((described.nextCall as Record<string, unknown>).tool).toBe('manage_asset');
+  });
+
+  it('native execute and describe resolve the namespace before the pair lookup', () => {
+    expect(nativeSource('MCP/Execute/McpNativeGatewayCanonicalRecords.cpp')).toMatch(/Entry\.Value\.Num\(\) == 1[\s\S]*ParentToolByNamespace\.Add/u);
+    expect(NATIVE_EXECUTE_PIPELINE).toMatch(/const FString Tool = Index\.ResolveToolNamespace\(RequestedTool\);\s*OutRecord = Index\.FindByLegacy\(Tool, Action\);/u);
+    expect(nativeSource('MCP/Transport/McpNativeTransportGateway.cpp')).toContain('DiscoveryQuery.Tool = FMcpCanonicalRecordIndex::Get().ResolveToolNamespace(AskedTool);');
   });
 });

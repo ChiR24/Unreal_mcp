@@ -37,7 +37,7 @@ export const CHARACTER_2: readonly CapabilityRecordSource[] = [
       hasCamera: P.bool_,
       playerViewState: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Player camera/view state.' },
       // Additional fields the handler
-      // (McpAutomationBridge_CharacterHandlersInfo.cpp) already emits. Anything
+      // (McpCharacterInfo.cpp) already emits. Anything
       // undeclared is discarded by output projection before the caller sees it.
       customMovementSpeed: P.num_,
       targetArmLength: P.num_,
@@ -52,7 +52,7 @@ export const CHARACTER_2: readonly CapabilityRecordSource[] = [
     exampleInput: { action: 'get_character_info', blueprintPath: '/Game/BP_Char' },
     exampleOutput: { success: true, message: 'Character info', blueprintPath: '/Game/BP_Char', capsuleRadius: 42, hasSpringArm: true } }),
   buildRecord({ parentTool: T, id: `${T}.configure_crouch`, action: 'configure_crouch', family: F,
-    summary: 'Configure crouch height, speed and whether crouching is allowed; only the fields sent change.', whenToUse: ['Crouch needed.'], whenNotToUse: ['Use configure_sprint.'],
+    summary: 'Configure crouch height, speed and whether crouching is allowed; only the fields sent change.', whenToUse: ['Crouch needed.'], whenNotToUse: ['Sprint speed is a movement speed (configure_character setting movement_speeds, runSpeed).'],
     inputProps: { blueprintPath: P.blueprintPath, canCrouch: C.canCrouch, crouchSpeed: C.crouchSpeed, crouchedHalfHeight: C.crouchedHalfHeight }, required: ['blueprintPath'],
     effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'interactive', resources: 'low',
     exampleInput: { action: 'configure_crouch', blueprintPath: '/Game/BP_Char', canCrouch: true, crouchSpeed: 300 } }),

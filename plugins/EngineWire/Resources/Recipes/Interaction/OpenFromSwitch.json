@@ -1,0 +1,28 @@
+{
+  "description": "Makes a door follow a switch: LinkedSwitch (set on each placed door to a placed switch) is bound at BeginPlay, and each OnSwitchChanged(bActivated) opens or shuts the door through bIsOpen, which the door's opening logic turns toward. A door with no LinkedSwitch ignores it.",
+  "tag": "OpenFromSwitch",
+  "placeholders": {
+    "SwitchClass": "The switch Blueprint's generated class path; it declares OnSwitchChanged(bActivated)."
+  },
+  "variables": [
+    { "variableName": "LinkedSwitch", "variableType": "{{SwitchClass}}", "category": "Interaction", "instanceEditable": true }
+  ],
+  "hooks": [
+    { "id": "linkBegin", "event": "BeginPlay" }
+  ],
+  "eventGraph": [
+    { "edit": "create_node", "id": "linkGet", "nodeType": "VariableGet", "memberName": "LinkedSwitch" },
+    { "edit": "create_node", "id": "linkValid", "nodeType": "CallFunction", "memberName": "IsValid", "memberClass": "/Script/Engine.KismetSystemLibrary" },
+    { "edit": "create_node", "id": "linkBranch", "nodeType": "Branch" },
+    { "edit": "create_node", "id": "linkTarget", "nodeType": "VariableGet", "memberName": "LinkedSwitch" },
+    { "edit": "create_node", "id": "linkBind", "nodeType": "BindEvent", "memberName": "OnSwitchChanged", "memberClass": "{{SwitchClass}}", "eventName": "OnLinkedSwitchChanged" },
+    { "edit": "create_node", "id": "linkOpen", "nodeType": "VariableSet", "memberName": "bIsOpen" },
+    { "edit": "connect_pins", "from": "$linkGet.LinkedSwitch", "to": "$linkValid.Object" },
+    { "edit": "connect_pins", "from": "$linkValid.ReturnValue", "to": "$linkBranch.Condition" },
+    { "edit": "connect_pins", "from": "$linkTarget.LinkedSwitch", "to": "$linkBind.self" },
+    { "edit": "connect_pins", "from": "$linkBind_event.bActivated", "to": "$linkOpen.bIsOpen" },
+    { "edit": "connect_pins", "from": "$linkBegin.then", "to": "$linkBranch.execute" },
+    { "edit": "connect_pins", "from": "$linkBranch.then", "to": "$linkBind.execute" },
+    { "edit": "connect_pins", "from": "$linkBind_event.then", "to": "$linkOpen.execute" }
+  ]
+}

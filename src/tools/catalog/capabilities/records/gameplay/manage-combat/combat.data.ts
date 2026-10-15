@@ -2,15 +2,9 @@
  * manage_combat records: weapon base and firing modes, projectiles, damage
  * types, damage execution, hitboxes, attachments and introspection.
  *
- * Parameters mirror the field literals read by
- * McpAutomationBridge_CombatHandlersInfo.cpp, DamageTypes.cpp,
- * DamageExecution.cpp, HealthRuntime.cpp and DefenseRuntime.cpp.
- *
- * apply_damage / heal / create_shield / modify_armor are Blueprint AUTHORING
- * actions despite their runtime-sounding names: the native handlers load the
- * Blueprint, call AddBlueprintVariableCombat, compile and McpSafeAssetSave. No
- * live PIE actor is mutated, so they stay editorStates 'edit' like every other
- * action on this tool.
+ * Parameters mirror the field literals read by the Domains/Combat handlers. Every
+ * action authors Blueprint assets in edit mode except apply_damage, which hits an
+ * actor in the running game.
  */
 import type { CapabilityRecordSource } from '../../../model.js';
 import { buildRecord } from '../helpers.js';
@@ -31,22 +25,22 @@ export const COMBAT_RECORDS: readonly CapabilityRecordSource[] = [
     outputProps: { blueprintPath: P.blueprintPath, baseDamage: C.baseDamage, fireRate: C.fireRate }, outputRequired: ['blueprintPath'],
     exampleInput: { action: 'create_weapon_blueprint', name: 'BP_Rifle', path: '/Game/Weapons', baseDamage: 37, fireRate: 480 }, exampleOutput: { success: true, message: 'Weapon Blueprint created', blueprintPath: WEAPON, baseDamage: 37, fireRate: 480 } }),
   buildRecord({ parentTool: T, id: `${T}.configure_weapon_mesh`, action: 'configure_weapon_mesh', family: F,
-    summary: 'Assign the weapon static mesh (the WeaponMesh component, created when missing).', whenToUse: ['The weapon mesh must change.'], whenNotToUse: ['Use configure_weapon_sockets for attach points.'],
+    summary: 'Assign the weapon static mesh (the WeaponMesh component, created when missing).', whenToUse: ['The weapon mesh must change.'], whenNotToUse: ['Attach points on the character are skeleton sockets (use animation_physics configure_socket).'],
     inputProps: { blueprintPath: P.blueprintPath, weaponMeshPath: C.weaponMeshPath }, required: ['blueprintPath', 'weaponMeshPath'],
     effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'interactive', resources: 'low',
     outputProps: { meshPath: P.meshPath }, outputRequired: [],
     exampleInput: { action: 'configure_weapon_mesh', blueprintPath: WEAPON, weaponMeshPath: '/Engine/BasicShapes/Cube.Cube' }, exampleOutput: { success: true, message: 'Weapon mesh configured', meshPath: '/Engine/BasicShapes/Cube.Cube' } }),
   buildRecord({ parentTool: T, id: `${T}.configure_projectile`, action: 'configure_projectile', family: F,
-    summary: 'Point the weapon at a projectile class and launch speed.', whenToUse: ['The weapon spawns projectiles.'], whenNotToUse: ['Use configure_hitscan for instant hits.'],
-    inputProps: { blueprintPath: P.blueprintPath, projectileClass: C.projectileClass, projectileSpeed: C.projectileSpeed }, required: ['blueprintPath'],
+    summary: 'Give a weapon a Fire function that spawns and launches a projectile class from its muzzle.', whenToUse: ['The weapon shoots projectiles: Fire, called from input or AI, spawns one at the WeaponMesh Muzzle socket owned by the weapon and launches it at projectileSpeed, at most FireRate times a minute.'], whenNotToUse: ['A hit must land at once (hitscan): trace in the weapon Blueprint graph instead (blueprint edit_graph).'],
+    inputProps: { blueprintPath: P.blueprintPath, projectileClass: C.projectileClass, projectileSpeed: C.projectileSpeed }, required: ['blueprintPath', 'projectileClass'],
     effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'interactive', resources: 'low',
-    outputProps: { projectileSpeed: C.projectileSpeed }, outputRequired: [],
-    exampleInput: { action: 'configure_projectile', blueprintPath: WEAPON, projectileClass: '/Script/Engine.Actor', projectileSpeed: 4500 }, exampleOutput: { success: true, message: 'Projectile configured', projectileSpeed: 4500 } }),
+    outputProps: { projectileSpeed: C.projectileSpeed, fireFunction: { type: 'string', description: 'The function that shoots: Fire.' } }, outputRequired: [],
+    exampleInput: { action: 'configure_projectile', blueprintPath: WEAPON, projectileClass: PROJECTILE, projectileSpeed: 4500 }, exampleOutput: { success: true, message: 'Projectile configured', projectileSpeed: 4500 } }),
   buildRecord({ parentTool: T, id: `${T}.create_projectile_blueprint`, action: 'create_projectile_blueprint', family: F,
-    summary: 'Create a projectile Blueprint with movement and collision.', whenToUse: ['A projectile actor must be authored.'], whenNotToUse: ['Use create_weapon_blueprint for the weapon that fires it.'],
-    inputProps: { name: P.name, path: P.path, projectileSpeed: C.projectileSpeed, projectileGravityScale: C.projectileGravityScale, collisionRadius: C.collisionRadius, projectileMeshPath: C.projectileMeshPath }, required: ['name'],
+    summary: 'Create a projectile Blueprint that flies, damages what it hits and is destroyed on impact.', whenToUse: ['A projectile actor must be authored: it stops on what it meets, applies damage to it (ApplyDamage, so health logic on that actor takes it) and never hits the actor that fired it.'], whenNotToUse: ['Use create_weapon_blueprint for the weapon that fires it.'],
+    inputProps: { name: P.name, path: P.path, projectileSpeed: C.projectileSpeed, projectileGravityScale: C.projectileGravityScale, collisionRadius: C.collisionRadius, projectileMeshPath: C.projectileMeshPath, damage: { type: 'number', description: 'Damage dealt to the actor it hits (default 20); kept in its Damage variable, which a placed copy can change.' } }, required: ['name'],
     effect: 'write', latency: 'interactive', resources: 'medium',
-    outputProps: { blueprintPath: P.blueprintPath, projectileMeshPath: C.projectileMeshPath }, outputRequired: ['blueprintPath'],
+    outputProps: { blueprintPath: P.blueprintPath, projectileMeshPath: C.projectileMeshPath, damage: { type: 'number', description: 'Damage it deals on a hit.' } }, outputRequired: ['blueprintPath'],
     exampleInput: { action: 'create_projectile_blueprint', name: 'BP_Bullet', path: '/Game/Weapons', projectileSpeed: 6000, projectileGravityScale: 0, collisionRadius: 8 }, exampleOutput: { success: true, message: 'Projectile Blueprint created', blueprintPath: PROJECTILE } }),
   buildRecord({ parentTool: T, id: `${T}.configure_projectile_movement`, action: 'configure_projectile_movement', family: F,
     summary: 'Configure projectile speed, gravity scale and lifespan.', whenToUse: ['Projectile flight must change.'], whenNotToUse: ['Use configure_projectile_collision for impact response.'],
@@ -64,7 +58,7 @@ export const COMBAT_RECORDS: readonly CapabilityRecordSource[] = [
     effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'interactive', resources: 'low',
     exampleInput: { action: 'configure_projectile_homing', blueprintPath: PROJECTILE, homingEnabled: true, homingAcceleration: 15000 } }),
   buildRecord({ parentTool: T, id: `${T}.create_damage_type`, action: 'create_damage_type', family: F,
-    summary: 'Create a DamageType Blueprint asset.', whenToUse: ['A custom damage classification is needed.'], whenNotToUse: ['Use configure_damage_execution to tune multipliers.'],
+    summary: 'Create a DamageType Blueprint asset.', whenToUse: ['A custom damage classification is needed.'], whenNotToUse: ['Damage multipliers are a Gameplay Effect execution (manage_gas configure_gameplay_effect add_execution_calculation).'],
     inputProps: { name: P.name, path: P.path }, required: ['name'],
     effect: 'write', latency: 'interactive', resources: 'low',
     outputProps: { damageTypePath: P.damageTypePath }, outputRequired: ['damageTypePath'],
@@ -76,7 +70,7 @@ export const COMBAT_RECORDS: readonly CapabilityRecordSource[] = [
     outputProps: { hitboxType: C.hitboxType, hitboxSize: C.hitboxSize }, outputRequired: [],
     exampleInput: { action: 'setup_hitbox_component', blueprintPath: WEAPON, hitboxBoneName: 'spine_03', hitboxType: 'Box', hitboxSize: { extent: { x: 12, y: 18, z: 22 } }, isDamageZoneHead: true, damageMultiplier: 2 }, exampleOutput: { success: true, message: 'Hitbox component set up', hitboxType: 'Box' } }),
   buildRecord({ parentTool: T, id: `${T}.setup_attachment_system`, action: 'setup_attachment_system', family: F,
-    summary: 'Create attachment slots and their scene components.', whenToUse: ['Modular optics or grips are needed.'], whenNotToUse: ['Use setup_weapon_switching to swap whole weapons.'],
+    summary: 'Create attachment slots and their scene components.', whenToUse: ['Modular optics or grips are needed.'], whenNotToUse: ['Swapping whole weapons is Blueprint logic (blueprint edit_graph).'],
     inputProps: { blueprintPath: P.blueprintPath, attachmentSlots: C.attachmentSlots }, required: ['blueprintPath'],
     effect: 'write', latency: 'interactive', resources: 'medium',
     outputProps: { attachmentSlots: C.attachmentSlots }, outputRequired: [],
@@ -88,7 +82,7 @@ export const COMBAT_RECORDS: readonly CapabilityRecordSource[] = [
     outputProps: { combatInfo: C.combatInfo }, outputRequired: [],
     exampleInput: { action: 'get_combat_info', blueprintPath: WEAPON }, exampleOutput: { success: true, message: 'Combat info', combatInfo: { parentClass: 'Actor', hasWeaponMesh: true } } }),
   buildRecord({ parentTool: T, id: `${T}.setup_damage_type`, action: 'setup_damage_type', family: F,
-    summary: 'Create a DamageType Blueprint and return its path.', whenToUse: ['A damage class is needed by name and folder.'], whenNotToUse: ['Use configure_damage_execution to tune multipliers.'],
+    summary: 'Create a DamageType Blueprint and return its path.', whenToUse: ['A damage class is needed by name and folder.'], whenNotToUse: ['Damage multipliers are a Gameplay Effect execution (manage_gas configure_gameplay_effect add_execution_calculation).'],
     inputProps: { name: P.name, path: P.path }, required: ['name'],
     effect: 'write', latency: 'interactive', resources: 'low',
     outputProps: { damageTypePath: P.damageTypePath }, outputRequired: ['damageTypePath'],
@@ -100,9 +94,30 @@ export const COMBAT_RECORDS: readonly CapabilityRecordSource[] = [
     outputProps: { hitboxType: C.hitboxType }, outputRequired: [],
     exampleInput: { action: 'configure_hit_detection', blueprintPath: WEAPON, hitboxType: 'Sphere', damageMultiplier: 1.5 }, exampleOutput: { success: true, message: 'Hit detection configured', hitboxType: 'Sphere' } }),
   buildRecord({ parentTool: T, id: `${T}.get_combat_stats`, action: 'get_combat_stats', family: F,
-    summary: 'Read combat stats back from a Blueprint.', whenToUse: ['Inspect authored weapon stats.'], whenNotToUse: ['Use set_weapon_stats to change them.'],
+    summary: 'Read combat stats back from a Blueprint.', whenToUse: ['Inspect authored weapon stats.'], whenNotToUse: ['The stats are Blueprint variable defaults: change them with blueprint edit_variable set_default.'],
     inputProps: { blueprintPath: P.blueprintPath }, required: ['blueprintPath'],
     effect: 'read', latency: 'instant', resources: 'low',
     outputProps: { combatInfo: C.combatInfo }, outputRequired: [],
     exampleInput: { action: 'get_combat_stats', blueprintPath: WEAPON }, exampleOutput: { success: true, message: 'Combat stats', combatInfo: { parentClass: 'Actor', baseDamage: 45 } } }),
+  // A hit in the running game through UGameplayStatics::ApplyDamage (McpCombatRuntimeDamage.cpp).
+  buildRecord({ parentTool: T, id: `${T}.apply_damage`, action: 'apply_damage', family: F,
+    topics: ['apply damage', 'deal damage', 'damage an actor', 'hurt the player', 'kill the player', 'test health'],
+    summary: 'Deal damage to an actor in the running game, as a hit does (ApplyDamage): its own damage handling decides what happens, so an actor with the health behaviour loses Health and dies at 0. A negative amount heals such an actor.',
+    whenToUse: ['A health, death or respawn behaviour must be tested while the game runs, without placing a weapon or a pain volume first.'],
+    whenNotToUse: ['The damage a weapon or projectile Blueprint deals must change (configure_projectile, create_combat_asset).'],
+    inputProps: {
+      actorName: { type: 'string', description: 'The actor to hit, by name in the running game; PlayerPawn names the pawn the player controls.' },
+      damage: { type: 'number', description: 'Damage to deal; a negative amount heals an actor whose damage handling allows it (the health behaviour does).' },
+      causerName: { type: 'string', description: 'The actor that deals it (DamageCauser), by name; its controller, or the controller of the pawn it is, instigates. Omitted: no causer.' },
+      damageType: { type: 'string', description: 'Damage type class, a path or a name (default DamageType).' },
+    },
+    required: ['actorName', 'damage'],
+    effect: 'write', editorStates: ['pie', 'simulate'], latency: 'instant', resources: 'low',
+    outputProps: {
+      damageApplied: { type: 'number', description: 'The damage the actor took: 0 when it cannot be damaged (Can be Damaged off).' },
+      health: { type: 'number', description: 'Its Health variable after the hit, when it has a number by that name (the health behaviour gives one).' },
+      destroyed: { type: 'boolean', description: 'The hit destroyed the actor.' },
+    }, outputRequired: [],
+    exampleInput: { action: 'apply_damage', actorName: 'PlayerPawn', damage: 25 },
+    exampleOutput: { success: true, message: 'BP_Player0 took 25 damage; its Health is now 75.', damageApplied: 25, health: 75 } }),
 ];

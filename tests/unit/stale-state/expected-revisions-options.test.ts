@@ -4,7 +4,7 @@ import { EXECUTION_OPTION_KEYS } from '../../../src/tools/catalog/capabilities/s
 import { validateExecutionOptions } from '../../../src/server/gateway/gateway-option-validate.js';
 
 // Task 42 parity mirror of the native
-// McpAutomationBridge.Foundation.LiveStateRevisions.ExpectedRevisionsParsing
+// EngineWire.Foundation.LiveStateRevisions.ExpectedRevisionsParsing
 // automation test. Both surfaces must accept the same pin envelope and refuse
 // the same malformed input with the same error code, otherwise a client gets a
 // different answer depending on which transport it happens to be talking to.

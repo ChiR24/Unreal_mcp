@@ -4,7 +4,7 @@
  * call_actor_function.
  */
 import type { CapabilityRecordSource } from '../../model.js';
-import { buildCoreRecord } from '../core/builder.js';
+import { ANY_EDITOR_STATE, buildCoreRecord } from '../core/builder.js';
 import { DOMAIN, P } from './properties.js';
 import { bool, str, vec3 } from '../shared/schema-props.js';
 
@@ -62,7 +62,11 @@ export const ADVANCED_RECORDS: readonly CapabilityRecordSource[] = [
     whenToUse: ['Instance variables on a Blueprint actor must be configured.', 'Several actors each need their own variable values (actors).'],
     whenNotToUse: ['The actor is not a Blueprint instance (variables are undefined).'],
     inputProps: {
-      actorName: P.actorName, variables: P.variables,
+      actorName: P.actorName,
+      variables: {
+        ...P.variables,
+        description: 'Blueprint variable name to value map. A name the actor does not have refuses the whole call before anything is set; the error lists the variables it does have. An actor variable takes the other actor by label, name or path. A value that does not take (an object path that loads nothing) fails the call, naming it; the variables that did take are listed under updated.',
+      },
       actors: {
         type: 'array',
         items: { type: 'object', properties: { actorName: P.actorName, variables: P.variables }, required: ['actorName', 'variables'], additionalProperties: false },
@@ -94,13 +98,29 @@ export const ADVANCED_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'set_actor_collision',
     domain: DOMAIN,
     family: FAMILY_COLLISION,
-    summary: 'Enable or disable collision on an actor, or on many actors at once with actorNames, as one undoable step; normalizes to set_collision.',
-    whenToUse: ['Actor collision must be toggled.', 'Many actors must have collision toggled together (actorNames does them in one call).'],
-    whenNotToUse: ['Per-component collision is required (use set_component_property).'],
+    summary: 'Turn collision on or off for an actor, give its components a collision preset (BlockAll, OverlapAllDynamic, NoCollision...), or set how they answer one channel (Pawn Ignore lets a character walk through, Pawn Block stops it); many actors at once with actorNames, as one undoable step.',
+    topics: ['collision preset', 'collision response', 'walk through', 'block the player', 'ignore collision with player'],
+    whenToUse: [
+      'Actor collision must be toggled.',
+      'Many actors must have collision toggled together (actorNames does them in one call).',
+      'A character must walk through an actor or be stopped by it (responses {"Pawn": "Ignore"} or {"Pawn": "Block"}), or the actor must only report overlaps, as a trigger does (profile OverlapAllDynamic).',
+    ],
+    whenNotToUse: [
+      'A mode other than on and off (QueryOnly, PhysicsOnly): use edit_component (edit set_properties) with CollisionEnabled, which takes the ECollisionEnabled names.',
+      'Every placed copy of a class must change: use edit_scs set_property on its component with CollisionProfileName or CollisionResponses.',
+    ],
     inputProps: {
       actorName: P.actorName,
-      actorNames: { type: 'array', items: { type: 'string' }, description: 'Several actors to toggle in one call and one undo step, in place of actorName; names not found are listed back under missing, and the actors changed under affectedActors (which the receipt lists as changes, with an actor handle each).' },
-      collisionEnabled: P.collisionEnabled,
+      actorNames: { type: 'array', items: { type: 'string' }, description: 'Several actors to change in one call and one undo step, in place of actorName; names not found are listed back under missing, and the actors changed under affectedActors (which the receipt lists as changes, with an actor handle each).' },
+      collisionEnabled: { ...P.collisionEnabled, description: 'Turn collision on (true) or off (false). Omitted with profile or responses, the mode stays as the preset sets it.' },
+      profile: str('A collision preset of the project (BlockAll, BlockAllDynamic, OverlapAll, OverlapAllDynamic, NoCollision, Pawn, Trigger, PhysicsActor...); an unknown name is refused with the list. The reply reads the preset back.'),
+      responses: {
+        type: 'object',
+        description: 'How the components answer each named channel, {"Pawn": "Ignore", "Visibility": "Block"}: an engine channel (WorldStatic, WorldDynamic, Pawn, Visibility, Camera, PhysicsBody, Vehicle, Destructible) or one the project added, by its name; each Block, Overlap or Ignore. Applied after profile, so the preset then reads Custom; the reply reads each channel back.',
+        additionalProperties: true,
+        'x-unreal-reflection-boundary': true,
+      },
+      componentName: str('Only the primitive component of this name (the capsule of a character, not its mesh); every primitive component of the actor otherwise.'),
     },
     required: [],
     requiredOneOf: ['actorName', 'actorNames'],
@@ -111,6 +131,7 @@ export const ADVANCED_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_actor',
     action: 'call_actor_function',
+    editorStates: ANY_EDITOR_STATE,
     domain: DOMAIN,
     family: FAMILY_FUNCTION,
     summary:
@@ -118,6 +139,7 @@ export const ADVANCED_RECORDS: readonly CapabilityRecordSource[] = [
     whenToUse: [
       'A Blueprint or native function on an actor must be invoked.',
       'A function of the running game\'s GameInstance (save, score, reset) must be called during Play In Editor: actorName GameInstance.',
+      'A function of one of the actor\'s components must be called (a body\'s GetCenterOfMass, a movement component\'s StopMovementImmediately): componentName.',
     ],
     whenNotToUse: ['The function has side effects that cannot be undone.'],
     inputProps: {
@@ -126,6 +148,7 @@ export const ADVANCED_RECORDS: readonly CapabilityRecordSource[] = [
         description:
           'Target actor name in the current level; while Play In Editor runs, GameInstance, GameMode, GameState, PlayerController, PlayerPawn, PlayerState or HUD names that object of the running game (the GameInstance is no actor).',
       },
+      componentName: str('Call the function on this component of the actor instead of on the actor itself (refused with COMPONENT_NOT_FOUND when the actor has none of that name).'),
       functionName: P.functionName,
       arguments: P.arguments,
     },

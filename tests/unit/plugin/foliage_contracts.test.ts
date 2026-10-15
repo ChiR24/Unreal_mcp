@@ -12,7 +12,7 @@ import { isRecord } from '../../../src/utils/validation/type-guards.js';
 
 import { sliceBetween } from './plugin-contract-fixtures.js';
 
-const DOMAINS = join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private', 'Domains');
+const DOMAINS = join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'Domains');
 
 /** Block and line comments removed, so no assertion can be satisfied by prose. */
 const read = (...segments: readonly string[]): string =>
@@ -20,7 +20,7 @@ const read = (...segments: readonly string[]): string =>
 
 describe('configure_foliage names what it wrote and what became of the placed instances', () => {
   const configure = (): string =>
-    sliceBetween(read('Environment', 'Runtime', 'McpAutomationBridge_EnvironmentHandlersFoliageAssets.cpp'), 'bool McpConfigureFoliageType(', 'bool McpCreateLandscapeLayerInfo(');
+    sliceBetween(read('Environment', 'Runtime', 'McpEnvFoliageAssets.cpp'), 'bool McpConfigureFoliageType(', 'bool McpCreateLandscapeLayerInfo(');
 
   it('names every setting it wrote by its property name, the handled ones as well as the reflected ones', () => {
     const source = configure();
@@ -60,7 +60,7 @@ describe('configure_foliage names what it wrote and what became of the placed in
 // (2, 1, 0.5) read as uniform. It now answers the whole scale.
 describe('get_foliage_instances reports the whole scale of an instance', () => {
   it('writes scale as {x, y, z}, and no longer as the X axis alone', () => {
-    const source = read('Foliage', 'McpAutomationBridge_FoliageHandlersGetInstances.cpp');
+    const source = read('Foliage', 'McpFoliageGetInsts.cpp');
 
     expect(source).toMatch(/TSharedPtr<FJsonObject> Scale = MakeShared<FJsonObject>\(\);\s*Scale->SetNumberField\(TEXT\("x"\), Inst\.DrawScale3D\.X\);\s*Scale->SetNumberField\(TEXT\("y"\), Inst\.DrawScale3D\.Y\);\s*Scale->SetNumberField\(TEXT\("z"\), Inst\.DrawScale3D\.Z\);\s*InstObj->SetObjectField\(TEXT\("scale"\), Scale\);/u);
     expect(source).not.toContain('SetNumberField(TEXT("scale")');

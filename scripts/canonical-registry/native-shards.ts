@@ -42,6 +42,11 @@ const MAX_CHUNK_CHARS = 4000;
 // Parent names are validated snake_case, so upper-casing yields a unique C++ identifier.
 const shardSymbol = (parent: string): string => `MCP_CAP_SHARD_${parent.toUpperCase()}`;
 
+// Shard file names stay short so every plugin path fits Fab's 170-character limit.
+const SHARD_ACRONYMS: Readonly<Record<string, string>> = { ai: 'AI', gas: 'GAS', pcg: 'PCG' };
+export const shardFileStem = (parent: string): string =>
+  `McpCapShard${parent.split('_').map((w) => SHARD_ACRONYMS[w] ?? w.charAt(0).toUpperCase() + w.slice(1)).join('')}`;
+
 // Every code unit outside printable ASCII becomes a JSON \uXXXX escape. The
 // result parses to the identical value and keeps the emitted C++ pure ASCII, so
 // no universal-character-name is ever required.

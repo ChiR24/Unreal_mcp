@@ -14,7 +14,7 @@ import { isRecord } from '../../../src/utils/validation/type-guards.js';
 
 import { sliceBetween } from './plugin-contract-fixtures.js';
 
-const PRIVATE = join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private');
+const PRIVATE = join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private');
 
 /** Block and line comments removed, so no assertion can be satisfied by prose. */
 const read = (...segments: readonly string[]): string =>
@@ -70,21 +70,21 @@ describe('shader compile state: counted through the engine, waited for off the g
 
 describe('every screenshot surface reports it, and control_editor.screenshot can wait', () => {
   it('the editor capture holds the call before it picks a mode, and resumes the same handler once the queue is done', () => {
-    const source = read('Domains', 'ControlEditor', 'McpAutomationBridge_ControlEditorScreenshot.cpp');
+    const source = read('Domains', 'ControlEditor', 'McpEditorScreenshot.cpp');
 
-    expect(source).toMatch(/if \(McpDeferForShaderCompile\(\s*Payload, \[Weak = TWeakObjectPtr<UMcpAutomationBridgeSubsystem>\(this\), RequestId,\s*Socket\]\(const TSharedPtr<FJsonObject> &Waited\) \{\s*if \(UMcpAutomationBridgeSubsystem \*Self = Weak\.Get\(\)\) \{\s*Self->HandleControlEditorScreenshot\(RequestId, Waited, Socket\);\s*\}\s*\}\)\) \{\s*return true;\s*\}/u);
+    expect(source).toMatch(/if \(McpDeferForShaderCompile\(\s*Payload, \[Weak = TWeakObjectPtr<UEngineWireSubsystem>\(this\), RequestId,\s*Socket\]\(const TSharedPtr<FJsonObject> &Waited\) \{\s*if \(UEngineWireSubsystem \*Self = Weak\.Get\(\)\) \{\s*Self->HandleControlEditorScreenshot\(RequestId, Waited, Socket\);\s*\}\s*\}\)\) \{\s*return true;\s*\}/u);
     expect(source.indexOf('McpDeferForShaderCompile('), 'before game_viewport forwards and before the mode is read').toBeLessThan(source.indexOf('FString Mode;'));
   });
 
   it('the editor-viewport and window receipt, and the game-viewport reply, add the state', () => {
-    expect(read('Domains', 'ControlEditor', 'McpAutomationBridge_ControlEditorScreenshotSupport.cpp'))
+    expect(read('Domains', 'ControlEditor', 'McpEditorScreenshotSupport.cpp'))
       .toMatch(/AddScreenshotMetadataForMcp\(Resp, Payload\);\s*McpAddShaderCompileState\(Resp, Payload\);/u);
-    expect(read('Domains', 'Ui', 'McpAutomationBridge_UiHandlersScreenshot.cpp'))
+    expect(read('Domains', 'Ui', 'McpUiScreenshot.cpp'))
       .toMatch(/AddScreenshotMetadataForUiMcp\(Resp, Payload\);\s*McpAddShaderCompileState\(Resp, Payload\);/u);
   });
 
   it('each editor-state read (project, editor and world settings, viewport, selection) carries the count before it answers', () => {
-    const source = read('Domains', 'Environment', 'Inspection', 'McpAutomationBridge_EnvironmentHandlersInspectSettings.cpp');
+    const source = read('Domains', 'Environment', 'Inspection', 'McpEnvInspectSettings.cpp');
 
     for (const action of ['get_project_settings', 'get_editor_settings', 'get_world_settings', 'get_viewport_info', 'get_selected_actors']) {
       const branch = sliceBetween(source, `LowerSubAction.Equals(TEXT("${action}"))`, 'return true;');

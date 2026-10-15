@@ -1,0 +1,191 @@
+#include "Domains/Blueprint/McpBPActionContext.h"
+#include "Foundation/BridgeHelpers/Assets/McpAssetSaveRegistry.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpBPAssetLoad.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpBPCompileHelpers.h"
+#include "Foundation/HandlerUtils/McpHandlerUtils.h"
+
+#include "Engine/Blueprint.h"
+#include "Engine/SCS_Node.h"
+#include "Engine/SimpleConstructionScript.h"
+#include "Kismet2/BlueprintEditorUtils.h"
+#include "Kismet2/Kismet2NameValidators.h"
+
+namespace McpBlueprintHandlers {
+bool HandleBlueprintRemoveRenameVariable(const FBlueprintActionContext &Context) {
+  MCP_BLUEPRINT_ACTION_LOCALS(Context);
+  if (ActionMatchesPattern(TEXT("remove_variable"))) {
+    UE_LOG(LogEngineWireSubsystem, Verbose,
+           TEXT("Entered blueprint_remove_variable handler: RequestId=%s"),
+           *RequestId);
+    FString Path = ResolveBlueprintRequestedPath();
+    if (Path.IsEmpty()) {
+      Bridge.SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          TEXT("blueprint_remove_variable requires a blueprint path."), nullptr,
+          TEXT("INVALID_BLUEPRINT_PATH"));
+      return true;
+    }
+
+    // variableNames: several variables under one consent, one compile and one save (eight
+    // removals were sixteen calls, a describe for each consent).
+    TArray<FString> VarNames = McpReadVariableNames(LocalPayload);
+    if (VarNames.Num() == 0) {
+      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("variableName or variableNames required"), nullptr,
+                             TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    FString LocalNormalized;
+    FString LocalLoadError;
+    UBlueprint *Blueprint =
+        LoadBlueprintAsset(Path, LocalNormalized, LocalLoadError);
+    if (!Blueprint) {
+      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
+                             LocalLoadError.IsEmpty()
+                                 ? TEXT("Failed to load blueprint")
+                                 : LocalLoadError,
+                             nullptr, TEXT("BLUEPRINT_NOT_FOUND"));
+      return true;
+    }
+
+    // Every name must be there, or nothing is removed.
+    TArray<FString> Missing;
+    TArray<FString> Known;
+    McpMatchVariableNames(Blueprint, VarNames, Missing, Known);
+    if (Missing.Num() > 0) {
+      Bridge.SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          FString::Printf(TEXT("Variable not found: %s. Nothing was removed. The Blueprint's variables: %s."),
+                          *FString::Join(Missing, TEXT(", ")),
+                          Known.Num() > 0 ? *FString::Join(Known, TEXT(", ")) : TEXT("<none>")),
+          nullptr, TEXT("NOT_FOUND"));
+      return true;
+    }
+
+    TArray<TSharedPtr<FJsonValue>> Removed;
+    for (const FString &Name : VarNames) {
+      FBlueprintEditorUtils::RemoveMemberVariable(Blueprint, FName(*Name));
+      Removed.Add(MakeShared<FJsonValueString>(Name));
+    }
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
+    McpSafeCompileBlueprint(Blueprint);
+    const bool bSaved = SaveLoadedAssetThrottled(Blueprint);
+
+    UE_LOG(LogEngineWireSubsystem, Log,
+           TEXT("HandleBlueprintAction: %d variable(s) removed from '%s' (saved=%s)"),
+           VarNames.Num(), *Path, bSaved ? TEXT("true") : TEXT("false"));
+
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetStringField(TEXT("variableName"), VarNames[0]);
+    Result->SetArrayField(TEXT("variableNames"), Removed);
+    Result->SetStringField(TEXT("blueprintPath"), LocalNormalized);
+    // Add verification data for the blueprint asset
+    McpHandlerUtils::AddVerification(Result, Blueprint);
+    Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
+                           FString::Printf(TEXT("Removed %s."), *FString::Join(VarNames, TEXT(", "))), Result);
+    return true;
+  }
+
+  if (ActionMatchesPattern(TEXT("rename_variable"))) {
+    UE_LOG(LogEngineWireSubsystem, Verbose,
+           TEXT("Entered blueprint_rename_variable handler: RequestId=%s"),
+           *RequestId);
+    FString Path = ResolveBlueprintRequestedPath();
+    if (Path.IsEmpty()) {
+      Bridge.SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          TEXT("blueprint_rename_variable requires a blueprint path."), nullptr,
+          TEXT("INVALID_BLUEPRINT_PATH"));
+      return true;
+    }
+
+    FString OldName;
+    LocalPayload->TryGetStringField(TEXT("oldName"), OldName);
+    FString NewName;
+    LocalPayload->TryGetStringField(TEXT("newName"), NewName);
+
+    if (OldName.IsEmpty() || NewName.IsEmpty()) {
+      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("Missing 'oldName' or 'newName' in payload."),
+                             nullptr, TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    UE_LOG(LogEngineWireSubsystem, Log,
+           TEXT("HandleBlueprintAction: blueprint_rename_variable start "
+                "RequestId=%s Path=%s OldName=%s NewName=%s"),
+           *RequestId, *Path, *OldName, *NewName);
+
+    FString LocalNormalized;
+    FString LocalLoadError;
+    UBlueprint *Blueprint =
+        LoadBlueprintAsset(Path, LocalNormalized, LocalLoadError);
+    if (!Blueprint) {
+      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
+                             LocalLoadError.IsEmpty()
+                                 ? TEXT("Failed to load blueprint")
+                                 : LocalLoadError,
+                             nullptr, TEXT("BLUEPRINT_NOT_FOUND"));
+      return true;
+    }
+
+    const FName OldVarName(*OldName);
+    bool bFound = false;
+    for (const FBPVariableDescription &Var : Blueprint->NewVariables) {
+      if (Var.VarName == OldVarName) {
+        bFound = true;
+        break;
+      }
+    }
+    // A component is a member variable too (the My Blueprint panel renames both); its graph
+    // getters follow the rename.
+    USCS_Node *Component = (!bFound && Blueprint->SimpleConstructionScript)
+                               ? Blueprint->SimpleConstructionScript->FindSCSNode(OldVarName)
+                               : nullptr;
+
+    if (!bFound && !Component) {
+      Bridge.SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          FString::Printf(TEXT("Neither a variable nor a component named '%s' in this blueprint."),
+                          *OldName),
+          nullptr, TEXT("NOT_FOUND"));
+      return true;
+    }
+    const EValidatorResult NameCheck = FKismetNameValidator(Blueprint, OldVarName).IsValid(FName(*NewName));
+    if (NameCheck != EValidatorResult::Ok) {
+      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
+                                    INameValidatorInterface::GetErrorString(NewName, NameCheck),
+                                    nullptr, TEXT("NAME_CONFLICT"));
+      return true;
+    }
+
+    if (Component) {
+      FBlueprintEditorUtils::RenameComponentMemberVariable(Blueprint, Component, FName(*NewName));
+    } else {
+      FBlueprintEditorUtils::RenameMemberVariable(Blueprint, OldVarName, FName(*NewName));
+    }
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
+    McpSafeCompileBlueprint(Blueprint);
+    const bool bSaved = SaveLoadedAssetThrottled(Blueprint);
+
+    UE_LOG(LogEngineWireSubsystem, Log,
+           TEXT("HandleBlueprintAction: variable renamed from '%s' to '%s' in "
+                "'%s' (saved=%s)"),
+           *OldName, *NewName, *Path, bSaved ? TEXT("true") : TEXT("false"));
+
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetStringField(TEXT("oldName"), OldName);
+    Result->SetStringField(TEXT("newName"), NewName);
+    Result->SetStringField(TEXT("kind"), Component ? TEXT("component") : TEXT("variable"));
+    Result->SetStringField(TEXT("blueprintPath"), LocalNormalized);
+    // Add verification data for the blueprint asset
+    McpHandlerUtils::AddVerification(Result, Blueprint);
+    Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Variable renamed successfully"), Result);
+    return true;
+  }
+
+  return false;
+}
+} // namespace McpBlueprintHandlers

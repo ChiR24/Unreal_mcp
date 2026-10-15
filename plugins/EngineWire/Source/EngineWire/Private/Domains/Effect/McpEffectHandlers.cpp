@@ -1,0 +1,162 @@
+#include "Core/Compatibility/McpVersionCompatibility.h"
+
+#include "Domains/Effect/McpEffectPrivate.h"
+
+bool UEngineWireSubsystem::HandleEffectAction(
+    const FString& RequestId,
+    const FString& Action,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
+{
+    const FString Lower = Action.ToLower();
+    const bool bIsCreateEffect =
+        Lower.Equals(TEXT("create_effect")) || Lower.StartsWith(TEXT("create_effect"));
+    const bool bIsNiagaraModule =
+        Lower.StartsWith(TEXT("add_")) ||
+        Lower.StartsWith(TEXT("set_parameter")) ||
+        Lower.StartsWith(TEXT("bind_parameter")) ||
+        Lower.StartsWith(TEXT("enable_gpu_simulation")) ||
+        Lower.StartsWith(TEXT("configure_event"));
+    const bool bIsSpawnNiagara = Lower.Equals(TEXT("spawn_niagara"));
+
+    if (!bIsCreateEffect && !bIsNiagaraModule && !bIsSpawnNiagara &&
+        !Lower.Equals(TEXT("manage_effect")) &&
+        !Lower.Equals(TEXT("set_niagara_parameter")) &&
+        !Lower.Equals(TEXT("activate_effect")) &&
+        !Lower.Equals(TEXT("list_debug_shapes")) &&
+        !Lower.Equals(TEXT("clear_debug_shapes")))
+    {
+        return false;
+    }
+
+    TSharedPtr<FJsonObject> LocalPayload =
+        Payload.IsValid() ? Payload : McpHandlerUtils::CreateResultObject();
+    const FString NativeSubAction =
+        McpEffectHandlers::NormalizeNativeSubAction(Lower, Action, LocalPayload);
+
+    // set_niagara_parameter on a system ASSET (assetPath, no actor) sets the user parameter's
+    // default, which is set_parameter_value's job; it used to fall to the actor form and
+    // answer "Actor '' not found".
+    if (NativeSubAction == TEXT("set_niagara_parameter") &&
+        McpGetFirstStringField(LocalPayload, {TEXT("actorName"), TEXT("systemName")}).IsEmpty() &&
+        !McpGetFirstStringField(LocalPayload, {TEXT("assetPath"), TEXT("systemPath")}).IsEmpty())
+    {
+        LocalPayload->SetStringField(TEXT("subAction"), TEXT("set_parameter_value"));
+        if (const TSharedPtr<FJsonValue> Value = LocalPayload->TryGetField(TEXT("value")))
+        {
+            LocalPayload->SetField(TEXT("parameterValue"), Value);
+        }
+        return HandleManageNiagaraAuthoringAction(
+            RequestId, TEXT("manage_niagara_authoring"), LocalPayload, RequestingSocket);
+    }
+
+    if (McpEffectHandlers::IsNiagaraAuthoringSubAction(NativeSubAction))
+    {
+        return HandleManageNiagaraAuthoringAction(
+            RequestId, TEXT("manage_niagara_authoring"), LocalPayload, RequestingSocket);
+    }
+
+    if (McpEffectHandlers::IsNiagaraGraphSubAction(NativeSubAction))
+    {
+        if (NativeSubAction == TEXT("add_niagara_module"))
+        {
+            LocalPayload->SetStringField(TEXT("subAction"), TEXT("add_module"));
+        }
+        else if (NativeSubAction == TEXT("connect_niagara_pins"))
+        {
+            LocalPayload->SetStringField(TEXT("subAction"), TEXT("connect_pins"));
+        }
+        else if (NativeSubAction == TEXT("remove_niagara_node"))
+        {
+            LocalPayload->SetStringField(TEXT("subAction"), TEXT("remove_node"));
+        }
+        return HandleNiagaraGraphAction(
+            RequestId, TEXT("manage_niagara_graph"), LocalPayload, RequestingSocket);
+    }
+
+    // `activate_effect` is the CANONICAL action name, but the lifecycle handler is
+    // keyed on the internal `activate_niagara` spelling, so a top-level canonical
+    // call passed the gate and then fell through to UNKNOWN_ACTION. Re-dispatch it
+    // through create_effect exactly as manage_effect does below, which reuses
+    // HandleNiagaraLifecycleAction instead of adding a second lifecycle path.
+    if (Lower.Equals(TEXT("activate_effect")))
+    {
+        LocalPayload->SetStringField(TEXT("subAction"), TEXT("activate_niagara"));
+        return HandleEffectAction(
+            RequestId, TEXT("create_effect"), LocalPayload, RequestingSocket);
+    }
+
+    if (Lower.Equals(TEXT("manage_effect")) && !NativeSubAction.IsEmpty())
+    {
+        // Catalogued lifecycle aliases: the Niagara lifecycle handler knows
+        // activate_niagara / deactivate_niagara, so map the public names onto
+        // them instead of falling through to "Unhandled manage_effect action".
+        if (NativeSubAction == TEXT("activate") || NativeSubAction == TEXT("activate_effect"))
+        {
+            LocalPayload->SetStringField(TEXT("subAction"), TEXT("activate_niagara"));
+            return HandleEffectAction(RequestId, TEXT("create_effect"), LocalPayload, RequestingSocket);
+        }
+        if (NativeSubAction == TEXT("deactivate") || NativeSubAction == TEXT("deactivate_effect"))
+        {
+            LocalPayload->SetStringField(TEXT("subAction"), TEXT("deactivate_niagara"));
+            return HandleEffectAction(RequestId, TEXT("create_effect"), LocalPayload, RequestingSocket);
+        }
+        if (NativeSubAction == TEXT("reset") || NativeSubAction == TEXT("reset_effect"))
+        {
+            LocalPayload->SetStringField(TEXT("subAction"), TEXT("activate_niagara"));
+            LocalPayload->SetBoolField(TEXT("reset"), true);
+            return HandleEffectAction(RequestId, TEXT("create_effect"), LocalPayload, RequestingSocket);
+        }
+        const FString RoutedAction =
+            (NativeSubAction == TEXT("list_debug_shapes") ||
+             NativeSubAction == TEXT("clear_debug_shapes") ||
+             NativeSubAction == TEXT("spawn_niagara"))
+                ? NativeSubAction
+                : TEXT("create_effect");
+        return HandleEffectAction(RequestId, RoutedAction, LocalPayload, RequestingSocket);
+    }
+
+    McpEffectHandlers::FEffectActionContext Context{
+        *this, RequestId, Action, Lower, LocalPayload, RequestingSocket};
+
+    if (McpEffectHandlers::HandleEffectDiscoveryAction(Context))
+    {
+        return true;
+    }
+
+    if (bIsCreateEffect || Lower.Equals(TEXT("create_niagara_system")))
+    {
+        const FString LowerSub =
+            McpEffectHandlers::ResolveCreateEffectSubAction(Action, Lower, LocalPayload);
+        if (McpEffectHandlers::HandleCreateEffectSubAction(Context, LowerSub))
+        {
+            return true;
+        }
+    }
+
+    if (McpEffectHandlers::HandleSpawnNiagara(Context, bIsCreateEffect))
+    {
+        return true;
+    }
+
+    if (McpEffectHandlers::HandleCleanup(Context, bIsCreateEffect))
+    {
+        return true;
+    }
+
+    if (McpEffectHandlers::HandleProceduralEffectAction(Context, bIsCreateEffect))
+    {
+        return true;
+    }
+
+    FString UnhandledAction = Action;
+    LocalPayload->TryGetStringField(TEXT("action"), UnhandledAction);
+    SendAutomationResponse(
+        RequestingSocket,
+        RequestId,
+        false,
+        FString::Printf(TEXT("Unhandled manage_effect action: %s"), *UnhandledAction),
+        nullptr,
+        TEXT("UNKNOWN_ACTION"));
+    return true;
+}

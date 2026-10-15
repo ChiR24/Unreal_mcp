@@ -21,7 +21,7 @@ import { describe, expect, it } from 'vitest';
 import { extractChanges, extractHandles } from '../../../src/tools/catalog/capabilities/semantic/receipt-outcome.js';
 
 const PRIVATE = join(
-  'plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private'
+  'plugins', 'EngineWire', 'Source', 'EngineWire', 'Private'
 );
 
 /** Block and line comments removed, so no assertion can be satisfied by prose. */
@@ -34,13 +34,13 @@ function nativeSource(...segments: readonly string[]): string {
 }
 
 function interaction(name: string): string {
-  return nativeSource('Domains', 'Interaction', `McpAutomationBridge_InteractionHandlers${name}.cpp`);
+  return nativeSource('Domains', 'Interaction', `McpInteraction${name}.cpp`);
 }
 
 const compile = (): string =>
-  nativeSource('Domains', 'Blueprint', 'Queries', 'McpAutomationBridge_BlueprintHandlersCompile.cpp');
+  nativeSource('Domains', 'Blueprint', 'Queries', 'McpBPCompile.cpp');
 const helper = (): string =>
-  nativeSource('Foundation', 'BridgeHelpers', 'Responses', 'McpAutomationBridgeHelpersMutationEvidence.h');
+  nativeSource('Foundation', 'BridgeHelpers', 'Responses', 'McpMutationEvidence.h');
 
 describe('todo16 BB-045: a widget mutation yields an asset handle', () => {
   it('widgetPath is recognised as canonical asset identity', () => {
@@ -88,7 +88,7 @@ describe('todo16: identity and changes reach the receipt, and nothing is invente
 // save, the "saved" gate, the verification and the evidence stamp for all of them; Interface still finishes inline.
 const SHARED_FINISH = ['Chest', 'Components', 'Door', 'Lever', 'Switch', 'Triggers'] as const;
 const finisher = (): string => {
-  const source = interaction('BlueprintVariables');
+  const source = interaction('BPVariables');
   const start = source.indexOf('void SendInteractableResult(');
   return source.slice(start, source.indexOf('\n}', start));
 };
@@ -105,7 +105,7 @@ describe('todo16 BB-008: every asset-mutating Interaction handler stamps evidenc
   it('the shared finisher saves, gates "saved" on that save, verifies and stamps evidence on the saved asset', () => {
     const source = finisher();
 
-    expect(interaction('BlueprintVariables')).toContain('McpAutomationBridgeHelpersMutationEvidence.h');
+    expect(interaction('BPVariables')).toContain('McpMutationEvidence.h');
     expect(source).toMatch(/if \(McpSafeAssetSave\(Blueprint\)\)\s*\{\s*Changes\.Add\(TEXT\("saved"\)\);/u);
     expect((source.match(/Changes\.Add\(TEXT\("saved"\)\)/gu) ?? []).length, '"saved" is added only behind the save').toBe(1);
     expect(source).toContain('McpHandlerUtils::AddVerification(Result, Blueprint)');
@@ -115,7 +115,7 @@ describe('todo16 BB-008: every asset-mutating Interaction handler stamps evidenc
   it('Interface binds its save result and gates "saved" on it', () => {
     const source = interaction('Interface');
 
-    expect(source).toContain('McpAutomationBridgeHelpersMutationEvidence.h');
+    expect(source).toContain('McpMutationEvidence.h');
     expect(source).toMatch(/const bool bInterfaceSaved = McpSafeAssetSave\(InterfaceBP\);/u);
     expect(source).toMatch(/if \(bInterfaceSaved\)\s*\{\s*InterfaceChanges\.Add\(TEXT\("saved"\)\);/u);
     expect(source).toContain('AddMutationEvidence(Result, InterfaceBP, InterfaceChanges)');
@@ -135,7 +135,7 @@ describe('todo16 BB-045 / P12: compile evidence is the asset, never status words
 
     expect(source).toContain('McpHandlerUtils::AddVerification(Out, BP);');
     expect(source).toMatch(/Out->SetBoolField\(TEXT\("saved"\), bSaved\);/u);
-    expect(nativeSource('Foundation', 'BridgeHelpers', 'Blueprints', 'McpAutomationBridgeHelpersBlueprintDiagnostics.h'))
+    expect(nativeSource('Foundation', 'BridgeHelpers', 'Blueprints', 'McpBPDiag.h'))
       .toMatch(/Out->SetBoolField\(TEXT\("compiled"\), bCompiled\);/u);
   });
 

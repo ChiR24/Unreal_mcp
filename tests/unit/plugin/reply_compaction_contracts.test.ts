@@ -8,13 +8,14 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   LOG_ONLY_EXECUTE_FIELDS,
+  RECEIPT_LISTED_FIELDS,
   RECEIPT_OUTCOME_LISTS,
   RESOLVED_IDENTITY_FIELDS,
   STOCK_OUTPUT_PROPERTIES
 } from '../../../src/utils/responses/gateway-reply-compaction.js';
 
 const protocol = (file: string): string => readFileSync(
-  resolve(process.cwd(), 'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Protocol', file),
+  resolve(process.cwd(), 'plugins/EngineWire/Source/EngineWire/Private/MCP/Protocol', file),
   'utf8'
 );
 
@@ -30,11 +31,12 @@ describe('reply compaction on both transports', () => {
     expect(listed(execute, 'LogOnlyExecuteFields')).toEqual([...LOG_ONLY_EXECUTE_FIELDS]);
     expect(listed(execute, 'ReceiptOutcomeLists')).toEqual([...RECEIPT_OUTCOME_LISTS]);
     expect(listed(execute, 'ResolvedIdentityFields')).toEqual([...RESOLVED_IDENTITY_FIELDS]);
+    expect(listed(execute, 'ReceiptListedFields')).toEqual([...RECEIPT_LISTED_FIELDS]);
   });
 
   it('carries the names a call used onto every native receipt, queued or not', () => {
     const execute = (file: string): string => readFileSync(
-      resolve(process.cwd(), 'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP', file), 'utf8');
+      resolve(process.cwd(), 'plugins/EngineWire/Source/EngineWire/Private/MCP', file), 'utf8');
     expect(execute('Execute/McpNativeGatewayExecuteRequest.cpp')).toContain('SetObjectField(TEXT("migratedFrom"), Legacy)');
     expect(execute('Execute/McpNativeGatewayValidation.cpp')).toContain('Context.Provenance = Request.Provenance;');
     expect(execute('Transport/McpNativeTransportGatewayStream.cpp')).toContain('Conn->Provenance = Context.Provenance;');

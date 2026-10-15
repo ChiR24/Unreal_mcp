@@ -15,7 +15,7 @@ import { isRecord } from '../../../src/utils/validation/type-guards.js';
 
 import { sliceBetween } from './plugin-contract-fixtures.js';
 
-const DOMAIN = join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private', 'Domains', 'ControlActor');
+const DOMAIN = join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'Domains', 'ControlActor');
 
 /** Block and line comments removed, so no assertion can be satisfied by prose. */
 function stripComments(source: string): string {
@@ -33,12 +33,12 @@ function listParamDescription(param: string): string {
 }
 
 describe('control_actor.list near and radius: what is close to a point, nearest first', () => {
-  const list = (): string => read('List', 'McpAutomationBridge_ControlActorList.cpp');
+  const list = (): string => read('List', 'McpActorList.cpp');
   const record = () => capabilityIndex().byId.get('control_actor.list');
 
   it('lives in its own file, not in the lookup file it was moved from', () => {
-    expect(list()).toContain('bool UMcpAutomationBridgeSubsystem::HandleControlActorList(');
-    expect(read('McpAutomationBridge_ControlActorLookup.cpp')).not.toContain('HandleControlActorList');
+    expect(list()).toContain('bool UEngineWireSubsystem::HandleControlActorList(');
+    expect(read('McpActorLookup.cpp')).not.toContain('HandleControlActorList');
   });
 
   it('measures the distance to the actor\'s world bounding box: 0 inside it, per axis outside it', () => {
@@ -75,7 +75,7 @@ describe('control_actor.list near and radius: what is close to a point, nearest 
   // className /Game/Enemies/BP_Enemy listed 0 actors: ObjectPathToObjectName hands a path without a
   // '.' back whole, and no class is named after a whole path.
   it('className matches a Blueprint by package path, as well as by name or object path', () => {
-    expect(read('McpAutomationBridge_ControlActorSupport.h'))
+    expect(read('McpActorSupport.h'))
       .toContain('FString Wanted = FPackageName::GetShortName(FPackageName::ObjectPathToObjectName(ClassName));');
   });
 
@@ -106,9 +106,9 @@ describe('control_actor.list near and radius: what is close to a point, nearest 
 
 describe('control_actor.list propertyNames takes "Component.Property" like sample_motion', () => {
   it('both handlers resolve a name through the one shared resolver', () => {
-    const support = read('McpAutomationBridge_ControlActorSupport.h');
-    const list = read('List', 'McpAutomationBridge_ControlActorList.cpp');
-    const motion = read('McpAutomationBridge_ControlActorMotionSample.cpp');
+    const support = read('McpActorSupport.h');
+    const list = read('List', 'McpActorList.cpp');
+    const motion = read('McpActorMotionSample.cpp');
 
     expect(support).toMatch(/inline FProperty \*McpResolveActorPropertyPath\(AActor \*Actor, const FString &Wanted, UObject \*&OutOwner\)/u);
     expect(support, 'the actor property that holds a component is tried first (CharacterMovement for CharMoveComp)').toMatch(/Wanted\.Split\(TEXT\("\."\), &ComponentName, &PropertyName\)\)\s*\{\s*const FObjectPropertyBase \*Holder = FindFProperty<FObjectPropertyBase>\(Actor->GetClass\(\), FName\(\*ComponentName\)\);/u);
@@ -119,9 +119,9 @@ describe('control_actor.list propertyNames takes "Component.Property" like sampl
   });
 
   it('list reads the value off the resolved owner and keys a component property as asked', () => {
-    const list = read('List', 'McpAutomationBridge_ControlActorList.cpp');
+    const list = read('List', 'McpActorList.cpp');
 
-    expect(list).toMatch(/GetPropertyValueAsString\(Owner, Property\)/u);
+    expect(list).toMatch(/ExportPropertyToJsonValueOrText\(Owner, Property\)/u);
     expect(list).toMatch(/Wanted\.Contains\(TEXT\("\."\)\) \? Wanted : Property->GetName\(\)/u);
     expect(list).toMatch(/Missing\.Add\(MakeShared<FJsonValueString>\(Wanted\)\)/u);
   });
@@ -134,7 +134,7 @@ describe('control_actor.list propertyNames takes "Component.Property" like sampl
 
 // startWhen {equals: 2} (or "2") waited for "True": TryGetBoolField coerces numbers and strings.
 describe('startWhen.equals is read by its JSON type', () => {
-  const source = read('McpAutomationBridge_ControlActorMotionInputs.cpp');
+  const source = read('McpActorMotionInputs.cpp');
 
   it('dispatches on the value type instead of trying a bool first', () => {
     expect(source).toContain('When->TryGetField(TEXT("equals"))');
@@ -155,11 +155,11 @@ describe('startWhen.equals is read by its JSON type', () => {
 // A minimized editor stepped PIE 0.333 s at a time: a 0.22 s jump was held 0.67 s and the
 // samples read as the level's own behaviour, with nothing in the reply to say so.
 describe('sample_motion runs at full rate or says it did not', () => {
-  const source = read('McpAutomationBridge_ControlActorMotionSample.cpp');
+  const source = read('McpActorMotionSample.cpp');
 
   it('puts a minimized editor back on screen without focus before the run', () => {
     expect(source).toContain('Run->Hold = BeginEditorRunForMcp();');
-    expect(read('..', 'ControlEditor', 'McpAutomationBridge_ControlEditorScreenshotWindows.cpp'))
+    expect(read('..', 'ControlEditor', 'McpEditorScreenshotWindows.cpp'))
       .toContain('Hold.bWindowRestored = RestoreWindowForCaptureForMcp(Root.ToSharedRef());');
     expect(source).toContain('Data->SetBoolField(TEXT("windowRestored"), true);');
   });
@@ -167,9 +167,9 @@ describe('sample_motion runs at full rate or says it did not', () => {
   // The person keeps the editor minimized while automation runs: whatever a capture or a timed run restores for itself
   // goes back, on every way the run can end, and the throttle preference it switched off (in memory only) goes back too.
   it('puts the window away again and the throttle preference back when a capture or a run that changed them is over', () => {
-    const windows = read('..', 'ControlEditor', 'McpAutomationBridge_ControlEditorScreenshotWindows.cpp');
+    const windows = read('..', 'ControlEditor', 'McpEditorScreenshotWindows.cpp');
     const begin = sliceBetween(windows, 'FMcpEditorRunHold BeginEditorRunForMcp()', 'void EndEditorRunForMcp');
-    const screenshot = read('..', 'ControlEditor', 'McpAutomationBridge_ControlEditorScreenshot.cpp');
+    const screenshot = read('..', 'ControlEditor', 'McpEditorScreenshot.cpp');
 
     expect(windows, 'minimizing never activates a window').toContain('Placement.showCmd = SW_SHOWMINNOACTIVE;');
     expect(windows).toContain('Payload->TryGetBoolField(TEXT("minimize"), bMinimize);');
@@ -182,8 +182,29 @@ describe('sample_motion runs at full rate or says it did not', () => {
 
   it('warns when the game advanced 0.1 s or more per frame', () => {
     expect(source).toContain('Run.Frames += 1;');
-    expect(read('McpAutomationBridge_ControlActorMotionInputs.cpp')).toMatch(/if \(PerFrame < 0\.1\) \{\s*return FString\(\);/u);
+    expect(read('McpActorMotionInputs.cpp')).toMatch(/if \(PerFrame < 0\.1\) \{\s*return FString\(\);/u);
     expect(source).toContain('McpSlowFrameWarning(Run->LastGame - Run->StartGame, Run->Frames)');
+  });
+
+  // A game holding most of the GPU made a run crawl at 5 fps; only a screenshot's viewport text said video memory ran out.
+  it('names video memory over budget, from the renderer\'s own figure, as the cause of a slow run', () => {
+    const inputs = read('McpActorMotionInputs.cpp');
+    expect(inputs).toContain('const double OverMB = double(GDemotedLocalMemorySize) / (1024.0 * 1024.0);');
+    expect(inputs).toContain('#include "RHI.h"');
+  });
+
+  // A foot that slid, sank or floated was invisible in the actor's own location.
+  it('follows points on the actor and measures each one against the ground below it', () => {
+    const points = read('Motion', 'McpMotionPoints.cpp');
+    expect(source).toContain('McpSampleMotionPoints(Run.Points, Actor, *Sample, GameTime);');
+    expect(source).toContain('McpAddMotionPointStats(Run.Points, *Data);');
+    expect(source).toContain('!McpParseMotionPoints(Found, Payload, Run->Points, TimelineError)');
+    // Fewer samples with each point, so the reply stays inside the response budget.
+    expect(source).toContain('Run.Samples.Num() >= McpMotionSampleCap(McpMaxMotionSamples, Run.Points)');
+    // Traced from above the point, so a sunk foot is found; a trace that starts inside a surface proves nothing.
+    expect(points).toContain('const FVector Start = Location + FVector(0.0, 0.0, McpGroundTraceUp);');
+    expect(points).toContain('|| Hit.bStartPenetrating)');
+    expect(points).toContain('const double Planted = Low + Points.ContactCm;');
   });
 
   // A title screen holds the game paused: the run sat out its whole 25 s real-time cap for one sample.
@@ -192,12 +213,44 @@ describe('sample_motion runs at full rate or says it did not', () => {
     expect(source).toContain('Run->StartReal = Run->LastAdvanceReal = FPlatformTime::Seconds();');
     expect(source).toContain('Ended == TEXT("gamePaused")         ? McpGamePausedWarning(Run->World.Get())');
   });
+
+  // A death that reloaded the level ended the run as "worldEnded", the answer for stopped play, while PIE ran on.
+  it('tells a level the game loaded from play that stopped', () => {
+    expect(source).toContain('return GEditor && GEditor->PlayWorld ? TEXT("levelChanged") : TEXT("worldEnded");');
+  });
+
+  // A pawn that died the moment it respawned took twenty calls to pin on the enemy that walked into it.
+  it('names the actors that began or stopped touching the watched one, checked every frame', () => {
+    const points = read('Motion', 'McpMotionPoints.cpp');
+    const advance = sliceBetween(source, 'FString McpAdvanceMotionRun(', '} // namespace');
+
+    expect(source).toContain('McpStartMotionOverlaps(Run->Overlaps, Found, Payload);');
+    expect(advance.indexOf('McpTrackMotionOverlaps(Run.Overlaps, Actor);'), 'every frame, once the run has started')
+      .toBeGreaterThan(advance.indexOf('Run.bWaiting = false;'));
+    expect(source).toContain('McpSampleMotionOverlaps(Run.Overlaps, Actor, *Sample);');
+    expect(source).toContain('if (Run.Overlaps.bOn) Data->SetArrayField(TEXT("overlapped"), McpHandlerUtils::ToJsonStringArray(Run.Overlaps.Ever));');
+    expect(points.match(/McpActorRef\(/gu), 'a name is looked up only when a touch begins').toHaveLength(1);
+    expect(points).toContain('const FString Name = Begun.Add(Other, McpActorRef(Other));');
+  });
+
+  // An enemy whose overlap killed the pawn, which then switched its collision off, began and ended its touch inside one
+  // frame, so the per-frame check never saw it.
+  it('hears the actor\'s own begin-overlap event, so a touch over within a frame still counts', () => {
+    const points = read('Motion', 'McpMotionPoints.cpp');
+    const probe = read('Motion', 'McpMotionOverlapProbe.h');
+
+    expect(probe).toMatch(/UFUNCTION\(\)\s*void OnBegin\(AActor\* Overlapped, AActor\* Other\) \{ Heard\.Add\(Other\); \}/u);
+    expect(points).toContain('Actor->OnActorBeginOverlap.AddDynamic(Overlaps.Probe.Get(), &UMcpMotionOverlapProbe::OnBegin);');
+    expect(points, 'unbound when the run ends').toContain('Actor->OnActorBeginOverlap.RemoveDynamic(Probe.Get(), &UMcpMotionOverlapProbe::OnBegin);');
+    expect(points.indexOf('Overlaps.Probe->Heard.Reset();'), 'announced touches before the polled ones')
+      .toBeLessThan(points.indexOf('Actor->GetOverlappingActors(Now);'));
+  });
 });
 
 // "Bug1" found nothing among Bug_01..Bug_10 and the empty list read as "there are no bugs".
 describe('find_by_name offers similar labels when nothing matches', () => {
   it('compares names without case, separators and leading zeros, only after a miss', () => {
-    const source = read('McpAutomationBridge_ControlActorQuery.cpp');
+    const source = read('McpActorQuery.cpp');
     expect(source).toContain('if (Matches.Num() == 0) {');
     expect(source).toContain('FChar::IsAlnum(In[I]) && !bLeadingZero');
     expect(source).toContain('Data->SetArrayField(TEXT("similar"), SimilarValues);');
@@ -207,14 +260,14 @@ describe('find_by_name offers similar labels when nothing matches', () => {
 // Hiding seventeen actors took thirty-four calls: set_visibility and set_actor_collision took one actorName
 // each, while add_tag already took actorNames and listed the names it could not find.
 describe('set_visibility and set_actor_collision take many actors in one call, as add_tag does', () => {
-  const support = (): string => read('McpAutomationBridge_ControlActorSupport.h');
+  const support = (): string => read('McpActorSupport.h');
   const from = (file: string, marker: string): string => {
     const source = read(file);
     return source.slice(source.indexOf(marker));
   };
-  const visibility = (): string => from('McpAutomationBridge_ControlActorTransform.cpp', 'HandleControlActorSetVisibility(');
-  const collision = (): string => from('McpAutomationBridge_ControlActorPhysics.cpp', 'HandleControlActorSetCollision(');
-  const addTag = (): string => sliceBetween(read('McpAutomationBridge_ControlActorTags.cpp'), 'HandleControlActorAddTag(', 'HandleControlActorRemoveTag(');
+  const visibility = (): string => from('McpActorTransform.cpp', 'HandleControlActorSetVisibility(');
+  const collision = (): string => from('McpActorPhysics.cpp', 'HandleControlActorSetCollision(');
+  const addTag = (): string => sliceBetween(read('McpActorTags.cpp'), 'HandleControlActorAddTag(', 'HandleControlActorRemoveTag(');
 
   it('one helper resolves the list, once per actor, and names what matched nothing; add_tag shares it', () => {
     const helper = sliceBetween(support(), 'inline bool McpResolveActorNames(', 'inline void McpSendNoActorNamesFound(');
@@ -227,7 +280,7 @@ describe('set_visibility and set_actor_collision take many actors in one call, a
       expect(source, name).toMatch(/McpResolveActorNames\(\s*(?:Payload|Payload, \[this\])/u);
       expect(source, name).toMatch(/\[this\]\(const FString ?& ?Name\) \{ return FindActorByName\(Name\); \}/u);
     }
-    expect(read('McpAutomationBridge_ControlActorTags.cpp'), 'add_tag no longer carries its own copy of the list').not.toContain('TryGetArrayField(TEXT("actorNames")');
+    expect(read('McpActorTags.cpp'), 'add_tag no longer carries its own copy of the list').not.toContain('TryGetArrayField(TEXT("actorNames")');
   });
 
   it('names none found ACTOR_NOT_FOUND with the names listed back; some found is a success that lists the rest under missing', () => {
@@ -283,7 +336,10 @@ describe('set_visibility and set_actor_collision take many actors in one call, a
   it('set_actor_collision toggles every named actor and each of its primitive components, and lists the actors that have none', () => {
     const source = collision();
 
-    expect(source).toMatch(/for \(AActor\* Actor : Actors\)\s*\{\s*Actor->SetActorEnableCollision\(bCollisionEnabled\);\s*TInlineComponentArray<UPrimitiveComponent\*> PrimComponents\(Actor\);/u);
+    expect(source).toMatch(/for \(AActor\* Actor : Actors\)\s*\{\s*if \(bSetEnabled\)\s*\{\s*Actor->SetActorEnableCollision\(bCollisionEnabled\);\s*\}\s*TInlineComponentArray<UPrimitiveComponent\*> PrimComponents\(Actor\);/u);
+    // A preset or per-channel responses are read before any actor changes, then read back off a changed component.
+    expect(source).toMatch(/McpIsCollisionProfile\(Profile, ReadError\)[\s\S]*McpReadCollisionResponses\([\s\S]*FMcpScopedEditorTransaction Transaction/u);
+    expect(source).toContain('First->GetCollisionResponseToChannel(Entry.Key)');
     expect(source).toContain('Updated += OnActor;');
     expect(source).toContain('NoComponent.Add(McpActorRef(Actor));');
     expect(source).toContain('Data->SetArrayField(TEXT("noPrimitiveComponents")');
@@ -305,20 +361,25 @@ describe('set_visibility and set_actor_collision take many actors in one call, a
 // only a Blueprint's own components listed them.
 describe('get_components rows name the mesh and materials a component draws', () => {
   it('world rows add the shared mesh asset fields', () => {
-    expect(read('McpAutomationBridge_ControlActorComponentDetails.cpp')).toContain('McpHandlerUtils::AddMeshAssetFields(Component, Entry);');
+    expect(read('McpActorComponentDetails.cpp')).toContain('McpHandlerUtils::AddMeshAssetFields(Component, Entry);');
+  });
+
+  // Each row listed the first ten property names its class declares, with no values: most of a pawn's 30 KB answer.
+  it('world rows carry no property name list', () => {
+    expect(read('McpActorComponentDetails.cpp')).not.toContain('TEXT("properties")');
   });
 });
 
 // set_actor_collision opened no transaction, one actor or many, so control_editor.undo had nothing to take
 // back, while set_visibility already was one undo step.
 describe('set_actor_collision is one undoable step over every actor it changes, as set_visibility is', () => {
-  const support = (): string => read('McpAutomationBridge_ControlActorSupport.h');
+  const support = (): string => read('McpActorSupport.h');
   const from = (file: string, marker: string): string => {
     const source = read(file);
     return source.slice(source.indexOf(marker));
   };
-  const collision = (): string => from('McpAutomationBridge_ControlActorPhysics.cpp', 'HandleControlActorSetCollision(');
-  const visibility = (): string => from('McpAutomationBridge_ControlActorTransform.cpp', 'HandleControlActorSetVisibility(');
+  const collision = (): string => from('McpActorPhysics.cpp', 'HandleControlActorSetCollision(');
+  const visibility = (): string => from('McpActorTransform.cpp', 'HandleControlActorSetVisibility(');
 
   it('builds the shared undo set for each actor and opens ONE named transaction, before the first write', () => {
     const source = collision();
@@ -332,7 +393,7 @@ describe('set_actor_collision is one undoable step over every actor it changes, 
     expect(collect).toBeGreaterThan(-1);
     expect(collect).toBeLessThan(open);
     expect(open).toBeLessThan(write);
-    expect(read('McpAutomationBridge_ControlActorPhysics.cpp')).toContain('#include "Foundation/McpScopedEditorTransaction.h"');
+    expect(read('McpActorPhysics.cpp')).toContain('#include "Foundation/McpScopedEditorTransaction.h"');
   });
 
   it('the undo block rides in the reply of the single and of the many form alike', () => {
@@ -367,11 +428,11 @@ describe('the many forms of set_visibility, set_actor_collision, add_tag and set
     const source = read(file);
     return source.slice(source.indexOf(marker));
   };
-  const addTag = (): string => sliceBetween(read('McpAutomationBridge_ControlActorTags.cpp'), 'HandleControlActorAddTag(', 'HandleControlActorRemoveTag(');
-  const visibility = (): string => from('McpAutomationBridge_ControlActorTransform.cpp', 'HandleControlActorSetVisibility(');
-  const collision = (): string => from('McpAutomationBridge_ControlActorPhysics.cpp', 'HandleControlActorSetCollision(');
+  const addTag = (): string => sliceBetween(read('McpActorTags.cpp'), 'HandleControlActorAddTag(', 'HandleControlActorRemoveTag(');
+  const visibility = (): string => from('McpActorTransform.cpp', 'HandleControlActorSetVisibility(');
+  const collision = (): string => from('McpActorPhysics.cpp', 'HandleControlActorSetCollision(');
   const nativeOutcome = readFileSync(
-    join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private', 'MCP', 'Execute', 'McpNativeReceiptOutcome.cpp'),
+    join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'MCP', 'Execute', 'McpNativeReceiptOutcome.cpp'),
     'utf8',
   );
 
@@ -401,13 +462,14 @@ describe('the many forms of set_visibility, set_actor_collision, add_tag and set
     expect(source).toMatch(/TArray<FString> Affected;\s*for \(AActor \*Actor : Actors\) \{\s*Actor->Tags\.AddUnique\(TagName\);\s*Actor->MarkPackageDirty\(\);\s*Affected\.Add\(McpActorRef\(Actor\)\);\s*\}/u);
     expect(source).toContain('Data->SetArrayField(TEXT("affectedActors"), McpHandlerUtils::ToJsonStringArray(Affected));');
     expect(single, 'the single form returns after the many branch').not.toContain('affectedActors');
-    expect(read('McpAutomationBridge_ControlActorTags.cpp').match(/TEXT\("affectedActors"\)/gu)).toHaveLength(1);
+    // add_tag's many form and set_folder name the actors they changed; nothing else in the file does.
+    expect(read('McpActorTags.cpp').match(/TEXT\("affectedActors"\)/gu)).toHaveLength(2);
   });
 
   // set_material's many form runs the one-actor handler per name under a captured reply and answered only
   // {results, applied}, so its receipt had no change and no handle.
   it('set_material lists the actors that took the material, each by the name its one-actor run replied, once each', () => {
-    const source = read('McpAutomationBridge_ControlActorMaterials.cpp');
+    const source = read('McpActorMats.cpp');
     const many = sliceBetween(source, 'TEXT("actorNames")', 'FString TargetName;');
 
     expect(many).toMatch(/TArray<FString> Failures;\s*TArray<FString> Affected;\s*for \(int32 Index = 0;/u);
@@ -416,6 +478,10 @@ describe('the many forms of set_visibility, set_actor_collision, add_tag and set
     );
     expect(many).toContain('Data->SetArrayField(TEXT("affectedActors"), McpHandlerUtils::ToJsonStringArray(Affected));');
     expect(many.indexOf('TEXT("affectedActors")'), 'the list rides on the incomplete reply too').toBeLessThan(many.indexOf('if (Failures.Num() > 0)'));
+    // Each actor also had a {actorName, applied: true} row, which only repeated affectedActors.
+    expect(sliceBetween(source, 'TEXT("actorNames")', 'TEXT("materials")'), 'rows only for the actors that did not take it')
+      .not.toContain('SetBoolField(TEXT("applied")');
+    expect(many).toMatch(/if \(Results\.Num\(\) > 0\) \{\s*Data->SetArrayField\(TEXT\("results"\), Results\);\s*\}/u);
     expect(source.match(/TEXT\("affectedActors"\)/gu), 'the single form names actorName instead').toHaveLength(1);
   });
 
@@ -444,7 +510,7 @@ describe('the batch forms of spawn_batch, set_transform and set_blueprint_variab
   const batch = (file: string, start: string, end: string): string => sliceBetween(read(file), start, end);
 
   it('spawn_batch lists every actor that spawned, by the name its result carries, under either report mode', () => {
-    const source = read('McpAutomationBridge_ControlActorSpawnBatch.cpp');
+    const source = read('McpActorSpawnBatch.cpp');
 
     expect(source).toMatch(/const FString Shown = Actor \? \(bNamed \? Actor->GetActorLabel\(\) : Actor->GetName\(\)\) : ActorPath;\s*Affected\.Add\(Shown\);\s*if \(Actor\) \{\s*Entry->SetStringField\(TEXT\("name"\), Shown\);/u);
     expect(source.indexOf('Affected.Add(Shown);'), 'only an item that spawned is listed').toBeGreaterThan(source.indexOf('++SpawnedCount;'));
@@ -454,21 +520,33 @@ describe('the batch forms of spawn_batch, set_transform and set_blueprint_variab
   });
 
   it('the set_transform batch lists each actor that moved once, by McpActorRef, in the pass that re-checks the layout', () => {
-    const many = batch('McpAutomationBridge_ControlActorTransform.cpp', 'TEXT("actors")', 'FString TargetName;');
+    const many = batch('McpActorTransform.cpp', 'McpTransformItems::Expand(Payload, Items)', 'FString TargetName;');
 
-    expect(many).toMatch(/TArray<FString> Affected;\s*for \(const TSharedPtr<FJsonValue> &Value : Results\) \{[\s\S]*?if \(!Moved\)\s*continue;\s*Affected\.AddUnique\(McpActorRef\(Moved\)\);/u);
+    expect(many).toMatch(/TArray<FString> Affected;\s*TMap<AActor \*, TSharedPtr<FJsonObject>> Rows;\s*for \(const TSharedPtr<FJsonValue> &Value : Results\) \{[\s\S]*?if \(!Moved\)\s*continue;\s*Affected\.AddUnique\(McpActorRef\(Moved\)\);/u);
     expect(many).toContain('Data->SetArrayField(TEXT("affectedActors"), McpHandlerUtils::ToJsonStringArray(Affected));');
-    expect(read('McpAutomationBridge_ControlActorTransform.cpp').match(/TEXT\("affectedActors"\)/gu), 'the set_visibility list and this one').toHaveLength(2);
+    expect(read('McpActorTransform.cpp').match(/TEXT\("affectedActors"\)/gu), 'the set_visibility list and this one').toHaveLength(2);
+  });
+
+  // Scaling forty frost caps by one scale took forty items that all said the same thing, and each came back in full.
+  it('set_transform gives actorNames one shared change, items take the parts they leave out, and report failures trims results', () => {
+    const items = read('Placement/McpTransformItems.h');
+    const many = batch('McpActorTransform.cpp', 'McpTransformItems::Expand(Payload, Items)', 'FString TargetName;');
+
+    expect(items).toContain('const bool bNames = !Payload->HasField(TEXT("actors")) && Payload->TryGetArrayField(TEXT("actorNames"), List);');
+    expect(items).toMatch(/if \(!One->HasField\(Shared\) && !\(bPlace && bOwnPlace\) && Payload->HasField\(Shared\)\) \{\s*One->SetField\(Shared, Payload->TryGetField\(Shared\)\);/u);
+    expect(items, 'an item never recurses into the many form').toContain('One->RemoveField(TEXT("actors"));');
+    expect(many.indexOf('Results.RemoveAll('), 'after the layout is re-checked').toBeGreaterThan(many.indexOf('McpCoplanar::AddCoplanarToRows(Rows);'));
+    expect(many, 'the count is every actor, whatever results keeps').toContain('const int32 Done = Items.Num() - Failures.Num();');
   });
 
   it('the set_blueprint_variables batch lists an actor that took a variable, and the single form names the instance it changed', () => {
-    const source = read('McpAutomationBridge_ControlActorAdvanced.cpp');
+    const source = read('McpActorAdvanced.cpp');
     const many = sliceBetween(source, 'TEXT("actors")', 'FString TargetName;');
     const single = source.slice(source.indexOf('FString TargetName;'), source.indexOf('HandleControlActorExport('));
 
     expect(many).toMatch(/if \(Updated && Updated->Num\(\) > 0\) \{\s*FString Changed;\s*if \(!ReplyData \|\| !\(\*ReplyData\)->TryGetStringField\(TEXT\("actorName"\), Changed\) \|\| Changed\.IsEmpty\(\)\)\s*Changed = Name;\s*Affected\.AddUnique\(Changed\);\s*\}/u);
     expect(many).toContain('Data->SetArrayField(TEXT("affectedActors"), McpHandlerUtils::ToJsonStringArray(Affected));');
-    expect(single).toMatch(/if \(Applied\.Num\(\) > 0\) \{[\s\S]*?Data->SetArrayField\(TEXT\("updated"\), AppliedArray\);\s*Data->SetStringField\(TEXT\("actorName"\), McpActorRef\(Found\)\);\s*\}/u);
+    expect(single).toMatch(/if \(Applied\.Num\(\) > 0\) \{\s*Data->SetArrayField\(TEXT\("updated"\), McpHandlerUtils::ToJsonStringArray\(Applied\)\);\s*Data->SetStringField\(TEXT\("actorName"\), McpActorRef\(Found\)\);\s*\}/u);
     expect(single.match(/TEXT\("actorName"\), McpActorRef/gu), 'the actor is named only when a variable was set').toHaveLength(1);
   });
 
@@ -505,15 +583,15 @@ describe('the batch forms of spawn_batch, set_transform and set_blueprint_variab
 // set_material changed components with Modify() and no transaction around it, so nothing it did reached the
 // undo buffer and the reply carried no `undo` block, where set_visibility and set_actor_collision name theirs.
 describe('set_material is one undoable step, single and many, as set_visibility is', () => {
-  const source = (): string => read('McpAutomationBridge_ControlActorMaterials.cpp');
+  const source = (): string => read('McpActorMats.cpp');
   const many = (): string => sliceBetween(source(), 'TEXT("actorNames")', 'FString TargetName;');
   const single = (): string => source().slice(source().indexOf('FString TargetName;'));
   const registry = readFileSync(
-    join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private', 'Core', 'Requests', 'McpResponseCaptureRegistry.cpp'),
+    join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'Core', 'Requests', 'McpResponseCaptureRegistry.cpp'),
     'utf8',
   );
   const registryHeader = readFileSync(
-    join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private', 'Core', 'Requests', 'McpResponseCaptureRegistry.h'),
+    join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'Core', 'Requests', 'McpResponseCaptureRegistry.h'),
     'utf8',
   );
 
@@ -550,7 +628,7 @@ describe('set_material is one undoable step, single and many, as set_visibility 
 
   it('a run inside a batch leaves the step to its caller: the list runs every actor captured, and so does spawn_batch\'s material', () => {
     expect(many()).toMatch(/Capture\.Begin\(ItemId\);\s*HandleControlActorSetMaterial\(ItemId, One, Socket\);/u);
-    expect(read('McpAutomationBridge_ControlActorSpawnBatch.cpp')).toMatch(/Capture\.Begin\(MaterialId\);\s*HandleControlActorSetMaterial\(MaterialId, MaterialPayload, Socket\);/u);
+    expect(read('McpActorSpawnBatch.cpp')).toMatch(/Capture\.Begin\(MaterialId\);\s*HandleControlActorSetMaterial\(MaterialId, MaterialPayload, Socket\);/u);
     expect(registryHeader).toContain('bool IsCapturing(const FString& RequestId) const;');
     expect(registryHeader).toContain('mutable FCriticalSection Mutex;');
     expect(registry).toMatch(/bool FMcpResponseCaptureRegistry::IsCapturing\(const FString& RequestId\) const\s*\{\s*FScopeLock Lock\(&Mutex\);\s*return Pending\.Contains\(RequestId\);\s*\}/u);
@@ -566,7 +644,7 @@ describe('set_material is one undoable step, single and many, as set_visibility 
 
 // find had findBy class and name only: the actors drawing one mesh, or showing one material in any slot, could not be asked for.
 describe('control_actor find asks which actors use a static mesh or a material', () => {
-  const find = (): string => read('Find', 'McpAutomationBridge_FindByAsset.cpp');
+  const find = (): string => read('Find', 'McpFindByAsset.cpp');
   const record = () => {
     const found = capabilityIndex().byId.get('control_actor.find');
     if (found === undefined) throw new Error('control_actor.find is not in the catalogue');
@@ -598,9 +676,9 @@ describe('control_actor find asks which actors use a static mesh or a material',
   });
 
   it('the dispatcher sends both to their handlers, which live in their own folder', () => {
-    const dispatch = read('McpAutomationBridge_ControlActorDispatch.cpp');
+    const dispatch = read('McpActorDispatch.cpp');
 
-    expect(dispatch).toContain('#include "Domains/ControlActor/Find/McpAutomationBridge_FindByAsset.h"');
+    expect(dispatch).toContain('#include "Domains/ControlActor/Find/McpFindByAsset.h"');
     expect(dispatch).toMatch(/LowerSub == TEXT\("find_by_mesh"\)\)\s*return McpFindByAsset::HandleFindByMesh\(this, RequestId, Payload, RequestingSocket\);/u);
     expect(dispatch).toMatch(/LowerSub == TEXT\("find_by_material"\)\)\s*return McpFindByAsset::HandleFindByMaterial\(this, RequestId, Payload, RequestingSocket\);/u);
   });
@@ -651,28 +729,46 @@ describe('control_actor find asks which actors use a static mesh or a material',
 });
 
 // A spawn ran outside any transaction, so after six actors were placed control_editor.undo answered NOTHING_TO_UNDO.
+// spawn works in a running game, but delete went through the editor actor subsystem, which refuses while a game
+// plays: a test actor spawned in PIE could not be removed.
+describe('delete removes an actor from the running game too', () => {
+  it('destroys a game-world actor in its own world and an editor actor through the editor subsystem', () => {
+    const lifecycle = read('McpActorLifecycle.cpp');
+    expect(lifecycle).toContain('const bool bGameWorld = Actor->GetWorld() && Actor->GetWorld()->IsGameWorld();');
+    expect(lifecycle).toContain('if (bGameWorld ? Actor->Destroy() : ActorSS->DestroyActor(Actor))');
+  });
+
+  it('deletes tagged actors from the running game\'s world, listed without the editor-only actor list', () => {
+    const lifecycle = read('McpActorLifecycle.cpp');
+    expect(lifecycle).toContain('UWorld *PlayWorld = GEditor->PlayWorld.Get();');
+    expect(lifecycle).toMatch(/if \(PlayWorld\) \{\s*for \(TActorIterator<AActor> It\(PlayWorld\); It; \+\+It\)/u);
+    expect(lifecycle).toContain('for (AActor *Actor : PlayWorld ? Candidates : ActorSS->GetAllLevelActors()) {');
+    expect(lifecycle).toContain('if (PlayWorld ? CastChecked<AActor>(Tagged[Index])->Destroy() : ActorSS->DestroyActor(CastChecked<AActor>(Tagged[Index])))');
+  });
+});
+
 describe('every spawn is one undo step, "Spawn Actors", and the reply says so', () => {
-  const support = (): string => read('McpAutomationBridge_ControlActorSupport.h');
+  const support = (): string => read('McpActorSupport.h');
 
   it('the helper opens it, and leaves it to the batch when the run is captured', () => {
     expect(support()).toMatch(/inline TUniquePtr<FMcpScopedEditorTransaction> McpBeginSpawnTransaction\(const FString &RequestId\) \{\s*if \(FMcpResponseCaptureRegistry::Get\(\)\.IsCapturing\(RequestId\)\) \{\s*return nullptr;\s*\}\s*return MakeUnique<FMcpScopedEditorTransaction>\(FText::FromString\(TEXT\("Spawn Actors"\)\),\s*EMcpMutationDurability::EditorStateOnly, TArray<UObject \*>\(\)\);\s*\}/u);
   });
 
   it('spawn and spawn_blueprint open it before the level is touched and describe it after the actor exists', () => {
-    for (const [file, reply] of [['McpAutomationBridge_ControlActorSpawn.cpp', 'Data'], ['McpAutomationBridge_ControlActorBlueprintSpawn.cpp', 'Resp']] as const) {
+    for (const [file, reply] of [['McpActorSpawn.cpp', 'Data'], ['McpActorBPSpawn.cpp', 'Resp']] as const) {
       const source = read(file);
       const opened = source.indexOf('McpBeginSpawnTransaction(RequestId);');
 
       expect(opened, file).toBeGreaterThan(-1);
       expect(opened, `${file}: before the world is modified`).toBeLessThan(source.indexOf('TargetWorld->Modify();'));
-      expect(opened, `${file}: before the spawn`).toBeLessThan(source.indexOf('TargetWorld->SpawnActor('));
+      expect(opened, `${file}: before the spawn`).toBeLessThan(source.indexOf('McpSpawnActorNoting(TargetWorld'));
       expect(source.split(/\s+/u).join(' '), file).toContain(`if (Transaction) { Transaction->DescribeInto(${reply}); }`);
-      expect(source.indexOf(`Transaction->DescribeInto(${reply});`), `${file}: after the spawn`).toBeGreaterThan(source.indexOf('TargetWorld->SpawnActor('));
+      expect(source.indexOf(`Transaction->DescribeInto(${reply});`), `${file}: after the spawn`).toBeGreaterThan(source.indexOf('McpSpawnActorNoting(TargetWorld'));
     }
   });
 
   it('spawn_batch holds one step for every item and describes it whether or not every item spawned', () => {
-    const source = read('McpAutomationBridge_ControlActorSpawnBatch.cpp');
+    const source = read('McpActorSpawnBatch.cpp');
     const opened = source.indexOf('McpBeginSpawnTransaction(RequestId);');
 
     expect(opened).toBeGreaterThan(-1);
@@ -695,36 +791,66 @@ describe('every spawn is one undo step, "Spawn Actors", and the reply says so', 
 // name; spawn_blueprint never asked. A mesh whose pivot is its bounds centre spawned at z 0 sat half under the floor behind
 // a bare success, while set_transform on the same actor named the sunk depth and the z that rests on the floor.
 describe('every spawn says where the actor ended up, as set_transform does', () => {
-  const support = (): string => read('McpAutomationBridge_ControlActorSupport.h');
+  const support = (): string => read('McpActorSupport.h');
   const flat = (source: string): string => source.split(/\s+/u).join(' ');
 
   it('one helper asks, and leaves it to the batch when the run is one of its items', () => {
-    expect(support()).toMatch(/inline void McpDescribeSpawnPlacement\(const FString &RequestId, AActor \*Spawned, const TSharedPtr<FJsonObject> &Data\) \{\s*if \(!FMcpResponseCaptureRegistry::Get\(\)\.IsCapturing\(RequestId\)\) \{\s*McpPlacement::DescribePlacement\(Spawned, Data\);\s*\}\s*\}/u);
+    expect(support()).toMatch(/inline void McpDescribeActorPlacement\(const FString &RequestId, AActor \*Actor, const TSharedPtr<FJsonObject> &Data\) \{\s*if \(!FMcpResponseCaptureRegistry::Get\(\)\.IsCapturing\(RequestId\)\) \{\s*McpPlacement::DescribePlacement\(Actor, Data\);\s*TMap<AActor \*, TSharedPtr<FJsonObject>> Row;\s*Row\.Add\(Actor, Data\);\s*McpCoplanar::AddCoplanarToRows\(Row\);\s*\}\s*\}/u);
+  });
+
+  // Only audit_placement looked for faces sharing a plane, so a room shell whose walls ran up to the ceiling's top
+  // flickered from above while every spawn and move that built it answered clean.
+  it('a spawn or a move names the faces it left sharing a plane, one level scan per call', () => {
+    const report = read('Placement/McpCoplanarReport.cpp');
+    const move = read('McpActorTransform.cpp');
+    const batch = read('McpActorSpawnBatch.cpp');
+
+    expect(report.match(/FindCoplanarFaces\(World, FString\(\), &Placed\)/gu)).toHaveLength(1);
+    expect(report).toContain('(*Row)->SetArrayField(TEXT("coplanarFaces"), Faces);');
+    expect(report).toContain('if (Faces.Num() > 1)');
+    expect(move).toContain('McpDescribeActorPlacement(RequestId, Found, Data);');
+    expect(move).not.toContain('McpPlacement::DescribePlacement(Found, Data);');
+    expect(move.indexOf('McpCoplanar::AddCoplanarToRows(Rows);')).toBeGreaterThan(move.indexOf('Rows.Add(Moved, Entry);'));
+    expect(batch.indexOf('PlacementWarnings += McpCoplanar::AddCoplanarToRows(Rows);'))
+      .toBeGreaterThan(batch.indexOf('McpPlacement::DescribePlacement(Item.Key, Item.Value);'));
+    expect(batch.indexOf('PlacementWarnings += McpCoplanar::AddCoplanarToRows(Rows);'))
+      .toBeLessThan(batch.indexOf('if (Report == TEXT("failures")) {'));
+  });
+
+  // Every move rescanned the level, reading the triangles of every distinct mesh in it, so a teleport cost the level.
+  it('the per-call scan reads only the meshes near what the call placed', () => {
+    const faces = read('Placement/McpCoplanarFaces.cpp');
+    const nearCheck = faces.indexOf('if (Focus && !Near.ContainsByPredicate(');
+
+    expect(faces).toContain('Near.Add(Actor->GetComponentsBoundingBox(true).ExpandBy(McpCoplanarPlaneTolerance + 1.0));');
+    expect(nearCheck).toBeGreaterThan(-1);
+    expect(nearCheck, 'before the mesh is read').toBeLessThan(faces.indexOf('MeasureFill(Mesh)'));
+    expect(faces).toContain('const bool bNamed = Focus ? Focus->Contains(Actor)');
   });
 
   it('spawn and spawn_blueprint ask through it once the reply names the actor', () => {
-    const spawn = read('McpAutomationBridge_ControlActorSpawn.cpp');
-    const blueprint = read('McpAutomationBridge_ControlActorBlueprintSpawn.cpp');
+    const spawn = read('McpActorSpawn.cpp');
+    const blueprint = read('McpActorBPSpawn.cpp');
 
     expect(spawn).not.toContain('McpPlacement::DescribePlacement(');
-    expect(spawn.indexOf('McpDescribeSpawnPlacement(RequestId, Spawned, Data);')).toBeGreaterThan(spawn.indexOf('McpHandlerUtils::AddVerification(Data, Spawned);'));
-    expect(blueprint.indexOf('McpDescribeSpawnPlacement(RequestId, Spawned, Resp);')).toBeGreaterThan(blueprint.indexOf('McpHandlerUtils::AddVerification(Resp, Spawned);'));
-    expect(blueprint.indexOf('McpDescribeSpawnPlacement(RequestId, Spawned, Resp);')).toBeLessThan(blueprint.indexOf('SendAutomationResponse(Socket, RequestId, true, TEXT("Blueprint spawned")'));
+    expect(spawn.indexOf('McpDescribeActorPlacement(RequestId, Spawned, Data);')).toBeGreaterThan(spawn.indexOf('McpHandlerUtils::AddVerification(Data, Spawned);'));
+    expect(blueprint.indexOf('McpDescribeActorPlacement(RequestId, Spawned, Resp);')).toBeGreaterThan(blueprint.indexOf('McpHandlerUtils::AddVerification(Resp, Spawned);'));
+    expect(blueprint.indexOf('McpDescribeActorPlacement(RequestId, Spawned, Resp);')).toBeLessThan(blueprint.indexOf('SendAutomationResponse(Socket, RequestId, true, TEXT("Blueprint spawned")'));
   });
 
   it('spawn_batch measures each item once the whole batch stands, tagged, furnished and coloured, and keeps a flagged item under report: failures', () => {
-    const source = read('McpAutomationBridge_ControlActorSpawnBatch.cpp');
+    const source = read('McpActorSpawnBatch.cpp');
     const measured = source.indexOf('McpPlacement::DescribePlacement(Item.Key, Item.Value);');
 
     expect(flat(source)).toContain('if (Actor) { Placed.Emplace(Actor, Entry); } }');
-    expect(flat(source)).toContain('for (const TPair<AActor *, TSharedPtr<FJsonObject>> &Item : Placed) { McpPlacement::DescribePlacement(Item.Key, Item.Value); PlacementWarnings += Item.Value->HasField(TEXT("placementWarning")) ? 1 : 0; }');
+    expect(flat(source)).toContain('for (const TPair<AActor *, TSharedPtr<FJsonObject>> &Item : Placed) { McpPlacement::DescribePlacement(Item.Key, Item.Value); PlacementWarnings += Item.Value->HasField(TEXT("placementWarning")) ? 1 : 0; Rows.Add(Item.Key, Item.Value); }');
     expect(measured, 'after the tags and folder').toBeGreaterThan(source.indexOf('ApplySpawnOrganisation(Actor, Item);'));
     expect(measured, 'after the variables').toBeGreaterThan(source.indexOf('HandleControlActorSetBlueprintVariables('));
     expect(measured, 'after the material').toBeGreaterThan(source.indexOf('HandleControlActorSetMaterial('));
-    expect(flat(source)).toContain('!Entry->HasField(TEXT("variablesError")) && !Entry->HasField(TEXT("placementWarning"));');
+    expect(flat(source)).toContain('!Entry->HasField(TEXT("variablesError")) && !Entry->HasField(TEXT("propertiesError")) && !Entry->HasField(TEXT("placementWarning")) && !Entry->HasField(TEXT("ignoredKeys"));');
     expect(source).toContain('Data->SetNumberField(TEXT("placementWarnings"), PlacementWarnings);');
     expect(source, 'a warning is not a failure').not.toMatch(/Failures\.Add\([^;]*placement/iu);
-    expect(source).toContain('Spawned %d actors; %d with a placement warning (results[].placementWarning)');
+    expect(source).toContain('"; %d with a placement warning (results[].placementWarning)"');
   });
 
   it('the records declare the facts, the count and the tag that silences a deliberate placement', () => {
@@ -744,14 +870,14 @@ describe('every spawn says where the actor ended up, as set_transform does', () 
     const audit = capabilityIndex().byId.get('control_actor.audit_placement')?.schemas.input.properties;
     const kinds = isRecord(audit) ? audit.kinds : undefined;
     expect(isRecord(kinds) ? kinds.description : '').toMatch(/vertical face .* is mounted, never floating or unsupported/u);
-    expect(description('results')).toMatch(/with a placementWarning under report: failures/u);
+    expect(description('results')).toMatch(/with a placementWarning or ignoredKeys under report: failures/u);
     expect(description('results')).toMatch(/measured after the item took its tags, variables and material/u);
   });
 
   // A fin whose pivot is a corner, sunk into a hull on purpose, was told "z=2545 would rest on it": the bounds centre's
   // height, with the bounds centre's x and y, which would have moved it sideways.
   it('suggests the actor location that rests it on the surface, whatever its pivot', () => {
-    const check = read('McpAutomationBridge_ControlActorPlacementCheck.cpp');
+    const check = read('McpActorPlacementCheck.cpp');
     expect(check).toContain('const double SuggestedZ = ActorLocation.Z - Clearance;');
     expect(check).toContain('Suggested->SetNumberField(TEXT("x"), ActorLocation.X);');
     expect(check, 'no claim that every location is a bounds centre').not.toContain('is its bounds centre, not its base');
@@ -761,7 +887,7 @@ describe('every spawn says where the actor ended up, as set_transform does', () 
 describe('get_component_property reads weak and lazy object pointers', () => {
   it('reads any object pointer through the base class, after a soft one is answered with its unloaded path', () => {
     const source = readFileSync(
-      join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private', 'Foundation', 'Reflection', 'McpPropertyReflection.cpp'),
+      join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'Foundation', 'Reflection', 'McpPropertyReflection.cpp'),
       'utf8',
     );
     const soft = source.indexOf('CastField<FSoftObjectProperty>(Property)');
@@ -769,5 +895,79 @@ describe('get_component_property reads weak and lazy object pointers', () => {
     expect(soft).toBeGreaterThan(-1);
     expect(base, 'a soft pointer is an object pointer too, so it must be answered first').toBeGreaterThan(soft);
     expect(source).not.toContain('CastField<FObjectProperty>(Property)');
+  });
+});
+
+describe('call_actor_function reaches a component and answers lean', () => {
+  it('calls the function on the named component, refusing a name the actor lacks', () => {
+    const source = read('McpActorAdvanced.cpp');
+    expect(source).toContain('Payload->TryGetStringField(TEXT("componentName"), ComponentName);');
+    expect(source).toContain('FindComponentByName(Owner, ComponentName)');
+    expect(source).toContain('TEXT("COMPONENT_NOT_FOUND")');
+    expect(source).toContain('Target->ProcessEvent(Function, Params.Data());');
+  });
+
+  it('carries no function or target diagnostics on a success', () => {
+    const source = read('McpActorAdvanced.cpp');
+    for (const field of ['functionFlags', 'functionHasNativeThunk', 'functionParmsSize', 'actorIsUnreachable', 'resolvedIsTemplate']) {
+      expect(source).not.toContain(`TEXT("${field}")`);
+    }
+  });
+});
+
+// A row of racks or a grid of ceiling lights was one hand-written batch item per actor.
+describe('a spawn_batch item\'s repeat unrolls into numbered copies before anything spawns', () => {
+  it('unrolls every item before the undo step opens, and refuses a malformed or oversized repeat with nothing placed', () => {
+    const source = read('McpActorSpawnBatch.cpp');
+
+    expect(source).toContain('McpSpawnRepeat::Expand(MergeSpawnItem(Defaults, *ItemObj), MaxSpawnBatchActors, Expanded,');
+    expect(source.indexOf('McpSpawnRepeat::Expand('), 'refused before the undo step and the first spawn').toBeLessThan(source.indexOf('McpBeginSpawnTransaction(RequestId)'));
+    expect(source).toMatch(/for \(int32 Index = 0; Index < Expanded\.Num\(\); \+\+Index\)/u);
+    expect(source).not.toContain('(*Items)[Index]');
+  });
+
+  it('steps each copy from the item\'s location by offset and rowOffset, numbers its actorName and caps the batch', () => {
+    const source = read('Placement', 'McpSpawnRepeat.cpp');
+
+    expect(source).toContain('Base + Offset * Column + RowOffset * Row');
+    expect(source).toContain('Copy->RemoveField(TEXT("repeat"));');
+    expect(source).toContain('FString::Printf(TEXT("%s_%d"), *Name, ++Number)');
+    expect(source).toMatch(/if \(Out\.Num\(\) \+ double\(Columns\) \* RowCount > MaxActors\)/u);
+  });
+
+  it('the record says what repeat takes', () => {
+    const properties = capabilityIndex().byId.get('control_actor.spawn')?.schemas.input.properties;
+    const actors = isRecord(properties) ? properties.actors : undefined;
+
+    expect(isRecord(actors) ? actors.description : '').toMatch(/repeat \(\{count, offset \[x, y, z\], rows, rowOffset/u);
+  });
+});
+
+// A desk spawned in a batch was not yet in the physics scene's query structure when the batch judged the monitor
+// placed on it, so the ground trace went through the desk and the monitor read "floating 91 units".
+describe('spawn_batch judges a stacked item against what the batch itself placed', () => {
+  it('flushes the editor world\'s physics scene before the placement pass, and leaves a running game\'s scene alone', () => {
+    const source = read('McpActorSpawnBatch.cpp');
+    const flush = source.indexOf('FPhysInterface_Chaos::FlushScene(SpawnWorld->GetPhysicsScene());');
+
+    expect(flush).toBeGreaterThan(-1);
+    expect(source).toContain('if (SpawnWorld && !SpawnWorld->IsGameWorld() && SpawnWorld->GetPhysicsScene())');
+    expect(flush, 'before the first item is judged').toBeLessThan(source.indexOf('McpPlacement::DescribePlacement(Item.Key, Item.Value);'));
+  });
+});
+
+// A row of lights spawned in one batch took an edit_component call per light for its colour and intensity.
+describe('a spawn_batch item\'s properties go on the component it spawned', () => {
+  it('applies them with the edit_component writer to the root component or componentName, and reports what failed', () => {
+    const props = read('McpActorComponentProps.cpp');
+    const helper = sliceBetween(props, 'FString McpApplySpawnItemProperties(', 'bool McpSendComponentPropertyShortfall(');
+    const batch = read('McpActorSpawnBatch.cpp');
+
+    expect(helper).toMatch(/ComponentName\.IsEmpty\(\) \? Actor->GetRootComponent\(\) : FindComponentByName\(Actor, ComponentName\)/u);
+    expect(helper).toContain('McpApplyComponentProperties(Component, *Properties, Applied, Warnings);');
+    expect(helper).toContain('McpRefreshComponentAfterEdit(Component);');
+    expect(batch).toContain('TEXT("spawnKind"), TEXT("properties")};');
+    expect(batch).toContain('const FString PropertiesError = McpApplySpawnItemProperties(Actor, Item);');
+    expect(batch).toContain('!Entry->HasField(TEXT("propertiesError"))');
   });
 });

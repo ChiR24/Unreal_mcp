@@ -129,7 +129,7 @@ const testCases = [
   // === CINEMATICS TRACKS / RIG (L1) — close parameter-combination coverage gaps ===
   // create_master_sequence
   { scenario: 'CINEMATICS: create_master_sequence', toolName: 'manage_sequence', arguments: { action: 'create_master_sequence', name: MASTER_NAME, path: TEST_FOLDER }, expected: 'success|already exists' },
-  { scenario: 'CINEMATICS: create_master_sequence optional', toolName: 'manage_sequence', arguments: { action: 'create_master_sequence', name: MASTER_NAME_2, path: TEST_FOLDER, assetPath: MASTER_PATH_2, save: true }, expected: 'success|already exists' },
+  { scenario: 'CINEMATICS: create_master_sequence optional', toolName: 'manage_sequence', arguments: { action: 'create_master_sequence', name: MASTER_NAME_2, path: TEST_FOLDER, assetPath: MASTER_PATH_2 }, expected: 'success|already exists' },
   // add_subsequence
   { scenario: 'CINEMATICS: add_subsequence', toolName: 'manage_sequence', arguments: { action: 'add_subsequence', path: SEQUENCE_PATH, subsequencePath: SUB_PATH }, expected: 'success|already exists' },
   { scenario: 'CINEMATICS: add_subsequence optional', toolName: 'manage_sequence', arguments: { action: 'add_subsequence', path: MASTER_PATH, subsequencePath: SUB_PATH_2, rowIndex: 0, startFrame: 10, endFrame: 70, save: true }, expected: 'success|already exists' },
@@ -239,21 +239,21 @@ const testCases = [
   { scenario: 'RECORDREPLAY: configure_demo_settings', toolName: 'manage_sequence', arguments: { action: 'configure_demo_settings', replayName: DEMO_NAME, prioritizeActors: true, friendlyName: 'McpReplayDemo', additionalOptions: ['-windowed'], checkpointSaveMaxMSPerFrame: 10, maxRecordTimeSeconds: 30, playbackSpeed: 1.0, loadDefaultMapOnStop: false }, expected: 'success' },
 
   // configure_killcam_duration (durationSeconds / duration / endTime) — no PIE required
-  { scenario: 'RECORDREPLAY: configure_killcam_duration', toolName: 'manage_sequence', arguments: { action: 'configure_killcam_duration', durationSeconds: 5.0, duration: 5.0 }, expected: 'success' },
+  { scenario: 'RECORDREPLAY: configure_killcam_duration', toolName: 'manage_sequence', arguments: { action: 'configure_killcam_duration', durationSeconds: 5.0 }, expected: 'success' },
 
   // Demo replay actions below require an active PIE / game world; in an
   // editor-only run they return controlled errors (NOT_IN_PIE / NOT_PLAYING /
   // NOT_RECORDING). Expectation primary is `error`.
-  // start_demo_recording (demoName / friendlyName / additionalOptions / maxRecordTimeSeconds / loadDefaultMapOnStop)
-  { scenario: 'RECORDREPLAY: start_demo_recording', toolName: 'manage_sequence', arguments: { action: 'start_demo_recording', demoName: DEMO_NAME, friendlyName: 'McpReplayDemo', additionalOptions: ['-windowed'], maxRecordTimeSeconds: 30, loadDefaultMapOnStop: false }, expected: 'error' },
+  // start_demo_recording (demoName / friendlyName / additionalOptions)
+  { scenario: 'RECORDREPLAY: start_demo_recording', toolName: 'manage_sequence', arguments: { action: 'start_demo_recording', demoName: DEMO_NAME, friendlyName: 'McpReplayDemo', additionalOptions: ['-windowed'] }, expected: 'error' },
   // stop_demo_recording (no payload params)
   { scenario: 'RECORDREPLAY: stop_demo_recording', toolName: 'manage_sequence', arguments: { action: 'stop_demo_recording' }, expected: 'error' },
   // play_demo (demoName / replayName / timeSeconds)
   { scenario: 'RECORDREPLAY: play_demo', toolName: 'manage_sequence', arguments: { action: 'play_demo', demoName: DEMO_NAME, replayName: DEMO_NAME, additionalOptions: ['-windowed'] }, expected: 'error' },
   // pause_demo (demoName / paused)
   { scenario: 'RECORDREPLAY: pause_demo', toolName: 'manage_sequence', arguments: { action: 'pause_demo', demoName: DEMO_NAME, paused: true }, expected: 'error' },
-  // seek_demo (demoName / timeSeconds / seconds / seekTime)
-  { scenario: 'RECORDREPLAY: seek_demo', toolName: 'manage_sequence', arguments: { action: 'seek_demo', demoName: DEMO_NAME, timeSeconds: 1.0, seconds: 1.0, seekTime: 1.0 }, expected: 'error' },
+  // seek_demo (demoName / timeSeconds / seconds)
+  { scenario: 'RECORDREPLAY: seek_demo', toolName: 'manage_sequence', arguments: { action: 'seek_demo', demoName: DEMO_NAME, timeSeconds: 1.0, seconds: 1.0 }, expected: 'error' },
   // set_demo_playback_speed (demoName / speed / playbackSpeed)
   { scenario: 'RECORDREPLAY: set_demo_playback_speed', toolName: 'manage_sequence', arguments: { action: 'set_demo_playback_speed', demoName: DEMO_NAME, speed: 2.0, playbackSpeed: 2.0 }, expected: 'error' },
   // start_killcam (demoName / replayName / durationSeconds / endTime)

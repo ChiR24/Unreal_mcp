@@ -6,7 +6,7 @@
  * creation and styling actions.
  *
  * Output shape matches the native handler
- * (WidgetAuthoring/Support/McpAutomationBridge_WidgetAuthoringInfo.cpp):
+ * (WidgetAuthoring/Support/McpWidgetInfo.cpp):
  * it returns `widgetInfo` { widgetClass, parentClass?, slots[], widgets[],
  * rootWidget?, animations[] } plus AddVerification fields
  * (assetPath/assetName/existsAfter/assetClass). `slots[]` stays a flat name

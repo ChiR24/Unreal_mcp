@@ -21,7 +21,10 @@ export const VARIABLES_METADATA_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Add a new member variable to a Blueprint.',
     whenToUse: ['A Blueprint needs a new member variable with a type and default.'],
     whenNotToUse: ['A graph-local variable is needed (use create_node with a local variable).'],
-    inputProps: { blueprintPath: P.blueprintPath, variableName: P.variableName, variableType: P.variableType, defaultValue: P.defaultValue, category: P.category, isReplicated: P.isReplicated, isPublic: P.isPublic },
+    inputProps: {
+      blueprintPath: P.blueprintPath, variableName: P.variableName, variableType: P.variableType, defaultValue: P.defaultValue, category: P.category, isReplicated: P.isReplicated, isPublic: P.isPublic,
+      exposeOnSpawn: { type: 'boolean', description: 'Expose on Spawn: the variable becomes an input pin on SpawnActor and Create Widget nodes for this class, set as the actor is made (before its BeginPlay). Makes it instance-editable too, as the editor does.' },
+    },
     required: ['blueprintPath', 'variableName', 'variableType'],
     outputProps: { variableName: P.variableName },
     outputRequired: ['variableName'],
@@ -37,11 +40,22 @@ export const VARIABLES_METADATA_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'remove_variable',
     family: FAMILY,
     domain: DOMAIN,
-    summary: 'Permanently remove a member variable from a Blueprint.',
-    whenToUse: ['A member variable must be permanently deleted.'],
+    summary: 'Permanently remove one or more member variables from a Blueprint.',
+    whenToUse: ['A member variable must be permanently deleted.', 'Several variables must go at once: variableNames removes them under one consent, with one compile and save.'],
     whenNotToUse: ['The variable should be renamed rather than removed.'],
-    inputProps: { blueprintPath: P.blueprintPath, variableName: P.variableName },
-    required: ['blueprintPath', 'variableName'],
+    inputProps: {
+      blueprintPath: P.blueprintPath, variableName: P.variableName,
+      variableNames: {
+        type: 'array', items: { type: 'string' },
+        description: 'Several variables to remove in one call, in place of or besides variableName. Every name must exist (any letter case), or nothing is removed and the reply lists the Blueprint\'s variables.',
+      },
+    },
+    required: ['blueprintPath'],
+    requiredOneOf: ['variableName', 'variableNames'],
+    outputProps: {
+      variableName: P.variableName,
+      variableNames: { type: 'array', items: { type: 'string' }, description: 'Every variable removed, in the Blueprint\'s own spelling.' },
+    },
     effect: 'destructive',
     behavior: { safeToRetry: false },
     latency: 'interactive',
@@ -134,7 +148,10 @@ export const VARIABLES_METADATA_RECORDS: readonly CapabilityRecordSource[] = [
     // returns it as `value`, but only when it exports to JSON; the object path
     // returns neither value. `value` is therefore an optional output, and
     // `verifiedValue` (which no set_default path emits) is not declared.
-    outputProps: { value: { description: 'Property value re-read from the Class Default Object after the write. Emitted on the literal path only and omitted when the value cannot be exported to JSON.' } },
+    outputProps: {
+      value: { description: 'Property value re-read from the Class Default Object after the write. Emitted on the literal path only and omitted when the value cannot be exported to JSON.' },
+      instancesUpdated: { type: 'number', description: 'Placed actors (in loaded levels) that still held the old default and took the new value, as the Details panel propagates a class default; an actor that overrides the value keeps it. Save the level to keep them.' },
+    },
     effect: 'write',
     behavior: { idempotency: 'idempotent', safeToRetry: true },
     latency: 'instant',

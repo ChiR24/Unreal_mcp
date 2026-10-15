@@ -41,7 +41,7 @@ const POLYGON_FACES = {
   items: { type: 'array', items: { type: 'integer', minimum: 0 }, minItems: 3, maxItems: 256 },
   minItems: 1,
   maxItems: 20000,
-  description: 'Faces, each a list of three or more vertex indices into vertices (at most 20000 faces). List a face\'s corners so that (v1 - v0) x (v2 - v0) points outward, and let two faces that share an edge run along it in opposite directions; the call refuses a face wound the other way, or an edge shared by more than two faces, and names the face. A face with more than three corners is triangulated (it may be concave) and all its triangles keep the face\'s polygroup.',
+  description: 'Faces, each a list of three or more vertex indices into vertices (at most 20000 faces). List a face\'s corners so that (v1 - v0) x (v2 - v0) points outward, and let two faces that share an edge run along it in opposite directions; the call refuses a face wound the other way, or an edge shared by more than two faces, and names the face. A face with more than three corners is triangulated (it may be concave) and all its triangles keep the face\'s polygroup. The new faces get smooth normals, shared where they meet; split_normals creases the hard edges.',
 };
 const FACE_GROUPS = {
   type: 'array',
@@ -59,12 +59,15 @@ const FACE_MATERIALS = {
 export const GEOMETRY_DYNAMICMESH_RECORDS: readonly CapabilityRecordSource[] = [
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'create_procedural_mesh', plugins: PLUGIN,
-    family: F, summary: 'Spawn an empty DynamicMesh actor to author geometry into.',
-    whenToUse: ['A mesh must be built vertex by vertex rather than from a primitive.'],
+    family: F, summary: 'Spawn a DynamicMesh actor to author geometry into: empty, or a copy of a static mesh asset.',
+    whenToUse: ['A mesh must be built vertex by vertex rather than from a primitive.',
+      'An existing static mesh asset must be cut, trimmed or edited: create with meshPath, edit, then bake it with convert_to_static_mesh.'],
     whenNotToUse: ['A parametric shape is enough; use a create_* primitive.'],
-    inputProps: { name: P.name, actorName: P.actorName, enableCollision: P.enableCollision },
+    inputProps: { name: P.name, actorName: P.actorName, enableCollision: P.enableCollision,
+      meshPath: str('Static mesh asset to start from: its geometry is copied in, each section as the material id of its slot, in the mesh\'s own local space. Omitted, the mesh starts empty.') },
     required: [], effect: 'write', costLatency: 'interactive', costResources: 'low',
-    outputProps: { name: P.name, class: str('Class of the spawned actor.'), enableCollision: P.enableCollision },
+    outputProps: { name: P.name, class: str('Class of the spawned actor.'), enableCollision: P.enableCollision,
+      triangleCount: int('With meshPath: triangles copied from the asset.') },
     outputRequired: ['name'],
     exampleInput: { action: 'create_procedural_mesh', name: 'DM_Authored', enableCollision: true },
     exampleOutput: { success: true, name: 'DM_Authored', class: 'DynamicMeshActor', enableCollision: true },

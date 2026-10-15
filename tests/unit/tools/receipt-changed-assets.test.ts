@@ -25,7 +25,7 @@ import {
 } from '../../../src/tools/catalog/capabilities/semantic/receipt-outcome.js';
 import { sliceBetween } from '../plugin/plugin-contract-fixtures.js';
 
-const PRIVATE = join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private');
+const PRIVATE = join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private');
 
 /** Block and line comments removed, so no assertion can be satisfied by prose. */
 function stripComments(source: string): string {
@@ -91,8 +91,18 @@ describe('native McpExtractReceiptChanges mirrors the same rule', () => {
     const body = outcome().slice(outcome().indexOf('TArray<FString> McpExtractReceiptChanges('));
     expect(body).toMatch(/ReadField\(RawResult,\s*TEXT\("changedAssets"\)\)/u);
     expect(body).toMatch(
-      /if\s*\(!StatedAssets\.IsValid\(\)\s*\|\|\s*!StatedAssets->TryGetArray\(StatedArray\)\)\s*\{\s*AddSingleChanges\(RawResult,\s*CHANGE_ASSET_SINGLES,\s*Changes\);\s*\}\s*AddSingleChanges\(RawResult,\s*CHANGE_ACTOR_SINGLES,\s*Changes\);/u
+      /if\s*\(!StatedAssets\.IsValid\(\)\s*\|\|\s*!StatedAssets->TryGetArray\(StatedArray\)\)\s*\{\s*AddSingleChanges\(RawResult,\s*CHANGE_ASSET_SINGLES,\s*Changes\);\s*\}[^;]*AddSingleChanges\(RawResult,\s*CHANGE_ACTOR_SINGLES,\s*Changes,\s*true\);/u
     );
+    expect(outcome(), 'the first actor field found is the change').toMatch(/Changes\.AddUnique\(Text\);\s*if \(bFirstOnly\) return;/u);
+  });
+});
+
+// A move listed its actor twice, by label and by object path, as two changes.
+describe('one actor is one change', () => {
+  it('names it by actorName, or by actorPath when there is no name', () => {
+    const path = '/Game/Maps/Demo.Demo:PersistentLevel.StaticMeshActor_3';
+    expect(extractChanges({ success: true, actorName: 'Crate', actorPath: path })).toEqual(['Crate']);
+    expect(extractChanges({ success: true, actorPath: path })).toEqual([path]);
   });
 });
 
@@ -106,18 +116,18 @@ describe('the handlers that only look at an asset state that they changed none',
   });
 
   it('preview_widget marks the widget it draws as unchanged before it replies', () => {
-    const source = nativeSource('Domains', 'WidgetAuthoring', 'Support', 'McpAutomationBridge_WidgetAuthoringPreview.cpp');
+    const source = nativeSource('Domains', 'WidgetAuthoring', 'Support', 'McpWidgetPreview.cpp');
     const mark = source.indexOf('McpHandlerUtils::MarkNoAssetsChanged(ResultJson)');
     expect(mark).toBeGreaterThan(-1);
     expect(mark).toBeLessThan(source.indexOf('SendAutomationResponse('));
   });
 
   const playback: ReadonlyArray<readonly [string, readonly string[], string, string]> = [
-    ['play_sound_at_location', ['Domains', 'Audio', 'McpAutomationBridge_AudioHandlersPlayback.cpp'], 'Lower == TEXT("play_sound_at_location")', 'Lower == TEXT('],
-    ['play_sound_2d', ['Domains', 'Audio', 'McpAutomationBridge_AudioHandlersPlayback.cpp'], 'Lower == TEXT("play_sound_2d")', 'Lower == TEXT('],
-    ['play_sound_attached', ['Domains', 'Audio', 'McpAutomationBridge_AudioHandlersPlayback.cpp'], 'Lower == TEXT("play_sound_attached")', 'return false;'],
-    ['spawn_sound_at_location', ['Domains', 'Audio', 'McpAutomationBridge_AudioHandlersAmbient.cpp'], 'Lower == TEXT("spawn_sound_at_location")', 'return false;'],
-    ['prime_sound', ['Domains', 'Audio', 'McpAutomationBridge_AudioHandlersComponentsAndFades.cpp'], 'Lower == TEXT("prime_sound")', 'create_audio_component']
+    ['play_sound_at_location', ['Domains', 'Audio', 'McpAudioPlayback.cpp'], 'Lower == TEXT("play_sound_at_location")', 'Lower == TEXT('],
+    ['play_sound_2d', ['Domains', 'Audio', 'McpAudioPlayback.cpp'], 'Lower == TEXT("play_sound_2d")', 'Lower == TEXT('],
+    ['play_sound_attached', ['Domains', 'Audio', 'McpAudioPlayback.cpp'], 'Lower == TEXT("play_sound_attached")', 'return false;'],
+    ['spawn_sound_at_location', ['Domains', 'Audio', 'McpAudioAmbient.cpp'], 'Lower == TEXT("spawn_sound_at_location")', 'return false;'],
+    ['prime_sound', ['Domains', 'Audio', 'McpAudioComponentsAndFades.cpp'], 'Lower == TEXT("prime_sound")', 'create_audio_component']
   ];
 
   it.each(playback)('%s marks the sound it plays as unchanged before it replies', (_action, file, start, end) => {
@@ -181,7 +191,7 @@ describe('over the gateway: a preview lists no change, an edit still does, a man
 // A level save answered only details.verifiedPath (and save-as levelPath), neither of which the
 // receipt reads, so saving a level returned "handles": [] and "changes": [].
 describe('a level save names the level it saved', () => {
-  const LEVEL = '/Game/Maps/L_Stage01';
+  const LEVEL = '/Game/Maps/L_Main';
 
   it('savedAssetPath gives the receipt a handle and a change', () => {
     expect(extractChanges({ success: true, details: { savedAssetPath: LEVEL, verifiedPath: LEVEL } })).toEqual([LEVEL]);
@@ -190,9 +200,9 @@ describe('a level save names the level it saved', () => {
 
   it('save and save-as both answer savedAssetPath', () => {
     const lifecycle = ['Domains', 'Level', 'Lifecycle'];
-    expect(nativeSource(...lifecycle, 'McpAutomationBridge_LevelHandlersSaveCurrent.cpp'))
+    expect(nativeSource(...lifecycle, 'McpLevelSaveCurrent.cpp'))
       .toMatch(/Resp->SetStringField\(TEXT\("savedAssetPath"\), LevelPath\);/u);
-    expect(nativeSource(...lifecycle, 'McpAutomationBridge_LevelHandlersSaveAs.cpp'))
+    expect(nativeSource(...lifecycle, 'McpLevelSaveAs.cpp'))
       .toMatch(/Resp->SetStringField\(TEXT\("savedAssetPath"\), SavePath\);/u);
   });
 });
@@ -206,7 +216,7 @@ describe('an output-file delete names the files it deleted', () => {
   });
 
   it('the single and the list form both answer changedEntities', () => {
-    const source = nativeSource('Domains', 'SystemControl', 'McpAutomationBridge_SystemControlHandlersOutputFiles.cpp');
+    const source = nativeSource('Domains', 'SystemControl', 'McpSystemOutputFiles.cpp');
     expect(source).toMatch(/SetArrayField\(TEXT\("changedEntities"\),\s*TArray<TSharedPtr<FJsonValue>>\{MakeShared<FJsonValueString>/u);
     expect(source).toMatch(/SetArrayField\(TEXT\("changedEntities"\), DeletedPaths\);/u);
   });

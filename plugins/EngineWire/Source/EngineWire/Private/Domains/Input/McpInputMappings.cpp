@@ -1,0 +1,276 @@
+#include "Core/Compatibility/McpVersionCompatibility.h"
+
+#include "EngineWireSubsystem.h"
+#include "Domains/Input/McpInputAssetResolve.h"
+#include "Domains/Input/McpInputKeyResolve.h"
+#include "Domains/Input/McpInputMappingSummaries.h"
+
+#include "InputAction.h"
+#include "InputMappingContext.h"
+#include "InputModifiers.h"
+#include "InputTriggers.h"
+#include "Foundation/BridgeHelpers/McpHelpers.h"
+#include "Foundation/HandlerUtils/McpHandlerUtils.h"
+
+namespace McpInputHandlers
+{
+void AddInputMappingSummary(
+    TSharedPtr<FJsonObject> Result,
+    const UInputMappingContext* Context,
+    const UInputAction* InAction)
+{
+    TArray<TSharedPtr<FJsonValue>> Mappings;
+    for (const FEnhancedActionKeyMapping& Mapping : Context->GetMappings())
+    {
+        if (Mapping.Action != InAction)
+        {
+            continue;
+        }
+
+        TSharedPtr<FJsonObject> MappingObject = MakeShared<FJsonObject>();
+        MappingObject->SetStringField(TEXT("key"), Mapping.Key.ToString());
+        MappingObject->SetNumberField(TEXT("modifierCount"), Mapping.Modifiers.Num());
+        MappingObject->SetNumberField(TEXT("triggerCount"), Mapping.Triggers.Num());
+        Mappings.Add(MakeShared<FJsonValueObject>(MappingObject));
+    }
+
+    Result->SetArrayField(TEXT("actionMappings"), Mappings);
+}
+
+void SetInputChangedAsset(const TSharedPtr<FJsonObject>& Result, const UObject* Asset, bool bSaved)
+{
+    TArray<TSharedPtr<FJsonValue>> Changed;
+    if (Asset)
+    {
+        Changed.Add(MakeShared<FJsonValueString>(Asset->GetOutermost()->GetName()));
+        Result->SetBoolField(TEXT("saved"), bSaved);
+    }
+    Result->SetArrayField(TEXT("changedAssets"), Changed);
+}
+
+bool HandleAddInputMapping(
+    UEngineWireSubsystem& Bridge,
+    const FString& RequestId,
+    const FString& SubAction,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
+{
+    FString ContextPath;
+    Payload->TryGetStringField(TEXT("contextPath"), ContextPath);
+    FString ActionPath;
+    Payload->TryGetStringField(TEXT("actionPath"), ActionPath);
+    FString KeyName;
+    Payload->TryGetStringField(TEXT("key"), KeyName);
+
+    FString SanitizedContextPath;
+    FString SanitizedActionPath;
+    UInputMappingContext* Context = LoadInputMappingContextAsset(ContextPath, SanitizedContextPath);
+    UInputAction* InAction = LoadInputActionAsset(ActionPath, SanitizedActionPath);
+
+    if (!Context || !InAction || KeyName.IsEmpty())
+    {
+        Bridge.SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("Context or action not found, or key is empty. Context: %s, Action: %s"),
+                *SanitizedContextPath, *SanitizedActionPath),
+            TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    FKey Key = FKey(FName(*KeyName));
+    if (!Key.IsValid())
+    {
+        Bridge.SendAutomationError(RequestingSocket, RequestId,
+            TEXT("Invalid key name."), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    // triggerType/modifierType go on the mapping's own arrays; both resolve before anything is mapped.
+    const FString TriggerType = GetJsonStringField(Payload, TEXT("triggerType"));
+    const FString ModifierType = GetJsonStringField(Payload, TEXT("modifierType"));
+    UClass* TriggerClass = ResolveInputClass(TriggerType, TEXT("InputTrigger"), UInputTrigger::StaticClass());
+    UClass* ModifierClass = ResolveInputClass(ModifierType, TEXT("InputModifier"), UInputModifier::StaticClass());
+    TArray<FString> Unresolved;
+    if (!TriggerType.IsEmpty() && !TriggerClass)
+    {
+        Unresolved.Add(FString::Printf(TEXT("triggerType '%s'"), *TriggerType));
+    }
+    if (!ModifierType.IsEmpty() && !ModifierClass)
+    {
+        Unresolved.Add(FString::Printf(TEXT("modifierType '%s'"), *ModifierType));
+    }
+    if (Unresolved.Num() > 0)
+    {
+        Bridge.SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("Could not resolve %s to an Enhanced Input class; the key mapping was not added."),
+                *FString::Join(Unresolved, TEXT(" and "))),
+            TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    // replaceKey moves the action's mapping off that key: its triggers and modifiers come along unless this call sends
+    // its own. A remove-then-add lost them, so W moved to Up dropped SwizzleAxis and Up strafed instead of walking.
+    const FString ReplaceName = GetJsonStringField(Payload, TEXT("replaceKey"));
+    const FKey ReplaceKey = InputKeyFromName(ReplaceName);
+    FEnhancedActionKeyMapping* Replaced = ReplaceName.IsEmpty() ? nullptr : FindInputMapping(Context, InAction, ReplaceKey);
+    if (!ReplaceName.IsEmpty() && !Replaced)
+    {
+        TArray<FString> Mapped;
+        for (const FEnhancedActionKeyMapping& Each : Context->GetMappings())
+        {
+            if (Each.Action == InAction)
+            {
+                Mapped.Add(Each.Key.ToString());
+            }
+        }
+        Bridge.SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("replaceKey '%s' is not mapped to %s in %s (its keys: %s); nothing was changed."),
+                *ReplaceName, *SanitizedActionPath, *SanitizedContextPath,
+                Mapped.Num() > 0 ? *FString::Join(Mapped, TEXT(", ")) : TEXT("none")),
+            TEXT("NOT_FOUND"));
+        return true;
+    }
+
+    // MapKey always appends, and a second mapping of the same action+key fires the action twice, so naming the
+    // pair again reuses that mapping and this call defines its triggers and modifiers.
+    Context->Modify();
+    decltype(FEnhancedActionKeyMapping::Triggers) Triggers;
+    decltype(FEnhancedActionKeyMapping::Modifiers) Modifiers;
+    if (Replaced)
+    {
+        Triggers = Replaced->Triggers;
+        Modifiers = Replaced->Modifiers;
+        if (ReplaceKey != Key)
+        {
+            Context->UnmapKey(InAction, ReplaceKey); // Replaced dangles from here on
+        }
+    }
+    FEnhancedActionKeyMapping* ExistingMapping = FindInputMapping(Context, InAction, Key);
+    const bool bReusedExistingMapping = ExistingMapping != nullptr;
+    FEnhancedActionKeyMapping& Mapping =
+        bReusedExistingMapping ? *ExistingMapping : Context->MapKey(InAction, Key);
+    if (TriggerClass)
+    {
+        Triggers.Reset();
+        Triggers.Add(NewObject<UInputTrigger>(Context, TriggerClass));
+    }
+    if (ModifierClass)
+    {
+        Modifiers.Reset();
+        Modifiers.Add(NewObject<UInputModifier>(Context, ModifierClass));
+    }
+    Mapping.Triggers = Triggers;
+    Mapping.Modifiers = Modifiers;
+    const bool bSaved = SaveLoadedAssetThrottled(Context, true);
+
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetStringField(TEXT("contextPath"), SanitizedContextPath);
+    Result->SetStringField(TEXT("actionPath"), SanitizedActionPath);
+    Result->SetStringField(TEXT("key"), KeyName);
+    Result->SetNumberField(TEXT("triggerCount"), Mapping.Triggers.Num());
+    Result->SetNumberField(TEXT("modifierCount"), Mapping.Modifiers.Num());
+    Result->SetBoolField(TEXT("reusedExistingMapping"), bReusedExistingMapping);
+    if (!ReplaceName.IsEmpty())
+    {
+        Result->SetStringField(TEXT("replacedKey"), ReplaceKey.ToString());
+    }
+    AddAssetVerificationNested(Result, TEXT("contextVerification"), Context);
+    AddAssetVerificationNested(Result, TEXT("actionVerification"), InAction);
+    SetInputChangedAsset(Result, Context, bSaved);
+
+    const FString Message = !ReplaceName.IsEmpty()
+        ? FString::Printf(TEXT("Mapping moved from %s to %s."), *ReplaceKey.ToString(), *Key.ToString())
+        : FString(SubAction == TEXT("map_input_action") ? TEXT("Input action mapped to key.") : TEXT("Mapping added."));
+    Bridge.SendAutomationResponse(RequestingSocket, RequestId, true, Message, Result);
+    return true;
+}
+
+bool HandleRemoveInputMapping(
+    UEngineWireSubsystem& Bridge,
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
+{
+    FString ContextPath;
+    Payload->TryGetStringField(TEXT("contextPath"), ContextPath);
+    FString ActionPath;
+    Payload->TryGetStringField(TEXT("actionPath"), ActionPath);
+    FString KeyName;
+    Payload->TryGetStringField(TEXT("key"), KeyName);
+
+    FString SanitizedContextPath;
+    FString SanitizedActionPath;
+    UInputMappingContext* Context = LoadInputMappingContextAsset(ContextPath, SanitizedContextPath);
+    UInputAction* InAction = LoadInputActionAsset(ActionPath, SanitizedActionPath);
+
+    if (!Context || !InAction)
+    {
+        Bridge.SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("Context or action not found. Context: %s, Action: %s"),
+                *SanitizedContextPath, *SanitizedActionPath),
+            TEXT("NOT_FOUND"));
+        return true;
+    }
+
+    FKey RequestedKey = InputKeyFromName(KeyName);
+    const bool bHasSpecificKey = !KeyName.IsEmpty();
+    if (bHasSpecificKey && !RequestedKey.IsValid())
+    {
+        Bridge.SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("Invalid key name: %s"), *KeyName), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    TArray<FKey> KeysToRemove;
+    for (const FEnhancedActionKeyMapping& Mapping : Context->GetMappings())
+    {
+        if (Mapping.Action == InAction && (!bHasSpecificKey || Mapping.Key == RequestedKey))
+        {
+            KeysToRemove.Add(Mapping.Key);
+        }
+    }
+
+    if (bHasSpecificKey && KeysToRemove.IsEmpty())
+    {
+        Bridge.SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("Mapping not found for action '%s' and key '%s'."),
+                *SanitizedActionPath, *KeyName),
+            TEXT("NOT_FOUND"));
+        return true;
+    }
+
+    for (const FKey& KeyToRemove : KeysToRemove)
+    {
+        Context->UnmapKey(InAction, KeyToRemove);
+    }
+
+    // An action with no mappings left to remove changes nothing, so nothing is saved or reported as changed.
+    const bool bChanged = KeysToRemove.Num() > 0;
+    const bool bSaved = bChanged && SaveLoadedAssetThrottled(Context, true);
+
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetStringField(TEXT("contextPath"), SanitizedContextPath);
+    Result->SetStringField(TEXT("actionPath"), SanitizedActionPath);
+    if (bHasSpecificKey)
+    {
+        Result->SetStringField(TEXT("key"), KeyName);
+    }
+    Result->SetNumberField(TEXT("keysRemoved"), KeysToRemove.Num());
+
+    TArray<TSharedPtr<FJsonValue>> RemovedKeys;
+    for (const FKey& Key : KeysToRemove)
+    {
+        RemovedKeys.Add(MakeShared<FJsonValueString>(Key.ToString()));
+    }
+    Result->SetArrayField(TEXT("removedKeys"), RemovedKeys);
+    AddInputMappingSummary(Result, Context, InAction);
+    AddAssetVerificationNested(Result, TEXT("contextVerification"), Context);
+    AddAssetVerificationNested(Result, TEXT("actionVerification"), InAction);
+    SetInputChangedAsset(Result, bChanged ? Context : nullptr, bSaved);
+
+    const FString SuccessMessage = bHasSpecificKey
+        ? FString::Printf(TEXT("Mapping removed for action key: %s"), *KeyName)
+        : TEXT("Mappings removed for action.");
+    Bridge.SendAutomationResponse(RequestingSocket, RequestId, true, SuccessMessage, Result);
+    return true;
+}
+}

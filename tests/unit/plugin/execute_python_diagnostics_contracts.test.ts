@@ -5,11 +5,11 @@ import { describe, expect, it } from 'vitest';
 
 const pluginSourceRoot = resolve(
   process.cwd(),
-  'plugins/McpAutomationBridge/Source/McpAutomationBridge',
+  'plugins/EngineWire/Source/EngineWire',
 );
 const pythonHandlerPath = resolve(
   pluginSourceRoot,
-  'Private/Domains/SystemControl/McpAutomationBridge_SystemControlHandlersPython.cpp',
+  'Private/Domains/SystemControl/McpSystemPython.cpp',
 );
 const messagesPath = resolve(
   pluginSourceRoot,

@@ -1,0 +1,85 @@
+# DOMAINS — Automation Implementation Layer
+
+55 top-level domain directories, ~1,016 source files. Every editor action an MCP client can trigger is implemented here.
+
+Cross-link, never duplicate: scope map in `../AGENTS.md`, registration in `../Core/AGENTS.md`, shared helpers in `../Foundation/AGENTS.md`, hazardous-op wrappers in `../Safety/AGENTS.md`, native MCP in `../MCP/AGENTS.md`.
+
+## STRUCTURE
+
+Each domain is a folder `Domains/<Domain>/` holding one thin `*Dispatch.cpp` plus sibling behavior `.cpp` files split by responsibility (e.g. `ControlActor/McpActorSpawn.cpp`).
+
+Grouped index (largest first; the rest are discoverable by folder name):
+
+- Cinematics: `Sequence` (~106), `Animation` (~27), `AnimationAuthoring` (~24), `Skeleton` (~25)
+- Asset/Blueprint: `AssetWorkflow` (~65), `MaterialAuthoring` (~50), `Blueprint` (~49), `WidgetAuthoring` (~36), `BlueprintGraph`, `BlueprintCreation`, `SCS`, `StructProperty`, `Texture`, `AssetQuery`
+- World: `Environment` (~42), `Geometry` (~37), `Level` (~35), `Volume`, `LevelStructure`, `Landscape`, `Foliage`, `Spline`, `Navigation`, `PCG`, `Lighting`, `Render`
+- VFX: `Niagara`, `NiagaraAuthoring`, `NiagaraGraph`, `Effect`
+- Gameplay: `AI` (~35), `GAS`, `Character`, `Combat`, `Interaction`, `Inventory`, `BehaviorTree`, `GameFramework`, `Input`, `Networking`, `Sessions`, `MetaHuman`
+- Editor/System: `ControlActor`, `ControlEditor`, `ConsoleCommand`, `Debug`, `Inspect`, `Log`, `Property`, `SystemControl`, `Performance`, `Insights`, `Ui`, `Audio`, `AudioAuthoring`
+
+## DISPATCH CONTRACT
+
+Every domain exposes one entry point on `UEngineWireSubsystem`:
+
+```cpp
+bool UEngineWireSubsystem::Handle<Domain>Action(
+    const FString &RequestId, const FString &Action,
+    const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+```
+
+The dispatcher resolves the sub-action (`subAction` first, `action` only as the
+fallback — the same priority `McpHandlerUtils::NormalizeAction` and the pre-queue
+gate use) and routes to concrete `Handle<Domain>Xxx` methods in sibling `.cpp`
+files with an explicit compare chain. Every domain does it this way:
+
+```cpp
+if (LowerSub == TEXT("spawn") || LowerSub == TEXT("spawn_actor"))
+    return HandleControlActorSpawn(RequestId, Payload, RequestingSocket);
+...
+if (LowerSub == TEXT("set_transform") || LowerSub == TEXT("set_actor_transform") ...)
+    return HandleControlActorSetTransform(RequestId, Payload, RequestingSocket);
+```
+
+**Keep dispatchers thin.** Validation of the sub-action string and a single unknown-action error belong in the dispatcher. All real work lives in the responsibility `.cpp`. Leaf handlers must NOT emit their own "Unknown <X> subAction" — return `false` and let the dispatcher own it.
+
+Errors go out through `SendAutomationError(Socket, RequestId, Message, Code)` with a
+SCREAMING_SNAKE code (`INVALID_PAYLOAD`, `MISSING_PARAMETER`, `NOT_FOUND`).
+
+## ADDING AN ACTION
+
+1. Pick or create the domain folder `Domains/<Domain>/`.
+2. Add a `Handle<Domain>Xxx(RequestId, Payload, Socket)` declaration to the domain support header and the body in a responsibility `.cpp`.
+3. Add the route to the compare chain in `<Domain>Dispatch.cpp`.
+4. Make sure the parent tool reaches the domain: `../Core/Subsystem/...HandlerRegistration.cpp` maps each of the 23 parents (plus `console_command`) to a handler, with `FSubRoute` entries for sibling domains. See `../Core/AGENTS.md`.
+5. Add the capability record (TS side) and an integration case under `tests/mcp-tools/`.
+
+## FILE-SIZE + STRUCTURE CEILINGS
+
+Enforced by Vitest source-contract tests that read C++ text and fail CI (`tests/unit/plugin/source_structure_contracts.test.ts`, `source_structure.test.ts`):
+
+- **250 pure lines per file** (pure = non-blank, non-`#`, non-`//`). Split oversized files into responsibility `.cpp`.
+- **≤25 files per folder.**
+- **No split artifacts**: never name files `Common*`, `Part\d+`, `\d+.cpp`, or `.incl`.
+- **Every local `Mcp*` include must resolve on disk** — dangling includes fail CI.
+- **Short file names**: `Mcp<Tag><Topic>.cpp` (`McpMatSetScalarParamValue.cpp`; tags such as `Anim`, `Mat`, `BP`, `BPGraph`, `Seq`, `Env`, `Actor`). Fab refuses a package path over 170 characters, and `source_structure.test.ts` holds every path to 150.
+
+## CONVENTIONS
+
+- Reuse `../Foundation/` for reflection, path, Blueprint, JSON, response, and object-resolution helpers. Do not grow domain-local copies.
+- Editor work runs on the game thread via the Core queue. Never call editor APIs from a socket thread.
+- Optional engine features must compile away or fail clearly when their module is missing, via the `MCP_HAS_*` defines emitted by `EngineWire.Build.cs` (e.g. `MCP_HAS_PCG`, `MCP_HAS_MOVIE_RENDER_PIPELINE`, `MCP_HAS_TAKE_RECORDER`, `MCP_HAS_MEDIA_ASSETS`). A missing module must never break the build.
+- An action that promises gameplay behaviour (movement modes, ammo, inventory functions, input bindings, trigger events) writes it into the Blueprint with `McpBlueprintBehaviour::Author` and a recipe file under `Resources/Recipes/<Domain>/`. Read `BlueprintGraph/Behaviour/AGENTS.md` first; never hand-roll graph edits or report "configured" for logic that was not authored.
+
+## ANTI-PATTERNS (forbidden -> alternative)
+
+| Forbidden | Use instead |
+|-----------|-------------|
+| `UPackage::SavePackage()` | `McpSafeAssetSave` / `McpSafeLevelSave` / `McpSafeLoadMap` (`../Safety/AGENTS.md`) |
+| `FEditorFileUtils::SaveMap` | `McpSafeLevelSave` |
+| `UEditorAssetLibrary::DeleteDirectory` | `McpSafeDeleteFolder` |
+| `ANY_PACKAGE` | modern `nullptr` / project lookup |
+| `TargetGraph->RemoveNode` | `RemoveNiagaraGraphNodeSafely` |
+| `GenerateFullEnumName` | `GetIndexByValue` + `HasMetaData("Hidden")` |
+| `SendRawMessage` / `SendControlMessage` for automation events | `BroadcastAutomationEvent` / `SendAutomationResponse` |
+| Leaf handler emits "Unknown <X> subAction" | return `false`; let the dispatcher own it |

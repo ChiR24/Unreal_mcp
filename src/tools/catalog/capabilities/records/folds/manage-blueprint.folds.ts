@@ -32,7 +32,7 @@ export const MANAGE_BLUEPRINT_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'edit_graph', selector: 'edit',
     summary: 'Edit a Blueprint graph: add or create nodes (including reroute and struct make/break nodes), connect pins, set node properties and pin defaults, add a construction script, arrange nodes beside what they are wired to, or run many of those edits, variables included, in one batch.',
-    topics: ['blueprint node', 'create node', 'connect pins in blueprint', 'connect blueprint nodes', 'connect nodes', 'wire pins', 'print string', 'print to screen', 'pin default', 'node property', 'construction script', 'reroute node', 'batch graph edit', 'branch node', 'timeline', 'delay node', 'cast node', 'arrange nodes', 'tidy graph', 'clean up graph layout'],
+    topics: ['blueprint node', 'create node', 'connect pins in blueprint', 'connect blueprint nodes', 'connect nodes', 'wire pins', 'print string', 'print to screen', 'pin default', 'node property', 'construction script', 'reroute node', 'batch graph edit', 'branch node', 'timeline', 'delay node', 'cast node', 'arrange nodes', 'tidy graph', 'clean up graph layout', 'anim graph node by class', 'add two bone ik node', 'animation blueprint node', 'math expression node', 'blueprint math expression', 'add a math expression', 'for each loop', 'set timer', 'random number', 'is valid', 'do once', 'gate node', 'branch on a condition', 'loop over an array', 'cast to player', 'event dispatcher', 'bind event to dispatcher'],
     members: {
       ...byName(['add_node', 'create_node', 'create_reroute_node', 'create_struct_make_break_nodes', 'connect_pins',
         'set_node_property', 'set_pin_default_value', 'add_construction_script', 'arrange_nodes']),
@@ -41,7 +41,8 @@ export const MANAGE_BLUEPRINT_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'delete_node', selector: 'deleteScope',
-    summary: 'Delete a graph node, or break the links of one of its pins.',
+    summary: 'Delete a graph node, or break (disconnect) the links of one of its pins.',
+    topics: ['delete node', 'remove node', 'disconnect pins', 'unlink pins', 'break pin links', 'remove wire', 'disconnect wire', 'unwire pin'],
     members: { node: 'delete_node', pin_links: 'break_pin_links' },
   },
   {
@@ -51,14 +52,20 @@ export const MANAGE_BLUEPRINT_FOLDS: readonly FoldSpec[] = [
     members: { function: 'add_function', event: 'add_event' },
   },
   {
+    primary: 'add_behaviour', selector: 'behaviour',
+    summary: 'Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player or patrols a route, walk, look and jump controls for a Character, a pawn that respawns when it falls or dies (with checkpoints), a goal that ends the level when the player reaches it, a pad that launches a Character, a teleporter, a spawner that keeps spawning an actor class, a dash key for a Character, the health of the player or a count such as coins or score on screen, or a game over screen that restarts the level when the player dies.',
+    topics: ['gameplay behaviour', 'add behaviour', 'gameplay logic'],
+    members: { health: 'add_health', damage_on_touch: 'add_damage_on_touch', pickup: 'add_pickup', sprint: 'add_sprint', shoot: 'add_shoot', chase: 'add_chase', patrol: 'add_patrol', controls: 'add_controls', respawn: 'add_respawn', goal: 'add_goal', launch_pad: 'add_launch_pad', teleporter: 'add_teleporter', spawner: 'add_spawner', dash: 'add_dash', health_hud: 'add_health_hud', counter_hud: 'add_counter_hud', game_over: 'add_game_over' },
+  },
+  {
     primary: 'remove_function', selector: 'kind',
     summary: 'Remove a function or an event from a Blueprint.',
     members: { function: 'remove_function', event: 'remove_event' },
   },
   {
     primary: 'inspect_graph', selector: 'info',
-    summary: 'Inspect a Blueprint graph: its nodes (every one, or those whose title, pin default, text or object path matches a filter), node details, pin details, or the available node types.',
-    topics: ['graph details', 'node details', 'pin details', 'node types', 'find nodes', 'search graph nodes'],
+    summary: 'Inspect a Blueprint graph: its nodes (every one, those whose title, pin default, text or object path matches a filter, or the unused ones), node details, pin details, or the available node types.',
+    topics: ['graph details', 'node details', 'pin details', 'node types', 'find nodes', 'search graph nodes', 'filter graph nodes', 'unused nodes', 'what writes a variable'],
     members: { graph: 'get_graph_details', node: 'get_node_details', pins: 'get_pin_details', node_types: 'list_node_types' },
   },
   {

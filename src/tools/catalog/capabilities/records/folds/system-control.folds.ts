@@ -22,7 +22,7 @@ export const SYSTEM_CONTROL_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'profile_performance', selector: 'control',
     summary: 'Profile performance: start or stop profiling, run a benchmark, generate a memory report, show stats.',
-    topics: ['profiling', 'benchmark', 'memory report', 'stat unit', 'show stats'],
+    topics: ['profiling', 'benchmark', 'memory report', 'stat unit', 'show stats', 'profile the game', 'find what is slow'],
     members: { start: 'start_profiling', stop: 'stop_profiling', benchmark: 'run_benchmark', memory_report: 'generate_memory_report', show_stats: 'show_stats' },
   },
   {
@@ -45,8 +45,8 @@ export const SYSTEM_CONTROL_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'run_build', selector: 'kind',
-    summary: 'Run automation tests, or run UnrealBuildTool for a target.',
-    topics: ['automation tests', 'run tests', 'ubt', 'unreal build tool', 'build target'],
+    summary: 'Run automation tests and answer with each one\'s result (passed or not, its errors and warnings), or run UnrealBuildTool for a target.',
+    topics: ['automation tests', 'run tests', 'test results', 'ubt', 'unreal build tool', 'build target'],
     members: { tests: 'run_tests', ubt: 'run_ubt' },
   },
   {

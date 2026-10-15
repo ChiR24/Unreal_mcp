@@ -35,7 +35,7 @@ export const P = {
   templateBlueprintPath: str('Canonical /Game Blueprint asset path. Reads the component template on the Blueprint CDO instead of a live actor, so a Blueprint with no instance in the level can still be inspected. Supply this or actorName.'),
   properties: {
     type: 'object',
-    description: 'Component property key-value pairs. Each key is a name or dotted path, as propertyName takes it (BodyInstance.CollisionEnabled works).',
+    description: 'Component property key-value pairs. Each key is a name or dotted path, as propertyName takes it (BodyInstance.CollisionEnabled works). Collision goes through the component setters: CollisionProfileName (a preset), CollisionEnabled, CollisionResponses ({"Pawn": "Ignore"}), PhysMaterialOverride (a physical material path, None to clear).',
     additionalProperties: true,
     'x-unreal-reflection-boundary': true,
   },
@@ -45,7 +45,7 @@ export const P = {
   tag: str('Actor tag: one entry in the Tags list of an actor (not a Gameplay Tag) to add, remove, find or delete by.'),
   variables: {
     type: 'object',
-    description: 'Blueprint variable name to value map.',
+    description: 'Blueprint variable name to value map. An actor variable, or an array of them, takes each actor by its label or name as list shows it ("Door_1", ["Fire_1", "Fire_2"]) or by its object path.',
     additionalProperties: true,
     'x-unreal-reflection-boundary': true,
   },
@@ -97,6 +97,34 @@ export const P = {
   excludedCount: num('Actors present in the world but never listable here: templates, transient actors, the builder brush and WorldSettings. Explains why this total is below the actorCount get_editor_state reports for the same world.'),
   isPieWorld: bool('Whether the list was produced while a Play-In-Editor (PIE) session is active.'),
   worldName: str('Name of the active world (or PIE world) the actors were listed from.'),
+} as const;
+
+// Where an actor ended up after a spawn or a move, so a mesh whose pivot is its bounds centre does not sit half under the
+// floor behind a bare success, and a wall run up to the ceiling's top does not flicker behind one. Each fact is present
+// only when the check could measure it.
+export const PLACEMENT_FACTS = {
+  groundZ: num('Z of the solid surface under the actor; absent when nothing is below it.'),
+  groundClearance: num('How far the bottom of the actor\'s bounds sits above that surface; negative means it is sunk into it.'),
+  placementWarning: str('Present when the placement looks wrong: it intersects other actors, is sunk below the surface under it (the bottom of its bounds is under it, wherever its pivot is; suggestedLocation rests it), floats more than 50 units above it, has nothing below it (an actor held up from the side is mounted, never floating: see mountedOn; a floor or platform, four times wider than tall, is ground itself and never reported for it), or has a face in the same plane as another actor\'s, pointing the same way, which flickers where they overlap (z-fighting: see coplanarFaces). A water body is a surface, not a solid: an actor partly under water (a buoy, a hull, a wading pawn) is neither intersecting nor sunk, and groundZ is the water level. Tag the actor mcp.placement.ok when the placement is deliberate and it is never reported; the tag does not hide a shared plane, which always flickers.'),
+  mountedOn: str('The actor this one hangs on from the side (a window band flush on a hall, an awning on a facade): its bounds touch or overlap that actor\'s vertical face, so it is held up and is not reported floating or without a surface below. Present only then.'),
+  overlappingActors: {
+    type: 'array',
+    items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
+    'x-unreal-reflection-boundary': true,
+    description: 'The actors it intersects (up to 8): actorName, actorClass, penetrationDepth.',
+  },
+  coplanarFaces: {
+    type: 'array',
+    items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
+    'x-unreal-reflection-boundary': true,
+    description: 'Its faces that lie in the same plane as a face of another actor and point the same way, so the overlap flickers between the two (z-fighting): direction (+X, -Z, ...), component, otherActor, otherComponent, overlapU and overlapV (the overlap\'s size in units), largest first. Move one about 2 units apart along direction, or stop a wall at a ceiling\'s underside; control_actor fix_coplanar nudges every pair. Present only when there is one.',
+  },
+  suggestedLocation: {
+    type: 'object',
+    additionalProperties: true,
+    'x-unreal-reflection-boundary': true,
+    description: 'The actor location (x, y, z) that rests the actor on the surface under it: its own location raised by the depth it is sunk, whatever its pivot. Present only when it is sunk.',
+  },
 } as const;
 
 export const DOMAIN = 'actor' as const;

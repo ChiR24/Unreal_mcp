@@ -8,13 +8,13 @@ const source = (relative: string): string => readFileSync(`${ROOT}/${relative}`,
 describe('Task 42 WebSocket expected-revisions transport', () => {
   it('keeps pins typed and outside the action payload across the socket callback', () => {
     const managerHeader = source(
-      'plugins/McpAutomationBridge/Source/McpAutomationBridge/Public/McpConnectionManager.h'
+      'plugins/EngineWire/Source/EngineWire/Public/McpConnectionManager.h'
     );
     const messages = source(
-      'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Transport/Connection/McpConnectionManagerMessages.cpp'
+      'plugins/EngineWire/Source/EngineWire/Private/Transport/Connection/McpConnectionManagerMessages.cpp'
     );
     const lifecycle = source(
-      'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Core/Subsystem/McpAutomationBridgeSubsystemLifecycle.cpp'
+      'plugins/EngineWire/Source/EngineWire/Private/Core/Subsystem/EngineWireSubsystemLifecycle.cpp'
     );
 
     expect(managerHeader).toContain('DECLARE_DELEGATE_FiveParams(FMcpMessageReceivedCallback');
@@ -25,10 +25,10 @@ describe('Task 42 WebSocket expected-revisions transport', () => {
 
   it('shares one parser between native HTTP and WebSocket ingress', () => {
     const native = source(
-      'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Execute/McpNativeGatewayExpectedRevisions.cpp'
+      'plugins/EngineWire/Source/EngineWire/Private/MCP/Execute/McpNativeGatewayExpectedRevisions.cpp'
     );
     const messages = source(
-      'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Transport/Connection/McpConnectionManagerMessages.cpp'
+      'plugins/EngineWire/Source/EngineWire/Private/Transport/Connection/McpConnectionManagerMessages.cpp'
     );
 
     expect(native).toContain('FMcpLiveStateRevisions::ParseExpectedRevisions');
@@ -37,10 +37,10 @@ describe('Task 42 WebSocket expected-revisions transport', () => {
 
   it('adds one strict live revision snapshot at the shared WebSocket response serializer', () => {
     const responses = source(
-      'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Transport/Connection/McpConnectionManagerResponses.cpp'
+      'plugins/EngineWire/Source/EngineWire/Private/Transport/Connection/McpConnectionManagerResponses.cpp'
     );
     const revisions = source(
-      'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Foundation/McpLiveStateRevisions.cpp'
+      'plugins/EngineWire/Source/EngineWire/Private/Foundation/McpLiveStateRevisions.cpp'
     );
 
     expect(responses).toMatch(/SetObjectField\(TEXT\("liveRevisions"\),[\s\S]*Snapshot/u);

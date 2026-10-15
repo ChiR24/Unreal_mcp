@@ -15,7 +15,7 @@ import {
   LIGHT_PROPERTY_KEYS,
 } from '../../../src/tools/catalog/capabilities/records/shared/light-text.js';
 
-const LIGHTING = join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private', 'Domains', 'Lighting');
+const LIGHTING = join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'Domains', 'Lighting');
 const strip = (text: string): string => text.replace(/\/\*[\s\S]*?\*\//gu, ' ').replace(/\/\/[^\n]*/gu, ' ');
 const cpp = (file: string): string => strip(readFileSync(join(LIGHTING, file), 'utf8'));
 
@@ -34,7 +34,7 @@ const record = (id: string): Rec => {
 };
 
 describe('create_light names every setting the C++ reads', () => {
-  const properties = cpp('McpAutomationBridge_LightingHandlersLightProperties.cpp');
+  const properties = cpp('McpLightingLightProps.cpp');
   const known = [...(/Known\[\] = \{([^}]*)\}/u.exec(properties)?.[1] ?? '').matchAll(/TEXT\("(\w+)"\)/gu)].map((match) => match[1]);
 
   it('has a list of the keys it accepts, and no other key is read', () => {
@@ -66,8 +66,8 @@ describe('create_light names every setting the C++ reads', () => {
 });
 
 describe('create_light says what it did', () => {
-  const spawn = cpp('McpAutomationBridge_LightingHandlersLightSpawn.cpp');
-  const properties = cpp('McpAutomationBridge_LightingHandlersLightProperties.cpp');
+  const spawn = cpp('McpLightingLightSpawn.cpp');
+  const properties = cpp('McpLightingLightProps.cpp');
 
   it('lists what was applied, refused and adjusted, and says so in the message', () => {
     expect(spawn).toContain('Say(TEXT("applied"), Report.Applied);');

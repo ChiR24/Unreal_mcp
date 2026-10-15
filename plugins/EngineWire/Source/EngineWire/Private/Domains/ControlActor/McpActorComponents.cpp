@@ -1,0 +1,255 @@
+#include "Domains/ControlActor/McpActorSupport.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
+
+bool UEngineWireSubsystem::HandleControlActorAddComponent(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+  FString TargetName;
+  Payload->TryGetStringField(TEXT("actorName"), TargetName);
+  if (TargetName.IsEmpty()) {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("actorName required"), nullptr);
+    return true;
+  }
+
+  FString ComponentType;
+  Payload->TryGetStringField(TEXT("componentType"), ComponentType);
+  if (ComponentType.IsEmpty()) {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("componentType required"), nullptr);
+    return true;
+  }
+
+  FString ComponentName;
+  Payload->TryGetStringField(TEXT("componentName"), ComponentName);
+
+  AActor *Found = FindActorByName(TargetName);
+  if (!Found) {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
+                              TEXT("Actor not found"), nullptr);
+    return true;
+  }
+
+  UClass *ComponentClass = ResolveClassByName(ComponentType);
+  if (!ComponentClass ||
+      !ComponentClass->IsChildOf(UActorComponent::StaticClass())) {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("CLASS_NOT_FOUND"),
+                              TEXT("Component class not found"), nullptr);
+    return true;
+  }
+
+  if (ComponentName.TrimStartAndEnd().IsEmpty())
+    ComponentName = FString::Printf(TEXT("%s_%d"), *ComponentClass->GetName(),
+                                    FMath::Rand());
+
+  FName DesiredName = FName(*ComponentName);
+  UActorComponent *NewComponent = NewObject<UActorComponent>(
+      Found, ComponentClass, DesiredName, RF_Transactional);
+  if (!NewComponent) {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("CREATE_COMPONENT_FAILED"),
+                              TEXT("Failed to create component"), nullptr);
+    return true;
+  }
+
+  Found->Modify();
+  NewComponent->SetFlags(RF_Transactional);
+  Found->AddInstanceComponent(NewComponent);
+  NewComponent->OnComponentCreated();
+
+  if (USceneComponent *SceneComp = Cast<USceneComponent>(NewComponent)) {
+    if (Found->GetRootComponent() && !SceneComp->GetAttachParent()) {
+      SceneComp->SetupAttachment(Found->GetRootComponent());
+    }
+  }
+
+  // Force lights to be movable to ensure they work without baking (Issue #6
+  // fix) We check for "LightComponent" class name to avoid dependency issues if
+  // header is obscure, but ULightComponent is standard.
+  if (NewComponent->IsA(ULightComponent::StaticClass())) {
+    if (USceneComponent *SC = Cast<USceneComponent>(NewComponent)) {
+      SC->SetMobility(EComponentMobility::Movable);
+    }
+  }
+
+  TArray<FString> AppliedProperties;
+  TArray<FString> PropertyWarnings;
+  // A mesh that failed to load, or a meshPath on a component that takes none,
+  // used to be dropped without a word.
+  FString MeshPath;
+  if (Payload->TryGetStringField(TEXT("meshPath"), MeshPath) && !MeshPath.IsEmpty()) {
+    UStaticMeshComponent *SMC = Cast<UStaticMeshComponent>(NewComponent);
+    const FString SafeMeshPath = SanitizeProjectRelativePath(MeshPath);
+    UStaticMesh *Mesh = (SMC && !SafeMeshPath.IsEmpty())
+                            ? Cast<UStaticMesh>(McpLoadAsset(SafeMeshPath))
+                            : nullptr;
+    if (Mesh) {
+      SMC->SetStaticMesh(Mesh);
+      AppliedProperties.Add(TEXT("meshPath"));
+    } else {
+      PropertyWarnings.Add(SMC ? FString::Printf(TEXT("Failed to set meshPath: no static mesh could be loaded from %s"), *MeshPath)
+                               : FString(TEXT("Failed to set meshPath: only a StaticMeshComponent takes a mesh")));
+    }
+  }
+  // The same property bag set_component_properties writes, so nested paths
+  // (BodyInstance.CollisionEnabled) and the engine setters work here too.
+  const TSharedPtr<FJsonObject> *PropertiesPtr = nullptr;
+  if (Payload->TryGetObjectField(TEXT("properties"), PropertiesPtr) &&
+      PropertiesPtr && (*PropertiesPtr).IsValid()) {
+    McpApplyComponentProperties(NewComponent, *PropertiesPtr, AppliedProperties, PropertyWarnings);
+  }
+
+  NewComponent->RegisterComponent();
+  if (USceneComponent *SceneComp = Cast<USceneComponent>(NewComponent))
+    SceneComp->UpdateComponentToWorld();
+  NewComponent->MarkPackageDirty();
+  Found->MarkPackageDirty();
+
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+  Resp->SetStringField(TEXT("componentName"), NewComponent->GetName());
+  Resp->SetStringField(TEXT("componentPath"), NewComponent->GetPathName());
+  Resp->SetStringField(TEXT("componentClass"), ComponentClass->GetPathName());
+  if (AppliedProperties.Num() > 0) {
+    TArray<TSharedPtr<FJsonValue>> PropsArray;
+    for (const FString &PropName : AppliedProperties)
+      PropsArray.Add(MakeShared<FJsonValueString>(PropName));
+    Resp->SetArrayField(TEXT("appliedProperties"), PropsArray);
+  }
+  // Every requested property failing came back success:true with the failures
+  // in warnings; it now fails the way set_component_properties does, naming
+  // the component that was added.
+  if (McpSendComponentPropertyShortfall(*this, Socket, RequestId, AppliedProperties, PropertyWarnings, Resp,
+                                        FString::Printf(TEXT("Component %s was added. "), *NewComponent->GetName()))) {
+    return true;
+  }
+  SendAutomationResponse(Socket, RequestId, true, TEXT("Component added"), Resp);
+  return true;
+}
+bool UEngineWireSubsystem::HandleControlActorGetComponents(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+  FString TargetName;
+  Payload->TryGetStringField(TEXT("actorName"), TargetName);
+
+  // Also accept "objectPath" as an alias, common in inspections
+  if (TargetName.IsEmpty()) {
+    Payload->TryGetStringField(TEXT("objectPath"), TargetName);
+  }
+
+  if (TargetName.IsEmpty()) {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("actorName or objectPath required"), nullptr);
+    return true;
+  }
+
+  AActor *Found = FindActorByName(TargetName);
+  // Fallback: Check if it's a Blueprint asset to inspect CDO components
+  if (!Found) {
+    const FString SafeTargetPath = SanitizeProjectRelativePath(TargetName);
+    if (!SafeTargetPath.IsEmpty()) {
+      if (UObject *Asset = McpLoadAsset(SafeTargetPath)) {
+        if (UBlueprint *BP = Cast<UBlueprint>(Asset)) {
+          if (BP->GeneratedClass) {
+            Found = Cast<AActor>(BP->GeneratedClass->GetDefaultObject());
+          }
+        }
+      }
+    }
+  }
+
+  if (!Found) {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
+                              TEXT("Actor or Blueprint not found"), nullptr);
+    return true;
+  }
+
+  TArray<TSharedPtr<FJsonValue>> ComponentsArray;
+  for (UActorComponent *Comp : Found->GetComponents()) {
+    if (!Comp)
+      continue;
+    TSharedPtr<FJsonObject> Entry = McpHandlerUtils::CreateResultObject();
+    Entry->SetStringField(TEXT("name"), Comp->GetName());
+    Entry->SetStringField(TEXT("class"), Comp->GetClass()
+                                             ? Comp->GetClass()->GetPathName()
+                                             : TEXT(""));
+    Entry->SetStringField(TEXT("path"), Comp->GetPathName());
+    if (USceneComponent *SceneComp = Cast<USceneComponent>(Comp)) {
+      FVector Loc = SceneComp->GetRelativeLocation();
+      FRotator Rot = SceneComp->GetRelativeRotation();
+      FVector Scale = SceneComp->GetRelativeScale3D();
+
+      Entry->SetObjectField(TEXT("relativeLocation"), McpHandlerUtils::VectorToJson(Loc));
+
+      Entry->SetObjectField(TEXT("relativeRotation"), McpHandlerUtils::RotatorToJson(Rot));
+
+      Entry->SetObjectField(TEXT("relativeScale"), McpHandlerUtils::VectorToJson(Scale));
+    }
+
+    // Inspection detail (class identity, attach parent, visibility/active,
+    // bounded property census) is appended by the shared component-detail
+    // helper so this list handler stays within its line budget.
+    McpAppendComponentDetailFields(Comp, Entry);
+
+    ComponentsArray.Add(MakeShared<FJsonValueObject>(Entry));
+  }
+
+  TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
+  McpHandlerUtils::FilterRowsByListedNames(Payload, TEXT("componentNames"), ComponentsArray, Data,
+                                           TEXT("missingComponents"));
+  Data->SetArrayField(TEXT("components"), ComponentsArray);
+  Data->SetNumberField(TEXT("count"), ComponentsArray.Num());
+
+  // Found is guaranteed non-null here: the !Found path already returned.
+  McpHandlerUtils::AddVerification(Data, Found);
+
+  SendAutomationResponse(Socket, RequestId, true,
+                         TEXT("Actor components retrieved"), Data);
+  return true;
+}
+bool UEngineWireSubsystem::HandleControlActorRemoveComponent(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+  FString ActorName;
+  Payload->TryGetStringField(TEXT("actorName"), ActorName);
+
+  FString ComponentName;
+  Payload->TryGetStringField(TEXT("componentName"), ComponentName);
+
+  if (ActorName.IsEmpty()) {
+    SendAutomationError(Socket, RequestId, TEXT("actorName is required"), TEXT("MISSING_PARAM"));
+    return true;
+  }
+
+  if (ComponentName.IsEmpty()) {
+    SendAutomationError(Socket, RequestId, TEXT("componentName is required"), TEXT("MISSING_PARAM"));
+    return true;
+  }
+
+  AActor* Actor = FindActorByName(ActorName);
+  if (!Actor) {
+    SendAutomationError(Socket, RequestId,
+                        FString::Printf(TEXT("Actor not found: %s"), *ActorName),
+                        TEXT("ACTOR_NOT_FOUND"));
+    return true;
+  }
+
+  // CRITICAL FIX: Use FindComponentByName helper which supports fuzzy matching
+  UActorComponent* Component = FindComponentByName(Actor, ComponentName);
+  if (Component) {
+    Component->DestroyComponent();
+    TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
+    Data->SetStringField(TEXT("actorName"), ActorName);
+    Data->SetStringField(TEXT("componentName"), ComponentName);
+
+    Data->SetBoolField(TEXT("existsAfter"), false);
+    Data->SetStringField(TEXT("action"), TEXT("control_actor:deleted"));
+
+    SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Component removed"), Data);
+    return true;
+  }
+
+  SendAutomationError(Socket, RequestId,
+                      FString::Printf(TEXT("Component not found: %s"), *ComponentName),
+                      TEXT("COMPONENT_NOT_FOUND"));
+  return true;
+}

@@ -2,11 +2,11 @@
  * Exact per-action schema vocabulary for manage_interaction.
  *
  * Every parameter name below is read by a handler under
- * plugins/McpAutomationBridge/.../Private/Domains/Interaction/: the
- * McpAutomationBridge_InteractionHandlers{Components,Interface,Door,Switch,
- * Chest,Lever,Triggers}.cpp files author Blueprint assets, and ...Info.cpp
- * reads one back (or a placed actor, by actorName). McpAutomationBridge_
- * InteractionHandlers.cpp calls each in turn. No handler changes a placed world
+ * plugins/EngineWire/.../Private/Domains/Interaction/: the
+ * McpInteraction{Components,Interface,Door,Switch,Chest,Lever,Triggers}.cpp
+ * files author Blueprint assets, and McpInteractionInfo.cpp reads one back (or a
+ * placed actor, by actorName). McpInteractionHandlers.cpp calls each in turn.
+ * No handler changes a placed world
  * actor, so the world-actor fields (doorName, switchName, chestName, isLocked,
  * requiredKey, maxItems, location, interactionDistance, traceChannel,
  * widgetText, offsetZ, ...) are deliberately NOT declared: declaring them would
@@ -38,10 +38,10 @@ export const NP: PropertyMap = {
   traceDistance: num('Interaction trace distance in world units.'),
   traceType: str('Free-text name stored in the TraceType Name variable of the Blueprint (default sphere). It does not choose or change a trace shape: the shape comes from the sphere and box components, which traceDistance and traceRadius resize.'),
   traceRadius: num('Cross-section of each box component in world units (default 50): a box gets extent traceDistance by traceRadius. Sphere components ignore it.'),
-  openAngle: num('Open angle in degrees.'),
-  openTime: num('Open animation duration in seconds.'),
-  autoClose: bool('Whether the door closes automatically.'),
-  autoCloseDelay: num('Delay in seconds before the door auto-closes.'),
+  openAngle: num('Open angle in degrees (a new door gets 90, a new chest lid 100).'),
+  openTime: num('Seconds the door or lid takes to swing fully open or shut (a new door gets 0.5, a new chest 0.6).'),
+  autoClose: bool('Whether it closes by itself after the last pawn leaves (default false: it stays open).'),
+  autoCloseDelay: num('Seconds after the last pawn leaves before an autoClose door or lid shuts (default 3).'),
   requiresKey: bool('Whether opening requires a key.'),
   doorPath: str('Canonical /Game door actor Blueprint asset path.'),
   locked: bool('Whether the interactable starts locked.'),

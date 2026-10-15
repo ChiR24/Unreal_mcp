@@ -1,0 +1,235 @@
+#include "Domains/Skeleton/Assets/McpSkeletonAssetLoading.h"
+#include "Domains/Skeleton/Assets/McpSkeletonPayload.h"
+
+#include "Animation/Skeleton.h"
+#include "Engine/SkeletalMesh.h"
+#include "Foundation/BridgeHelpers/Security/McpProjectPaths.h"
+#include "Safety/McpSafeOperations.h"
+#include "EngineWireSubsystem.h"
+#include "Transport/WebSocket/McpBridgeWebSocket.h"
+#include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "PhysicsEngine/BodySetup.h"
+#include "PhysicsEngine/PhysicsAsset.h"
+#include "ReferenceSkeleton.h"
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
+#if __has_include("PhysicsEngine/SkeletalBodySetup.h")
+#include "PhysicsEngine/SkeletalBodySetup.h"
+#endif
+#endif
+
+using namespace McpSkeletonHandlers;
+
+bool UEngineWireSubsystem::HandleAddPhysicsBody(
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
+{
+    FString PhysicsAssetPath = GetJsonStringField(Payload, TEXT("physicsAssetPath"));
+    FString BoneName = GetJsonStringField(Payload, TEXT("boneName"));
+    FString BodyType = GetJsonStringField(Payload, TEXT("bodyType"));
+
+    if (PhysicsAssetPath.IsEmpty())
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("physicsAssetPath is required"), TEXT("MISSING_PARAM"));
+        return true;
+    }
+
+    if (BoneName.IsEmpty())
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("boneName is required"), TEXT("MISSING_PARAM"));
+        return true;
+    }
+
+    FString Error;
+    UPhysicsAsset* PhysicsAsset = LoadPhysicsAssetFromPath(PhysicsAssetPath, Error);
+    if (!PhysicsAsset)
+    {
+        SendAutomationError(RequestingSocket, RequestId, Error, TEXT("PHYSICS_ASSET_NOT_FOUND"));
+        return true;
+    }
+
+    // CRITICAL: Validate bone exists in the skeleton before creating physics body
+    // This prevents creating physics bodies for non-existent bones (fixes suspicious passes)
+    USkeletalMesh* PreviewMesh = PhysicsAsset->GetPreviewMesh();
+    if (PreviewMesh)
+    {
+        USkeleton* Skeleton = PreviewMesh->GetSkeleton();
+        if (Skeleton)
+        {
+            const FReferenceSkeleton& RefSkeleton = Skeleton->GetReferenceSkeleton();
+            int32 BoneIndex = RefSkeleton.FindBoneIndex(FName(*BoneName));
+            if (BoneIndex == INDEX_NONE)
+            {
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Bone '%s' does not exist in skeleton"), *BoneName),
+                    TEXT("BONE_NOT_FOUND"));
+                return true;
+            }
+        }
+    }
+
+    int32 BodyIndex = PhysicsAsset->FindBodyIndex(FName(*BoneName));
+    USkeletalBodySetup* BodySetup = nullptr;
+    bool bCreated = false;
+
+    if (BodyIndex == INDEX_NONE)
+    {
+        BodySetup = NewObject<USkeletalBodySetup>(PhysicsAsset, NAME_None, RF_Transactional);
+        if (!BodySetup)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create physics body setup"), TEXT("CREATION_FAILED"));
+            return true;
+        }
+        BodySetup->BoneName = FName(*BoneName);
+        PhysicsAsset->SkeletalBodySetups.Add(BodySetup);
+        bCreated = true;
+        BodyIndex = PhysicsAsset->SkeletalBodySetups.Num() - 1;
+    }
+    else
+    {
+        BodySetup = PhysicsAsset->SkeletalBodySetups[BodyIndex];
+    }
+
+    if (BodyType.IsEmpty()) BodyType = TEXT("Capsule");
+
+    double Radius = 10.0;
+    double Length = 20.0;
+    double Width = 10.0, Height = 10.0, Depth = 10.0;
+
+    Payload->TryGetNumberField(TEXT("radius"), Radius);
+    Payload->TryGetNumberField(TEXT("length"), Length);
+    Payload->TryGetNumberField(TEXT("width"), Width);
+    Payload->TryGetNumberField(TEXT("height"), Height);
+    Payload->TryGetNumberField(TEXT("depth"), Depth);
+
+    FVector Center = ExtractVectorField(Payload, TEXT("center"), FVector::ZeroVector);
+    FRotator Rotation = ExtractRotatorField(Payload, TEXT("rotation"), FRotator::ZeroRotator);
+
+    if (BodyType.Equals(TEXT("Sphere"), ESearchCase::IgnoreCase))
+    {
+        FKSphereElem SphereElem;
+        SphereElem.Radius = static_cast<float>(Radius);
+        SphereElem.Center = Center;
+        BodySetup->AggGeom.SphereElems.Add(SphereElem);
+    }
+    else if (BodyType.Equals(TEXT("Box"), ESearchCase::IgnoreCase))
+    {
+        FKBoxElem BoxElem;
+        BoxElem.X = static_cast<float>(Width);
+        BoxElem.Y = static_cast<float>(Depth);
+        BoxElem.Z = static_cast<float>(Height);
+        BoxElem.Center = Center;
+        BoxElem.Rotation = Rotation;
+        BodySetup->AggGeom.BoxElems.Add(BoxElem);
+    }
+    else
+    {
+        // Capsule/Sphyl, and the default for any other bodyType.
+        FKSphylElem CapsuleElem;
+        CapsuleElem.Radius = static_cast<float>(Radius);
+        CapsuleElem.Length = static_cast<float>(Length);
+        CapsuleElem.Center = Center;
+        CapsuleElem.Rotation = Rotation;
+        BodySetup->AggGeom.SphylElems.Add(CapsuleElem);
+    }
+
+    PhysicsAsset->UpdateBodySetupIndexMap();
+    PhysicsAsset->UpdateBoundsBodiesArray();
+    SaveIfRequested(PhysicsAsset, Payload);
+
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetStringField(TEXT("boneName"), BoneName);
+    Result->SetStringField(TEXT("bodyType"), BodyType);
+    Result->SetNumberField(TEXT("bodyIndex"), BodyIndex);
+    Result->SetBoolField(TEXT("created"), bCreated);
+
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+        FString::Printf(TEXT("Physics body %s for bone '%s'"), bCreated ? TEXT("created") : TEXT("modified"), *BoneName), Result);
+    return true;
+}
+
+bool UEngineWireSubsystem::HandleConfigurePhysicsBody(
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
+{
+    FString PhysicsAssetPath = GetJsonStringField(Payload, TEXT("physicsAssetPath"));
+    FString BoneName = GetJsonStringField(Payload, TEXT("boneName"));
+
+    if (PhysicsAssetPath.IsEmpty())
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("physicsAssetPath is required"), TEXT("MISSING_PARAM"));
+        return true;
+    }
+
+    if (BoneName.IsEmpty())
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("boneName is required"), TEXT("MISSING_PARAM"));
+        return true;
+    }
+
+    FString Error;
+    UPhysicsAsset* PhysicsAsset = LoadPhysicsAssetFromPath(PhysicsAssetPath, Error);
+    if (!PhysicsAsset)
+    {
+        SendAutomationError(RequestingSocket, RequestId, Error, TEXT("PHYSICS_ASSET_NOT_FOUND"));
+        return true;
+    }
+
+    int32 BodyIndex = PhysicsAsset->FindBodyIndex(FName(*BoneName));
+    if (BodyIndex == INDEX_NONE)
+    {
+        SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("No physics body found for bone '%s'"), *BoneName),
+            TEXT("BODY_NOT_FOUND"));
+        return true;
+    }
+
+    USkeletalBodySetup* BodySetup = PhysicsAsset->SkeletalBodySetups[BodyIndex];
+
+    double Mass = 0.0;
+    if (Payload->TryGetNumberField(TEXT("mass"), Mass))
+    {
+        // Mass is set via DefaultInstance
+        BodySetup->DefaultInstance.MassScale = 1.0f;
+        BodySetup->DefaultInstance.bOverrideMass = true;
+        // Note: Actual mass is calculated from density and volume
+    }
+
+    double LinearDamping = 0.0;
+    if (Payload->TryGetNumberField(TEXT("linearDamping"), LinearDamping))
+    {
+        BodySetup->DefaultInstance.LinearDamping = static_cast<float>(LinearDamping);
+    }
+
+    double AngularDamping = 0.0;
+    if (Payload->TryGetNumberField(TEXT("angularDamping"), AngularDamping))
+    {
+        BodySetup->DefaultInstance.AngularDamping = static_cast<float>(AngularDamping);
+    }
+
+    bool bCollisionEnabled = true;
+    if (Payload->TryGetBoolField(TEXT("collisionEnabled"), bCollisionEnabled))
+    {
+        BodySetup->DefaultInstance.SetCollisionEnabled(bCollisionEnabled ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::NoCollision);
+    }
+
+    bool bSimulatePhysics = true;
+    if (Payload->TryGetBoolField(TEXT("simulatePhysics"), bSimulatePhysics))
+    {
+        // Note: In UE 5.7+, SetSimulatePhysics is not available on FBodyInstance
+        // The simulation is controlled at the component level at runtime
+        BodySetup->DefaultInstance.bSimulatePhysics = bSimulatePhysics;
+    }
+
+    SaveIfRequested(PhysicsAsset, Payload);
+
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetStringField(TEXT("boneName"), BoneName);
+    Result->SetNumberField(TEXT("bodyIndex"), BodyIndex);
+
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+        FString::Printf(TEXT("Physics body '%s' configured"), *BoneName), Result);
+    return true;
+}
+

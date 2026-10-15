@@ -1,0 +1,153 @@
+#include "Domains/ControlActor/McpActorSupport.h"
+#include "Domains/ControlActor/Find/McpFindByAsset.h"
+#include "Domains/ControlActor/Placement/McpCoplanarFaces.h"
+
+bool UEngineWireSubsystem::HandleControlActorAction(
+    const FString &RequestId, const FString &Action,
+    const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+  const FString Lower = Action.ToLower();
+  if (!Lower.Equals(TEXT("control_actor"), ESearchCase::IgnoreCase) &&
+      !Lower.StartsWith(TEXT("control_actor")))
+    return false;
+  if (!Payload.IsValid()) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("control_actor payload missing."),
+                        TEXT("INVALID_PAYLOAD"));
+    return true;
+  }
+
+  // subAction FIRST, `action` only as the fallback — the same priority the
+  // pre-queue gate's McpHandlerUtils::NormalizeAction uses. This domain spans
+  // read actions (find_by_class) and destructive ones (delete), so a dispatcher
+  // that read `action` while the gate read `subAction` let a read-scoped caller
+  // delete actors. AuthorizeAutomationRequest already refuses a payload whose
+  // two fields disagree; resolving them in the gate's own order means this
+  // handler cannot diverge even if that guard is ever bypassed.
+  FString SubAction;
+  if (!Payload->TryGetStringField(TEXT("subAction"), SubAction) || SubAction.IsEmpty()) {
+    Payload->TryGetStringField(TEXT("action"), SubAction);
+  }
+  const FString LowerSub = SubAction.ToLower();
+
+  if (!GEditor) {
+    SendStandardErrorResponse(this, RequestingSocket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
+                              TEXT("Editor not available"), nullptr);
+    return true;
+  }
+  if (!GEditor->GetEditorSubsystem<UEditorActorSubsystem>()) {
+    SendStandardErrorResponse(this, RequestingSocket, RequestId, TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"),
+                              TEXT("EditorActorSubsystem not available"), nullptr);
+    return true;
+  }
+
+  if (LowerSub == TEXT("spawn") || LowerSub == TEXT("spawn_actor"))
+    return HandleControlActorSpawn(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("spawn_blueprint"))
+    return HandleControlActorSpawnBlueprint(RequestId, Payload,
+                                            RequestingSocket);
+  if (LowerSub == TEXT("spawn_batch"))
+    return HandleControlActorSpawnBatch(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("delete") || LowerSub == TEXT("remove") || LowerSub == TEXT("delete_object") ||
+      LowerSub == TEXT("destroy_actor"))
+    return HandleControlActorDelete(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("apply_force"))
+    return HandleControlActorApplyForce(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("set_transform") ||
+      LowerSub == TEXT("set_actor_transform") ||
+      LowerSub == TEXT("teleport_actor") ||
+      LowerSub == TEXT("set_actor_location") ||
+      LowerSub == TEXT("set_actor_rotation") ||
+      LowerSub == TEXT("set_actor_scale"))
+    return HandleControlActorSetTransform(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("get_transform") ||
+      LowerSub == TEXT("get_actor_transform"))
+    return HandleControlActorGetTransform(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("sample_motion"))
+    return HandleControlActorSampleMotion(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("set_visibility") ||
+      LowerSub == TEXT("set_actor_visible"))
+    return HandleControlActorSetVisibility(RequestId, Payload,
+                                           RequestingSocket);
+  if (LowerSub == TEXT("add_component"))
+    return HandleControlActorAddComponent(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("set_component_properties") ||
+      LowerSub == TEXT("set_component_property"))
+    return HandleControlActorSetComponentProperties(RequestId, Payload,
+                                                    RequestingSocket);
+  if (LowerSub == TEXT("set_material") ||
+      LowerSub == TEXT("set_actor_material") ||
+      LowerSub == TEXT("apply_material"))
+    return HandleControlActorSetMaterial(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("get_components") ||
+      LowerSub == TEXT("get_actor_components"))
+    return HandleControlActorGetComponents(RequestId, Payload,
+                                           RequestingSocket);
+  if (LowerSub == TEXT("duplicate"))
+    return HandleControlActorDuplicate(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("rename"))
+    return HandleControlActorRename(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("attach") || LowerSub == TEXT("attach_actor"))
+    return HandleControlActorAttach(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("detach") || LowerSub == TEXT("detach_actor"))
+    return HandleControlActorDetach(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("find_by_tag") || LowerSub == TEXT("find_actors_by_tag"))
+    return HandleControlActorFindByTag(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("add_tag"))
+    return HandleControlActorAddTag(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("remove_tag"))
+    return HandleControlActorRemoveTag(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("set_folder"))
+    return HandleControlActorSetFolder(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("find_by_name") || LowerSub == TEXT("find_actors_by_name"))
+    return HandleControlActorFindByName(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("delete_by_tag"))
+    return HandleControlActorDeleteByTag(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("set_blueprint_variables"))
+    return HandleControlActorSetBlueprintVariables(RequestId, Payload,
+                                                   RequestingSocket);
+  if (LowerSub == TEXT("create_snapshot"))
+    return HandleControlActorCreateSnapshot(RequestId, Payload,
+                                            RequestingSocket);
+  if (LowerSub == TEXT("restore_snapshot"))
+    return HandleControlActorRestoreSnapshot(RequestId, Payload,
+                                             RequestingSocket);
+  if (LowerSub == TEXT("export"))
+    return HandleControlActorExport(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("get_bounding_box") || LowerSub == TEXT("get_actor_bounds"))
+    return HandleControlActorGetBoundingBox(RequestId, Payload,
+                                            RequestingSocket);
+  if (LowerSub == TEXT("get_metadata"))
+    return HandleControlActorGetMetadata(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("list") || LowerSub == TEXT("list_objects"))
+    return HandleControlActorList(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("get"))
+    return HandleControlActorGet(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("find_by_class") || LowerSub == TEXT("find_actors_by_class"))
+    return HandleControlActorFindByClass(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("find_by_mesh"))
+    return McpFindByAsset::HandleFindByMesh(this, RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("find_by_material"))
+    return McpFindByAsset::HandleFindByMaterial(this, RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("remove_component"))
+    return HandleControlActorRemoveComponent(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("get_component_property"))
+    return HandleControlActorGetComponentProperty(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("audit_placement"))
+    return HandleControlActorAuditPlacement(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("fix_coplanar"))
+    return McpCoplanar::HandleFixCoplanar(this, RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("set_property"))
+    return HandleSetObjectProperty(RequestId, TEXT("set_object_property"), Payload, RequestingSocket);
+  if (LowerSub == TEXT("get_property"))
+    return HandleGetObjectProperty(RequestId, TEXT("get_object_property"), Payload, RequestingSocket);
+  if (LowerSub == TEXT("set_actor_collision"))
+    return HandleControlActorSetCollision(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("call_actor_function"))
+    return HandleControlActorCallFunction(RequestId, Payload, RequestingSocket);
+
+  SendStandardErrorResponse(
+      this, RequestingSocket, RequestId, TEXT("UNKNOWN_ACTION"),
+      FString::Printf(TEXT("Unknown actor control action: %s"), *LowerSub), nullptr);
+  return true;
+}

@@ -1,0 +1,321 @@
+#include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Domains/AnimationAuthoring/McpAnimSupport.h"
+
+namespace McpAnimationAuthoring {
+
+TSharedPtr<FJsonObject> HandleBlueprintStateTransitionActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response)
+{
+    if (SubAction == TEXT("add_state"))
+    {
+        FString BlueprintPath = NormalizeAnimPath(GetJsonStringField(Params, TEXT("blueprintPath"), TEXT("")));
+        FString StateMachineName = GetJsonStringField(Params, TEXT("stateMachineName"), TEXT(""));
+        FString StateName = GetJsonStringField(Params, TEXT("stateName"), TEXT(""));
+        // describe advertises both spellings and names this field machineName in
+        // add_state's own output, so a caller who sends machineName was reaching
+        // an unnamed state machine -- which matches every machine in the graph.
+        if (StateMachineName.IsEmpty())
+        {
+            StateMachineName = GetJsonStringField(Params, TEXT("machineName"), TEXT(""));
+        }
+        const TArray<FString> AnimPaths = ReadStateAnimationPaths(Params);
+        int32 NodePosX = static_cast<int32>(GetJsonNumberField(Params, TEXT("positionX"), 200));
+        int32 NodePosY = static_cast<int32>(GetJsonNumberField(Params, TEXT("positionY"), 0));
+        bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
+
+        if (StateName.IsEmpty())
+        {
+            ANIM_ERROR_RESPONSE(TEXT("stateName is required"), TEXT("MISSING_STATE_NAME"));
+        }
+
+        // Try to find in-memory version first (may have unsaved changes from add_state_machine)
+        UAnimBlueprint* AnimBP = FindObject<UAnimBlueprint>(nullptr, *BlueprintPath);
+        if (!AnimBP)
+        {
+            // Fall back to loading from disk
+            AnimBP = Cast<UAnimBlueprint>(StaticLoadObject(UAnimBlueprint::StaticClass(), nullptr, *BlueprintPath));
+        }
+        if (!AnimBP)
+        {
+            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation blueprint: %s"), *BlueprintPath), TEXT("ANIM_BP_NOT_FOUND"));
+        }
+
+        // Get the main AnimGraph
+        UEdGraph* AnimGraph = GetAnimGraphFromBlueprint(AnimBP);
+        if (!AnimGraph)
+        {
+            ANIM_ERROR_RESPONSE(TEXT("Could not find AnimGraph in blueprint"), TEXT("GRAPH_NOT_FOUND"));
+        }
+
+        TArray<UAnimGraphNode_StateMachine*> MatchingStateMachines = FindStateMachineNodes(AnimGraph, StateMachineName);
+        if (MatchingStateMachines.Num() == 0)
+        {
+            AddStateMachineInventory(AnimGraph, Response);
+            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("State machine '%s' not found"), *StateMachineName), TEXT("SM_NOT_FOUND"));
+        }
+
+        UAnimationStateMachineGraph* SMGraph = nullptr;
+        for (UAnimGraphNode_StateMachine* MatchingSMNode : MatchingStateMachines)
+        {
+            if (!MatchingSMNode || !MatchingSMNode->EditorStateMachineGraph)
+            {
+                continue;
+            }
+
+            UAnimationStateMachineGraph* CandidateGraph = Cast<UAnimationStateMachineGraph>(MatchingSMNode->EditorStateMachineGraph);
+            if (!CandidateGraph)
+            {
+                continue;
+            }
+
+            if (UAnimStateNode* ExistingState = FindStateNode(CandidateGraph, StateName))
+            {
+                Response->SetStringField(TEXT("stateName"), ExistingState->GetStateName());
+                Response->SetStringField(TEXT("requestedName"), StateName);
+                Response->SetStringField(TEXT("stateMachine"), StateMachineName);
+                Response->SetBoolField(TEXT("existingAsset"), true);
+                EnsureStateMachineEntry(CandidateGraph, ExistingState, Response);
+                ApplyStateAnimations(ExistingState, AnimPaths, Response);
+                FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(AnimBP);
+                SaveAnimAsset(AnimBP, bSave);
+                ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("State '%s' already exists in state machine '%s'"), *ExistingState->GetStateName(), *StateMachineName));
+                return Response;
+            }
+
+            if (!SMGraph)
+            {
+                SMGraph = CandidateGraph;
+            }
+        }
+
+        if (!SMGraph)
+        {
+            ANIM_ERROR_RESPONSE(TEXT("Invalid state machine graph"), TEXT("INVALID_GRAPH"));
+        }
+
+        // Create the State Node using FGraphNodeCreator
+        FGraphNodeCreator<UAnimStateNode> StateCreator(*SMGraph);
+        UAnimStateNode* StateNode = StateCreator.CreateNode();
+        StateNode->NodePosX = NodePosX;
+        StateNode->NodePosY = NodePosY;
+        StateCreator.Finalize();
+
+        // IMPORTANT: FGraphNodeCreator does NOT call PostPlacedNewNode(), which is where
+        // the BoundGraph is normally created. We must create it manually here.
+        // This mirrors UAnimStateNode::PostPlacedNewNode() logic exactly.
+        if (!StateNode->BoundGraph)
+        {
+            // Create the animation state graph (BoundGraph) with NAME_None first
+            // This matches UE's PostPlacedNewNode() behavior
+            StateNode->BoundGraph = FBlueprintEditorUtils::CreateNewGraph(
+                StateNode,
+                NAME_None,
+                UAnimationStateGraph::StaticClass(),
+                UAnimationStateGraphSchema::StaticClass()
+            );
+
+            if (StateNode->BoundGraph)
+            {
+                // Use RenameGraphWithSuggestion for proper name validation (matches UE behavior)
+                TSharedPtr<INameValidatorInterface> NameValidator = FNameValidatorFactory::MakeValidator(StateNode);
+                FBlueprintEditorUtils::RenameGraphWithSuggestion(StateNode->BoundGraph, NameValidator, *StateName);
+
+                // Initialize the state graph with default nodes (result node, etc.)
+                const UEdGraphSchema* StateSchema = StateNode->BoundGraph->GetSchema();
+                if (StateSchema)
+                {
+                    StateSchema->CreateDefaultNodesForGraph(*StateNode->BoundGraph);
+                }
+
+                // Add the new graph as a child of the state machine graph
+                if (SMGraph->SubGraphs.Find(StateNode->BoundGraph) == INDEX_NONE)
+                {
+                    SMGraph->SubGraphs.Add(StateNode->BoundGraph);
+                }
+            }
+        }
+        else
+        {
+            // BoundGraph already exists (shouldn't happen with FGraphNodeCreator), rename it
+            FBlueprintEditorUtils::RenameGraph(StateNode->BoundGraph, *StateName);
+        }
+
+        // Get the actual state name that was assigned (may differ from requested due to validation)
+        FString ActualStateName = StateNode->GetStateName();
+
+        EnsureStateMachineEntry(SMGraph, StateNode, Response);
+        ApplyStateAnimations(StateNode, AnimPaths, Response);
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(AnimBP);
+        SaveAnimAsset(AnimBP, bSave);
+
+        Response->SetStringField(TEXT("stateName"), ActualStateName);
+        Response->SetStringField(TEXT("requestedName"), StateName);
+        Response->SetStringField(TEXT("stateMachine"), StateMachineName);
+        ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("State '%s' created in state machine '%s'"), *ActualStateName, *StateMachineName));
+        return Response;
+    }
+
+    if (SubAction == TEXT("add_transition"))
+    {
+        FString BlueprintPath = NormalizeAnimPath(GetJsonStringField(Params, TEXT("blueprintPath"), TEXT("")));
+        FString StateMachineName = GetJsonStringField(Params, TEXT("stateMachineName"), TEXT(""));
+        if (StateMachineName.IsEmpty())
+        {
+            StateMachineName = GetJsonStringField(Params, TEXT("machineName"), TEXT(""));
+        }
+        FString FromState = GetJsonStringField(Params, TEXT("fromState"), TEXT(""));
+        FString ToState = GetJsonStringField(Params, TEXT("toState"), TEXT(""));
+        bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
+
+        if (FromState.IsEmpty() || ToState.IsEmpty())
+        {
+            ANIM_ERROR_RESPONSE(TEXT("fromState and toState are required"), TEXT("MISSING_STATES"));
+        }
+
+        // Try to find in-memory version first (may have unsaved changes from add_state)
+        UAnimBlueprint* AnimBP = FindObject<UAnimBlueprint>(nullptr, *BlueprintPath);
+        if (!AnimBP)
+        {
+            // Fall back to loading from disk
+            AnimBP = Cast<UAnimBlueprint>(StaticLoadObject(UAnimBlueprint::StaticClass(), nullptr, *BlueprintPath));
+        }
+        if (!AnimBP)
+        {
+            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation blueprint: %s"), *BlueprintPath), TEXT("ANIM_BP_NOT_FOUND"));
+        }
+
+        // Get the main AnimGraph
+        UEdGraph* AnimGraph = GetAnimGraphFromBlueprint(AnimBP);
+        if (!AnimGraph)
+        {
+            ANIM_ERROR_RESPONSE(TEXT("Could not find AnimGraph in blueprint"), TEXT("GRAPH_NOT_FOUND"));
+        }
+
+        TArray<UAnimGraphNode_StateMachine*> MatchingStateMachines = FindStateMachineNodes(AnimGraph, StateMachineName);
+        if (MatchingStateMachines.Num() == 0)
+        {
+            AddStateMachineInventory(AnimGraph, Response);
+            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("State machine '%s' not found"), *StateMachineName), TEXT("SM_NOT_FOUND"));
+        }
+
+        UAnimationStateMachineGraph* SMGraph = nullptr;
+        bool bFoundSourceStateAnywhere = false;
+        bool bFoundTargetStateAnywhere = false;
+
+        for (UAnimGraphNode_StateMachine* MatchingSMNode : MatchingStateMachines)
+        {
+            if (!MatchingSMNode || !MatchingSMNode->EditorStateMachineGraph)
+            {
+                continue;
+            }
+
+            UAnimationStateMachineGraph* CandidateGraph = Cast<UAnimationStateMachineGraph>(MatchingSMNode->EditorStateMachineGraph);
+            if (!CandidateGraph)
+            {
+                continue;
+            }
+
+            UAnimStateNode* CandidateFrom = FindStateNode(CandidateGraph, FromState);
+            UAnimStateNode* CandidateTo = FindStateNode(CandidateGraph, ToState);
+            bFoundSourceStateAnywhere = bFoundSourceStateAnywhere || CandidateFrom != nullptr;
+            bFoundTargetStateAnywhere = bFoundTargetStateAnywhere || CandidateTo != nullptr;
+
+            if (CandidateFrom && CandidateTo)
+            {
+                SMGraph = CandidateGraph;
+
+                if (UAnimStateTransitionNode* ExistingTransition = FindTransitionNode(CandidateGraph, FromState, ToState))
+                {
+                    Response->SetStringField(TEXT("fromState"), FromState);
+                    Response->SetStringField(TEXT("toState"), ToState);
+                    Response->SetBoolField(TEXT("existingAsset"), true);
+                    FString SettingsError, SettingsCode;
+                    bool bChanged = false;
+                    if (!ApplyTransitionSettings(ExistingTransition, AnimBP, Params, Response,
+                                                 SettingsError, SettingsCode, bChanged))
+                    {
+                        ANIM_ERROR_RESPONSE(SettingsError, SettingsCode);
+                    }
+                    // Marking and saving unconditionally turned the documented
+                    // idempotent existence check into a structural recompile,
+                    // a reinstancing of every live AnimInstance and a package
+                    // write -- during PIE, the compile-during-PIE hazard.
+                    if (bChanged)
+                    {
+                        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(AnimBP);
+                        SaveAnimAsset(AnimBP, bSave);
+                    }
+                    Response->SetBoolField(TEXT("settingsApplied"), bChanged);
+                    ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Transition from '%s' to '%s' already exists%s"), *FromState, *ToState, bChanged ? TEXT("; settings applied") : TEXT("; no settings supplied, nothing changed")));
+                    return Response;
+                }
+
+                break;
+            }
+        }
+
+        if (!bFoundSourceStateAnywhere || !bFoundTargetStateAnywhere)
+        {
+            AddStateInventory(AnimGraph, StateMachineName, Response);
+        }
+        if (!bFoundSourceStateAnywhere)
+        {
+            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Source state '%s' not found"), *FromState), TEXT("SOURCE_STATE_NOT_FOUND"));
+        }
+        if (!bFoundTargetStateAnywhere)
+        {
+            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Target state '%s' not found"), *ToState), TEXT("TARGET_STATE_NOT_FOUND"));
+        }
+
+        if (!SMGraph)
+        {
+            ANIM_ERROR_RESPONSE(TEXT("Invalid state machine graph"), TEXT("INVALID_GRAPH"));
+        }
+
+        // SMGraph is only set on the branch where BOTH states resolved in it, so
+        // this cannot fail today. It is still checked: CreateConnections
+        // dereferences both arguments, so a future change to FindStateNode's
+        // matching or to how SMGraph is chosen would turn a silent null into an
+        // editor crash instead of an error receipt.
+        UAnimStateNode* FromNode = FindStateNode(SMGraph, FromState);
+        UAnimStateNode* ToNode = FindStateNode(SMGraph, ToState);
+        if (!FromNode || !ToNode)
+        {
+            AddStateInventory(AnimGraph, StateMachineName, Response);
+            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("State '%s' not found in the resolved state machine graph"), FromNode ? *ToState : *FromState), FromNode ? TEXT("TARGET_STATE_NOT_FOUND") : TEXT("SOURCE_STATE_NOT_FOUND"));
+        }
+
+        // Create the Transition Node
+        FGraphNodeCreator<UAnimStateTransitionNode> TransCreator(*SMGraph);
+        UAnimStateTransitionNode* TransNode = TransCreator.CreateNode();
+        TransCreator.Finalize();
+
+        // Establish the connection between states
+        TransNode->CreateConnections(FromNode, ToNode);
+
+        // CrossfadeDuration is deliberately not set here: a fresh
+        // UAnimStateTransitionNode arrives at 0.2 s from its own constructor,
+        // and ApplyTransitionSettings overwrites it only when the caller
+        // supplied a value. Defaulting it in two places with two conventions
+        // (0.2 here, -1.0-means-untouched there) was one edit from diverging.
+        TransNode->BlendMode = EAlphaBlendOption::Linear;
+
+        FString SettingsError, SettingsCode;
+        bool bSettingsChanged = false;
+        if (!ApplyTransitionSettings(TransNode, AnimBP, Params, Response, SettingsError, SettingsCode,
+                                     bSettingsChanged))
+        {
+            ANIM_ERROR_RESPONSE(SettingsError, SettingsCode);
+        }
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(AnimBP);
+        SaveAnimAsset(AnimBP, bSave);
+
+        Response->SetStringField(TEXT("fromState"), FromState);
+        Response->SetStringField(TEXT("toState"), ToState);
+        ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Transition from '%s' to '%s' created"), *FromState, *ToState));
+        return Response;
+    }
+    return nullptr;
+}
+
+} // namespace McpAnimationAuthoring

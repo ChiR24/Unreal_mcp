@@ -91,8 +91,8 @@ export function pluginVersionMismatch(metadata: Record<string, unknown> | undefi
     const server = `${PACKAGE.name} ${PACKAGE.version}`;
     const install = `install the ${PACKAGE.version} plugin from ${RELEASE_TAG_URL}${PACKAGE.version} and restart the editor`;
     return typeof plugin === 'string'
-        ? `Version mismatch: this server is ${server} but the editor runs McpAutomationBridge ${plugin}, so actions and parameters can differ. Fix: ${install}, or pin the server to the plugin with npx -y ${PACKAGE.name}@${plugin} and restart the MCP client.`
-        : `Version mismatch: this server is ${server} but the editor runs a McpAutomationBridge plugin that predates version reporting, so actions and parameters can differ. Fix: ${install}.`;
+        ? `Version mismatch: this server is ${server} but the editor runs EngineWire ${plugin}, so actions and parameters can differ. Fix: ${install}, or pin the server to the plugin with npx -y ${PACKAGE.name}@${plugin} and restart the MCP client.`
+        : `Version mismatch: this server is ${server} but the editor runs an EngineWire plugin that predates version reporting, so actions and parameters can differ. Fix: ${install}.`;
 }
 
 export const bridgeErrorSchema = z.looseObject({

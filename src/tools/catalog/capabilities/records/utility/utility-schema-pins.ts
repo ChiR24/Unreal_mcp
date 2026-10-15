@@ -27,10 +27,11 @@ export const BOOLEAN_FIELDS = new Set([
   'canRespawn', 'systemWide', 'makeDefault',
   'indefinite', 'bypass', 'applyToChildren', 'applyEQ', 'spatialize', 'replace',
   // Legacy input-mapping modifier flags. The native handler reads these with
-  // TryGetBoolField (McpAutomationBridge_InputHandlersLegacyMappings.cpp), so
+  // TryGetBoolField (McpInputLegacyMappings.cpp), so
   // publishing them as strings made a schema-valid boolean unrepresentable.
   'shift', 'ctrl', 'alt', 'cmd',
-  'smoothing', 'all',
+  'smoothing', 'all', 'oneShot',
+  'enableReverbSend', 'useOwnerNetRelevancy',
 ]);
 
 /** Field names whose JSON-Schema type is `number` on the wire. */
@@ -49,7 +50,7 @@ export const NUMBER_FIELDS = new Set([
   'midFrequency', 'midGain', 'highMidFrequency', 'highMidGain', 'highFrequency', 'highGain',
   'density', 'diffusion', 'gain', 'gainHF', 'decayTime', 'decayHFRatio', 'lfeBleed',
   'voiceCenterChannelVolume', 'micInputGain', 'noiseGateThreshold', 'silenceDetectionThreshold', 'sampleRate',
-  'maxSeconds',
+  'maxSeconds', 'volumeAdjuster', 'reverbDistanceMin', 'reverbDistanceMax', 'reverbWetLevelMin', 'reverbWetLevelMax',
 ]);
 
 /** Field names whose value is an arbitrary reflection-boundary object. */
@@ -108,6 +109,7 @@ export const FIELD_DESCRIPTIONS: Readonly<Record<string, string>> = {
   inputType: 'Graph input data type (Float, Int32, Bool, String, Trigger, Audio).',
   location: 'World location as [x, y, z] (an {x, y, z} object is accepted).',
   looping: 'Whether playback loops.',
+  oneShot: 'Whether the MetaSound is a one-shot source that ends when On Finished fires; false is a continuous source the engine virtualizes like a loop.',
   lowPassFilterFrequency: 'Low-pass filter cutoff frequency in Hz.',
   maxSeconds: 'Longest the measurement runs, in seconds (default 5, 0.2 to 20). A sound that ends sooner ends it then; looping sounds, music and MetaSounds that never trigger On Finished play until this.',
   mixName: 'Sound Mix name.',
@@ -266,6 +268,7 @@ export const FIELD_DESCRIPTIONS: Readonly<Record<string, string>> = {
   actionPath: 'Action path (canonical /Game asset path).',
   triggerType: 'Trigger type.',
   modifierType: 'Modifier type.',
+  replaceKey: 'A key the action is already mapped to: its mapping moves to key (the remap of a control), keeping its triggers and modifiers unless triggerType or modifierType is sent, and that key stops firing the action. A key the action is not mapped to fails NOT_FOUND and lists the keys it is.',
   defaultPawnClass: 'Default pawn class.',
   playerControllerClass: 'Player controller class.',
   gameStateClass: 'Game state class.',

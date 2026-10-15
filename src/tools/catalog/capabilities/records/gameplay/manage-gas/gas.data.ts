@@ -44,7 +44,7 @@ export const GAS_RECORDS: readonly CapabilityRecordSource[] = [
     exampleInput: { action: 'set_attribute_base_value', attributeSetPath: '/Game/AS_Char', attributeName: 'Health', baseValue: 100 } }),
   buildRecord({ parentTool: T, id: `${T}.create_gameplay_ability`, action: 'create_gameplay_ability', family: F,
     topics: ['gameplay ability', 'ability', 'gas ability', 'new ability', 'skill'],
-    summary: 'Create a Gameplay Ability asset.', whenToUse: W, whenNotToUse: ['Use add_ability_task.'],
+    summary: 'Create a Gameplay Ability asset.', whenToUse: W, whenNotToUse: ['The ability exists and needs its logic: build its graph, ability tasks included (blueprint edit_graph).'],
     inputProps: { name: P.name, path: P.path }, required: ['name'],
     effect: 'write', latency: 'interactive', resources: 'medium', plugins: GAS_PLUGIN,
     outputProps: { assetPath: P.assetPath }, outputRequired: ['assetPath'],
@@ -126,7 +126,7 @@ export const GAS_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: { assetPath: P.assetPath }, required: ['assetPath'],
     effect: 'read', latency: 'instant', resources: 'low', plugins: GAS_PLUGIN,
     // `abilityCount` was declared but is never set by the handler
-    // (McpAutomationBridge_GASHandlersInfo.cpp), so output projection produced
+    // (McpGASInfo.cpp), so output projection produced
     // an empty payload and get_gas_info reported success carrying nothing.
     // Declared below is exactly what the handler emits.
     outputProps: {
@@ -140,7 +140,7 @@ export const GAS_RECORDS: readonly CapabilityRecordSource[] = [
   buildRecord({ parentTool: T, id: `${T}.add_ability`, action: 'add_ability', family: F,
     summary: 'Add an ability to an existing Gameplay Ability Set.',
     whenToUse: ['An ability must join a set that already exists.'],
-    whenNotToUse: ['The ability is granted directly to an actor; use grant_ability.'],
+    whenNotToUse: ['The ability is granted directly to an actor: that is Blueprint logic on its Ability System Component (blueprint edit_graph, Give Ability).'],
     inputProps: { setPath: G.setPath, abilityPath: P.abilityPath, abilityClass: G.abilityClass },
     required: ['setPath'], requiredOneOf: ['abilityPath', 'abilityClass'],
     outputProps: { setPath: G.setPath, abilityPath: P.abilityPath, abilityClass: G.abilityClass, note: P.string_ }, outputRequired: [],

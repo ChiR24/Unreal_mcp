@@ -1,8 +1,8 @@
 {
   "name": "unreal-engine-mcp-server",
-  "version": "0.6.0-beta-c",
+  "version": "0.6.0-beta-e",
   "mcpName": "io.github.ChiR24/unreal-engine-mcp",
-  "description": "A comprehensive Model Context Protocol (MCP) server that enables AI assistants to control Unreal Engine via native automation bridge. Built with TypeScript and designed for game development automation.",
+  "description": "EngineWire: an MCP server and Unreal Editor plugin that let AI assistants build in Unreal Engine 5.0-5.8: levels, Blueprints, UI, materials, effects and more.",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -54,6 +54,7 @@
     "node": ">=20.19.0"
   },
   "keywords": [
+    "enginewire",
     "mcp",
     "modelcontextprotocol",
     "unreal",
@@ -66,7 +67,7 @@
   "author": "Unreal Engine MCP Team",
   "license": "MIT",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "1.29.0",
+    "@modelcontextprotocol/sdk": "1.32.1",
     "ws": "^8.18.3",
     "zod": "^4.2.1"
   },

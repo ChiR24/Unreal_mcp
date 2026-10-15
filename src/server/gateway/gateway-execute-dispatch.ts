@@ -70,8 +70,10 @@ export function projectCanonicalOutput(result: unknown, schema: Draft202012Objec
     const details: Record<string, unknown> = existing ? { ...existing } : {};
     const fold = (source: Record<string, unknown>): void => {
       for (const [name, value] of Object.entries(source)) {
-        // The bridge frame's own fields (liveRevisions too, which the envelope reports) are not handler output.
-        if (name === 'data' || name === 'requestId' || name === 'type' || name === 'liveRevisions' || name in schema.properties) continue;
+        // The bridge frame's own fields (liveRevisions too, which the envelope reports) are not handler output, and
+        // the receipt carries the message at its top: folded here as well, every reply printed it twice.
+        if (name === 'data' || name === 'requestId' || name === 'type' || name === 'liveRevisions' || name === 'message'
+          || name in schema.properties) continue;
         if (!(name in details)) details[name] = value;
       }
     };
@@ -112,9 +114,16 @@ function pieWorldWarnings(record: CapabilityRecord, result: unknown): readonly s
   }
   const details = isRecord(result) ? result.details : undefined;
   const world = failureString(result, 'worldName') ?? failureString(details, 'worldName');
-  return world?.includes('/UEDPIE_') === true
-    ? [`Applied to the running Play-In-Editor world (${world}): the change is discarded when play stops and the editor level is unchanged. Stop PIE first to edit the level.`]
-    : [];
+  const paused = (isRecord(result) && result.gamePaused === true) || (isRecord(details) && details.gamePaused === true);
+  return [
+    ...(world?.includes('/UEDPIE_') === true
+      ? [`Applied to the running Play-In-Editor world (${world}): the change is discarded when play stops and the editor level is unchanged. Stop PIE first to edit the level.`]
+      : []),
+    // A character moved into a game that had paused itself stayed in the air, which read as broken gravity.
+    ...(paused
+      ? ['The game is paused (a title screen, a pause menu or control_editor pause): nothing it moves or simulates advances until play resumes (control_editor resume with unpauseGame).']
+      : []),
+  ];
 }
 
 const HANDLER_CODE = /^[A-Z][A-Z0-9_]{0,63}$/;

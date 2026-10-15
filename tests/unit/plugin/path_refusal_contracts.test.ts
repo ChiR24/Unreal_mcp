@@ -1,6 +1,6 @@
 // A refused path says why, a mounted content root is accepted wherever a folder is, and a reply keeps a registered
 // mount readable. Wiring contracts only: the behaviour is pinned in-editor by
-// McpAutomationBridge.Transport.ContentRoots.PathAcceptance and .ReplyRedaction.
+// EngineWire.Transport.ContentRoots.PathAcceptance and .ReplyRedaction.
 //
 // query_asset lookup=search packagePaths ["/Game","/MoverExamples","/MoverTests"] answered "contains traversal
 // sequences" for a root whose plugin was simply not enabled: about thirty handlers worded every refusal as
@@ -11,7 +11,7 @@ import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-const PRIVATE = join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private');
+const PRIVATE = join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private');
 const SECURITY = join(PRIVATE, 'Foundation', 'BridgeHelpers', 'Security');
 const CORE = join(PRIVATE, 'Core', 'Subsystem');
 
@@ -28,7 +28,7 @@ const walk = (dir: string): string[] =>
 const sources = walk(PRIVATE).map((file) => ({ file, body: code(file) }));
 
 describe('a mounted content root is a folder like /Game is', () => {
-  const paths = code(SECURITY, 'McpAutomationBridgeHelpersProjectPaths.h');
+  const paths = code(SECURITY, 'McpProjectPaths.h');
 
   it('accepts a bare root, a trailing slash and an object path under a registered mount', () => {
     const probe = paths.slice(paths.indexOf('McpIsMountedContentPath('));
@@ -52,13 +52,13 @@ describe('a mounted content root is a folder like /Game is', () => {
 });
 
 describe('a refusal is worded in one place', () => {
-  const refusal = code(SECURITY, 'McpAutomationBridgeHelpersProjectPathsRefusal.h');
+  const refusal = code(SECURITY, 'McpProjectPathsRefusal.h');
 
   it('defines the formatter once, in the helper header chain', () => {
     const definers = sources.filter(({ body }) => /\bMcpDescribePathRejection\s*\([^;{]*\)\s*\{/u.test(body)).map(({ file }) => file);
-    expect(definers).toEqual([join(SECURITY, 'McpAutomationBridgeHelpersProjectPathsRefusal.h')]);
-    expect(code(SECURITY, 'McpAutomationBridgeHelpersProjectPaths.h')).toContain(
-      '#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersProjectPathsRefusal.h"',
+    expect(definers).toEqual([join(SECURITY, 'McpProjectPathsRefusal.h')]);
+    expect(code(SECURITY, 'McpProjectPaths.h')).toContain(
+      '#include "Foundation/BridgeHelpers/Security/McpProjectPathsRefusal.h"',
     );
   });
 
@@ -107,7 +107,7 @@ describe('the handlers report what SanitizeProjectRelativePath said', () => {
   });
 
   it('query_asset search names the field and the reason for a package path it refuses', () => {
-    const search = code(PRIVATE, 'Domains', 'AssetQuery', 'McpAutomationBridge_AssetQuerySearch.cpp');
+    const search = code(PRIVATE, 'Domains', 'AssetQuery', 'McpAssetQuerySearch.cpp');
     expect(search).toContain('McpPathRefusalMessage(TEXT("package path"), RawPath)');
     expect(search).toContain('McpPathRefusalMessage(TEXT("path"), SinglePath)');
     expect(search).not.toContain('traversal');
@@ -115,8 +115,8 @@ describe('the handlers report what SanitizeProjectRelativePath said', () => {
 });
 
 describe('a reply keeps a registered content mount readable', () => {
-  const sanitization = code(CORE, 'McpAutomationBridgeSubsystemResponseSanitization.h');
-  const contentPaths = code(CORE, 'McpAutomationBridgeSubsystemContentPaths.h');
+  const sanitization = code(CORE, 'EngineWireSubsystemResponseSanitization.h');
+  const contentPaths = code(CORE, 'EngineWireSubsystemContentPaths.h');
 
   it('asks the engine whether the first segment is a registered mount, and never trusts a host root', () => {
     const mount = contentPaths.slice(contentPaths.indexOf('IsRegisteredContentMountAt('));
@@ -136,6 +136,12 @@ describe('a reply keeps a registered content mount readable', () => {
   it('still hides a host path of every shape, and the root nothing has mounted', () => {
     const redact = sanitization.slice(sanitization.indexOf('inline FString RedactFilesystemPathsForResponse'));
     expect(redact).toContain('const bool bWindowsPath');
+    // "e.g. 'Content/Icons/Logo.png'" read "Content[path redacted]": a project folder path names no host directory.
+    expect(redact).toContain('(IsAllowedUnrealMountPath(Input, Index, bNameMounts) || IsProjectRelativePathAt(Input, Index))');
+    const project = contentPaths.slice(contentPaths.indexOf('inline bool IsProjectRelativePathAt('));
+    expect(project).toContain('return bAfterToken && !Run.Contains(TEXT("..")) && !Run.Contains(TEXT(":")) &&');
+    // A drive letter starts a token, so the "t:/" in Object:/Script/Engine.Actor is not a drive.
+    expect(redact).toMatch(/FChar::IsAlpha\(Input\[Index\]\) &&\s*\(Index == 0 \|\| !FChar::IsAlnum\(Input\[Index - 1\]\)\) &&\s*Input\[Index \+ 1\] == ':'/u);
     expect(redact).toContain('const bool bUncPath');
     expect(redact).toContain('FString(TEXT("[path redacted]"))');
     expect(redact).toContain('IsAllowedUnrealMountPath(Input, Index, bNameMounts)');
@@ -153,7 +159,7 @@ describe('a reply keeps a registered content mount readable', () => {
 
   it('asks the engine only where a reply is built, never inline in the log device', () => {
     // The log device runs on whichever thread logged, which can be the one holding the engine's mount lock.
-    expect(code(PRIVATE, 'Domains', 'Log', 'McpAutomationBridge_LogHandlers.cpp')).toMatch(
+    expect(code(PRIVATE, 'Domains', 'Log', 'McpLogHandlers.cpp')).toMatch(
       /SanitizeEngineErrorForResponse\(FString\(V\),\s+false\)\.Left\(2048\)/u,
     );
     // Nothing else passes the flag: every other caller sanitizes a finished message, on the thread that answers.
@@ -161,6 +167,6 @@ describe('a reply keeps a registered content mount readable', () => {
       .filter(({ file, body }) => /SanitizeEngineErrorForResponse\((?:[^(),]|\([^()]*\))+,\s*(?:false|true)\)/u.test(body)
         && !file.endsWith('ResponseSanitization.h') && !file.startsWith(join(PRIVATE, 'Tests')))
       .map(({ file }) => file);
-    expect(flagged).toEqual([join(PRIVATE, 'Domains', 'Log', 'McpAutomationBridge_LogHandlers.cpp')]);
+    expect(flagged).toEqual([join(PRIVATE, 'Domains', 'Log', 'McpLogHandlers.cpp')]);
   });
 });

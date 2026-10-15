@@ -4,7 +4,7 @@ import { coerceNumber } from '../utils/validation/type-guards.js';
 /** Backs ue://actors: every actor in the current level. */
 export async function listActors(automationBridge: AutomationRequestBridge | undefined): Promise<Record<string, unknown>> {
   if (!automationBridge || typeof automationBridge.sendAutomationRequest !== 'function') {
-    return { success: false, error: 'Automation bridge is not available. Please ensure Unreal Engine is running with the MCP Automation Bridge plugin.' };
+    return { success: false, error: 'Automation bridge is not available. Please ensure Unreal Engine is running with the EngineWire plugin.' };
   }
   try {
     const resp = await automationBridge.sendAutomationRequest('control_actor', { action: 'list' }) as Record<string, unknown>;

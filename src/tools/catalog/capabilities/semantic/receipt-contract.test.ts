@@ -359,7 +359,7 @@ describe('receipt redaction — a credential NAMED by a sibling masks the generi
     const masked = maskSecretsDeep({
       propertyName: 'CapabilityToken',
       value: SECRET,
-      objectPath: '/Script/McpAutomationBridge.Default__McpAutomationBridgeSettings',
+      objectPath: '/Script/EngineWire.Default__EngineWireSettings',
     }) as Record<string, unknown>;
 
     expect(JSON.stringify(masked)).not.toContain(SECRET);

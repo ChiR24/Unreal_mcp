@@ -4,8 +4,8 @@ import type { FoldSpec } from '../shared/fold-types.js';
 export const CONTROL_EDITOR_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'play', selector: 'control',
-    summary: 'Control Play In Editor with control: play (starts it), pause, resume, stop, eject (leave the pawn for a free camera) or possess (take it back).',
-    topics: ['play in editor', 'press play', 'start the game', 'run the game', 'start pie', 'stop pie', 'pause pie', 'pause game', 'pause simulation', 'resume game', 'eject', 'possess', 'quit game'],
+    summary: 'Control Play In Editor with control: play (starts it, answering once play has begun), pause, resume, stop (answers once play has ended), eject (leave the pawn for a free camera) or possess (control another pawn by actorName, such as a character to test, or back to the player pawn).',
+    topics: ['play in editor', 'press play', 'start the game', 'run the game', 'start pie', 'stop pie', 'pause pie', 'pause game', 'pause simulation', 'resume game', 'eject', 'possess', 'possess a character', 'quit game'],
     members: { play: 'play', pause: 'pause', resume: 'resume', stop: 'stop', eject: 'eject', possess: 'possess' },
     aliasMembers: { stop: 'stop_pie' },
   },

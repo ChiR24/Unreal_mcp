@@ -1,0 +1,219 @@
+#include "Core/Compatibility/McpVersionCompatibility.h"
+
+#include "Domains/Performance/McpPerfPrivate.h"
+
+#include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Editor.h"
+#include "Engine/World.h"
+#include "WorldPartition/WorldPartition.h"
+
+#include "Engine/Engine.h"
+#include "HAL/IConsoleManager.h"
+#include "Scalability.h"
+
+#include "Editor/UnrealEd/Public/Editor.h"
+
+namespace McpPerformanceHandlers
+{
+bool HandleAdvancedOptimizationAction(const FPerformanceActionContext& Context)
+{
+    if (Context.Lower == TEXT("apply_baseline_settings"))
+    {
+        FString Profile = TEXT("balanced");
+        Context.Payload->TryGetStringField(TEXT("profile"), Profile);
+
+        // The engine's own profiles: performance = Low, quality = Epic, anything else (balanced) = High.
+        const int32 QualityLevel = Profile.Equals(TEXT("performance"), ESearchCase::IgnoreCase) ? 0
+            : Profile.Equals(TEXT("quality"), ESearchCase::IgnoreCase) ? 3 : 2;
+        Scalability::FQualityLevels Levels;
+        Levels.SetFromSingleQualityLevel(QualityLevel);
+        Scalability::SetQualityLevels(Levels);
+        SetCVarIfExists(TEXT("r.VSync"), QualityLevel == 0 ? 0 : 1);
+
+        TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+        Resp->SetStringField(TEXT("profile"), Profile);
+        Resp->SetNumberField(TEXT("qualityLevel"), QualityLevel);
+        Context.Bridge.SendAutomationResponse(
+            Context.RequestingSocket, Context.RequestId, true,
+            FString::Printf(TEXT("Baseline settings applied: %s"), *Profile), Resp);
+        return true;
+    }
+
+    if (Context.Lower == TEXT("optimize_draw_calls"))
+    {
+        bool bEnabled = true;
+        if (!Context.Payload->TryGetBoolField(TEXT("enabled"), bEnabled))
+        {
+            Context.Payload->TryGetBoolField(TEXT("enableBatching"), bEnabled);
+        }
+
+        // enableInstancing is the declared name, so it wins over the older instancing spelling.
+        bool bInstancing = true;
+        if (!Context.Payload->TryGetBoolField(TEXT("enableInstancing"), bInstancing))
+        {
+            Context.Payload->TryGetBoolField(TEXT("instancing"), bInstancing);
+        }
+
+        SetCVarIfExists(
+            TEXT("r.MeshDrawCommands.DynamicInstancing"), bInstancing ? 1 : 0);
+        SetCVarIfExists(
+            TEXT("r.MeshDrawCommands.UseCachedCommands"), bEnabled ? 1 : 0);
+
+        TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+        Resp->SetBoolField(TEXT("optimized"), bEnabled);
+        Resp->SetBoolField(TEXT("instancing"), bInstancing);
+        Context.Bridge.SendAutomationResponse(
+            Context.RequestingSocket, Context.RequestId, true,
+            TEXT("Draw call optimizations configured"), Resp);
+        return true;
+    }
+
+    if (Context.Lower == TEXT("configure_occlusion_culling"))
+    {
+        bool bEnabled = true;
+        Context.Payload->TryGetBoolField(TEXT("enabled"), bEnabled);
+
+        double OcclusionSlop = 0.0;
+        const bool bHasSlop = Context.Payload->TryGetNumberField(
+            TEXT("slop"), OcclusionSlop);
+
+        double MinScreenRadiusForOcclusion = 0.0;
+        const bool bHasMinRadius = Context.Payload->TryGetNumberField(
+            TEXT("minScreenRadius"), MinScreenRadiusForOcclusion);
+
+        SetCVarIfExists(TEXT("r.AllowOcclusionQueries"), bEnabled ? 1 : 0);
+        if (bHasSlop)
+        {
+            SetCVarIfExists(
+                TEXT("r.OcclusionSlop"), static_cast<float>(OcclusionSlop));
+        }
+        if (bHasMinRadius)
+        {
+            SetCVarIfExists(
+                TEXT("r.OcclusionCullMinScreenRadius"),
+                static_cast<float>(MinScreenRadiusForOcclusion));
+        }
+
+        TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+        Resp->SetBoolField(TEXT("enabled"), bEnabled);
+        if (bHasSlop)
+        {
+            Resp->SetNumberField(TEXT("slop"), OcclusionSlop);
+        }
+        if (bHasMinRadius)
+        {
+            Resp->SetNumberField(TEXT("minScreenRadius"), MinScreenRadiusForOcclusion);
+        }
+        Context.Bridge.SendAutomationResponse(
+            Context.RequestingSocket, Context.RequestId, true,
+            TEXT("Occlusion culling configured"), Resp);
+        return true;
+    }
+
+    if (Context.Lower == TEXT("optimize_shaders"))
+    {
+        FString Mode = TEXT("changed");
+        Context.Payload->TryGetStringField(TEXT("mode"), Mode);
+
+        bool bForceRecompile = false;
+        Context.Payload->TryGetBoolField(TEXT("forceRecompile"), bForceRecompile);
+
+        FString Command;
+        if (bForceRecompile)
+        {
+            Command = TEXT("recompileshaders all");
+        }
+        else if (Mode.Equals(TEXT("material"), ESearchCase::IgnoreCase))
+        {
+            Command = TEXT("recompileshaders material");
+        }
+        else if (Mode.Equals(TEXT("global"), ESearchCase::IgnoreCase))
+        {
+            Command = TEXT("recompileshaders global");
+        }
+        else
+        {
+            Command = TEXT("recompileshaders changed");
+        }
+
+        if (!GEditor)
+        {
+            Context.Bridge.SendAutomationError(
+                Context.RequestingSocket, Context.RequestId,
+                TEXT("Editor not available"), TEXT("NO_EDITOR"));
+            return true;
+        }
+
+        GEngine->Exec(GEditor->GetEditorWorldContext().World(), *Command);
+
+        TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+        Resp->SetStringField(TEXT("mode"), Mode);
+        Resp->SetBoolField(TEXT("forceRecompile"), bForceRecompile);
+        Resp->SetStringField(TEXT("command"), Command);
+        Context.Bridge.SendAutomationResponse(
+            Context.RequestingSocket, Context.RequestId, true,
+            FString::Printf(TEXT("Shader optimization initiated: %s"), *Command),
+            Resp);
+        return true;
+    }
+
+    if (Context.Lower != TEXT("configure_world_partition"))
+    {
+        return false;
+    }
+
+    bool bEnabled = true;
+    Context.Payload->TryGetBoolField(TEXT("enabled"), bEnabled);
+
+    double CellSize = 0.0;
+    const bool bHasCellSize =
+        Context.Payload->TryGetNumberField(TEXT("cellSize"), CellSize);
+
+    // streamingDistance is the declared name, so it wins over the older loadingRange spelling.
+    double LoadingRange = 0.0;
+    bool bHasLoadingRange =
+        Context.Payload->TryGetNumberField(TEXT("streamingDistance"), LoadingRange);
+    if (!bHasLoadingRange)
+    {
+        bHasLoadingRange =
+            Context.Payload->TryGetNumberField(TEXT("loadingRange"), LoadingRange);
+    }
+
+    // These CVars only mean something on a partitioned world (dogfood #175).
+    UWorld* EditorWorld = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    if (!EditorWorld || !EditorWorld->GetWorldPartition())
+    {
+        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId,
+            TEXT("The loaded level has no World Partition; enable it first (manage_level_structure enable_world_partition) before configuring streaming"),
+            TEXT("WORLD_PARTITION_NOT_ENABLED"));
+        return true;
+    }
+    SetCVarIfExists(TEXT("wp.Runtime.EnableStreaming"), bEnabled ? 1 : 0);
+    if (bHasCellSize)
+    {
+        SetCVarIfExists(
+            TEXT("wp.Runtime.RuntimeCellSize"), static_cast<float>(CellSize));
+    }
+    if (bHasLoadingRange)
+    {
+        SetCVarIfExists(
+            TEXT("wp.Runtime.RuntimeStreamingRange"),
+            static_cast<float>(LoadingRange));
+    }
+
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+    Resp->SetBoolField(TEXT("streamingEnabled"), bEnabled);
+    if (bHasCellSize)
+    {
+        Resp->SetNumberField(TEXT("cellSize"), CellSize);
+    }
+    if (bHasLoadingRange)
+    {
+        Resp->SetNumberField(TEXT("loadingRange"), LoadingRange);
+    }
+    Context.Bridge.SendAutomationResponse(
+        Context.RequestingSocket, Context.RequestId, true,
+        TEXT("World Partition settings configured"), Resp);
+    return true;
+}
+}

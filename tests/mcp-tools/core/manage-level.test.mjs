@@ -59,7 +59,7 @@ const testCases = [
   { scenario: 'CREATE: build_lighting', toolName: 'manage_level', arguments: { action: 'build_lighting', quality: 'Preview' }, expected: 'success|already exists' },
 
   // === METADATA ===
-  { scenario: 'CONFIG: set_metadata', toolName: 'manage_level', arguments: { action: 'set_metadata', assetPath: MAIN_LEVEL, metadata: { suite: 'manage_level', timestamp: ts } }, expected: 'success' },
+  { scenario: 'CONFIG: set_metadata', toolName: 'manage_level', arguments: { action: 'set_metadata', levelPath: MAIN_LEVEL, metadata: { suite: 'manage_level', timestamp: ts } }, expected: 'success' },
   { scenario: 'CONFIG: set_world_settings', toolName: 'manage_level', arguments: { action: 'set_world_settings', gameMode: '/Game/Maps/BP_RaceGameMode', killZ: -100000, gravityZ: -980, timeDilation: 1, enableWorldBoundsChecks: true }, expected: 'success' },
 
   // === IMPORT / EXPORT / INFO ===
@@ -69,16 +69,18 @@ const testCases = [
   { scenario: 'INFO: list_levels', toolName: 'manage_level', arguments: { action: 'list_levels' }, expected: 'success' },
   { scenario: 'INFO: get_summary', toolName: 'manage_level', arguments: { action: 'get_summary', levelPath: MAIN_LEVEL }, expected: 'success' },
   { scenario: 'ACTION: validate_level', toolName: 'manage_level', arguments: { action: 'validate_level', levelPath: MAIN_LEVEL }, expected: 'success' },
-  { scenario: 'ACTION: validate_level assetPath alias', toolName: 'manage_level', arguments: { action: 'validate_level', assetPath: MAIN_LEVEL }, expected: 'success' },
   { scenario: 'INFO: get_current_level', toolName: 'manage_level', arguments: { action: 'get_current_level' }, expected: 'success' },
 
   // === ASSET OPERATIONS ===
-  { scenario: 'ACTION: duplicate_level', toolName: 'manage_level', arguments: { action: 'duplicate_level', sourcePath: MAIN_LEVEL, destinationPath: DUPLICATED_LEVEL, targetPath: TEST_FOLDER, overwrite: false }, expected: 'success|already exists' },
+  { scenario: 'ACTION: duplicate_level', toolName: 'manage_level', arguments: { action: 'duplicate_level', sourcePath: MAIN_LEVEL, destinationPath: DUPLICATED_LEVEL, overwrite: false }, expected: 'success|already exists' },
   { scenario: 'ACTION: rename_level', toolName: 'manage_level', arguments: { action: 'rename_level', levelPath: DUPLICATED_LEVEL, newName: RENAMED_LEVEL_NAME, overwrite: false }, expected: 'success|already exists' },
   { scenario: 'ACTION: rename_level to a destinationPath', toolName: 'manage_level', arguments: { action: 'rename_level', levelPath: RENAMED_LEVEL, destinationPath: MOVED_LEVEL }, expected: 'success|already exists' },
-  { scenario: 'DELETE: delete multiple levels', toolName: 'manage_level', arguments: { action: 'delete', levelPaths: [SAVE_AS_LEVEL, SAVE_LEVEL_AS, EXPORTED_LEVEL, SAVE_VIA_SAVE_LEVEL] }, expected: 'success|not found' },
+  { scenario: 'DELETE: delete SAVE_AS_LEVEL', toolName: 'manage_level', arguments: { action: 'delete', levelPath: SAVE_AS_LEVEL }, expected: 'success|not found' },
+  { scenario: 'DELETE: delete SAVE_LEVEL_AS', toolName: 'manage_level', arguments: { action: 'delete', levelPath: SAVE_LEVEL_AS }, expected: 'success|not found' },
+  { scenario: 'DELETE: delete EXPORTED_LEVEL', toolName: 'manage_level', arguments: { action: 'delete', levelPath: EXPORTED_LEVEL }, expected: 'success|not found' },
+  { scenario: 'DELETE: delete SAVE_VIA_SAVE_LEVEL', toolName: 'manage_level', arguments: { action: 'delete', levelPath: SAVE_VIA_SAVE_LEVEL }, expected: 'success|not found' },
   { scenario: 'DELETE: delete', toolName: 'manage_level', arguments: { action: 'delete', levelPath: MOVED_LEVEL }, expected: 'success|not found' },
-  { scenario: 'DELETE: delete_level path alias', toolName: 'manage_level', arguments: { action: 'delete_level', path: IMPORTED_LEVEL }, expected: 'success|not found' },
+  { scenario: 'DELETE: delete_level', toolName: 'manage_level', arguments: { action: 'delete_level', levelPath: IMPORTED_LEVEL }, expected: 'success|not found' },
 
   // === CLEANUP ===
   { scenario: 'Cleanup: delete test actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: TEST_ACTOR }, expected: 'success|not found' },

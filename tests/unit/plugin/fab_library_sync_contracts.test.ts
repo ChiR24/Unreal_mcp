@@ -15,7 +15,7 @@ import { describe, expect, it } from 'vitest';
 const library = readFileSync(
   resolve(
     process.cwd(),
-    'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Domains/AssetWorkflow/Operations/McpAutomationBridge_AssetWorkflowFabLibrary.cpp',
+    'plugins/EngineWire/Source/EngineWire/Private/Domains/AssetWorkflow/Operations/McpAssetFabLibrary.cpp',
   ),
   'utf8',
 );

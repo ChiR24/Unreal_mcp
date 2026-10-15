@@ -227,6 +227,7 @@ const testCases = [
     arguments: {
       action: 'seek_media',
       mediaPlayerPath: PLAYER_PATH,
+      seekTime: 5,
       timeSeconds: 5,
       seconds: 5,
       time: 5,

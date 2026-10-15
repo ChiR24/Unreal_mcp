@@ -1,0 +1,67 @@
+{
+  "description": "A pawn that chases the player: every ChaseInterval seconds, while the player's pawn is within ChaseRange, its AI controller moves it toward the player (MoveToActor, stopping StopDistance away), and stops it once the player is out of range. With UsePathfinding it follows the navigation mesh, which needs a Nav Mesh Bounds Volume in the level; without it the pawn heads straight for the player. The pawn must be possessed by an AI controller.",
+  "tag": "Chase",
+  "placeholders": {
+    "ChaseRange": "Distance within which it chases, in units.",
+    "StopDistance": "How close it gets before it stops, in units.",
+    "UsePathfinding": "true to follow the navigation mesh, false to head straight for the player."
+  },
+  "variables": [
+    { "variableName": "ChaseRange", "variableType": "Float", "defaultValue": "{{ChaseRange}}", "category": "Chase", "instanceEditable": true },
+    { "variableName": "StopDistance", "variableType": "Float", "defaultValue": "{{StopDistance}}", "category": "Chase", "instanceEditable": true },
+    { "variableName": "UsePathfinding", "variableType": "Bool", "defaultValue": "{{UsePathfinding}}", "category": "Chase", "instanceEditable": true },
+    { "variableName": "ChaseInterval", "variableType": "Float", "defaultValue": 0.25, "category": "Chase", "instanceEditable": true, "keepExisting": true }
+  ],
+  "functions": [
+    {
+      "id": "chase",
+      "functionName": "ChaseUpdate",
+      "operations": [
+        { "edit": "create_node", "id": "chasePlayer", "nodeType": "CallFunction", "memberName": "GetPlayerPawn", "memberClass": "/Script/Engine.GameplayStatics", "pinDefaults": { "PlayerIndex": 0 } },
+        { "edit": "create_node", "id": "chaseValid", "nodeType": "CallFunction", "memberName": "IsValid", "memberClass": "/Script/Engine.KismetSystemLibrary" },
+        { "edit": "create_node", "id": "chaseDistance", "nodeType": "CallFunction", "memberName": "GetDistanceTo", "memberClass": "/Script/Engine.Actor" },
+        { "edit": "create_node", "id": "chaseRange", "nodeType": "VariableGet", "memberName": "ChaseRange" },
+        { "edit": "create_node", "id": "chaseNear", "nodeType": "CallFunction", "memberName": "LessEqual_DoubleDouble", "memberClass": "/Script/Engine.KismetMathLibrary" },
+        { "edit": "create_node", "id": "chaseBoth", "nodeType": "CallFunction", "memberName": "BooleanAND", "memberClass": "/Script/Engine.KismetMathLibrary" },
+        { "edit": "create_node", "id": "chaseBranch", "nodeType": "Branch" },
+        { "edit": "create_node", "id": "chaseController", "nodeType": "CallFunction", "memberName": "GetController", "memberClass": "/Script/Engine.Pawn" },
+        { "edit": "create_node", "id": "chaseGoAI", "nodeType": "Cast", "targetClass": "/Script/AIModule.AIController" },
+        { "edit": "create_node", "id": "chaseStop", "nodeType": "VariableGet", "memberName": "StopDistance" },
+        { "edit": "create_node", "id": "chasePath", "nodeType": "VariableGet", "memberName": "UsePathfinding" },
+        { "edit": "create_node", "id": "chaseMove", "nodeType": "CallFunction", "memberName": "MoveToActor", "memberClass": "/Script/AIModule.AIController" },
+        { "edit": "create_node", "id": "chaseHaltAI", "nodeType": "Cast", "targetClass": "/Script/AIModule.AIController" },
+        { "edit": "create_node", "id": "chaseHalt", "nodeType": "CallFunction", "memberName": "StopMovement", "memberClass": "/Script/Engine.Controller" },
+        { "edit": "connect_pins", "from": "$chasePlayer.ReturnValue", "to": "$chaseValid.Object" },
+        { "edit": "connect_pins", "from": "$chasePlayer.ReturnValue", "to": "$chaseDistance.OtherActor" },
+        { "edit": "connect_pins", "from": "$chaseDistance.ReturnValue", "to": "$chaseNear.A" },
+        { "edit": "connect_pins", "from": "$chaseRange.ChaseRange", "to": "$chaseNear.B" },
+        { "edit": "connect_pins", "from": "$chaseValid.ReturnValue", "to": "$chaseBoth.A" },
+        { "edit": "connect_pins", "from": "$chaseNear.ReturnValue", "to": "$chaseBoth.B" },
+        { "edit": "connect_pins", "from": "$chaseBoth.ReturnValue", "to": "$chaseBranch.Condition" },
+        { "edit": "connect_pins", "from": "$chaseController.ReturnValue", "to": "$chaseGoAI.Object" },
+        { "edit": "connect_pins", "from": "$chaseGoAI.AsAIController", "to": "$chaseMove.self" },
+        { "edit": "connect_pins", "from": "$chasePlayer.ReturnValue", "to": "$chaseMove.Goal" },
+        { "edit": "connect_pins", "from": "$chaseStop.StopDistance", "to": "$chaseMove.AcceptanceRadius" },
+        { "edit": "connect_pins", "from": "$chasePath.UsePathfinding", "to": "$chaseMove.bUsePathfinding" },
+        { "edit": "connect_pins", "from": "$chaseController.ReturnValue", "to": "$chaseHaltAI.Object" },
+        { "edit": "connect_pins", "from": "$chaseHaltAI.AsAIController", "to": "$chaseHalt.self" },
+        { "edit": "connect_pins", "from": "$chase.then", "to": "$chaseBranch.execute" },
+        { "edit": "connect_pins", "from": "$chaseBranch.then", "to": "$chaseGoAI.execute" },
+        { "edit": "connect_pins", "from": "$chaseGoAI.then", "to": "$chaseMove.execute" },
+        { "edit": "connect_pins", "from": "$chaseBranch.else", "to": "$chaseHaltAI.execute" },
+        { "edit": "connect_pins", "from": "$chaseHaltAI.then", "to": "$chaseHalt.execute" }
+      ]
+    }
+  ],
+  "hooks": [
+    { "id": "chaseBegin", "event": "BeginPlay" }
+  ],
+  "eventGraph": [
+    { "edit": "create_node", "id": "chaseSelf", "nodeType": "Self" },
+    { "edit": "create_node", "id": "chaseEvery", "nodeType": "VariableGet", "memberName": "ChaseInterval" },
+    { "edit": "create_node", "id": "chaseTimer", "nodeType": "CallFunction", "memberName": "K2_SetTimer", "memberClass": "/Script/Engine.KismetSystemLibrary", "pinDefaults": { "FunctionName": "ChaseUpdate", "bLooping": true } },
+    { "edit": "connect_pins", "from": "$chaseSelf.self", "to": "$chaseTimer.Object" },
+    { "edit": "connect_pins", "from": "$chaseEvery.ChaseInterval", "to": "$chaseTimer.Time" },
+    { "edit": "connect_pins", "from": "$chaseBegin.then", "to": "$chaseTimer.execute" }
+  ]
+}

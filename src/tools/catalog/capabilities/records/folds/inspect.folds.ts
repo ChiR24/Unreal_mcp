@@ -33,20 +33,20 @@ export const INSPECT_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'get_editor_state', selector: 'editorState',
-    summary: 'Read editor state: selected actors, viewport, world settings, project settings, editor settings.',
-    topics: ['selected actors', 'what is selected', 'viewport info', 'world settings', 'project settings', 'editor settings'],
+    summary: 'Read editor state: selected actors, viewport, world settings (with whether the game is playing or paused), project settings, editor settings.',
+    topics: ['selected actors', 'what is selected', 'viewport info', 'world settings', 'project settings', 'editor settings', 'is the game paused'],
     members: { selected_actors: 'get_selected_actors', viewport: 'get_viewport_info', world_settings: 'get_world_settings', project_settings: 'get_project_settings', editor_settings: 'get_editor_settings' },
   },
   {
     primary: 'get_stats', selector: 'statsKind',
     summary: 'Read performance (FPS, frame rate and time, thread and GPU ms), memory usage (used, available, peak) or scene statistics (actors by category, components, hidden actors).',
-    topics: ['performance stats', 'memory stats', 'scene stats', 'fps'],
+    topics: ['performance stats', 'memory stats', 'scene stats', 'fps', 'game fps', 'measure fps', 'frame rate', 'frame time', 'how fast the game runs', 'gpu time', 'stat unit'],
     members: { performance: 'get_performance_stats', memory: 'get_memory_stats', scene: 'get_scene_stats' },
   },
   {
     primary: 'runtime_report',
-    summary: 'Report the live state of a running PIE game: up to 25 matching actors with class, transform, tags and components, plus the player controller, pawn, view target and camera; actors are reported only while PIE runs.',
-    topics: ['pie state', 'inspect running game', 'live actors'],
+    summary: 'Report the live state of a running PIE game: the player controller, pawn, view target and camera, plus up to 25 matching actors with class, transform, tags, components and the live values of the variables or properties named in propertyNames; actors are reported only while PIE runs.',
+    topics: ['pie state', 'inspect running game', 'live actors', 'player location during play', 'variable value during play', 'runtime value of a variable'],
     members: ['pie_report'],
   },
 ];

@@ -19,7 +19,7 @@ import { ALL_CAPABILITY_RECORDS } from '../../../src/tools/catalog/capabilities/
 import type { CapabilityRecord } from '../../../src/tools/catalog/capabilities/model.js';
 
 const PLUGIN_PRIVATE = join(
-  'plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private'
+  'plugins', 'EngineWire', 'Source', 'EngineWire', 'Private'
 );
 
 const source = (...segments: string[]): string =>
@@ -36,7 +36,7 @@ function byLegacy(tool: string, action: string): CapabilityRecord {
 describe('todo14 BB-017: set_material_parameter dispatches instead of refusing', () => {
   const stub = (): string =>
     source(PLUGIN_PRIVATE, 'Domains', 'MaterialAuthoring', 'Parameters',
-      'McpAutomationBridge_MaterialAuthoringHandlersSetMaterialParameter.cpp');
+      'McpMatSetMatParam.cpp');
 
   it('no longer answers the advertised action with AMBIGUOUS_ACTION', () => {
     expect(stub()).not.toContain('AMBIGUOUS_ACTION');
@@ -60,7 +60,7 @@ describe('todo14 BB-017: set_material_parameter dispatches instead of refusing',
 
 describe('todo14 BB-026: activate_effect survives the top-level effect gate', () => {
   const effect = (): string =>
-    source(PLUGIN_PRIVATE, 'Domains', 'Effect', 'McpAutomationBridge_EffectHandlers.cpp');
+    source(PLUGIN_PRIVATE, 'Domains', 'Effect', 'McpEffectHandlers.cpp');
 
   it('exempts the canonical action from the early-exit gate', () => {
     expect(effect()).toContain('!Lower.Equals(TEXT("activate_effect"))');
@@ -80,19 +80,19 @@ describe('todo14 BB-026: activate_effect survives the top-level effect gate', ()
 describe('todo14 BB-039: sequence set_metadata reaches a registered handler', () => {
   it('routes the prefixed sub-action in the sequence dispatch table', () => {
     const dispatch = source(PLUGIN_PRIVATE, 'Domains', 'Sequence',
-      'McpAutomationBridge_SequenceHandlers.cpp');
+      'McpSeqHandlers.cpp');
     expect(dispatch).toContain('TEXT("sequence_set_metadata")');
     expect(dispatch).toContain('HandleSequenceSetMetadata');
   });
 
   it('defines the handler and declares it on the subsystem', () => {
     const impl = source(PLUGIN_PRIVATE, 'Domains', 'Sequence', 'Metadata',
-      'McpAutomationBridge_SequenceHandlersSetMetadata.cpp');
-    expect(impl).toContain('UMcpAutomationBridgeSubsystem::HandleSequenceSetMetadata');
+      'McpSeqSetMetadata.cpp');
+    expect(impl).toContain('UEngineWireSubsystem::HandleSequenceSetMetadata');
     expect(impl).toContain('SetMetadataTag');
 
-    const declarations = source('plugins', 'McpAutomationBridge', 'Source',
-      'McpAutomationBridge', 'Public', 'McpAutomationBridgeSubsystemSequenceDeclarations.h');
+    const declarations = source('plugins', 'EngineWire', 'Source',
+      'EngineWire', 'Public', 'EngineWireSubsystemSequenceDeclarations.h');
     expect(declarations).toContain('MCP_DECLARE_PAYLOAD_HANDLER(HandleSequenceSetMetadata)');
   });
 
@@ -116,7 +116,7 @@ describe('todo14 BB-029/BB-057/BB-066: the already-wired rows stay wired', () =>
 
   it('native accepts remove_variable', () => {
     const text = source(PLUGIN_PRIVATE, 'Domains', 'Blueprint', 'Variables',
-      'McpAutomationBridge_BlueprintHandlersVariableRemovalRename.cpp');
+      'McpBPVariableRemovalRename.cpp');
     expect(text).toContain('TEXT("remove_variable")');
   });
 });

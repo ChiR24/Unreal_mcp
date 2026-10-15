@@ -5,7 +5,7 @@
  * game-thread task and returns a numeric taskId (an opaque scheduling receipt,
  * not a completion marker). It is long-running and not safe to retry
  * (re-execution regenerates actors). Per the native PCG handler
- * (McpAutomationBridge_PCGHandlersComponentActions.cpp) the leaf emits taskId
+ * (McpPCGComponentActions.cpp) the leaf emits taskId
  * as a number and NO cancellation state and NO poll action. When createComponent
  * is false the caller must supply a component selector (actorName/
  * componentName/componentPath). Requires the PCG optional plugin.

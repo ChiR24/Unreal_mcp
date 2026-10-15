@@ -1,0 +1,241 @@
+// Copyright (c) 2024 EngineWire Contributors
+
+#include "EngineWireSubsystem.h"
+#include "Foundation/BridgeHelpers/McpHelpers.h"
+#include "Foundation/HandlerUtils/McpHandlerUtils.h"
+
+#include "Dom/JsonObject.h"
+#include "Misc/PackageName.h"
+
+#include "EditorAssetLibrary.h"
+#include "ISourceControlModule.h"
+#include "ISourceControlProvider.h"
+#include "SourceControlHelpers.h"
+#include "SourceControlOperations.h"
+
+bool UEngineWireSubsystem::HandleSourceControlCheckout(
+    const FString &RequestId, const FString &Action,
+    const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+  const FString Lower = Action.ToLower();
+  if (!Lower.Equals(TEXT("source_control_checkout"), ESearchCase::IgnoreCase) &&
+      !Lower.Equals(TEXT("checkout"), ESearchCase::IgnoreCase)) {
+    return false;
+  }
+  if (!Payload.IsValid()) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("source_control_checkout payload missing"),
+                        TEXT("INVALID_PAYLOAD"));
+    return true;
+  }
+
+  // The contract declares `paths`; only assetPaths was read, so a multi-asset
+  // call through the gateway was impossible. assetPaths stays as the fallback.
+  const TArray<FString> AssetPaths = McpGetStringListField(
+      Payload, Payload->HasField(TEXT("paths")) ? TEXT("paths") : TEXT("assetPaths"), TEXT("assetPath"));
+
+  if (AssetPaths.Num() == 0) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("assetPath (string) or paths (array) required"),
+                        TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  if (!ISourceControlModule::Get().IsEnabled()) {
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetBoolField(TEXT("success"), false);
+    Result->SetStringField(TEXT("error"),
+                           TEXT("Source control is not enabled"));
+    SendAutomationResponse(RequestingSocket, RequestId, false,
+                           TEXT("Source control disabled"), Result,
+                           TEXT("SOURCE_CONTROL_DISABLED"));
+    return true;
+  }
+
+  TArray<FString> PackageNames;
+  TArray<FString> ValidPaths;
+  for (const FString &Path : AssetPaths) {
+    const FString SafePath = SanitizeProjectRelativePath(Path);
+    if (!SafePath.IsEmpty() && McpAssetExists(SafePath)) {
+      ValidPaths.Add(SafePath);
+      FString PackageName = FPackageName::ObjectPathToPackageName(SafePath);
+      PackageNames.Add(PackageName);
+    }
+  }
+
+  if (PackageNames.Num() == 0) {
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetBoolField(TEXT("success"), false);
+    Result->SetStringField(TEXT("error"), TEXT("No valid assets found"));
+    SendAutomationResponse(RequestingSocket, RequestId, false,
+                           TEXT("No valid assets"), Result,
+                           TEXT("NO_VALID_ASSETS"));
+    return true;
+  }
+
+  bool bSuccess = SourceControlHelpers::CheckOutFiles(PackageNames, true);
+
+  TArray<TSharedPtr<FJsonValue>> CheckedOutPaths;
+  for (const FString &Path : ValidPaths) {
+    CheckedOutPaths.Add(MakeShared<FJsonValueString>(Path));
+  }
+
+  TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+  Result->SetBoolField(TEXT("success"), bSuccess);
+  Result->SetNumberField(TEXT("checkedOut"), PackageNames.Num());
+  Result->SetArrayField(TEXT("assets"), CheckedOutPaths);
+
+  SendAutomationResponse(RequestingSocket, RequestId, bSuccess,
+                         bSuccess ? TEXT("Assets checked out successfully")
+                                  : TEXT("Checkout failed"),
+                         Result,
+                         bSuccess ? FString() : TEXT("CHECKOUT_FAILED"));
+  return true;
+}
+
+bool UEngineWireSubsystem::HandleSourceControlSubmit(
+    const FString &RequestId, const FString &Action,
+    const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+  const FString Lower = Action.ToLower();
+  if (!Lower.Equals(TEXT("source_control_submit"), ESearchCase::IgnoreCase) &&
+      !Lower.Equals(TEXT("submit"), ESearchCase::IgnoreCase)) {
+    return false;
+  }
+  if (!Payload.IsValid()) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("source_control_submit payload missing"),
+                        TEXT("INVALID_PAYLOAD"));
+    return true;
+  }
+
+  // The contract declares `paths`; only assetPaths was read, so a multi-asset
+  // call through the gateway was impossible. assetPaths stays as the fallback.
+  const TArray<FString> AssetPaths = McpGetStringListField(
+      Payload, Payload->HasField(TEXT("paths")) ? TEXT("paths") : TEXT("assetPaths"), TEXT("assetPath"));
+
+  if (AssetPaths.Num() == 0) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("assetPath (string) or paths (array) required"),
+                        TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  FString Description;
+  if (!Payload->TryGetStringField(TEXT("description"), Description) ||
+      Description.IsEmpty()) {
+    Description = TEXT("Automated submission via EngineWire");
+  }
+
+  if (!ISourceControlModule::Get().IsEnabled()) {
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetBoolField(TEXT("success"), false);
+    Result->SetStringField(TEXT("error"),
+                           TEXT("Source control is not enabled"));
+    SendAutomationResponse(RequestingSocket, RequestId, false,
+                           TEXT("Source control disabled"), Result,
+                           TEXT("SOURCE_CONTROL_DISABLED"));
+    return true;
+  }
+
+  ISourceControlProvider &SourceControlProvider =
+      ISourceControlModule::Get().GetProvider();
+
+  TArray<FString> PackageNames;
+  for (const FString &Path : AssetPaths) {
+    const FString SafePath = SanitizeProjectRelativePath(Path);
+    if (!SafePath.IsEmpty() && McpAssetExists(SafePath)) {
+      FString PackageName = FPackageName::ObjectPathToPackageName(SafePath);
+      PackageNames.Add(PackageName);
+    }
+  }
+
+  if (PackageNames.Num() == 0) {
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetBoolField(TEXT("success"), false);
+    Result->SetStringField(TEXT("error"), TEXT("No valid assets found"));
+    SendAutomationResponse(RequestingSocket, RequestId, false,
+                           TEXT("No valid assets"), Result,
+                           TEXT("NO_VALID_ASSETS"));
+    return true;
+  }
+
+  TArray<FString> FilePaths;
+  for (const FString &PackageName : PackageNames) {
+    FString FilePath;
+    if (FPackageName::TryConvertLongPackageNameToFilename(
+            PackageName, FilePath, FPackageName::GetAssetPackageExtension()) ||
+        FPackageName::TryConvertLongPackageNameToFilename(
+            PackageName, FilePath, FPackageName::GetMapPackageExtension())) {
+      FilePaths.Add(FilePath);
+    }
+  }
+
+  TSharedRef<FCheckIn, ESPMode::ThreadSafe> CheckInOperation =
+      ISourceControlOperation::Create<FCheckIn>();
+  CheckInOperation->SetDescription(FText::FromString(Description));
+
+  ECommandResult::Type Result =
+      SourceControlProvider.Execute(CheckInOperation, FilePaths);
+  bool bSuccess = (Result == ECommandResult::Succeeded);
+
+  TSharedPtr<FJsonObject> ResultObj = McpHandlerUtils::CreateResultObject();
+  ResultObj->SetBoolField(TEXT("success"), bSuccess);
+  ResultObj->SetNumberField(TEXT("submitted"),
+                            bSuccess ? PackageNames.Num() : 0);
+  ResultObj->SetStringField(TEXT("description"), Description);
+
+  SendAutomationResponse(
+      RequestingSocket, RequestId, bSuccess,
+      bSuccess ? TEXT("Assets submitted successfully") : TEXT("Submit failed"),
+      ResultObj, bSuccess ? FString() : TEXT("SUBMIT_FAILED"));
+  return true;
+}
+
+bool UEngineWireSubsystem::HandleSourceControlEnable(
+    const FString &RequestId, const FString &Action,
+    const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+  const FString Lower = Action.ToLower();
+  if (!Lower.Equals(TEXT("source_control_enable"), ESearchCase::IgnoreCase)) {
+    return false;
+  }
+  FString Provider = TEXT("None");
+  if (Payload.IsValid()) {
+    Payload->TryGetStringField(TEXT("provider"), Provider);
+  }
+
+  ISourceControlModule& SourceControlModule = ISourceControlModule::Get();
+
+  // Check if already enabled
+  if (SourceControlModule.IsEnabled()) {
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetBoolField(TEXT("success"), true);
+    Result->SetStringField(TEXT("provider"), SourceControlModule.GetProvider().GetName().ToString());
+    Result->SetStringField(TEXT("message"), TEXT("Source control already enabled"));
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Source control already enabled"), Result, FString());
+    return true;
+  }
+
+  // Try to set the provider by name
+  if (!Provider.IsEmpty() && !Provider.Equals(TEXT("None"), ESearchCase::IgnoreCase)) {
+    SourceControlModule.SetProvider(FName(*Provider));
+  }
+
+  bool bEnabled = SourceControlModule.IsEnabled();
+  TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+  Result->SetBoolField(TEXT("success"), bEnabled);
+  Result->SetStringField(TEXT("provider"), SourceControlModule.GetProvider().GetName().ToString());
+
+  if (bEnabled) {
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Source control enabled"), Result, FString());
+  } else {
+    Result->SetStringField(TEXT("error"), TEXT("Failed to enable source control. Please configure provider in Editor preferences."));
+    SendAutomationResponse(RequestingSocket, RequestId, false,
+                           TEXT("Source control enable failed"), Result,
+                           TEXT("SOURCE_CONTROL_ENABLE_FAILED"));
+  }
+  return true;
+}

@@ -1021,12 +1021,18 @@ const noopMissingCapture = () => {};
  * Resolves ${captured:key} placeholders in nested test arguments.
  *
  * @param {unknown} value
- * @param {Record<string, string>} capturedValues
+ * @param {Record<string, unknown>} capturedValues
  * @param {(captureKey: string) => void} onMissingCapture
  * @returns {unknown}
  */
 export function resolveCapturedValues(value, capturedValues, onMissingCapture = noopMissingCapture) {
   if (typeof value === 'string') {
+    // A value that is one placeholder and nothing else keeps the captured value's own type, so a captured
+    // true goes back as a boolean, not the text "true".
+    const whole = /^\$\{captured:([^}]+)\}$/.exec(value);
+    if (whole && capturedValues[whole[1]] !== undefined && typeof capturedValues[whole[1]] !== 'string') {
+      return capturedValues[whole[1]];
+    }
     return value.replace(capturedPlaceholderPattern, (match, captureKey) => {
       const captured = capturedValues[captureKey];
       if (captured === undefined) {

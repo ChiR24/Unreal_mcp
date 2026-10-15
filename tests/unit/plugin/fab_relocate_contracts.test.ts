@@ -13,17 +13,17 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-const fabDir = 'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Domains/AssetWorkflow/Fab';
+const fabDir = 'plugins/EngineWire/Source/EngineWire/Private/Domains/AssetWorkflow/Fab';
 const read = (file: string): string => readFileSync(resolve(process.cwd(), fabDir, file), 'utf8');
 const handlers = (file: string): string =>
-  readFileSync(resolve(process.cwd(), 'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Domains/AssetWorkflow', file), 'utf8');
+  readFileSync(resolve(process.cwd(), 'plugins/EngineWire/Source/EngineWire/Private/Domains/AssetWorkflow', file), 'utf8');
 
 /** Comment bodies explain the rules, so rule checks ignore them. */
 const code = (text: string): string =>
   text.replace(/\/\*[\s\S]*?\*\//gu, '').replace(/^[ \t]*\/\/.*$/gmu, '');
 
-const rules = code(read('McpAutomationBridge_FabRelocateRules.h'));
-const relocate = code(read('McpAutomationBridge_FabRelocate.cpp'));
+const rules = code(read('McpFabRelocateRules.h'));
+const relocate = code(read('McpFabRelocate.cpp'));
 
 describe('what a relocation may touch', () => {
   it('considers only assets in a folder under /Game/Fab/, and never the shared ones', () => {
@@ -78,7 +78,7 @@ describe('how a relocation moves things', () => {
   it('rewrites the paths it reports, and the saved packages, to where the assets are now', () => {
     expect(relocate).toContain('for (TArray<FString>* Paths : {&ImportedPaths, &Result.SamplePaths})');
     expect(relocate).toContain('Result.RootPath = Destination;');
-    const post = code(read('McpAutomationBridge_FabPostImport.cpp'));
+    const post = code(read('McpFabPostImport.cpp'));
     expect(post).toMatch(/McpFabRelocate::Apply\(DestinationFolder, AssetName, Result, ImportedPaths\);\s*\}\s*SaveImported\(Result, ImportedPaths\);/u);
   });
 });
@@ -104,7 +104,7 @@ describe('how an asset is named', () => {
 });
 
 describe('the add and the status read', () => {
-  const add = code(handlers('Operations/McpAutomationBridge_AssetWorkflowFabAdd.cpp'));
+  const add = code(handlers('Operations/McpAssetFabAdd.cpp'));
 
   it('refuses a destination outside /Game, and a name that is not one, before Fab is asked', () => {
     expect(add).toContain('SanitizeProjectRelativePath(RequestedDestination)');
@@ -118,12 +118,12 @@ describe('the add and the status read', () => {
   it('hands the validated values to the post-import step, which only the settled import reaches', () => {
     expect(add).toContain('McpFabPostImport::Run(Result, Paths, Destination, AssetName);');
     // A cancelled import skips the post-import step, so nothing is moved or saved for it.
-    expect(code(readFileSync(resolve(process.cwd(), 'plugins/McpAutomationBridge/Source/McpAutomationBridgeFab/Private/Import/McpFabImportWatcher.cpp'), 'utf8')))
+    expect(code(readFileSync(resolve(process.cwd(), 'plugins/EngineWire/Source/EngineWireFab/Private/Import/McpFabImportWatcher.cpp'), 'utf8')))
       .toContain('if (PostImport && Count > 0 && !bCancelled)');
   });
 
   it('reports what the relocation did, and only when it ran', () => {
-    const status = code(read('McpAutomationBridge_AssetWorkflowFabImportStatus.cpp'));
+    const status = code(read('McpAssetFabImportStatus.cpp'));
     expect(status).toMatch(/if \(Result\.bRelocateRan\) \{\s*Data->SetBoolField\(TEXT\("relocated"\), Result\.MovedCount > 0\);/u);
     expect(status).toContain('TEXT("movedCount")');
     expect(status).toContain('TEXT("relocationNote")');

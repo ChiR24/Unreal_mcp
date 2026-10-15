@@ -1,6 +1,6 @@
 /**
  * Level-structure volume records, grounded in HandleManageVolumesAction
- * (Domains/Volume/McpAutomationBridge_VolumeHandlers.cpp).
+ * (Domains/Volume/McpVolumeHandlers.cpp).
  *
  * Creation is ONE record, `create_volume`, standing for the 17 volume classes
  * the native Volume domain spawns, which used to be 23 actions (17 create_* plus
@@ -101,7 +101,7 @@ export const LEVEL_VOLUME_RECORDS: readonly CapabilityRecordSource[] = [
     folded: FOLDED,
     dispatchBy: { param: 'volumeClass', actions: VOLUME_CLASS_ACTIONS },
     aliases: ADVERTISED_ALIASES,
-    topics: ['create volume', 'trigger volume', 'trigger box', 'trigger sphere', 'trigger capsule', 'blocking volume', 'kill z volume', 'post process volume'],
+    topics: ['create volume', 'trigger volume', 'trigger box', 'trigger sphere', 'trigger capsule', 'blocking volume', 'kill z volume', 'post process volume', 'kill zone', 'damage zone'],
     family: F,
     summary: 'Create a volume actor of the chosen class in the level, or attach it to an actor when actorPath is given.',
     whenToUse: [
@@ -111,7 +111,7 @@ export const LEVEL_VOLUME_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['An existing volume must be resized or reconfigured; use set_volume_extent or set_volume_properties.'],
     inputProps: {
       volumeClass,
-      volumeName: P.volumeName, location: P.location, rotation: P.rotation, extent: P.extent, actorPath,
+      volumeName: P.volumeName, location: { ...P.location, description: 'World location {x, y, z}; the world origin when omitted.' }, rotation: P.rotation, extent: P.extent, actorPath,
       boxExtent: P.boxExtent, sphereRadius: P.sphereRadius, capsuleRadius: P.capsuleRadius, capsuleHalfHeight: P.capsuleHalfHeight,
       bPainCausing: P.bPainCausing, damagePerSec: P.damagePerSec,
       fluidFriction: P.fluidFriction, terminalVelocity: P.terminalVelocity, bWaterVolume: P.bWaterVolume,
@@ -127,7 +127,7 @@ export const LEVEL_VOLUME_RECORDS: readonly CapabilityRecordSource[] = [
       },
       save: P.levelEditSave,
     },
-    required: ['volumeClass', 'location'], effect: 'write', costLatency: 'interactive', costResources: 'low',
+    required: ['volumeClass'], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'create_volume', volumeClass: 'TriggerVolume', location: { x: 0, y: 0, z: 0 }, extent: { x: 500, y: 500, z: 200 } },
   }),
   buildWorldRecord({

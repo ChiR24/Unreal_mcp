@@ -19,6 +19,7 @@ const ts = Date.now();
 const MESH_ACTOR = `DM_Promo_${ts}`;
 const BOOL_TARGET = `DM_BoolTarget_${ts}`;
 const BOOL_TOOL = `DM_BoolTool_${ts}`;
+const COPY_ACTOR = `DM_Copy_${ts}`;
 
 const geo = (action, extra = {}) => ({ action, actorName: MESH_ACTOR, ...extra });
 
@@ -29,6 +30,8 @@ const testCases = [
   // === CREATE: create_procedural_mesh (every param optional; name defaults to ProceduralMesh) ===
   { scenario: 'CREATE: create_procedural_mesh with all optionals', toolName: 'manage_geometry', arguments: { action: 'create_procedural_mesh', name: MESH_ACTOR, actorName: MESH_ACTOR, enableCollision: true }, expected: 'success' },
   { scenario: 'CREATE: create_procedural_mesh defaults every parameter', toolName: 'manage_geometry', arguments: { action: 'create_procedural_mesh' }, expected: 'success' },
+  { scenario: 'CREATE: create_procedural_mesh starts from a copy of a static mesh asset', toolName: 'manage_geometry', arguments: { action: 'create_procedural_mesh', name: COPY_ACTOR, meshPath: '/Engine/BasicShapes/Cube' }, expected: 'success' },
+  { scenario: 'CREATE: create_procedural_mesh refuses a meshPath that is no static mesh', toolName: 'manage_geometry', arguments: { action: 'create_procedural_mesh', name: `${COPY_ACTOR}_Missing`, meshPath: '/Game/MCPTest/DoesNotExist' }, expected: 'error|ASSET_NOT_FOUND' },
 
   // === BUILD: append_vertex / append_triangle ===
   { scenario: 'BUILD: append_vertex at an explicit position', toolName: 'manage_geometry', arguments: geo('append_vertex', { position: { x: 0, y: 0, z: 0 } }), expected: 'success' },
@@ -63,12 +66,13 @@ const testCases = [
   // === BOOLEAN: difference (the boolean_subtract spelling) ===
   { scenario: 'Setup: create boolean target mesh', toolName: 'manage_geometry', arguments: { action: 'create_procedural_mesh', name: BOOL_TARGET, actorName: BOOL_TARGET }, expected: 'success' },
   { scenario: 'Setup: create boolean tool mesh', toolName: 'manage_geometry', arguments: { action: 'create_procedural_mesh', name: BOOL_TOOL, actorName: BOOL_TOOL }, expected: 'success' },
-  { scenario: 'BOOLEAN: difference subtracts the tool from the target', toolName: 'manage_geometry', arguments: { action: 'difference', targetActor: BOOL_TARGET, toolActor: BOOL_TOOL, keepTool: true, keepInside: false }, expected: 'success' },
+  { scenario: 'BOOLEAN: difference subtracts the tool from the target', toolName: 'manage_geometry', arguments: { action: 'difference', targetActor: BOOL_TARGET, toolActor: BOOL_TOOL, keepTool: true }, expected: 'success' },
 
   // === CLEANUP ===
   { scenario: 'Cleanup: delete promoted mesh actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: MESH_ACTOR }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete boolean target actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: BOOL_TARGET }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete boolean tool actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: BOOL_TOOL }, expected: 'success|not found' },
+  { scenario: 'Cleanup: delete copied mesh actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: COPY_ACTOR }, expected: 'success|not found' },
 ];
 
 runToolTests('manage-geometry-dynamicmesh-promotion', testCases);

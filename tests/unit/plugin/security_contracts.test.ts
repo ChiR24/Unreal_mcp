@@ -7,7 +7,7 @@ const privateSource = (...parts: string[]): string =>
   readFileSync(
     resolve(
       process.cwd(),
-      'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private',
+      'plugins/EngineWire/Source/EngineWire/Private',
       ...parts,
     ),
     'utf8',
@@ -36,7 +36,7 @@ describe('plugin security contracts', () => {
       'Domains',
       'AssetWorkflow',
       'Operations',
-      'McpAutomationBridge_AssetWorkflowImportDuplicate.cpp',
+      'McpAssetImportDuplicate.cpp',
     );
 
     expect(source).toMatch(/McpResolveProjectFilePath\(\s*SourcePath/u);
@@ -81,7 +81,7 @@ describe('plugin security contracts', () => {
       'Foundation',
       'BridgeHelpers',
       'Security',
-      'McpAutomationBridgeHelpersCapabilityToken.h',
+      'McpCapToken.h',
     );
     // The store exists and exposes the shared resolution function.
     expect(store).toContain('ResolveEffectiveToken');
@@ -146,7 +146,7 @@ describe('plugin security contracts', () => {
       'Foundation',
       'BridgeHelpers',
       'Security',
-      'McpAutomationBridgeHelpersProjectPathsResolve.h',
+      'McpProjectPathsResolve.h',
     );
     const resolver = source.slice(
       source.indexOf('bool McpResolveProjectFilePath'),
@@ -176,12 +176,12 @@ describe('plugin security contracts', () => {
     const consoleSource = privateSource(
       'Domains',
       'Render',
-      'McpAutomationBridge_RenderConsole.cpp',
+      'McpRenderConsole.cpp',
     );
     const renderTargetSource = privateSource(
       'Domains',
       'Render',
-      'McpAutomationBridge_RenderTargets.cpp',
+      'McpRenderTargets.cpp',
     );
 
     expect(consoleSource).toContain('ReadBoundedNumberSetting');
@@ -208,7 +208,7 @@ describe('plugin security contracts', () => {
   // One pass over every plugin source file: 0.1 s alone, but over the 10 s default on a loaded
   // machine (the suite's other whole-tree tests carry 60 s for the same reason).
   it('never calls UPackage::SavePackage outside the Safety wrappers', () => {
-    const root = resolve(process.cwd(), 'plugins/McpAutomationBridge/Source');
+    const root = resolve(process.cwd(), 'plugins/EngineWire/Source');
     const offenders = readdirSync(root, { recursive: true, encoding: 'utf8' })
       .filter((file) => file.endsWith('.cpp') || file.endsWith('.h'))
       .filter((file) => readFileSync(resolve(root, file), 'utf8').includes('UPackage::SavePackage'));

@@ -28,6 +28,11 @@ describe('requiredOneOf (at-least-one semantics)', () => {
       expect(violation?.message).toBe('At least one of [a, b] must be provided');
   });
 
+  it('names a key sent in place of the listed ones, as a missing required parameter does', () => {
+      const violation = validateAgainstCapabilitySchema({ assetPath: 'x' }, AT_LEAST_ONE_SCHEMA);
+      expect(violation?.message).toBe('At least one of [a, b] must be provided; sent assetPath, which this action does not take');
+  });
+
   it('accepts a value carrying at least one listed property', () => {
       expect(validateAgainstCapabilitySchema({ a: 'x' }, AT_LEAST_ONE_SCHEMA)).toBeUndefined();
       expect(validateAgainstCapabilitySchema({ b: 'y' }, AT_LEAST_ONE_SCHEMA)).toBeUndefined();

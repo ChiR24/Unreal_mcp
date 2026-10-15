@@ -10,6 +10,8 @@ const WU = ['A spline actor or spline mesh must be created or modified.'];
 // A spline edit targets actorName (label, name or object path) or, when that is
 // omitted, actorPath.
 const ACTOR_PATH = { ...P.actorPath, description: 'Object path of the spline actor; used when actorName is omitted.' };
+// A point is placed relative to the spline actor: an ocean shoreline read as world points was set off by the actor's location.
+const SPLINE_POSITION = { ...P.position, description: 'Point position relative to the spline actor {x, y, z}: its local space, the location get_splines_info with actorName reports (worldLocation is where the point lies in the level).' };
 // Every template reads the same inputs; fence posts go through scatter_meshes_along_spline.
 const TEMPLATE = {
   name: P.name, location: P.location, meshPath: P.meshPath, points: P.points,
@@ -30,7 +32,7 @@ export const SPLINE_RECORDS: readonly CapabilityRecordSource[] = [
     id: 'build_environment.add_spline_point', action: 'add_spline_point', family: F,
     summary: 'Add a point to an existing spline.',
     whenToUse: WU, whenNotToUse: ['The spline should be recreated with all points.'],
-    inputProps: { actorName: P.actorName, actorPath: ACTOR_PATH, position: P.position, index: P.index,
+    inputProps: { actorName: P.actorName, actorPath: ACTOR_PATH, position: SPLINE_POSITION, index: P.index,
       arriveTangent: P.arriveTangent, leaveTangent: P.leaveTangent, pointType: P.pointType },
     required: [], effect: 'write', latency: 'interactive', resources: 'low',
     exampleInput: { action: 'add_spline_point', actorName: 'Spline_1', position: { x: 100, y: 0, z: 0 } },
@@ -47,7 +49,7 @@ export const SPLINE_RECORDS: readonly CapabilityRecordSource[] = [
     id: 'build_environment.set_spline_point_position', action: 'set_spline_point_position', family: F,
     summary: 'Set the position of a spline point by index.',
     whenToUse: WU, whenNotToUse: ['The point should be moved interactively.'],
-    inputProps: { actorName: P.actorName, actorPath: ACTOR_PATH, pointIndex: P.pointIndex, position: P.position },
+    inputProps: { actorName: P.actorName, actorPath: ACTOR_PATH, pointIndex: P.pointIndex, position: SPLINE_POSITION },
     required: [], effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'interactive', resources: 'low',
     exampleInput: { action: 'set_spline_point_position', actorName: 'Spline_1', pointIndex: 0, position: { x: 0, y: 0, z: 100 } },
   }),
@@ -194,7 +196,7 @@ export const SPLINE_RECORDS: readonly CapabilityRecordSource[] = [
   buildRecord({
     id: 'build_environment.get_splines_info', action: 'get_splines_info', family: F,
     topics: ['point count and length', 'closed loop', 'world points'],
-    summary: 'List the spline actors in the level with each one\'s point count, length and world points (first 64); with actorName, one spline\'s points and types, length and closed-loop flag.',
+    summary: 'List the spline actors in the level with each one\'s point count, length and world points (first 64); with actorName, one spline\'s points (location relative to the actor, the space spline edits take, and worldLocation), types, length and closed-loop flag.',
     whenToUse: ['Spline actors must be enumerated.'],
     whenNotToUse: ['A specific spline path is already known.'],
     inputProps: { actorName: P.actorName },

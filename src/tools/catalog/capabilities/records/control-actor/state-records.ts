@@ -3,7 +3,7 @@
  * get_components/get_actor_components, get_actor_bounds, list.
  */
 import type { CapabilityRecordSource } from '../../model.js';
-import { buildCoreRecord } from '../core/builder.js';
+import { ANY_EDITOR_STATE, buildCoreRecord } from '../core/builder.js';
 import { DOMAIN, P } from './properties.js';
 
 const FAMILY_VISIBILITY = 'visibility';
@@ -37,7 +37,7 @@ export const STATE_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'set_visibility',
     domain: DOMAIN,
     family: FAMILY_VISIBILITY,
-    topics: ['hide actor', 'show actor', 'toggle visibility', 'hidden in game', 'make actor invisible', 'unhide actor'],
+    topics: ['hide actor', 'show actor', 'toggle visibility', 'hidden in game', 'make actor invisible', 'unhide actor', 'hide a light'],
     aliases: ['control_actor.hide_actor', 'control_actor.show_actor'],
     summary: 'Toggle the visibility of an actor in the level, or of many actors at once with actorNames.',
     whenToUse: ['An actor must be shown or hidden without being deleted.', 'Many actors must be shown or hidden together (actorNames does them in one call).'],
@@ -90,7 +90,7 @@ export const STATE_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['The actor has no renderable components (bounds are undefined).'],
     inputProps: { actorName: P.actorName },
     required: ['actorName'],
-    // The handler (McpAutomationBridge_ControlActorQuery.cpp,
+    // The handler (McpActorQuery.cpp,
     // HandleControlActorGetBoundingBox) emits `origin` and `extent`. This record
     // declared `location`/`scale`, which the handler never sets, so output
     // projection dropped BOTH and the capability answered "Bounding box
@@ -108,6 +108,7 @@ export const STATE_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_actor',
     action: 'list',
+    editorStates: ANY_EDITOR_STATE,
     domain: DOMAIN,
     family: FAMILY_QUERY,
     topics: ['list actors', 'all actors in level', 'actors in scene', 'enumerate actors', 'world outliner', 'actors in level', 'level actors', 'actor positions', 'actor locations', 'actor transforms', 'level layout', 'variable values of many actors', 'how many actors', 'count actors', 'actors in the level', 'actors near point', 'count enemies'],
@@ -120,7 +121,7 @@ export const STATE_RECORDS: readonly CapabilityRecordSource[] = [
       tag: { type: 'string', description: 'Only actors carrying this actor tag. With summary, shows what the tag covers before a delete_by_tag removes it.' },
       className: { type: 'string', description: 'Only actors of this class or a subclass, by name or path: TextRenderActor, Light (every light type), or a Blueprint such as BP_Sign, with or without _C.' },
       folder: { type: 'string', description: 'Only actors in this outliner folder or a folder under it (Level/Stage matches Level/Stage/Signs); "(none)" for the actors at the root.' },
-      propertyNames: { type: 'array', items: { type: 'string' }, description: 'Property or Blueprint variable names to read on every listed actor, returned per actor under properties, e.g. Kind and Content, or a component\'s as "Component.Property" (StaticMeshComponent.LDMaxDrawDistance, Visual.RelativeScale3D; the component by its name, or by the actor property that holds it, as CharacterMovement.MaxWalkSpeed), keyed as asked. A name that an actor lacks, or whose component it lacks, is listed under missingProperties for that actor.' },
+      propertyNames: { type: 'array', items: { type: 'string' }, description: 'Property or Blueprint variable names to read on every listed actor, returned per actor under properties, each as JSON (a number, true or false, the name of an enum value, the path of an object, or an array of them), e.g. Kind and Content, or a component\'s as "Component.Property" (StaticMeshComponent.LDMaxDrawDistance, Visual.RelativeScale3D; the component by its name, or by the actor property that holds it, as CharacterMovement.MaxWalkSpeed), keyed as asked. A name that an actor lacks, or whose component it lacks, is listed under missingProperties for that actor.' },
       near: { ...P.location, description: 'A world point as [x, y, z] (an {x, y, z} object works too): list what is close to it, nearest first, each row with its distance. With radius, only actors whose bounds come within radius of the point; without it, every matching actor sorted by distance. Combines with filter, tag, className and folder.' },
       radius: { type: 'number', minimum: 0, description: 'World units from near: an actor is listed when its bounding box comes within this distance of the point (the distance is 0 for a box that contains the point, such as a floor slab under it). Needs near.' },
       summary: { type: 'boolean', description: 'Count the matching actors by class, actor tag and outliner folder (byClass, byTag, byFolder) instead of listing them; limit and offset do not apply. The cheap first look at an unfamiliar level.' },

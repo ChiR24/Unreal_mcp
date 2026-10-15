@@ -57,7 +57,7 @@ export const MANAGE_GEOMETRY_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'array_mesh', selector: 'arrayMode',
-    summary: 'Duplicate a mesh in a linear or radial array.',
+    summary: 'Repeat a mesh inside the same mesh: a row (linear, one offset per copy) or a ring round its local Z (radial). count includes the original.',
     topics: ['linear array', 'radial array', 'array duplicate'],
     members: { linear: 'array_linear', radial: 'array_radial' },
   },

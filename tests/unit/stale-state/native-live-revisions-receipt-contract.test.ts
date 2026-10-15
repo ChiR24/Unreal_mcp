@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const source = readFileSync(
-  `${process.cwd()}/plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Execute/McpNativeGatewayReceipt.cpp`,
+  `${process.cwd()}/plugins/EngineWire/Source/EngineWire/Private/MCP/Execute/McpNativeGatewayReceipt.cpp`,
   'utf8',
 );
 

@@ -7,7 +7,7 @@ import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-const MODULE = join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge');
+const MODULE = join('plugins', 'EngineWire', 'Source', 'EngineWire');
 const GEOMETRY = join(MODULE, 'Private', 'Domains', 'Geometry');
 
 /** Block and line comments removed, so no assertion can be satisfied by prose. */
@@ -15,8 +15,8 @@ const strip = (source: string): string => source.replace(/\/\*[\s\S]*?\*\//gu, '
 const read = (...segments: readonly string[]): string => strip(readFileSync(join(GEOMETRY, ...segments), 'utf8'));
 
 describe('append_polygons validates everything before it touches the mesh', () => {
-  const input = (): string => read('Modeling', 'McpAutomationBridge_GeometryPolygonInput.cpp');
-  const handler = (): string => read('Modeling', 'McpAutomationBridge_GeometryAppendPolygons.cpp');
+  const input = (): string => read('Modeling', 'McpGeometryPolygonInput.cpp');
+  const handler = (): string => read('Modeling', 'McpGeometryAppendPolygons.cpp');
 
   it('caps the call, checks indices and finite coordinates, and names the face at fault', () => {
     const source = input();
@@ -32,6 +32,20 @@ describe('append_polygons validates everything before it touches the mesh', () =
     // The block comment naming bOrientAsHoleFill is stripped before this reads, leaving only `false`: same winding, not a hole fill.
     expect(input()).toMatch(/PolygonTriangulation::TriangulateSimplePolygon\(Polygon, Local,\s+false\);/u);
     expect(input()).toContain('Local.Num() != Face.Num() - 2');
+  });
+
+  // Unreal's triangles face (v2 - v0) x (v1 - v0); appended in the given order, an outward-wound cage came out inside out.
+  it('appends each triangle in Unreal winding, so (v1 - v0) x (v2 - v0) is the side it faces', () => {
+    expect(handler()).toContain('EditMesh.AppendTriangle(VertexIds[Triangle.A], VertexIds[Triangle.C], VertexIds[Triangle.B], GroupOfFace[Face]);');
+    expect(read('Modeling', 'McpGeometryProceduralMesh.cpp')).toContain('EditMesh.AppendTriangle(Idx0, Idx2, Idx1, GroupID);');
+  });
+
+  // Appended onto a mesh that had normals, the new faces had none and rendered as streaks until a split_normals.
+  it('gives every triangle the normal overlay left unset an element per corner before the recompute', () => {
+    const source = handler();
+    expect(source).toContain('Normals->IsSetTriangle(TriangleId)');
+    expect(source).toContain('Normals->SetTriangle(TriangleId, Elements);');
+    expect(source.indexOf('Normals->SetTriangle(TriangleId, Elements);')).toBeLessThan(source.indexOf('RecomputeMeshNormals(Mesh);'));
   });
 
   it('refuses inconsistent winding and edges shared by more than two faces', () => {
@@ -57,13 +71,24 @@ describe('append_polygons validates everything before it touches the mesh', () =
   });
 
   it('leaves out a point no face uses, so no isolated vertex stretches the mesh bounds', () => {
-    const source = read('Modeling', 'McpAutomationBridge_GeometryAppendPolygons.cpp');
+    const source = read('Modeling', 'McpGeometryAppendPolygons.cpp');
     expect(source).toContain('Used[Triangle.A] = Used[Triangle.B] = Used[Triangle.C] = true;');
     expect(source).toContain('if (Used[VertexIndex])');
     expect(source).toContain('Result->SetNumberField(TEXT("verticesAdded"), VerticesAdded);');
   });
 
   it('the dispatcher routes append_polygons to HandleAppendPolygons', () => {
-    expect(read('McpAutomationBridge_GeometryHandlers.cpp')).toContain('if (SubAction == TEXT("append_polygons")) return HandleAppendPolygons(this, RequestId, Payload, RequestingSocket);');
+    expect(read('McpGeometryHandlers.cpp')).toContain('if (SubAction == TEXT("append_polygons")) return HandleAppendPolygons(this, RequestId, Payload, RequestingSocket);');
+  });
+});
+
+// An existing static mesh asset could not be edited: a dynamic mesh only ever started empty.
+describe('create starts a dynamic mesh from a static mesh asset when meshPath names one', () => {
+  it('copies the asset before any actor is spawned, and refuses a path that is no static mesh', () => {
+    const source = read('Modeling', 'McpGeometryProceduralMesh.cpp');
+    expect(source).toContain('UGeometryScriptLibrary_StaticMeshFunctions::CopyMeshFromStaticMesh(Source, DynMesh,');
+    expect(source.indexOf('CopyMeshFromStaticMesh(')).toBeLessThan(source.indexOf('SpawnDynamicMeshActorWithMesh('));
+    expect(source).toContain('TEXT("ASSET_NOT_FOUND")');
+    expect(source).toContain('Result->SetNumberField(TEXT("triangleCount"), CopiedTriangles);');
   });
 });

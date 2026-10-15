@@ -2,7 +2,7 @@
  * Input simulation record: simulate_input.
  */
 import type { CapabilityRecordSource } from '../../model.js';
-import { buildCoreRecord } from '../core/builder.js';
+import { ANY_EDITOR_STATE, buildCoreRecord } from '../core/builder.js';
 import { P } from './properties.js';
 
 const F = 'input';
@@ -11,12 +11,13 @@ const D = 'editor';
 export const INPUT_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_editor', action: 'simulate_input', domain: D, family: F,
+    editorStates: ANY_EDITOR_STATE,
     // The widget verbs are not in the action name, and topics cannot outrank a
     // widget-authoring record that carries them: "click widget button" landed on
     // add_content_widget, which edits a Widget Blueprint instead of pressing one.
     // widget_click is the type value itself: "widget click" ranked bind_widget first.
     aliases: ['control_editor.click_widget', 'control_editor.widget_click', 'control_editor.press_ui_button'],
-    topics: ['click button', 'click ui button', 'click button in running game', 'check or toggle a checkbox in running game', 'press key', 'press jump key', 'simulate key press', 'drive game ui', 'test running game', 'list live widgets', 'list widgets in running game', 'widgets on screen', 'list buttons on screen', 'press space', 'press spacebar', 'hold key down', 'list open widgets in game'],
+    topics: ['click button', 'click ui button', 'click button in running game', 'check or toggle a checkbox in running game', 'press key', 'press jump key', 'make the player jump', 'simulate key press', 'drive game ui', 'test running game', 'list live widgets', 'list widgets in running game', 'widgets on screen', 'list buttons on screen', 'press space', 'press spacebar', 'hold key down', 'walk the player forward', 'list open widgets in game'],
     summary: 'Simulate a keyboard or mouse input event (key_down, key_up, key_tap, mouse_click, mouse_move), or list and press the live UMG widgets of a PIE session (widget_list, widget_click).',
     whenToUse: [
       'Synthetic input must be injected into the editor or PIE.',
@@ -39,7 +40,7 @@ export const INPUT_RECORDS: readonly CapabilityRecordSource[] = [
     },
     required: [],
     // The handler already computes all three of these
-    // (Private/Domains/ControlEditor/McpAutomationBridge_ControlEditorInput.cpp),
+    // (Private/Domains/ControlEditor/McpEditorInput.cpp),
     // but the record declared no outputs at all, so the gateway stripped them and
     // left only "delivered to PIE" -- which means ROUTED, not consumed. An
     // Enhanced Input game silently ignores a raw Slate key, and with these fields
@@ -57,6 +58,7 @@ export const INPUT_RECORDS: readonly CapabilityRecordSource[] = [
       },
       widget: { type: 'string', description: 'widget_click: the widget that was driven, as Owner.Name.' },
       widgetType: { type: 'string', description: 'widget_click: the driven widget\'s class (Button, CheckBox, Slider).' },
+      pawn: { type: 'string', description: 'In PIE, the pawn the player controls, by the name actor calls take: read it (control_actor get_transform) once a hold is over to see what the input did.' },
     },
     effect: 'write',
    

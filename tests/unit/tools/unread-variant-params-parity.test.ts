@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
-const MCP = 'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP';
+const MCP = 'plugins/EngineWire/Source/EngineWire/Private/MCP';
 const read = (file: string): string => readFileSync(resolve(repoRoot, file), 'utf8').replace(/\r\n/gu, '\n');
 
 describe('a parameter only other variants read: both doors warn the same way', () => {

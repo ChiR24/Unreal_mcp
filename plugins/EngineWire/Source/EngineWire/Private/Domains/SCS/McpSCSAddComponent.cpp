@@ -1,0 +1,299 @@
+#include "Core/Compatibility/McpVersionCompatibility.h"
+
+#include "Domains/Blueprint/Components/McpBPScsParentResolve.h"
+#include "Domains/SCS/McpSCSHandlers.h"
+#include "Domains/SCS/McpSCSSupport.h"
+
+#include "Foundation/BridgeHelpers/McpHelpers.h"
+#include "Foundation/HandlerUtils/McpHandlerUtils.h"
+
+#include "Components/ActorComponent.h"
+#include "Components/PrimitiveComponent.h"
+#include "Components/SceneComponent.h"
+#include "Components/SkeletalMeshComponent.h"
+#include "Components/StaticMeshComponent.h"
+#include "Engine/Blueprint.h"
+#include "Engine/SCS_Node.h"
+#include "Engine/SimpleConstructionScript.h"
+#include "Engine/SkeletalMesh.h"
+#include "Engine/StaticMesh.h"
+#include "GameFramework/Actor.h"
+#include "UObject/UnrealType.h"
+#include "Materials/MaterialInterface.h"
+
+using namespace McpSCSHandlers;
+
+namespace {
+// An SCS node can legally parent to an inherited native component -- that is what
+// USCS_Node::SetParent(const USceneComponent*) is for -- but parent resolution only
+// searched SCS nodes, so on a Character every spelling of the inherited capsule and
+// mesh was rejected and there was no way to attach a camera, weapon or light to them.
+USceneComponent *FindNativeSceneComponent(UBlueprint *BP, const FString &Name) {
+  UClass *ParentClass = BP ? BP->ParentClass : nullptr;
+  AActor *CDO = ParentClass ? Cast<AActor>(ParentClass->GetDefaultObject()) : nullptr;
+  if (!CDO || Name.IsEmpty()) {
+    return nullptr;
+  }
+  // Object name first: CollisionCylinder, CharacterMesh0.
+  for (UActorComponent *Comp : CDO->GetComponents()) {
+    USceneComponent *Scene = Cast<USceneComponent>(Comp);
+    if (Scene && Scene->GetName().Equals(Name, ESearchCase::IgnoreCase)) {
+      return Scene;
+    }
+  }
+  // Then the UPROPERTY that exposes it, which is the name the editor shows and
+  // the one callers reach for: CapsuleComponent, Mesh.
+  for (TFieldIterator<FObjectProperty> It(ParentClass); It; ++It) {
+    FObjectProperty *Prop = *It;
+    if (!Prop || !Prop->PropertyClass ||
+        !Prop->PropertyClass->IsChildOf(USceneComponent::StaticClass()) ||
+        !Prop->GetName().Equals(Name, ESearchCase::IgnoreCase)) {
+      continue;
+    }
+    if (UObject *Value = Prop->GetObjectPropertyValue_InContainer(CDO)) {
+      if (USceneComponent *Scene = Cast<USceneComponent>(Value)) {
+        return Scene;
+      }
+    }
+  }
+  return nullptr;
+}
+
+// "Parent component not found: X" never said what would have worked. List both
+// pools so one round trip is enough.
+FString DescribeParentCandidates(UBlueprint *BP, USimpleConstructionScript *SCS) {
+  TArray<FString> Names;
+  if (SCS) {
+    for (USCS_Node *Node : SCS->GetAllNodes()) {
+      if (Node) {
+        Names.Add(GetSCSNodeName(Node));
+      }
+    }
+  }
+  McpPropertyCdoComponents::ForEachScsNode(BP, [&Names](USCS_Node *Node, bool bInherited) {
+    if (bInherited && Node->ComponentTemplate && Node->ComponentTemplate->IsA<USceneComponent>()) {
+      Names.AddUnique(GetSCSNodeName(Node) + TEXT(" (inherited)"));
+    }
+    return true;
+  });
+  UClass *ParentClass = BP ? BP->ParentClass : nullptr;
+  if (AActor *CDO = ParentClass ? Cast<AActor>(ParentClass->GetDefaultObject()) : nullptr) {
+    for (UActorComponent *Comp : CDO->GetComponents()) {
+      if (Cast<USceneComponent>(Comp)) {
+        Names.AddUnique(Comp->GetName() + TEXT(" (inherited)"));
+      }
+    }
+  }
+  return Names.IsEmpty() ? TEXT("none") : FString::Join(Names, TEXT(", "));
+}
+} // namespace
+
+TSharedPtr<FJsonObject> FSCSHandlers::AddSCSComponent(
+    const FString &BlueprintPath, const FString &ComponentClass,
+    const FString &ComponentName, const FString &ParentComponentName,
+    const FString &MeshPath, const FString &MaterialPath) {
+  TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+
+  if (IsPlayInEditorActive()) {
+    return PIEActiveError();
+  }
+
+  UBlueprint *Blueprint = LoadScsBlueprint(BlueprintPath, Result, false);
+  if (!Blueprint) {
+    return Result;
+  }
+
+  USimpleConstructionScript *SCS = Blueprint->SimpleConstructionScript;
+  if (!SCS) {
+    SCS = NewObject<USimpleConstructionScript>(Blueprint);
+    Blueprint->SimpleConstructionScript = SCS;
+  }
+
+  UClass *CompClass = ResolveClassByName(ComponentClass);
+  if (!CompClass) {
+    Result->SetBoolField(TEXT("success"), false);
+    Result->SetStringField(
+        TEXT("error"), FString::Printf(TEXT("Component class not found: %s"),
+                                       *ComponentClass));
+    return Result;
+  }
+
+  if (!CompClass->IsChildOf(UActorComponent::StaticClass())) {
+    Result->SetBoolField(TEXT("success"), false);
+    Result->SetStringField(
+        TEXT("error"),
+        FString::Printf(TEXT("Class is not a component: %s"), *ComponentClass));
+    return Result;
+  }
+
+  USCS_Node *ParentNode = nullptr;
+  USceneComponent *NativeParent = nullptr;
+  USCS_Node *InheritedParent = nullptr;
+  if (!ParentComponentName.IsEmpty()) {
+    if (IsSCSRootAlias(SCS, ParentComponentName)) {
+      const TArray<USCS_Node *> &Roots = SCS->GetRootNodes();
+      for (USCS_Node *Root : Roots) {
+        if (Root && GetSCSNodeName(Root).Equals(
+                        TEXT("DefaultSceneRoot"), ESearchCase::IgnoreCase)) {
+          ParentNode = Root;
+          break;
+        }
+      }
+      if (!ParentNode && !Roots.IsEmpty()) {
+        ParentNode = Roots[0];
+      }
+    } else {
+      ParentNode = FindSCSNodeByVariableName(SCS, ParentComponentName);
+      // A parent Blueprint's part, as edit_scs attachTo takes it (this path refused it).
+      InheritedParent = ParentNode ? nullptr : McpScsParent::FindInheritedScsSceneNode(Blueprint, ParentComponentName);
+      if (!ParentNode && !InheritedParent) {
+        NativeParent = FindNativeSceneComponent(Blueprint, ParentComponentName);
+      }
+      if (!ParentNode && !NativeParent && !InheritedParent) {
+        Result->SetBoolField(TEXT("success"), false);
+        Result->SetStringField(
+            TEXT("error"),
+            FString::Printf(
+                TEXT("Parent component not found: %s. Available: %s"),
+                *ParentComponentName,
+                *DescribeParentCandidates(Blueprint, SCS)));
+        return Result;
+      }
+      if ((NativeParent || InheritedParent) && !CompClass->IsChildOf(USceneComponent::StaticClass())) {
+        Result->SetBoolField(TEXT("success"), false);
+        Result->SetStringField(
+            TEXT("error"),
+            FString::Printf(
+                TEXT("'%s' is a non-scene component and cannot attach to '%s'"),
+                *ComponentName, *ParentComponentName));
+        return Result;
+      }
+    }
+  }
+
+  if (FindSCSNodeByVariableName(SCS, ComponentName)) {
+    Result->SetBoolField(TEXT("success"), false);
+    Result->SetStringField(
+        TEXT("error"),
+        FString::Printf(TEXT("Component with name '%s' already exists"),
+                        *ComponentName));
+    return Result;
+  }
+
+  USCS_Node *NewNode = SCS->CreateNode(CompClass, FName(*ComponentName));
+  if (!NewNode) {
+    Result->SetBoolField(TEXT("success"), false);
+    Result->SetStringField(TEXT("error"), TEXT("Failed to create SCS node"));
+    return Result;
+  }
+
+  NewNode->SetVariableName(FName(*ComponentName));
+
+  if (ParentNode) {
+    ParentNode->AddChildNode(NewNode);
+  } else {
+    SCS->AddNode(NewNode);
+    if (NativeParent) {
+      NewNode->SetParent(NativeParent);
+    } else if (InheritedParent) {
+      NewNode->SetParent(InheritedParent);
+    }
+  }
+
+  bool bMeshApplied = false;
+  if (!MeshPath.IsEmpty() && NewNode->ComponentTemplate) {
+    if (UStaticMeshComponent *SMC =
+            Cast<UStaticMeshComponent>(NewNode->ComponentTemplate)) {
+      UStaticMesh *Mesh = LoadObject<UStaticMesh>(nullptr, *MeshPath);
+      if (Mesh) {
+        SMC->SetStaticMesh(Mesh);
+        bMeshApplied = true;
+      }
+    } else if (USkeletalMeshComponent *SkMC =
+                   Cast<USkeletalMeshComponent>(NewNode->ComponentTemplate)) {
+      USkeletalMesh *Mesh = LoadObject<USkeletalMesh>(nullptr, *MeshPath);
+      if (Mesh) {
+        SkMC->SetSkeletalMesh(Mesh, true);
+        bMeshApplied = true;
+      }
+    }
+  }
+
+  bool bMaterialApplied = false;
+  if (!MaterialPath.IsEmpty() && NewNode->ComponentTemplate) {
+    if (UPrimitiveComponent *PC =
+            Cast<UPrimitiveComponent>(NewNode->ComponentTemplate)) {
+      UMaterialInterface *Mat =
+          LoadObject<UMaterialInterface>(nullptr, *MaterialPath);
+      if (Mat) {
+        PC->SetMaterial(0, Mat);
+        bMaterialApplied = true;
+      }
+    }
+  }
+
+  bool bCompiled = false;
+  bool bSaved = false;
+  FinalizeBlueprintSCSChange(Blueprint, bCompiled, bSaved);
+
+  USCS_Node *VerifiedNode = FindSCSNodeByVariableName(SCS, ComponentName);
+  const bool bVerified = VerifiedNode != nullptr;
+  const bool bParentVerified =
+      bVerified && SCSParentMatches(SCS, VerifiedNode, ParentComponentName);
+
+  if (!bVerified || !bParentVerified) {
+    Result->SetBoolField(TEXT("success"), false);
+    Result->SetStringField(TEXT("error"),
+                           bVerified
+                               ? FString::Printf(
+                                     TEXT("Verification failed: Component '%s' "
+                                          "parent did not match requested parent '%s'"),
+                                     *ComponentName, *ParentComponentName)
+                               : FString::Printf(
+                                     TEXT("Verification failed: Component '%s' "
+                                          "not found in SCS after add"),
+                                     *ComponentName));
+    Result->SetStringField(TEXT("errorCode"), TEXT("SCS_VERIFICATION_FAILED"));
+    if (VerifiedNode) {
+      AddSCSNodeVerification(Result, SCS, VerifiedNode);
+    }
+    return Result;
+  }
+
+  Result->SetBoolField(TEXT("success"), true);
+  Result->SetStringField(
+      TEXT("message"),
+      FString::Printf(TEXT("Component '%s' added to SCS"), *ComponentName));
+  Result->SetStringField(TEXT("component_name"), ComponentName);
+  Result->SetStringField(TEXT("component_class"), CompClass->GetName());
+  // Report the parent the engine actually attached to: a new scene component with no
+  // explicit parent lands under the root node, not at "(root)" (dogfood #23).
+  FString ActualParent = ParentComponentName;
+  if (USCS_Node *ActualParentNode = SCS->FindParentNode(VerifiedNode)) {
+    ActualParent = ActualParentNode->GetVariableName().ToString();
+  }
+  // An actor component (buoyancy, movement) attaches to nothing; scsVerification already says so.
+  const bool bSceneComponent = CompClass->IsChildOf(USceneComponent::StaticClass());
+  Result->SetStringField(TEXT("parent"), !bSceneComponent ? TEXT("(none - not a scene component)")
+                                         : ActualParent.IsEmpty() ? TEXT("(root)") : ActualParent);
+  // componentName is the SCS name the caller asked for and can address again; the internal
+  // variable/template name (Name_GEN_VARIABLE) rides separately (dogfood #23).
+  Result->SetStringField(TEXT("componentName"), ComponentName);
+  Result->SetStringField(TEXT("variableName"), VerifiedNode->GetVariableName().ToString());
+  Result->SetBoolField(TEXT("compiled"), bCompiled);
+  Result->SetBoolField(TEXT("saved"), bSaved);
+  AddSCSNodeVerification(Result, SCS, VerifiedNode);
+  Result->SetBoolField(TEXT("mesh_applied"), bMeshApplied);
+  Result->SetBoolField(TEXT("material_applied"), bMaterialApplied);
+  McpHandlerUtils::AddVerification(Result, Blueprint);
+  if (NewNode && NewNode->ComponentTemplate) {
+    if (USceneComponent *SceneComp =
+            Cast<USceneComponent>(NewNode->ComponentTemplate)) {
+      AddComponentVerification(Result, SceneComp);
+      // AddComponentVerification reports the template object name; keep the SCS name authoritative (dogfood #23).
+      Result->SetStringField(TEXT("componentName"), ComponentName);
+    }
+  }
+
+  return Result;
+}

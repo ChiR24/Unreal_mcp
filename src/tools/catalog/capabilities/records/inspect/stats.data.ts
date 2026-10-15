@@ -2,13 +2,14 @@
  * Statistics inspection records (3 actions): scene, performance, memory.
  */
 import type { CapabilityRecordSource } from '../../model.js';
-import { buildCoreRecord } from '../core/builder.js';
+import { ANY_EDITOR_STATE, buildCoreRecord } from '../core/builder.js';
 
 const D = 'inspect';
 
 export const STATS_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'inspect', action: 'get_scene_stats', dispatchAction: 'get_scene_stats', domain: D, family: 'stats',
+    editorStates: ANY_EDITOR_STATE,
     summary: 'Return scene statistics (actor counts, component counts, etc.).',
     whenToUse: ['Scene-level statistics must be inspected.'],
     whenNotToUse: ['Runtime performance is needed; use get_performance_stats.'],
@@ -21,6 +22,7 @@ export const STATS_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'inspect', action: 'get_performance_stats', dispatchAction: 'get_performance_stats', domain: D, family: 'stats',
+    editorStates: ANY_EDITOR_STATE,
     summary: 'Return performance statistics (frame rate, frame time, game, render and GPU thread times, actor count).',
     whenToUse: ['Performance metrics must be inspected.'],
     whenNotToUse: ['Scene composition is needed; use get_scene_stats.'],
@@ -45,17 +47,21 @@ export const STATS_RECORDS: readonly CapabilityRecordSource[] = [
       frameTimeMs: { type: 'number', description: 'Frame time in milliseconds.' },
       estimatedFps: { type: 'number', description: 'Estimated frames per second from delta time.' },
       fps: { type: 'number', description: 'Reported frames per second (same as estimatedFps).' },
-      gameThreadMs: { type: 'number', description: 'Game thread time in milliseconds.' },
+      gameThreadMs: { type: 'number', description: 'Game thread time in milliseconds; while Play In Editor runs it also holds the editor\'s own UI and viewports, so worldTickMs is the game\'s share.' },
+      worldTickMs: { type: 'number', description: 'The measured world\'s own tick in milliseconds (actors, components and physics, from the start of its tick to the end of its tick groups), averaged over about 30 frames: the game\'s share of gameThreadMs. Absent until the world has ticked.' },
       renderThreadMs: { type: 'number', description: 'Render thread time in milliseconds.' },
       rhiThreadMs: { type: 'number', description: 'RHI thread time in milliseconds.' },
       gpuMs: { type: 'number', description: 'GPU frame time in milliseconds.' },
       actorCount: { type: 'number', description: 'Actor count of the measured world.' },
+      windowMinimized: { type: 'boolean', description: 'True when the editor window is minimized: no frame is drawn, so renderThreadMs, rhiThreadMs and gpuMs are left from the last drawn frame and the frame delta is the background throttle. Restore it (control_editor configure_editor setting window) before measuring. Absent otherwise.' },
+      videoMemoryOverBudgetMB: { type: 'number', description: 'How far video memory is over budget, the figure the viewport\'s "Video memory has been exhausted" line prints: another application holding the GPU (a game) or a scene that does not fit, which slows every frame. Absent when it fits.' },
       isBenchmarking: { type: 'boolean', description: 'Whether the engine is in benchmarking mode.' },
       useFixedTimeStep: { type: 'boolean', description: 'Whether a fixed time step is active.' },
     },
   }),
   buildCoreRecord({
     parentTool: 'inspect', action: 'get_memory_stats', dispatchAction: 'get_memory_stats', domain: D, family: 'stats',
+    editorStates: ANY_EDITOR_STATE,
     summary: 'Return memory statistics (allocated, virtual, resource counts).',
     whenToUse: ['Memory usage must be inspected.'],
     whenNotToUse: ['Performance timing is needed; use get_performance_stats.'],

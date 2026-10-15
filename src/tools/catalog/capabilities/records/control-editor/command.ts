@@ -3,7 +3,7 @@
  * set_preferences.
  */
 import type { CapabilityRecordSource } from '../../model.js';
-import { buildCoreRecord } from '../core/builder.js';
+import { ANY_EDITOR_STATE, buildCoreRecord } from '../core/builder.js';
 import { P } from './properties.js';
 
 const F = 'command';
@@ -185,6 +185,7 @@ export const COMMAND_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'control_editor', action: 'open_editor_tab', dispatchAction: 'control_editor',
+    editorStates: ANY_EDITOR_STATE,
     domain: D, family: F,
     summary: 'Open a registered editor tab by id via FGlobalTabmanager, the same path the Window menu uses. Content-source plugins register their windows globally — Bridge as "BridgeTab" — so this reaches them without depending on either plugin. Fab registers no fixed id (it numbers each tab Fab1, Fab2, ...), so tabId "Fab" opens a new Fab tab through the Fab browser API (UE 5.8+). This is also the correct way to authenticate against those services: each owns its own sign-in and persists its own session, so opening its window lets it log in on its own terms rather than reimplementing a login.',
     whenToUse: [
@@ -207,6 +208,7 @@ export const COMMAND_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'control_editor', action: 'console_command', dispatchAction: 'console_command',
+    editorStates: ANY_EDITOR_STATE,
     domain: D, family: F,
     topics: ['console command', 'exec command', 'run command', 'stat fps', 'cheat command', 'type a cheat code'],
     summary: 'Execute an Unreal console command via cross-parent dispatch to the console_command bridge action.',
@@ -220,6 +222,7 @@ export const COMMAND_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'control_editor', action: 'restore_editor_window', domain: D, family: F,
+    editorStates: ANY_EDITOR_STATE,
     summary: 'Restore or minimize the main editor window without giving it focus. Restoring also stops the editor throttling itself '
       + 'while in the background (a minimized editor runs Play In Editor at about 3 fps, which makes every timed test lie); '
       + 'minimize puts the window away and turns the throttle back on, so an editor kept out of the way costs the machine next to nothing.',
@@ -246,6 +249,7 @@ export const COMMAND_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'control_editor', action: 'set_preferences', domain: D, family: F,
+    editorStates: ANY_EDITOR_STATE,
     summary: 'Set editor preferences for a category. Distinct from system_control set_project_setting.',
     whenToUse: ['Editor preferences must be configured for a category.'],
     whenNotToUse: ['Project settings are needed (use system_control set_project_setting).'],

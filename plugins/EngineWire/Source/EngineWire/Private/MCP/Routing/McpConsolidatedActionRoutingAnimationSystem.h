@@ -1,0 +1,123 @@
+#pragma once
+
+#include "CoreMinimal.h"
+
+namespace McpConsolidatedActions
+{
+inline const TArray<FString>& AnimationAuthoring()
+{
+	static const TArray<FString> Actions = {
+		TEXT("add_notify"), TEXT("create_animation_sequence"), TEXT("set_sequence_length"),
+		TEXT("add_bone_track"), TEXT("set_bone_key"), TEXT("set_curve_key"),
+		TEXT("add_notify_state"), TEXT("add_sync_marker"),
+		TEXT("set_root_motion_settings"), TEXT("set_additive_settings"),
+		TEXT("create_montage"), TEXT("add_montage_section"),
+		TEXT("add_montage_slot"), TEXT("set_section_timing"),
+		TEXT("add_montage_notify"), TEXT("set_blend_in"),
+		TEXT("set_blend_out"), TEXT("link_sections"),
+		TEXT("create_blend_space"), TEXT("create_blend_space_1d"), TEXT("create_blend_space_2d"),
+		TEXT("add_blend_sample"), TEXT("force_rebuild_blend_space"),
+		TEXT("set_axis_settings"), TEXT("set_interpolation_settings"),
+		TEXT("create_aim_offset"), TEXT("add_aim_offset_sample"),
+		TEXT("create_anim_blueprint"), TEXT("create_animation_bp"),
+		TEXT("create_animation_blueprint"), TEXT("add_state_machine"),
+		TEXT("add_state"), TEXT("add_transition"),
+		TEXT("set_transition_rules"), TEXT("delete_transition"),
+		TEXT("add_blend_node"),
+		TEXT("add_cached_pose"), TEXT("add_slot_node"),
+		TEXT("add_layered_blend_per_bone"),
+		TEXT("set_anim_graph_node_value"), TEXT("create_control_rig"),
+		TEXT("edit_control_rig"), TEXT("get_control_rig"), TEXT("list_rig_units"),
+		TEXT("create_ik_rig"), TEXT("create_ik_retargeter"), TEXT("set_retarget_chain_mapping"),
+		TEXT("get_animation_info"), TEXT("analyze_animation")
+	};
+	return Actions;
+}
+
+inline const TArray<FString>& Skeleton()
+{
+	static const TArray<FString> Actions = {
+		TEXT("create_skeleton"), TEXT("add_bone"), TEXT("remove_bone"),
+		TEXT("rename_bone"), TEXT("set_bone_transform"),
+		TEXT("set_bone_parent"), TEXT("create_virtual_bone"),
+		TEXT("create_socket"), TEXT("configure_socket"),
+		TEXT("auto_skin_weights"), TEXT("set_vertex_weights"),
+		TEXT("copy_weights"), TEXT("mirror_weights"), TEXT("prune_weights"),
+		TEXT("import_morph_targets"),
+		TEXT("create_physics_asset"),
+		TEXT("add_physics_body"), TEXT("configure_physics_body"),
+		TEXT("add_physics_constraint"), TEXT("configure_constraint_limits"),
+		TEXT("bind_cloth_to_skeletal_mesh"),
+		TEXT("assign_cloth_asset_to_mesh"), TEXT("create_morph_target"),
+		TEXT("set_morph_target_deltas"),
+		TEXT("get_skeleton_info"), TEXT("list_bones"), TEXT("list_sockets"),
+		TEXT("list_physics_bodies"),
+		TEXT("add_socket"), TEXT("modify_socket"), TEXT("delete_socket"),
+		TEXT("remove_socket"), TEXT("set_physics_asset"),
+		TEXT("modify_physics_body"), TEXT("remove_physics_body"),
+		TEXT("set_physics_constraint"), TEXT("get_physics_asset_info"),
+		TEXT("list_morph_targets"), TEXT("delete_morph_target"),
+		TEXT("set_morph_target_value"), TEXT("get_bone_transform"),
+		TEXT("list_virtual_bones"), TEXT("delete_virtual_bone")
+	};
+	return Actions;
+}
+
+inline const TArray<FString>& AudioAuthoring()
+{
+	static const TArray<FString> Actions = {
+		TEXT("create_sound_cue"), TEXT("create_sound_class"),
+		TEXT("create_sound_mix"),
+		TEXT("add_cue_node"), TEXT("connect_cue_nodes"),
+		TEXT("set_cue_attenuation"), TEXT("set_cue_concurrency"),
+		TEXT("set_doppler_effect"),
+		TEXT("create_metasound"), TEXT("add_metasound_node"),
+		TEXT("connect_metasound_nodes"), TEXT("add_metasound_input"),
+		TEXT("add_metasound_output"), TEXT("set_metasound_default"),
+		TEXT("build_metasound"), TEXT("remove_metasound_node"),
+		TEXT("disconnect_metasound_nodes"), TEXT("get_metasound_graph"),
+		TEXT("list_metasound_nodes"),
+		TEXT("set_class_properties"), TEXT("set_class_parent"),
+		TEXT("add_mix_modifier"), TEXT("configure_mix_eq"),
+		TEXT("create_attenuation_settings"),
+		TEXT("configure_distance_attenuation"),
+		TEXT("configure_spatialization"), TEXT("configure_occlusion"),
+		TEXT("configure_reverb_send"), TEXT("create_dialogue_voice"),
+		TEXT("create_dialogue_wave"), TEXT("set_dialogue_context"),
+		TEXT("create_reverb_effect"), TEXT("create_source_effect_chain"),
+		TEXT("add_source_effect"), TEXT("create_submix_effect"),
+		TEXT("get_audio_info")
+	};
+	return Actions;
+}
+
+inline const TArray<FString>& Performance()
+{
+	static const TArray<FString> Actions = {
+		TEXT("start_profiling"), TEXT("stop_profiling"),
+		TEXT("run_benchmark"), TEXT("show_fps"), TEXT("show_stats"),
+		TEXT("generate_memory_report"), TEXT("set_scalability"),
+		TEXT("set_resolution_scale"), TEXT("set_vsync"),
+		TEXT("set_frame_rate_limit"), TEXT("enable_gpu_timing"),
+		TEXT("configure_texture_streaming"), TEXT("configure_lod"),
+		TEXT("apply_baseline_settings"), TEXT("optimize_draw_calls"),
+		TEXT("merge_actors"), TEXT("configure_occlusion_culling"),
+		TEXT("optimize_shaders"), TEXT("configure_nanite"),
+		TEXT("configure_world_partition")
+	};
+	return Actions;
+}
+
+// system_control actions served by the Ui domain (HandleUiAction).
+inline const TArray<FString>& SystemUi()
+{
+	static const TArray<FString> Actions = {
+		TEXT("create_widget"), TEXT("show_widget"), TEXT("add_widget_child"),
+		TEXT("screenshot"), TEXT("get_project_settings"), TEXT("set_project_setting"), TEXT("configure_rendering"),
+		TEXT("lumen_update_scene"), TEXT("spawn_category"), TEXT("play_sound"),
+		TEXT("set_cvar"), TEXT("set_quality"), TEXT("set_resolution"),
+		TEXT("set_fullscreen"), TEXT("profile")
+	};
+	return Actions;
+}
+}

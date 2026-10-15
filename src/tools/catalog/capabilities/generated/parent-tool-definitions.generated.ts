@@ -70,7 +70,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "assetPath": {
           "type": "string",
-          "description": "Canonical /Game asset path."
+          "description": "Animation Sequence asset path, e.g. /Game/Anims/A_Run (a montage or blend space is refused: analyze the sequences it plays)."
         },
         "assetType": {
           "type": "string",
@@ -254,6 +254,21 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Name of the created physics constraint."
         },
+        "contactHeight": {
+          "type": "number",
+          "description": "cm above a foot's lowest point that still counts as planted (default 5)."
+        },
+        "controlType": {
+          "type": "string",
+          "enum": [
+            "transform",
+            "float",
+            "bool",
+            "position",
+            "rotator"
+          ],
+          "description": "add_control: the value the control drives (default transform)."
+        },
         "createConstraints": {
           "type": "boolean",
           "description": "Create joint constraints between bodies."
@@ -278,6 +293,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "x-unreal-reflection-boundary": true
           },
           "description": "Per-vertex morph target position deltas."
+        },
+        "density": {
+          "type": "number",
+          "description": "Density in g/cm3, which sets mass from volume (water is 1)."
         },
         "depth": {
           "type": "number",
@@ -336,6 +355,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "set_axis_settings",
             "set_interpolation_settings",
             "rebuild",
+            "add_unit",
+            "connect",
+            "disconnect",
+            "set_pin",
+            "remove_node",
+            "import_bones",
+            "add_null",
+            "add_control",
+            "remove_element",
             "auto",
             "set",
             "copy",
@@ -352,7 +380,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "set_deltas",
             "import"
           ],
-          "description": "Which configure anim graph node variant to run."
+          "description": "The edit to make (each step of steps names its own)."
         },
         "element": {
           "type": "string",
@@ -387,6 +415,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Engine settings: maxRPM, maxTorque, gears (forward gear count)."
         },
+        "feet": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Foot bones to check (default every bone whose name holds foot but not ik, e.g. foot_l and foot_r)."
+        },
         "forceRootLock": {
           "type": "boolean",
           "description": "Whether root motion is force-locked to the reference pose."
@@ -399,6 +434,24 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Frames per second (default 30)."
         },
+        "friction": {
+          "type": "number",
+          "description": "Kinetic friction, 0 (ice) to 1 and above (rubber); the engine default is 0.7."
+        },
+        "frictionCombineMode": {
+          "type": "string",
+          "enum": [
+            "Average",
+            "Min",
+            "Multiply",
+            "Max"
+          ],
+          "description": "How this surface and the one it touches combine their friction: Min lets the slipperier (or deader) one win, Max the grippier (or bouncier) one; Average when not set."
+        },
+        "from": {
+          "type": "string",
+          "description": "connect, disconnect: the output pin, Node.Pin as get_control_rig lists it; execution runs from the event's execute pin to each unit's (ExecutePin in UE 5.8)."
+        },
         "fromSection": {
           "type": "string",
           "description": "Source montage section."
@@ -410,6 +463,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "geomType": {
           "type": "string",
           "description": "Body primitive: Sphyl, Box, Sphere, TaperedCapsule, MultiConvexHull or SingleConvexHull."
+        },
+        "global": {
+          "type": "boolean",
+          "description": "add_bone, add_null: location, rotation and scale are in rig space, not relative to the parent."
         },
         "gridDivisions": {
           "type": "number",
@@ -498,6 +555,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Capsule length between the end caps (default 20)."
         },
+        "limit": {
+          "type": "number",
+          "description": "Most units to list (default 50, up to 500); matched counts them all."
+        },
         "limits": {
           "type": "object",
           "additionalProperties": false,
@@ -534,12 +595,26 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Linear damping value."
         },
         "location": {
-          "type": "array",
-          "items": {
-            "type": "number"
-          },
-          "minItems": 3,
-          "maxItems": 3,
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 3,
+              "maxItems": 3,
+              "description": "World or relative location as [x, y, z]."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 3,
+              "maxItems": 3,
+              "description": "add_bone, add_null, add_control: location [x, y, z] in cm (a control's offset), relative to the parent unless global."
+            }
+          ],
           "description": "World or relative location as [x, y, z]."
         },
         "lodIndex": {
@@ -557,6 +632,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "mass": {
           "type": "number",
           "description": "Mass value."
+        },
+        "maxSamples": {
+          "type": "number",
+          "description": "Frames sampled, spread evenly with the first and last always in (default 300, at most 2000; a shorter clip samples every frame)."
         },
         "maxValue": {
           "type": "number",
@@ -605,6 +684,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Replacement bone name."
         },
+        "node": {
+          "type": "string",
+          "description": "One node's name: only that node, with every struct member pin by its full path."
+        },
         "nodeId": {
           "type": "string",
           "description": "The node GUID; an alternative to nodeName."
@@ -633,6 +716,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Overwrite an existing asset with the same name."
         },
+        "parent": {
+          "type": "string",
+          "description": "add_bone, add_null, add_control: the parent element's name (a bone, null or control); omitted, the top of the hierarchy."
+        },
         "parentBoneName": {
           "type": "string",
           "description": "Parent bone name."
@@ -653,6 +740,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Canonical /Game PhysicsAsset path."
         },
+        "pin": {
+          "type": "string",
+          "description": "set_pin: the pin, Node.Pin; a struct member has its own pin (SetTransform.Item.Name, SetTransform.Transform.Translation.X)."
+        },
         "pitch": {
           "type": "number",
           "description": "Aim offset pitch in degrees."
@@ -667,6 +758,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "string"
           },
           "description": "Distinct names for the poses in frame order; frames without a name keep the engine default name."
+        },
+        "position": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "add_unit: graph position [x, y] (default right of the last node)."
         },
         "positionX": {
           "type": "number",
@@ -687,6 +787,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "propertyName": {
           "type": "string",
           "description": "The property: a member of the node's settings struct (Alpha, PlayRate, bLoopAnimation, Sequence) or of the graph node (NodeComment), with dots for a nested one (Node.PlayRate). On an asset player the asset property (Sequence, BlendSpace) is written through the node's own setter and read back, and fails when the node did not take it; any other property is written by reflection and its stored value read back."
+        },
+        "query": {
+          "type": "string",
+          "description": "Words to match in the unit's name, display name, category or keywords (spaces ignored), e.g. two bone, aim, set transform."
         },
         "radius": {
           "type": "number",
@@ -736,6 +840,20 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether child bones are removed with the target bone."
         },
+        "restitution": {
+          "type": "number",
+          "description": "Bounce, 0 (none) to 1 (keeps all its speed)."
+        },
+        "restitutionCombineMode": {
+          "type": "string",
+          "enum": [
+            "Average",
+            "Min",
+            "Multiply",
+            "Max"
+          ],
+          "description": "How this surface and the one it touches combine their bounce: Min lets the slipperier (or deader) one win, Max the grippier (or bouncier) one; Average when not set."
+        },
         "retargeterPath": {
           "type": "string",
           "description": "An existing IK Retargeter to bake through. Omit to auto-build one by characterizing both skeletons and mapping their chains."
@@ -767,6 +885,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "minItems": 3,
               "maxItems": 3,
               "description": "Rotation as [pitch, yaw, roll] in degrees."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 3,
+              "maxItems": 3,
+              "description": "add_bone, add_null, add_control: rotation [pitch, yaw, roll] in degrees."
             }
           ],
           "description": "Box or capsule rotation relative to the bone as [pitch, yaw, roll]."
@@ -795,6 +922,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "minItems": 3,
               "maxItems": 3,
               "description": "Bone scale as [x, y, z] (default [1, 1, 1])."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 3,
+              "maxItems": 3,
+              "description": "add_bone, add_null, add_control: scale [x, y, z] (default 1)."
             }
           ],
           "description": "Bone scale as [x, y, z] (default [1, 1, 1])."
@@ -902,9 +1038,22 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "States to create, as [{ name }]."
         },
+        "staticFriction": {
+          "type": "number",
+          "description": "Friction at rest, before a body starts to slide."
+        },
         "staticMeshPath": {
           "type": "string",
           "description": "StaticMesh to skin, e.g. a coat downloaded as a rigid mesh."
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Several edits in order, each an object with edit and its own fields as above; the first that fails stops the rest, and those before it stay (failedStep names it)."
         },
         "suffix": {
           "type": "string",
@@ -945,6 +1094,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "time": {
           "type": "number",
           "description": "Time in seconds."
+        },
+        "to": {
+          "type": "string",
+          "description": "connect, disconnect: the input pin, Node.Pin."
         },
         "toSection": {
           "type": "string",
@@ -1001,6 +1154,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Comment/name for the blend node (alias of name)."
         },
+        "unit": {
+          "type": "string",
+          "description": "add_unit: the unit, as an object path (/Script/ControlRig.RigUnit_SetTransform), its struct name with or without RigUnit_ (SetTransform), or its display name."
+        },
         "value": {
           "oneOf": [
             {
@@ -1008,6 +1165,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             },
             {
               "description": "The value: a number, boolean or string, an {x,y,z} or {r,g,b,a} object for a struct, or for an asset property the asset path (/Game/Anims/A_Idle)."
+            },
+            {
+              "type": [
+                "string",
+                "number",
+                "boolean"
+              ],
+              "description": "set_pin: the value as text (Bone, foot_l), a number, or true/false."
             }
           ],
           "description": "Property value (any type)."
@@ -1094,17 +1259,22 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "edit_anim_graph",
             "edit_animation",
             "create_control_rig",
+            "edit_control_rig",
+            "get_control_rig",
+            "list_rig_units",
             "setup_ik",
             "edit_montage",
             "play_montage",
             "setup_ragdoll",
             "configure_vehicle",
             "setup_physics_simulation",
+            "create_physical_material",
             "edit_blend_space",
             "setup_retargeting",
             "skin_mesh_to_skeleton",
             "configure_anim_graph_node",
             "get_animation_info",
+            "analyze_animation",
             "cleanup",
             "create_skeleton",
             "edit_skeleton",
@@ -1181,6 +1351,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "string"
           },
           "description": "Requested animation paths that could not be loaded."
+        },
+        "applied": {
+          "type": "number",
+          "description": "Edits applied."
         },
         "assetPath": {
           "type": "string",
@@ -1285,6 +1459,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether any mapping changed."
         },
+        "compileErrors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The compile errors, when there were any."
+        },
+        "compiled": {
+          "type": "boolean",
+          "description": "Whether the rig compiled after the edits."
+        },
         "compiledAnimBlueprints": {
           "type": "array",
           "items": {
@@ -1319,6 +1504,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Number of bones listed."
         },
+        "created": {
+          "type": "boolean",
+          "description": "True when this call made it; false when it tuned one already there."
+        },
         "deleted": {
           "type": "boolean",
           "description": "True when the transition and its rule graph were removed."
@@ -1328,13 +1517,70 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true,
           "description": "Additional handler result fields not named by the contract."
         },
+        "elementCount": {
+          "type": "number",
+          "description": "All hierarchy elements."
+        },
+        "elements": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Hierarchy elements in order (up to 500): type (Bone, Null, Control, Curve ...), name and parent."
+        },
         "existingAsset": {
           "type": "boolean",
           "description": "Boolean parameter."
         },
+        "failedStep": {
+          "type": "number",
+          "description": "steps: the step that failed (0-based); the ones before it were applied, compiled and saved."
+        },
+        "feet": {
+          "type": "array",
+          "description": "One entry per foot bone.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "bone": {
+                "type": "string",
+                "description": "Foot bone."
+              },
+              "lowest": {
+                "type": "number",
+                "description": "Its lowest height in cm."
+              },
+              "contacts": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  }
+                },
+                "description": "Planted intervals as [start, end] in seconds (at most 32)."
+              },
+              "plantedRatio": {
+                "type": "number",
+                "description": "Share of sampled frames the foot is planted (0-1)."
+              },
+              "plantedSpeed": {
+                "type": "number",
+                "description": "Average horizontal speed of the planted foot in cm/s: the ground speed an in-place clip implies, or foot slide on a root-motion clip."
+              }
+            }
+          }
+        },
         "frameRate": {
           "type": "number",
-          "description": "Numeric parameter."
+          "description": "Frames per second."
+        },
+        "frames": {
+          "type": "number",
+          "description": "Frames (sampled keys) in the sequence."
         },
         "hasPhysicsAsset": {
           "type": "boolean",
@@ -1364,7 +1610,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "length": {
           "type": "number",
-          "description": "Numeric parameter."
+          "description": "Length in seconds."
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Each link: from (output pin) and to (input pin)."
         },
         "location": {
           "type": "object",
@@ -1382,9 +1637,37 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             }
           }
         },
+        "loop": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Last frame against the first, every bone but the root in its parent's space: near 0 is a clean loop.",
+          "properties": {
+            "positionError": {
+              "type": "number",
+              "description": "Largest bone offset in cm."
+            },
+            "rotationError": {
+              "type": "number",
+              "description": "Largest bone rotation in degrees."
+            },
+            "worstBone": {
+              "type": "string",
+              "description": "The bone with the largest rotation."
+            }
+          }
+        },
         "machineName": {
           "type": "string",
           "description": "State machine name."
+        },
+        "made": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "What the edits made: {node, unit, pins} for an added unit, {pin, value} for a set pin (the value as stored), {element} for an added element, {importedFrom, bones} for a skeleton's bones imported (bones the rig already had are matched in place)."
         },
         "mapping": {
           "type": "array",
@@ -1403,6 +1686,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "additionalProperties": false
           },
           "description": "Every target chain with the source chain now driving it (None when unmapped)."
+        },
+        "matched": {
+          "type": "number",
+          "description": "Units that match."
         },
         "maxInfluencesAfter": {
           "type": "number",
@@ -1467,6 +1754,22 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Object name of the node that was set."
         },
+        "nodeNames": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "With a node that is not there: the nodes there are."
+        },
+        "nodes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Each node: name, title, unit (struct path), position [x, y] and pins [{pin, direction, type, default, linked}]."
+        },
         "numBodies": {
           "type": "number",
           "description": "Number of physics bodies in the asset."
@@ -1483,6 +1786,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Index of the parent bone, -1 for the root."
         },
+        "physicalMaterialPath": {
+          "type": "string",
+          "description": "Object path of the physical material."
+        },
         "physicsAssetName": {
           "type": "string",
           "description": "Name of the generated Physics Asset."
@@ -1490,6 +1797,28 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "physicsAssetPath": {
           "type": "string",
           "description": "Canonical /Game PhysicsAsset path."
+        },
+        "pops": {
+          "type": "array",
+          "description": "The three bones whose rotation spikes fastest: a pop shows as one far above the rest.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "bone": {
+                "type": "string",
+                "description": "Bone."
+              },
+              "time": {
+                "type": "number",
+                "description": "When, in seconds."
+              },
+              "degreesPerSecond": {
+                "type": "number",
+                "description": "Its rotation speed there."
+              }
+            }
+          }
         },
         "poseCount": {
           "type": "number",
@@ -1533,6 +1862,40 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Morph targets the mesh already had and were replaced."
         },
+        "rootMotion": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "The root bone's path in component space (in-place clips stay at 0).",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Whether the sequence has root motion enabled."
+            },
+            "displacement": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "description": "From the first to the last frame, [x, y, z] in cm."
+            },
+            "distance": {
+              "type": "number",
+              "description": "Path length in cm."
+            },
+            "averageSpeed": {
+              "type": "number",
+              "description": "cm/s over the clip."
+            },
+            "peakSpeed": {
+              "type": "number",
+              "description": "Fastest frame-to-frame speed in cm/s."
+            },
+            "turn": {
+              "type": "number",
+              "description": "Yaw change in degrees."
+            }
+          }
+        },
         "rotation": {
           "type": "object",
           "additionalProperties": false,
@@ -1548,6 +1911,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "type": "number"
             }
           }
+        },
+        "samples": {
+          "type": "number",
+          "description": "Frames sampled."
         },
         "saved": {
           "type": "boolean",
@@ -1605,6 +1972,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "success": {
           "type": "boolean",
           "description": "Whether the action succeeded."
+        },
+        "units": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Matching units sorted by struct name: unit (the object path add_unit takes), name and category."
         },
         "unmappedBones": {
           "type": "array",
@@ -1700,7 +2076,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "amplitude": {
           "type": "number",
-          "description": "Wave amplitude."
+          "description": "Same as waveHeight; waveHeight wins when both are given."
         },
         "aperture": {
           "type": "number",
@@ -2040,26 +2416,50 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "density": {
           "type": "number",
-          "description": "Foliage density."
+          "description": "Fog density, the height fog's FogDensity (0.02 a light haze, 0.05 and up a thick fog)."
         },
         "direction": {
-          "type": "object",
-          "description": "Direction rotation.",
-          "properties": {
-            "pitch": {
-              "type": "number",
-              "description": "Pitch"
+          "oneOf": [
+            {
+              "type": "object",
+              "description": "Direction rotation.",
+              "properties": {
+                "pitch": {
+                  "type": "number",
+                  "description": "Pitch"
+                },
+                "yaw": {
+                  "type": "number",
+                  "description": "Yaw"
+                },
+                "roll": {
+                  "type": "number",
+                  "description": "Roll"
+                }
+              },
+              "additionalProperties": false
             },
-            "yaw": {
-              "type": "number",
-              "description": "Yaw"
-            },
-            "roll": {
-              "type": "number",
-              "description": "Roll"
+            {
+              "type": "object",
+              "description": "Wind direction: its yaw sets where the waves travel.",
+              "properties": {
+                "pitch": {
+                  "type": "number",
+                  "description": "Pitch"
+                },
+                "yaw": {
+                  "type": "number",
+                  "description": "Yaw"
+                },
+                "roll": {
+                  "type": "number",
+                  "description": "Roll"
+                }
+              },
+              "additionalProperties": false
             }
-          },
-          "additionalProperties": false
+          ],
+          "description": "Direction rotation."
         },
         "directionalLightActorPath": {
           "type": "string",
@@ -2753,23 +3153,47 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Spline points."
         },
         "position": {
-          "type": "object",
-          "description": "Position {x, y, z}.",
-          "properties": {
-            "x": {
-              "type": "number",
-              "description": "X"
+          "oneOf": [
+            {
+              "type": "object",
+              "description": "Point position relative to the spline actor {x, y, z}: its local space, the location get_splines_info with actorName reports (worldLocation is where the point lies in the level).",
+              "properties": {
+                "x": {
+                  "type": "number",
+                  "description": "X"
+                },
+                "y": {
+                  "type": "number",
+                  "description": "Y"
+                },
+                "z": {
+                  "type": "number",
+                  "description": "Z"
+                }
+              },
+              "additionalProperties": false
             },
-            "y": {
-              "type": "number",
-              "description": "Y"
-            },
-            "z": {
-              "type": "number",
-              "description": "Z"
+            {
+              "type": "object",
+              "description": "Position {x, y, z}.",
+              "properties": {
+                "x": {
+                  "type": "number",
+                  "description": "X"
+                },
+                "y": {
+                  "type": "number",
+                  "description": "Y"
+                },
+                "z": {
+                  "type": "number",
+                  "description": "Z"
+                }
+              },
+              "additionalProperties": false
             }
-          },
-          "additionalProperties": false
+          ],
+          "description": "Point position relative to the spline actor {x, y, z}: its local space, the location get_splines_info with actorName reports (worldLocation is where the point lies in the level)."
         },
         "properties": {
           "type": "object",
@@ -3194,7 +3618,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "steepness": {
           "type": "number",
-          "description": "Wave steepness."
+          "description": "Crest sharpness of the short waves, 0 (smooth swell) to 1 (peaked); the long waves take about half. Keep it under about 0.3: steep crests from many waves fold the surface over itself."
         },
         "strength": {
           "type": "number",
@@ -3322,11 +3746,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "waveHeight": {
           "type": "number",
-          "description": "Wave height."
+          "description": "Height (amplitude) of the largest wave in cm; the body's other waves shrink to 15% of it, as a real sea's do. A calm harbour is about 5-10, open sea 50 or more."
         },
         "waveLength": {
           "type": "number",
-          "description": "Wave length."
+          "description": "Wavelength of the longest wave in cm, crest to crest; the shortest waves are 13% of it (a harbour is about 1500-2500)."
         },
         "width": {
           "type": "number",
@@ -3487,7 +3911,21 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "items": {
                 "type": "string"
               },
+              "description": "Several actors to change in one call and one undo step, in place of actorName; names not found are listed back under missing, and the actors changed under affectedActors (which the receipt lists as changes, with an actor handle each)."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
               "description": "Several actors to give the same material in one call and one undo step, in place of actorName; each is reported under results, and the actors changed under affectedActors (which the receipt lists as changes, with an actor handle each); the call fails naming any that did not take it."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Several actors to move in one call and one undo step, in place of actorName; names not found are listed back under missing, and the actors moved under affectedActors."
             },
             {
               "type": "array",
@@ -3508,7 +3946,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "items": {
                 "type": "string"
               },
-              "description": "Several actors to toggle in one call and one undo step, in place of actorName; names not found are listed back under missing, and the actors changed under affectedActors (which the receipt lists as changes, with an actor handle each)."
+              "description": "Several actors whose component of componentName takes the same properties in one call and one undo step, in place of actorName (a row of point lights, each LightComponent0). The actors changed are counted in updatedActors and listed under affectedActors (which the receipt lists as changes), names that matched no actor come back in missing, and an actor whose component did not take everything is a results row {actorName, error} that fails the call PARTIAL_FAILURE."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "maxItems": 500,
+              "description": "Many actors given the same change: the location, offset, rotation or scale beside it (forty frost caps rescaled by one scale, a group raised by one offset). Reported as actors is."
             }
           ],
           "description": "Actor names to act on (batch delete)."
@@ -3523,7 +3970,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "x-unreal-reflection-boundary": true
               },
               "x-unreal-reflection-boundary": true,
-              "description": "Actors to spawn, 1-500. Each is a spawn payload: classPath, blueprintPath or meshPath, plus actorName, location, rotation, scale ([x, y, z] arrays). Optional per item: materialPath (applied like set_material; componentName/materialSlot/allComponents narrow it), variables ({name: value} Blueprint variables set on the new instance, like set_blueprint_variables), folder (outliner folder path), tags (actor tags; delete_by_tag removes the batch again). Items that fail are reported; the rest still spawn."
+              "description": "Actors to spawn, 1-500. Each is a spawn payload: classPath, blueprintPath or meshPath, plus actorName, location, rotation, scale ([x, y, z] arrays). Optional per item: materialPath (applied like set_material; componentName/materialSlot/allComponents narrow it), variables ({name: value} Blueprint variables set on the new instance, like set_blueprint_variables; in a running game they are set before its BeginPlay, so it starts with them), properties ({name: value} set on the root component, or on componentName's, as edit_component sets them: a light's Intensity, LightColor and AttenuationRadius), folder (outliner folder path), tags (actor tags; delete_by_tag removes the batch again), repeat ({count, offset [x, y, z], rows, rowOffset [x, y, z]}: count x rows copies of the item, each moved from its location by offset per copy and rowOffset per row, actorName numbered _1, _2, ...; a row of racks, a grid of lights; at most 1000 actors once unrolled). Items that fail are reported; the rest still spawn. Parts meant to hang in the air or sit inside another (ceiling ducts, lights, a flange on a pipe) take the tag mcp.placement.ok (defaults.tags covers the whole batch), so the reply keeps only what needs fixing."
             },
             {
               "type": "array",
@@ -3576,7 +4023,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 ],
                 "additionalProperties": false
               },
-              "description": "Many actors in one call, each {actorName, location? or offset?, rotation?, scale?} with its own values (an omitted part keeps its current value); every actor is reported, and the call fails naming any that did not move."
+              "description": "Many actors in one call, each {actorName, location? or offset?, rotation?, scale?} with its own values; a part an item leaves out takes the call's own location, offset, rotation or scale when given, else keeps its current value. Every actor is reported, and the call fails naming any that did not move."
             },
             {
               "type": "array",
@@ -3589,7 +4036,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                   },
                   "variables": {
                     "type": "object",
-                    "description": "Blueprint variable name to value map.",
+                    "description": "Blueprint variable name to value map. An actor variable, or an array of them, takes each actor by its label or name as list shows it (\"Door_1\", [\"Fire_1\", \"Fire_2\"]) or by its object path.",
                     "additionalProperties": true,
                     "x-unreal-reflection-boundary": true
                   }
@@ -3603,7 +4050,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "description": "Many actors in one call, each {actorName, variables} with its own values; every actor is reported, the actors that took a variable come back under affectedActors (which the receipt lists as changes, with an actor handle each), and the call fails naming any that did not take all of its variables."
             }
           ],
-          "description": "Actors to spawn, 1-500. Each is a spawn payload: classPath, blueprintPath or meshPath, plus actorName, location, rotation, scale ([x, y, z] arrays). Optional per item: materialPath (applied like set_material; componentName/materialSlot/allComponents narrow it), variables ({name: value} Blueprint variables set on the new instance, like set_blueprint_variables), folder (outliner folder path), tags (actor tags; delete_by_tag removes the batch again). Items that fail are reported; the rest still spawn."
+          "description": "Actors to spawn, 1-500. Each is a spawn payload: classPath, blueprintPath or meshPath, plus actorName, location, rotation, scale ([x, y, z] arrays). Optional per item: materialPath (applied like set_material; componentName/materialSlot/allComponents narrow it), variables ({name: value} Blueprint variables set on the new instance, like set_blueprint_variables; in a running game they are set before its BeginPlay, so it starts with them), properties ({name: value} set on the root component, or on componentName's, as edit_component sets them: a light's Intensity, LightColor and AttenuationRadius), folder (outliner folder path), tags (actor tags; delete_by_tag removes the batch again), repeat ({count, offset [x, y, z], rows, rowOffset [x, y, z]}: count x rows copies of the item, each moved from its location by offset per copy and rowOffset per row, actorName numbered _1, _2, ...; a row of racks, a grid of lights; at most 1000 actors once unrolled). Items that fail are reported; the rest still spawn. Parts meant to hang in the air or sit inside another (ceiling ducts, lights, a flange on a pipe) take the tag mcp.placement.ok (defaults.tags covers the whole batch), so the reply keeps only what needs fixing."
         },
         "allComponents": {
           "type": "boolean",
@@ -3634,11 +4081,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "collisionEnabled": {
           "type": "boolean",
-          "description": "Desired collision enabled state."
+          "description": "Turn collision on (true) or off (false). Omitted with profile or responses, the mode stays as the preset sets it."
         },
         "componentName": {
           "type": "string",
-          "description": "Component of the parent actor to attach to (default its root): on a character built from several meshes, the mesh that owns the bone."
+          "description": "Call the function on this component of the actor instead of on the actor itself (refused with COMPONENT_NOT_FOUND when the actor has none of that name)."
         },
         "componentNames": {
           "type": "array",
@@ -3650,6 +4097,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "componentType": {
           "type": "string",
           "description": "Component class to add."
+        },
+        "contactCm": {
+          "type": "number",
+          "description": "With groundTrace: how far above its own lowest height a point still counts as planted (default 2 cm), so an ankle bone that never reaches the floor still counts as down when the foot is."
         },
         "defaults": {
           "type": "object",
@@ -3718,6 +4169,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "functionName": {
           "type": "string",
           "description": "Actor function name to call."
+        },
+        "groundTrace": {
+          "type": "boolean",
+          "description": "With points: each sample's aboveGround gives each point's height over the first surface below it that blocks Visibility (the actor and what is attached to it ignored), negative when the point is inside that surface, and pointStats sums up its contact."
         },
         "info": {
           "type": "string",
@@ -3885,13 +4340,29 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Move by [dx, dy, dz] from where the actor stands now, instead of to an absolute location; give one or the other."
         },
+        "overlaps": {
+          "type": "boolean",
+          "description": "Also watch which actors overlap the watched one, checked every frame: a sample names those that began (overlapsBegan) or stopped (overlapsEnded) touching it since the sample before, and overlapped lists every actor it touched. Finds what killed a pawn, what a pickup or trigger fired on, or an enemy wandering into a spawn point."
+        },
         "parentActor": {
           "type": "string",
           "description": "Parent actor name to attach to."
         },
+        "points": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 8,
+          "description": "Places on the actor sampled with it (at most 8): a component by its name (LegL), a bone or socket of any of its components (foot_l, hand_r), or a component's own socket as Component.Socket (Weapon.Muzzle). Each sample's points gives each one's world location [x, y, z]; a name the actor lacks is refused with the names it has. Fewer samples are kept with points: 400 x 2 / (2 + points)."
+        },
+        "profile": {
+          "type": "string",
+          "description": "A collision preset of the project (BlockAll, BlockAllDynamic, OverlapAll, OverlapAllDynamic, NoCollision, Pawn, Trigger, PhysicsActor...); an unknown name is refused with the list. The reply reads the preset back."
+        },
         "properties": {
           "type": "object",
-          "description": "Component property key-value pairs. Each key is a name or dotted path, as propertyName takes it (BodyInstance.CollisionEnabled works).",
+          "description": "Component property key-value pairs. Each key is a name or dotted path, as propertyName takes it (BodyInstance.CollisionEnabled works). Collision goes through the component setters: CollisionProfileName (a preset), CollisionEnabled, CollisionResponses ({\"Pawn\": \"Ignore\"}), PhysMaterialOverride (a physical material path, None to clear).",
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true
         },
@@ -3906,17 +4377,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "items": {
                 "type": "string"
               },
-              "description": "Actor properties read at every sample, e.g. [\"bDead\", \"HP\"], or a component's as \"Component.Property\" (\"Visual.RelativeScale3D\" catches a squash on landing), the component by its name or by the actor property that holds it (\"CharacterMovement.MaxWalkSpeed\"); a name that resolves to nothing is listed under missingProperties."
+              "description": "Actor properties read at every sample, each as JSON (a number, true or false, the name of an enum value, the path of an object, or an array of them), e.g. [\"bDead\", \"HP\"], or a component's as \"Component.Property\" (\"Visual.RelativeScale3D\" catches a squash on landing), the component by its name or by the actor property that holds it (\"CharacterMovement.MaxWalkSpeed\"); a name that resolves to nothing is listed under missingProperties."
             },
             {
               "type": "array",
               "items": {
                 "type": "string"
               },
-              "description": "Property or Blueprint variable names to read on every listed actor, returned per actor under properties, e.g. Kind and Content, or a component's as \"Component.Property\" (StaticMeshComponent.LDMaxDrawDistance, Visual.RelativeScale3D; the component by its name, or by the actor property that holds it, as CharacterMovement.MaxWalkSpeed), keyed as asked. A name that an actor lacks, or whose component it lacks, is listed under missingProperties for that actor."
+              "description": "Property or Blueprint variable names to read on every listed actor, returned per actor under properties, each as JSON (a number, true or false, the name of an enum value, the path of an object, or an array of them), e.g. Kind and Content, or a component's as \"Component.Property\" (StaticMeshComponent.LDMaxDrawDistance, Visual.RelativeScale3D; the component by its name, or by the actor property that holds it, as CharacterMovement.MaxWalkSpeed), keyed as asked. A name that an actor lacks, or whose component it lacks, is listed under missingProperties for that actor."
             }
           ],
-          "description": "Actor properties read at every sample, e.g. [\"bDead\", \"HP\"], or a component's as \"Component.Property\" (\"Visual.RelativeScale3D\" catches a squash on landing), the component by its name or by the actor property that holds it (\"CharacterMovement.MaxWalkSpeed\"); a name that resolves to nothing is listed under missingProperties."
+          "description": "Actor properties read at every sample, each as JSON (a number, true or false, the name of an enum value, the path of an object, or an array of them), e.g. [\"bDead\", \"HP\"], or a component's as \"Component.Property\" (\"Visual.RelativeScale3D\" catches a squash on landing), the component by its name or by the actor property that holds it (\"CharacterMovement.MaxWalkSpeed\"); a name that resolves to nothing is listed under missingProperties."
         },
         "propertyPath": {
           "type": "string",
@@ -3964,7 +4435,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "all",
             "failures"
           ],
-          "description": "Which items results lists: all (default), or failures only (items that failed to spawn or to take their material or variables, and items with a placementWarning); spawned and failed still count every item. Use failures for big layouts."
+          "description": "Which items results lists: all, or failures only (items that failed to spawn or to take their material or variables, and items with a placementWarning); spawned and failed still count every item. Default all, or failures for a batch of more than 20 items once repeats are unrolled; the receipt still names every actor."
+        },
+        "responses": {
+          "type": "object",
+          "description": "How the components answer each named channel, {\"Pawn\": \"Ignore\", \"Visibility\": \"Block\"}: an engine channel (WorldStatic, WorldDynamic, Pawn, Visibility, Camera, PhysicsBody, Vehicle, Destructible) or one the project added, by its name; each Block, Overlap or Ignore. Applied after profile, so the preset then reads Custom; the reply reads each channel back.",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true
         },
         "rotation": {
           "type": "array",
@@ -4018,7 +4495,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "description": "That actor's property, as propertyNames reads it: bActorEnableCollision, or a component's as Component.Property (CharacterMovement.MovementMode starts the run on a landing when equals is MOVE_Walking)."
             },
             "equals": {
-              "description": "Value that starts the run, as samples show it (\"True\", \"False\", 3)."
+              "description": "Value that starts the run, as samples show it (true, false, 3, \"Walking\")."
             },
             "waitForChange": {
               "type": "boolean",
@@ -4055,11 +4532,23 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "default": "add"
         },
         "tags": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Several actor tags at once, in place of tag: every actor carrying any of them is deleted under one consent."
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Actor tags for the new actor: delete_by_tag removes them again, and mcp.placement.ok marks a deliberate overlap before the placement is judged."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Several actor tags at once, in place of tag: every actor carrying any of them is deleted under one consent."
+            }
+          ],
+          "description": "Actor tags for the new actor: delete_by_tag removes them again, and mcp.placement.ok marks a deliberate overlap before the placement is judged."
         },
         "transformMode": {
           "type": "string",
@@ -4078,7 +4567,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "variables": {
           "type": "object",
-          "description": "Blueprint variable name to value map.",
+          "description": "Blueprint variable name to value map. A name the actor does not have refuses the whole call before anything is set; the error lists the variables it does have. An actor variable takes the other actor by label, name or path. A value that does not take (an object path that loads nothing) fails the call, naming it; the variables that did take are listed under updated.",
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true
         },
@@ -4103,6 +4592,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "get_components",
             "list",
             "add_tag",
+            "set_folder",
             "find_by_tag",
             "find",
             "audit_placement",
@@ -4233,6 +4723,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "items": {
                 "type": "string"
               },
+              "description": "The actors moved; the receipt lists them as changes, with an actor handle each."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
               "description": "The actors that spawned, by the name each result carries, in batch order and under either report mode; the receipt lists them as changes, with an actor handle each (the first 20)."
             },
             {
@@ -4240,10 +4737,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "items": {
                 "type": "string"
               },
-              "description": "actors: the actors that took their transform, each by name and once; the receipt lists them as changes, with an actor handle each."
+              "description": "actors or actorNames: the actors that took their transform, each by name and once; the receipt lists them as changes, with an actor handle each."
             }
           ],
-          "description": "The actors that spawned, by the name each result carries, in batch order and under either report mode; the receipt lists them as changes, with an actor handle each (the first 20)."
+          "description": "The actors moved; the receipt lists them as changes, with an actor handle each."
         },
         "blueprintPath": {
           "type": "string",
@@ -4385,6 +4882,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Actor components."
         },
+        "coplanarFaces": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "x-unreal-reflection-boundary": true,
+          "description": "Its faces that lie in the same plane as a face of another actor and point the same way, so the overlap flickers between the two (z-fighting): direction (+X, -Z, ...), component, otherActor, otherComponent, overlapU and overlapV (the overlap's size in units), largest first. Move one about 2 units apart along direction, or stop a wall at a ceiling's underside; control_actor fix_coplanar nudges every pair. Present only when there is one."
+        },
         "count": {
           "type": "number",
           "description": "Number of actors returned."
@@ -4407,7 +4914,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "endedBecause": {
           "type": "string",
-          "description": "duration, realTimeCap, sampleCap, actorDestroyed (a PIE death that reloads the level ends here), worldEnded (PIE stopped), startWhenTimeout (startWhen never happened within maxWaitSeconds) or gamePaused (game time stood still for 3 s: a title or pause menu holds the game; the warning says how to get past it)."
+          "description": "duration, realTimeCap, sampleCap, actorDestroyed (the actor was destroyed while its level kept running), levelChanged (the game loaded a level and PIE runs on in it: a death that reloads the level, or travel to the next one), worldEnded (PIE stopped),startWhenTimeout (startWhen never happened within maxWaitSeconds) or gamePaused (game time stood still for 3 s: a title or pause menu holds the game; the warning says how to get past it)."
         },
         "examined": {
           "type": "number",
@@ -4428,7 +4935,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "failed": {
           "type": "number",
-          "description": "Items that failed to spawn or to take their material."
+          "description": "Items that failed to spawn or to take their material, variables or properties."
         },
         "filter": {
           "type": "string",
@@ -4437,6 +4944,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "flagged": {
           "type": "number",
           "description": "Actors with a placement problem (part findings, with blueprintPath), before the limit."
+        },
+        "folder": {
+          "type": "string",
+          "description": "The folder the actors are in now (\"\" for the root)."
         },
         "gameSeconds": {
           "type": "number",
@@ -4510,6 +5021,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Smallest x, y and z sampled (the lowest point is min[2])."
         },
+        "missing": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Names that matched no actor."
+        },
         "missingComponents": {
           "type": "array",
           "items": {
@@ -4540,7 +5058,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "movedActors": {
           "type": "number",
-          "description": "actors: how many actors took their transform."
+          "description": "actors or actorNames: how many actors took their transform."
+        },
+        "movedCount": {
+          "type": "number",
+          "description": "How many actors were moved."
         },
         "name": {
           "type": "string",
@@ -4575,6 +5097,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "maxItems": 3,
           "description": "World-space centre of the bounding box as [x, y, z]."
         },
+        "overlapped": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "With overlaps: every actor that touched the watched one during the run, first touch first; empty when nothing did."
+        },
         "overlappingActors": {
           "type": "array",
           "items": {
@@ -4595,11 +5124,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "placementWarning": {
           "type": "string",
-          "description": "Present when the placement looks wrong: it intersects other actors, is sunk below the surface under it (the bottom of its bounds is under it, wherever its pivot is; suggestedLocation rests it), floats more than 50 units above it, or has nothing below it (an actor held up from the side is mounted, never floating: see mountedOn). Tag the actor mcp.placement.ok when that is deliberate and it is never reported."
+          "description": "Present when the placement looks wrong: it intersects other actors, is sunk below the surface under it (the bottom of its bounds is under it, wherever its pivot is; suggestedLocation rests it), floats more than 50 units above it, has nothing below it (an actor held up from the side is mounted, never floating: see mountedOn; a floor or platform, four times wider than tall, is ground itself and never reported for it), or has a face in the same plane as another actor's, pointing the same way, which flickers where they overlap (z-fighting: see coplanarFaces). A water body is a surface, not a solid: an actor partly under water (a buoy, a hull, a wading pawn) is neither intersecting nor sunk, and groundZ is the water level. Tag the actor mcp.placement.ok when the placement is deliberate and it is never reported; the tag does not hide a shared plane, which always flickers."
         },
         "placementWarnings": {
           "type": "number",
-          "description": "Items that spawned but look misplaced (sunk into the surface under them, floating, intersecting other actors or with nothing below); each carries its placementWarning in results. A warning is not a failure: it changes neither failed nor success."
+          "description": "Items that spawned but look misplaced (sunk into the surface under them, floating, intersecting other actors, with nothing below, or with a face flickering against another actor's in the same plane); each carries its placementWarning in results. A warning is not a failure: it changes neither failed nor success."
+        },
+        "pointStats": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "Per point: min and max [x, y, z] over the run; with groundTrace also minAboveGround and maxAboveGround (a negative minimum means it sank into the surface, a large one that it never touched it), contactSeconds (time spent planted) and contactSlip (cm it moved across the ground while planted: a planted foot that slides shows here)."
         },
         "problems": {
           "type": "array",
@@ -4632,7 +5167,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "additionalProperties": true,
                 "x-unreal-reflection-boundary": true
               },
-              "description": "actors: one entry per actor (actorName, success, read-back location/rotation/scale, placementWarning, error)."
+              "description": "actors or actorNames: one entry per actor (actorName, success, read-back location/rotation/scale, placementWarning, coplanarFaces, error), its placement checked once every actor in the call has moved; report failures keeps only the failed and misplaced ones."
             },
             {
               "type": "array",
@@ -4642,10 +5177,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "x-unreal-reflection-boundary": true
               },
               "x-unreal-reflection-boundary": true,
-              "description": "Per item (only the failed ones and those with a placementWarning under report: failures): index, success, name, path, error, errorCode, variablesSet, variablesError, materialApplied, materialError, and the placement facts set_transform reports (groundZ, groundClearance, placementWarning, overlappingActors, suggestedLocation), measured after the item took its tags, variables and material, so an item tagged mcp.placement.ok is never reported. name is the label the item asked for, or the unique actor name when it gave no actorName."
+              "description": "Per item (only the failed ones and those with a placementWarning or ignoredKeys under report: failures, the default past 20 items): index (its place in the batch once repeats are unrolled), success, name, path, error, errorCode, variablesSet, variablesError, materialApplied, materialError, propertiesError, ignoredKeys (the item's keys no spawn reads, such as a \"label\" meant as actorName), and the placement facts set_transform reports (groundZ, groundClearance, placementWarning, overlappingActors, coplanarFaces, suggestedLocation), measured after the item took its tags, variables and material, so an item tagged mcp.placement.ok is never reported. name is the label the item asked for, or the unique actor name when it gave no actorName."
             }
           ],
-          "description": "Per item (only the failed ones and those with a placementWarning under report: failures): index, success, name, path, error, errorCode, variablesSet, variablesError, materialApplied, materialError, and the placement facts set_transform reports (groundZ, groundClearance, placementWarning, overlappingActors, suggestedLocation), measured after the item took its tags, variables and material, so an item tagged mcp.placement.ok is never reported. name is the label the item asked for, or the unique actor name when it gave no actorName."
+          "description": "Per item (only the failed ones and those with a placementWarning or ignoredKeys under report: failures, the default past 20 items): index (its place in the batch once repeats are unrolled), success, name, path, error, errorCode, variablesSet, variablesError, materialApplied, materialError, propertiesError, ignoredKeys (the item's keys no spawn reads, such as a \"label\" meant as actorName), and the placement facts set_transform reports (groundZ, groundClearance, placementWarning, overlappingActors, coplanarFaces, suggestedLocation), measured after the item took its tags, variables and material, so an item tagged mcp.placement.ok is never reported. name is the label the item asked for, or the unique actor name when it gave no actorName."
         },
         "returned": {
           "type": "number",
@@ -4683,7 +5218,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "additionalProperties": true,
             "x-unreal-reflection-boundary": true
           },
-          "description": "One entry per sample: t (game seconds since the start), location [x, y, z], velocity [x, y, z], properties."
+          "description": "One entry per sample: t (game seconds since the start), location [x, y, z], velocity [x, y, z] (cm/s: the movement or physics velocity, or for an actor moved by setting its location, the one its positions show since the sample before), rotation [pitch, yaw, roll] in degrees (on the first sample and on each one where it changed, so a sample without it still has the last one written), properties, with points their world locations (points) and heights over the ground (aboveGround, with groundTrace; a point with nothing below it within 10 m is left out), and with overlaps the actors that began or stopped touching it since the sample before (overlapsBegan, overlapsEnded)."
         },
         "scale": {
           "oneOf": [
@@ -4754,10 +5289,21 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Present when the limit cut the list short; says how to reach the rest."
         },
         "undo": {
-          "type": "object",
-          "additionalProperties": true,
-          "x-unreal-reflection-boundary": true,
-          "description": "Whether editor undo takes the spawn back: {undoable: true, transactionScope: \"Spawn Actors\"} (control_editor undo removes every actor the call made), or {undoable: false, reasonCode, reason}."
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "Whether editor undo takes the move back: {undoable, transactionScope}."
+            },
+            {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "Whether editor undo takes the spawn back: {undoable: true, transactionScope: \"Spawn Actors\"} (control_editor undo removes every actor the call made), or {undoable: false, reasonCode, reason}."
+            }
+          ],
+          "description": "Whether editor undo takes the move back: {undoable, transactionScope}."
         },
         "unnamedActors": {
           "type": "array",
@@ -4814,7 +5360,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "items": {
             "type": "string"
           },
-          "description": "Save only these assets or levels, e.g. [\"/Game/UI/WBP_Menu\"], and leave every other dirty package as it is; omit to save everything dirty."
+          "description": "Save only these assets or levels, e.g. [\"/Game/UI/WBP_Menu\"], and leave every other dirty package as it is; omit to save everything dirty. A named asset the editor has loaded is written even when it is not marked dirty (a material usage flag the editor set while loading)."
         },
         "blendTime": {
           "type": "number",
@@ -4921,7 +5467,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "holdSeconds": {
           "type": "number",
-          "description": "Keep injecting inputAction, or keep a raw key_down/key_tap key pressed, for this many seconds of GAME time so the pawn actually travels (default 0: an action lasts one frame, a key_down stays down until key_up, a key_tap lets go after 0.1s). Game time, not wall time: under set_game_speed 0.05 a 2s hold still delivers 2s of in-game input, which takes 40s of real time. A key_up for the same action or key stops the hold early."
+          "description": "Keep injecting inputAction, or keep a raw key_down/key_tap key pressed, for this many seconds of GAME time so the pawn actually travels (default 0: an action lasts one frame, a key_down stays down until key_up, a key_tap lets go after 0.1s). Game time, not wall time: under set_game_speed 0.05 a 2s hold still delivers 2s of in-game input, which takes 40s of real time. A key_up for the same action or key stops the hold early. The reply comes back at once, while the key is still down: read the pawn after the hold, or press and watch in one call with control_actor sample_motion inputs."
         },
         "id": {
           "type": "integer",
@@ -5011,7 +5557,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                   "description": "z"
                 }
               },
-              "description": "editor_viewport (and game_viewport while the player is ejected): put the camera here first, in the same call ({x, y, z}); it stays there. That is the level viewport camera, or, while Play In Editor runs with the player ejected, the ejected view. While Play In Editor runs and the player is not ejected there is no free camera to move and the call is refused with PIE_VIEW_NOT_EJECTED (eject first, or point the game camera with set_camera cameraOp=view_target), exactly as set_camera is.",
+              "description": "editor_viewport (and game_viewport while the player is ejected): put the camera here first, in the same call ({x, y, z}); it stays there. Water and streamed texture detail follow the view over the next frames, which this call does not wait for: after a jump far from the last view (or right after a level opens) the picture can show black water or soft textures, so capture again from the same spot, or move with set_camera first. That is the level viewport camera, or, while Play In Editor runs with the player ejected, the ejected view. While Play In Editor runs and the player is not ejected there is no free camera to move and the call is refused with PIE_VIEW_NOT_EJECTED (eject first, or point the game camera with set_camera cameraOp=view_target), exactly as set_camera is.",
               "additionalProperties": false
             }
           ],
@@ -5041,7 +5587,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "path": {
           "type": "string",
-          "description": "Directory or file path."
+          "description": "Directory to save the PNG in, inside the project (relative to it, or absolute under it). Default Saved/Screenshots (game_viewport: Saved/Screenshots/WindowsEditor). A path outside the project is refused."
         },
         "preferences": {
           "type": "object",
@@ -5155,6 +5701,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "type": {
           "type": "string",
           "description": "Input event type (key_down, key_up, key_tap = press then release, mouse_click, mouse_move), or widget_list / widget_click to operate the live UMG of a PIE session."
+        },
+        "unpauseGame": {
+          "type": "boolean",
+          "description": "Also lift a pause the game holds itself (SetGamePaused from its pause menu or a title screen), as its own unpause does. Without it, a game that paused itself fails the call with GAME_PAUSED and pausedBy: the editor pause is off, but nothing ticks."
         },
         "unthrottle": {
           "type": "boolean",
@@ -5502,6 +6052,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             }
           }
         },
+        "gameSeconds": {
+          "type": "number",
+          "description": "Game seconds the steps advanced, when a fixed delta time is set (set_game_speed fixed_delta_time): steps x deltaTime x game speed."
+        },
         "handledByPIE": {
           "type": "boolean",
           "description": "PIE actually consumed the event. False here with routedToPIE true means the key reached the game and nothing bound it: no active input mapping context maps that key (inject the action with inputAction instead)."
@@ -5529,6 +6083,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "isDefaultObject": {
           "type": "boolean",
           "description": "True when only the CDO existed, which usually means the owning window has never been opened."
+        },
+        "leftDirtyPackages": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "With assetPaths: the other packages that still hold unsaved changes, left as they were."
         },
         "locationApplied": {
           "type": "boolean",
@@ -5571,6 +6132,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true,
           "description": "Return value and out parameters, keyed by parameter name."
         },
+        "pawn": {
+          "type": "string",
+          "description": "In PIE, the pawn the player controls, by the name actor calls take: read it (control_actor get_transform) once a hold is over to see what the input did."
+        },
         "possessed": {
           "type": "string",
           "description": "The pawn the player controller holds after the call, by object name."
@@ -5607,6 +6172,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Saved screenshot file path."
         },
+        "settledSeconds": {
+          "type": "number",
+          "description": "How long the reply waited for the level to settle (its water, streamed textures and effects drawn), so a screenshot right after shows the level as it looks."
+        },
         "shaderWait": {
           "type": "object",
           "additionalProperties": true,
@@ -5633,9 +6202,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Tab id acted on."
         },
+        "texturesStillStreaming": {
+          "type": "number",
+          "description": "Textures still streaming in when the wait ended at its cap; absent when streaming had gone quiet."
+        },
         "throttleOff": {
           "type": "boolean",
           "description": "Whether background CPU throttling is off after the call."
+        },
+        "timeDilation": {
+          "type": "number",
+          "description": "The game speed the steps ran at, present when it is not 1: a step keeps the slow motion that was set, so at speed 0.1 each step advances a tenth of its frame of game time."
         },
         "tool": {
           "type": "object",
@@ -5774,6 +6351,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Several world actors to act on in one call, in place of actorName; names not found are listed back."
         },
+        "actors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Only these actors (label, name or path): their rows under actors, and under notVisible each one that drew no pixel with its reason, outside the frame or hidden, with hiddenBy naming the actors drawn over its box (up to three, by share of the box). Names that match no actor are listed under notFound. limit does not apply."
+        },
         "blueprintPath": {
           "type": "string",
           "description": "Blueprint asset /Game path (for CDO/component inspection without spawning)."
@@ -5822,7 +6406,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "detailed": {
           "type": "boolean",
-          "description": "Return detailed property/component information."
+          "description": "Every property the component's class declares, as text (up to 200): a Niagara or mesh component declares about 200, most of the reply. Prefer propertyNames."
         },
         "editorState": {
           "type": "string",
@@ -5873,6 +6457,22 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Maximum objects to return (default 100)."
         },
+        "location": {
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            },
+            "z": {
+              "type": "number"
+            }
+          },
+          "additionalProperties": false,
+          "description": "Camera location {x, y, z} in cm; omitted, the viewport's current one. The camera stays there."
+        },
         "lookup": {
           "type": "string",
           "enum": [
@@ -5890,7 +6490,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "meshPath": {
           "type": "string",
-          "description": "Static mesh asset path, e.g. /Game/Meshes/SM_Rock. Rays meet its source triangles, so a Nanite mesh answers at full detail."
+          "description": "Static mesh asset path, e.g. /Game/Meshes/SM_Rock. Its source triangles (LOD 0 as imported or built) are checked, so a Nanite mesh answers at full detail. A placed actor's mesh is named by get_components."
         },
         "name": {
           "type": "string",
@@ -5913,6 +6513,29 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Object path of the world actor or asset (e.g. /Game/Maps/Demo.Demo_PersistentLevel)."
         },
+        "objectPaths": {
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "maxItems": 64,
+              "description": "The same read on several objects in one call, in place of objectPath: each entry is a target as objectPath takes it (an actor by name or label, an asset, a class default, PlayerPawn), read as a single call would be, propertyNames included. Answered under targets; a target that cannot be read carries its error and the others still answer."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "maxItems": 64,
+              "description": "The same write on several targets in one call, in place of objectPath: each entry is a target as objectPath takes it (an actor, \"Actor.Component\", an asset, a class default), written as a single call would be, with properties too. Answered under targets; the call fails naming each target that did not take the write, and the others keep it."
+            }
+          ],
+          "description": "The same read on several objects in one call, in place of objectPath: each entry is a target as objectPath takes it (an actor by name or label, an asset, a class default, PlayerPawn), read as a single call would be, propertyNames included. Answered under targets; a target that cannot be read carries its error and the others still answer."
+        },
         "offset": {
           "type": "number",
           "description": "Matching objects to skip before the first one returned, for paging (default 0); hasMore says whether more follow."
@@ -5920,6 +6543,18 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "outputPath": {
           "type": "string",
           "description": "File to also write the export to, inside the project (relative to it, or absolute under it), e.g. Saved/Exports/Actor.t3d. A path outside the project is refused with INVALID_PATH."
+        },
+        "passes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "id",
+              "depth",
+              "normal"
+            ]
+          },
+          "description": "Passes to write (default all three)."
         },
         "properties": {
           "oneOf": [
@@ -5949,6 +6584,20 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "items": {
                 "type": "string"
               },
+              "description": "Properties to read, each a name or dotted path: read on each matching actor itself (its Blueprint variables, such as bIsOpen, land in the actor properties) and on each reported component (in that component properties). A name found on none of the listed actors is listed once in propertiesNotFound."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Property values to add to the reply, by name (Intensity, bIsActive), as text under properties; a name the class lacks is listed under missingProperties. CollisionResponses reads every channel's response on a primitive component ({\"Pawn\": \"Ignore\", ...}). Without propertyNames or detailed no property values come back."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
               "description": "Specific property names to include."
             },
             {
@@ -5961,7 +6610,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "description": "Several properties of the same target in one call, in place of propertyName: each read as a single call would (dotted paths too, such as CharacterMovement.MaxWalkSpeed). Answered under properties; a name that does not resolve is listed under missingProperties with the reason, and the others still answer."
             }
           ],
-          "description": "Several properties of the same target in one call, in place of propertyName: each read as a single call would (dotted paths too, such as CharacterMovement.MaxWalkSpeed). Answered under properties; a name that does not resolve is listed under missingProperties with the reason, and the others still answer."
+          "description": "Properties to read, each a name or dotted path: read on each matching actor itself (its Blueprint variables, such as bIsOpen, land in the actor properties) and on each reported component (in that component properties). A name found on none of the listed actors is listed once in propertiesNotFound."
         },
         "propertyPath": {
           "type": "string",
@@ -5976,10 +6625,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "items": {
                 "type": "object",
                 "additionalProperties": false,
-                "required": [
-                  "origin",
-                  "direction"
-                ],
                 "properties": {
                   "origin": {
                     "type": "object",
@@ -5992,10 +6637,22 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                     "additionalProperties": true,
                     "x-unreal-reflection-boundary": true,
                     "description": "Ray direction {x, y, z}; any length, it is normalized."
+                  },
+                  "start": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "x-unreal-reflection-boundary": true,
+                    "description": "Line start {x, y, z} in local space, with end in place of origin and direction (the form raycast_world takes)."
+                  },
+                  "end": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "x-unreal-reflection-boundary": true,
+                    "description": "Line end {x, y, z} in local space; nothing past it is reported."
                   }
                 }
               },
-              "description": "Rays in the mesh's local space; each answers in hits at the same index."
+              "description": "Rays in the mesh's local space, each {origin, direction} or {start, end}; each answers in hits at the same index."
             },
             {
               "type": "array",
@@ -6027,6 +6684,22 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             }
           ],
           "description": "Lines in world space; each answers in hits at the same index."
+        },
+        "rotation": {
+          "type": "object",
+          "properties": {
+            "pitch": {
+              "type": "number"
+            },
+            "yaw": {
+              "type": "number"
+            },
+            "roll": {
+              "type": "number"
+            }
+          },
+          "additionalProperties": false,
+          "description": "Camera rotation {pitch, yaw, roll} in degrees; omitted, the viewport's current one."
         },
         "snapshotName": {
           "type": "string",
@@ -6071,7 +6744,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "properties": {
             "propertyName": {
               "type": "string",
-              "description": "The property to sample; a dotted path reaches through widgets and structs (LivesBox.RenderTransform)."
+              "description": "The property to sample; a dotted path reaches through widgets and structs (LivesBox.RenderTransform). Omitted, the property the call writes."
             },
             "objectPath": {
               "type": "string",
@@ -6086,10 +6759,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "description": "Seconds between samples (default 0: every frame); a sample is kept only when the value changed."
             }
           },
-          "required": [
-            "propertyName"
-          ],
           "additionalProperties": false
+        },
+        "width": {
+          "type": "number",
+          "description": "Width of every pass in pixels (default 960, 64 to 4096); the height follows the viewport's shape so the passes line up with it."
         },
         "action": {
           "type": "string",
@@ -6097,6 +6771,9 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "inspect_object",
             "get_blueprint_details",
             "raycast_mesh",
+            "check_mesh",
+            "describe_view",
+            "capture_passes",
             "raycast_world",
             "get_property",
             "set_property",
@@ -6150,7 +6827,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "additionalProperties": true,
                 "x-unreal-reflection-boundary": true
               },
-              "description": "Matching runtime actors and their inspected components/properties."
+              "description": "Largest share first: name (actor label), class, coverage (percent of the frame), box [left, top, right, bottom] in percent of the frame's width and height, brightness (0-1, as drawn) and distance (cm from the camera to its bounds). Editor icons and shapes hidden in game are left out."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Matching runtime actors, at most 25, each with its components and, under propertyNames, the values found: properties on the actor itself and properties on each component. Only when filter, actorName, componentNames or propertyNames selects them."
             },
             {
               "type": "array",
@@ -6173,7 +6859,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "applied": {
           "type": "number",
-          "description": "With properties: how many writes applied."
+          "description": "With properties: how many writes applied; with objectPaths: how many targets."
         },
         "availablePhysicalBytes": {
           "type": "number",
@@ -6191,6 +6877,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Available virtual memory in megabytes."
         },
+        "background": {
+          "type": "number",
+          "description": "Percent of the frame where no object was drawn (sky, void)."
+        },
         "blueprintCompiled": {
           "type": "boolean",
           "description": "True when the target was a Blueprint CDO and the Blueprint was recompiled, so the value now applies to newly spawned instances. The reply (value, actorPath, actorClass) is read back from the recompiled class default object and the Blueprint package is saved; a variable the Blueprint declares keeps the value as its default, and the call fails with PROPERTY_SET_FAILED, never success, when the compile did not keep it. A Default__ objectPath resolves to the Blueprint's current default object; a copy a compile left behind (a REINST_ class, or a Blueprint object in /Engine/Transient with no game running) fails with STALE_TARGET. False for plain world actors and assets, where no compile is involved."
@@ -6199,6 +6889,28 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Blueprint asset /Game path (for CDO/component inspection without spawning)."
         },
+        "brightness": {
+          "type": "object",
+          "properties": {
+            "p10": {
+              "type": "number"
+            },
+            "median": {
+              "type": "number"
+            },
+            "p90": {
+              "type": "number"
+            },
+            "clipped": {
+              "type": "number"
+            },
+            "dark": {
+              "type": "number"
+            }
+          },
+          "additionalProperties": false,
+          "description": "The frame as drawn: p10, median and p90 brightness (0-1), and the percent of the frame clipped (a channel at full) or dark (below 0.05)."
+        },
         "buildConfig": {
           "type": "string",
           "description": "Build configuration, e.g. Development."
@@ -6206,6 +6918,18 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "busiestThreadMs": {
           "type": "number",
           "description": "Slowest of game/render/GPU thread times, in milliseconds."
+        },
+        "cameraLocation": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "Where the camera was."
+        },
+        "cameraRotation": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "Where it looked."
         },
         "cdoProperties": {
           "type": "object",
@@ -6224,6 +6948,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "classPath": {
           "type": "string",
           "description": "Full /Script class path of the inspected object."
+        },
+        "closed": {
+          "type": "boolean",
+          "description": "True when every edge joins exactly two faces (seams count as joined): the surface is watertight (a solid, not a sheet or a shell with gaps)."
         },
         "companyName": {
           "type": "string",
@@ -6270,7 +6998,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "count": {
           "type": "number",
-          "description": "Number of actors returned after filtering."
+          "description": "Number of actors returned after filtering; absent with actors."
         },
         "defaultGameMode": {
           "type": "string",
@@ -6286,6 +7014,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true,
           "description": "Default value of each property on the class default object, as text."
         },
+        "degenerateTriangles": {
+          "type": "number",
+          "description": "Faces with no area (slivers or a repeated corner)."
+        },
         "deleted": {
           "type": "string",
           "description": "Name of the deleted actor."
@@ -6297,6 +7029,25 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "deltaTimeSeconds": {
           "type": "number",
           "description": "Last frame delta in seconds."
+        },
+        "depth": {
+          "type": "object",
+          "properties": {
+            "min": {
+              "type": "number"
+            },
+            "median": {
+              "type": "number"
+            },
+            "max": {
+              "type": "number"
+            },
+            "sky": {
+              "type": "number"
+            }
+          },
+          "additionalProperties": false,
+          "description": "depth: nearest, median and farthest distance of the drawn pixels in cm, and the percent that is sky (nothing within 100 km)."
         },
         "description": {
           "type": "string",
@@ -6318,6 +7069,22 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "estimatedFps": {
           "type": "number",
           "description": "Estimated frames per second from delta time."
+        },
+        "files": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "depth": {
+              "type": "string"
+            },
+            "normal": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "description": "Absolute path of each pass written."
         },
         "flags": {
           "type": "object",
@@ -6353,6 +7120,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "additionalProperties": false,
           "description": "Class flags as booleans."
         },
+        "flippedEdges": {
+          "type": "number",
+          "description": "Edges (seams included) whose two faces wind the same way along them, so one of the two faces points inward (a face turned inside out renders dark or vanishes)."
+        },
+        "fov": {
+          "type": "number",
+          "description": "Horizontal field of view in degrees."
+        },
         "fps": {
           "type": "number",
           "description": "Reported frames per second (same as estimatedFps)."
@@ -6379,7 +7154,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "gameThreadMs": {
           "type": "number",
-          "description": "Game thread time in milliseconds."
+          "description": "Game thread time in milliseconds; while Play In Editor runs it also holds the editor's own UI and viewports, so worldTickMs is the game's share."
         },
         "generatedBy": {
           "type": "string",
@@ -6488,13 +7263,26 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "One entry per line, in order."
         },
+        "holes": {
+          "type": "number",
+          "description": "Separate outlines those open edges form (one per hole or open rim)."
+        },
         "homepage": {
           "type": "string",
           "description": "Project homepage URL."
         },
+        "ids": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "id: each actor in the id image, largest first (up to 256): color (#rrggbb in the PNG), name (actor label), class and coverage (percent of the frame). Black is background (sky, void), dark grey (#404040) what only the editor draws."
+        },
         "instancesUpdated": {
           "type": "number",
-          "description": "A write to a class default or component template: how many placed copies that still held the old default took the new one, as the details panel does; copies that override the value keep theirs. Absent for any other target."
+          "description": "A write to a class default or component template: how many placed copies, and derived Blueprints' defaults with their own copies, still held the old default and took the new one, as the details panel does; one that overrides the value keeps it. Absent for any other target."
         },
         "isActive": {
           "type": "boolean",
@@ -6532,6 +7320,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether a PIE session is active."
         },
+        "isPaused": {
+          "type": "boolean",
+          "description": "Whether game time stands still: control_editor pause, or the game paused itself (a title screen or a pause menu). Nothing moves or simulates until control_editor resume (unpauseGame for a pause the game holds)."
+        },
         "isPieWorld": {
           "type": "boolean",
           "description": "Whether the world is a PIE world."
@@ -6564,6 +7356,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Z height below which actors are killed."
         },
+        "largestParts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Up to 8 pieces, largest first: triangles, size [x, y, z] and center [x, y, z] in cm, in the mesh's own space."
+        },
         "levelName": {
           "type": "string",
           "description": "Current level name."
@@ -6592,7 +7393,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "meshPath": {
           "type": "string",
-          "description": "The mesh the rays were cast at."
+          "description": "The mesh checked."
         },
         "message": {
           "type": "string",
@@ -6624,6 +7425,42 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Viewport mouse sensitivity."
         },
+        "nonManifoldEdges": {
+          "type": "number",
+          "description": "Edges shared by three or more faces (fins, faces stacked on one edge); they break booleans, remeshing and collision generation."
+        },
+        "normal": {
+          "type": "object",
+          "properties": {
+            "up": {
+              "type": "number"
+            },
+            "down": {
+              "type": "number"
+            },
+            "side": {
+              "type": "number"
+            }
+          },
+          "additionalProperties": false,
+          "description": "normal: percent of the drawn pixels facing up (normal z above 0.7), down (below -0.7) and sideways."
+        },
+        "notFound": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "With actors: the names that match no actor."
+        },
+        "notVisible": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "With actors: each named actor that drew no pixel, as {name, reason (outside the frame; at the edge of the frame, mostly outside it; hidden behind what is drawn over its box; or not drawn with nothing nearer over it), inFrame (percent of its projected box inside the frame), hiddenBy [{name, share (percent of its box)}], which leaves out actors centred farther than it and the ground under it}."
+        },
         "objectName": {
           "type": "string",
           "description": "Object name."
@@ -6641,6 +7478,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Matching object info."
         },
+        "openEdges": {
+          "type": "number",
+          "description": "Edges with a face on one side only and none on the other at that place: the outlines of holes and open rims."
+        },
+        "other": {
+          "type": "number",
+          "description": "Percent drawn by what only the editor shows (icons, gizmos, shapes hidden in game) or no actor owns (BSP)."
+        },
         "packageName": {
           "type": "string",
           "description": "Package name of the world asset."
@@ -6652,6 +7497,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "parentClassPath": {
           "type": "string",
           "description": "Full path of the super-class."
+        },
+        "parts": {
+          "type": "number",
+          "description": "Separate pieces: groups of faces joined by corners at the same place."
         },
         "pawn": {
           "type": "string",
@@ -6727,6 +7576,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "With properties: each write as {propertyName, applied, value read back}."
         },
+        "propertiesNotFound": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The propertyNames found on none of the listed actors or their components (a misspelt or missing variable)."
+        },
         "propertiesTruncated": {
           "type": "boolean",
           "description": "True when the class has more than the 200 properties listed."
@@ -6758,14 +7614,33 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true,
           "description": "World rotation as {pitch, yaw, roll} in degrees."
         },
+        "saveSkippedReason": {
+          "type": "string",
+          "description": "Why nothing was saved: markDirty was false, a running-game or transient object (the change lasts until PIE stops), level content (saved with its level), engine content, or a save that failed (the change is only in memory)."
+        },
+        "saved": {
+          "type": "boolean",
+          "description": "Whether the target's package was written to disk after the write; with properties, the last write's save, which holds every write of the call. False with saveSkippedReason when nothing was saved."
+        },
         "scale": {
           "type": "object",
           "x-unreal-reflection-boundary": true,
           "description": "World scale as {x, y, z}."
         },
+        "seamEdges": {
+          "type": "number",
+          "description": "Places where two faces meet without sharing their corners (split for flat shading or UV seams): the surface renders whole, but booleans, remeshing and collision built from the mesh need it welded."
+        },
         "shadersCompiling": {
           "type": "number",
           "description": "Every get_editor_state variant: shader compile jobs still outstanding. Above 0 the viewport, and a screenshot of it, shows the engine default material (black foliage, grey ground) for what they cover; a warning says so."
+        },
+        "size": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "description": "Extent [x, y, z] in cm, in the mesh's own space."
         },
         "slotBoundsAvailable": {
           "type": "boolean",
@@ -6787,12 +7662,41 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Project support contact."
         },
+        "surfaceArea": {
+          "type": "number",
+          "description": "Total face area in cm²."
+        },
         "tags": {
           "type": "array",
           "items": {
             "type": "string"
           },
           "description": "Actor tags."
+        },
+        "targets": {
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "x-unreal-reflection-boundary": true,
+              "description": "With objectPaths: each target as {objectPath as given, applied, the value read back (properties with properties), actorPath, saved, saveSkippedReason}."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "x-unreal-reflection-boundary": true,
+              "description": "With objectPaths: each target as {objectPath as given, propertyName and value, or properties and missingProperties with propertyNames, error when it could not be read}."
+            }
+          ],
+          "description": "With objectPaths: each target as {objectPath as given, applied, the value read back (properties with properties), actorPath, saved, saveSkippedReason}."
         },
         "threadTimeDerivedFps": {
           "type": "number",
@@ -6843,6 +7747,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true,
           "description": "Combined transform: location, rotation and scale."
         },
+        "triangles": {
+          "type": "number",
+          "description": "Source triangles (LOD 0)."
+        },
         "useDistanceScaledCamera": {
           "type": "boolean",
           "description": "Whether distance-scaled camera speed is used."
@@ -6870,9 +7778,25 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "value": {
           "description": "The value read; its type follows the property."
         },
+        "vertices": {
+          "type": "number",
+          "description": "Distinct corner positions (to 0.01 cm): corners at one place count once, whether or not the source shares the vertex."
+        },
+        "videoMemoryOverBudgetMB": {
+          "type": "number",
+          "description": "How far video memory is over budget, the figure the viewport's \"Video memory has been exhausted\" line prints: another application holding the GPU (a game) or a scene that does not fit, which slows every frame. Absent when it fits."
+        },
         "viewTarget": {
           "type": "string",
           "description": "Object path of the current view target."
+        },
+        "visibleActors": {
+          "type": "number",
+          "description": "Actors the game would draw with at least one pixel in the frame."
+        },
+        "volume": {
+          "type": "number",
+          "description": "With closed: the volume it encloses, in cm³."
         },
         "watch": {
           "type": "object",
@@ -6883,6 +7807,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "width": {
           "type": "number",
           "description": "Active viewport width in pixels."
+        },
+        "windowMinimized": {
+          "type": "boolean",
+          "description": "True when the editor window is minimized: no frame is drawn, so renderThreadMs, rhiThreadMs and gpuMs are left from the last drawn frame and the frame delta is the background throttle. Restore it (control_editor configure_editor setting window) before measuring. Absent otherwise."
         },
         "worldGravityZ": {
           "type": "number",
@@ -6895,6 +7823,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "worldPath": {
           "type": "string",
           "description": "Package path of that world."
+        },
+        "worldTickMs": {
+          "type": "number",
+          "description": "The measured world's own tick in milliseconds (actors, components and physics, from the start of its tick to the end of its tick groups), averaged over about 30 frames: the game's share of gameThreadMs. Absent until the world has ticked."
         },
         "worldType": {
           "type": "string",
@@ -8223,7 +9155,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "items": {
                 "type": "string"
               },
-              "description": "Several asset paths to process in one call."
+              "description": "Several asset paths to process in one call: lods generates LODs for each; mesh_materials sets the same materials entries on each mesh by slot name, passing over a slot a mesh lacks (an entry no mesh has fails the call), as a whole imported pack needs."
             }
           ],
           "description": "Absolute paths of the downloaded pack files. Used with folderName to synthesize a single-entry envelope when payload is omitted."
@@ -8307,6 +9239,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "HLSL code."
         },
+        "collectionPath": {
+          "type": "string",
+          "description": "Material Parameter Collection a CollectionParameter node reads (name picks its parameter); a collection that does not load, or lacks the parameter, adds nothing and fails, listing its parameters."
+        },
         "collisionType": {
           "type": "string",
           "enum": [
@@ -8356,6 +9292,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "coordinateIndex": {
           "type": "number",
           "description": "UV channel index (default 0)."
+        },
+        "createPhysicsAsset": {
+          "type": "boolean",
+          "description": "Skeletal mesh: make a physics asset for it (default true); false makes none."
         },
         "cursor": {
           "type": "string",
@@ -8435,6 +9375,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             {
               "type": "string",
               "description": "Folder for the copy, e.g. /Game/Structs, when destinationName is given, the path ends in \"/\" or the folder exists; the copy is destinationPath/destinationName, or keeps the source name without one. Otherwise the full new asset path, e.g. /Game/Structs/S_WeaponRow_V2. A copy onto an existing struct is refused with ALREADY_EXISTS."
+            },
+            {
+              "type": "string",
+              "description": "The folder the asset goes in, e.g. /Game/Imports (it keeps the source file's name), or an object path such as /Game/Chars/SK_Hero.SK_Hero to name it."
             }
           ],
           "description": "A /Game folder to move what the import created to, for example /Game/Props/Barriers. The layout beneath the import's own folder (StaticMeshes, Materials, Textures) is kept under it. Omit to leave the import where Fab put it. The shared master materials in /Game/Fab/Materials, MaterialFunctions and Textures never move, and a unreal-engine pack is left where Fab put it."
@@ -8555,7 +9499,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "format": {
           "type": "string",
-          "description": "Pixel format."
+          "description": "File format; default glb, or the extension outputPath ends in. glb and gltf are scaled to meters with materials converted to glTF PBR; fbx and obj keep centimeters."
         },
         "freeOnly": {
           "type": "boolean",
@@ -8593,6 +9537,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "importAnimations": {
           "type": "boolean",
           "description": "Import animation takes from an FBX. Off by default, which imports mesh only."
+        },
+        "importMesh": {
+          "type": "boolean",
+          "description": "With skeletonPath: import the skeletal mesh onto that skeleton (its takes too when importAnimations) instead of the take alone."
+        },
+        "importMorphTargets": {
+          "type": "boolean",
+          "description": "Skeletal mesh: import its morph targets (blend shapes)."
         },
         "inBlack": {
           "type": "number",
@@ -8725,6 +9677,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "landscape",
             "post_process",
             "function",
+            "parameter_collection",
             "metadata",
             "tags"
           ],
@@ -8942,7 +9895,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "name": {
           "type": "string",
-          "description": "DataTable name."
+          "description": "Asset name."
         },
         "neverStream": {
           "type": "boolean",
@@ -9163,7 +10116,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "x-unreal-reflection-boundary": true
           },
           "x-unreal-reflection-boundary": true,
-          "description": "Several parameter values at once, each {parameterName, parameterType (scalar | vector | texture), value, or texturePath for a texture}; every entry is reported, and the call fails naming any that did not apply."
+          "description": "Several parameter values at once, each {parameterName, parameterType (scalar | vector | texture), value, or texturePath for a texture}; applied counts those that took, and an entry that did not is listed under parameters with why and fails the call."
         },
         "parentMaterial": {
           "type": "string",
@@ -9250,6 +10203,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "physicalMaterialPath": {
           "type": "string",
           "description": "Physical material the layer applies, e.g. /Game/Physics/PM_Grass."
+        },
+        "physicsAssetPath": {
+          "type": "string",
+          "description": "Skeletal mesh: an existing physics asset to use instead of making one."
         },
         "pinName": {
           "type": "string",
@@ -9415,6 +10372,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Package path for the instance."
         },
+        "scalars": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Scalar parameters, each {name, default}: a name the collection lacks is added, one it has takes the new default (0 when a new one gives none)."
+        },
         "scale": {
           "type": "number",
           "description": "Noise scale (default 1)."
@@ -9459,7 +10424,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "skeletonPath": {
           "type": "string",
-          "description": "Existing skeleton to import the take against, e.g. /Game/Chars/SK_Hero_Skeleton. Set it to import the animation ALONE; omit it to import mesh and animation together. Implies importAnimations."
+          "description": "Existing skeleton, e.g. /Game/Chars/SK_Hero_Skeleton. Alone it imports the FBX's animation take ALONE against it (implies importAnimations); with importMesh it binds the imported skeletal mesh to it instead, so the mesh shares that skeleton's animations."
         },
         "sourceControlOp": {
           "type": "string",
@@ -9657,6 +10622,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Stable member GUID."
         },
+        "vectors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Vector parameters, each {name, default}: default as [r, g, b, a] or {r, g, b, a} (alpha 1 when omitted); a name the collection lacks is added, one it has takes the new default."
+        },
         "virtualTextureStreaming": {
           "type": "boolean",
           "description": "Enable VT streaming."
@@ -9691,6 +10664,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "process_asset",
             "set_metadata",
             "create_render_target",
+            "export_mesh",
             "edit_material_instance",
             "nanite_rebuild_mesh",
             "bulk_delete",
@@ -9757,9 +10731,23 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "What would surprise the caller about adding this listing: a pack with no build for the running engine, or a mesh file large enough that the add refuses it until combineMeshes is chosen."
         },
+        "added": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The parameters this call added."
+        },
         "alreadyRunning": {
           "type": "boolean",
           "description": "True when this listing was already queued or being imported and this call returned that same operation instead of starting another."
+        },
+        "alsoImported": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Other assets the import made (its takes, materials, textures), at most 50."
         },
         "applied": {
           "type": "number",
@@ -9832,6 +10820,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "blueprintType": {
           "type": "string",
           "description": "Blueprint kind: Class, Interface, MacroLibrary, or FunctionLibrary."
+        },
+        "bones": {
+          "type": "number",
+          "description": "Skeletal mesh: bones in its reference skeleton."
+        },
+        "bytes": {
+          "type": "number",
+          "description": "Its size in bytes."
         },
         "cacheDirectory": {
           "type": "string",
@@ -9940,8 +10936,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Asset count on this page."
         },
         "created": {
-          "type": "number",
-          "description": "With instances: how many were created."
+          "type": [
+            "boolean",
+            "number"
+          ],
+          "description": "True when the call made the collection, false when it updated one."
         },
         "currency": {
           "type": "string",
@@ -10146,6 +11145,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "fontSize": {
           "type": "number",
           "description": "Font size the text was fitted at, the largest whose lines (letter spacing included) fit inside the padding."
+        },
+        "format": {
+          "type": "string",
+          "description": "The format written."
         },
         "formatCode": {
           "type": "string",
@@ -10356,6 +11359,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Average texel over the whole texture, 0-1 (unused texels count as 1)."
         },
+        "meshes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "With assetPaths: one row per mesh, {assetPath, changed (slots this call changed on it), error (it is not a mesh, or does not load), saved (false only when it could not be saved)}."
+        },
         "message": {
           "type": "string",
           "description": "Explanation when the asset type carries no graph, or which action reads it."
@@ -10379,6 +11390,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "string"
           },
           "description": "Root tokens whose directory does not exist on this machine."
+        },
+        "morphTargets": {
+          "type": "number",
+          "description": "Skeletal mesh: morph targets it carries."
         },
         "movedCount": {
           "type": "number",
@@ -10434,6 +11449,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "operationId": {
           "type": "string",
           "description": "The background import. Pass it to asset.query_marketplace lookup=fab_import_status. On QUEUE_FULL it names the import at the head of the queue instead, and on ADD_ALREADY_RUNNING the open import of this listing."
+        },
+        "otherFiles": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Files the export wrote beside it, each {name, bytes}: a gltf's .bin buffers and textures, obj's UV and collision variants."
         },
         "outputName": {
           "type": "string",
@@ -10505,9 +11528,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "MaterialInstance: the material or instance it overrides."
         },
+        "path": {
+          "type": "string",
+          "description": "Absolute path of the file written."
+        },
         "phase": {
           "type": "string",
           "description": "queued when another import is running, else downloading right after Fab accepts. For alreadyRunning, the phase the operation was in."
+        },
+        "physicsAsset": {
+          "type": "string",
+          "description": "Skeletal mesh: its physics asset (empty when none)."
         },
         "pickedEngineVersion": {
           "type": "string",
@@ -10598,7 +11629,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "object",
             "x-unreal-reflection-boundary": true
           },
-          "description": "Per-step outcome: index, edit, id, success, nodeId, placementWarning, error."
+          "description": "Per-step outcome: index, edit, id, success, nodeId, placementWarning, error. A step that ran and has nothing more to say (a plain connect_nodes) is counted in succeeded, not listed; a failed batch lists every step."
         },
         "rootDirectories": {
           "type": "object",
@@ -10632,6 +11663,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "DefaultValue, for scalar parameter expressions."
         },
+        "scalars": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "x-unreal-reflection-boundary": true,
+          "description": "Every scalar parameter of the collection after the call: {name, default}."
+        },
         "scannedAssets": {
           "type": "number",
           "description": "Blueprints, DataTables and String Tables searched."
@@ -10651,6 +11692,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "shapeCount": {
           "type": "number",
           "description": "Simple collision shapes the mesh holds after the call (0 for complex and none)."
+        },
+        "skeleton": {
+          "type": "string",
+          "description": "Skeletal mesh: the skeleton it is bound to."
         },
         "skippedCount": {
           "type": "number",
@@ -10794,6 +11839,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true,
           "description": "DefaultValue as rgba, for vector parameter expressions."
         },
+        "vectors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "x-unreal-reflection-boundary": true,
+          "description": "Every vector parameter after the call: {name, default [r, g, b, a]}."
+        },
         "versionName": {
           "type": "string",
           "description": "Listing version selected for this engine."
@@ -10843,6 +11898,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "attachPointName": {
           "type": "string",
           "description": "Socket or bone name to attach the sound to."
+        },
+        "attenuateWithLPF": {
+          "type": "boolean",
+          "description": "Air absorption on or off: a low-pass whose cutoff drops with distance. Sending any lpf value turns it on unless this is false."
         },
         "attenuationPath": {
           "type": "string",
@@ -10946,7 +12005,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Whether the feature is enabled."
         },
         "enableReverbSend": {
-          "type": "string",
+          "type": "boolean",
           "description": "Whether the sound sends to reverb."
         },
         "eqPriority": {
@@ -10958,6 +12017,30 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Four-band EQ as {frequencyCenter0..3, gain0..3, bandwidth0..3}; a missing key keeps its value.",
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true
+        },
+        "extent": {
+          "type": "object",
+          "description": "A Box shape's half-size on each axis in cm, {x, y, z}, each above 0: a zone the length of a hall without reaching as far sideways. It replaces the size innerRadius gives a box; another shape is refused.",
+          "properties": {
+            "x": {
+              "type": "number",
+              "description": "Half-size along X, cm."
+            },
+            "y": {
+              "type": "number",
+              "description": "Half-size along Y, cm."
+            },
+            "z": {
+              "type": "number",
+              "description": "Half-size along Z, cm."
+            }
+          },
+          "required": [
+            "x",
+            "y",
+            "z"
+          ],
+          "additionalProperties": false
         },
         "fade": {
           "type": "string",
@@ -10993,6 +12076,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Attenuation falloff mode."
         },
+        "filter": {
+          "type": "string",
+          "description": "Part of a class name, display name or category, spaces and case ignored (\"Trigger\", \"Envelope\", \"Filters\"); omitted, every class up to limit."
+        },
         "gain": {
           "type": "number",
           "description": "Reverb master volume (0 to 1)."
@@ -11020,6 +12107,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "highMidGain": {
           "type": "number",
           "description": "Linear gain of EQ band 2 (0 to 4)."
+        },
+        "includePins": {
+          "type": "boolean",
+          "description": "Also list each class's input and output pins as \"Name (Type)\", the names connect and set_default take."
         },
         "indefinite": {
           "type": "boolean",
@@ -11059,6 +12150,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Share of the sound sent to the LFE channel (0 to 1)."
         },
+        "limit": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 200,
+          "description": "At most this many classes (default 50), those whose own name equals, starts with or contains filter first, the engine's UE nodes first among those, then by name; matchCount and truncated say what was left out."
+        },
         "localizationKeyFormat": {
           "type": "string",
           "description": "Localization key format of the context (default {ContextHash})."
@@ -11091,6 +12188,22 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "lowPassFilterFrequency": {
           "type": "number",
           "description": "Low-pass filter cutoff frequency in Hz."
+        },
+        "lpfFrequencyAtMax": {
+          "type": "number",
+          "description": "Low-pass cutoff in Hz at lpfRadiusMax and beyond (900 sounds like a distant, muffled engine)."
+        },
+        "lpfFrequencyAtMin": {
+          "type": "number",
+          "description": "Low-pass cutoff in Hz at lpfRadiusMin and nearer (20000 leaves the sound unfiltered)."
+        },
+        "lpfRadiusMax": {
+          "type": "number",
+          "description": "Distance in cm where the cutoff reaches lpfFrequencyAtMax."
+        },
+        "lpfRadiusMin": {
+          "type": "number",
+          "description": "Distance in cm where the low-pass starts closing; nearer than this the cutoff is lpfFrequencyAtMin."
         },
         "maxSeconds": {
           "type": "number",
@@ -11145,6 +12258,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Volume scale applied while occluded (0-1)."
         },
+        "oneShot": {
+          "type": "boolean",
+          "description": "false makes a continuous source with no On Finished output: the engine treats it as looping, so a hum or ambience whose AudioComponent starts out of earshot resumes when the listener comes near. Default true (it plays until On Finished fires)."
+        },
         "operations": {
           "type": "array",
           "items": {
@@ -11153,7 +12270,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "x-unreal-reflection-boundary": true
           },
           "x-unreal-reflection-boundary": true,
-          "description": "Steps run in order, 1-200, stopping at the first failure; every add_node class is looked up first, so a node class the registry does not hold fails the batch with nothing applied. Each is {edit, ...the params of that edit}: edit is add_node, connect, disconnect, remove_node, set_default, add_input or add_output (the add_metasound_node, connect_metasound_nodes, disconnect_metasound_nodes, remove_metasound_node, set_metasound_default, add_metasound_input, add_metasound_output params). Optional per step: id (names the node it creates; later steps use \"$id\" in nodeId/nodeIds/sourceNodeId/targetNodeId), from/to (\"$id.PinName\" shorthand for connect; interface nodes such as the On Play input are named with the explicit fields)."
+          "description": "Steps run in order, 1-200, stopping at the first failure; every add_node class is looked up first, so a node class the registry does not hold fails the batch with nothing applied, and so is every pin a connect or set_default names on a node the batch adds (a wrong one fails with PIN_NOT_FOUND and that node's pins). Each is {edit, ...the params of that edit}: edit is add_node, connect, disconnect, remove_node, set_default, add_input or add_output (the add_metasound_node, connect_metasound_nodes, disconnect_metasound_nodes, remove_metasound_node, set_metasound_default, add_metasound_input, add_metasound_output params). Optional per step: id (names the node it creates; later steps use \"$id\" in nodeId/nodeIds/sourceNodeId/targetNodeId), from/to (\"$id.PinName\" shorthand for connect; interface nodes such as the On Play input are named with the explicit fields)."
         },
         "outputName": {
           "type": "string",
@@ -11200,11 +12317,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Replace the context mapping of the same speaker instead of adding another (default false)."
         },
         "reverbDistanceMax": {
-          "type": "string",
+          "type": "number",
           "description": "Distance at which the reverb wet level reaches its maximum."
         },
         "reverbDistanceMin": {
-          "type": "string",
+          "type": "number",
           "description": "Distance at which the reverb send starts."
         },
         "reverbEffect": {
@@ -11212,11 +12329,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Canonical /Game ReverbEffect asset path."
         },
         "reverbWetLevelMax": {
-          "type": "string",
+          "type": "number",
           "description": "Maximum reverb wet level (0-1)."
         },
         "reverbWetLevelMin": {
-          "type": "string",
+          "type": "number",
           "description": "Minimum reverb wet level (0-1)."
         },
         "rotation": {
@@ -11345,7 +12462,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Volume multiplier."
         },
         "volumeAdjuster": {
-          "type": "string",
+          "type": "number",
           "description": "Volume multiplier applied by the mix modifier."
         },
         "wavePath": {
@@ -11365,6 +12482,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "configure_sound_class",
             "configure_sound_attenuation",
             "get_metasound_graph",
+            "list_metasound_nodes",
             "create_audio_asset",
             "get_audio_info",
             "set_dialogue_context"
@@ -11476,6 +12594,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "True when the node was newly inserted; false when an existing one was updated."
         },
+        "matchCount": {
+          "type": "number",
+          "description": "Number of node classes that match filter, before limit cut the list."
+        },
         "message": {
           "type": "string",
           "description": "Human-readable result message."
@@ -11483,6 +12605,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "modifierCount": {
           "type": "number",
           "description": "Number of Sound Class effects declared by the inspected Sound Mix."
+        },
+        "nodeClasses": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Each matching MetaSound node class, by name: nodeClassName (the spelling add_node takes), category, description and, with includePins, inputs and outputs as \"Name (Type)\"."
         },
         "nodeCount": {
           "type": "number",
@@ -11514,6 +12645,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "numChannels": {
           "type": "number",
           "description": "Number of audio channels in the inspected Sound Wave."
+        },
+        "oneShot": {
+          "type": "boolean",
+          "description": "Whether the new MetaSound is a one-shot source; false when it was made continuous (no On Finished output)."
         },
         "parentClass": {
           "type": "string",
@@ -11601,6 +12736,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Seconds each timeline entry covers: 0.05 for sounds up to 5 s, longer so there are at most 100 entries."
         },
+        "truncated": {
+          "type": "boolean",
+          "description": "True when limit cut the list; raise limit or narrow filter to see the rest."
+        },
         "type": {
           "type": "string",
           "description": "Kind of asset the bridge resolved, such as SoundCue, SoundWave or InputAction."
@@ -11650,6 +12789,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Always show scrollbar."
         },
+        "amount": {
+          "type": "number",
+          "description": "With collectorClass: added each time (default 1)."
+        },
         "anchorMax": {
           "type": "object",
           "additionalProperties": true,
@@ -11668,7 +12811,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "animationName": {
           "type": "string",
-          "description": "Widget animation name."
+          "description": "The animation to read in full; omitted, every animation is listed with its timing."
         },
         "applyAndSave": {
           "type": "boolean",
@@ -11676,11 +12819,42 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "attachTo": {
           "type": "string",
-          "description": "Socket or parent component to attach to."
+          "description": "Socket or parent component to attach to: one of this Blueprint's own, a parent Blueprint's part, or a native one (Mesh, CapsuleComponent)."
+        },
+        "autoPlay": {
+          "type": "boolean",
+          "description": "Start when the game starts, without a Play call."
         },
         "autoWrap": {
           "type": "boolean",
           "description": "Enable text auto-wrap."
+        },
+        "barName": {
+          "type": "string",
+          "description": "The ProgressBar in the widget that shows the health (default HealthBar_Bar, the bar of the health bar piece). A bar named here must already be in the widget."
+        },
+        "behaviour": {
+          "type": "string",
+          "enum": [
+            "health",
+            "damage_on_touch",
+            "pickup",
+            "sprint",
+            "shoot",
+            "chase",
+            "patrol",
+            "controls",
+            "respawn",
+            "goal",
+            "launch_pad",
+            "teleporter",
+            "spawner",
+            "dash",
+            "health_hud",
+            "counter_hud",
+            "game_over"
+          ],
+          "description": "Which add behaviour variant to run."
         },
         "bindingKind": {
           "type": "string",
@@ -11708,7 +12882,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "blueprintType": {
           "type": "string",
-          "description": "Blueprint type hint for creation."
+          "description": "Picks the parent class when parentClass is absent: Actor, Pawn, Character or FunctionLibrary; Interface makes a Blueprint Interface (its functions with add_function, taken on with implement_interface)."
         },
         "bottom": {
           "type": "number",
@@ -11738,6 +12912,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Category folder for the variable."
         },
+        "chaseRange": {
+          "type": "number",
+          "description": "Distance within which the pawn chases the player, in units: chase defaults to 2000, and a patrol chases only when given one (default 0, or the range of a chase it takes over)."
+        },
+        "checkpointTag": {
+          "type": "string",
+          "description": "Actor tag that marks a checkpoint (default Checkpoint)."
+        },
         "clipping": {
           "type": "string",
           "enum": [
@@ -11748,6 +12930,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "OnDemand"
           ],
           "description": "Widget clipping mode."
+        },
+        "collectorClass": {
+          "type": "string",
+          "description": "Instead of heal: the class that collects it (a Blueprint path such as /Game/Blueprints/BP_Player), whose variableName goes up by amount."
         },
         "colorAndOpacity": {
           "type": "object",
@@ -11792,6 +12978,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true,
           "description": "Tint (0-1 values) a border applies to its content."
         },
+        "cooldown": {
+          "type": "number",
+          "description": "Seconds before it works again: before a Character can dash again, or before a teleporter takes a pawn after one arrived on it (default 1)."
+        },
         "copyStyleFrom": {
           "type": "string",
           "description": "Name of another TextBlock in the same Widget Blueprint whose font, colour and shadow this one takes; the other fields in the call then apply on top."
@@ -11818,8 +13008,20 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Custom event name to create."
         },
+        "damage": {
+          "type": "number",
+          "description": "Damage on each touch (default 10; negative heals)."
+        },
+        "dashSpeed": {
+          "type": "number",
+          "description": "Launch speed along the facing, units per second (default 1500)."
+        },
         "defaultValue": {
           "description": "Default value for the variable or property."
+        },
+        "delay": {
+          "type": "number",
+          "description": "Seconds between reaching the goal and opening nextLevel (default 2)."
         },
         "deleteScope": {
           "type": "string",
@@ -11833,6 +13035,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "delta": {
           "type": "number",
           "description": "Spinbox increment."
+        },
+        "destroyOnDeath": {
+          "type": "boolean",
+          "description": "Destroy the actor when its health reaches 0 (default false; OnDied fires either way)."
         },
         "duration": {
           "type": "number",
@@ -11923,9 +13129,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Use explicit wrap width."
         },
+        "exposeOnSpawn": {
+          "type": "boolean",
+          "description": "Expose on Spawn: the variable becomes an input pin on SpawnActor and Create Widget nodes for this class, set as the actor is made (before its BeginPlay). Makes it instance-editable too, as the editor does."
+        },
         "fadeTime": {
           "type": "number",
           "description": "Seconds of the fade: the damage flash (default 0.6) or the loading screen FadeIn animation (0 makes none)."
+        },
+        "fallHeight": {
+          "type": "number",
+          "description": "How far below its respawn point the pawn may fall before it respawns, in units (default 2000)."
         },
         "fillColorAndOpacity": {
           "type": "object",
@@ -11940,7 +13154,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "filter": {
           "type": "string",
-          "description": "Only nodes whose title or name, or whose pin default value or default object path, contains this text (case-insensitive, spaces ignored), e.g. \"IA_Move\", \"Set bLocked\", or \"WBP_MainMenu\" for the Create Widget node whose Class pin holds /Game/UI/WBP_MainMenu.WBP_MainMenu_C."
+          "description": "Only nodes whose title or name, or whose pin default value or default object path, contains this text (case-insensitive, spaces ignored), e.g. \"IA_Move\", \"Set bLocked\", or \"WBP_MainMenu\" for the Create Widget node whose Class pin holds /Game/UI/WBP_MainMenu.WBP_MainMenu_C; or whose input is wired from a variable or component of that name, so \"Arm\" lists every node that reads or moves the Arm component (find each writer before driving it from Tick)."
+        },
+        "fireRate": {
+          "type": "number",
+          "description": "Most shots a minute (default 300)."
         },
         "folder": {
           "type": "string",
@@ -11980,6 +13198,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Event graph page to add the event to; omitted, the main EventGraph."
         },
+        "heal": {
+          "type": "number",
+          "description": "Health given to the pawn that collects it; it reaches an actor with health (add_health) as negative damage."
+        },
         "heightOverride": {
           "type": "number",
           "description": "Height override for size box."
@@ -11991,6 +13213,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "hoverSoundPath": {
           "type": "string",
           "description": "Sound a Button plays when the pointer moves onto it (SoundCue, SoundWave or MetaSound path); an empty string clears it."
+        },
+        "ignoreTimeDilation": {
+          "type": "boolean",
+          "description": "Play at real speed while the game is slowed down or sped up."
         },
         "includePins": {
           "type": "boolean",
@@ -12041,7 +13267,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "inputActionPath": {
           "type": "string",
-          "description": "Enhanced Input action asset path for an EnhancedInputAction node."
+          "description": "An Input Action to use instead of the one the behaviour makes next to the Blueprint (IA_Sprint, IA_Shoot, IA_Dash)."
         },
         "inputAxisName": {
           "type": "string",
@@ -12057,13 +13283,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "inputs": {
           "type": "array",
-          "description": "Function input parameter descriptors.",
+          "description": "Function inputs, each {name, type}, with the types add_event parameters take (Float, Vector, Actor, Array<Int> ...). A nameless entry or a type no pin takes is refused (TYPE_RESOLUTION_FAILED) before anything changes.",
           "items": {
             "type": "object",
             "additionalProperties": true,
             "x-unreal-reflection-boundary": true
           },
           "x-unreal-reflection-boundary": true
+        },
+        "interfacePath": {
+          "type": "string",
+          "description": "The interface: a Blueprint Interface asset path (/Game/Interfaces/BPI_Interactable) or a native interface class path or name."
         },
         "interpolation": {
           "type": "string",
@@ -12073,6 +13303,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "constant"
           ],
           "description": "Keyframe interpolation."
+        },
+        "interval": {
+          "type": "number",
+          "description": "Seconds between spawns (default 3)."
         },
         "isChecked": {
           "type": "boolean",
@@ -12106,6 +13340,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Rows the objective or quest tracker lists, top to bottom."
         },
+        "jumpKey": {
+          "type": "string",
+          "description": "Key that jumps (default SpaceBar)."
+        },
         "justification": {
           "type": "string",
           "description": "Text justification of a TextBlock or RichTextBlock: left, center or right. To centre the widget itself in its slot use set_alignment."
@@ -12138,6 +13376,19 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Which add function variant to run; omit for 'function'."
         },
+        "label": {
+          "type": "string",
+          "description": "Text before the number (default the variable name; empty for the number alone)."
+        },
+        "launchVelocity": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "description": "Launch velocity [x, y, z] in units per second, world axes (default [0, 0, 1200], straight up)."
+        },
         "layoutProperty": {
           "type": "string",
           "enum": [
@@ -12158,6 +13409,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Left margin in slate units."
         },
+        "length": {
+          "type": "number",
+          "description": "How long it plays, in seconds (a new timeline: 5)."
+        },
         "letterSpacing": {
           "type": "number",
           "description": "Extra space between the letters of a TextBlock, in thousandths of an em (0 normal, 100 airy, negative tighter)."
@@ -12172,13 +13427,29 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true
         },
+        "look": {
+          "type": "boolean",
+          "description": "Also turn the view with the mouse and the right stick (default true); false for a fixed camera."
+        },
+        "loop": {
+          "type": "boolean",
+          "description": "Start over at the end, again and again."
+        },
         "mapSize": {
           "type": "number",
           "description": "Minimap width and height in pixels (default 220)."
         },
+        "mappingContextPath": {
+          "type": "string",
+          "description": "The Input Mapping Context its keys go in (the project's own); default the one the pawn already registers, else /Game/Input/IMC_MCP."
+        },
         "materialPath": {
           "type": "string",
           "description": "Material asset path for a component."
+        },
+        "maxAlive": {
+          "type": "number",
+          "description": "Most of its spawned actors alive at once (default 5); a destroyed one frees its place."
         },
         "maxDesiredHeight": {
           "type": "number",
@@ -12187,6 +13458,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "maxDesiredWidth": {
           "type": "number",
           "description": "Maximum desired width of a size box."
+        },
+        "maxHealth": {
+          "type": "number",
+          "description": "Starting and largest health (default 100)."
         },
         "maxValue": {
           "type": "number",
@@ -12207,6 +13482,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "meshPath": {
           "type": "string",
           "description": "Static/Skeletal mesh asset path for a mesh component."
+        },
+        "message": {
+          "type": "string",
+          "description": "The text shown (default GAME OVER)."
         },
         "metadata": {
           "type": "object",
@@ -12250,6 +13529,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "New parent SCS node name."
         },
+        "nextLevel": {
+          "type": "string",
+          "description": "Level opened once the goal is reached, by name or /Game path (a path must exist). Omitted: the game stays in this level, and OnGoalReached is left for other logic."
+        },
         "nodeGuid": {
           "type": "string",
           "description": "Node GUID accepted in place of nodeId."
@@ -12287,7 +13570,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "nodeType": {
           "type": "string",
-          "description": "The node to create: CallFunction (memberName, plus memberClass for a function of another class), Event (eventName: BeginPlay, Tick), CustomEvent (customEventName), VariableGet or VariableSet (memberName), Cast (targetClass), InputAxisEvent (inputAxisName), Branch, Sequence, Select, Switch, SwitchOnInt, SwitchOnEnum, SwitchOnString, DoOnce, DoN, FlipFlop, Gate, MultiGate, ForLoop, ForEachLoop, WhileLoop (each also WithBreak), MakeArray, MakeStruct and BreakStruct (structPath), SpawnActorFromClass, GetAllActorsOfClass, Self, Timeline, Reroute, Comment; a common function by name (PrintString, Delay, SetActorLocation, GetPlayerPawn, GetActorOfClass, IsValid, PlaySound2D); or a K2Node class name that inspect_graph info=node_types lists. For create_struct_make_break_nodes: make or break."
+          "description": "The node to create: CallFunction (memberName, plus memberClass for a function of another class), Event (eventName: BeginPlay, Tick), CustomEvent (customEventName), VariableGet or VariableSet (memberName), Cast (targetClass), InputAxisEvent (inputAxisName), Branch, Sequence, Select, Switch, SwitchOnInt, SwitchOnEnum, SwitchOnString, DoOnce, DoN, FlipFlop, Gate, MultiGate, ForLoop, ForEachLoop, WhileLoop (each also WithBreak), MakeArray, MakeStruct and BreakStruct (structPath), SpawnActorFromClass, GetAllActorsOfClass, Self, CallDelegate (memberName: an event dispatcher, memberClass: another class's), BindEvent (the same, plus eventName: a Bind Event node and a custom event with the dispatcher's inputs wired to it, eventNodeGuid in the reply),Timeline (timelineName; edit_timeline keys its tracks), Reroute, Comment, MathExpression (its formula goes in set_node_property Expression) (a Switch on Int is made with only Default: wire a case by its number, from \"$id.0\", \"$id.1\"..., and the case pin is added; a Sequence or a commutative math node grows its inputs the same way); a common function by name (PrintString, Delay, SetActorLocation, GetPlayerPawn, GetActorOfClass, IsValid, PlaySound2D); or a K2Node class name that inspect_graph info=node_types lists. In an Animation Blueprint's AnimGraph or a state's graph (graphName), any animation node by class: AnimGraphNode_TwoBoneIK, TwoBoneIK or Two Bone IK (info=node_types with filter IK lists them; animation_physics configure_anim_graph_node set_value sets its settings); a node the graph cannot hold is refused (NODE_NOT_ALLOWED_IN_GRAPH). For create_struct_make_break_nodes: make or break."
         },
         "offset": {
           "type": "number",
@@ -12313,7 +13596,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "oneOf": [
             {
               "type": "array",
-              "description": "SCS operations applied in order. Each entry is an object with `type` plus that operation's own fields; `type: \"add_component\"` also takes componentName, componentClass (or componentType), attachTo, transform, meshPath, materialPath and a nested properties bag; `type: \"modify_component\"` takes the same transform, meshPath, materialPath and properties for a component that already exists; transform is {location:{x,y,z}, rotation:{pitch,yaw,roll}, scale:{x,y,z}} (or those three directly on the operation), and a part left out keeps its current value, while a transform that cannot be applied (a part that is not an {x,y,z} or {pitch,yaw,roll} object or a three-number array, or a component with no transform) is named in warnings, not skipped, as is a meshPath or materialPath that does not load or that its component cannot take; `type: \"attach_component\"` (or \"reparent\") moves componentName under parentComponent (or attachTo/newParent). A failed operation is named in warnings, and the call fails when none applied. Each result carries instancesUpdated (placed copies that took the change, 0 included) with up to three of their paths, and a hint, repeated in warnings, when a mesh or material lands on a hidden component.",
+              "description": "SCS operations applied in order. Each entry is an object with `type` plus that operation's own fields; `type: \"add_component\"` also takes componentName, componentClass (or componentType), attachTo, transform, meshPath, materialPath and a nested properties bag; `type: \"modify_component\"` takes the same transform, meshPath, materialPath and properties for a component that already exists (its own, or a parent Blueprint's part, edited through this Blueprint's override of it); transform is {location:{x,y,z}, rotation:{pitch,yaw,roll}, scale:{x,y,z}} (or those three directly on the operation), and a part left out keeps its current value, while a transform that cannot be applied (a part that is not an {x,y,z} or {pitch,yaw,roll} object or a three-number array, or a component with no transform) is named in warnings, not skipped, as is a meshPath or materialPath that does not load or that its component cannot take; `type: \"attach_component\"` (or \"reparent\") moves componentName under parentComponent (or attachTo/newParent). A failed operation is named in warnings, and the call fails when none applied. Each result carries instancesUpdated (placed copies that took the change, 0 included) with up to three of their paths, and a hint, repeated in warnings, when a mesh or material lands on a hidden component.",
               "items": {
                 "type": "object",
                 "additionalProperties": true,
@@ -12329,10 +13612,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "x-unreal-reflection-boundary": true
               },
               "x-unreal-reflection-boundary": true,
-              "description": "Steps run in order, 1-200. Each is {edit, ...that edit's own params}. Member steps come before the nodes that use them: add_variable (variableName, variableType as add_variable takes it: basic, class, struct, enum and container types, defaultValue, isPublic, category), add_function (functionName, inputs, outputs, pure, isPublic; its body steps set graphName to the function name; with an id, \"$id\" is its entry node and \"$id_return\" its return node, which exists when outputs are declared), add_event (customEventName and parameters, or componentName plus eventName for a component or Widget Blueprint widget delegate, e.g. PlayButton with OnClicked) and add_event_dispatcher (dispatcherName, parameters [{name, type}]). Node steps: create_node, connect_pins, set_pin_default_value, set_node_property, create_reroute_node. create_node also takes nodeType CallDelegate (memberName: a dispatcher), Message (memberClass: an interface, memberName: its function), AsyncTask (memberClass: the task or async-action class, memberName: its static factory; event graphs only) and FunctionResult (one more return node in a function graph). Optional per step: id (names the created node; later steps use \"$id\" in fromNodeId, toNodeId and nodeId), from and to (\"$id.PinName\" shorthand for connect_pins), pinDefaults (create_node only: {PinName: value} applied to the new node; a read-only pin such as Set Text's Value gets a MakeLiteral node wired into it). \"$entry\" is the graph's own entry node (a Construction Script or function graph starts there: from \"$entry.then\"). A create step without posX and posY is auto-placed, and once every step ran it moves beside a node it is wired to (right of what runs it, below-left of what reads it); one whose posX and posY overlap an existing node is placed at the nearest free position instead, and its result says where in placementWarning, so a crowded row never stops the batch (a single create_node call still refuses an overlap). Every function, variable, dispatcher and async factory a step names is checked before any step runs, so a misspelled one fails the batch with nothing applied; any other failure stops the batch at that step, and that step leaves nothing behind (a member step included), in whichever graph it ran."
+              "description": "Steps run in order, 1-200. Each is {edit, ...that edit's own params}. Member steps come before the nodes that use them: add_variable (variableName, variableType as add_variable takes it: basic, class, struct, enum and container types, defaultValue, isPublic, exposeOnSpawn, category), add_function (functionName, inputs, outputs, pure, isPublic; its body steps set graphName to the function name; with an id, \"$id\" is its entry node and \"$id_return\" its return node, which exists when outputs are declared), add_event (customEventName and parameters, or componentName plus eventName for a component or Widget Blueprint widget delegate, e.g. PlayButton with OnClicked) and add_event_dispatcher (dispatcherName, parameters [{name, type}]). Node steps: create_node, connect_pins, set_pin_default_value, set_node_property, create_reroute_node. create_node also takes nodeType CallDelegate (memberName: a dispatcher, memberClass: another class's), BindEvent (the same: a Bind Event node and a custom event, eventName, wired to it; with an id, \"$id_event\" is that event, whose then pin runs when the dispatcher fires, and the object bound goes to \"$id.self\"), Message (memberClass: an interface, memberName: its function), AsyncTask (memberClass: the task or async-action class, memberName: its static factory; event graphs only), FunctionResult (one more return node in a function graph) and MathExpression with expression (the formula, checked and set as set_node_property Expression sets it, before pinDefaults, which can then name its inputs). Optional per step: id (names the created node; later steps use \"$id\" in fromNodeId, toNodeId and nodeId), from and to (\"$id.PinName\" shorthand for connect_pins), pinDefaults (create_node only: {PinName: value} applied to the new node; a read-only pin such as Set Text's Value gets a MakeLiteral node wired into it). \"$entry\" is the graph's own entry node (a Construction Script or function graph starts there: from \"$entry.then\"). A create step without posX and posY is auto-placed, and once every step ran it moves beside a node it is wired to (right of what runs it, below-left of what reads it); one whose posX and posY overlap an existing node is placed at the nearest free position instead, and its result says where in placementWarning, so a crowded row never stops the batch (a single create_node call still refuses an overlap). Every function, variable, dispatcher and async factory a step names is checked before any step runs, so a misspelled one fails the batch with nothing applied; any other failure stops the batch at that step and undoes the steps before it (members, nodes, links and pin defaults, in every graph), so a failed batch leaves the Blueprint as it was: fix that step and send the whole batch again. Only a set_node_property on a node that was already there stays, and the error names it."
             }
           ],
-          "description": "SCS operations applied in order. Each entry is an object with `type` plus that operation's own fields; `type: \"add_component\"` also takes componentName, componentClass (or componentType), attachTo, transform, meshPath, materialPath and a nested properties bag; `type: \"modify_component\"` takes the same transform, meshPath, materialPath and properties for a component that already exists; transform is {location:{x,y,z}, rotation:{pitch,yaw,roll}, scale:{x,y,z}} (or those three directly on the operation), and a part left out keeps its current value, while a transform that cannot be applied (a part that is not an {x,y,z} or {pitch,yaw,roll} object or a three-number array, or a component with no transform) is named in warnings, not skipped, as is a meshPath or materialPath that does not load or that its component cannot take; `type: \"attach_component\"` (or \"reparent\") moves componentName under parentComponent (or attachTo/newParent). A failed operation is named in warnings, and the call fails when none applied. Each result carries instancesUpdated (placed copies that took the change, 0 included) with up to three of their paths, and a hint, repeated in warnings, when a mesh or material lands on a hidden component."
+          "description": "SCS operations applied in order. Each entry is an object with `type` plus that operation's own fields; `type: \"add_component\"` also takes componentName, componentClass (or componentType), attachTo, transform, meshPath, materialPath and a nested properties bag; `type: \"modify_component\"` takes the same transform, meshPath, materialPath and properties for a component that already exists (its own, or a parent Blueprint's part, edited through this Blueprint's override of it); transform is {location:{x,y,z}, rotation:{pitch,yaw,roll}, scale:{x,y,z}} (or those three directly on the operation), and a part left out keeps its current value, while a transform that cannot be applied (a part that is not an {x,y,z} or {pitch,yaw,roll} object or a three-number array, or a component with no transform) is named in warnings, not skipped, as is a meshPath or materialPath that does not load or that its component cannot take; `type: \"attach_component\"` (or \"reparent\") moves componentName under parentComponent (or attachTo/newParent). A failed operation is named in warnings, and the call fails when none applied. Each result carries instancesUpdated (placed copies that took the change, 0 included) with up to three of their paths, and a hint, repeated in warnings, when a mesh or material lands on a hidden component."
         },
         "options": {
           "type": "array",
@@ -12362,13 +13645,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "outputs": {
           "type": "array",
-          "description": "Function output parameter descriptors.",
+          "description": "Function outputs (its return values), each {name, type}, with the types inputs take.",
           "items": {
             "type": "object",
             "additionalProperties": true,
             "x-unreal-reflection-boundary": true
           },
           "x-unreal-reflection-boundary": true
+        },
+        "overrideXY": {
+          "type": "boolean",
+          "description": "Replace the horizontal speed of the Character instead of adding to it (default false)."
         },
         "padding": {
           "type": "object",
@@ -12380,7 +13667,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "oneOf": [
             {
               "type": "array",
-              "description": "CustomEvent inputs, each {name, type}: float, double, int, int64, bool, byte, string, name, text, object, class, or a struct (Vector, /Script/CoreUObject.Vector).",
+              "description": "CustomEvent inputs, each {name, type}: float, double, int, int64, bool, byte, string, name, text, object, class, softobject, an enum or struct name (Vector, Rotator, Transform, /Script/CoreUObject.Vector) or a class name (Actor) for an object of that class. An array, set or map parameter needs add_event. A nameless entry or another type is refused (TYPE_RESOLUTION_FAILED) before anything changes.",
               "items": {
                 "type": "object",
                 "additionalProperties": true,
@@ -12390,7 +13677,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             },
             {
               "type": "array",
-              "description": "Function/event parameter descriptors.",
+              "description": "Event parameters, each {name, type}. Types: bool, byte, int, int64, float, double, string, name, text, vector, vector2d, rotator, transform, color, linearcolor, object, class, a class, struct or enum name (Actor, HitResult), Object:/Script/Engine.Actor, Struct:<path>, Enum:<path>, and Array<T>, Set<T> or Map<Key,Value>. A nameless entry or a type no pin takes is refused (TYPE_RESOLUTION_FAILED) before anything changes.",
               "items": {
                 "type": "object",
                 "additionalProperties": true,
@@ -12399,7 +13686,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "x-unreal-reflection-boundary": true
             }
           ],
-          "description": "CustomEvent inputs, each {name, type}: float, double, int, int64, bool, byte, string, name, text, object, class, or a struct (Vector, /Script/CoreUObject.Vector)."
+          "description": "CustomEvent inputs, each {name, type}: float, double, int, int64, bool, byte, string, name, text, object, class, softobject, an enum or struct name (Vector, Rotator, Transform, /Script/CoreUObject.Vector) or a class name (Actor) for an object of that class. An array, set or map parameter needs add_event. A nameless entry or another type is refused (TYPE_RESOLUTION_FAILED) before anything changes."
         },
         "parentClass": {
           "type": "string",
@@ -12407,7 +13694,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "parentComponent": {
           "type": "string",
-          "description": "Parent SCS node name for reparenting."
+          "description": "Parent component to put the component under: one of this Blueprint's own, a parent Blueprint's scene component, or a native one (Mesh, CapsuleComponent)."
         },
         "parentSlot": {
           "type": "string",
@@ -12424,6 +13711,18 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "pinName": {
           "type": "string",
           "description": "Pin name on a graph node."
+        },
+        "points": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3
+          },
+          "description": "The route: [x, y, z] offsets from where the pawn starts, in world axes, walked in turn and looped (default [[500, 0, 0], [0, 0, 0]], back and forth). Each placed pawn walks its own copy (PatrolPoints is instance editable)."
         },
         "posX": {
           "type": "number",
@@ -12455,6 +13754,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Sound a Button plays when it is pressed (SoundCue, SoundWave or MetaSound path); an empty string clears it."
         },
+        "projectileClass": {
+          "type": "string",
+          "description": "The projectile it shoots: a Blueprint path (/Game/Weapons/BP_Fireball) or class path."
+        },
+        "projectileSpeed": {
+          "type": "number",
+          "description": "Launch speed, units per second (default 3000)."
+        },
         "properties": {
           "type": "object",
           "description": "Property bag applied to the CDO, component template, or node: name to value. A dotted name reaches a member of a component or struct (CapsuleComponent.CapsuleRadius, BodyInstance.CollisionEnabled); on a Blueprint's class defaults a native component also answers to its object name (CollisionCylinder.CapsuleRadius, CharMoveComp.MaxWalkSpeed). An object or class reference takes a path (a Blueprint class path ends in _C); null or \"None\" clears it.",
@@ -12474,7 +13781,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "description": "Value to assign to the property. An object or class reference takes a path (a Blueprint class path ends in _C); null or \"None\" clears it."
             },
             {
-              "description": "set_node_property: text for NodeComment, a number for NodePosX or NodePosY, true or false for bCommentBubbleVisible or bDisabled, Enabled, Disabled or DevelopmentOnly for EnabledState, an asset path for a reflected field. set_pin_default_value: the pin's new default as text: a number, true or false, an enum value name, a vector as X,Y,Z (0,150,110), a rotator as P,Y,R, or an asset path."
+              "description": "set_node_property: text for NodeComment, a number for NodePosX or NodePosY, true or false for bCommentBubbleVisible or bDisabled, Enabled, Disabled or DevelopmentOnly for EnabledState, the text of a Math Expression node's Expression (each other name becomes a number input pin, except one the Blueprint has a variable of, which reads that variable; a number input is never a vector, so add to a location as VECT(x, y, z + 20) from its parts; a comparison used as a number is refused: write SelectFloat(1, 0, A > B); an input pin is never true/false, so join true/false values from other nodes with BooleanAND, BooleanOR or BooleanXOR nodes), an asset path for a reflected field. set_pin_default_value: the pin's new default as text: a number, true or false, an enum value name, a vector as X,Y,Z (0,150,110), a rotator as P,Y,R, or an asset path."
             }
           ],
           "description": "The key value, by trackType: opacity a number 0-1; color {r,g,b,a} or [r,g,b,a]; translation, scale or shear {x,y} or [x,y]; angle a number in degrees; transform any of {translation:{x,y}, scale:{x,y}, angle, shear:{x,y}}. A value of the wrong shape is refused before anything is added."
@@ -12482,6 +13789,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "pure": {
           "type": "boolean",
           "description": "Build a Cast node pure (no exec pins, as in the editor's Convert to pure cast); default false."
+        },
+        "radius": {
+          "type": "number",
+          "description": "How far across from the spawner an actor may appear, in units (default 0: on the spawner)."
+        },
+        "remove": {
+          "type": "boolean",
+          "description": "Drop the interface instead (its function graphs go with it)."
         },
         "renderOpacity": {
           "type": "number",
@@ -12494,6 +13809,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "responseCount": {
           "type": "number",
           "description": "Response buttons under the dialog line (0-6, default 3)."
+        },
+        "restartDelay": {
+          "type": "number",
+          "description": "Seconds before the level opens again (default 3); 0 never restarts it."
         },
         "right": {
           "type": "number",
@@ -12612,6 +13931,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true,
           "description": "Padding between uniform grid slots."
         },
+        "soundPath": {
+          "type": "string",
+          "description": "Sound asset played at the actor: where a pickup was collected, a goal when the player reaches it, a pad on each launch, or where a teleported pawn arrives."
+        },
         "sourceNode": {
           "type": "string",
           "description": "Source node id accepted in place of fromNodeId."
@@ -12620,9 +13943,21 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Source pin name on the originating node."
         },
+        "spawnClass": {
+          "type": "string",
+          "description": "The actor it spawns: a Blueprint path (/Game/Enemies/BP_Slime) or class path; not the spawner itself."
+        },
+        "sprintSpeed": {
+          "type": "number",
+          "description": "MaxWalkSpeed while sprinting, cm/s (default 1000)."
+        },
         "stepSize": {
           "type": "number",
           "description": "Value step size for slider."
+        },
+        "stopDistance": {
+          "type": "number",
+          "description": "How close it gets to the player before it stops, in units (default 100)."
         },
         "stretch": {
           "type": "string",
@@ -12660,7 +13995,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "targetClass": {
           "type": "string",
-          "description": "Target class for a node that carries one: a Cast target, a CreateWidget or SpawnActor class, or the subsystem a Get Subsystem node returns. Required for cast and subsystem nodes, whose type is stored on the node itself and cannot be set afterwards."
+          "description": "Target class for a node that carries one: a Cast target, a CreateWidget or SpawnActor class, the subsystem a Get Subsystem node returns, or the class GetAllActorsOfClass and GetActorOfClass look for (their result is then typed to it, so a ForEach element wires to its functions). Required for cast and subsystem nodes, whose type is stored on the node itself and cannot be set afterwards."
         },
         "targetNode": {
           "type": "string",
@@ -12673,6 +14008,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "text": {
           "type": "string",
           "description": "Text content for a text block or button."
+        },
+        "textName": {
+          "type": "string",
+          "description": "The TextBlock in the widget that the behaviour writes: the count of counter_hud (default <variable>Counter) or the message of game_over (default GameOver_Text). A text named here must already be in the widget."
         },
         "textStyle": {
           "type": "string",
@@ -12690,6 +14029,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "time": {
           "type": "number",
           "description": "Keyframe time."
+        },
+        "timelineName": {
+          "type": "string",
+          "description": "For nodeType Timeline: the timeline it plays, which edit_timeline keys; a name the Blueprint lacks makes one (omitted, a new Timeline_N). One node plays a timeline, in the event graph of an Actor Blueprint."
         },
         "title": {
           "type": "string",
@@ -12721,6 +14064,18 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Animation track type: opacity/renderOpacity (RenderOpacity), color (ColorAndOpacity), translation/scale/angle/shear or transform (RenderTransform)."
         },
+        "tracks": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 50,
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "x-unreal-reflection-boundary": true,
+          "description": "Tracks to add, or whose keys to replace (a track keeps its type): each {name, type, keys, interpolation}. name is the node pin its value comes out of; type float (default), vector, color or event (an exec pin that fires at each key time); keys [{time in seconds, value}], value a number, {x, y, z} or {r, g, b, a} by type and none for an event; interpolation auto (smooth, default), linear or constant. Every track is checked before anything changes; a bad one is named by its index (tracks[1].keys[0])."
+        },
         "translation": {
           "type": "object",
           "additionalProperties": true,
@@ -12736,6 +14091,18 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "typeface": {
           "type": "string",
           "description": "Face of the TextBlock font: Regular, Bold, Italic, Light... A face the font lacks is refused with the list it has."
+        },
+        "unusedOnly": {
+          "type": "boolean",
+          "description": "Only nodes that do nothing: a call no exec wire reaches, or a getter, math or other pure node whose result nothing reads (what is left behind when the node that read it was deleted; the compiler says nothing). Events, input actions and function entries never count. Combines with filter."
+        },
+        "useLastKeyframe": {
+          "type": "boolean",
+          "description": "End at the last key instead of at length."
+        },
+        "usePathfinding": {
+          "type": "boolean",
+          "description": "Follow the navigation mesh (default true; the level needs a Nav Mesh Bounds Volume); false heads straight for the player or the next point."
         },
         "userSpecifiedScale": {
           "type": "number",
@@ -12762,10 +14129,22 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Variable name to add, remove, rename, or modify."
         },
         "variableNames": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Several variables to give the same metadata in one call (one compile and save), in place of or besides variableName."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Several variables to remove in one call, in place of or besides variableName. Every name must exist (any letter case), or nothing is removed and the reply lists the Blueprint's variables."
+            }
+          ],
           "description": "Several variables to give the same metadata in one call (one compile and save), in place of or besides variableName."
         },
         "variableType": {
@@ -12786,6 +14165,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "waitForShaders": {
           "type": "boolean",
           "description": "true: when the drawing left shaders compiling (the editor compiles a material's UI shaders the first time it is drawn: right after the editor starts, or after a material edit), wait for them, at most 25 seconds, and draw again; shaderWait in the reply says how long it waited. Default false: draw once and report shadersCompiling."
+        },
+        "waitTime": {
+          "type": "number",
+          "description": "Seconds it waits at each point (default 1)."
         },
         "widgetKind": {
           "type": "string",
@@ -12832,7 +14215,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "widgetPath": {
           "type": "string",
-          "description": "Canonical /Game Widget Blueprint asset path."
+          "description": "A Widget Blueprint to show instead of the one made next to the Blueprint under UI/ (WBP_HealthBar, WBP_<variable>Counter, WBP_GameOver). One without the bar or the text gets it: the health bar HUD piece (add_game_widget), a text at the top right, or a full-screen shade with the message."
         },
         "widthOverride": {
           "type": "number",
@@ -12858,10 +14241,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "edit_variable",
             "remove_variable",
             "edit_graph",
+            "edit_timeline",
             "delete_node",
             "inspect_graph",
             "add_function",
             "remove_function",
+            "implement_interface",
+            "add_behaviour",
             "probe_handle",
             "edit_widget_blueprint",
             "preview_widget",
@@ -12874,6 +14260,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "bind_widget",
             "edit_widget_animation",
             "delete_animation",
+            "get_widget_animation",
             "get_widget_info",
             "add_game_widget",
             "create_widget_template"
@@ -12905,6 +14292,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Animation created with the piece (the damage indicator's <slot>_Flash); play it on a hit."
         },
+        "animations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Without animationName: each animation with name, durationSeconds and trackCount."
+        },
         "applied": {
           "type": "object",
           "additionalProperties": true,
@@ -12919,11 +14315,23 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "set_style: the style fields that were written (text, fontSize, colorAndOpacity, cornerRadius...)."
         },
         "appliedProperties": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "The properties names set on the class defaults; a subobject property reads Holder.Property."
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "The names in properties that took their value; one that did not apply fails the call and is named in the error."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "The properties names set on the class defaults; a subobject property reads Holder.Property."
+            }
+          ],
+          "description": "The names in properties that took their value; one that did not apply fails the call and is named in the error."
         },
         "appliedValue": {
           "type": "string",
@@ -12940,6 +14348,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "assetPath": {
           "type": "string",
           "description": "Asset path of the created node (verification)."
+        },
+        "autoPlay": {
+          "type": "boolean",
+          "description": "Whether it starts on its own."
         },
         "bindingGuid": {
           "type": "string",
@@ -12979,6 +14391,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "bottom": {
           "type": "number",
           "description": "Bottom margin in slate units."
+        },
+        "boundToMembers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Expression: names that read the Blueprint's own variable of that name instead of making a pin; rename the input to get a pin."
         },
         "buttons": {
           "type": "array",
@@ -13060,6 +14479,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "With followExec: each node the exec wires reach, in walk order: nodeId, nodeTitle, via (the \"Title.Pin\" exec output that led to it) and inputs (each input pin as its literal value, or \"<- Title.Pin\" for the node feeding it)."
         },
+        "changed": {
+          "type": "boolean",
+          "description": "False when the Blueprint was already in the asked state."
+        },
         "channelCount": {
           "type": "number",
           "description": "Channels that received a key."
@@ -13070,7 +14493,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "compiled": {
           "type": "boolean",
-          "description": "True when the Blueprint is up-to-date (warnings allowed)."
+          "description": "The Blueprint compiled with the behaviour."
         },
         "compilerStatus": {
           "type": "string",
@@ -13104,7 +14527,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "connected": {
           "type": "boolean",
-          "description": "Whether the two pins are linked after the call, read back from the graph rather than inferred from the schema call."
+          "description": "Whether the two pins are linked after the call, directly or through the conversion node the engine inserted between differing pin types (conversionInserted), read back from the graph rather than inferred from the schema call."
         },
         "copiedWidgets": {
           "type": "array",
@@ -13118,6 +14541,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "count": {
           "type": "number",
           "description": "Total number of node types listed."
+        },
+        "created": {
+          "type": "boolean",
+          "description": "True when this call made the timeline."
+        },
+        "createdAssets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The Widget Blueprint this call made; it stays if the Blueprint is rolled back."
         },
         "createdBinding": {
           "type": "boolean",
@@ -13161,9 +14595,20 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Compile messages: { severity, message }.",
           "x-unreal-reflection-boundary": true
         },
+        "dispatchers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Event dispatchers it added, which other logic can bind."
+        },
         "duration": {
           "type": "number",
           "description": "Length of the new animation in seconds."
+        },
+        "durationSeconds": {
+          "type": "number",
+          "description": "With animationName: the animation's length in seconds."
         },
         "editorOpened": {
           "type": "boolean",
@@ -13191,13 +14636,25 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Custom event name."
         },
         "events": {
-          "type": "array",
-          "description": "Event graph entry points.",
-          "items": {
-            "type": "object",
-            "x-unreal-reflection-boundary": true,
-            "description": "Event entry: name, eventType."
-          }
+          "oneOf": [
+            {
+              "type": "array",
+              "description": "Event graph entry points.",
+              "items": {
+                "type": "object",
+                "x-unreal-reflection-boundary": true,
+                "description": "Event entry: name, eventType."
+              }
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Interface functions without outputs: events to handle in the event graph."
+            }
+          ],
+          "description": "Event graph entry points."
         },
         "exists": {
           "type": "boolean",
@@ -13227,26 +14684,50 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Key position in MovieScene tick-resolution frames."
         },
         "functionGraphs": {
-          "type": "array",
-          "description": "Names of function graphs.",
-          "items": {
-            "type": "object",
-            "x-unreal-reflection-boundary": true,
-            "description": "Graph entry."
-          }
+          "oneOf": [
+            {
+              "type": "array",
+              "description": "Names of function graphs.",
+              "items": {
+                "type": "object",
+                "x-unreal-reflection-boundary": true,
+                "description": "Graph entry."
+              }
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Interface functions with outputs: graphs to fill (edit_graph graphName)."
+            }
+          ],
+          "description": "Interface functions with outputs: graphs to fill (edit_graph graphName)."
         },
         "functionName": {
           "type": "string",
           "description": "Function name to add or remove."
         },
         "functions": {
-          "type": "array",
-          "description": "User function graphs with parameters.",
-          "items": {
-            "type": "object",
-            "x-unreal-reflection-boundary": true,
-            "description": "Function entry: name, parameters, nodeCount."
-          }
+          "oneOf": [
+            {
+              "type": "array",
+              "description": "User function graphs with parameters.",
+              "items": {
+                "type": "object",
+                "x-unreal-reflection-boundary": true,
+                "description": "Function entry: name, parameters, nodeCount."
+              }
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Functions it added, which other logic can call."
+            }
+          ],
+          "description": "Functions it added, which other logic can call."
         },
         "generatedGetter": {
           "type": "boolean",
@@ -13287,8 +14768,26 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "additionalProperties": true,
             "x-unreal-reflection-boundary": true
           },
-          "description": "Components inherited from parent Blueprints (their own components) and from the native parent class (a Character's CollisionCylinder): componentName, componentType, isSceneComponent, ownerClass. A native one is valid as parentComponent for add_scs_component; one from a parent Blueprint is not.",
+          "description": "Components inherited from parent Blueprints (their own components) and from the native parent class (a Character's CollisionCylinder): componentName, componentType, isSceneComponent, ownerClass, and overridden when this Blueprint restyled the part. A scene component of either kind is valid as parentComponent or attachTo.",
           "x-unreal-reflection-boundary": true
+        },
+        "inputPins": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Expression: the input pins the parsed expression made, the names to wire."
+        },
+        "instancesUpdated": {
+          "type": "number",
+          "description": "Placed actors (in loaded levels) that still held the old default and took the new value, as the Details panel propagates a class default; an actor that overrides the value keeps it. Save the level to keep them."
+        },
+        "interfaces": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Every interface the Blueprint implements now."
         },
         "isVisible": {
           "type": "boolean",
@@ -13316,9 +14815,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Left margin in slate units."
         },
+        "length": {
+          "type": "number",
+          "description": "Its length in seconds."
+        },
         "literalNodeId": {
           "type": "string",
           "description": "Guid of the MakeLiteral node carrying the value when the pin itself takes no literal; setting the pin again updates that node."
+        },
+        "loop": {
+          "type": "boolean",
+          "description": "Whether it loops."
         },
         "message": {
           "type": "string",
@@ -13358,6 +14865,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "New parent SCS node name."
         },
+        "newRoot": {
+          "type": "string",
+          "description": "The root after a root was removed, read back after the compile."
+        },
         "nodeClass": {
           "type": "string",
           "description": "Resolved UK2Node class name."
@@ -13379,7 +14890,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "additionalProperties": {
             "type": "string"
           },
-          "description": "Step id -> node guid for every node the batch created or reused; an add_function step with an id also adds \"<id>_return\" for its return node."
+          "description": "Step id -> node guid for every node the batch created or reused; an add_function step with an id also adds \"<id>_return\" for its return node. Absent when a step failed: its nodes were removed."
         },
         "nodeName": {
           "type": "string",
@@ -13405,7 +14916,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "properties": {
               "className": {
                 "type": "string",
-                "description": "Blueprint node class name (e.g. UK2Node_CallFunction)."
+                "description": "Node class name, the nodeType create_node takes (K2Node_CallFunction, AnimGraphNode_TwoBoneIK)."
               },
               "displayName": {
                 "type": "string",
@@ -13450,7 +14961,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "parent": {
           "type": "string",
-          "description": "Parent SCS node name for reparenting."
+          "description": "Parent component to put the component under: one of this Blueprint's own, a parent Blueprint's scene component, or a native one (Mesh, CapsuleComponent)."
         },
         "parentClass": {
           "type": "string",
@@ -13498,7 +15009,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "pins": {
           "type": "array",
           "x-unreal-reflection-boundary": true,
-          "description": "Pin descriptors (name, direction, type, links).",
+          "description": "Pin descriptors (pinName, direction, pinType, pinSubType: the class, struct or enum it carries, container: array, set or map when the pin holds many pinType values, valueType: the value type of a map, linkedTo[] of {nodeId, pinName, nodeTitle}, and for a visible input nothing is wired to the literal it holds: defaultValue, defaultTextValue or defaultObjectPath).",
           "items": {
             "type": "object",
             "additionalProperties": true,
@@ -13516,6 +15027,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "posY": {
           "type": "number",
           "description": "Y coordinate the node was placed at."
+        },
+        "promotedChildren": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The removed component's children, which moved up instead of going with it."
         },
         "property": {
           "type": "string",
@@ -13551,6 +15069,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Name of the widget that was removed from the widget tree."
         },
+        "replaced": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Behaviours this one took over and removed first (Chase)."
+        },
         "replacedLinks": {
           "type": "array",
           "items": {
@@ -13560,6 +15085,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "x-unreal-reflection-boundary": true,
           "description": "Links the new one replaced, each {nodeId, nodeTitle, pinName}: a pin that holds one link (an exec output, a data input) drops its old link to take the new one. Absent when nothing was replaced."
+        },
+        "respawnOnDeath": {
+          "type": "boolean",
+          "description": "The pawn has the health behaviour, so dying respawns it too; add health first, then respawn again, to get it. False on a pawn with a game over, which restarts the level when it dies."
         },
         "resultNodeGuid": {
           "type": "string",
@@ -13573,7 +15102,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "x-unreal-reflection-boundary": true
           },
           "x-unreal-reflection-boundary": true,
-          "description": "Per-step outcome: index, edit, id, success, error, nodeGuid, resultNodeGuid (add_function), pins (for created nodes), connected, appliedValue, placementWarning (a create step that was moved off an overlapping position, or placed where it still overlaps)."
+          "description": "Per-step outcome: index, edit, id, success, error, nodeGuid, resultNodeGuid (add_function), pins (for created nodes), connected, appliedValue, placementWarning (a create step that was moved off an overlapping position, or placed where it still overlaps), inputPins and boundToMembers (a Math Expression's Expression step: the pins it made, and the names that read member variables instead). A step that ran and has nothing more to say (a plain connect_pins, an add_variable) is counted in succeeded, not listed; a failed batch lists only the step that failed, with its error."
         },
         "right": {
           "type": "number",
@@ -13581,7 +15110,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "saved": {
           "type": "boolean",
-          "description": "Whether the Widget Blueprint was saved."
+          "description": "The Blueprint was saved."
         },
         "scanned": {
           "type": "number",
@@ -13651,7 +15180,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "succeeded": {
           "type": "number",
-          "description": "Steps that completed."
+          "description": "Steps that completed; 0 when a step failed, since the steps before it were undone."
         },
         "success": {
           "type": "boolean",
@@ -13669,6 +15198,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Key time in seconds."
         },
+        "timelineName": {
+          "type": "string",
+          "description": "For a Timeline node: the timeline it plays, the name edit_timeline takes."
+        },
         "top": {
           "type": "number",
           "description": "Top margin in slate units."
@@ -13681,9 +15214,22 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "MovieScene track class that owns the section."
         },
+        "trackCount": {
+          "type": "number",
+          "description": "With animationName: tracks in the animation, those on its widgets included."
+        },
         "trackType": {
           "type": "string",
           "description": "Normalised track type."
+        },
+        "tracks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Every track: name (its node pin), type and keys (the key count)."
         },
         "truncated": {
           "type": "boolean",
@@ -13696,6 +15242,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Ids of listed nodes that stayed where they were: wired to no node left in place, or no free slot near one."
         },
+        "useLastKeyframe": {
+          "type": "boolean",
+          "description": "Whether it ends at its last key."
+        },
         "value": {
           "description": "Property value re-read from the Class Default Object after the write. Emitted on the literal path only and omitted when the value cannot be exported to JSON."
         },
@@ -13704,20 +15254,46 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Variable name to add, remove, rename, or modify."
         },
         "variableNames": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Every variable that took the metadata."
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Every variable removed, in the Blueprint's own spelling."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Every variable that took the metadata."
+            }
+          ],
+          "description": "Every variable removed, in the Blueprint's own spelling."
         },
         "variables": {
-          "type": "array",
-          "description": "Blueprint variables (NewVariables).",
-          "items": {
-            "type": "object",
-            "x-unreal-reflection-boundary": true,
-            "description": "Variable entry: name, type, category, replication, default value."
-          }
+          "oneOf": [
+            {
+              "type": "array",
+              "description": "Blueprint variables (NewVariables).",
+              "items": {
+                "type": "object",
+                "x-unreal-reflection-boundary": true,
+                "description": "Variable entry: name, type, category, replication, default value."
+              }
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "The variables it uses: {name, status added, redefaulted or kept}."
+            }
+          ],
+          "description": "Blueprint variables (NewVariables)."
         },
         "verifiedValue": {
           "description": "Value to assign to the property. An object or class reference takes a path (a Blueprint class path ends in _C); null or \"None\" clears it."
@@ -13823,6 +15399,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "widgets": {
           "oneOf": [
+            {
+              "type": "array",
+              "description": "With animationName: each widget it drives, by its name in the widget tree.",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true,
+                "description": "{widget, tracks: [{property (RenderTransform, RenderOpacity, ColorAndOpacity ...), kind (transform, float, color, or the track class), channels: {name: [[seconds, value], ...]}}]}; at most 100 keys a channel."
+              }
+            },
             {
               "type": "array",
               "items": {
@@ -14375,6 +15961,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
     "inputSchema": {
       "type": "object",
       "properties": {
+        "actorName": {
+          "type": "string",
+          "description": "The actor to hit, by name in the running game; PlayerPawn names the pawn the player controls."
+        },
         "attachmentSlots": {
           "type": "array",
           "description": "Attachment slot definitions created on the weapon.",
@@ -14416,13 +16006,25 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Fraction of velocity retained on bounce (0-1)."
         },
+        "causerName": {
+          "type": "string",
+          "description": "The actor that deals it (DamageCauser), by name; its controller, or the controller of the pawn it is, instigates. Omitted: no causer."
+        },
         "collisionRadius": {
           "type": "number",
           "description": "Projectile collision sphere radius."
         },
+        "damage": {
+          "type": "number",
+          "description": "Damage dealt to the actor it hits (default 20); kept in its Damage variable, which a placed copy can change."
+        },
         "damageMultiplier": {
           "type": "number",
           "description": "Damage multiplier applied for this hitbox."
+        },
+        "damageType": {
+          "type": "string",
+          "description": "Damage type class, a path or a name (default DamageType)."
         },
         "fireRate": {
           "type": "number",
@@ -14516,7 +16118,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "projectileClass": {
           "type": "string",
-          "description": "Class path of the projectile the weapon spawns."
+          "description": "The projectile the weapon shoots: its Blueprint path (/Game/Weapons/BP_Bullet) or class path."
         },
         "projectileGravityScale": {
           "type": "number",
@@ -14567,7 +16169,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "configure_weapon",
             "configure_projectile",
             "configure_damage",
-            "get_combat_info"
+            "get_combat_info",
+            "apply_damage"
           ],
           "description": "Action to invoke on manage_combat."
         }
@@ -14619,18 +16222,38 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true
         },
+        "damage": {
+          "type": "number",
+          "description": "Damage it deals on a hit."
+        },
+        "damageApplied": {
+          "type": "number",
+          "description": "The damage the actor took: 0 when it cannot be damaged (Can be Damaged off)."
+        },
         "damageTypePath": {
           "type": "string",
           "description": "Canonical /Game damage type asset path."
+        },
+        "destroyed": {
+          "type": "boolean",
+          "description": "The hit destroyed the actor."
         },
         "details": {
           "type": "object",
           "x-unreal-reflection-boundary": true,
           "description": "Additional handler result fields not named by the contract."
         },
+        "fireFunction": {
+          "type": "string",
+          "description": "The function that shoots: Fire."
+        },
         "fireRate": {
           "type": "number",
           "description": "Rate of fire in rounds per minute."
+        },
+        "health": {
+          "type": "number",
+          "description": "Its Health variable after the hit, when it has a number by that name (the health behaviour gives one)."
         },
         "hitboxSize": {
           "type": "object",
@@ -14759,6 +16382,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Color as an {r, g, b, a} object or an [r, g, b, a] array: 0 to 255 channels for debug_shape, 0 to 1 for a light."
         },
+        "componentName": {
+          "type": "string",
+          "description": "Actor form: which Niagara component of the actor takes the values, when it has several (a Blueprint with a fire and a smoke); default its first. A name it lacks is refused with the names it has."
+        },
         "control": {
           "type": "string",
           "enum": [
@@ -14772,7 +16399,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "deltaTime": {
           "type": "number",
-          "description": "Simulation delta time per step, in seconds."
+          "description": "Seconds per step (default 0.1); steps of about a frame (0.02) simulate the way the game does."
         },
         "density": {
           "type": "number",
@@ -14985,6 +16612,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Module (function call) name that owns inputName; alternative to targetNodeId."
         },
+        "moduleNames": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Only these modules' moduleInputs and staticSwitches (Collision, SpawnRate), any case; a whole system's inputs run to 15 KB."
+        },
         "modulePath": {
           "type": "string",
           "description": "Canonical /Niagara module script path to insert."
@@ -15003,7 +16637,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "parameterType": {
           "type": "string",
-          "description": "Niagara parameter type (Float, Vector, Color, ...)."
+          "description": "Niagara parameter type (Float, Vector, Color or LinearColor, ...)."
         },
         "parameterValue": {
           "description": "Niagara parameter value (any type)."
@@ -15029,7 +16663,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             ],
             "additionalProperties": false
           },
-          "description": "Several values written together and saved once, in place of parameterName and parameterValue: each {parameterName, parameterValue} names a user parameter, a module input or a module's static switch as get_niagara_info lists it (InitializeParticle.Lifetime, InitializeParticle.Ribbon Width Mode), and emitterName and save apply to every entry. The reply lists every entry (parameterName, applied, error); the call fails PARAMETER_BATCH_INCOMPLETE naming any that did not apply, and the others stay written."
+          "description": "Several values written together and saved once, in place of parameterName and parameterValue: each {parameterName, parameterValue} names a user parameter, a module input or a module's static switch as get_niagara_info lists it (InitializeParticle.Lifetime, InitializeParticle.Ribbon Width Mode), and emitterName and save apply to every entry. With actorName (edit=set_parameter) each entry is a user parameter of that placed effect, in place of parameterName and value. The reply lists every entry (parameterName, applied, error); the call fails PARAMETER_BATCH_INCOMPLETE naming any that did not apply, and the others stay written."
         },
         "path": {
           "type": "string",
@@ -15049,7 +16683,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "reset": {
           "type": "boolean",
-          "description": "Whether the effect restarts from its initial state."
+          "description": "Restart the system from age 0 before stepping, so it ends at exactly steps x deltaTime seconds; also plays a finished system again. Without it the steps add to the age it has."
         },
         "rotation": {
           "type": "array",
@@ -15091,6 +16725,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "The parameter to read: a user parameter of the same type (User.Tint) or an engine, system or emitter one (Emitter.Age)."
         },
+        "sourceEmitterName": {
+          "type": "string",
+          "description": "The emitter of sourceSystemPath to copy, by the name get_niagara_info lists."
+        },
+        "sourceSystemPath": {
+          "type": "string",
+          "description": "Niagara system to copy sourceEmitterName from, in place of emitterPath. The user parameters the emitter reads come along with their values when this system lacks them. An emitter that inherits from an emitter asset is refused (EMITTER_INHERITS): add that asset with emitterPath."
+        },
         "spawnOnEvent": {
           "type": "boolean",
           "description": "Whether the receiver spawns particles on each event."
@@ -15105,7 +16747,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "steps": {
           "type": "number",
-          "description": "Number of simulation steps to advance."
+          "description": "Steps to run (default 1): the system ages steps x deltaTime seconds."
         },
         "system": {
           "type": "string",
@@ -15190,6 +16832,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "A parameters call: how many entries were written."
         },
+        "componentName": {
+          "type": "string",
+          "description": "Actor form: the Niagara component that took the values."
+        },
         "details": {
           "type": "object",
           "x-unreal-reflection-boundary": true,
@@ -15249,6 +16895,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "List of string values."
         },
+        "stackErrors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "What the Niagara editor's stack shows as errors for the system after the add, each naming the module, the problem and the editor's fixes; empty when the stack is clean."
+        },
+        "stackIndex": {
+          "type": "number",
+          "description": "Where the module went in its stack (0 is the first module), when it went ahead of a module that must run after it; absent when it went at the end."
+        },
         "success": {
           "type": "boolean",
           "description": "Whether the action succeeded."
@@ -15256,6 +16913,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "systemPath": {
           "type": "string",
           "description": "Canonical /Game asset path."
+        },
+        "userParametersAdded": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "User parameters a copy brought along (User.EmberRate), absent when none."
         },
         "valid": {
           "type": "boolean",
@@ -15697,7 +17361,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "angle": {
           "type": "number",
-          "description": "Angle in degrees."
+          "description": "Degrees to turn the profile about local Z, 1 to 360 (default 360), starting on local +X and turning toward +Y; less leaves an open wedge whose two cut faces are not closed."
         },
         "aoDistance": {
           "type": "number",
@@ -15742,28 +17406,60 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Which boolean mesh variant to run."
         },
+        "by": {
+          "type": "string",
+          "enum": [
+            "parts",
+            "material"
+          ],
+          "description": "parts (default): one mesh per separate object, where connected pieces whose bounds touch or come within gap cm are one object (a crate's planks stay one crate); material: one per material slot."
+        },
         "cap": {
           "type": "boolean",
           "description": "Close open ends: the tube ends of a loft, sweep or extrude along a spline, or for a revolve flat discs from the first and last profile points to the axis (revolve default true)."
         },
         "center": {
-          "type": "object",
-          "description": "Center of operation.",
-          "properties": {
-            "x": {
-              "type": "number",
-              "description": "X"
+          "oneOf": [
+            {
+              "type": "object",
+              "description": "A point on the mirror plane in the mesh's local space, cm (default 0,0,0).",
+              "properties": {
+                "x": {
+                  "type": "number",
+                  "description": "X"
+                },
+                "y": {
+                  "type": "number",
+                  "description": "Y"
+                },
+                "z": {
+                  "type": "number",
+                  "description": "Z"
+                }
+              },
+              "additionalProperties": false
             },
-            "y": {
-              "type": "number",
-              "description": "Y"
-            },
-            "z": {
-              "type": "number",
-              "description": "Z"
+            {
+              "type": "object",
+              "description": "Ring: a point on the turning axis in the mesh's local space, cm (default 0,0,0); the copies turn about the mesh's local Z through it.",
+              "properties": {
+                "x": {
+                  "type": "number",
+                  "description": "X"
+                },
+                "y": {
+                  "type": "number",
+                  "description": "Y"
+                },
+                "z": {
+                  "type": "number",
+                  "description": "Z"
+                }
+              },
+              "additionalProperties": false
             }
-          },
-          "additionalProperties": false
+          ],
+          "description": "A point on the mirror plane in the mesh's local space, cm (default 0,0,0)."
         },
         "collision": {
           "type": "string",
@@ -15800,7 +17496,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "count": {
           "type": "integer",
-          "description": "Count of repeated elements."
+          "description": "Copies in all, the original included (1 to 100): count 3 is the original and two copies."
         },
         "curvatureScale": {
           "type": "number",
@@ -15825,7 +17521,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "depth": {
           "type": "number",
-          "description": "Primitive depth along Z."
+          "description": "Primitive depth: a box's size along Z; a plane's size along Y (a plane lies flat in XY, centred, facing +Z)."
         },
         "depthSegments": {
           "type": "integer",
@@ -15853,6 +17549,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "distance": {
           "type": "number",
           "description": "Distance for offset-style operations."
+        },
+        "dropRepeats": {
+          "type": "boolean",
+          "description": "Leave out an object that only repeats a larger one where it stands, such as an LOD copy an importer merged into the mesh (default true)."
+        },
+        "dryRun": {
+          "type": "boolean",
+          "description": "Answer the meshes the split would make (size, triangles, offset, and exists when the name is taken) and create nothing, to tune gap and minTriangles first. A large pack can take longer than one call waits."
         },
         "edges": {
           "type": "array",
@@ -15915,7 +17619,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "minItems": 1,
           "maxItems": 20000,
-          "description": "Faces, each a list of three or more vertex indices into vertices (at most 20000 faces). List a face's corners so that (v1 - v0) x (v2 - v0) points outward, and let two faces that share an edge run along it in opposite directions; the call refuses a face wound the other way, or an edge shared by more than two faces, and names the face. A face with more than three corners is triangulated (it may be concave) and all its triangles keep the face's polygroup."
+          "description": "Faces, each a list of three or more vertex indices into vertices (at most 20000 faces). List a face's corners so that (v1 - v0) x (v2 - v0) points outward, and let two faces that share an edge run along it in opposite directions; the call refuses a face wound the other way, or an edge shared by more than two faces, and names the face. A face with more than three corners is triangulated (it may be concave) and all its triangles keep the face's polygroup. The new faces get smooth normals, shared where they meet; split_normals creases the hard edges."
         },
         "floating": {
           "type": "boolean",
@@ -15928,6 +17632,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "g": {
           "type": "number",
           "description": "Green channel, 0-1."
+        },
+        "gap": {
+          "type": "number",
+          "description": "With by parts: pieces whose bounds come within this many cm of each other are one object (default 2)."
         },
         "groupID": {
           "type": "integer",
@@ -15947,7 +17655,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "heightSegments": {
           "type": "integer",
-          "description": "Tessellation segments along height."
+          "description": "Tessellation segments along height (on a plane, along its depth, Y)."
         },
         "hullCount": {
           "type": "integer",
@@ -15955,7 +17663,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "innerRadius": {
           "type": "number",
-          "description": "Radius of a centred hole (default 0, a solid disc)."
+          "description": "In cm, per variant. Disc and ring: the centred hole (disc default 0, solid; ring 25). Pipe: the inner wall (default 40). Torus and arch: the TUBE radius, its round cross-section, not a hole (default 20 torus, 25 arch); the opening under an arch is radius - innerRadius. Spiral stairs: the radius of the central well."
         },
         "iterations": {
           "type": "integer",
@@ -16030,9 +17738,21 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "integer",
           "description": "Hull budget (1 to 64, default 8) when collisionType is convex_decomposition."
         },
+        "maxParts": {
+          "type": "number",
+          "description": "More parts than this (default 64) refuses the split with nothing made."
+        },
+        "meshPath": {
+          "type": "string",
+          "description": "Static mesh asset to start from: its geometry is copied in, each section as the material id of its slot, in the mesh's own local space. Omitted, the mesh starts empty."
+        },
         "midpoint": {
           "type": "number",
           "description": "Texture luminance midpoint for displacement."
+        },
+        "minTriangles": {
+          "type": "number",
+          "description": "Objects with fewer triangles are left out (default 12): loose bits, decal cards."
         },
         "modeling": {
           "type": "string",
@@ -16061,6 +17781,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Name for the new asset or node."
         },
+        "namePrefix": {
+          "type": "string",
+          "description": "Names are <namePrefix>01, <namePrefix>02 ..., largest part first (default <source name>_Part); a name already taken refuses the split before anything is made."
+        },
         "numCuts": {
           "type": "integer",
           "description": "Number of evenly spaced cuts."
@@ -16082,23 +17806,47 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Number of turns for spiral stairs (converted to a curve angle)."
         },
         "offset": {
-          "type": "object",
-          "description": "Offset vector.",
-          "properties": {
-            "x": {
-              "type": "number",
-              "description": "X"
+          "oneOf": [
+            {
+              "type": "object",
+              "description": "Offset vector.",
+              "properties": {
+                "x": {
+                  "type": "number",
+                  "description": "X"
+                },
+                "y": {
+                  "type": "number",
+                  "description": "Y"
+                },
+                "z": {
+                  "type": "number",
+                  "description": "Z"
+                }
+              },
+              "additionalProperties": false
             },
-            "y": {
-              "type": "number",
-              "description": "Y"
-            },
-            "z": {
-              "type": "number",
-              "description": "Z"
+            {
+              "type": "object",
+              "description": "Row: the step from one copy to the next in the mesh's local space, cm (default 100 along x); copy k sits k steps from the original.",
+              "properties": {
+                "x": {
+                  "type": "number",
+                  "description": "X"
+                },
+                "y": {
+                  "type": "number",
+                  "description": "Y"
+                },
+                "z": {
+                  "type": "number",
+                  "description": "Z"
+                }
+              },
+              "additionalProperties": false
             }
-          },
-          "additionalProperties": false
+          ],
+          "description": "Offset vector."
         },
         "operation": {
           "type": "string",
@@ -16135,6 +17883,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "outputPath": {
           "type": "string",
           "description": "Canonical /Game output asset path."
+        },
+        "pivot": {
+          "type": "string",
+          "enum": [
+            "bottom",
+            "center",
+            "source"
+          ],
+          "description": "Each new mesh's pivot: bottom (default), the bottom centre of its bounds, so it stands on what it is placed on; center; or source, the source's own origin."
         },
         "position": {
           "type": "object",
@@ -16196,7 +17953,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             ],
             "additionalProperties": false
           },
-          "description": "Points from bottom to top, at least 2. For a hollow shape with walls, go up the outside and back down the inside. Omit for a small built-in vase."
+          "description": "Points from bottom to top, at least 2. For a hollow shape with walls, go up the outside and back down the inside. A closed loop (end on the first point) with cap false turns a solid ring section, such as a moulding or a tyre. Omit for a small built-in vase."
         },
         "r": {
           "type": "number",
@@ -16208,7 +17965,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "radius": {
           "type": "number",
-          "description": "Primitive radius."
+          "description": "Radius in cm (default 50). Torus and arch: from the centre to the middle of the tube (arch default 100). Pipe: the outer wall, as outerRadius. Spiral stairs: the inner radius when innerRadius is not given (default 150)."
         },
         "recomputeNormals": {
           "type": "boolean",
@@ -16425,7 +18182,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                   "torus",
                   "cone"
                 ],
-                "description": "sphere (radius), ellipsoid (radii), box (extent = half size, rounding), capsule (radius, length of the straight part, along local Z), cylinder (radius, length, rounding, along local Z), torus (radius to the tube centre, thickness = tube radius, in local XY), cone (radius at the bottom, topRadius, length, along local Z, rounded ends)."
+                "description": "sphere (radius), ellipsoid (radii), box (extent = half size, rounding), capsule (radius, length of the straight part, along local Z), cylinder (radius, length, rounding, along local Z), torus (radius to the tube centre, thickness = tube radius, in local XY), cone (radius at the bottom, topRadius, length, along local Z, rounded ends). radius also sets an ellipsoid's radii and a box's extent when those are left out; any other size a type does not read is refused."
               },
               "operation": {
                 "type": "string",
@@ -16438,7 +18195,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               },
               "center": {
                 "type": "object",
-                "description": "Shape centre in the mesh's local space, cm (default 0,0,0).",
+                "description": "Shape centre in the mesh's local space, cm (default 0,0,0); with relativeTo, in that shape's frame.",
                 "properties": {
                   "x": {
                     "type": "number",
@@ -16454,6 +18211,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                   }
                 },
                 "additionalProperties": false
+              },
+              "relativeTo": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 63,
+                "description": "Index of an earlier shapes[] entry to place this one on: center, rotation, repeat and mirror are then measured from that shape's centre along its own turned axes (not scaled by its size), so the eyes, mouth or buttons of a leaning or turned part stay on it without working out the rotation. mirror then reflects across that shape's own planes."
               },
               "rotation": {
                 "type": "object",
@@ -16779,7 +18542,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "v0": {
           "type": "object",
-          "description": "First corner {x, y, z} of the appended triangle.",
+          "description": "First corner {x, y, z} of the appended triangle. The triangle faces the side (v1 - v0) x (v2 - v0) points to, as append_polygons faces do; the other side is culled.",
           "properties": {
             "x": {
               "type": "number",
@@ -16902,6 +18665,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "configure_mesh_lods",
             "convert_to_nanite",
             "convert_to_static_mesh",
+            "split_mesh",
             "get_mesh_info",
             "edit_dynamic_mesh",
             "get_vertex_position"
@@ -16997,6 +18761,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Offset distance used, in cm."
         },
+        "droppedRepeats": {
+          "type": "number",
+          "description": "Objects left out as repeats of a larger one."
+        },
         "elementsModified": {
           "type": "integer",
           "description": "Number of UV elements written."
@@ -17035,6 +18803,19 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "integer"
           },
           "description": "Every material id the mesh carries now, ascending."
+        },
+        "meshPath": {
+          "type": "string",
+          "description": "The source mesh."
+        },
+        "meshes": {
+          "type": "array",
+          "description": "One entry per new mesh, largest first: assetPath, triangles, size [x, y, z], offset [x, y, z] (its pivot in the source's space), slots; saved: false when it could not be written to disk.",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          }
         },
         "message": {
           "type": "string",
@@ -17092,6 +18873,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "copies": {
                 "type": "integer",
                 "description": "How many shapes this entry became with its repeat and mirror (the shape itself included); absent for a single shape."
+              },
+              "warning": {
+                "type": "string",
+                "description": "Present when a union shape is under two grid cells across: its surface can come out ragged, or as almost nothing when it formed under 24 triangles; raise resolution or thicken it."
               }
             }
           }
@@ -17138,6 +18923,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "skipped": {
           "type": "number",
           "description": "Degenerate or missing triangles that were left alone."
+        },
+        "skippedSmall": {
+          "type": "number",
+          "description": "Objects left out for having fewer than minTriangles triangles."
         },
         "slots": {
           "type": "array",
@@ -17193,7 +18982,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "integer",
             "number"
           ],
-          "description": "Triangle count of the mesh after the call."
+          "description": "Triangle count."
         },
         "triangleIndex": {
           "type": "integer",
@@ -17296,11 +19085,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "autoClose": {
           "type": "boolean",
-          "description": "Whether the door closes automatically."
+          "description": "Whether it closes by itself after the last pawn leaves (default false: it stays open)."
         },
         "autoCloseDelay": {
           "type": "number",
-          "description": "Delay in seconds before the door auto-closes."
+          "description": "Seconds after the last pawn leaves before an autoClose door or lid shuts (default 3)."
         },
         "blueprintPath": {
           "type": "string",
@@ -17353,11 +19142,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "openAngle": {
           "type": "number",
-          "description": "Open angle in degrees."
+          "description": "Open angle in degrees (a new door gets 90, a new chest lid 100)."
         },
         "openTime": {
           "type": "number",
-          "description": "Open animation duration in seconds."
+          "description": "Seconds the door or lid takes to swing fully open or shut (a new door gets 0.5, a new chest 0.6)."
         },
         "requiresKey": {
           "type": "boolean",
@@ -17852,10 +19641,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
     "inputSchema": {
       "type": "object",
       "properties": {
-        "assetPath": {
-          "type": "string",
-          "description": "Alias of levelPath resolved by the manage_level argument normalizer."
-        },
         "color": {
           "type": "array",
           "items": {
@@ -17921,13 +19706,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Folder the new level goes in (e.g. /Game/Maps, combined with levelName), or its full path; omitted, the level lands in /Game/Maps."
         },
-        "levelPaths": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Array of level asset paths."
-        },
         "lightClass": {
           "type": "string",
           "description": "Light class name or path, for a class lightType does not name, including a Blueprint light (/Game/Lights/BP_Lamp.BP_Lamp_C); build_environment list_light_types lists the loaded ones. Wins over lightType."
@@ -17967,10 +19745,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "parentLevel": {
           "type": "string",
           "description": "Level the sub-level belongs to; it must be the level open in the editor, or the call is refused (load it first)."
-        },
-        "path": {
-          "type": "string",
-          "description": "Alias of levelPath resolved by the manage_level argument normalizer."
         },
         "properties": {
           "type": "object",
@@ -18040,7 +19814,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "targetPath": {
           "type": "string",
-          "description": "Alias of destinationPath resolved by the manage_level argument normalizer."
+          "description": "Alias of destinationPath."
         },
         "timeDilation": {
           "type": "number",
@@ -18177,9 +19951,9 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Levels in the current world (persistent level plus streaming levels)."
         },
-        "deletedCount": {
-          "type": "number",
-          "description": "Number of levels successfully deleted."
+        "deleted": {
+          "type": "boolean",
+          "description": "True once the map file and its built data and external actor files are gone."
         },
         "details": {
           "type": "object",
@@ -18246,6 +20020,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether any world setting was written."
         },
+        "settledSeconds": {
+          "type": "number",
+          "description": "How long the reply waited for the level to settle (its water, streamed textures and effects drawn), so a screenshot right after shows the level as it looks."
+        },
         "success": {
           "type": "boolean",
           "description": "Whether the action succeeded."
@@ -18255,6 +20033,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true,
           "description": "Asset-registry tag/value pairs (asset-registry lookup)."
+        },
+        "texturesStillStreaming": {
+          "type": "number",
+          "description": "Textures still streaming in when the wait ended at its cap; absent when streaming had gone quiet."
         },
         "timeDilation": {
           "type": "number",
@@ -18570,23 +20352,47 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Loading range for grid cells."
         },
         "location": {
-          "type": "object",
-          "description": "World location {x, y, z}.",
-          "properties": {
-            "x": {
-              "type": "number",
-              "description": "X"
+          "oneOf": [
+            {
+              "type": "object",
+              "description": "World location {x, y, z}.",
+              "properties": {
+                "x": {
+                  "type": "number",
+                  "description": "X"
+                },
+                "y": {
+                  "type": "number",
+                  "description": "Y"
+                },
+                "z": {
+                  "type": "number",
+                  "description": "Z"
+                }
+              },
+              "additionalProperties": false
             },
-            "y": {
-              "type": "number",
-              "description": "Y"
-            },
-            "z": {
-              "type": "number",
-              "description": "Z"
+            {
+              "type": "object",
+              "description": "World location {x, y, z}; the world origin when omitted.",
+              "properties": {
+                "x": {
+                  "type": "number",
+                  "description": "X"
+                },
+                "y": {
+                  "type": "number",
+                  "description": "Y"
+                },
+                "z": {
+                  "type": "number",
+                  "description": "Z"
+                }
+              },
+              "additionalProperties": false
             }
-          },
-          "additionalProperties": false
+          ],
+          "description": "World location {x, y, z}."
         },
         "nodeClass": {
           "type": "string",
@@ -19202,6 +21008,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Rep notify func."
         },
+        "replaceKey": {
+          "type": "string",
+          "description": "A key the action is already mapped to: its mapping moves to key (the remap of a control), keeping its triggers and modifiers unless triggerType or modifierType is sent, and that key stops firing the action. A key the action is not mapped to fails NOT_FOUND and lists the keys it is."
+        },
         "replicateMovement": {
           "type": "boolean",
           "description": "Replicate movement."
@@ -19345,7 +21155,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Trigger type."
         },
         "useOwnerNetRelevancy": {
-          "type": "string",
+          "type": "boolean",
           "description": "Use owner net relevancy."
         },
         "usePushModel": {
@@ -21538,6 +23348,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Category name to enable/disable."
         },
+        "taskId": {
+          "type": "string",
+          "description": "The task.taskId the still-running answer gave. Only the last 32 such calls of this server or editor session are kept."
+        },
         "tools": {
           "type": "array",
           "items": {
@@ -21555,6 +23369,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "enable_category",
             "disable_category",
             "get_status",
+            "get_task_result",
             "reset"
           ],
           "description": "Action to invoke on manage_tools."
@@ -21638,15 +23453,38 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "string"
           }
         },
+        "outcome": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "Once done: the call's own reply as it would have answered (success, message, errorCode, data, and its receipt with what changed)."
+        },
+        "progress": {
+          "type": "number",
+          "description": "While running, the share done (0-1) when the call reports progress."
+        },
         "protected": {
           "type": "array",
           "items": {
             "type": "string"
           }
         },
+        "state": {
+          "type": "string",
+          "enum": [
+            "queued",
+            "running",
+            "done"
+          ],
+          "description": "queued (waiting for the editor), running, or done."
+        },
         "success": {
           "type": "boolean",
           "description": "Whether the action succeeded."
+        },
+        "taskId": {
+          "type": "string",
+          "description": "The task read."
         },
         "tools": {
           "type": "array",
@@ -21690,6 +23528,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Actor names to merge (>=2 required)."
         },
+        "antiAliasing": {
+          "type": "string",
+          "enum": [
+            "tsr",
+            "taa",
+            "fxaa",
+            "msaa",
+            "none"
+          ],
+          "description": "Default anti-aliasing method."
+        },
         "archiveDirectory": {
           "type": "string",
           "description": "Archive directory package_project wrote (default <Project>/Packaged). Must be inside the project."
@@ -21701,6 +23550,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "assetPath": {
           "type": "string",
           "description": "Single asset path to validate."
+        },
+        "autoExposure": {
+          "type": "boolean",
+          "description": "Auto exposure on by default."
+        },
+        "bloom": {
+          "type": "boolean",
+          "description": "Bloom on by default."
         },
         "boostPlayerLocation": {
           "type": "boolean",
@@ -21729,6 +23586,18 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "childClass": {
           "type": "string",
           "description": "Child component class (required)."
+        },
+        "classLocation": {
+          "type": "string",
+          "enum": [
+            "public",
+            "private"
+          ],
+          "description": "public (default): header in Public, .cpp in Private; private: both in Private. A module without those folders takes both files in its own folder."
+        },
+        "className": {
+          "type": "string",
+          "description": "The class name without its prefix: MyActor makes AMyActor (an Actor parent), MyThing makes UMyThing (an Object parent). Letters, digits and _."
         },
         "code": {
           "type": "string",
@@ -21774,6 +23643,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "cvar": {
           "type": "string",
           "description": "Alternate CVar name field."
+        },
+        "dataValidation": {
+          "type": "boolean",
+          "description": "Also run Data Validation on every asset that loads (default false): an asset row gains dataValidation (valid, invalid or notValidated, the last when no validator checks that kind of asset) with its errors and warnings, a folder row the count of each verdict and issues (up to 20 assets with errors or warnings). An invalid asset makes its row invalid."
         },
         "deleteSlot": {
           "type": "boolean",
@@ -21827,6 +23700,19 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "forceRecompile": {
           "type": "boolean",
           "description": "Force a shader recompile."
+        },
+        "globalIllumination": {
+          "type": "string",
+          "enum": [
+            "lumen",
+            "screen_space",
+            "none"
+          ],
+          "description": "Dynamic global illumination method."
+        },
+        "hardwareRayTracing": {
+          "type": "boolean",
+          "description": "Support hardware ray tracing (applies after an editor restart)."
         },
         "height": {
           "type": "number",
@@ -21899,9 +23785,25 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Maps to cook. Pass these when a map is reached by NAME at runtime (OpenLevel) rather than by reference, or the cooker will not find it."
         },
+        "materialUsage": {
+          "type": "boolean",
+          "description": "Also list the material usage flags the assets' meshes need and their materials lack (default false): a Nanite static mesh's slots, a skeletal mesh's, and a Blueprint's mesh components (Nanite, instanced, spline or skeletal), as materialUsage [{material, usage, property, unsaved, component, asset}] (a folder: at most 40, with materialUsageCount). The editor sets such a flag only while it draws the mesh outside play, so a mesh that only appears in play draws the default material there and in a cooked game; set property true on the material (inspect set_property) to fix one. unsaved true: the editor set the flag (drawing a preview or loading a mesh sets it) but it is not on disk yet; save that material (control_editor save_all with assetPaths). On UE 5.8 a material instance holds its own flags, so material can name the instance. A missing flag makes its row invalid."
+        },
         "maxFPS": {
           "type": "number",
           "description": "Maximum frames per second."
+        },
+        "maxTests": {
+          "type": "number",
+          "description": "Run at most this many of the matching tests, in the order the editor lists them (default 50, at most 200); matched says how many there were."
+        },
+        "megaLights": {
+          "type": "boolean",
+          "description": "Use MegaLights by default (UE 5.5 and later; listed under unavailable on older engines)."
+        },
+        "meshDistanceFields": {
+          "type": "boolean",
+          "description": "Generate mesh distance fields, which software Lumen traces (applies after an editor restart)."
         },
         "message": {
           "type": "string",
@@ -21932,6 +23834,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Optimization mode."
         },
+        "moduleName": {
+          "type": "string",
+          "description": "The project module that gets the files; default the module named after the project, else its first runtime module. A wrong name lists the modules."
+        },
+        "motionBlur": {
+          "type": "boolean",
+          "description": "Motion blur on by default."
+        },
         "name": {
           "type": "string",
           "description": "CVar name (alternatively cvar, key, or command)."
@@ -21956,6 +23866,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "pak": {
           "type": "boolean",
           "description": "Pak the staged content (default true)."
+        },
+        "parentClass": {
+          "type": "string",
+          "description": "The C++ class to derive from, by name or path (Actor, Character, Pawn, ActorComponent, SceneComponent, Object, BlueprintFunctionLibrary, /Script/Engine.GameModeBase), or None for a plain C++ class. A Blueprint class is refused: derive from its C++ parent."
         },
         "parentName": {
           "type": "string",
@@ -22040,6 +23954,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "For a folder path, include its subfolders (default true)."
         },
+        "reflections": {
+          "type": "string",
+          "enum": [
+            "lumen",
+            "screen_space",
+            "none"
+          ],
+          "description": "Reflection method."
+        },
         "replaceSourceActors": {
           "type": "boolean",
           "description": "Replace source actors in the level."
@@ -22084,7 +24007,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "section": {
           "type": "string",
-          "description": "Settings section."
+          "description": "Settings section: a class path such as /Script/EngineSettings.GameMapsSettings, or its class name (GameMapsSettings)."
         },
         "setting": {
           "type": "string",
@@ -22110,6 +24033,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "baseline"
           ],
           "description": "Which configure display variant to run."
+        },
+        "shadows": {
+          "type": "string",
+          "enum": [
+            "virtual",
+            "maps"
+          ],
+          "description": "Shadow map method: virtual shadow maps or classic shadow maps."
         },
         "slop": {
           "type": "number",
@@ -22145,6 +24076,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Loading/streaming range."
         },
+        "subfolder": {
+          "type": "string",
+          "description": "Folder under the module's Public (or Private) folder, such as Gameplay/Pickups; default none. A module without Public and Private folders refuses one: its own folder is no include path, so the class would not compile there."
+        },
         "target": {
           "type": "string",
           "description": "UBT target name (required)."
@@ -22152,6 +24087,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "text": {
           "type": "string",
           "description": "Optional text for text-bearing components."
+        },
+        "timeoutSeconds": {
+          "type": "number",
+          "description": "Stop a test still running after this many seconds and count it failed (default 60, at most 600)."
         },
         "traceFile": {
           "type": "string",
@@ -22219,6 +24158,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "profile_performance",
             "configure_performance",
             "merge_actors",
+            "create_cpp_class",
             "run_build",
             "package_project",
             "package_status",
@@ -22232,6 +24172,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "execute_python",
             "set_project_setting",
             "get_project_settings",
+            "configure_rendering",
             "validate_assets",
             "lumen_update_scene",
             "list_plugins",
@@ -22257,13 +24198,41 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Active trace channels."
         },
+        "allPassed": {
+          "type": "boolean",
+          "description": "True when at least one test ran and every test passed."
+        },
         "archiveDirectory": {
           "type": "string",
           "description": "Resolved absolute archive directory."
         },
         "changed": {
-          "type": "boolean",
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "The settings this call changed."
+            },
+            {
+              "type": "boolean",
+              "description": "False when the plugin was already in the requested state and nothing was written."
+            }
+          ],
           "description": "False when the plugin was already in the requested state and nothing was written."
+        },
+        "checkedCount": {
+          "type": "number",
+          "description": "Paths checked."
+        },
+        "className": {
+          "type": "string",
+          "description": "The C++ class name with its prefix (AMyActor)."
+        },
+        "classPath": {
+          "type": "string",
+          "description": "The class's path once compiled (/Script/<Module>.<Name>), for a class with a UObject parent."
         },
         "codeSha256": {
           "type": "string",
@@ -22276,6 +24245,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "commandLine": {
           "type": "string",
           "description": "The UAT command line this job launched."
+        },
+        "compiled": {
+          "type": "boolean",
+          "description": "Whether the editor compiled the module after adding the files (Live Coding or hot reload, as its settings say); a Live Coding compile has only started when this answers, and read_log category LogLiveCoding says whether it succeeded."
         },
         "componentName": {
           "type": "string",
@@ -22300,6 +24273,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "count": {
           "type": "number",
           "description": "Without slotName: how many slots there are."
+        },
+        "cppPath": {
+          "type": "string",
+          "description": "Absolute path of the new .cpp."
         },
         "created": {
           "type": "boolean",
@@ -22354,6 +24331,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "launch_build only: the exit code of a game that quit before its run ended."
         },
+        "failed": {
+          "type": "number",
+          "description": "Tests that failed or timed out."
+        },
         "failedCount": {
           "type": "number",
           "description": "With paths: how many paths were not deleted."
@@ -22375,9 +24356,21 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "True when more matching files follow this page."
         },
+        "headerPath": {
+          "type": "string",
+          "description": "Absolute path of the new header."
+        },
         "hint": {
           "type": "string",
           "description": "How to get a full section dump."
+        },
+        "invalidCount": {
+          "type": "number",
+          "description": "Paths that failed."
+        },
+        "isValid": {
+          "type": "boolean",
+          "description": "True when every path loaded (and, with dataValidation, none was invalid; with materialUsage, no flag was missing)."
         },
         "jobId": {
           "type": "string",
@@ -22432,9 +24425,21 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Human-readable result message."
         },
+        "moduleName": {
+          "type": "string",
+          "description": "The module the class went into."
+        },
         "nextOffset": {
           "type": "number",
           "description": "The offset of the next page; present only when hasMore is true."
+        },
+        "notRun": {
+          "type": "number",
+          "description": "Tests the framework did not start (another run or Play In Editor began meanwhile)."
+        },
+        "note": {
+          "type": "string",
+          "description": "A setting that cannot work as set, such as Lumen without distance fields or hardware ray tracing."
         },
         "offset": {
           "type": "number",
@@ -22457,6 +24462,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "parentName": {
           "type": "string",
           "description": "Panel it was added under."
+        },
+        "passed": {
+          "type": "number",
+          "description": "Tests that passed."
         },
         "path": {
           "type": "string",
@@ -22542,17 +24551,43 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Absolute path to the generated .memreport file."
         },
         "restartRequired": {
-          "type": "boolean",
-          "description": "True whenever the project file changed; modules and content mount only at startup."
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Changed settings that take effect only after the editor restarts (control_editor restart_editor)."
+            },
+            {
+              "type": "boolean",
+              "description": "True whenever the project file changed; modules and content mount only at startup."
+            }
+          ],
+          "description": "Changed settings that take effect only after the editor restarts (control_editor restart_editor)."
         },
         "results": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "additionalProperties": true,
-            "x-unreal-reflection-boundary": true
-          },
-          "description": "With paths: one entry per path (path, deleted, and errorCode plus error when it was not deleted). The call fails with PARTIAL_DELETE when any path was not deleted."
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "One row per path: path, isValid, kind (asset, directory, missing or invalid), message, assetCount for a folder, with dataValidation its verdict, errors, warnings or issues, and with materialUsage the missing flags (materialUsage, and materialUsageCount for a folder)."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "With paths: one entry per path (path, deleted, and errorCode plus error when it was not deleted). The call fails with PARTIAL_DELETE when any path was not deleted."
+            }
+          ],
+          "description": "One row per path: path, isValid, kind (asset, directory, missing or invalid), message, assetCount for a folder, with dataValidation its verdict, errors, warnings or issues, and with materialUsage the missing flags (materialUsage, and materialUsageCount for a folder)."
         },
         "returned": {
           "type": "number",
@@ -22587,8 +24622,19 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Number of config properties returned."
         },
         "settings": {
-          "type": "object",
-          "x-unreal-reflection-boundary": true,
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "Every setting above as it reads after the call, by the same names and values."
+            },
+            {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Config properties of the requested section (every CPF_Config property of the settings class as text; omitted when key names one), or the project snapshot (engineVersion, projectName, projectDir, maps, general) when no section is given."
+            }
+          ],
           "description": "Config properties of the requested section (every CPF_Config property of the settings class as text; omitted when key names one), or the project snapshot (engineVersion, projectName, projectDir, maps, general) when no section is given."
         },
         "slotName": {
@@ -22616,6 +24662,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether the action succeeded."
         },
+        "tests": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "One row per test run: name (its full path), passed, durationSeconds, errorCount and errors, warningCount and warnings (the first 10 of each), and a note when it timed out or was not run."
+        },
         "total": {
           "type": "number",
           "description": "How many files match the root and extension filters, across all pages."
@@ -22631,6 +24686,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "uatResult": {
           "type": "string",
           "description": "UAT's own result word once the task finished."
+        },
+        "unavailable": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Settings this engine version does not have; nothing was written for them."
         },
         "value": {
           "type": "string",

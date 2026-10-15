@@ -1,4 +1,4 @@
-# Native gates for the McpAutomationBridge plugin.
+# Native gates for the EngineWire plugin.
 #
 # The TypeScript suite validates records, counts and drift, but it never
 # compiles or runs the C++. That gap is not theoretical: a handler calling a
@@ -37,7 +37,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path $PSScriptRoot -Parent
-$uplugin = Join-Path $repoRoot 'plugins\McpAutomationBridge\McpAutomationBridge.uplugin'
+$uplugin = Join-Path $repoRoot 'plugins\EngineWire\EngineWire.uplugin'
 $failures = @()
 
 function Invoke-CompileGate {
@@ -74,9 +74,9 @@ function New-SmokeProject {
     Remove-Item $dir -Recurse -Force -ErrorAction SilentlyContinue
     New-Item -ItemType Directory -Force -Path (Join-Path $dir 'Content') | Out-Null
 
-    $plugins = Join-Path $dir 'Plugins\McpAutomationBridge'
+    $plugins = Join-Path $dir 'Plugins\EngineWire'
     New-Item -ItemType Directory -Force -Path $plugins | Out-Null
-    foreach ($item in 'Binaries', 'Content', 'Resources', 'McpAutomationBridge.uplugin') {
+    foreach ($item in 'Binaries', 'Content', 'Resources', 'EngineWire.uplugin') {
         $src = Join-Path $built $item
         if (Test-Path $src) { Copy-Item $src $plugins -Recurse -Force }
     }
@@ -86,8 +86,8 @@ function New-SmokeProject {
     # the search path when their plugin is mounted, and an Optional reference in
     # the .uplugin is not enough to mount them in a bare project, so the declared
     # dependency set is restated here as explicit project entries.
-    $manifest = Get-Content (Join-Path $plugins 'McpAutomationBridge.uplugin') -Raw | ConvertFrom-Json
-    $entries = @([ordered]@{ Name = 'McpAutomationBridge'; Enabled = $true })
+    $manifest = Get-Content (Join-Path $plugins 'EngineWire.uplugin') -Raw | ConvertFrom-Json
+    $entries = @([ordered]@{ Name = 'EngineWire'; Enabled = $true })
     # Deliberately NOT carrying the manifest's Optional flag across: an optional
     # project reference leaves the plugin unmounted, and an unmounted plugin
     # keeps its Binaries off the DLL search path, which is what makes the
@@ -121,7 +121,7 @@ function New-SmokeProject {
         FileVersion       = 3
         EngineAssociation = $version
         Category          = ''
-        Description       = 'Disposable project for the McpAutomationBridge runtime smoke gate.'
+        Description       = 'Disposable project for the EngineWire runtime smoke gate.'
         Plugins           = $entries
     } | ConvertTo-Json -Depth 5 | Set-Content $uproject -Encoding utf8
     return $uproject
@@ -155,7 +155,7 @@ function Invoke-SmokeGate {
         # A developer editor may already hold the default listen ports on this
         # project. Binding is not what this gate measures, so move the sockets
         # out of the way instead of failing on a collision that is not a defect.
-        $settings = '/Script/McpAutomationBridge.McpAutomationBridgeSettings'
+        $settings = '/Script/EngineWire.EngineWireSettings'
         $report = Join-Path $env:TEMP ("McpBridgeSmokeReport_" + (Split-Path $root -Leaf) + "_$Mode")
         Remove-Item $report -Recurse -Force -ErrorAction SilentlyContinue
         $env:MCP_NATIVE_PORT = '13000'
@@ -164,7 +164,7 @@ function Invoke-SmokeGate {
         # before a single test runs. -TestExit is what makes the editor quit when
         # the queue drains instead of sitting in an idle editor loop forever.
         & $cmd "$target" `
-            -ExecCmds="Automation RunTests McpAutomationBridge" `
+            -ExecCmds="Automation RunTests EngineWire" `
             -TestExit="Automation Test Queue Empty" `
             -ReportExportPath="$report" `
             -ini:Engine:["$settings"]:ListenPorts=18090,18091 `

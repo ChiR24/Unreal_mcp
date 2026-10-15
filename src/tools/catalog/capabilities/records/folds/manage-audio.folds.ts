@@ -4,19 +4,20 @@ import type { FoldSpec } from '../shared/fold-types.js';
 export const MANAGE_AUDIO_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'play_sound', selector: 'playback',
-    summary: 'Play a sound: 2D, at a location (played or spawned), attached to an actor, or prime it for playback. A 2D sound (looping music too) plays until stop_sound. measure plays it 2D and reports how loud it played (peak and average dB, silent).',
-    topics: ['play sound', 'play sound 2d', 'play sound at location', 'attached sound', 'prime sound', 'preview sound', 'preload sound', 'measure sound', 'is sound audible'],
+    summary: 'Play a sound: 2D, at a location (played or spawned), attached to an actor, or prime it for playback. A 2D sound (looping music too) plays until stop_sound. measure plays it 2D and reports how loud it played (peak and average dB, silent). The sounds already playing are listed by console_command au.DumpActiveSounds.',
+    topics: ['play sound', 'play sound 2d', 'play sound at location', 'attached sound', 'prime sound', 'preview sound', 'preload sound', 'measure sound', 'is sound audible', 'looping music'],
     members: { '2d': 'play_sound_2d', at_location: 'play_sound_at_location', spawn_at_location: 'spawn_sound_at_location', attached: 'play_sound_attached', prime: 'prime_sound', measure: 'play_sound_measure' },
   },
   {
     primary: 'fade_sound', selector: 'fade',
     summary: 'Fade a playing sound: to a target volume, in, or out.',
+    topics: ['music volume', 'turn down the music', 'lower the volume', 'make the music quieter'],
     members: { to_volume: 'fade_sound', in: 'fade_sound_in', out: 'fade_sound_out' },
   },
   {
     primary: 'stop_sound', selector: 'soundOp',
     summary: 'Stop, pause or resume playing sounds: the 2D sounds play_sound started (only that sound with soundPath), or with all every sound the editor and a running game play, its music included. Pause holds a sound where it is and resume continues it; the reply counts the sounds changed (0 when none was playing).',
-    topics: ['pause music', 'pause sound', 'resume music'],
+    topics: ['pause music', 'pause sound', 'resume music', 'turn off sound'],
     whenNotToUse: ['The game or the Play In Editor session must be paused (use control_editor pause).'],
     members: { stop: 'stop_sound', pause: 'pause_sound', resume: 'resume_sound' },
   },
@@ -50,8 +51,8 @@ export const MANAGE_AUDIO_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'configure_sound_attenuation', selector: 'setting',
-    summary: 'Configure sound attenuation: distance falloff, spatialization, occlusion, reverb send, or a named attenuation preset.',
-    topics: ['attenuation', 'spatialization', 'occlusion', 'reverb send', 'falloff distance', 'make sound 3d', 'sound blocked by walls'],
+    summary: 'Configure sound attenuation: distance falloff and air absorption, spatialization, occlusion, reverb send, or a named attenuation preset.',
+    topics: ['attenuation', 'spatialization', 'occlusion', 'reverb send', 'falloff distance', 'make sound 3d', 'sound blocked by walls', 'air absorption', 'muffled with distance'],
     members: {
       distance: 'configure_distance_attenuation', spatialization: 'configure_spatialization', occlusion: 'configure_occlusion', reverb_send: 'configure_reverb_send',
       audio_occlusion: 'set_audio_occlusion', preset: 'set_sound_attenuation',
@@ -60,7 +61,7 @@ export const MANAGE_AUDIO_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'configure_sound_class', selector: 'setting',
     summary: 'Configure a sound class or mix: parent class, class properties, mix modifier, mix EQ.',
-    topics: ['sound class properties', 'sound class parent', 'mix modifier', 'mix eq', 'mix equalizer'],
+    topics: ['sound class properties', 'sound class parent', 'mix modifier', 'mix eq', 'mix equalizer', 'master volume'],
     members: { parent: 'set_class_parent', properties: 'set_class_properties', mix_modifier: 'add_mix_modifier', mix_eq: 'configure_mix_eq' },
   },
   {

@@ -1,0 +1,297 @@
+#include "Domains/BlueprintGraph/McpBPGraphPrivate.h"
+
+#include "Domains/Blueprint/McpBPActionContext.h"
+#include "Domains/BlueprintGraph/Behaviour/McpBPBehaviour.h"
+#include "Domains/BlueprintGraph/Behaviour/McpBPBehaviourNodes.h"
+#include "Domains/BlueprintGraph/McpBPGraphCompatibility.h"
+#include "Domains/BlueprintGraph/McpBPGraphBatchSteps.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpBPDiag.h"
+#include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
+
+// build_graph: one call that runs a list of graph edits. Wiring one event chain
+// used to cost a round trip per node, per link and per pin default; a batch runs
+// the SAME single-step handlers in-process (their replies are parked by
+// FMcpResponseCaptureRegistry instead of sent), so every step keeps its checks.
+// The batch stops at the first failing step and undoes the steps before it: kept,
+// a type error at step 5 left two variables and three nodes for the caller to find.
+namespace McpBlueprintGraphHandlers
+{
+namespace
+{
+bool IsCallFunctionType(const FString& NodeType)
+{
+    return NodeType == TEXT("CallFunction") || NodeType == TEXT("K2Node_CallFunction") ||
+           NodeType == TEXT("FunctionCall");
+}
+}
+
+namespace GraphBatch
+{
+// delete_node / break_pin_links stay single calls so each keeps its own consent
+// gate. The member steps let one batch declare what its own nodes use: a new
+// Blueprint used to cost a call per variable or function before the graph could be built.
+bool IsBatchableEdit(const FString& Edit)
+{
+    return Edit == TEXT("create_node") || Edit == TEXT("connect_pins") ||
+           Edit == TEXT("set_pin_default_value") || Edit == TEXT("set_node_property") ||
+           Edit == TEXT("create_reroute_node") || Edit == TEXT("add_variable") || Edit == TEXT("add_function") ||
+           Edit == TEXT("add_event") || Edit == TEXT("add_event_dispatcher");
+}
+
+bool RunBlueprintMemberStep(const FActionContext& Parent, const FString& Edit, const FString& StepId,
+                            const TSharedPtr<FJsonObject>& Payload)
+{
+    struct FBatchMemberStep
+    {
+        const TCHAR* Edit;
+        bool (*Handler)(const McpBlueprintHandlers::FBlueprintActionContext&);
+    };
+    static const FBatchMemberStep Members[] = {
+        {TEXT("add_variable"), &McpBlueprintHandlers::HandleBlueprintAddVariable},
+        {TEXT("add_function"), &McpBlueprintHandlers::HandleBlueprintAddFunction},
+        {TEXT("add_event"), &McpBlueprintHandlers::HandleBlueprintAddEvent},
+        {TEXT("add_event_dispatcher"), &McpBlueprintHandlers::HandleBlueprintAddEventDispatcher}};
+    for (const FBatchMemberStep& Member : Members)
+    {
+        if (Edit == Member.Edit)
+        {
+            Member.Handler(McpBlueprintHandlers::BuildBlueprintActionContext(*Parent.Subsystem, StepId, Edit, Payload,
+                                                                            Parent.RequestingSocket));
+            return true;
+        }
+    }
+    return false;
+}
+
+UEdGraphNode* FindBatchNode(UBlueprint* Blueprint, const FString& Guid)
+{
+    FGuid Parsed;
+    return Blueprint && FGuid::Parse(Guid, Parsed) ? FBlueprintEditorUtils::GetNodeByGUID(Blueprint, Parsed) : nullptr;
+}
+
+// Every function and variable a step names is resolved before any step runs. A
+// misspelled name at step 10 used to leave steps 0-9 applied, and the caller had
+// to continue the half-built graph by node guid.
+FString PrecheckSteps(const FActionContext& Context, const TArray<TSharedPtr<FJsonValue>>& Steps,
+                      int32& OutIndex, FString& OutCode)
+{
+    const bool bWidgetBlueprint = FindObject<UObject>(Context.Blueprint, TEXT("WidgetTree")) != nullptr;
+    TSet<FName> Declared, DeclaredBools;
+    for (int32 Index = 0; Index < Steps.Num(); ++Index)
+    {
+        const TSharedPtr<FJsonObject>* Step = nullptr;
+        if (!Steps[Index].IsValid() || !Steps[Index]->TryGetObject(Step) || Step == nullptr)
+        {
+            continue;
+        }
+        FString Edit, NodeType, Member, MemberClass;
+        (*Step)->TryGetStringField(TEXT("edit"), Edit);
+        // An edit the batch does not run stopped it at that step, the steps before it applied (an arrange_nodes
+        // after 69 steps), so it is refused here with the expressions, before any step runs.
+        const bool bRuns = IsBatchableEdit(Edit);
+        if (const FString Bad = bRuns ? DescribeExpressionStep(Context.Blueprint, **Step, DeclaredBools)
+                                      : DescribeUnbatchableEdit(Edit); !Bad.IsEmpty())
+        {
+            OutIndex = Index;
+            OutCode = bRuns ? TEXT("EXPRESSION_INVALID") : TEXT("INVALID_OPERATION");
+            return Bad;
+        }
+        (*Step)->TryGetStringField(TEXT("nodeType"), NodeType);
+        (*Step)->TryGetStringField(TEXT("memberName"), Member);
+        if (!(*Step)->TryGetStringField(TEXT("memberClass"), MemberClass))
+        {
+            (*Step)->TryGetStringField(TEXT("targetClass"), MemberClass);
+        }
+        if (Edit == TEXT("add_variable") || Edit == TEXT("add_function") || Edit == TEXT("add_event") ||
+            Edit == TEXT("add_event_dispatcher"))
+        {
+            if ((*Step)->HasField(TEXT("pinDefaults")))
+            {
+                OutIndex = Index;
+                OutCode = TEXT("INVALID_OPERATION");
+                return TEXT("pinDefaults applies to create_node steps; a member step (add_variable, add_function, "
+                            "add_event, add_event_dispatcher) makes no node to set pins on.");
+            }
+            // What a later step can name: the variable, function, custom event or dispatcher,
+            // under every field the member handlers read (add_function and add_event_dispatcher
+            // also take name or memberName).
+            Declared.Add(FName(*McpGetFirstStringField(*Step, {TEXT("variableName"), TEXT("functionName"),
+                                                                TEXT("customEventName"), TEXT("eventName"),
+                                                                TEXT("dispatcherName"), TEXT("name"),
+                                                                TEXT("memberName")})));
+            continue;
+        }
+        // A custom event a create_node step makes is as callable by a later step as one add_event declares: the
+        // batch that created ShowSaved and then called it was refused with FUNCTION_NOT_FOUND before anything ran.
+        if (Edit == TEXT("create_node") && (NodeType.Equals(TEXT("CustomEvent"), ESearchCase::IgnoreCase) ||
+                                            NodeType.Equals(TEXT("K2Node_CustomEvent"), ESearchCase::IgnoreCase)))
+        {
+            Declared.Add(FName(*McpGetFirstStringField(*Step, {TEXT("customEventName"), TEXT("eventName"),
+                                                                TEXT("memberName")})));
+            continue;
+        }
+        if (Edit != TEXT("create_node") || Member.IsEmpty())
+        {
+            continue;
+        }
+        OutIndex = Index;
+        UClass* ResolvedClass = nullptr;
+        FString OwnerClass, OutputClass;
+        if (IsCallFunctionType(NodeType) && !(MemberClass.IsEmpty() && Declared.Contains(FName(*Member))) &&
+            !ResolveCallNodeFunction(Context.Blueprint, *Step, Member, OwnerClass, OutputClass, ResolvedClass))
+        {
+            OutCode = TEXT("FUNCTION_NOT_FOUND");
+            return DescribeMissingFunction(Context.Blueprint, Member, OwnerClass, ResolvedClass);
+        }
+        const FName Variable(*Member);
+        bool bSetNode = false;
+        if (ParseVariableNodeType(NodeType, bSetNode) && MemberClass.IsEmpty() && !bWidgetBlueprint &&
+            !Declared.Contains(Variable) &&
+            FBlueprintEditorUtils::FindNewVariableIndex(Context.Blueprint, Variable) == INDEX_NONE &&
+            !(Context.Blueprint->GeneratedClass && Context.Blueprint->GeneratedClass->FindPropertyByName(Variable)))
+        {
+            OutCode = TEXT("VARIABLE_NOT_FOUND");
+            return FString::Printf(TEXT("Variable '%s' not found in the Blueprint, its components or any parent "
+                                        "class, and no earlier add_variable step declares it."), *Member);
+        }
+        const FString Behaviour = PrecheckBehaviourNode(Context, NodeType, Member, MemberClass, Declared, OutCode);
+        if (!Behaviour.IsEmpty())
+        {
+            return Behaviour;
+        }
+    }
+    OutIndex = INDEX_NONE;
+    return FString();
+}
+
+bool RunGraphBatch(FActionContext& Context, int32 MaxSteps, bool bCompile)
+{
+    const TArray<TSharedPtr<FJsonValue>>* Steps = nullptr;
+    if (!Context.Payload->TryGetArrayField(TEXT("operations"), Steps) || Steps->Num() == 0 ||
+        Steps->Num() > MaxSteps)
+    {
+        Context.SendError(FString::Printf(
+            TEXT("build_graph needs `operations`: 1-%d steps, each {edit, ...that edit's params}, "
+                 "optionally `id` to name a created node for later steps as \"$id\"."),
+            MaxSteps), TEXT("INVALID_OPERATIONS"));
+        return true;
+    }
+
+    int32 BadIndex = INDEX_NONE;
+    FString BadCode;
+    const FString Precheck = PrecheckSteps(Context, *Steps, BadIndex, BadCode);
+    if (!Precheck.IsEmpty())
+    {
+        TSharedPtr<FJsonObject> Details = McpHandlerUtils::CreateResultObject();
+        Details->SetNumberField(TEXT("succeeded"), 0);
+        Details->SetNumberField(TEXT("failedIndex"), BadIndex);
+        Context.SendErrorWithDetails(FString::Printf(
+            TEXT("build_graph checked every step before running any: operations[%d] would fail. %s "
+                 "Nothing was applied."), BadIndex, *Precheck), BadCode, Details);
+        return true;
+    }
+
+    // Author (bCompile false) takes its own snapshot and puts the Blueprint back itself.
+    const McpBlueprintBehaviour::FSnapshot Before =
+        bCompile ? McpBlueprintBehaviour::TakeSnapshot(Context.Blueprint) : McpBlueprintBehaviour::FSnapshot();
+    FBatchState State;
+    for (UEdGraphNode* Existing : Context.TargetGraph->Nodes)
+    {
+        float Width = 0.0f;
+        float Height = 0.0f;
+        if (Existing)
+        {
+            McpGraphLayout::EstimateNodeExtent(*Existing, Width, Height);
+            State.OriginX = FMath::Max(State.OriginX, Existing->NodePosX + Width + 240.0f);
+            // "$entry" is the graph's own entry node (a Construction Script's
+            // exec start), which used to need an inspect_graph call to find.
+            if (Existing->IsA<UK2Node_FunctionEntry>())
+            {
+                State.Aliases.Add(TEXT("entry"), Existing->NodeGuid.ToString());
+            }
+        }
+    }
+
+    TArray<TSharedPtr<FJsonValue>> Results;
+    TSharedPtr<FJsonObject> NodeIds = MakeShared<FJsonObject>();
+    for (int32 Index = 0; Index < Steps->Num(); ++Index)
+    {
+        TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
+        Entry->SetNumberField(TEXT("index"), Index);
+        FString ErrorCode;
+        FString Error;
+        {
+            // The step's own save is deferred to the one this batch makes below.
+            FMcpDeferAssetSaves DeferSave;
+            Error = RunBatchStep(Context, State, (*Steps)[Index], Index, Entry, NodeIds, ErrorCode);
+        }
+        Entry->SetBoolField(TEXT("success"), Error.IsEmpty());
+        Results.Add(MakeShared<FJsonValueObject>(Entry));
+        if (Error.IsEmpty())
+        {
+            continue;
+        }
+        Entry->SetStringField(TEXT("error"), Error);
+        // Author (bCompile false) puts the Blueprint back itself and reads every step's result.
+        const FString Outcome = bCompile ? McpBlueprintBehaviour::UndoBatch(Context.Blueprint, Before, *Steps, Results)
+                                         : FString(TEXT("Its caller undoes the steps before it."));
+        TSharedPtr<FJsonObject> Details = McpHandlerUtils::CreateResultObject();
+        Details->SetArrayField(TEXT("results"), Results);
+        Details->SetNumberField(TEXT("succeeded"), 0);
+        Details->SetNumberField(TEXT("failedIndex"), Index);
+        // The outcome first: the message is cut at 512 characters, and the step's own error is in results.
+        Context.SendErrorWithDetails(FString::Printf(TEXT("build_graph stopped at operations[%d]. %s %s"), Index,
+                                                     *Outcome, *Error), ErrorCode, Details);
+        return true;
+    }
+
+    SettleAutoPlacedNodes(Context.Blueprint, State);
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    McpSetBatchSteps(Result, Results, NodeIds);
+    Result->SetNumberField(TEXT("succeeded"), Results.Num());
+    // A step's warning (a Target pin now holding two objects) sat in results[], where no receipt check looks.
+    TArray<TSharedPtr<FJsonValue>> Warnings;
+    for (const TSharedPtr<FJsonValue>& Value : Results)
+    {
+        const TArray<TSharedPtr<FJsonValue>>* StepWarnings = nullptr;
+        if (Value->AsObject()->TryGetArrayField(TEXT("warnings"), StepWarnings))
+        {
+            for (const TSharedPtr<FJsonValue>& Warning : *StepWarnings)
+            {
+                Warnings.Add(MakeShared<FJsonValueString>(FString::Printf(TEXT("operations[%d]: %s"),
+                    static_cast<int32>(Value->AsObject()->GetNumberField(TEXT("index"))), *Warning->AsString())));
+            }
+        }
+    }
+    if (Warnings.Num() > 0)
+    {
+        Result->SetArrayField(TEXT("warnings"), Warnings);
+    }
+    // Every step ran, so the Blueprint changed. The compile below leaves it clean, which the reply funnel
+    // reads as "unchanged", so the batch says it itself: the receipt then names and lists the Blueprint.
+    Context.NameBlueprint(Result, /*bChanged=*/true);
+    if (!bCompile)
+    {
+        // The caller compiles and saves once its own work is done.
+        Context.bDeferCompile = true;
+        Context.SendResponse(FString::Printf(TEXT("Ran %d graph operations."), Results.Num()), Result);
+        return true;
+    }
+    FString FirstError;
+    const bool bCompiled = McpCompileBlueprintWithDiagnostics(Context.Blueprint, Result, FirstError, 12);
+    Result->SetBoolField(TEXT("saved"), SaveLoadedAssetThrottled(Context.Blueprint));
+    Context.SendResponse(bCompiled
+        ? FString::Printf(TEXT("Ran %d graph operations; the blueprint compiles."), Results.Num())
+        : FString::Printf(TEXT("Ran %d graph operations. WARNING: the blueprint does not compile: %s"),
+                          Results.Num(), FirstError.IsEmpty() ? TEXT("no compiler message") : *FirstError),
+        Result);
+    return true;
+}
+} // namespace GraphBatch
+
+bool HandleGraphBatchAction(FActionContext& Context)
+{
+    return Context.SubAction == TEXT("build_graph") &&
+           GraphBatch::RunGraphBatch(Context, GraphBatch::MaxBatchSteps, /*bCompile=*/true);
+}
+}

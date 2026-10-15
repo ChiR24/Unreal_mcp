@@ -88,6 +88,8 @@ export type ScoreContext = {
   readonly queryTokens: readonly string[];
   /** `queryTokens` less closed-class glue, which no identifier can ever spell. */
   readonly contentTokens: readonly string[];
+  /** The query as typed, lower-cased with single spaces, when it has two words or more; empty otherwise. */
+  readonly queryPhrase: string;
   readonly querySet: ReadonlySet<string>;
   /** The query opens with a read word ("get actor location"): read-effect capabilities rank ahead. */
   readonly readIntent: boolean;
@@ -398,6 +400,11 @@ function adjacencyScore(
   return score;
 }
 
+function phraseOf(query: string): string {
+  const words = query.toLowerCase().trim().split(/\s+/u);
+  return words.length >= 2 ? words.join(' ') : '';
+}
+
 function rounded(value: number, precision: number): number {
   const factor = 10 ** precision;
   return Math.round(value * factor) / factor;
@@ -416,18 +423,32 @@ export function scoreDocument(
     + exactMatchBonus(document, context)
     + actionCoverageScore(document, context)
     + adjacencyScore(document.sequences, context.contentTokens);
-  if (matchScore < RETRIEVAL_SCORE_CONSTANTS.minimumRelevanceScore) return null;
-  // Only ever reorders records the query already matched; it never makes one a result.
-  const effect = document.record.behavior.effect;
   // Every content word named by the record itself: "change button text" is all of
   // set_widget_layout's vocabulary, while add_content_widget matched two of its
   // words through member names and outranked it.
   const named = new Set(contributions
     .filter((entry) => RETRIEVAL_COVERAGE_FIELDS.has(entry.field))
     .flatMap((entry) => entry.allMatchedTokens));
-  const fullyNamed = context.contentTokens.length >= 2 && context.contentTokens.every((token) => named.has(token));
+  // A topic holding the whole query as typed names it outright, as the native door's phrase rule reads it: "is
+  // valid" and "do once" have one content word each, and found nothing although edit_graph's topics say exactly that.
+  const phraseTopic = context.queryPhrase !== ''
+    && (document.record.discovery.topics ?? []).some((topic) => topic.toLowerCase().includes(context.queryPhrase));
+  const fullyNamed = (context.contentTokens.length >= 2 || phraseTopic)
+    && context.contentTokens.every((token) => named.has(token));
+  // A one-word query a topic says exactly stays a result too, with no bonus, as the native door keeps it: once the
+  // folded add_behaviour record grew, "checkpoint" fell under the floor on its missing action words and found nothing.
+  const topicIsQuery = context.queryTokens.length === 1 && context.contentTokens.length === 1
+    && (document.record.discovery.topics ?? []).some((topic) =>
+      tokensEqual(tokenizeCapabilityText(topic), context.contentTokens));
+  // A record whose own names and topics hold every content word stays a result although its action words are
+  // missing from the query: "random number" dropped edit_graph, whose topic says exactly that, and found nothing.
+  if (matchScore < RETRIEVAL_SCORE_CONSTANTS.minimumRelevanceScore && !fullyNamed && !topicIsQuery) return null;
+  const effect = document.record.behavior.effect;
+  // The phrase also outweighs a record that names the same words one by one, as native's McpSearchPhraseTopicBonus:
+  // "connect blueprint nodes" is an edit_graph topic, and the level Blueprint record took it word by word.
   const score = matchScore
     + (fullyNamed ? RETRIEVAL_SCORE_CONSTANTS.fullCoverageBonus : 0)
+    + (phraseTopic ? RETRIEVAL_SCORE_CONSTANTS.phraseTopicBonus : 0)
     + (context.readIntent && effect === 'read' ? RETRIEVAL_SCORE_CONSTANTS.readIntentBonus : 0)
     + (context.deleteIntent && effect === 'destructive' ? RETRIEVAL_SCORE_CONSTANTS.deleteIntentBonus : 0);
   contributions.sort((left, right) => {
@@ -472,6 +493,7 @@ export function rankCapabilityRecords(
     index,
     queryTokens,
     contentTokens: queryTokens.filter((token) => !RETRIEVAL_FUNCTION_WORDS.has(token)),
+    queryPhrase: phraseOf(query),
     querySet: new Set(queryTokens),
     readIntent: RETRIEVAL_READ_INTENT_WORDS.has(firstWord),
     deleteIntent: RETRIEVAL_DELETE_INTENT_WORDS.has(firstWord),

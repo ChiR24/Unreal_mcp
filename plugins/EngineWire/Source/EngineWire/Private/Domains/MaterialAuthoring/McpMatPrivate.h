@@ -1,0 +1,425 @@
+#pragma once
+
+// MCP Core
+#include "EngineWireSubsystem.h"
+#include "Core/Module/EngineWireGlobals.h"
+#include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/BridgeHelpers/McpHelpers.h"
+#include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Core/Requests/McpResponseCaptureRegistry.h"
+#include "Domains/MaterialAuthoring/McpMatMainInputs.h"
+
+// JSON & Serialization
+#include "Dom/JsonObject.h"
+
+// Engine Version
+#include "Misc/EngineVersionComparison.h"
+
+
+// Asset Tools & Registry
+#include "AssetRegistry/AssetRegistryModule.h"
+#include "AssetToolsModule.h"
+#include "IAssetTools.h"
+
+// Graph
+#include "EdGraph/EdGraph.h"
+#include "EdGraph/EdGraphSchema.h"
+
+// Material Core
+#include "Materials/Material.h"
+#include "Materials/MaterialFunction.h"
+#include "Materials/MaterialFunctionInterface.h"
+#include "Materials/MaterialInstanceConstant.h"
+#include "PhysicalMaterials/PhysicalMaterial.h"
+#include "Engine/Texture.h"
+
+// MaterialDomain.h is split out in UE 5.2; earlier engines declare it via Materials/Material.h
+#if __has_include("MaterialDomain.h")
+#include "MaterialDomain.h"
+#endif
+
+// Material Expressions (Basic)
+#include "Materials/MaterialExpression.h"
+#include "Materials/MaterialExpressionAdd.h"
+#include "Materials/MaterialExpressionAppendVector.h"
+#include "Materials/MaterialExpressionClamp.h"
+#include "Materials/MaterialExpressionConstant.h"
+#include "Materials/MaterialExpressionConstant2Vector.h"
+#include "Materials/MaterialExpressionConstant3Vector.h"
+#include "Materials/MaterialExpressionConstant4Vector.h"
+#include "Materials/MaterialExpressionCustom.h"
+#include "Materials/MaterialExpressionDivide.h"
+#include "Materials/MaterialExpressionFrac.h"
+#include "Materials/MaterialExpressionFresnel.h"
+#include "Materials/MaterialExpressionFunctionInput.h"
+#include "Materials/MaterialExpressionFunctionOutput.h"
+#include "Materials/MaterialExpressionIf.h"
+#include "Materials/MaterialExpressionLinearInterpolate.h"
+#include "Materials/MaterialExpressionMaterialFunctionCall.h"
+#include "Materials/MaterialExpressionMultiply.h"
+#include "Materials/MaterialExpressionNoise.h"
+#include "Materials/MaterialExpressionOneMinus.h"
+#include "Materials/MaterialExpressionPanner.h"
+#include "Materials/MaterialExpressionPixelDepth.h"
+#include "Materials/MaterialExpressionPower.h"
+#include "Materials/MaterialExpressionReflectionVectorWS.h"
+
+// UE 5.1+ MaterialExpressionRotator
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+#include "Materials/MaterialExpressionRotator.h"
+#endif
+
+// Material Expressions (Parameters)
+#include "Materials/MaterialExpressionScalarParameter.h"
+#include "Materials/MaterialExpressionStaticSwitchParameter.h"
+#include "Materials/MaterialExpressionSubtract.h"
+#include "Materials/MaterialExpressionTextureCoordinate.h"
+#include "Materials/MaterialExpressionTextureSample.h"
+#include "Materials/MaterialExpressionTextureSampleParameter2D.h"
+#include "Materials/MaterialExpressionVectorParameter.h"
+
+// Material Expressions (Utility)
+#include "Materials/MaterialExpressionVertexNormalWS.h"
+#include "Materials/MaterialExpressionWorldPosition.h"
+#include "Materials/MaterialExpressionComponentMask.h"
+#include "Materials/MaterialExpressionDotProduct.h"
+#include "Materials/MaterialExpressionCrossProduct.h"
+#include "Materials/MaterialExpressionDesaturation.h"
+
+// Factories
+#include "Factories/MaterialFactoryNew.h"
+#include "Factories/MaterialFunctionFactoryNew.h"
+#include "Factories/MaterialInstanceConstantFactoryNew.h"
+
+// Core
+#include "EditorAssetLibrary.h"
+
+// Landscape (UE 5.0+)
+#include "LandscapeLayerInfoObject.h"
+
+namespace McpMaterialAuthoringHandlers
+{
+// The material root output is a UMaterialGraphNode_Root, not a UMaterialExpression, so it is
+// never present in the expression list every node lookup here walks. It is addressed by the
+// "Main" sentinel instead. Callers reach for the name the material editor shows them, and the
+// resulting miss used to surface as NODE_NOT_FOUND on a graph that cannot be terminated any
+// other way, so accept the spellings people actually type.
+inline bool IsMaterialRootTarget(const FString& TargetNodeId)
+{
+  FString Key = TargetNodeId.TrimStartAndEnd().ToLower();
+  Key.ReplaceInline(TEXT(" "), TEXT(""));
+  Key.ReplaceInline(TEXT("_"), TEXT(""));
+  if (Key.IsEmpty() || Key == TEXT("main") || Key == TEXT("root") || Key == TEXT("rootnode") ||
+      Key == TEXT("output") || Key == TEXT("materialoutput") || Key == TEXT("material")) {
+    return true;
+  }
+  // The graph node class name, plus the instance index the editor appends ("..._Root_0").
+  static const FString RootClassKey(TEXT("materialgraphnoderoot"));
+  if (Key.StartsWith(RootClassKey)) {
+    const FString Suffix = Key.RightChop(RootClassKey.Len());
+    return Suffix.IsEmpty() || Suffix.IsNumeric();
+  }
+  return false;
+}
+
+// Root inputs are matched by name against fixed literals. FString comparison already ignores
+// case, so only the separators a caller may type ("Base Color") need removing.
+inline FString NormalizeMaterialInputName(const FString& InputName)
+{
+  FString Key = InputName.TrimStartAndEnd();
+  Key.ReplaceInline(TEXT(" "), TEXT(""));
+  Key.ReplaceInline(TEXT("_"), TEXT(""));
+  return Key;
+}
+
+// Reads `additionalOutputs` onto a Custom node (false when the payload has none) and rebuilds its output pins.
+bool ApplyCustomAdditionalOutputs(UMaterialExpressionCustom* Custom, const TSharedPtr<FJsonObject>& Payload);
+// "Float1".."Float4" / "MaterialAttributes", with or without "CMOT_"; Fallback for anything else.
+ECustomMaterialOutputType ParseCustomOutputType(FString Type, ECustomMaterialOutputType Fallback);
+// Rebuilds Inputs from payload `inputs` [{name}]; an input that keeps its name keeps its wire.
+void ApplyCustomInputs(UMaterialExpressionCustom* Custom, const TSharedPtr<FJsonObject>& Payload);
+
+// String -> enum parsers shared by create_material and the set_* handlers; false when the name is unknown.
+bool ParseMaterialDomain(const FString& Value, EMaterialDomain& Out);
+bool ParseBlendMode(const FString& Value, EBlendMode& Out);
+bool ParseShadingModel(const FString& Value, EMaterialShadingModel& Out);
+// "Surface" for MD_Surface: an enumerator's name after its prefix ("Unknown" when unnamed).
+FString MaterialEnumShortName(const UEnum* Enum, int64 Value);
+FString ValidMaterialDomains();
+FString ValidBlendModes();
+FString ValidShadingModels();
+UMaterialExpression* FindExpressionByIdOrName(UMaterial* Material, const FString& NodeIdOrName);
+UMaterialExpression* FindExpressionByIdOrNameInFunction(UMaterialFunction* Function, const FString& NodeIdOrName);
+UObject* LoadMaterialOrFunction(const FString& AssetPath, UMaterial*& OutMaterial, UMaterialFunction*& OutFunction);
+void AddExpressionToContainer(UMaterial* Material, UMaterialFunction* Function, UMaterialExpression* Expr);
+FString FunctionInputTypeToString(EFunctionInputType InType);
+void AppendMaterialInfoConnections(UMaterial* Material, UMaterialFunction* Function, const TSharedPtr<FJsonObject>& Payload, const TSharedPtr<FJsonObject>& Result);
+bool HandleCreateMaterial(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
+// Applies whichever of blendMode / materialDomain / shadingModel the payload carries; false with OutError
+// ("Invalid <field> ... Valid values: ...") on the first unparseable one.
+bool ApplyMaterialEnumFields(UMaterial* Material, const TSharedPtr<FJsonObject>& Payload, FString& OutError);
+// The shared create_* prelude: a name that sanitizing changes only in underscores, a validated package path
+// (RequestedPath, else DefaultPath) whose parent folder exists or is made, and no asset already there.
+// Sends the refusal itself and returns false on any failure.
+bool PrepareNewMaterialAsset(UEngineWireSubsystem* Bridge, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket,
+                             const FString& RawName, FString RequestedPath, const TCHAR* DefaultPath, const TCHAR* Noun,
+                             FString& OutName, FString& OutPackagePath, bool& bOutParentFolderCreated);
+// set_blend_mode / set_material_domain / set_shading_model.
+bool HandleSetMaterialEnumProperty(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
+bool HandleAddTextureSample(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
+bool HandleAddTextureCoordinate(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
+// add_scalar_parameter / add_vector_parameter / add_static_switch_parameter.
+bool HandleAddParameterNode(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
+// add_math_node, add_world_position/.../add_voronoi, add_if, add_switch.
+bool HandleAddClassNode(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
+bool HandleAddCustomExpression(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
+bool HandleConnectNodes(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
+bool HandleDisconnectNodes(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
+bool HandleCreateMaterialFunction(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
+bool HandleCreateParameterCollection(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
+bool HandleFunctionInputsOutputs(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
+bool HandleUseMaterialFunction(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
+bool HandleCreateMaterialInstance(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
+bool HandleSetScalarParameterValue(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
+bool HandleSetVectorParameterValue(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
+bool HandleSetTextureParameterValue(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
+bool HandleAddLandscapeLayer(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
+bool HandleConfigureLayerBlend(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
+bool HandleCompileMaterial(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
+// After PostEditChange: translation and shader compile errors, waiting for the shader compile. In ...CompileMaterial.cpp.
+TArray<FString> McpMaterialCompileErrors(UMaterial* Material);
+bool HandleGetMaterialInfo(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
+bool HandleFindNode(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
+bool HandleGetNodeConnections(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
+bool HandleGetNodeProperties(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
+bool HandleSetStaticSwitchParameterValue(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
+bool HandleDeleteNode(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
+bool HandleUpdateCustomExpression(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
+bool HandleGetNodeChain(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
+bool HandleGetConnectedSubgraph(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
+bool HandleAddMaterialNode(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
+bool HandleSetNodePosition(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
+bool HandleSetMaterialParameter(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
+// Runs each {parameterName, parameterType, value | texturePath} entry through set_material_parameter
+// on AssetPath under a captured reply; one result per entry, "name: why" for each that failed.
+// Shared is the call's own payload: a flag given once there (save) is every entry's unless the entry names its own.
+// OutChangedAssetPath, when given, takes the assetPath the first entry that applied replied with.
+void ApplyMaterialParameterList(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& AssetPath, const TArray<TSharedPtr<FJsonValue>>& Entries, const TSharedPtr<FJsonObject>& Shared, TSharedPtr<FMcpBridgeWebSocket> Socket, TArray<TSharedPtr<FJsonValue>>& OutResults, TArray<FString>& OutFailed, FString* OutChangedAssetPath = nullptr);
+// build_material_graph: runs each additive step through RunStep (the subsystem's
+// own manage_material_authoring entry) with its reply captured, then compiles and saves once.
+bool HandleBuildMaterialGraph(UEngineWireSubsystem* Bridge, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket, TFunctionRef<void(const FString&, const TSharedPtr<FJsonObject>&)> RunStep);
+bool HandleGetMaterialNodeDetails(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
+bool HandleSetTwoSided(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
+}
+
+// Helper macro for expression creation - validates path BEFORE loading
+#define LOAD_MATERIAL_OR_RETURN()                                              \
+  FString AssetPath;                                                           \
+  if ((!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) ||            \
+       AssetPath.IsEmpty()) &&                                                 \
+      (!Payload->TryGetStringField(TEXT("materialPath"), AssetPath) ||         \
+       AssetPath.IsEmpty())) {                                                 \
+    Bridge->SendAutomationError(Socket, RequestId, TEXT("Missing 'assetPath' or 'materialPath'."), \
+                        TEXT("INVALID_ARGUMENT"));                             \
+    return true;                                                               \
+  }                                                                            \
+  /* SECURITY: Validate path BEFORE loading asset */                           \
+  FString ValidatedAssetPath = SanitizeProjectRelativePath(AssetPath);         \
+  if (ValidatedAssetPath.IsEmpty()) {                                          \
+    Bridge->SendAutomationError(Socket, RequestId,                                     \
+                        McpPathRefusalMessage(TEXT("path"), AssetPath), \
+                        TEXT("INVALID_PATH"));                                \
+    return true;                                                               \
+  }                                                                            \
+  AssetPath = ValidatedAssetPath;                                              \
+  UMaterial *Material = LoadObject<UMaterial>(nullptr, *AssetPath);            \
+  if (!Material) {                                                             \
+    Bridge->SendAutomationError(Socket, RequestId, TEXT("Could not load Material."),   \
+                        TEXT("ASSET_NOT_FOUND"));                              \
+    return true;                                                               \
+  }                                                                            \
+  float X = 0.0f, Y = 0.0f;                                                    \
+  if (!Payload->TryGetNumberField(TEXT("x"), X))                               \
+    Payload->TryGetNumberField(TEXT("posX"), X);                               \
+  if (!Payload->TryGetNumberField(TEXT("y"), Y))                               \
+    Payload->TryGetNumberField(TEXT("posY"), Y)
+
+// MF-aware variant of LOAD_MATERIAL_OR_RETURN.
+// Declares Material*, Function*, HostOuter (whichever is non-null), and X/Y.
+// Exactly one of {Material, Function} will be non-null on success.
+#define LOAD_MATERIAL_OR_FUNCTION_OR_RETURN()                                  \
+  FString AssetPath;                                                           \
+  if ((!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) ||            \
+       AssetPath.IsEmpty()) &&                                                 \
+      (!Payload->TryGetStringField(TEXT("materialPath"), AssetPath) ||         \
+       AssetPath.IsEmpty())) {                                                 \
+    Bridge->SendAutomationError(Socket, RequestId, TEXT("Missing 'assetPath' or 'materialPath'."), \
+                        TEXT("INVALID_ARGUMENT"));                             \
+    return true;                                                               \
+  }                                                                            \
+  FString ValidatedAssetPath = SanitizeProjectRelativePath(AssetPath);         \
+  if (ValidatedAssetPath.IsEmpty()) {                                          \
+    Bridge->SendAutomationError(Socket, RequestId,                                     \
+                        McpPathRefusalMessage(TEXT("path"), AssetPath), \
+                        TEXT("INVALID_PATH"));                                 \
+    return true;                                                               \
+  }                                                                            \
+  AssetPath = ValidatedAssetPath;                                              \
+  UMaterial *Material = nullptr;                                               \
+  UMaterialFunction *Function = nullptr;                                       \
+  LoadMaterialOrFunction(AssetPath, Material, Function);                       \
+  if (!Material && !Function) {                                                \
+    Bridge->SendAutomationError(Socket, RequestId,                                     \
+                        TEXT("Could not load Material or Material Function."),\
+                        TEXT("ASSET_NOT_FOUND"));                              \
+    return true;                                                               \
+  }                                                                            \
+  UObject *HostOuter = Material ? static_cast<UObject*>(Material)              \
+                                 : static_cast<UObject*>(Function);            \
+  float X = 0.0f, Y = 0.0f;                                                    \
+  if (!Payload->TryGetNumberField(TEXT("x"), X))                               \
+    Payload->TryGetNumberField(TEXT("posX"), X);                               \
+  if (!Payload->TryGetNumberField(TEXT("y"), Y))                               \
+    Payload->TryGetNumberField(TEXT("posY"), Y)
+
+// Find an expression in either container by GUID / name / parameter name.
+#define FIND_EXPR_IN_HOST(NodeIdOrName)                                      \
+    (Material ? FindExpressionByIdOrName(Material, (NodeIdOrName))             \
+              : FindExpressionByIdOrNameInFunction(Function, (NodeIdOrName)))
+
+// Recompiles an edited material or function and marks it dirty, unless the edit is a step of build_material_graph (its
+// reply is captured): that batch ends with one compile_material, and a recompile per step translated the half-built
+// graph and logged it as a failure on the receipt ("Custom material X missing input 20 (OP)" before the connect feeding it).
+inline void McpFinishMaterialEdit(const FString &RequestId, UObject *Host) {
+  if (Host && !FMcpResponseCaptureRegistry::Get().IsCapturing(RequestId)) { Host->PostEditChange(); }
+  if (Host) { Host->MarkPackageDirty(); }
+}
+
+// Finalize edits for either container.
+#define FINALIZE_HOST() McpFinishMaterialEdit(RequestId, Material ? static_cast<UObject *>(Material) : static_cast<UObject *>(Function))
+
+// The reply to an edit of the loaded material or function. It names the host, so the receipt
+// lists it as changed; update_custom_expression and connect_nodes answered with changes: [].
+inline TSharedPtr<FJsonObject> McpMaterialHostResult(UObject *Host) {
+  TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+  McpHandlerUtils::AddVerification(Result, Host);
+  return Result;
+}
+
+// Stable node ID: use UObject name (e.g. "MaterialExpressionCustom_0")
+// which is unique within an asset and immune to GUID duplication.
+// Responses also include "guid" for backwards compatibility.
+#define MCP_NODE_ID(Expr) ((Expr)->GetName())
+
+/**
+ * Estimated on-graph extent of a material expression.
+ *
+ * Slate decides the real size when the material editor draws, so it does not
+ * exist on this path. Callers still place expressions by MaterialExpressionEditorX/Y,
+ * and with no size back from the tool consecutive parameter nodes stack on top
+ * of one another. Estimated from connector count plus an allowance for the
+ * inline default-value widget a parameter node draws (a vector parameter's
+ * colour swatch is much taller than a scalar's number box).
+ */
+inline void EstimateMaterialNodeExtent(UMaterialExpression *Expr, float &OutWidth, float &OutHeight) {
+  OutWidth = 200.0f;
+  OutHeight = 64.0f;
+  if (!Expr) {
+    return;
+  }
+  // CountInputs/GetOutputs are the stable accessors across the 5.0-5.8 range the
+  // plugin supports; GetInputs() does not exist on UMaterialExpression.
+#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 5
+  const int32 InputCount = Expr->CountInputs();
+#else
+  // CountInputs arrives in UE 5.5; GetInput returns null past the last input.
+  int32 InputCount = 0;
+  while (Expr->GetInput(InputCount) != nullptr) {
+    ++InputCount;
+  }
+#endif
+  const int32 OutputCount = Expr->GetOutputs().Num();
+  const int32 Rows = FMath::Max(InputCount, OutputCount);
+  OutHeight = 48.0f + Rows * 26.0f;
+
+  // Parameter nodes draw their default value inline under the title.
+  if (Expr->IsA<UMaterialExpressionVectorParameter>()) {
+    OutHeight += 118.0f; // colour swatch
+  } else if (Expr->IsA<UMaterialExpressionScalarParameter>() ||
+             Expr->IsA<UMaterialExpressionStaticBoolParameter>()) {
+    OutHeight += 34.0f; // single value row
+  }
+
+  // The title the editor draws (a parameter's name, "Multiply"), not the object name: that ran
+  // "MaterialExpressionTextureSampleParameter2D_0" to 408 px, and nodes the batch set 400 apart read as overlapping.
+  TArray<FString> Captions;
+  Expr->GetCaption(Captions);
+  int32 Longest = 0;
+  for (const FString &Line : Captions) { Longest = FMath::Max(Longest, Line.Len()); }
+  OutWidth = FMath::Max(200.0f, Longest * 8.0f + 56.0f);
+}
+
+/**
+ * Adds posX/posY and the estimated extent to a material node result, plus an
+ * overlap warning naming the expressions the new node was dropped on top of.
+ * Returns the warning text (empty when the placement is clear).
+ */
+inline FString AddMaterialNodePlacementFields(const TSharedPtr<FJsonObject> &Result,
+                                              UMaterial *Material,
+                                              UMaterialExpression *NewExpr) {
+  if (!Result.IsValid() || !NewExpr) {
+    return FString();
+  }
+  float NewWidth = 0.0f;
+  float NewHeight = 0.0f;
+  EstimateMaterialNodeExtent(NewExpr, NewWidth, NewHeight);
+  const float NewLeft = static_cast<float>(NewExpr->MaterialExpressionEditorX);
+  const float NewTop = static_cast<float>(NewExpr->MaterialExpressionEditorY);
+  Result->SetNumberField(TEXT("posX"), NewExpr->MaterialExpressionEditorX);
+  Result->SetNumberField(TEXT("posY"), NewExpr->MaterialExpressionEditorY);
+  Result->SetNumberField(TEXT("estimatedWidth"), NewWidth);
+  Result->SetNumberField(TEXT("estimatedHeight"), NewHeight);
+
+  // Overlap is only computed for a base material; a material function's
+  // expression list is reached differently and is left unchecked rather than
+  // reported wrongly.
+  if (!Material) {
+    return FString();
+  }
+
+  TArray<FString> Overlapping;
+  for (UMaterialExpression *Other : MCP_GET_MATERIAL_EXPRESSIONS(Material)) {
+    if (!Other || Other == NewExpr) {
+      continue;
+    }
+    float OtherWidth = 0.0f;
+    float OtherHeight = 0.0f;
+    EstimateMaterialNodeExtent(Other, OtherWidth, OtherHeight);
+    const float OtherLeft = static_cast<float>(Other->MaterialExpressionEditorX);
+    const float OtherTop = static_cast<float>(Other->MaterialExpressionEditorY);
+    const bool bSeparated = NewLeft + NewWidth <= OtherLeft ||
+                            OtherLeft + OtherWidth <= NewLeft ||
+                            NewTop + NewHeight <= OtherTop ||
+                            OtherTop + OtherHeight <= NewTop;
+    if (!bSeparated) {
+      Overlapping.Add(Other->GetName());
+    }
+  }
+  if (Overlapping.Num() == 0) {
+    return FString();
+  }
+
+  TArray<TSharedPtr<FJsonValue>> OverlapValues;
+  for (const FString &Name : Overlapping) {
+    OverlapValues.Add(MakeShared<FJsonValueString>(Name));
+  }
+  Result->SetArrayField(TEXT("overlappingNodes"), OverlapValues);
+  const FString Warning = FString::Printf(
+      TEXT("Node placed at (%d, %d) overlaps %d existing node(s): %s. Estimated ")
+      TEXT("size is %.0fx%.0f; offset the next node by at least that height."),
+      NewExpr->MaterialExpressionEditorX, NewExpr->MaterialExpressionEditorY,
+      Overlapping.Num(), *FString::Join(Overlapping, TEXT(", ")), NewWidth, NewHeight);
+  Result->SetStringField(TEXT("placementWarning"), Warning);
+  return Warning;
+}
+

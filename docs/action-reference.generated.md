@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `688215cc0b14c02b`
+Catalog revision: `16f60cf04e47786f`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 396 capabilities across
+The catalog declares 416 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -36,20 +36,20 @@ validates against, so `execute` cannot accept an action this table omits.
 
 | Parent tool | Capabilities | read | write | destructive | Domains |
 | --- | --- | --- | --- | --- | --- |
-| `animation_physics` | 26 | 2 | 22 | 2 | animation physics |
+| `animation_physics` | 31 | 5 | 24 | 2 | animation physics |
 | `build_environment` | 40 | 5 | 32 | 3 | environment |
-| `control_actor` | 24 | 8 | 14 | 2 | actor |
+| `control_actor` | 25 | 8 | 15 | 2 | actor |
 | `control_editor` | 24 | 9 | 12 | 3 | editor |
-| `inspect` | 18 | 13 | 4 | 1 | inspect |
+| `inspect` | 21 | 16 | 4 | 1 | inspect |
 | `manage_ai` | 16 | 2 | 14 | 0 | manage ai |
-| `manage_asset` | 46 | 9 | 32 | 5 | asset, datatable, enum, material, struct, texture |
-| `manage_audio` | 13 | 2 | 11 | 0 | audio |
-| `manage_blueprint` | 28 | 6 | 16 | 6 | blueprint, widget |
+| `manage_asset` | 47 | 10 | 32 | 5 | asset, datatable, enum, material, struct, texture |
+| `manage_audio` | 14 | 3 | 11 | 0 | audio |
+| `manage_blueprint` | 32 | 7 | 19 | 6 | blueprint, widget |
 | `manage_character` | 10 | 2 | 8 | 0 | manage character |
-| `manage_combat` | 5 | 1 | 4 | 0 | manage combat |
+| `manage_combat` | 6 | 1 | 5 | 0 | manage combat |
 | `manage_effect` | 13 | 2 | 10 | 1 | manage effect |
 | `manage_gas` | 6 | 1 | 5 | 0 | manage gas |
-| `manage_geometry` | 15 | 2 | 13 | 0 | world |
+| `manage_geometry` | 16 | 2 | 14 | 0 | world |
 | `manage_interaction` | 3 | 1 | 2 | 0 | manage interaction |
 | `manage_inventory` | 6 | 1 | 5 | 0 | manage inventory |
 | `manage_level` | 17 | 4 | 12 | 1 | level |
@@ -57,12 +57,12 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_networking` | 21 | 5 | 13 | 3 | networking |
 | `manage_pcg` | 3 | 0 | 3 | 0 | world |
 | `manage_sequence` | 19 | 2 | 16 | 1 | cinematics, media, movie_render, replay, sequence, take_recorder |
-| `manage_tools` | 8 | 3 | 5 | 0 | tools |
-| `system_control` | 27 | 9 | 16 | 2 | audio, build, console, insights, logs, performance, project, python, render, viewport, widget |
+| `manage_tools` | 9 | 4 | 5 | 0 | tools |
+| `system_control` | 29 | 9 | 18 | 2 | audio, build, console, insights, logs, performance, project, python, render, viewport, widget |
 
 ## Capabilities requiring consent
 
-64 of 396 capabilities require consent.
+64 of 416 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -135,6 +135,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 | Capability | Tool | Action | Effect | Scope | Consent | Legacy pairs |
 | --- | --- | --- | --- | --- | --- | --- |
+| `animation_physics.analyze_animation` | `animation_physics` | `analyze_animation` | read | read | none | `animation_physics.analyze_animation` |
 | `animation_physics.bind_cloth_to_skeletal_mesh` | `animation_physics` | `bind_cloth_to_skeletal_mesh` | write | write | none | `animation_physics.bind_cloth_to_skeletal_mesh` `animation_physics.assign_cloth_asset_to_mesh` |
 | `animation_physics.cleanup` | `animation_physics` | `cleanup` | destructive | destructive | explicit | `animation_physics.cleanup` |
 | `animation_physics.configure_anim_graph_node` | `animation_physics` | `add_layered_blend_per_bone` | write | write | none | `animation_physics.configure_anim_graph_node` `animation_physics.add_layered_blend_per_bone` `animation_physics.set_anim_graph_node_value` |
@@ -143,17 +144,21 @@ validates against, so `execute` cannot accept an action this table omits.
 | `animation_physics.create_animation_asset` | `animation_physics` | `create_animation_asset` | write | write | none | `animation_physics.create_animation_asset` `animation_physics.create_animation_sequence` `animation_physics.create_montage` `animation_physics.create_blend_space` `animation_physics.create_blend_space_1d` `animation_physics.create_blend_space_2d` `animation_physics.create_aim_offset` `animation_physics.create_pose_library` `animation_physics.create_procedural_anim` |
 | `animation_physics.create_animation_blueprint` | `animation_physics` | `create_animation_blueprint` | write | write | none | `animation_physics.create_animation_blueprint` `animation_physics.create_anim_blueprint` `animation_physics.create_animation_bp` |
 | `animation_physics.create_control_rig` | `animation_physics` | `create_control_rig` | write | write | none | `animation_physics.create_control_rig` |
+| `animation_physics.create_physical_material` | `animation_physics` | `create_physical_material` | write | write | none | `animation_physics.create_physical_material` |
 | `animation_physics.create_skeleton` | `animation_physics` | `create_skeleton` | write | write | none | `animation_physics.create_skeleton` |
 | `animation_physics.edit_anim_graph` | `animation_physics` | `add_blend_node` | write | write | none | `animation_physics.edit_anim_graph` `animation_physics.add_blend_node` `animation_physics.add_cached_pose` `animation_physics.add_slot_node` `animation_physics.create_state_machine` `animation_physics.add_state_machine` `animation_physics.add_state` `animation_physics.add_transition` `animation_physics.set_transition_rules` `animation_physics.delete_transition` `animation_physics.create_blend_tree` |
 | `animation_physics.edit_animation` | `animation_physics` | `add_bone_track` | write | write | none | `animation_physics.edit_animation` `animation_physics.add_bone_track` `animation_physics.set_bone_key` `animation_physics.set_curve_key` `animation_physics.add_notify` `animation_physics.add_notify_state` `animation_physics.add_sync_marker` `animation_physics.set_additive_settings` `animation_physics.set_root_motion_settings` `animation_physics.set_sequence_length` `animation_physics.add_aim_offset_sample` |
 | `animation_physics.edit_blend_space` | `animation_physics` | `add_blend_sample` | write | write | none | `animation_physics.edit_blend_space` `animation_physics.add_blend_sample` `animation_physics.set_axis_settings` `animation_physics.set_interpolation_settings` `animation_physics.force_rebuild_blend_space` |
+| `animation_physics.edit_control_rig` | `animation_physics` | `edit_control_rig` | write | write | none | `animation_physics.edit_control_rig` |
 | `animation_physics.edit_montage` | `animation_physics` | `add_montage_notify` | write | write | none | `animation_physics.edit_montage` `animation_physics.add_montage_notify` `animation_physics.add_montage_section` `animation_physics.add_montage_slot` `animation_physics.link_sections` `animation_physics.set_blend_in` `animation_physics.set_blend_out` `animation_physics.set_section_timing` |
 | `animation_physics.edit_morph_target` | `animation_physics` | `create_morph_target` | write | write | none | `animation_physics.edit_morph_target` `animation_physics.create_morph_target` `animation_physics.set_morph_target_deltas` `animation_physics.import_morph_targets` `animation_physics.set_morph_target_value` |
 | `animation_physics.edit_physics_asset` | `animation_physics` | `create_physics_asset` | write | write | none | `animation_physics.edit_physics_asset` `animation_physics.create_physics_asset` `animation_physics.add_physics_body` `animation_physics.configure_physics_body` `animation_physics.modify_physics_body` `animation_physics.add_physics_constraint` `animation_physics.set_physics_constraint` `animation_physics.configure_constraint_limits` `animation_physics.set_physics_asset` |
 | `animation_physics.edit_skeleton` | `animation_physics` | `add_bone` | write | write | none | `animation_physics.edit_skeleton` `animation_physics.add_bone` `animation_physics.rename_bone` `animation_physics.set_bone_parent` `animation_physics.set_bone_transform` `animation_physics.create_virtual_bone` |
 | `animation_physics.edit_skin_weights` | `animation_physics` | `auto_skin_weights` | write | write | none | `animation_physics.edit_skin_weights` `animation_physics.auto_skin_weights` `animation_physics.set_vertex_weights` `animation_physics.copy_weights` `animation_physics.mirror_weights` `animation_physics.prune_weights` |
 | `animation_physics.get_animation_info` | `animation_physics` | `get_animation_info` | read | read | none | `animation_physics.get_animation_info` |
+| `animation_physics.get_control_rig` | `animation_physics` | `get_control_rig` | read | read | none | `animation_physics.get_control_rig` |
 | `animation_physics.get_skeleton_info` | `animation_physics` | `get_skeleton_info` | read | read | none | `animation_physics.get_skeleton_info` `animation_physics.list_bones` `animation_physics.list_sockets` `animation_physics.list_virtual_bones` `animation_physics.get_bone_transform` `animation_physics.list_morph_targets` `animation_physics.get_physics_asset_info` `animation_physics.list_physics_bodies` |
+| `animation_physics.list_rig_units` | `animation_physics` | `list_rig_units` | read | read | none | `animation_physics.list_rig_units` |
 | `animation_physics.play_montage` | `animation_physics` | `play_montage` | write | write | none | `animation_physics.play_montage` `animation_physics.play_anim_montage` |
 | `animation_physics.remove_skeleton_element` | `animation_physics` | `remove_bone` | destructive | destructive | explicit | `animation_physics.remove_skeleton_element` `animation_physics.remove_bone` `animation_physics.remove_socket` `animation_physics.remove_physics_body` |
 | `animation_physics.setup_ik` | `animation_physics` | `setup_ik` | write | write | none | `animation_physics.setup_ik` `animation_physics.create_ik_rig` `animation_physics.create_ik_retargeter` `animation_physics.set_retarget_chain_mapping` |
@@ -167,6 +172,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `asset.delete` | `manage_asset` | `delete` | destructive | destructive | elevated | `manage_asset.delete` `manage_asset.delete_asset` `manage_asset.delete_assets` |
 | `asset.duplicate` | `manage_asset` | `duplicate` | write | write | explicit | `manage_asset.duplicate` `manage_asset.duplicate_asset` |
 | `asset.edit_material_instance` | `manage_asset` | `add_material_parameter` | write | write | explicit | `manage_asset.edit_material_instance` `manage_asset.add_material_parameter` `manage_asset.reset_instance_parameters` |
+| `asset.export_mesh` | `manage_asset` | `export_mesh` | read | read | none | `manage_asset.export_mesh` |
 | `asset.import` | `manage_asset` | `import` | write | write | explicit | `manage_asset.import` |
 | `asset.import_marketplace_asset` | `manage_asset` | `add_fab_asset_to_project` | write | write | explicit | `manage_asset.import_marketplace_asset` `manage_asset.add_fab_asset_to_project` `manage_asset.cancel_fab_import` `manage_asset.download_fab_asset` `manage_asset.import_megascans_asset` |
 | `asset.inspect_asset` | `manage_asset` | `get_metadata` | read | read | none | `manage_asset.inspect_asset` `manage_asset.get_metadata` `manage_asset.get_dependencies` `manage_asset.get_asset_graph` `manage_asset.validate` `manage_asset.generate_report` |
@@ -180,6 +186,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `asset.rename` | `manage_asset` | `rename` | write | write | explicit | `manage_asset.rename` `manage_asset.rename_asset` |
 | `asset.set_metadata` | `manage_asset` | `set_metadata` | write | write | explicit | `manage_asset.set_metadata` `manage_asset.set_tags` |
 | `asset.source_control` | `manage_asset` | `source_control_checkout` | write | write | explicit | `manage_asset.source_control` `manage_asset.source_control_checkout` `manage_asset.source_control_submit` `manage_asset.source_control_enable` `manage_asset.source_control_init` `manage_asset.source_control_commit_all` |
+| `blueprint.add_behaviour` | `manage_blueprint` | `add_health` | write | write | none | `manage_blueprint.add_behaviour` `manage_blueprint.add_health` `manage_blueprint.add_damage_on_touch` `manage_blueprint.add_pickup` `manage_blueprint.add_sprint` `manage_blueprint.add_shoot` `manage_blueprint.add_chase` `manage_blueprint.add_patrol` `manage_blueprint.add_controls` `manage_blueprint.add_respawn` `manage_blueprint.add_goal` `manage_blueprint.add_launch_pad` `manage_blueprint.add_teleporter` `manage_blueprint.add_spawner` `manage_blueprint.add_dash` `manage_blueprint.add_health_hud` `manage_blueprint.add_counter_hud` `manage_blueprint.add_game_over` |
 | `blueprint.add_content_widget` | `manage_blueprint` | `add_text_block` | write | write | none | `manage_blueprint.add_content_widget` `manage_blueprint.add_text_block` `manage_blueprint.add_rich_text_block` `manage_blueprint.add_image` `manage_blueprint.add_button` `manage_blueprint.add_check_box` `manage_blueprint.add_combo_box` `manage_blueprint.add_slider` `manage_blueprint.add_spin_box` `manage_blueprint.add_progress_bar` `manage_blueprint.add_text_input` `manage_blueprint.add_list_view` `manage_blueprint.add_tree_view` `manage_blueprint.add_widget_component` |
 | `blueprint.add_function` | `manage_blueprint` | `add_function` | write | write | none | `manage_blueprint.add_function` `manage_blueprint.add_event` |
 | `blueprint.add_game_widget` | `manage_blueprint` | `add_health_bar` | write | write | none | `manage_blueprint.add_game_widget` `manage_blueprint.add_health_bar` `manage_blueprint.add_ammo_counter` `manage_blueprint.add_crosshair` `manage_blueprint.add_minimap` `manage_blueprint.add_compass` `manage_blueprint.add_damage_indicator` `manage_blueprint.add_interaction_prompt` `manage_blueprint.add_objective_tracker` `manage_blueprint.add_quest_tracker` |
@@ -193,12 +200,15 @@ validates against, so `execute` cannot accept an action this table omits.
 | `blueprint.duplicate_widget` | `manage_blueprint` | `duplicate_widget` | write | write | none | `manage_blueprint.duplicate_widget` |
 | `blueprint.edit_graph` | `manage_blueprint` | `add_node` | write | write | none | `manage_blueprint.edit_graph` `manage_blueprint.add_node` `manage_blueprint.create_node` `manage_blueprint.create_reroute_node` `manage_blueprint.create_struct_make_break_nodes` `manage_blueprint.connect_pins` `manage_blueprint.set_node_property` `manage_blueprint.set_pin_default_value` `manage_blueprint.add_construction_script` `manage_blueprint.arrange_nodes` `manage_blueprint.build_graph` |
 | `blueprint.edit_scs` | `manage_blueprint` | `add_scs_component` | write | write | none | `manage_blueprint.edit_scs` `manage_blueprint.add_scs_component` `manage_blueprint.add_component` `manage_blueprint.modify_scs` `manage_blueprint.reparent_scs_component` `manage_blueprint.set_scs_property` `manage_blueprint.set_scs_transform` |
+| `blueprint.edit_timeline` | `manage_blueprint` | `edit_timeline` | write | write | none | `manage_blueprint.edit_timeline` |
 | `blueprint.edit_variable` | `manage_blueprint` | `add_variable` | write | write | none | `manage_blueprint.edit_variable` `manage_blueprint.add_variable` `manage_blueprint.rename_variable` `manage_blueprint.set_variable_metadata` `manage_blueprint.set_metadata` `manage_blueprint.set_default` |
 | `blueprint.edit_widget_animation` | `manage_blueprint` | `create_widget_animation` | write | write | none | `manage_blueprint.edit_widget_animation` `manage_blueprint.create_widget_animation` `manage_blueprint.add_animation_track` `manage_blueprint.add_animation_keyframe` |
 | `blueprint.edit_widget_blueprint` | `manage_blueprint` | `create_widget_blueprint` | write | write | none | `manage_blueprint.edit_widget_blueprint` `manage_blueprint.create_widget_blueprint` `manage_blueprint.set_widget_parent_class` `manage_blueprint.rename_widget` `manage_blueprint.reparent_widget` |
 | `blueprint.get_blueprint` | `manage_blueprint` | `get_blueprint` | read | read | none | `manage_blueprint.get_blueprint` `manage_blueprint.get` |
 | `blueprint.get_scs` | `manage_blueprint` | `get_scs` | read | read | none | `manage_blueprint.get_scs` |
+| `blueprint.get_widget_animation` | `manage_blueprint` | `get_widget_animation` | read | read | none | `manage_blueprint.get_widget_animation` |
 | `blueprint.get_widget_info` | `manage_blueprint` | `get_widget_info` | read | read | none | `manage_blueprint.get_widget_info` `manage_blueprint.get_widget_slot_info` |
+| `blueprint.implement_interface` | `manage_blueprint` | `implement_interface` | write | write | none | `manage_blueprint.implement_interface` |
 | `blueprint.inspect_graph` | `manage_blueprint` | `get_graph_details` | read | read | none | `manage_blueprint.inspect_graph` `manage_blueprint.get_graph_details` `manage_blueprint.get_node_details` `manage_blueprint.get_pin_details` `manage_blueprint.list_node_types` |
 | `blueprint.preview_widget` | `manage_blueprint` | `preview_widget` | read | read | none | `manage_blueprint.preview_widget` |
 | `blueprint.probe_handle` | `manage_blueprint` | `probe_handle` | read | read | none | `manage_blueprint.probe_handle` |
@@ -268,6 +278,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `control_actor.rename` | `control_actor` | `rename` | write | write | none | `control_actor.rename` |
 | `control_actor.set_actor_collision` | `control_actor` | `set_actor_collision` | write | write | none | `control_actor.set_actor_collision` |
 | `control_actor.set_blueprint_variables` | `control_actor` | `set_blueprint_variables` | write | write | none | `control_actor.set_blueprint_variables` |
+| `control_actor.set_folder` | `control_actor` | `set_folder` | write | write | none | `control_actor.set_folder` |
 | `control_actor.set_material` | `control_actor` | `set_material` | write | write | none | `control_actor.set_material` `control_actor.apply_material` `control_actor.set_actor_material` |
 | `control_actor.set_transform` | `control_actor` | `set_transform` | write | write | none | `control_actor.set_transform` `control_actor.set_actor_location` `control_actor.set_actor_rotation` `control_actor.set_actor_scale` `control_actor.teleport_actor` `control_actor.set_actor_transform` |
 | `control_actor.set_visibility` | `control_actor` | `set_visibility` | write | write | none | `control_actor.set_visibility` `control_actor.set_actor_visible` |
@@ -303,8 +314,11 @@ validates against, so `execute` cannot accept an action this table omits.
 | `enum.edit_enum` | `manage_asset` | `create_enum` | write | write | explicit | `manage_asset.edit_enum` `manage_asset.create_enum` `manage_asset.add_enum_value` `manage_asset.rename_enum_value` `manage_asset.reorder_enum_values` `manage_asset.set_enum_value_metadata` `manage_asset.split_enum` |
 | `enum.get_enum` | `manage_asset` | `get_enum` | read | read | none | `manage_asset.get_enum` |
 | `inspect.add_tag` | `inspect` | `control_actor` | write | write | none | `inspect.add_tag` |
+| `inspect.capture_passes` | `inspect` | `capture_passes` | read | read | none | `inspect.capture_passes` |
+| `inspect.check_mesh` | `inspect` | `check_mesh` | read | read | none | `inspect.check_mesh` |
 | `inspect.create_snapshot` | `inspect` | `control_actor` | write | write | none | `inspect.create_snapshot` `inspect.restore_snapshot` |
 | `inspect.delete_object` | `inspect` | `control_actor` | destructive | destructive | explicit | `inspect.delete_object` |
+| `inspect.describe_view` | `inspect` | `describe_view` | read | read | none | `inspect.describe_view` |
 | `inspect.find_by_class` | `inspect` | `find_by_class` | read | read | none | `inspect.find_by_class` |
 | `inspect.get_blueprint_details` | `inspect` | `blueprint_get` | read | read | none | `inspect.get_blueprint_details` |
 | `inspect.get_component_details` | `inspect` | `control_actor` | read | read | none | `inspect.get_component_details` `inspect.get_component_property` |
@@ -346,6 +360,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_audio.fade_sound` | `manage_audio` | `manage_audio` | write | write | none | `manage_audio.fade_sound` `manage_audio.fade_sound_in` `manage_audio.fade_sound_out` |
 | `manage_audio.get_audio_info` | `manage_audio` | `manage_audio` | read | read | none | `manage_audio.get_audio_info` |
 | `manage_audio.get_metasound_graph` | `manage_audio` | `manage_audio` | read | read | none | `manage_audio.get_metasound_graph` |
+| `manage_audio.list_metasound_nodes` | `manage_audio` | `manage_audio` | read | read | none | `manage_audio.list_metasound_nodes` |
 | `manage_audio.play_sound` | `manage_audio` | `manage_audio` | write | write | none | `manage_audio.play_sound` `manage_audio.play_sound_2d` `manage_audio.play_sound_at_location` `manage_audio.spawn_sound_at_location` `manage_audio.play_sound_attached` `manage_audio.prime_sound` `manage_audio.play_sound_measure` |
 | `manage_audio.set_dialogue_context` | `manage_audio` | `manage_audio` | write | write | none | `manage_audio.set_dialogue_context` |
 | `manage_audio.stop_sound` | `manage_audio` | `manage_audio` | write | write | none | `manage_audio.stop_sound` `manage_audio.pause_sound` `manage_audio.resume_sound` |
@@ -359,6 +374,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_character.rig_metahuman` | `manage_character` | `rig_metahuman` | write | write | none | `manage_character.rig_metahuman` |
 | `manage_character.set_movement_property` | `manage_character` | `set_walk_speed` | write | write | none | `manage_character.set_movement_property` `manage_character.set_walk_speed` `manage_character.set_jump_height` `manage_character.set_gravity_scale` `manage_character.set_ground_friction` `manage_character.set_braking_deceleration` |
 | `manage_character.setup_movement` | `manage_character` | `setup_movement` | write | write | none | `manage_character.setup_movement` |
+| `manage_combat.apply_damage` | `manage_combat` | `apply_damage` | write | write | none | `manage_combat.apply_damage` |
 | `manage_combat.configure_damage` | `manage_combat` | `configure_hit_detection` | write | write | none | `manage_combat.configure_damage` `manage_combat.configure_hit_detection` `manage_combat.setup_hitbox_component` |
 | `manage_combat.configure_projectile` | `manage_combat` | `configure_projectile` | write | write | none | `manage_combat.configure_projectile` `manage_combat.configure_projectile_movement` `manage_combat.configure_projectile_collision` `manage_combat.configure_projectile_homing` |
 | `manage_combat.configure_weapon` | `manage_combat` | `configure_weapon_mesh` | write | write | none | `manage_combat.configure_weapon` `manage_combat.configure_weapon_mesh` `manage_combat.setup_attachment_system` |
@@ -398,6 +414,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_geometry.mirror` | `manage_geometry` | `mirror` | write | write | none | `manage_geometry.mirror` |
 | `manage_geometry.model_mesh` | `manage_geometry` | `extrude` | write | write | none | `manage_geometry.model_mesh` `manage_geometry.extrude` `manage_geometry.inset` `manage_geometry.outset` `manage_geometry.offset_faces` `manage_geometry.bevel` `manage_geometry.chamfer` `manage_geometry.bridge` `manage_geometry.loft` `manage_geometry.sweep` `manage_geometry.revolve` `manage_geometry.shell` `manage_geometry.loop_cut` `manage_geometry.edge_split` `manage_geometry.poke` `manage_geometry.quadrangulate` `manage_geometry.extrude_along_spline` `manage_geometry.duplicate_along_spline` |
 | `manage_geometry.optimize_mesh` | `manage_geometry` | `simplify_mesh` | write | write | none | `manage_geometry.optimize_mesh` `manage_geometry.simplify_mesh` `manage_geometry.remesh_uniform` `manage_geometry.remesh_voxel` `manage_geometry.subdivide` `manage_geometry.morphology` `manage_geometry.merge_vertices` `manage_geometry.weld_vertices` `manage_geometry.remove_degenerates` `manage_geometry.fill_holes` `manage_geometry.flip_normals` `manage_geometry.recalculate_normals` `manage_geometry.recompute_tangents` |
+| `manage_geometry.split_mesh` | `manage_geometry` | `split_mesh` | write | write | none | `manage_geometry.split_mesh` |
 | `manage_interaction.configure_interactable` | `manage_interaction` | `configure_door_properties` | write | write | none | `manage_interaction.configure_interactable` `manage_interaction.configure_door_properties` `manage_interaction.configure_chest_properties` `manage_interaction.configure_switch_properties` `manage_interaction.configure_interaction_trace` |
 | `manage_interaction.create_interactable` | `manage_interaction` | `create_door_actor` | write | write | none | `manage_interaction.create_interactable` `manage_interaction.create_door_actor` `manage_interaction.create_chest_actor` `manage_interaction.create_switch_actor` `manage_interaction.create_lever_actor` `manage_interaction.create_trigger_actor` `manage_interaction.create_interactable_interface` `manage_interaction.create_interaction_component` |
 | `manage_interaction.get_interaction_info` | `manage_interaction` | `get_interaction_info` | read | read | none | `manage_interaction.get_interaction_info` |
@@ -461,6 +478,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_tools.enable_category` | `manage_tools` | `enable_category` | write | write | none | `manage_tools.enable_category` |
 | `manage_tools.enable_tools` | `manage_tools` | `enable_tools` | write | write | none | `manage_tools.enable_tools` |
 | `manage_tools.get_status` | `manage_tools` | `get_status` | read | read | none | `manage_tools.get_status` |
+| `manage_tools.get_task_result` | `manage_tools` | `get_task_result` | read | read | none | `manage_tools.get_task_result` |
 | `manage_tools.list_categories` | `manage_tools` | `list_categories` | read | read | none | `manage_tools.list_categories` |
 | `manage_tools.list_tools` | `manage_tools` | `list_tools` | read | read | none | `manage_tools.list_tools` |
 | `manage_tools.reset` | `manage_tools` | `reset` | write | write | none | `manage_tools.reset` |
@@ -469,7 +487,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `material.compile_material` | `manage_asset` | `compile_material` | write | write | explicit | `manage_asset.compile_material` `manage_asset.rebuild_material` |
 | `material.configure_layer_blend` | `manage_asset` | `configure_layer_blend` | write | write | explicit | `manage_asset.configure_layer_blend` |
 | `material.connect_nodes` | `manage_asset` | `connect_nodes` | write | write | explicit | `manage_asset.connect_nodes` `manage_asset.connect_material_pins` |
-| `material.create_material` | `manage_asset` | `create_material` | write | write | explicit | `manage_asset.create_material` `manage_asset.create_decal_material` `manage_asset.create_landscape_material` `manage_asset.create_post_process_material` `manage_asset.create_material_function` |
+| `material.create_material` | `manage_asset` | `create_material` | write | write | explicit | `manage_asset.create_material` `manage_asset.create_decal_material` `manage_asset.create_landscape_material` `manage_asset.create_post_process_material` `manage_asset.create_material_function` `manage_asset.create_parameter_collection` |
 | `material.create_material_instance` | `manage_asset` | `create_material_instance` | write | write | explicit | `manage_asset.create_material_instance` |
 | `material.delete_node` | `manage_asset` | `delete_node` | write | write | explicit | `manage_asset.delete_node` `manage_asset.remove_material_node` |
 | `material.disconnect_nodes` | `manage_asset` | `disconnect_nodes` | write | write | explicit | `manage_asset.disconnect_nodes` `manage_asset.break_material_connections` |
@@ -502,7 +520,9 @@ validates against, so `execute` cannot accept an action this table omits.
 | `struct.get_struct` | `manage_asset` | `get_struct` | read | read | none | `manage_asset.get_struct` `manage_asset.read_struct` `manage_asset.list_struct_members` `manage_asset.list_structs` `manage_asset.search_struct_usage` `manage_asset.compare_structs` `manage_asset.export_struct` `manage_asset.get_instanced_struct_property` |
 | `system_control.configure_display` | `system_control` | `console_command` | write | write | none | `system_control.configure_display` `system_control.set_resolution` `system_control.set_fullscreen` `system_control.set_quality` `system_control.set_cvar` `system_control.show_fps` `system_control.profile` |
 | `system_control.configure_performance` | `system_control` | `set_scalability` | write | write | none | `system_control.configure_performance` `system_control.set_scalability` `system_control.set_frame_rate_limit` `system_control.set_resolution_scale` `system_control.set_vsync` `system_control.configure_lod` `system_control.configure_nanite` `system_control.configure_occlusion_culling` `system_control.configure_texture_streaming` `system_control.configure_world_partition` `system_control.enable_gpu_timing` `system_control.optimize_draw_calls` `system_control.optimize_shaders` `system_control.apply_baseline_settings` |
+| `system_control.configure_rendering` | `system_control` | `system_control` | write | write | none | `system_control.configure_rendering` |
 | `system_control.console_command` | `system_control` | `console_command` | write | write | none | `system_control.console_command` `system_control.execute_command` |
+| `system_control.create_cpp_class` | `system_control` | `create_cpp_class` | write | write | none | `system_control.create_cpp_class` |
 | `system_control.create_widget` | `system_control` | `manage_widget_authoring` | write | write | none | `system_control.create_widget` `system_control.add_widget_child` `system_control.show_widget` |
 | `system_control.delete_output_file` | `system_control` | `delete_output_file` | destructive | destructive | explicit | `system_control.delete_output_file` |
 | `system_control.edit_save_game` | `system_control` | `edit_save_game` | destructive | destructive | explicit | `system_control.edit_save_game` |

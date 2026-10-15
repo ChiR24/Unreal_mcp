@@ -1,0 +1,132 @@
+#include "Core/Compatibility/McpVersionCompatibility.h"
+
+#include "Domains/Effect/McpEffectPrivate.h"
+
+#include "Editor.h"
+#include "NiagaraActor.h"
+#include "NiagaraComponent.h"
+#include "NiagaraSystem.h"
+#include "Subsystems/EditorActorSubsystem.h"
+
+namespace McpEffectHandlers
+{
+bool CreateNiagaraEffectFromPayload(
+    const FEffectActionContext& Context,
+    const FString& EffectName,
+    const FString& DefaultSystemPath,
+    const TSharedPtr<FJsonObject>& ExtraFields)
+{
+    if (!GEditor)
+    {
+        TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
+        Response->SetBoolField(TEXT("success"), false);
+        Response->SetStringField(TEXT("error"), TEXT("Editor not available"));
+        Context.Bridge.SendAutomationResponse(
+            Context.Socket, Context.RequestId, false,
+            TEXT("Editor not available"), Response, TEXT("EDITOR_NOT_AVAILABLE"));
+        return true;
+    }
+    if (!GEditor->GetEditorSubsystem<UEditorActorSubsystem>())
+    {
+        TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
+        Response->SetBoolField(TEXT("success"), false);
+        Response->SetStringField(TEXT("error"), TEXT("EditorActorSubsystem not available"));
+        Context.Bridge.SendAutomationResponse(
+            Context.Socket, Context.RequestId, false,
+            TEXT("EditorActorSubsystem not available"), Response,
+            TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"));
+        return true;
+    }
+
+    // An explicit (non-empty) systemPath or alias wins over the caller-supplied default;
+    // an empty payload field no longer clobbers the default the way TryGetStringField did.
+    const FString PayloadSystemPath = ReadNiagaraSystemPathField(Context.Payload);
+    const FString SystemPath = PayloadSystemPath.IsEmpty() ? DefaultSystemPath : PayloadSystemPath;
+    if (SystemPath.IsEmpty())
+    {
+        TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
+        Response->SetBoolField(TEXT("success"), false);
+        Response->SetStringField(
+            TEXT("error"),
+            FString::Printf(
+                TEXT("systemPath is required for %s. Please provide a valid asset path (e.g. /Game/Effects/MySystem)"),
+                *EffectName));
+        Context.Bridge.SendAutomationResponse(
+            Context.Socket, Context.RequestId, false,
+            TEXT("systemPath required"), Response, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    // Package ('/Game/FX/NS') and object ('/Game/FX/NS.NS') forms resolve identically.
+    UObject* NiagaraObject = LoadEffectAsset(SystemPath);
+    if (!NiagaraObject)
+    {
+        Context.Bridge.SendAutomationResponse(
+            Context.Socket, Context.RequestId, false,
+            FString::Printf(TEXT("Niagara system asset not found: %s"), *SystemPath),
+            nullptr, TEXT("SYSTEM_NOT_FOUND"));
+        return true;
+    }
+
+    AActor* Spawned = SpawnActorInActiveWorld<AActor>(
+        ANiagaraActor::StaticClass(),
+        ExtractVectorField(Context.Payload, TEXT("location"), FVector::ZeroVector),
+        FRotator::ZeroRotator);
+    if (!Spawned)
+    {
+        TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
+        Response->SetBoolField(TEXT("success"), false);
+        Response->SetStringField(TEXT("error"), TEXT("Failed to spawn Niagara actor"));
+        Context.Bridge.SendAutomationResponse(
+            Context.Socket, Context.RequestId, false,
+            TEXT("Failed to spawn Niagara actor"), Response, TEXT("SPAWN_FAILED"));
+        return true;
+    }
+
+    if (UNiagaraComponent* NiagaraComponent = Spawned->FindComponentByClass<UNiagaraComponent>())
+    {
+        if (NiagaraObject->IsA<UNiagaraSystem>())
+        {
+            NiagaraComponent->SetAsset(Cast<UNiagaraSystem>(NiagaraObject));
+            NiagaraComponent->Activate(true);
+        }
+    }
+
+    FString Name;
+    Context.Payload->TryGetStringField(TEXT("name"), Name);
+    if (Name.IsEmpty())
+    {
+        Context.Payload->TryGetStringField(TEXT("actorName"), Name);
+    }
+    Spawned->SetActorLabel(
+        !Name.IsEmpty()
+            ? Name
+            : FString::Printf(TEXT("%s_%lld"), *EffectName.Replace(TEXT("create_"), TEXT("")), FDateTime::Now().ToUnixTimestamp()));
+
+    UE_LOG(
+        LogEngineWireSubsystem,
+        Verbose,
+        TEXT("CreateNiagaraEffect: Spawned actor '%s' (ID: %u)"),
+        *Spawned->GetActorLabel(),
+        Spawned->GetUniqueID());
+
+    TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
+    Response->SetBoolField(TEXT("success"), true);
+    Response->SetStringField(TEXT("effectType"), EffectName);
+    Response->SetStringField(TEXT("systemPath"), SystemPath);
+    Response->SetStringField(TEXT("actorName"), McpActorRef(Spawned));
+    Response->SetNumberField(TEXT("actorId"), Spawned->GetUniqueID());
+    if (ExtraFields.IsValid())
+    {
+        // Creator-specific facts (authored asset, template emitter, preset resolution).
+        for (const auto& Pair : ExtraFields->Values)
+        {
+            Response->SetField(FString(*Pair.Key), Pair.Value);
+        }
+    }
+    Context.Bridge.SendAutomationResponse(
+        Context.Socket, Context.RequestId, true,
+        FString::Printf(TEXT("%s created successfully"), *EffectName), Response);
+    return true;
+}
+}

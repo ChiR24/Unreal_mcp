@@ -59,6 +59,8 @@ export const RETRIEVAL_FUNCTION_WORDS: ReadonlySet<string> = Object.freeze(new S
   // 'how do i spawn an actor') carries the same content words as the imperative.
   'what', 'which', 'how', 'where', 'who', 'when', 'why', 'do', 'does', 'did',
   'can', 'could', 'should', 'would', 'will', 'want', 'need',
+  // A yes/no check ('check if actors are floating') carries the same content words as the request without it.
+  'if', 'whether',
 ]));
 
 /**
@@ -104,6 +106,7 @@ export const RETRIEVAL_SCORE_CONSTANTS = Object.freeze({
   readIntentBonus: 80,
   deleteIntentBonus: 14,
   fullCoverageBonus: 100,
+  phraseTopicBonus: 50,
   minimumRelevanceScore: 0.01,
   confidenceSaturation: 40,
   confidenceSaturationWeight: 0.85,

@@ -70,6 +70,7 @@ export const GLOBAL_RECORDS: readonly CapabilityRecordSource[] = [
       deltaTimeSeconds: { type: 'number', description: 'Last frame delta in seconds.' },
       hasBegunPlay: { type: 'boolean', description: 'Whether the world has begun play.' },
       isPlayInEditor: { type: 'boolean', description: 'Whether this world is a PIE world.' },
+      isPaused: { type: 'boolean', description: 'Whether game time stands still: control_editor pause, or the game paused itself (a title screen or a pause menu). Nothing moves or simulates until control_editor resume (unpauseGame for a pause the game holds).' },
       killZ: { type: 'number', description: 'Z height below which actors are killed.' },
       worldGravityZ: { type: 'number', description: 'World gravity along Z.' },
       timeDilation: { type: 'number', description: 'Global time dilation multiplier.' },

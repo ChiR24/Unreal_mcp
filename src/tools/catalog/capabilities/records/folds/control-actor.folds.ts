@@ -18,15 +18,15 @@ export const CONTROL_ACTOR_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'get_transform', selector: 'readMode',
-    summary: 'Read where an actor is (the player\'s pawn too): its transform now, or watch it over game time in PIE (motion): location, velocity and chosen properties at every interval, to prove a jump, launch, patrol or fall in one call.',
-    topics: ['actor location', 'where is the actor', 'where is the player', 'player location', 'actor position', 'sample motion', 'record trajectory', 'track actor over time'],
+    summary: 'Read where an actor is (the player\'s pawn too): its transform now, or watch it over game time in PIE (motion): location, velocity, rotation, chosen properties and points on it (bones, sockets, components, with their height over the ground) at every interval, to prove a jump, launch, patrol, fall, foot plant or a rocking hull in one call.',
+    topics: ['actor location', 'where is the actor', 'where is the player', 'player location', 'actor position', 'sample motion', 'record trajectory', 'track actor over time', 'foot sliding', 'feet slide', 'foot contact', 'bone position over time'],
     members: { transform: 'get_transform', motion: 'sample_motion' },
     aliasMembers: ['get_actor_transform'],
   },
   {
     primary: 'edit_component', selector: 'edit',
     summary: 'Add or remove an actor component, or set one or more of its properties (a placed mesh\'s StaticMesh or OverrideMaterials, a light\'s Intensity or LightColor, a TextRender\'s Text).',
-    topics: ['add component', 'remove component', 'component property', 'set static mesh', 'change mesh', 'swap mesh', 'replace actor mesh', 'override materials', 'set component property value', 'actor component', 'text render text', 'change sign text', 'set light intensity', 'light color', 'light radius', 'change light color', '3d text', 'world text', 'floating text above actor', 'text above head'],
+    topics: ['add component', 'remove component', 'component property', 'set static mesh', 'change mesh', 'swap mesh', 'replace actor mesh', 'override materials', 'set component property value', 'actor component', 'text render text', 'change sign text', 'set light intensity', 'turn off a light', 'dim the light', 'rotating platform', 'moving platform', 'spin an object', 'rotate an object forever', 'light color', 'light radius', 'change light color', '3d text', 'world text', 'floating text above actor', 'text above head'],
     members: { add: 'add_component', remove: 'remove_component', set_property: 'set_component_property', set_properties: 'set_component_properties' },
   },
   {

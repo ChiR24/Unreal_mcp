@@ -20,7 +20,7 @@ export const MATERIAL_PARAMETER_LIST: JsonObject = {
   type: 'array',
   items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
   'x-unreal-reflection-boundary': true,
-  description: 'Several parameter values at once, each {parameterName, parameterType (scalar | vector | texture), value, or texturePath for a texture}; every entry is reported, and the call fails naming any that did not apply.',
+  description: 'Several parameter values at once, each {parameterName, parameterType (scalar | vector | texture), value, or texturePath for a texture}; applied counts those that took, and an entry that did not is listed under parameters with why and fails the call.',
 };
 // Several material assets retuned under the one consent of a set_material_parameter call.
 export const MATERIAL_PARAMETER_ASSETS: JsonObject = {

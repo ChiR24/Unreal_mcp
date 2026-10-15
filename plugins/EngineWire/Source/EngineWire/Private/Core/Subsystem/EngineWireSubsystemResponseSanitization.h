@@ -1,0 +1,317 @@
+#pragma once
+
+#include "CoreMinimal.h"
+#include "Core/Subsystem/EngineWireSubsystemContentPaths.h"
+#include "MCP/Execute/McpNativeReceiptRedaction.h"
+
+namespace EngineWireSubsystemResponse
+{
+inline FString SanitizeForLog(const FString& In)
+{
+    if (In.IsEmpty())
+    {
+        return FString();
+    }
+
+    FString Out;
+    Out.Reserve(FMath::Min<int32>(In.Len(), 1024));
+    for (int32 Index = 0; Index < In.Len(); ++Index)
+    {
+        const TCHAR Character = In[Index];
+        Out.AppendChar(Character >= 32 && Character != 127 ? Character : TEXT('?'));
+    }
+
+    if (Out.Len() > 512)
+    {
+        Out = Out.Left(512) + TEXT("[TRUNCATED]");
+    }
+    return Out;
+}
+
+inline bool IsAllowedUnrealMountPrefixAt(
+    const FString& Value,
+    int32 Index,
+    const TCHAR* Mount)
+{
+    const int32 MountLen = FCString::Strlen(Mount);
+    if (Index + MountLen > Value.Len())
+    {
+        return false;
+    }
+
+    if (!Value.Mid(Index, MountLen).Equals(Mount, ESearchCase::CaseSensitive))
+    {
+        return false;
+    }
+
+    const int32 AfterMount = Index + MountLen;
+    if (AfterMount == Value.Len() || Value[AfterMount] == '/')
+    {
+        return true;
+    }
+
+    // A mount root NAMED in prose is still the public mount name, not a host
+    // path. Requiring a trailing '/' meant the reflection-boundary refusal
+    // ("Objects in /Script packages are not addressable...") had its own
+    // subject rewritten to "[path redacted]", deleting the only actionable
+    // fact in the message. A following character that cannot continue a path
+    // segment ends the token, so `/Script packages` is kept while a genuine
+    // host path like `/Scripts/secret` still fails the prefix test and is
+    // redacted as before.
+    const TCHAR Next = Value[AfterMount];
+    return !(FChar::IsAlnum(Next) || Next == TEXT('_') || Next == TEXT('-')
+             || Next == TEXT('.') || Next == TEXT('\\'));
+}
+
+// The five engine roots, and a content mount registered right now when bNameMounts: a plugin or Fab pack mount is
+// as public as /Game. Not from a log device, which can run while the engine holds its mount lock.
+inline bool IsAllowedUnrealMountPath(const FString& Value, int32 Index, bool bNameMounts = true)
+{
+    return IsAllowedUnrealMountPrefixAt(Value, Index, TEXT("/Game")) ||
+           IsAllowedUnrealMountPrefixAt(Value, Index, TEXT("/Engine")) ||
+           IsAllowedUnrealMountPrefixAt(Value, Index, TEXT("/Script")) ||
+           IsAllowedUnrealMountPrefixAt(Value, Index, TEXT("/Temp")) ||
+           IsAllowedUnrealMountPrefixAt(Value, Index, TEXT("/Niagara")) ||
+           (bNameMounts && IsRegisteredContentMountAt(Value, Index));
+}
+
+// Characters that may appear INSIDE a bare path segment. Space, '(' and ')'
+// are not included here: they are handled by IsPathContinuationChar below,
+// which only lets them extend a run that is already unambiguously a path.
+inline bool IsResponsePathChar(TCHAR Character)
+{
+    return FChar::IsAlnum(Character) || Character == '/' || Character == '\\' ||
+           Character == '.' || Character == '_' || Character == '-' ||
+           Character == ':' || Character == '+' || Character == '~';
+}
+
+// A path may only START after a separator when the very next character is a
+// plausible path character. "/ 'path'" and "a / b" are prose separators, not
+// path roots.
+inline bool IsPathStartChar(TCHAR Character)
+{
+    return FChar::IsAlnum(Character) || Character == '.' || Character == '_' ||
+           Character == '~' || Character == '/' || Character == '\\';
+}
+
+// Space and parentheses continue an unambiguous path ("C:\Program Files
+// (x86)\...", "/home/My Project/x"). They are only consulted once the run is
+// known to be a path, so a lone prose '/' ("read/write or create/delete",
+// "('a' / 'b')") still cannot swallow the words around it.
+inline bool IsPathContinuationChar(TCHAR Character)
+{
+    return IsResponsePathChar(Character) || Character == ' ' ||
+           Character == '(' || Character == ')';
+}
+
+// True when Input[Start, End) ends in a file extension ('.' and 1-5 letters or digits). A space after a file name ends
+// the path: "<dir>/L_Main.umap would discard ..." ran on to the next comma and the sentence was redacted with it.
+inline bool SegmentHasFileExtension(const FString& Input, int32 Start, int32 End)
+{
+    int32 Dot = End - 1;
+    while (Dot > Start && End - Dot <= 6 && FChar::IsAlnum(Input[Dot])) --Dot;
+    return Dot > Start && Input[Dot] == '.' && End - Dot >= 2 && End - Dot <= 6;
+}
+
+inline bool IsUnrealMountPathChar(TCHAR Character)
+{
+    return FChar::IsAlnum(Character) || Character == '/' || Character == '.' ||
+           Character == '_' || Character == '-' || Character == ':';
+}
+
+inline FString RedactFilesystemPathsForResponse(const FString& Input, bool bNameMounts = true)
+{
+    FString Output;
+    Output.Reserve(Input.Len());
+
+    for (int32 Index = 0; Index < Input.Len();)
+    {
+        const bool bAllowedUnrealPath = Input[Index] == '/' &&
+            (IsAllowedUnrealMountPath(Input, Index, bNameMounts) || IsProjectRelativePathAt(Input, Index));
+        // A lone '/' in prose is a separator, not a path root: require a
+        // plausible path character next, then either a second separator or a
+        // known host root as the first segment. Spaces and parentheses only
+        // extend the run once a second separator has been seen, so a real
+        // spaced path is redacted whole while "read/write or create/delete"
+        // stays prose.
+        bool bUnixPath = false;
+        int32 UnixEnd = Index + 1;
+        if (Input[Index] == '/' && !bAllowedUnrealPath &&
+            Index + 1 < Input.Len() && IsPathStartChar(Input[Index + 1]))
+        {
+            int32 Scan = Index + 1;
+            int32 Separators = 1;
+            int32 SegmentStart = Index + 1;
+            bool bAllowSpaces = false;
+            while (Scan < Input.Len())
+            {
+                const TCHAR ScanChar = Input[Scan];
+                if (ScanChar == ' ' || ScanChar == '(' || ScanChar == ')')
+                {
+                    if (!bAllowSpaces || SegmentHasFileExtension(Input, SegmentStart, Scan)) break;
+                }
+                else if (!IsResponsePathChar(ScanChar))
+                {
+                    break;
+                }
+                if (ScanChar == '/')
+                {
+                    ++Separators;
+                    bAllowSpaces = Separators >= 2;
+                    SegmentStart = Scan + 1;
+                }
+                ++Scan;
+            }
+            // Single-segment token: a path only when standalone, so `/etc` is
+            // redacted and the embedded `and/or` stays prose.
+            const bool bStandaloneToken =
+                Index == 0 || !FChar::IsAlnum(Input[Index - 1]);
+            bUnixPath = Separators >= 2 || bStandaloneToken;
+            UnixEnd = Scan;
+        }
+        // A drive letter starts a token: the "t:/" inside Object:/Script/Engine.Actor or Struct:/Game/... is a typed
+        // Unreal path, and redacting it from there left "Objec[path redacted]".
+        const bool bWindowsPath =
+            Index + 2 < Input.Len() && FChar::IsAlpha(Input[Index]) &&
+            (Index == 0 || !FChar::IsAlnum(Input[Index - 1])) &&
+            Input[Index + 1] == ':' &&
+            (Input[Index + 2] == '/' || Input[Index + 2] == '\\');
+        const bool bUncPath =
+            Index + 1 < Input.Len() && Input[Index] == '\\' &&
+            Input[Index + 1] == '\\';
+
+        if (bAllowedUnrealPath)
+        {
+            while (Index < Input.Len() && IsUnrealMountPathChar(Input[Index]))
+            {
+                Output.AppendChar(Input[Index]);
+                ++Index;
+            }
+            continue;
+        }
+
+        if (bUnixPath || bWindowsPath || bUncPath)
+        {
+            // A drive or UNC root is unambiguous from its first character, so its
+            // run consumes spaces/parentheses as well ("Program Files (x86)").
+            int32 End = bUnixPath ? UnixEnd : Index;
+            int32 DriveSegment = Index;
+            while (!bUnixPath && End < Input.Len() && IsPathContinuationChar(Input[End]))
+            {
+                if (Input[End] == '/' || Input[End] == '\\') DriveSegment = End + 1;
+                else if (Input[End] == ' ' && SegmentHasFileExtension(Input, DriveSegment, End)) break;
+                ++End;
+            }
+            // A package file under mounted content is named by its package path instead.
+            FString Package, Rest;
+            Output += MapContentPathForResponse(Input.Mid(Index, End - Index), Package, Rest)
+                ? Package + RedactFilesystemPathsForResponse(Rest, bNameMounts) : FString(TEXT("[path redacted]"));
+            Index = End;
+            continue;
+        }
+
+        Output.AppendChar(Input[Index]);
+        ++Index;
+    }
+
+    return Output;
+}
+
+inline void RedactFollowingValueForResponse(FString& Text, const FString& Marker)
+{
+    const auto IsValueDelimiter = [](TCHAR Character)
+    {
+        return Character == ';' || Character == '&' || Character == ',' ||
+               Character == '\r' || Character == '\n';
+    };
+    const auto IsHeaderDelimiter = [](TCHAR Character)
+    {
+        return Character == ';' || Character == '&' || Character == '\r' ||
+               Character == '\n';
+    };
+
+    int32 SearchStart = 0;
+    while (SearchStart < Text.Len())
+    {
+        const int32 MarkerIndex = Text.Find(
+            Marker, ESearchCase::IgnoreCase, ESearchDir::FromStart, SearchStart);
+        if (MarkerIndex == INDEX_NONE)
+        {
+            return;
+        }
+
+        const int32 ValueStart = MarkerIndex + Marker.Len();
+        const bool bAllowWhitespaceInValue = Marker.EndsWith(TEXT(":"));
+        int32 ValueEnd = ValueStart;
+        if (bAllowWhitespaceInValue)
+        {
+            while (ValueEnd < Text.Len() && FChar::IsWhitespace(Text[ValueEnd]) &&
+                   Text[ValueEnd] != '\r' && Text[ValueEnd] != '\n')
+            {
+                ++ValueEnd;
+            }
+            while (ValueEnd < Text.Len() && !IsHeaderDelimiter(Text[ValueEnd]))
+            {
+                ++ValueEnd;
+            }
+        }
+        else
+        {
+            while (ValueEnd < Text.Len() && !IsValueDelimiter(Text[ValueEnd]) &&
+                   !FChar::IsWhitespace(Text[ValueEnd]))
+            {
+                ++ValueEnd;
+            }
+        }
+
+        Text = Text.Left(ValueStart) + TEXT("[redacted]") + Text.Mid(ValueEnd);
+        SearchStart = ValueStart + 10;
+    }
+}
+
+// A key written the way the editor logs identities ("UserID = x", "AccountId: x",
+// "LoginId=x"), spaces allowed around '=' or ':'. read_log handed back the Epic
+// analytics user id verbatim because only the exact "key=" markers were known.
+inline void RedactKeyedValueForResponse(FString& Text, const TCHAR* Key)
+{
+    const int32 KeyLen = FCString::Strlen(Key);
+    for (int32 From = 0; From < Text.Len();)
+    {
+        const int32 At = Text.Find(Key, ESearchCase::IgnoreCase, ESearchDir::FromStart, From);
+        if (At == INDEX_NONE) return;
+        int32 Start = At + KeyLen;
+        while (Start < Text.Len() && Text[Start] == ' ') ++Start;
+        From = At + KeyLen;
+        if (Start >= Text.Len() || (Text[Start] != '=' && Text[Start] != ':')) continue;
+        for (++Start; Start < Text.Len() && Text[Start] == ' ';) ++Start;
+        int32 End = Start;
+        while (End < Text.Len() && !FChar::IsWhitespace(Text[End]) && Text[End] != ',' &&
+               Text[End] != ';' && Text[End] != '&') ++End;
+        if (End == Start) continue;
+        Text = Text.Left(Start) + TEXT("[redacted]") + Text.Mid(End);
+        From = Start + 10;
+    }
+}
+
+inline FString SanitizeEngineErrorForResponse(const FString& In, bool bNameMounts = true)
+{
+    // The receipt masker first (passwd/pwd/api-key, quoted JSON and Bearer forms), then
+    // this path's own markers, which also swallow a whole header value ("Authorization: Basic a b").
+    FString Out = McpMaskSecrets(RedactFilesystemPathsForResponse(SanitizeForLog(In), bNameMounts));
+    for (const TCHAR* Key : {TEXT("userid"), TEXT("accountid"), TEXT("loginid")})
+    {
+        RedactKeyedValueForResponse(Out, Key);
+    }
+    for (const TCHAR* Marker : {TEXT("token="), TEXT("capabilitytoken="), TEXT("password="), TEXT("secret="),
+                                TEXT("api_key="), TEXT("apikey="), TEXT("authorization:"), TEXT("bearer ")})
+    {
+        RedactFollowingValueForResponse(Out, Marker);
+    }
+
+    if (Out.Len() > 512)
+    {
+        Out = Out.Left(512) + TEXT("[TRUNCATED]");
+    }
+    return Out;
+}
+}

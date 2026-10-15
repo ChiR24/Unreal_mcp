@@ -1,0 +1,62 @@
+#include "Domains/Geometry/McpGeometryHandlers.h"
+
+#if MCP_HAS_FULL_GEOMETRY_SCRIPT
+
+namespace McpGeometryHandlers
+{
+bool HandleRecomputeTangents(UEngineWireSubsystem* Self, const FString& RequestId,
+                                    const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+
+    const TOptional<FMcpGeometryTarget> Target = ResolveGeometryTarget(Self, RequestId, ActorName, Socket);
+    if (!Target) return true;
+    auto [TargetActor, DMC, Mesh] = *Target;
+
+    // Recompute tangents using MikkT space
+    FGeometryScriptTangentsOptions TangentOptions;
+    UGeometryScriptLibrary_MeshNormalsFunctions::ComputeTangents(Mesh, TangentOptions, nullptr);
+
+    DMC->NotifyMeshUpdated();
+
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetStringField(TEXT("actorName"), ActorName);
+    Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Tangents recomputed"), Result);
+    return true;
+}
+
+bool HandleSplitNormals(UEngineWireSubsystem* Self, const FString& RequestId,
+                               const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    double SplitAngle = GetJsonNumberField(Payload, TEXT("splitAngle"), 60.0);
+
+    const TOptional<FMcpGeometryTarget> Target = ResolveGeometryTarget(Self, RequestId, ActorName, Socket);
+    if (!Target) return true;
+    auto [TargetActor, DMC, Mesh] = *Target;
+
+    // UE 5.7: SplitAngle was removed from FGeometryScriptCalculateNormalsOptions
+    // Use ComputeSplitNormals with FGeometryScriptSplitNormalsOptions instead
+    FGeometryScriptSplitNormalsOptions SplitOptions;
+    SplitOptions.bSplitByOpeningAngle = true;
+    SplitOptions.OpeningAngleDeg = SplitAngle;
+    SplitOptions.bSplitByFaceGroup = false;
+
+    FGeometryScriptCalculateNormalsOptions CalcOptions;
+    CalcOptions.bAngleWeighted = true;
+    CalcOptions.bAreaWeighted = true;
+
+    UGeometryScriptLibrary_MeshNormalsFunctions::ComputeSplitNormals(Mesh, SplitOptions, CalcOptions, nullptr);
+
+    DMC->NotifyMeshUpdated();
+
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetStringField(TEXT("actorName"), ActorName);
+    Result->SetNumberField(TEXT("splitAngle"), SplitAngle);
+    Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Split normals applied"), Result);
+    return true;
+}
+
+} // namespace McpGeometryHandlers
+
+#endif // MCP_HAS_FULL_GEOMETRY_SCRIPT

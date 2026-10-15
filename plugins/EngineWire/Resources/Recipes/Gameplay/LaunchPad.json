@@ -1,0 +1,35 @@
+{
+  "description": "A pad that launches a Character that touches it: LaunchCharacter with LaunchVelocity, replacing its vertical speed so every bounce reaches the same height (and its horizontal speed too with LaunchOverrideXY), and LaunchSound plays at the pad. Other actors pass over it. The actor needs a component that overlaps pawns.",
+  "tag": "LaunchPad",
+  "placeholders": {
+    "Velocity": "The launch velocity as vector export text, such as (X=0,Y=0,Z=1200).",
+    "OverrideXY": "true replaces the Character's horizontal speed instead of adding to it.",
+    "Sound": "Object path of the sound to play at the pad on each launch, or None."
+  },
+  "variables": [
+    { "variableName": "LaunchVelocity", "variableType": "Vector", "defaultValue": "{{Velocity}}", "category": "Launch", "instanceEditable": true },
+    { "variableName": "LaunchOverrideXY", "variableType": "Bool", "defaultValue": "{{OverrideXY}}", "category": "Launch", "instanceEditable": true },
+    { "variableName": "LaunchSound", "variableType": "Object:/Script/Engine.SoundBase", "defaultValue": "{{Sound}}", "category": "Launch", "instanceEditable": true }
+  ],
+  "hooks": [
+    { "id": "launch", "event": "ActorBeginOverlap" }
+  ],
+  "eventGraph": [
+    { "edit": "create_node", "id": "launchWho", "nodeType": "Cast", "targetClass": "/Script/Engine.Character" },
+    { "edit": "create_node", "id": "launchVelocity", "nodeType": "VariableGet", "memberName": "LaunchVelocity" },
+    { "edit": "create_node", "id": "launchXY", "nodeType": "VariableGet", "memberName": "LaunchOverrideXY" },
+    { "edit": "create_node", "id": "launchGo", "nodeType": "CallFunction", "memberName": "LaunchCharacter", "memberClass": "/Script/Engine.Character", "pinDefaults": { "bZOverride": true } },
+    { "edit": "create_node", "id": "launchSound", "nodeType": "VariableGet", "memberName": "LaunchSound" },
+    { "edit": "create_node", "id": "launchWhere", "nodeType": "CallFunction", "memberName": "K2_GetActorLocation", "memberClass": "/Script/Engine.Actor" },
+    { "edit": "create_node", "id": "launchPlay", "nodeType": "CallFunction", "memberName": "PlaySoundAtLocation", "memberClass": "/Script/Engine.GameplayStatics" },
+    { "edit": "connect_pins", "from": "$launch_event.OtherActor", "to": "$launchWho.Object" },
+    { "edit": "connect_pins", "from": "$launchWho.AsCharacter", "to": "$launchGo.self" },
+    { "edit": "connect_pins", "from": "$launchVelocity.LaunchVelocity", "to": "$launchGo.LaunchVelocity" },
+    { "edit": "connect_pins", "from": "$launchXY.LaunchOverrideXY", "to": "$launchGo.bXYOverride" },
+    { "edit": "connect_pins", "from": "$launchSound.LaunchSound", "to": "$launchPlay.Sound" },
+    { "edit": "connect_pins", "from": "$launchWhere.ReturnValue", "to": "$launchPlay.Location" },
+    { "edit": "connect_pins", "from": "$launch.then", "to": "$launchWho.execute" },
+    { "edit": "connect_pins", "from": "$launchWho.then", "to": "$launchGo.execute" },
+    { "edit": "connect_pins", "from": "$launchGo.then", "to": "$launchPlay.execute" }
+  ]
+}

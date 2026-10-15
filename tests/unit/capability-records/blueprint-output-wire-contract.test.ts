@@ -33,9 +33,9 @@ import { validateAgainstCapabilitySchema } from '../../../src/server/gateway/gat
 import { MANAGE_BLUEPRINT_UNFOLDED_SOURCES as MANAGE_BLUEPRINT_RECORDS } from '../../../src/tools/catalog/capabilities/records/manage-blueprint/index.js';
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
-const PLUGIN = 'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private';
-const SET_DEFAULT_LITERAL = `${PLUGIN}/Domains/Blueprint/Graph/McpAutomationBridge_BlueprintHandlersSetDefaultLiteral.cpp`;
-const SCS_SET_PROPERTY = `${PLUGIN}/Domains/SCS/McpAutomationBridge_SCSHandlersSetProperty.cpp`;
+const PLUGIN = 'plugins/EngineWire/Source/EngineWire/Private';
+const SET_DEFAULT_LITERAL = `${PLUGIN}/Domains/Blueprint/Graph/McpBPSetDefaultLiteral.cpp`;
+const SCS_SET_PROPERTY = `${PLUGIN}/Domains/SCS/McpSCSSetProp.cpp`;
 
 /** `success`/`message` are the response envelope, not a domain output field. */
 const ENVELOPE_FIELDS: ReadonlySet<string> = new Set(['success', 'message']);

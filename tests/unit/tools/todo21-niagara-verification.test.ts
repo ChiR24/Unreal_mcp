@@ -5,7 +5,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-const PRIVATE = resolve(process.cwd(), 'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private');
+const PRIVATE = resolve(process.cwd(), 'plugins/EngineWire/Source/EngineWire/Private');
 function read(...parts: string[]): string {
   const p = resolve(PRIVATE, ...parts);
   expect(existsSync(p), `missing: ${p}`).toBe(true);
@@ -13,8 +13,8 @@ function read(...parts: string[]): string {
 }
 function code(s: string): string { return s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, ''); }
 
-const infoVal = () => read('Domains/NiagaraAuthoring/McpAutomationBridge_NiagaraAuthoringHandlersInfoValidation.cpp');
-const ctx = () => read('Domains/NiagaraAuthoring/McpAutomationBridge_NiagaraAuthoringHandlersContext.cpp');
+const infoVal = () => read('Domains/NiagaraAuthoring/McpNiagaraInfoValidate.cpp');
+const ctx = () => read('Domains/NiagaraAuthoring/McpNiagaraContext.cpp');
 
 describe('BB-025 false-success chain is structurally detectable', () => {
   it('GetNiagaraInfo emits emitterCount at the top level for the System branch', () => {

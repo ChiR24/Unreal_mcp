@@ -21,7 +21,7 @@ import { validateAgainstCapabilitySchema } from '../../../src/server/gateway/gat
 import { isRecord } from '../../../src/utils/validation/type-guards.js';
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
-const PLUGIN = 'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private';
+const PLUGIN = 'plugins/EngineWire/Source/EngineWire/Private';
 const read = (relativePath: string): string => readFileSync(resolve(REPO_ROOT, relativePath), 'utf8');
 
 function outputSchemaOf(id: string): Draft202012ObjectSchema {
@@ -57,6 +57,25 @@ describe('output projection publishes declared fields only', () => {
     expect(schema.required).toContain('componentName');
     expect(validateAgainstCapabilitySchema(canonical({ saved: true }, schema), schema)?.reason).toBe('missing-required');
     expect(validateAgainstCapabilitySchema(canonical({ componentName: 123, saved: true }, schema), schema)?.reason).toBe('type');
+  });
+});
+
+// The receipt carries the message at its top; a record declaring only {success, details} printed it a second time
+// under details.message.
+describe('the details fold leaves the message to the receipt', () => {
+  const schema: Draft202012ObjectSchema = {
+    $schema: 'https://json-schema.org/draft/2020-12/schema', type: 'object',
+    properties: { success: { type: 'boolean' }, details: { type: 'object' } }, required: ['success'], additionalProperties: false,
+  };
+
+  it('folds the undeclared fields but not the message, from the root or the payload', () => {
+    const projected = canonical({ message: 'Collection created', data: { message: 'Collection created', added: ['Wind'] }, created: true }, schema);
+    expect(projected.details).toEqual({ created: true, added: ['Wind'] });
+  });
+
+  it('on both transports', () => {
+    expect(read(`${PLUGIN}/MCP/Gateway/McpNativeGatewayOutputProjection.cpp`))
+      .toContain('Entry.Key == TEXT("liveRevisions") || Entry.Key == TEXT("message") || (*Properties)->HasField(Entry.Key)');
   });
 });
 

@@ -23,7 +23,7 @@ import { resolve } from 'node:path';
 
 const SHARD_DIR = resolve(
   process.cwd(),
-  'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Generated',
+  'plugins/EngineWire/Source/EngineWire/Private/MCP/Generated',
 );
 
 /** One `{ "record": <CapabilityRecord> }` wrapper as emitted into a shard. */
@@ -39,7 +39,7 @@ export interface NativeShardFile {
 /** Ordered shard source paths (excludes the index header). */
 export const listNativeShardFiles = (): readonly string[] =>
   readdirSync(SHARD_DIR)
-    .filter((n) => n.startsWith('McpGeneratedCapabilityShards_') && n.endsWith('.cpp'))
+    .filter((n) => n.startsWith('McpCapShard') && n.endsWith('.cpp'))
     .sort()
     .map((n) => resolve(SHARD_DIR, n));
 

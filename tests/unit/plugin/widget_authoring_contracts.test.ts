@@ -11,7 +11,7 @@ import { describe, expect, it } from 'vitest';
 import { capabilityIndex } from '../../../src/server/gateway/gateway-capability-index.js';
 import { isRecord } from '../../../src/utils/validation/type-guards.js';
 
-const DOMAIN = join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private', 'Domains', 'WidgetAuthoring');
+const DOMAIN = join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'Domains', 'WidgetAuthoring');
 
 /** Block and line comments removed, so no assertion can be satisfied by prose. */
 function stripComments(source: string): string {
@@ -28,8 +28,8 @@ function sources(dir: string = DOMAIN): string[] {
 }
 
 const UI_WIDGET_AUTHORING = join(
-  'plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private', 'Domains', 'Ui',
-  'McpAutomationBridge_UiHandlersWidgetAuthoring.cpp'
+  'plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'Domains', 'Ui',
+  'McpUiWidgetAuthoring.cpp'
 );
 
 describe('widgetPath is the canonical /Game package path, never the object path', () => {
@@ -46,12 +46,12 @@ describe('widgetPath is the canonical /Game package path, never the object path'
   it('the shared layout reply, the creators and the template builders name the package path', () => {
     const viaHelper = /SetStringField\(TEXT\("widgetPath"\), WidgetBlueprintPackagePath\((?:WidgetBP|WidgetBlueprint)\)\)/u;
     for (const segments of [
-      ['Support', 'McpAutomationBridge_WidgetAuthoringSlotReadback.cpp'],
-      ['Support', 'McpAutomationBridge_WidgetAuthoringCreation.cpp'],
-      ['Animation', 'McpAutomationBridge_WidgetAuthoringAnimationCore.cpp'],
-      ['Bindings', 'McpAutomationBridge_WidgetAuthoringPropertyBindings.cpp'],
-      ['Templates', 'McpAutomationBridge_WidgetAuthoringHudElements.cpp'],
-      ['Templates', 'McpAutomationBridge_WidgetAuthoringScreenParts.cpp']
+      ['Support', 'McpWidgetSlotReadback.cpp'],
+      ['Support', 'McpWidgetCreation.cpp'],
+      ['Animation', 'McpWidgetAnimCore.cpp'],
+      ['Bindings', 'McpWidgetPropBindings.cpp'],
+      ['Templates', 'McpWidgetHudElements.cpp'],
+      ['Templates', 'McpWidgetScreenParts.cpp']
     ] as const) {
       expect(read(...segments), segments.join('/')).toMatch(viaHelper);
     }
@@ -59,14 +59,14 @@ describe('widgetPath is the canonical /Game package path, never the object path'
   });
 
   it('WidgetBlueprintPackagePath is the package name of the asset', () => {
-    expect(read('Support', 'McpAutomationBridge_WidgetAuthoringLoading.cpp')).toMatch(
+    expect(read('Support', 'McpWidgetLoading.cpp')).toMatch(
       /FString WidgetBlueprintPackagePath\(const UWidgetBlueprint\* WidgetBP\)\s*\{\s*return WidgetBP && WidgetBP->GetOutermost\(\) \? WidgetBP->GetOutermost\(\)->GetName\(\) : FString\(\);/u
     );
   });
 });
 
 describe('set_style and set_clipping name the widget they saved into', () => {
-  const styling = (): string => read('Styling', 'McpAutomationBridge_WidgetAuthoringStyleClipping.cpp');
+  const styling = (): string => read('Styling', 'McpWidgetStyleClipping.cpp');
 
   it('widgetPath is on the reply before either variant branches', () => {
     const source = styling();
@@ -88,16 +88,16 @@ describe('set_style and set_clipping name the widget they saved into', () => {
 
 describe('a tree edit that adds or renames a variable widget leaves the generated class current', () => {
   it('RefreshWidgetBlueprintClass compiles, but never while Play-In-Editor runs', () => {
-    expect(read('Support', 'McpAutomationBridge_WidgetAuthoringLoading.cpp')).toMatch(
+    expect(read('Support', 'McpWidgetLoading.cpp')).toMatch(
       /bool RefreshWidgetBlueprintClass\(UWidgetBlueprint\* WidgetBP\)\s*\{\s*if \(!WidgetBP \|\| \(GEditor && GEditor->PlayWorld\)\)\s*\{\s*return false;\s*\}\s*const bool bCompiled = McpSafeCompileBlueprint\(WidgetBP\);/u
     );
   });
 
   it.each([
-    ['add_* widgets', ['Support', 'McpAutomationBridge_WidgetAuthoringAddWidget.cpp'], 'ValidateWidgetCreation('],
-    ['add_widget_component', ['Components', 'McpAutomationBridge_WidgetAuthoringGenericComponent.cpp'], 'McpSafeAssetSave(WidgetBP)'],
-    ['duplicate_widget', ['Support', 'McpAutomationBridge_WidgetAuthoringDuplicate.cpp'], 'MarkWidgetBlueprintModifiedAndSave(WidgetBP)'],
-    ['add_game_widget', ['Templates', 'McpAutomationBridge_WidgetAuthoringHudElements.cpp'], 'ValidateWidgetCreation(']
+    ['add_* widgets', ['Support', 'McpWidgetAddWidget.cpp'], 'ValidateWidgetCreation('],
+    ['add_widget_component', ['Components', 'McpWidgetGenericComponent.cpp'], 'McpSafeAssetSave(WidgetBP)'],
+    ['duplicate_widget', ['Support', 'McpWidgetDuplicate.cpp'], 'MarkWidgetBlueprintModifiedAndSave(WidgetBP)'],
+    ['add_game_widget', ['Templates', 'McpWidgetHudElements.cpp'], 'ValidateWidgetCreation(']
   ] as const)('%s refreshes the class after the edit it saved', (_name, file, after) => {
     const source = read(...file);
     const refresh = source.indexOf('RefreshWidgetBlueprintClass(WidgetBP);');
@@ -107,7 +107,7 @@ describe('a tree edit that adds or renames a variable widget leaves the generate
   });
 
   it('rename_widget and remove_widget each refresh it inside their own block', () => {
-    const source = read('Support', 'McpAutomationBridge_WidgetAuthoringManipulation.cpp');
+    const source = read('Support', 'McpWidgetManipulation.cpp');
     const rename = source.slice(source.indexOf('"rename_widget"'), source.indexOf('"reparent_widget"'));
     const remove = source.slice(source.indexOf('"remove_widget"'), source.indexOf('"rename_widget"'));
 
@@ -119,7 +119,7 @@ describe('a tree edit that adds or renames a variable widget leaves the generate
 
 describe('SafeAddWidgetToTree: only an add that re-uses a slotName warns that the widget was already seated', () => {
   it('the warning is gated on the caller not moving the widget on purpose', () => {
-    const tree = read('Support', 'McpAutomationBridge_WidgetAuthoringTree.cpp');
+    const tree = read('Support', 'McpWidgetTree.cpp');
 
     expect(tree).toMatch(/if \(bDetached && bWarnOnReuse\)/u);
     expect(tree).toMatch(/DetachFromOwningPanel\(WidgetBP, NewWidget, OldSlot, OldParent, OldIndex, !bMove\);/u);
@@ -136,9 +136,9 @@ describe('SafeAddWidgetToTree: only an add that re-uses a slotName warns that th
     const moving = calls.filter((call) => /,\s*true\s*\)/u.test(call.args));
 
     expect(calls.length, 'every add path still goes through the funnel').toBeGreaterThanOrEqual(4);
-    expect(moving.map((call) => call.file)).toEqual(['McpAutomationBridge_WidgetAuthoringManipulation.cpp']);
+    expect(moving.map((call) => call.file)).toEqual(['McpWidgetManipulation.cpp']);
 
-    const manipulation = read('Support', 'McpAutomationBridge_WidgetAuthoringManipulation.cpp');
+    const manipulation = read('Support', 'McpWidgetManipulation.cpp');
     const reparent = manipulation.slice(manipulation.indexOf('reparent_widget'), manipulation.indexOf('get_widget_slot_info'));
     expect(reparent).toMatch(/SafeAddWidgetToTree\(WidgetBP, TargetWidget, NewParentWidget->GetName\(\),[^;{]*,\s*true\)/u);
   });
@@ -158,7 +158,7 @@ describe('duplicate_widget: the record says how the copies are named', () => {
   });
 
   it('is what the handler does: every child is copied under its own name plus _Copy', () => {
-    const handler = read('Support', 'McpAutomationBridge_WidgetAuthoringDuplicate.cpp');
+    const handler = read('Support', 'McpWidgetDuplicate.cpp');
 
     expect(handler).toContain('Source->GetName() + TEXT("_Copy")');
     expect(handler).toMatch(/McpCopySubtree\(Tree, Child, FString\(\), Names\)/u);
@@ -178,8 +178,8 @@ describe('set_size sizes a box child by rule, and the record declares what the h
   });
 
   it('the handler reads both, through the property the layout readback reports', () => {
-    const geometry = read('Layout', 'McpAutomationBridge_WidgetAuthoringCanvasSlotGeometry.cpp');
-    const readback = read('Support', 'McpAutomationBridge_WidgetAuthoringSlotReadback.cpp');
+    const geometry = read('Layout', 'McpWidgetCanvasSlotGeometry.cpp');
+    const readback = read('Support', 'McpWidgetSlotReadback.cpp');
 
     expect(geometry).toContain('TEXT("sizeRule")');
     expect(geometry).toContain('TEXT("fillValue")');
@@ -194,7 +194,7 @@ describe('set_size sizes a box child by rule, and the record declares what the h
 // the name up flat, so no struct member (a text outline) could be written.
 describe('set_style propertyName walks a dotted path into a struct', () => {
   it('resolves through the shared property path resolver and writes into the resolved container', () => {
-    const source = read('Styling', 'McpAutomationBridge_WidgetAuthoringStyleClipping.cpp');
+    const source = read('Styling', 'McpWidgetStyleClipping.cpp');
     expect(source).toContain('McpResolvePropertyPath(Widget, PropertyName, Container, ResolvedPath, ResolveError)');
     expect(source).toContain('Prop->ContainerPtrToValuePtr<void>(Container)');
   });

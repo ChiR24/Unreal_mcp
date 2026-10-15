@@ -1,0 +1,309 @@
+#include "MCP/Transport/McpNativeTransportPrivate.h"
+#include "Interfaces/IPluginManager.h"
+
+DEFINE_LOG_CATEGORY(LogMcpNativeTransport);
+
+// ─── Lifecycle ──────────────────────────────────────────────────────────────
+
+FMcpNativeTransport::FMcpNativeTransport(UEngineWireSubsystem* InSubsystem)
+	: Subsystem(InSubsystem)
+{
+}
+
+FMcpNativeTransport::~FMcpNativeTransport()
+{
+	Shutdown();
+}
+
+bool FMcpNativeTransport::Start(int32 Port, const FString& PluginDir, bool bLoadAllTools,
+	const FString& InUserInstructions, const FString& InListenHost,
+	bool bInAllowNonLoopback)
+{
+	if (Port <= 0 || Port > 65535)
+	{
+		UE_LOG(LogMcpNativeTransport, Error,
+			TEXT("Invalid Native MCP port %d. Port must be between 1 and 65535."), Port);
+		return false;
+	}
+
+	ListenPort = Port;
+	UserInstructions = InUserInstructions;
+	bAllowNonLoopback = bInAllowNonLoopback;
+
+	ListenHost = InListenHost.IsEmpty() ? TEXT("127.0.0.1") : InListenHost;
+	if (ListenHost.Equals(TEXT("localhost"), ESearchCase::IgnoreCase))
+	{
+		ListenHost = TEXT("127.0.0.1");
+	}
+	else if (ListenHost == TEXT("[::1]"))
+	{
+		ListenHost = TEXT("::1");
+	}
+
+	const bool bIsLoopback =
+		ListenHost == TEXT("127.0.0.1") || ListenHost == TEXT("::1");
+	if (!bIsLoopback && !bAllowNonLoopback)
+	{
+		UE_LOG(LogMcpNativeTransport, Warning,
+			TEXT("ListenHost '%s' is not loopback and AllowNonLoopback is false; falling back to 127.0.0.1"),
+			*ListenHost);
+		ListenHost = TEXT("127.0.0.1");
+	}
+	else if (!bIsLoopback)
+	{
+		// Fail-closed LAN/token coupling. A non-loopback bind exposes the native
+		// MCP surface to the network. The default-allow loopback posture means a
+		// LAN bind without capability-token auth would let any network client
+		// call any tool unauthenticated, so refuse to start unless the token is
+		// required. The disallowed-host loopback fallback above is preserved: a
+		// host that is NOT explicitly allowed still degrades to 127.0.0.1.
+		const UEngineWireSettings* Settings = GetDefault<UEngineWireSettings>();
+		if (!Settings || !Settings->bRequireCapabilityToken)
+		{
+			UE_LOG(LogMcpNativeTransport, Error,
+				TEXT("SECURITY: refusing to bind native MCP to non-loopback %s without RequireCapabilityToken; "
+					"enable the capability token or keep the host loopback"),
+				*ListenHost);
+			return false;
+		}
+		UE_LOG(LogMcpNativeTransport, Warning,
+			TEXT("SECURITY: native MCP binding to non-loopback %s requires capability token"),
+			*ListenHost);
+	}
+
+	// Load server identity & instructions from server-info.json
+	{
+		FString ServerInfoPath = FPaths::Combine(PluginDir, TEXT("Resources/MCP/server-info.json"));
+		FString JsonString;
+		if (FFileHelper::LoadFileToString(JsonString, *ServerInfoPath))
+		{
+			TSharedPtr<FJsonObject> JsonObj;
+			TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(JsonString);
+			if (FJsonSerializer::Deserialize(Reader, JsonObj) && JsonObj.IsValid())
+			{
+				JsonObj->TryGetStringField(TEXT("name"), ServerName);
+				JsonObj->TryGetStringField(TEXT("instructions"), BaseInstructions);
+
+				UE_LOG(LogMcpNativeTransport, Log, TEXT("Loaded server-info.json: %s"), *ServerName);
+			}
+			else
+			{
+				UE_LOG(LogMcpNativeTransport, Warning,
+					TEXT("Failed to parse server-info.json -- using defaults"));
+			}
+		}
+		else
+		{
+			UE_LOG(LogMcpNativeTransport, Warning,
+				TEXT("server-info.json not found at %s -- using defaults"), *ServerInfoPath);
+		}
+	}
+	// The .uplugin VersionName is the native side's only copy of the version.
+	if (const TSharedPtr<IPlugin> Plugin = IPluginManager::Get().FindPlugin(TEXT("EngineWire"))) { ServerVersion = Plugin->GetDescriptor().VersionName; }
+
+	// Initialize dynamic tool manager from self-describing C++ tool registry
+	{
+		FMcpToolRegistry& Registry = FMcpToolRegistry::Get();
+		UE_LOG(LogMcpNativeTransport, Log,
+			TEXT("Tool registry: %d self-describing tools registered"), Registry.GetToolCount());
+		ToolManager.Initialize(Registry, bLoadAllTools);
+	}
+
+	// Create stop event and launch accept thread
+	StopEvent = FPlatformProcess::GetSynchEventFromPool(true);
+	BindCompleteEvent = FPlatformProcess::GetSynchEventFromPool(false);
+	bStopping.store(false);
+	bBindSuccess.store(false);
+
+	Thread = FRunnableThread::Create(this, TEXT("McpNativeHTTPServer"), 0, TPri_Normal);
+	if (!Thread)
+	{
+		UE_LOG(LogMcpNativeTransport, Error, TEXT("Failed to create HTTP server thread"));
+		FPlatformProcess::ReturnSynchEventToPool(BindCompleteEvent);
+		BindCompleteEvent = nullptr;
+		FPlatformProcess::ReturnSynchEventToPool(StopEvent);
+		StopEvent = nullptr;
+		return false;
+	}
+
+	// Wait for the thread to complete bind/listen before reporting success
+	BindCompleteEvent->Wait();
+	FPlatformProcess::ReturnSynchEventToPool(BindCompleteEvent);
+	BindCompleteEvent = nullptr;
+
+	if (!bBindSuccess.load())
+	{
+		UE_LOG(LogMcpNativeTransport, Error,
+			TEXT("Failed to start native MCP server on %s:%d — bind/listen failed"), *ListenHost, Port);
+		Thread->WaitForCompletion();
+		delete Thread;
+		Thread = nullptr;
+		FPlatformProcess::ReturnSynchEventToPool(StopEvent);
+		StopEvent = nullptr;
+		return false;
+	}
+
+	// Launch the keepalive loop on its own thread so it survives long GameThread
+	// stalls (recompile, PIE, modal, blocking import) instead of starving with the
+	// subsystem ticker that drives CleanupStaleRequests.
+	KeepaliveLoopFuture = Async(EAsyncExecution::Thread, [this]() { RunKeepaliveLoop(); });
+
+	// Seed the game-thread heartbeat at start-up so a startup modal (restore packages after a kill)
+	// is reported as EDITOR_BLOCKED instead of queueing requests forever (dogfood #79).
+	LastGameThreadHeartbeat.store(FPlatformTime::Seconds());
+	UE_LOG(LogMcpNativeTransport, Log,
+		TEXT("Native MCP server started on http://%s:%d/mcp"), *ListenHost, Port);
+	return true;
+}
+
+void FMcpNativeTransport::Stop()
+{
+	// FRunnable::Stop() — lightweight signal, called by Thread->Kill()
+	{
+		FScopeLock SessionLock(&SessionMutex);
+		bStopping.store(true);
+	}
+	if (StopEvent)
+	{
+		StopEvent->Trigger();
+	}
+	// Close listen socket to unblock Accept()
+	if (ListenSocket)
+	{
+		ListenSocket->Close();
+	}
+}
+
+void FMcpNativeTransport::Shutdown()
+{
+	Stop();  // Signal the accept thread
+
+	// Wait for accept thread to finish
+	if (Thread)
+	{
+		Thread->Kill(true);  // Calls Stop() again (no-op — already signaled)
+		delete Thread;
+		Thread = nullptr;
+	}
+
+	// Join the keepalive loop before StopEvent is returned to the pool (it waits on
+	// it) and before notification streams are closed (it writes to their sockets).
+	// Stop() already signaled bStopping + StopEvent, so the loop is on its way out.
+	if (KeepaliveLoopFuture.IsValid())
+	{
+		KeepaliveLoopFuture.Wait();
+		KeepaliveLoopFuture = TFuture<void>();
+	}
+
+	// Wait for in-flight connection handlers and async writes to finish.
+	// IMPORTANT: Shutdown runs on GameThread. HandleToolsCall dispatches
+	// ProcessAutomationRequest → CompletePendingRequest to GameThread via
+	// AsyncTask. If we block GameThread with a plain spin-wait, those tasks
+	// can never execute and PendingAsyncWrites never reaches 0 → deadlock.
+	// Solution: pump GameThread tasks while waiting so queued handlers drain.
+	{
+		double WaitStart = FPlatformTime::Seconds();
+		constexpr double WarnAfter = 15.0;
+		bool bWarned = false;
+		while (ActiveConnectionCount.load() > 0 || PendingAsyncWrites.load() > 0)
+		{
+			if (IsInGameThread())
+			{
+				FTaskGraphInterface::Get().ProcessThreadUntilIdle(ENamedThreads::GameThread);
+			}
+			FPlatformProcess::Sleep(0.01f);
+			double Elapsed = FPlatformTime::Seconds() - WaitStart;
+			if (!bWarned && Elapsed > WarnAfter)
+			{
+				UE_LOG(LogMcpNativeTransport, Warning,
+					TEXT("Shutdown stalled: %d active connections, %d pending async writes after %.0fs"),
+					ActiveConnectionCount.load(), PendingAsyncWrites.load(), Elapsed);
+				bWarned = true;
+			}
+		}
+	}
+
+	if (Subsystem)
+	{
+		Subsystem->CancelAllAutomationRequests();
+	}
+
+	if (StopEvent)
+	{
+		FPlatformProcess::ReturnSynchEventToPool(StopEvent);
+		StopEvent = nullptr;
+	}
+
+	// Close all active SSE connections with error.
+	// WriteMutex is taken per-connection to synchronize with in-flight async writes.
+	{
+		FScopeLock Lock(&SSEConnectionsMutex);
+		// First pass: mark every conn for removal under SSEConnectionsMutex so
+		// any SendSSEProgressUpdate / CompletePendingRequest async task that
+		// has not yet acquired the lock bails out at its bMarkedForRemoval
+		// check. WriteMutex then serializes with any writer that already
+		// passed the check.
+		for (auto& [RequestId, Conn] : SSEConnections)
+		{
+			if (Conn.IsValid())
+			{
+				Conn->bMarkedForRemoval.store(true);
+			}
+		}
+		for (auto& [RequestId, Conn] : SSEConnections)
+		{
+			if (Conn.IsValid())
+			{
+				FScopeLock WriteLock(&Conn->WriteMutex);
+				if (Conn->Socket)
+				{
+					// Inline SSE write — we already hold WriteMutex
+					FString ErrorJson = FMcpJsonRpc::BuildError(
+						Conn->JsonRpcId, FMcpJsonRpc::ErrorInternalError,
+						TEXT("Server shutting down"));
+					SendSSEFrame(Conn->Socket, ErrorJson);
+
+					CloseSocket(Conn->Socket);
+				}
+			}
+		}
+		SSEConnections.Empty();
+		}
+	// Drop any cancellation markers; the connections they referenced are gone,
+	// so leaving them would only be harmless-but-stale state across a restart.
+	{
+		FScopeLock Lock(&CancelledRequestsMutex);
+		CancelledInternalRequestIds.Empty();
+		CancelledClientIdToInternal.Empty();
+	}
+
+	// Close all persistent notification streams
+	{
+		FScopeLock Lock(&NotificationStreamsMutex);
+		for (auto& [StreamId, Stream] : NotificationStreams)
+		{
+			if (Stream.IsValid())
+			{
+				CloseNotificationStream(Stream);
+			}
+		}
+		NotificationStreams.Empty();
+	}
+
+	{
+		FScopeLock Lock(&SessionMutex);
+		ActiveSessions.Empty();
+		SessionRateStates.Empty();
+		ClientRateStates.Empty();
+	}
+	{
+		FScopeLock Lock(&LogEventSubscriptionsMutex);
+		LogEventSubscribedSessions.Empty();
+	}
+
+	ListenSocket = nullptr;
+
+	UE_LOG(LogMcpNativeTransport, Log, TEXT("Native MCP server stopped"));
+}
+
+// ─── Socket Helper ──────────────────────────────────────────────────────────

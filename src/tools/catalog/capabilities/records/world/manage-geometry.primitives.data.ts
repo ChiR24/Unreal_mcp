@@ -19,6 +19,12 @@ const XFORM = { location: P.location, rotation: P.rotation, scale: P.scale };
 
 const cm = (d: string): JsonObject => ({ type: 'number', description: d });
 const vec = (d: string): JsonObject => ({ type: 'object', description: d, properties: { x: cm('X'), y: cm('Y'), z: cm('Z') }, additionalProperties: false });
+// create_primitive keeps the first variant's text for a parameter every variant shares, so each shared text speaks for
+// all of them: the disc's "centred hole" was read as the arch's innerRadius, which is its tube.
+const RADIUS = cm('Radius in cm (default 50). Torus and arch: from the centre to the middle of the tube (arch default 100). Pipe: the outer wall, as outerRadius. Spiral stairs: the inner radius when innerRadius is not given (default 150).');
+const INNER_RADIUS = cm('In cm, per variant. Disc and ring: the centred hole (disc default 0, solid; ring 25). Pipe: the inner wall (default 40). ' +
+  'Torus and arch: the TUBE radius, its round cross-section, not a hole (default 20 torus, 25 arch); the opening under an arch is radius - innerRadius. Spiral stairs: the radius of the central well.');
+const SWEEP = cm('Sweep in degrees: torus default 360 (less leaves an open segment), arch default 180, a half ring. Both lie flat in the local XY plane, starting on local +X and turning toward +Y; give a rotation to stand an arch up.');
 const SDF_SHAPES: JsonObject = {
   type: 'array', minItems: 1, maxItems: 64,
   description: 'Shapes combined in order onto shapes[0] (which must be a union) as one signed distance field, then meshed. ' +
@@ -27,9 +33,10 @@ const SDF_SHAPES: JsonObject = {
   items: {
     type: 'object', required: ['type'], additionalProperties: false,
     properties: {
-      type: { type: 'string', enum: ['sphere', 'ellipsoid', 'box', 'capsule', 'cylinder', 'torus', 'cone'], description: 'sphere (radius), ellipsoid (radii), box (extent = half size, rounding), capsule (radius, length of the straight part, along local Z), cylinder (radius, length, rounding, along local Z), torus (radius to the tube centre, thickness = tube radius, in local XY), cone (radius at the bottom, topRadius, length, along local Z, rounded ends).' },
+      type: { type: 'string', enum: ['sphere', 'ellipsoid', 'box', 'capsule', 'cylinder', 'torus', 'cone'], description: 'sphere (radius), ellipsoid (radii), box (extent = half size, rounding), capsule (radius, length of the straight part, along local Z), cylinder (radius, length, rounding, along local Z), torus (radius to the tube centre, thickness = tube radius, in local XY), cone (radius at the bottom, topRadius, length, along local Z, rounded ends). radius also sets an ellipsoid\'s radii and a box\'s extent when those are left out; any other size a type does not read is refused.' },
       operation: { type: 'string', enum: ['union', 'subtract', 'intersect'], description: 'union adds the shape (default), subtract carves it out of what came before (a recess, socket or groove), intersect keeps only the overlap.' },
-      center: vec('Shape centre in the mesh\'s local space, cm (default 0,0,0).'),
+      center: vec('Shape centre in the mesh\'s local space, cm (default 0,0,0); with relativeTo, in that shape\'s frame.'),
+      relativeTo: { type: 'integer', minimum: 0, maximum: 63, description: 'Index of an earlier shapes[] entry to place this one on: center, rotation, repeat and mirror are then measured from that shape\'s centre along its own turned axes (not scaled by its size), so the eyes, mouth or buttons of a leaning or turned part stay on it without working out the rotation. mirror then reflects across that shape\'s own planes.' },
       rotation: { type: 'object', description: 'Shape rotation {pitch, yaw, roll} in degrees; turns the shape\'s local Z axis for capsule, cylinder, cone and torus.', properties: { pitch: cm('Pitch'), yaw: cm('Yaw'), roll: cm('Roll') }, additionalProperties: false },
       radius: cm('Radius in cm (sphere, capsule, cylinder, cone base; torus: distance to the tube centre). Default 50.'),
       radii: vec('Ellipsoid radii along local X, Y, Z in cm.'),
@@ -70,43 +77,43 @@ export const GEOMETRY_PRIMITIVES_RECORDS: readonly CapabilityRecordSource[] = [
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'create_sphere', plugins: PLUGIN,
     family: F, summary: 'Create a sphere dynamic mesh actor.', whenToUse: ['A sphere primitive must be created.'], whenNotToUse: ['A box is needed; use create_box.'],
-    inputProps: { ...IDENT, ...XFORM, radius: P.radius, radialSegments: P.radialSegments, numRings: P.numRings }, required: [], effect: 'write', costLatency: 'interactive', costResources: 'low',
+    inputProps: { ...IDENT, ...XFORM, radius: RADIUS, radialSegments: P.radialSegments, numRings: P.numRings }, required: [], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'create_sphere', radius: 50 },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'create_cylinder', plugins: PLUGIN,
     family: F, summary: 'Create a cylinder dynamic mesh actor.', whenToUse: ['A cylinder primitive must be created.'], whenNotToUse: ['A cone is needed; use create_cone.'],
-    inputProps: { ...IDENT, ...XFORM, radius: P.radius, height: P.height, numSides: P.numSides }, required: [], effect: 'write', costLatency: 'interactive', costResources: 'low',
+    inputProps: { ...IDENT, ...XFORM, radius: RADIUS, height: P.height, numSides: P.numSides }, required: [], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'create_cylinder', radius: 50, height: 200 },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'create_cone', plugins: PLUGIN,
     family: F, summary: 'Create a cone dynamic mesh actor.', whenToUse: ['A cone primitive must be created.'], whenNotToUse: ['A cylinder is needed; use create_cylinder.'],
-    inputProps: { ...IDENT, ...XFORM, radius: P.radius, baseRadius: P.baseRadius, topRadius: P.topRadius, height: P.height, numSides: P.numSides }, required: [], effect: 'write', costLatency: 'interactive', costResources: 'low',
+    inputProps: { ...IDENT, ...XFORM, radius: RADIUS, baseRadius: P.baseRadius, topRadius: P.topRadius, height: P.height, numSides: P.numSides }, required: [], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'create_cone', radius: 50, height: 200 },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'create_capsule', plugins: PLUGIN,
     family: F, summary: 'Create a capsule dynamic mesh actor.', whenToUse: ['A capsule primitive must be created.'], whenNotToUse: ['A sphere is needed; use create_sphere.'],
-    inputProps: { ...IDENT, ...XFORM, radius: P.radius, length: P.length, height: P.height, radialSegments: P.radialSegments, numRings: P.numRings, heightSegments: P.heightSegments }, required: [], effect: 'write', costLatency: 'interactive', costResources: 'low',
+    inputProps: { ...IDENT, ...XFORM, radius: RADIUS, length: P.length, height: P.height, radialSegments: P.radialSegments, numRings: P.numRings, heightSegments: P.heightSegments }, required: [], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'create_capsule', radius: 50, height: 200 },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'create_torus', plugins: PLUGIN,
     family: F, summary: 'Create a torus dynamic mesh actor.', whenToUse: ['A torus primitive must be created.'], whenNotToUse: ['A ring is needed; use create_ring.'],
-    inputProps: { ...IDENT, ...XFORM, radius: P.radius, innerRadius: P.innerRadius, angle: { type: 'number', description: 'Sweep angle in degrees (default 360, a full torus; less makes an open segment).' }, numSides: P.numSides, radialSegments: P.radialSegments, numRings: P.numRings }, required: [], effect: 'write', costLatency: 'interactive', costResources: 'low',
+    inputProps: { ...IDENT, ...XFORM, radius: RADIUS, innerRadius: INNER_RADIUS, angle: SWEEP, numSides: P.numSides, radialSegments: P.radialSegments, numRings: P.numRings }, required: [], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'create_torus', radius: 100, innerRadius: 20 },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'create_plane', plugins: PLUGIN,
-    family: F, summary: 'Create a plane dynamic mesh actor.', whenToUse: ['A flat plane primitive must be created.'], whenNotToUse: ['A box is needed; use create_box.'],
+    family: F, summary: 'Create a plane dynamic mesh actor: flat in XY, centred on its origin, facing +Z.', whenToUse: ['A flat plane primitive must be created.', 'A sign, banner or flag needs a subdivided sheet: stand the plane up with a 90 degree roll on the component that draws it.'], whenNotToUse: ['A box is needed; use create_box.'],
     inputProps: { ...IDENT, ...XFORM, width: P.width, depth: P.depth, widthSegments: P.widthSegments, heightSegments: P.heightSegments }, required: [], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'create_plane', width: 500, depth: 500 },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'create_disc', plugins: PLUGIN,
     family: F, summary: 'Create a disc dynamic mesh actor.', whenToUse: ['A circular disc primitive must be created.'], whenNotToUse: ['A plane is needed; use create_plane.'],
-    inputProps: { ...IDENT, ...XFORM, radius: P.radius, innerRadius: { type: 'number', description: 'Radius of a centred hole (default 0, a solid disc).' }, numSides: P.numSides }, required: [], effect: 'write', costLatency: 'interactive', costResources: 'low',
+    inputProps: { ...IDENT, ...XFORM, radius: RADIUS, innerRadius: INNER_RADIUS, numSides: P.numSides }, required: [], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'create_disc', radius: 100 },
   }),
   buildWorldRecord({
@@ -118,25 +125,25 @@ export const GEOMETRY_PRIMITIVES_RECORDS: readonly CapabilityRecordSource[] = [
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'create_spiral_stairs', plugins: PLUGIN,
     family: F, summary: 'Create a spiral stairs dynamic mesh actor.', whenToUse: ['A spiral stair primitive must be created.'], whenNotToUse: ['A straight stair is needed; use create_stairs.'],
-    inputProps: { ...IDENT, ...XFORM, steps: P.steps, numSteps: P.numSteps, radius: P.radius, innerRadius: P.innerRadius, numTurns: P.numTurns, stepWidth: P.stepWidth, stepHeight: P.stepHeight, floating: P.floating }, required: ['steps'], effect: 'write', costLatency: 'interactive', costResources: 'low',
+    inputProps: { ...IDENT, ...XFORM, steps: P.steps, numSteps: P.numSteps, radius: RADIUS, innerRadius: INNER_RADIUS, numTurns: P.numTurns, stepWidth: P.stepWidth, stepHeight: P.stepHeight, floating: P.floating }, required: ['steps'], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'create_spiral_stairs', steps: 20, radius: 200 },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'create_ring', plugins: PLUGIN,
     family: F, summary: 'Create a ring dynamic mesh actor.', whenToUse: ['A ring/annulus primitive must be created.'], whenNotToUse: ['A torus is needed; use create_torus.'],
-    inputProps: { ...IDENT, ...XFORM, innerRadius: P.innerRadius, outerRadius: P.outerRadius, numSides: P.numSides }, required: [], effect: 'write', costLatency: 'interactive', costResources: 'low',
+    inputProps: { ...IDENT, ...XFORM, innerRadius: INNER_RADIUS, outerRadius: P.outerRadius, numSides: P.numSides }, required: [], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'create_ring', innerRadius: 80, outerRadius: 100 },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'create_arch', plugins: PLUGIN,
     family: F, summary: 'Create an arch dynamic mesh actor.', whenToUse: ['An arch primitive must be created.'], whenNotToUse: ['A pipe is needed; use create_pipe.'],
-    inputProps: { ...IDENT, ...XFORM, radius: P.radius, innerRadius: P.innerRadius, angle: P.angle, numSides: P.numSides, radialSegments: P.radialSegments, numRings: P.numRings }, required: [], effect: 'write', costLatency: 'interactive', costResources: 'low',
+    inputProps: { ...IDENT, ...XFORM, radius: RADIUS, innerRadius: INNER_RADIUS, angle: SWEEP, numSides: P.numSides, radialSegments: P.radialSegments, numRings: P.numRings }, required: [], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'create_arch', radius: 300, innerRadius: 50, angle: 180 },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'create_pipe', plugins: PLUGIN,
     family: F, summary: 'Create a pipe dynamic mesh actor.', whenToUse: ['A pipe/tube primitive must be created.'], whenNotToUse: ['A cylinder is needed; use create_cylinder.'],
-    inputProps: { ...IDENT, ...XFORM, radius: P.radius, innerRadius: P.innerRadius, outerRadius: P.outerRadius, height: P.height, numSides: P.numSides, heightSegments: P.heightSegments }, required: [], effect: 'write', costLatency: 'interactive', costResources: 'low',
+    inputProps: { ...IDENT, ...XFORM, radius: RADIUS, innerRadius: INNER_RADIUS, outerRadius: P.outerRadius, height: P.height, numSides: P.numSides, heightSegments: P.heightSegments }, required: [], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'create_pipe', radius: 30, height: 400 },
   }),
   buildWorldRecord({
@@ -164,6 +171,7 @@ export const GEOMETRY_PRIMITIVES_RECORDS: readonly CapabilityRecordSource[] = [
             materialId: { type: 'integer', description: 'Material slot of that surface.' },
             triangles: { type: 'integer', description: 'Triangles of that surface; 0 when another shape covered it entirely.' },
             copies: { type: 'integer', description: 'How many shapes this entry became with its repeat and mirror (the shape itself included); absent for a single shape.' },
+            warning: { type: 'string', description: 'Present when a union shape is under two grid cells across: its surface can come out ragged, or as almost nothing when it formed under 24 triangles; raise resolution or thicken it.' },
           },
         },
       },

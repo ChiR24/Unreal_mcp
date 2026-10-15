@@ -1,0 +1,408 @@
+// =============================================================================
+// McpVersionCompatibility.h
+// =============================================================================
+// UE 5.0 - 5.8+ API Compatibility Macros
+//
+// These macros abstract API differences between UE versions to allow the same
+// code to compile across UE 5.0, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, and 5.8.
+//
+// REFACTORING NOTES:
+// - Extracted from McpHelpers.h for better organization
+// - Include this file FIRST before other engine includes
+// - All version-specific APIs should use these macros
+//
+// Copyright (c) 2024 EngineWire Contributors
+// =============================================================================
+
+#pragma once
+
+#include "Runtime/Launch/Resources/Version.h"
+#include "Misc/Crc.h"
+
+// The MCP_HAS_* feature macros (cinematic camera, media, MRQ, take recorder,
+// replay, SMAA, ...) are always defined, to 1 or 0, by EngineWire.Build.cs.
+
+// MCP_DISALLOW_SHRINKING is passed as the bAllowShrinking argument to
+// TArray::RemoveAt. On UE 5.6+ it is the EAllowShrinking enum
+// (EAllowShrinking::No on the modern path). On older UE it falls back to
+// `false`, which maps to the legacy `bool bAllowShrinking` parameter that
+// existed before the enum was introduced. Both paths mean "do not shrink";
+// the fallback value is intentionally the legacy bool, not the modern enum.
+#if __has_include("Containers/AllowShrinking.h")
+#include "Containers/AllowShrinking.h"
+#define MCP_DISALLOW_SHRINKING EAllowShrinking::No
+#else
+#define MCP_DISALLOW_SHRINKING false
+#endif
+
+// =============================================================================
+// StructUtils header relocation (UE 5.0-5.4 vs 5.5+)
+// =============================================================================
+// StructUtils merged into CoreUObject in 5.5 and the headers moved under a
+// StructUtils/ prefix. The engine kept forwarding shims at the old paths behind
+// UE_ENABLE_INCLUDE_ORDER_DEPRECATED_IN_5_5, then DELETED them in 5.8:
+//
+//   UE 5.0-5.4  UUserDefinedStruct -> "Engine/UserDefinedStruct.h"
+//               FInstancedStruct   -> "InstancedStruct.h"  (StructUtils plugin)
+//   UE 5.5-5.7  both the new StructUtils/ paths and the old shims resolve
+//   UE 5.8+     ONLY the StructUtils/ paths exist
+//
+// Five files included the StructUtils/ paths unconditionally, which cannot
+// resolve on 5.0-5.4 — so the plugin could not compile there at all, despite
+// claiming 5.0-5.8 support. Probing with __has_include rather than
+// ENGINE_MINOR_VERSION keeps this correct if a path moves again, and mirrors
+// the MCP_MOVIE_PIPELINE_CONFIG_HEADER pattern below.
+#if __has_include("StructUtils/UserDefinedStruct.h")
+#define MCP_USER_DEFINED_STRUCT_HEADER "StructUtils/UserDefinedStruct.h"
+#else
+#define MCP_USER_DEFINED_STRUCT_HEADER "Engine/UserDefinedStruct.h"
+#endif
+
+#if __has_include("StructUtils/InstancedStruct.h")
+#define MCP_INSTANCED_STRUCT_HEADER "StructUtils/InstancedStruct.h"
+#else
+#define MCP_INSTANCED_STRUCT_HEADER "InstancedStruct.h"
+#endif
+
+// These macros are only defined when Movie Render Pipeline is actually enabled
+// (MCP_HAS_MOVIE_RENDER_PIPELINE=1). When MRP is disabled, callers gate the
+// related #include with the same flag, so the macros being undefined is safe.
+// When MRP is enabled, the standard MRP config header must be present so the
+// macros resolve to a real include path; otherwise we #error with a clear
+// message instead of letting the broken #include produce a confusing error.
+#if MCP_HAS_MOVIE_RENDER_PIPELINE
+#if __has_include("MoviePipelinePrimaryConfig.h")
+#define MCP_MOVIE_PIPELINE_CONFIG_HEADER "MoviePipelinePrimaryConfig.h"
+#define MCP_MOVIE_PIPELINE_CONFIG_CLASS UMoviePipelinePrimaryConfig
+#elif __has_include("MoviePipelineMasterConfig.h")
+#define MCP_MOVIE_PIPELINE_CONFIG_HEADER "MoviePipelineMasterConfig.h"
+#define MCP_MOVIE_PIPELINE_CONFIG_CLASS UMoviePipelineMasterConfig
+#else
+#error "MCP_HAS_MOVIE_RENDER_PIPELINE=1 but neither MoviePipelinePrimaryConfig.h nor MoviePipelineMasterConfig.h is present on the include path. Check that the Movie Render Pipeline module/plugin is installed."
+#endif
+#endif
+
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 2
+#define MCP_GET_MOVIE_PIPELINE_QUEUE_DIRTY(Queue) (Queue)->IsDirty()
+#define MCP_SET_MOVIE_PIPELINE_QUEUE_DIRTY(Queue, bDirty) \
+  (Queue)->SetIsDirty(bDirty)
+#else
+#define MCP_GET_MOVIE_PIPELINE_QUEUE_DIRTY(Queue) false
+#define MCP_SET_MOVIE_PIPELINE_QUEUE_DIRTY(Queue, bDirty) \
+  do {                                                   \
+    (void)(Queue);                                       \
+    (void)(bDirty);                                      \
+  } while (false)
+#endif
+
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 6
+#define MCP_HAS_MOVIE_SCENE_SHOT_METADATA 1
+#else
+#define MCP_HAS_MOVIE_SCENE_SHOT_METADATA 0
+#endif
+
+// EGetObjectsFlags (UObject/FindObjectFlags.h) replaced the `bool bIncludeNestedObjects` parameter of
+// ForEachObjectWithPackage/ForEachObjectWithOuter in 5.8; the bool overload still exists there but is
+// deprecated. The enum does NOT exist before 5.8 (measured: it appears in no public CoreUObject header of
+// 5.5/5.6/5.7), so naming it unconditionally is a hard compile error on those versions, not a warning.
+// MCP_GET_OBJECTS_NO_NESTED expands to whichever spelling the compiling engine accepts; both mean "do not
+// walk nested objects" (5.8's deprecated shim forwards `false` to exactly EGetObjectsFlags::None).
+#ifndef MCP_HAS_GET_OBJECTS_FLAGS
+  #if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 8)
+    #define MCP_HAS_GET_OBJECTS_FLAGS 1
+  #else
+    #define MCP_HAS_GET_OBJECTS_FLAGS 0
+  #endif
+#endif
+
+#if MCP_HAS_GET_OBJECTS_FLAGS
+  #define MCP_GET_OBJECTS_NO_NESTED EGetObjectsFlags::None
+#else
+  #define MCP_GET_OBJECTS_NO_NESTED false
+#endif
+
+// ControlRigBlueprintFactory availability
+// Available in all UE 5.x versions, but header location varies
+#ifndef MCP_HAS_CONTROLRIG_FACTORY
+  #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+    #define MCP_HAS_CONTROLRIG_FACTORY 1
+  #else
+    #define MCP_HAS_CONTROLRIG_FACTORY 0
+  #endif
+#endif
+
+// =============================================================================
+// Material resource lookup (feature level through 5.6, shader platform from 5.7)
+// =============================================================================
+// UMaterial::GetMaterialResource took ERHIFeatureLevel::Type at the 5.1.1-5.6.1
+// release tags (and locally in 5.0) and takes EShaderPlatform in 5.7 and 5.8.
+#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7)
+  #define MCP_GET_MATERIAL_RESOURCE(Material) (Material)->GetMaterialResource(GMaxRHIShaderPlatform)
+#else
+  #define MCP_GET_MATERIAL_RESOURCE(Material) (Material)->GetMaterialResource(GMaxRHIFeatureLevel)
+#endif
+
+// =============================================================================
+// Material API Compatibility (UE 5.0 vs 5.1+)
+// =============================================================================
+// UE 5.0: Material->Expressions (direct TArray access)
+// UE 5.1+: Material->GetEditorOnlyData()->ExpressionCollection.Expressions
+
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+  #define MCP_GET_MATERIAL_EXPRESSIONS(Material) \
+    (Material)->GetEditorOnlyData()->ExpressionCollection.Expressions
+  #define MCP_GET_FUNCTION_EXPRESSIONS(Function) \
+    (Function)->GetEditorOnlyData()->ExpressionCollection.Expressions
+  #define MCP_GET_MATERIAL_INPUT(Material, InputName) \
+    (Material)->GetEditorOnlyData()->InputName
+#else
+  #define MCP_GET_MATERIAL_EXPRESSIONS(Material) \
+    (Material)->Expressions
+  #define MCP_GET_FUNCTION_EXPRESSIONS(Function) \
+    (Function)->FunctionExpressions
+  #define MCP_GET_MATERIAL_INPUT(Material, InputName) \
+    (Material)->InputName
+#endif
+
+// =============================================================================
+// Niagara API Compatibility (UE 5.0 vs 5.1+)
+// =============================================================================
+// UE 5.0: FNiagaraEmitterHandle::GetInstance() returns UNiagaraEmitter*
+// UE 5.1+: Returns FVersionedNiagaraEmitter
+
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+  #define MCP_NIAGARA_EMITTER_DATA_TYPE FVersionedNiagaraEmitterData
+#else
+  #define MCP_NIAGARA_EMITTER_DATA_TYPE UNiagaraEmitter
+#endif
+
+// =============================================================================
+// AssetRegistry API Compatibility (UE 5.0 vs 5.1+)
+// =============================================================================
+// UE 5.0: FARFilter uses ClassNames (TArray<FName>)
+// UE 5.1+: FARFilter uses ClassPaths (TArray<FTopLevelAssetPath>)
+
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+  #define MCP_HAS_ASSET_CLASS_PATHS 1
+#else
+  #define MCP_HAS_ASSET_CLASS_PATHS 0
+#endif
+
+// =============================================================================
+// FAssetData API Compatibility (UE 5.0 vs 5.1+)
+// =============================================================================
+// UE 5.0: AssetClass (FName), no GetSoftObjectPath()
+// UE 5.1+: AssetClassPath (FTopLevelAssetPath), GetSoftObjectPath()
+
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+  #define MCP_ASSET_DATA_GET_CLASS_PATH(AssetData) (AssetData).AssetClassPath.ToString()
+  #define MCP_ASSET_DATA_GET_SOFT_PATH(AssetData) (AssetData).GetSoftObjectPath().ToString()
+  // IAssetRegistry::GetAssetByObjectPath's argument for an object path string.
+  #define MCP_ASSET_REGISTRY_OBJECT_PATH(Path) FSoftObjectPath(Path)
+#else
+  #define MCP_ASSET_DATA_GET_CLASS_PATH(AssetData) (AssetData).AssetClass.ToString()
+  // ObjectPath, not PackageName: ObjectPath yields "/Game/Foo.Foo" while
+  // PackageName yields "/Game/Foo", so the old fallback handed callers a package
+  // path where they expected an object path — a different string shape, not just
+  // an older spelling. UE 5.0's FAssetData::ObjectPath is the exact equivalent
+  // of the 5.1+ GetSoftObjectPath() used in the branch above.
+  #define MCP_ASSET_DATA_GET_SOFT_PATH(AssetData) (AssetData).ObjectPath.ToString()
+  #define MCP_ASSET_REGISTRY_OBJECT_PATH(Path) FName(*(Path))
+#endif
+
+// =============================================================================
+// FProperty ExportText API Compatibility (UE 5.0 vs 5.1+)
+// =============================================================================
+// UE 5.0: ExportText_Direct() with different parameters
+// UE 5.1+: ExportTextItem_Direct()
+
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+  #define MCP_PROPERTY_EXPORT_TEXT(Property, OutText, ValuePtr, DefaultValuePtr, Container, Flags) \
+    (Property)->ExportTextItem_Direct(OutText, ValuePtr, DefaultValuePtr, Container, Flags)
+#else
+  #define MCP_PROPERTY_EXPORT_TEXT(Property, OutText, ValuePtr, DefaultValuePtr, Container, Flags) \
+    (Property)->ExportText_Direct(OutText, ValuePtr, DefaultValuePtr, Container, Flags, nullptr)
+#endif
+
+// =============================================================================
+// FAssetCompilingManager API Compatibility (UE 5.0 vs 5.1+)
+// =============================================================================
+// Grepped out of Engine/Source/Runtime/Engine/Public/AssetCompilingManager.h at
+// each release tag in EpicGames/UnrealEngine:
+//   5.0.3 5.1.1 -> absent
+//   5.2.1 5.3.2 5.4.4 5.5.4 5.6.1 -> PRESENT  (5.7 declares it at line 76)
+// The boundary is 5.2, not 5.1. The old >= 1 guard made UE 5.1 call
+// FinishCompilationForObjects, which does not exist there — a compile error on
+// that version. 5.1 now takes the FinishAllCompilation() fallback with 5.0.
+//
+// UE 5.0-5.1: Only FinishAllCompilation() exists (no object-specific compilation)
+// UE 5.2+: FinishCompilationForObjects(TArrayView<UObject* const>) for selective compilation
+
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 2
+#define MCP_FINISH_COMPILATION_FOR_OBJECTS(Manager, Objects) (Manager).FinishCompilationForObjects(Objects)
+#else
+// UE 5.0-5.1: Fall back to global compilation finish
+#define MCP_FINISH_COMPILATION_FOR_OBJECTS(Manager, Objects) (Manager).FinishAllCompilation()
+#endif
+
+
+// =============================================================================
+// UWidgetBlueprint API Compatibility (UE 5.0 vs 5.1 vs 5.2-5.6 vs 5.7+)
+// =============================================================================
+// Grepped out of Engine/Source/Editor/UMGEditor/Public/WidgetBlueprint.h at each
+// release tag in EpicGames/UnrealEngine:
+//   5.0.3 5.1.0 5.1.1 5.2.1 5.3.2 5.4.4 5.5.4 -> absent
+//   5.6.0 5.6.1 -> PRESENT   (5.7 / 5.8 confirmed in the installed engines)
+// The member appears in 5.6.0 and never goes away, so the boundary is a plain
+// >= 6. The previous guard claimed it existed in 5.1 and NOT in 5.6: the 5.1
+// half was a COMPILE ERROR on that version (the member is not there), and the
+// 5.6 half silently dropped the GUID registration on an engine that supports it.
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 6
+    #define MCP_HAS_WIDGET_VARIABLE_GUID_MAP 1
+    #define MCP_WIDGET_BP_GET_GUID_MAP(WidgetBP) (WidgetBP)->WidgetVariableNameToGuidMap
+#else
+    // UE 5.0-5.5: WidgetVariableNameToGuidMap does not exist.
+    // The macro is never used because MCP_HAS_WIDGET_VARIABLE_GUID_MAP is 0,
+    // but we define it to a no-op to avoid "macro redefined" warnings.
+    #define MCP_HAS_WIDGET_VARIABLE_GUID_MAP 0
+    #define MCP_WIDGET_BP_GET_GUID_MAP(WidgetBP) (void)(WidgetBP)
+#endif
+
+// =============================================================================
+// IKRig Editor API Compatibility (UE 5.0 vs 5.1 vs 5.2 vs 5.3+)
+// =============================================================================
+// UE 5.0: No CreateNewIKRigAsset, use NewObject; separate SetSourceIKRig/SetTargetIKRig
+// UE 5.1: CreateNewIKRigAsset exists; SetIKRig with enum
+// UE 5.2: CreateNewIKRigAsset DOES NOT exist (use NewObject); SetIKRig with enum exists
+// UE 5.3+: CreateNewIKRigAsset DOES NOT exist (factory has no static method); SetIKRig with enum exists
+
+// CreateNewIKRigAsset availability. Grepped out of
+// Engine/Plugins/Animation/IKRig/Source/IKRigEditor/Public/RigEditor/
+// IKRigDefinitionFactory.h at each release tag in EpicGames/UnrealEngine:
+//   5.0.3 5.1.0 5.1.1 5.2.1 5.3.2 5.4.4 5.5.4 -> absent
+//   5.6.0 5.6.1 -> PRESENT   (5.7 / 5.8 confirmed in the installed engines)
+//     static UE_API UIKRigDefinition* CreateNewIKRigAsset(
+//         const FString& InPackagePath, const FString& InAssetName);
+// This read "only UE 5.1 has it", which was wrong in BOTH directions. 5.1 does
+// not have it, so that branch was a compile error on the one version it claimed
+// to serve. And every engine from 5.6 on does have it, so the guard fell back to
+// NewObject there — a path that creates the package and object but never calls
+// FAssetRegistryModule::AssetCreated, leaving a rig made through create_ik_rig
+// unregistered and missing from the Content Browser until a rescan.
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 6
+    #define MCP_HAS_IKRIG_CREATE_NEW_ASSET 1
+#else
+    #define MCP_HAS_IKRIG_CREATE_NEW_ASSET 0
+#endif
+
+// SetIKRig with enum availability. Grepped out of
+// Engine/Plugins/Animation/IKRig/Source/IKRigEditor/Public/RetargetEditor/
+// IKRetargeterController.h at each release tag in EpicGames/UnrealEngine:
+//   5.0.3          -> SetSourceIKRig + SetTargetIKRig; SetIKRig absent
+//   5.1.1          -> SetSourceIKRig ONLY; SetTargetIKRig was dropped and SetIKRig had not landed
+//   5.2.1 - 5.6.1  -> SetIKRig(ERetargetSourceOrTarget, ...); the pair is gone
+// UE 5.1 needs a third path: its UIKRetargeter still carries the target as the public
+// TargetIKRigAsset UPROPERTY, so the asset is assigned directly (no controller setter exists).
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 2
+    #define MCP_IKRETARGETER_SET_SOURCE_IKRIG(Controller, Rig) (Controller)->SetIKRig(ERetargetSourceOrTarget::Source, Rig)
+    #define MCP_IKRETARGETER_SET_TARGET_IKRIG(Controller, Rig) (Controller)->SetIKRig(ERetargetSourceOrTarget::Target, Rig)
+#elif ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 1
+    #define MCP_IKRETARGETER_SET_SOURCE_IKRIG(Controller, Rig) (Controller)->SetSourceIKRig(Rig)
+    #define MCP_IKRETARGETER_SET_TARGET_IKRIG(Controller, Rig) (Controller)->GetAsset()->TargetIKRigAsset = Rig
+#else
+    // UE 5.0: the separate-method pair
+    #define MCP_IKRETARGETER_SET_SOURCE_IKRIG(Controller, Rig) (Controller)->SetSourceIKRig(Rig)
+    #define MCP_IKRETARGETER_SET_TARGET_IKRIG(Controller, Rig) (Controller)->SetTargetIKRig(Rig)
+#endif
+
+// CreateNewIKRigAsset macro (only when available)
+#if MCP_HAS_IKRIG_CREATE_NEW_ASSET
+    #define MCP_IKRIG_CREATE_NEW_ASSET(Path, Name) UIKRigDefinitionFactory::CreateNewIKRigAsset(Path, Name)
+#else
+    // No macro for creation – code will fall back to NewObject
+#endif
+
+// =============================================================================
+// Deterministic GUID generator (for widget/anim variable GUIDs)
+// =============================================================================
+#ifndef MCP_NEW_DETERMINISTIC_GUID
+    #define MCP_NEW_DETERMINISTIC_GUID(PathString) \
+        [Path = FString(PathString)]() -> FGuid \
+        { \
+            uint32 Hash = FCrc::StrCrc32(*Path); \
+            uint32 Hash2 = FCrc::StrCrc32(*FString::Printf(TEXT("%s_salt"), *Path)); \
+            return FGuid(Hash, Hash2, Hash, Hash2); \
+        }()
+#endif
+
+// =============================================================================
+// FAssetData Object Path Compatibility (UE 5.0 vs 5.1+)
+// =============================================================================
+// UE 5.0: ObjectPath member (FName), no GetObjectPathString()
+// UE 5.1+: GetObjectPathString() method
+
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+#define MCP_ASSET_DATA_GET_OBJECT_PATH(AssetData) (AssetData).GetObjectPathString()
+#else
+#define MCP_ASSET_DATA_GET_OBJECT_PATH(AssetData) (AssetData).ObjectPath.ToString()
+#endif
+
+// =============================================================================
+// UUserDefinedEnum::SetEnums Compatibility (UE 5.8 signature change)
+// =============================================================================
+// UE 5.8: UUserDefinedEnum overrides SetEnums with a 5-parameter signature
+//         (Names, CppForm, UnderlyingType, Flags, AddMaxKeyIfMissing). The
+//         2/4-argument UEnum overload is deprecated AND final, and the override
+//         hides it, so a 2-argument call no longer compiles.
+// UE 5.0-5.7: the 2-argument UEnum::SetEnums(Names, CppForm) is the way.
+//
+// On 5.8 the underlying type is read back with GetUnderlyingType() so the
+// enum keeps its own type. Note this is deliberately NOT what the deprecated
+// 2-argument overload does -- that one forwards EUnderlyingType::int64
+// unconditionally. Reading the type back matches Engine's own
+// FEnumEditorUtils, which is the behaviour you want when editing an existing
+// user-defined enum (creating one uses uint8, so int64 would rewrite it).
+
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 8
+  #define MCP_SET_ENUMS(EnumPtr, Names, CppForm)                                \
+    (EnumPtr)->SetEnums((Names), (CppForm), (EnumPtr)->GetUnderlyingType(),     \
+                        EEnumFlags::None, UEnum::EAddMaxKeyIfMissing::Yes)
+#else
+  #define MCP_SET_ENUMS(EnumPtr, Names, CppForm)                                \
+    (EnumPtr)->SetEnums((Names), (CppForm))
+#endif
+
+// UImage::GetBrush and UButton::GetStyle arrive in 5.2; earlier engines expose the UPROPERTYs directly.
+#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 2
+#define MCP_UIMAGE_GET_BRUSH(Image) (Image)->GetBrush()
+#define MCP_UBUTTON_GET_STYLE(Button) (Button)->GetStyle()
+#else
+#define MCP_UIMAGE_GET_BRUSH(Image) (Image)->Brush
+#define MCP_UBUTTON_GET_STYLE(Button) (Button)->WidgetStyle
+#endif
+
+// UMovieScene master tracks became plain root tracks in 5.2: GetMasterTracks -> GetTracks, AddMasterTrack ->
+// AddTrack(Class), and RemoveTrack removes root tracks too (on 5.0 and 5.1 it only searches bindings). Checked in
+// the 5.0/5.7/5.8 headers and the 5.1.1-5.6.1 tags: 5.1 still has only the Master spellings.
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 2
+#define MCP_GET_MOVIESCENE_TRACKS(MovieScene) (MovieScene)->GetTracks()
+#define MCP_ADD_MOVIESCENE_TRACK(MovieScene, TrackClass) (MovieScene)->AddTrack(TrackClass)
+#define MCP_REMOVE_MOVIESCENE_TRACK(MovieScene, Track) (MovieScene)->RemoveTrack(Track)
+#define MCP_FIND_MOVIESCENE_TRACK(MovieScene, TrackClass) (MovieScene)->FindTrack<TrackClass>()
+#else
+#define MCP_GET_MOVIESCENE_TRACKS(MovieScene) (MovieScene)->GetMasterTracks()
+#define MCP_ADD_MOVIESCENE_TRACK(MovieScene, TrackClass) (MovieScene)->AddMasterTrack(TrackClass)
+#define MCP_REMOVE_MOVIESCENE_TRACK(MovieScene, Track) ((MovieScene)->RemoveMasterTrack(Track) || (MovieScene)->RemoveTrack(Track))
+#define MCP_FIND_MOVIESCENE_TRACK(MovieScene, TrackClass) (MovieScene)->FindMasterTrack<TrackClass>()
+#endif
+
+// UDataTable::AddRow(Name, RowMemory, RowStruct) arrives in 5.5. Before it, the FTableRowBase& overload copies the
+// row with the table's own RowStruct, which is the struct every caller here built the row memory for.
+#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 5
+#define MCP_DATATABLE_ADD_ROW(Table, RowName, RowMemory) (Table)->AddRow(RowName, RowMemory, (Table)->RowStruct)
+#else
+#define MCP_DATATABLE_ADD_ROW(Table, RowName, RowMemory) (Table)->AddRow(RowName, *reinterpret_cast<const FTableRowBase*>(RowMemory))
+#endif
+
+// UE 5.0's non-const UNiagaraSystem::GetEmitterHandles() returns a const array; 5.1+ returns a mutable one.
+#define MCP_MUTABLE_EMITTER_HANDLES(System) const_cast<TArray<FNiagaraEmitterHandle>&>((System)->GetEmitterHandles())

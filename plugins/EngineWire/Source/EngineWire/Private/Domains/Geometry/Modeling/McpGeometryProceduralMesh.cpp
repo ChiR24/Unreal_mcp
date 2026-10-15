@@ -1,0 +1,179 @@
+#include "Domains/Geometry/McpGeometryHandlers.h"
+
+#if MCP_HAS_FULL_GEOMETRY_SCRIPT
+
+namespace McpGeometryHandlers
+{
+bool HandleCreateProceduralMesh(UEngineWireSubsystem* Self, const FString& RequestId,
+                                       const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+    FString Name = GetJsonStringField(Payload, TEXT("name"), GetJsonStringField(Payload, TEXT("actorName")));
+    if (Name.IsEmpty()) Name = TEXT("ProceduralMesh");
+
+    const FTransform Transform = FTransform::Identity; // edit_dynamic_mesh declares no placement
+    bool bEnableCollision = GetJsonBoolField(Payload, TEXT("enableCollision"), false);
+
+    UDynamicMesh* DynMesh = NewObject<UDynamicMesh>(GetTransientPackage());
+    // meshPath starts the mesh as a copy of a static mesh asset, so an existing asset can be cut, trimmed or edited and
+    // baked again; before, only geometry built here could be.
+    const FString MeshPath = GetJsonStringField(Payload, TEXT("meshPath"));
+    int32 CopiedTriangles = 0;
+    if (!MeshPath.IsEmpty())
+    {
+        UStaticMesh* Source = Cast<UStaticMesh>(McpLoadAsset(SanitizeProjectRelativePath(MeshPath)));
+        EGeometryScriptOutcomePins Outcome = EGeometryScriptOutcomePins::Failure;
+        if (Source)
+        {
+            UGeometryScriptLibrary_StaticMeshFunctions::CopyMeshFromStaticMesh(Source, DynMesh, FGeometryScriptCopyMeshFromAssetOptions(),
+                                                                               FGeometryScriptMeshReadLOD(), Outcome);
+        }
+        if (Outcome != EGeometryScriptOutcomePins::Success)
+        {
+            DynMesh->MarkAsGarbage();
+            if (Source)
+            {
+                Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Could not read geometry from %s"), *MeshPath), TEXT("MESH_READ_FAILED"));
+            }
+            else
+            {
+                Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Static mesh not found: %s"), *MeshPath), TEXT("ASSET_NOT_FOUND"));
+            }
+            return true;
+        }
+        DynMesh->ProcessMesh([&CopiedTriangles](const UE::Geometry::FDynamicMesh3& Mesh) { CopiedTriangles = Mesh.TriangleCount(); });
+    }
+    FString SpawnError;
+    AActor* NewActor = SpawnDynamicMeshActorWithMesh(Transform, Name, DynMesh,
+                                                     SpawnError);
+    if (!NewActor)
+    {
+        DynMesh->MarkAsGarbage();
+        Self->SendAutomationError(Socket, RequestId, SpawnError.IsEmpty() ? TEXT("Failed to spawn DynamicMeshActor") : SpawnError, TEXT("SPAWN_FAILED"));
+        return true;
+    }
+
+    if (ADynamicMeshActor* DMActor = Cast<ADynamicMeshActor>(NewActor))
+    {
+        UDynamicMeshComponent* DMComp = DMActor->GetDynamicMeshComponent();
+        if (DMComp)
+        {
+            DMComp->SetGenerateOverlapEvents(bEnableCollision);
+        }
+    }
+
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetStringField(TEXT("name"), McpActorRef(NewActor));
+    Result->SetStringField(TEXT("class"), TEXT("DynamicMeshActor"));
+    Result->SetBoolField(TEXT("enableCollision"), bEnableCollision);
+    if (!MeshPath.IsEmpty())
+    {
+        Result->SetNumberField(TEXT("triangleCount"), CopiedTriangles);
+    }
+    Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Procedural mesh actor created"), Result);
+    return true;
+}
+
+bool HandleAppendTriangle(UEngineWireSubsystem* Self, const FString& RequestId,
+                                 const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+
+    if (ActorName.IsEmpty())
+    {
+        Self->SendAutomationError(Socket, RequestId, TEXT("actorName required"), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    FVector V0 = ExtractVectorField(Payload, TEXT("v0"), FVector(0, 0, 0));
+    FVector V1 = ExtractVectorField(Payload, TEXT("v1"), FVector(100, 0, 0));
+    FVector V2 = ExtractVectorField(Payload, TEXT("v2"), FVector(50, 100, 0));
+    int32 GroupID = GetJsonIntField(Payload, TEXT("groupID"), 0);
+
+    const TOptional<FMcpGeometryTarget> Target = ResolveGeometryTarget(Self, RequestId, ActorName, Socket);
+    if (!Target) return true;
+    auto [TargetActor, DMC, Mesh] = *Target;
+
+    // Use the internal mesh directly to append triangle
+    UE::Geometry::FDynamicMesh3& EditMesh = Mesh->GetMeshRef();
+
+    int32 Idx0 = EditMesh.AppendVertex(UE::Geometry::FVertexInfo(V0));
+    int32 Idx1 = EditMesh.AppendVertex(UE::Geometry::FVertexInfo(V1));
+    int32 Idx2 = EditMesh.AppendVertex(UE::Geometry::FVertexInfo(V2));
+
+    // v0, v1, v2 face the side (v1 - v0) x (v2 - v0) points to, as append_polygons faces do; Unreal's
+    // left-handed triangles face (v2 - v0) x (v1 - v0), so the last two corners swap.
+    int32 TriIdx = EditMesh.AppendTriangle(Idx0, Idx2, Idx1, GroupID);
+
+    DMC->NotifyMeshUpdated();
+
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetStringField(TEXT("actorName"), ActorName);
+    Result->SetNumberField(TEXT("triangleIndex"), TriIdx);
+    Result->SetNumberField(TEXT("vertexIndex0"), Idx0);
+    Result->SetNumberField(TEXT("vertexIndex1"), Idx1);
+    Result->SetNumberField(TEXT("vertexIndex2"), Idx2);
+    Result->SetNumberField(TEXT("triangleCount"), Mesh->GetTriangleCount());
+    Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Triangle appended"), Result);
+    return true;
+}
+bool HandleSetVertexColor(UEngineWireSubsystem* Self, const FString& RequestId,
+                                 const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    int32 VertexIndex = GetJsonIntField(Payload, TEXT("vertexIndex"), -1);
+    double R = GetJsonNumberField(Payload, TEXT("r"), 1.0);
+    double G = GetJsonNumberField(Payload, TEXT("g"), 1.0);
+    double B = GetJsonNumberField(Payload, TEXT("b"), 1.0);
+    double A = GetJsonNumberField(Payload, TEXT("a"), 1.0);
+    bool bSetAll = GetJsonBoolField(Payload, TEXT("setAll"), false);
+
+    const TOptional<FMcpGeometryTarget> Target = ResolveGeometryTarget(Self, RequestId, ActorName, Socket);
+    if (!Target) return true;
+    auto [TargetActor, DMC, Mesh] = *Target;
+    UE::Geometry::FDynamicMesh3& EditMesh = Mesh->GetMeshRef();
+
+    // Enable vertex colors if not already enabled
+    if (!EditMesh.HasVertexColors())
+    {
+        EditMesh.EnableVertexColors(FVector3f(1.0f, 1.0f, 1.0f));
+    }
+
+    FVector4f Color(static_cast<float>(R), static_cast<float>(G), static_cast<float>(B), static_cast<float>(A));
+    int32 VerticesModified = 0;
+
+    if (bSetAll)
+    {
+        for (int32 VID : EditMesh.VertexIndicesItr())
+        {
+            EditMesh.SetVertexColor(VID, Color);
+            VerticesModified++;
+        }
+    }
+    else if (VertexIndex >= 0 && EditMesh.IsVertex(VertexIndex))
+    {
+        EditMesh.SetVertexColor(VertexIndex, Color);
+        VerticesModified = 1;
+    }
+    else
+    {
+        Self->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("Invalid vertex index: %d"), VertexIndex), TEXT("INVALID_VERTEX"));
+        return true;
+    }
+
+    DMC->NotifyMeshUpdated();
+
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetStringField(TEXT("actorName"), ActorName);
+    Result->SetNumberField(TEXT("verticesModified"), VerticesModified);
+    Result->SetNumberField(TEXT("r"), R);
+    Result->SetNumberField(TEXT("g"), G);
+    Result->SetNumberField(TEXT("b"), B);
+    Result->SetNumberField(TEXT("a"), A);
+    Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Vertex color set"), Result);
+    return true;
+}
+
+} // namespace McpGeometryHandlers
+
+#endif // MCP_HAS_FULL_GEOMETRY_SCRIPT

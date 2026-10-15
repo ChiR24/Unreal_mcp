@@ -18,6 +18,9 @@ export const RESOLVED_IDENTITY_FIELDS = ['capabilityId', 'capability', 'tool', '
 /** The receipt fields that say what the call did; the rest of a receipt is bookkeeping. */
 export const RECEIPT_OUTCOME_LISTS = ['nextCalls', 'handles', 'changes', 'warnings'] as const;
 
+/** Payload lists the receipt reads into its changes, so a copy of them says nothing once changes lists every entry. */
+export const RECEIPT_LISTED_FIELDS = ['changedAssets', 'changedEntities', 'deleted', 'affectedActors'] as const;
+
 /** Output properties every capability declares in the same words; the reply itself shows them. */
 export const STOCK_OUTPUT_PROPERTIES: Readonly<Record<string, string>> = {
   success: 'Whether the action succeeded.',
@@ -40,8 +43,8 @@ function strings(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
 }
 
-// A payload list (warnings, changedAssets) whose every entry the receipt already lists, at its root and down
-// `details` (where the receipt collects them from).
+// A payload list (warnings, or one of RECEIPT_LISTED_FIELDS) whose every entry the receipt already lists, at its root
+// and down `details` (where the receipt collects them from).
 function withoutListed(payload: Json, field: string, listed: readonly string[]): Json {
   const out = { ...payload };
   const list = out[field];
@@ -146,7 +149,10 @@ function compactExecute(reply: Json): Json {
     delete out.warnings;
   }
   if (isRecord(out.data)) {
-    const data = withoutRepeatedValues(withoutListed(withoutListed(out.data, 'warnings', listed), 'changedAssets', strings(receipt?.changes)));
+    const changes = strings(receipt?.changes);
+    let data = withoutListed(out.data, 'warnings', listed);
+    for (const field of RECEIPT_LISTED_FIELDS) data = withoutListed(data, field, changes);
+    data = withoutRepeatedValues(data);
     if (same(data.success, out.success)) delete data.success;
     if (same(data.message, out.message)) delete data.message;
     out.data = data;

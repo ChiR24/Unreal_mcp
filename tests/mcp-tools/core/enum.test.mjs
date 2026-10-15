@@ -5,7 +5,7 @@ import { runToolTests } from '../../test-runner.mjs';
 const TEST_FOLDER = '/Game/MCPTest/CoreAssets';
 const ts = Date.now();
 
-// These scenarios require a live Unreal Editor with the McpAutomationBridge
+// These scenarios require a live Unreal Editor with the EngineWire
 // plugin. They validate the UserDefinedEnum authoring surface (issue #510
 // enum follow-up) that the C++ Lifecycle.cpp / Values.cpp shards expose under
 // the manage_asset tool's enum actions.

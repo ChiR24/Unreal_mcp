@@ -40,25 +40,37 @@ const SLOT = {
 // A mesh replaced in place reshapes every Blueprint part that draws it: a body grown 4 cm buries the parts that sit on it.
 const MESH_USER_WARNINGS = { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, 'x-unreal-reflection-boundary': true, description: 'When outputPath replaced a mesh that loaded Blueprints already draw: the parts drawing it that now sink, worst first (at most 8, each also a warnings[] sentence): blueprintPath, componentName, kind (buried: inside otherComponent; sunk: below a Character\'s capsule bottom), depth in cm, insideShare and issue. Measured like edit_scs partWarnings; a part tagged mcp.placement.ok is left out, and mcp.placement.ok:<component> accepts the embed in that one part only.' };
 const CONVERT_COLLISION ={ type: 'string', enum: ['box', 'complex', 'none'], description: 'Collision for the baked asset: box (default) is one box the size of the bounds, which pawns can stand on (on a converted-over asset too); complex uses the render triangles as simple collision too, exact but costly; none gives the asset no collision at all.' };
-const COLLISION_TYPE = { type: 'string', enum: ['box', 'sphere', 'capsule', 'convex', 'convex_decomposition'], description: 'Collision shapes to generate (default convex).' };
+const ARRAY_COUNT = { type: 'integer', description: 'Copies in all, the original included (1 to 100): count 3 is the original and two copies.' };
+const COLLISION_TYPE ={ type: 'string', enum: ['box', 'sphere', 'capsule', 'convex', 'convex_decomposition'], description: 'Collision shapes to generate (default convex).' };
 
 export const GEOMETRY_OPTIMIZE_RECORDS: readonly CapabilityRecordSource[] = [
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'mirror', topics: ['mirror a mesh'], plugins: PLUGIN,
-    family: F, summary: 'Mirror a dynamic mesh across an axis.', whenToUse: ['A mesh must be mirrored.'], whenNotToUse: ['Instances must be arrayed; use array_linear.'],
-    inputProps: { actorName: P.actorName, targetActor: P.targetActor, axis: P.axis, center: P.center }, required: ['axis'], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'low',
+    family: F, summary: 'Mirror a dynamic mesh across a plane: the original stays and a reflected copy is added to the same mesh, welded where the two meet.', whenToUse: ['A mesh must be mirrored.'], whenNotToUse: ['Instances must be arrayed; use array_linear.'],
+    inputProps: {
+      actorName: P.actorName, targetActor: P.targetActor,
+      axis: { ...P.axis, description: 'The mirror plane\'s normal: X, Y or Z ("X" reflects x to -x about center).' },
+      center: { ...P.center, description: 'A point on the mirror plane in the mesh\'s local space, cm (default 0,0,0).' },
+    }, required: ['axis'], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'mirror', targetActor: 'DM_A', axis: 'X' },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'array_linear', plugins: PLUGIN,
-    family: F, summary: 'Create a linear array of a dynamic mesh.', whenToUse: ['Instances must be arrayed linearly.'], whenNotToUse: ['A radial array is needed; use array_radial.'],
-    inputProps: { actorName: P.actorName, targetActor: P.targetActor, count: P.count, offset: P.offset }, required: ['count'], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'medium',
+    family: F, summary: 'Repeat a dynamic mesh in a row inside the same mesh: count copies in all, each one offset further from the last.', whenToUse: ['Instances must be arrayed linearly.'], whenNotToUse: ['A radial array is needed; use array_radial.'],
+    inputProps: {
+      actorName: P.actorName, targetActor: P.targetActor, count: ARRAY_COUNT,
+      offset: { ...P.offset, description: 'Row: the step from one copy to the next in the mesh\'s local space, cm (default 100 along x); copy k sits k steps from the original.' },
+    }, required: ['count'], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'medium',
     exampleInput: { action: 'array_linear', targetActor: 'DM_A', count: 5, offset: { x: 200, y: 0, z: 0 } },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'array_radial', plugins: PLUGIN,
-    family: F, summary: 'Create a radial array of a dynamic mesh.', whenToUse: ['Instances must be arrayed radially.'], whenNotToUse: ['A linear array is needed; use array_linear.'],
-    inputProps: { actorName: P.actorName, angle: P.angle, targetActor: P.targetActor, count: P.count, center: P.center }, required: ['count'], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'medium',
+    family: F, summary: 'Repeat a dynamic mesh round its local Z axis inside the same mesh: count copies in all, angle / count apart.', whenToUse: ['Instances must be arrayed radially.'], whenNotToUse: ['A linear array is needed; use array_linear.'],
+    inputProps: {
+      actorName: P.actorName, targetActor: P.targetActor, count: ARRAY_COUNT,
+      angle: { ...P.angle, description: 'Ring: the total sweep in degrees (default 360). Copies sit angle / count apart, so 360 closes a ring of count; an open arc of N copies 22.5 degrees apart takes angle 22.5 * N.' },
+      center: { ...P.center, description: 'Ring: a point on the turning axis in the mesh\'s local space, cm (default 0,0,0); the copies turn about the mesh\'s local Z through it.' },
+    }, required: ['count'], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'medium',
     exampleInput: { action: 'array_radial', actorName: 'DM_A', count: 8, center: { x: 0, y: 0, z: 0 } },
   }),
   buildWorldRecord({
@@ -258,9 +270,38 @@ export const GEOMETRY_OPTIMIZE_RECORDS: readonly CapabilityRecordSource[] = [
     exampleInput: { action: 'convert_to_static_mesh', targetActor: 'DM_A', outputPath: '/Game/Meshes/SM_Baked', materials: ['/Engine/BasicShapes/BasicShapeMaterial'] },
   }),
   buildWorldRecord({
+    parentTool: 'manage_geometry', action: 'split_mesh', plugins: PLUGIN,
+    topics: ['split mesh', 'separate mesh parts', 'break a mesh apart', 'mesh pack into separate props', 'split mesh by material'],
+    family: F, summary: 'Split a static mesh asset into one static mesh per connected part (or per material slot), each with its own pivot, the materials it uses and a collision choice.',
+    whenToUse: ['A library pack or kit came in as one static mesh and its props must be placed one by one: split it, then place each new mesh (offset says where its pivot stood in the source, so the original layout can be rebuilt).',
+      'A mesh must be separated by material slot (by material).'],
+    whenNotToUse: ['A dynamic mesh actor being modelled must become an asset (use convert_to_static_mesh).'],
+    inputProps: {
+      meshPath: { type: 'string', description: 'The static mesh asset to split; it is not changed.' },
+      by: { type: 'string', enum: ['parts', 'material'], description: 'parts (default): one mesh per separate object, where connected pieces whose bounds touch or come within gap cm are one object (a crate\'s planks stay one crate); material: one per material slot.' },
+      gap: { type: 'number', description: 'With by parts: pieces whose bounds come within this many cm of each other are one object (default 2).' },
+      outputPath: { type: 'string', description: 'Folder for the new meshes (default: the folder of the source mesh).' },
+      namePrefix: { type: 'string', description: 'Names are <namePrefix>01, <namePrefix>02 ..., largest part first (default <source name>_Part); a name already taken refuses the split before anything is made.' },
+      pivot: { type: 'string', enum: ['bottom', 'center', 'source'], description: 'Each new mesh\'s pivot: bottom (default), the bottom centre of its bounds, so it stands on what it is placed on; center; or source, the source\'s own origin.' },
+      minTriangles: { type: 'number', description: 'Objects with fewer triangles are left out (default 12): loose bits, decal cards.' },
+      maxParts: { type: 'number', description: 'More parts than this (default 64) refuses the split with nothing made.' },
+      dropRepeats: { type: 'boolean', description: 'Leave out an object that only repeats a larger one where it stands, such as an LOD copy an importer merged into the mesh (default true).' },
+      dryRun: { type: 'boolean', description: 'Answer the meshes the split would make (size, triangles, offset, and exists when the name is taken) and create nothing, to tune gap and minTriangles first. A large pack can take longer than one call waits.' },
+      collision: CONVERT_COLLISION,
+    },
+    required: ['meshPath'], effect: 'write', costLatency: 'interactive', costResources: 'medium',
+    outputProps: {
+      meshPath: { type: 'string', description: 'The source mesh.' },
+      meshes: { type: 'array', description: 'One entry per new mesh, largest first: assetPath, triangles, size [x, y, z], offset [x, y, z] (its pivot in the source\'s space), slots; saved: false when it could not be written to disk.', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true } },
+      skippedSmall: { type: 'number', description: 'Objects left out for having fewer than minTriangles triangles.' },
+      droppedRepeats: { type: 'number', description: 'Objects left out as repeats of a larger one.' },
+    },
+    exampleInput: { action: 'split_mesh', meshPath: '/Game/Imports/SM_CratePack', outputPath: '/Game/Props/Crates', namePrefix: 'SM_Crate' },
+  }),
+  buildWorldRecord({
     parentTool: 'manage_geometry', action: 'get_mesh_info', plugins: PLUGIN,
     topics: ['vertex count', 'triangle count', 'has uvs and normals', 'how many vertices does a mesh have'],
-    family: F, summary: 'Read a procedural DynamicMesh actor: vertex count and triangle count, and whether it has normals, UV sets, vertex colors and polygroups.', whenToUse: ['Mesh stats must be inspected.'], whenNotToUse: ['The mesh must be modified.'],
+    family: F, summary: 'Read a procedural DynamicMesh actor: vertex count and triangle count, and whether it has normals, UV sets, vertex colors and polygroups.', whenToUse: ['Mesh stats must be inspected.'], whenNotToUse: ['The mesh must be modified.', 'A static mesh asset\'s triangles, size or material slots are needed (use inspect inspect_object objectKind mesh).'],
     inputProps: { actorName: P.actorName, targetActor: P.targetActor }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'read', costLatency: 'instant', costResources: 'low',
     exampleInput: { action: 'get_mesh_info', targetActor: 'DM_A' }, exampleOutput: { success: true, message: 'Mesh info', vertexCount: 1200, triangleCount: 2400 },
     outputProps: {

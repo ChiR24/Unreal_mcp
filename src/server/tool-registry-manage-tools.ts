@@ -1,6 +1,7 @@
 import { CATALOG_REVISION } from '../tools/catalog/capabilities/generated/canonical-registry.generated.js';
 import { dynamicToolManager, type ToolCategory } from '../tools/dynamic/dynamic-tool-manager.js';
 import { getString } from './gateway/gateway-shared.js';
+import { describeTask } from './gateway/gateway-task-results.js';
 
 const VALID_TOOL_CATEGORIES: ToolCategory[] = ['core', 'world', 'gameplay', 'utility', 'all'];
 
@@ -35,6 +36,8 @@ export async function handleManageToolsCall(args: Record<string, unknown>): Prom
             return setCategoryEnabled(args, false);
         case 'get_status':
             return getStatus();
+        case 'get_task_result':
+            return describeTask(getString(args, 'taskId') ?? '');
         case 'reset': {
             const result = dynamicToolManager.reset();
             return {
@@ -46,7 +49,7 @@ export async function handleManageToolsCall(args: Record<string, unknown>): Prom
         default:
             return {
                 success: false,
-                error: `Unknown action: ${action}. Available: list_tools, list_categories, enable_tools, disable_tools, enable_category, disable_category, get_status, reset`,
+                error: `Unknown action: ${action}. Available: list_tools, list_categories, enable_tools, disable_tools, enable_category, disable_category, get_status, get_task_result, reset`,
                 errorCode: 'UNKNOWN_ACTION'
             };
     }

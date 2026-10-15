@@ -1,0 +1,90 @@
+{
+  "description": "A pawn's health on screen, for a pawn with the Health behaviour: when a local player's controller takes the pawn, the widget is created for that player, added to the viewport and its bar filled with Health / MaxHealth; OnHealthChanged refills the bar; the widget comes off the screen when the pawn loses that controller or is destroyed.",
+  "tag": "HealthHud",
+  "placeholders": {
+    "WidgetClass": "The widget's generated class path (/Game/UI/WBP_HealthBar.WBP_HealthBar_C).",
+    "WidgetType": "The HealthHud variable's type: Object: followed by the widget's generated class path.",
+    "BarName": "The ProgressBar in the widget that shows the health.",
+    "SelfClass": "The pawn Blueprint's own generated class path; it declares OnHealthChanged."
+  },
+  "variables": [
+    { "variableName": "HealthHud", "variableType": "{{WidgetType}}", "category": "Health" }
+  ],
+  "functions": [
+    {
+      "id": "hudFill",
+      "functionName": "UpdateHealthHud",
+      "operations": [
+        { "edit": "create_node", "id": "hudFillWidget", "nodeType": "VariableGet", "memberName": "HealthHud" },
+        { "edit": "create_node", "id": "hudFillValid", "nodeType": "CallFunction", "memberName": "IsValid", "memberClass": "/Script/Engine.KismetSystemLibrary" },
+        { "edit": "create_node", "id": "hudFillBranch", "nodeType": "Branch" },
+        { "edit": "create_node", "id": "hudFillBar", "nodeType": "VariableGet", "memberName": "{{BarName}}", "memberClass": "{{WidgetClass}}" },
+        { "edit": "create_node", "id": "hudFillHealth", "nodeType": "VariableGet", "memberName": "Health" },
+        { "edit": "create_node", "id": "hudFillMax", "nodeType": "VariableGet", "memberName": "MaxHealth" },
+        { "edit": "create_node", "id": "hudFillShare", "nodeType": "CallFunction", "memberName": "NormalizeToRange", "memberClass": "/Script/Engine.KismetMathLibrary" },
+        { "edit": "create_node", "id": "hudFillSet", "nodeType": "CallFunction", "memberName": "SetPercent", "memberClass": "/Script/UMG.ProgressBar" },
+        { "edit": "connect_pins", "from": "$hudFillWidget.HealthHud", "to": "$hudFillValid.Object" },
+        { "edit": "connect_pins", "from": "$hudFillValid.ReturnValue", "to": "$hudFillBranch.Condition" },
+        { "edit": "connect_pins", "from": "$hudFillWidget.HealthHud", "to": "$hudFillBar.self" },
+        { "edit": "connect_pins", "fromNodeId": "$hudFillBar", "fromPinName": "{{BarName}}", "toNodeId": "$hudFillSet", "toPinName": "self" },
+        { "edit": "connect_pins", "from": "$hudFillHealth.Health", "to": "$hudFillShare.Value" },
+        { "edit": "connect_pins", "from": "$hudFillMax.MaxHealth", "to": "$hudFillShare.RangeMax" },
+        { "edit": "connect_pins", "from": "$hudFillShare.ReturnValue", "to": "$hudFillSet.InPercent" },
+        { "edit": "connect_pins", "from": "$hudFill.then", "to": "$hudFillBranch.execute" },
+        { "edit": "connect_pins", "from": "$hudFillBranch.then", "to": "$hudFillSet.execute" }
+      ]
+    },
+    {
+      "id": "hudDrop",
+      "functionName": "RemoveHealthHud",
+      "operations": [
+        { "edit": "create_node", "id": "hudDropWidget", "nodeType": "VariableGet", "memberName": "HealthHud" },
+        { "edit": "create_node", "id": "hudDropValid", "nodeType": "CallFunction", "memberName": "IsValid", "memberClass": "/Script/Engine.KismetSystemLibrary" },
+        { "edit": "create_node", "id": "hudDropBranch", "nodeType": "Branch" },
+        { "edit": "create_node", "id": "hudDropRemove", "nodeType": "CallFunction", "memberName": "RemoveFromParent", "memberClass": "/Script/UMG.Widget" },
+        { "edit": "create_node", "id": "hudDropClear", "nodeType": "VariableSet", "memberName": "HealthHud" },
+        { "edit": "connect_pins", "from": "$hudDropWidget.HealthHud", "to": "$hudDropValid.Object" },
+        { "edit": "connect_pins", "from": "$hudDropValid.ReturnValue", "to": "$hudDropBranch.Condition" },
+        { "edit": "connect_pins", "from": "$hudDropWidget.HealthHud", "to": "$hudDropRemove.self" },
+        { "edit": "connect_pins", "from": "$hudDrop.then", "to": "$hudDropBranch.execute" },
+        { "edit": "connect_pins", "from": "$hudDropBranch.then", "to": "$hudDropRemove.execute" },
+        { "edit": "connect_pins", "from": "$hudDropRemove.then", "to": "$hudDropClear.execute" }
+      ]
+    }
+  ],
+  "hooks": [
+    { "id": "hudBegin", "event": "BeginPlay" },
+    { "id": "hudControl", "event": "ReceiveControllerChanged" },
+    { "id": "hudEnd", "event": "Destroyed" }
+  ],
+  "eventGraph": [
+    { "edit": "create_node", "id": "hudSelf", "nodeType": "Self" },
+    { "edit": "create_node", "id": "hudBind", "nodeType": "BindEvent", "memberName": "OnHealthChanged", "memberClass": "{{SelfClass}}", "eventName": "OnHealthChangedHud" },
+    { "edit": "create_node", "id": "hudRefill", "nodeType": "CallFunction", "memberName": "UpdateHealthHud" },
+    { "edit": "connect_pins", "from": "$hudSelf.self", "to": "$hudBind.self" },
+    { "edit": "connect_pins", "from": "$hudBegin.then", "to": "$hudBind.execute" },
+    { "edit": "connect_pins", "from": "$hudBind_event.then", "to": "$hudRefill.execute" },
+    { "edit": "create_node", "id": "hudSwap", "nodeType": "CallFunction", "memberName": "RemoveHealthHud" },
+    { "edit": "create_node", "id": "hudLocal", "nodeType": "CallFunction", "memberName": "IsLocallyControlled", "memberClass": "/Script/Engine.Pawn" },
+    { "edit": "create_node", "id": "hudLocalBranch", "nodeType": "Branch" },
+    { "edit": "create_node", "id": "hudPlayer", "nodeType": "Cast", "targetClass": "/Script/Engine.PlayerController" },
+    { "edit": "create_node", "id": "hudCreate", "nodeType": "K2Node_CreateWidget", "targetClass": "{{WidgetClass}}" },
+    { "edit": "create_node", "id": "hudKeep", "nodeType": "VariableSet", "memberName": "HealthHud" },
+    { "edit": "create_node", "id": "hudShow", "nodeType": "CallFunction", "memberName": "AddToViewport", "memberClass": "/Script/UMG.UserWidget" },
+    { "edit": "create_node", "id": "hudFirstFill", "nodeType": "CallFunction", "memberName": "UpdateHealthHud" },
+    { "edit": "connect_pins", "from": "$hudControl.then", "to": "$hudSwap.execute" },
+    { "edit": "connect_pins", "from": "$hudSwap.then", "to": "$hudLocalBranch.execute" },
+    { "edit": "connect_pins", "from": "$hudLocal.ReturnValue", "to": "$hudLocalBranch.Condition" },
+    { "edit": "connect_pins", "from": "$hudLocalBranch.then", "to": "$hudPlayer.execute" },
+    { "edit": "connect_pins", "from": "$hudControl_event.NewController", "to": "$hudPlayer.Object" },
+    { "edit": "connect_pins", "from": "$hudPlayer.then", "to": "$hudCreate.execute" },
+    { "edit": "connect_pins", "from": "$hudPlayer.AsPlayer Controller", "to": "$hudCreate.OwningPlayer" },
+    { "edit": "connect_pins", "from": "$hudCreate.then", "to": "$hudKeep.execute" },
+    { "edit": "connect_pins", "from": "$hudCreate.ReturnValue", "to": "$hudKeep.HealthHud" },
+    { "edit": "connect_pins", "from": "$hudKeep.then", "to": "$hudShow.execute" },
+    { "edit": "connect_pins", "from": "$hudKeep.Output_Get", "to": "$hudShow.self" },
+    { "edit": "connect_pins", "from": "$hudShow.then", "to": "$hudFirstFill.execute" },
+    { "edit": "create_node", "id": "hudGone", "nodeType": "CallFunction", "memberName": "RemoveHealthHud" },
+    { "edit": "connect_pins", "from": "$hudEnd.then", "to": "$hudGone.execute" }
+  ]
+}

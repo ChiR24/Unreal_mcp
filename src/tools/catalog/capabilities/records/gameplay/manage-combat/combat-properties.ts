@@ -19,7 +19,7 @@ export const C = {
   spread: num('Base spread cone in degrees.'),
   weaponMeshPath: str('Canonical /Game weapon static or skeletal mesh path.'),
 
-  projectileClass: str('Class path of the projectile the weapon spawns.'),
+  projectileClass: str('The projectile the weapon shoots: its Blueprint path (/Game/Weapons/BP_Bullet) or class path.'),
   projectileSpeed: num('Projectile launch/travel speed.'),
 
 

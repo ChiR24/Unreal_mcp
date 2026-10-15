@@ -1,0 +1,309 @@
+#include "Domains/ControlActor/McpActorSupport.h"
+
+#include "Foundation/Reflection/McpReflectedInvoke.h"
+#include "Core/Requests/McpResponseCaptureRegistry.h"
+#include "UObject/Script.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpBPDiag.h"
+
+bool UEngineWireSubsystem::HandleControlActorSetBlueprintVariables(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+  // actors: many actors, each with its own values, in one call (eight billboard
+  // headlines were eight calls). Each item runs through this handler under a
+  // captured id, so it behaves exactly like a single call.
+  const TArray<TSharedPtr<FJsonValue>> *Items = nullptr;
+  if (Payload->TryGetArrayField(TEXT("actors"), Items) && Items->Num() > 0) {
+    // The same bound spawn_batch and set_material's actorNames hold to.
+    if (Items->Num() > 500) {
+      SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                                TEXT("actors takes at most 500 actors"), nullptr);
+      return true;
+    }
+    FMcpResponseCaptureRegistry &Capture = FMcpResponseCaptureRegistry::Get();
+    TArray<TSharedPtr<FJsonValue>> Results;
+    TArray<FString> Failures;
+    // The actors that took at least one variable, each by the name its one-actor run replied with, once
+    // each: what the receipt lists as changes and gives an actor handle apiece.
+    TArray<FString> Affected;
+    for (int32 Index = 0; Index < Items->Num(); ++Index) {
+      const TSharedPtr<FJsonObject> *Item = nullptr;
+      TSharedPtr<FJsonObject> One = MakeShared<FJsonObject>();
+      FString Name;
+      int32 Wanted = 0;
+      if ((*Items)[Index].IsValid() && (*Items)[Index]->TryGetObject(Item) && Item) {
+        One->Values = (*Item)->Values;
+        One->RemoveField(TEXT("actors"));
+        One->TryGetStringField(TEXT("actorName"), Name);
+        const TSharedPtr<FJsonObject> *Vars = nullptr;
+        if (One->TryGetObjectField(TEXT("variables"), Vars) && Vars && Vars->IsValid())
+          Wanted = (*Vars)->Values.Num();
+      }
+      const FString ItemId = FString::Printf(TEXT("%s#%d"), *RequestId, Index);
+      Capture.Begin(ItemId);
+      HandleControlActorSetBlueprintVariables(ItemId, One, Socket);
+      const FMcpCapturedResponse Reply = Capture.End(ItemId);
+      // Reply envelope: { data: { updated: [...] }, warnings: [...] }.
+      const TSharedPtr<FJsonObject> *ReplyData = nullptr;
+      const TArray<TSharedPtr<FJsonValue>> *Updated = nullptr;
+      const TArray<TSharedPtr<FJsonValue>> *Warnings = nullptr;
+      if (Reply.Result.IsValid()) {
+        if (Reply.Result->TryGetObjectField(TEXT("data"), ReplyData))
+          (*ReplyData)->TryGetArrayField(TEXT("updated"), Updated);
+        Reply.Result->TryGetArrayField(TEXT("warnings"), Warnings);
+      }
+      const bool bAll = Reply.bSuccess && Updated && Wanted > 0 && Updated->Num() == Wanted;
+      TSharedPtr<FJsonObject> Entry = McpHandlerUtils::CreateResultObject();
+      Entry->SetStringField(TEXT("actorName"), Name);
+      Entry->SetBoolField(TEXT("success"), bAll);
+      if (Updated)
+        Entry->SetArrayField(TEXT("updated"), *Updated);
+      if (Updated && Updated->Num() > 0) {
+        FString Changed;
+        if (!ReplyData || !(*ReplyData)->TryGetStringField(TEXT("actorName"), Changed) || Changed.IsEmpty())
+          Changed = Name;
+        Affected.AddUnique(Changed);
+      }
+      if (!bAll) {
+        // A call that ran reports "Variables updated"; what went wrong is in its warnings.
+        TArray<FString> Reasons;
+        if (!Reply.bSuccess)
+          Reasons.Add(Reply.Message);
+        if (Warnings) {
+          for (const TSharedPtr<FJsonValue> &Warning : *Warnings)
+            Reasons.Add(Warning->AsString());
+        }
+        if (Reasons.Num() == 0)
+          Reasons.Add(FString::Printf(TEXT("set %d of %d variables"), Updated ? Updated->Num() : 0, Wanted));
+        const FString Why = FString::Join(Reasons, TEXT("; "));
+        Entry->SetStringField(TEXT("error"), Why);
+        Failures.Add(FString::Printf(TEXT("%s: %s"), *Name, *Why));
+      }
+      Results.Add(MakeShared<FJsonValueObject>(Entry));
+    }
+    const int32 Done = Results.Num() - Failures.Num();
+    TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
+    Data->SetArrayField(TEXT("results"), Results);
+    Data->SetNumberField(TEXT("updatedActors"), Done);
+    Data->SetArrayField(TEXT("affectedActors"), McpHandlerUtils::ToJsonStringArray(Affected));
+    if (Failures.Num() > 0) {
+      SendAutomationResponse(Socket, RequestId, false,
+                             FString::Printf(TEXT("Variables set on %d of %d actors; %s"), Done,
+                                             Results.Num(), *FString::Join(Failures, TEXT("; "))),
+                             Data, TEXT("VARIABLE_BATCH_INCOMPLETE"));
+    } else {
+      SendAutomationResponse(Socket, RequestId, true,
+                             FString::Printf(TEXT("Variables set on %d actors"), Done), Data);
+    }
+    return true;
+  }
+
+  FString TargetName;
+  Payload->TryGetStringField(TEXT("actorName"), TargetName);
+  if (TargetName.IsEmpty()) {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("actorName required"), nullptr);
+    return true;
+  }
+
+  const TSharedPtr<FJsonObject> *VariablesPtr = nullptr;
+  if (!(Payload->TryGetObjectField(TEXT("variables"), VariablesPtr) &&
+        VariablesPtr && VariablesPtr->IsValid())) {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("variables object required"), nullptr);
+    return true;
+  }
+
+  AActor *Found = FindActorByName(TargetName);
+  if (!Found) {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
+                              TEXT("Actor not found"), nullptr);
+    return true;
+  }
+
+  UClass *ActorClass = Found->GetClass();
+  // Names are resolved before the actor is touched, and one unknown name refuses the whole call: a
+  // partial write answered "Variables updated" with the miss only in a warning. The error names the
+  // real variables.
+  TArray<FString> Missing;
+  for (const auto &Pair : (*VariablesPtr)->Values) {
+    if (!ActorClass->FindPropertyByName(*Pair.Key))
+      Missing.Emplace(*Pair.Key);
+  }
+  if (Missing.Num() > 0) {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("PROPERTY_NOT_FOUND"),
+        FString::Printf(TEXT("%s has no variable named %s; nothing was set. Its Blueprint variables: %s."),
+                        *TargetName, *FString::Join(Missing, TEXT(", ")),
+                        *McpBlueprintVariableList(ActorClass)), nullptr);
+    return true;
+  }
+  Found->Modify();
+  TArray<FString> Applied;
+  TArray<FString> Warnings;
+
+  for (const auto &Pair : (*VariablesPtr)->Values) {
+    const FString VariableName(*Pair.Key);
+    FProperty *Property = ActorClass->FindPropertyByName(*VariableName);
+    if (!Property)
+      continue;
+
+    const TSharedPtr<FJsonValue> Value =
+        McpActorRefsToPaths(Pair.Value, Property, [this](const FString &Name) { return FindActorByName(Name); });
+    FString ApplyError;
+    if (ApplyJsonValueToProperty(Found, Property, Value, ApplyError))
+      Applied.Add(VariableName);
+    else
+      Warnings.Add(FString::Printf(TEXT("Failed to set %s: %s"), *VariableName, *ApplyError));
+  }
+
+  // A Details-panel edit reruns the construction script; without this an
+  // instance kept the look its old values built until something else moved it.
+  if (Applied.Num() > 0) Found->PostEditChange();
+  Found->MarkComponentsRenderStateDirty();
+  Found->MarkPackageDirty();
+
+  TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
+  if (Applied.Num() > 0) {
+    Data->SetArrayField(TEXT("updated"), McpHandlerUtils::ToJsonStringArray(Applied));
+    // The instance whose variables changed (the Blueprint asset itself did not), so the receipt names it.
+    Data->SetStringField(TEXT("actorName"), McpActorRef(Found));
+  }
+  // A value that did not take (a reference that resolves to nothing) answered "Variables updated" with the miss
+  // only in a warning.
+  if (Warnings.Num() > 0) {
+    SendAutomationResponse(Socket, RequestId, false, FString::Printf(TEXT("Set %d of %d variables on %s; %s"),
+        Applied.Num(), (*VariablesPtr)->Values.Num(), *TargetName, *FString::Join(Warnings, TEXT("; "))),
+        Data, TEXT("VARIABLE_NOT_SET"));
+    return true;
+  }
+
+  SendStandardSuccessResponse(this, Socket, RequestId,
+                              TEXT("Variables updated"), Data);
+  return true;
+}
+
+
+bool UEngineWireSubsystem::HandleControlActorExport(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+  FString TargetName;
+  Payload->TryGetStringField(TEXT("actorName"), TargetName);
+  if (TargetName.IsEmpty()) {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("actorName required"), nullptr);
+    return true;
+  }
+
+  AActor *Found = FindActorByName(TargetName);
+  if (!Found) {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
+                              TEXT("Actor not found"), nullptr);
+    return true;
+  }
+
+  FMcpOutputCapture OutputCapture;
+  UExporter::ExportToOutputDevice(nullptr, Found, nullptr, OutputCapture,
+                                  TEXT("T3D"), 0, 0, false);
+  FString OutputString = FString::Join(OutputCapture.Consume(), TEXT("\n"));
+
+  TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
+  Data->SetStringField(TEXT("t3d"), OutputString);
+  Data->SetStringField(TEXT("actorName"), McpActorRef(Found));
+  SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Actor exported"),
+                              Data);
+  return true;
+}
+
+bool UEngineWireSubsystem::HandleControlActorCallFunction(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+  FString ActorName, FunctionName, ComponentName;
+  Payload->TryGetStringField(TEXT("actorName"), ActorName);
+  Payload->TryGetStringField(TEXT("functionName"), FunctionName);
+  Payload->TryGetStringField(TEXT("componentName"), ComponentName);
+
+  if (ActorName.IsEmpty() || FunctionName.IsEmpty()) {
+    SendAutomationError(Socket, RequestId, TEXT("actorName and functionName are required"), TEXT("MISSING_PARAM"));
+    return true;
+  }
+
+  // While PIE runs the game's objects also go by role, as get_property takes them: the GameInstance is no actor.
+  UObject* Target = FindActorByName(ActorName);
+  Target = Target ? Target : McpHandlerUtils::ResolveRuntimeRole(ActorName);
+  if (!Target) {
+    SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Actor not found: %s"), *ActorName), TEXT("ACTOR_NOT_FOUND"));
+    return true;
+  }
+  // A component's own functions (a body's GetCenterOfMass, a movement component's StopMovementImmediately) were out
+  // of reach: only the actor's functions resolved.
+  if (!ComponentName.IsEmpty()) {
+    AActor* Owner = Cast<AActor>(Target);
+    UActorComponent* Component = Owner ? FindComponentByName(Owner, ComponentName) : nullptr;
+    if (!Component) {
+      SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Component not found on %s: %s"), *ActorName, *ComponentName), TEXT("COMPONENT_NOT_FOUND"));
+      return true;
+    }
+    Target = Component;
+  }
+
+  UFunction* Function = Target->FindFunction(*FunctionName);
+  if (!Function) {
+    SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Function not found on %s: %s"), *Target->GetClass()->GetName(), *FunctionName), TEXT("FUNCTION_NOT_FOUND"));
+    return true;
+  }
+
+  const TSharedPtr<FJsonObject> *ArgsPtr = nullptr;
+  Payload->TryGetObjectField(TEXT("arguments"), ArgsPtr);
+  const TSharedPtr<FJsonObject> Args =
+      (ArgsPtr && ArgsPtr->IsValid()) ? *ArgsPtr : nullptr;
+
+  TArray<TSharedPtr<FJsonValue>> Unset;
+  TSharedPtr<FJsonObject> Outputs;
+
+  // AActor::ProcessEvent drops every call on an actor whose world has not initialized its actors (the
+  // editor world) unless GAllowActorScriptExecutionInEditor is set, so a Blueprint custom event such as
+  // BP_Block's BecomeUsed "succeeded" and changed nothing. The guard is what the editor itself uses for
+  // CallInEditor functions and editor utility calls.
+  FEditorScriptExecutionGuard ScriptGuard;
+  if (Function->ParmsSize > 0) {
+    // The parameter block must be constructed, bound and destroyed through the
+    // function's own property chain. Handing ProcessEvent a merely zeroed buffer
+    // -- what this did before -- discarded every argument the caller sent while
+    // still reporting success, so a bool argument always arrived false.
+    FMcpScopedParamBlock Params(Function);
+    FString BindError;
+    if (!McpBindJsonArgsToParams(Function, Args, Params.Data(), Unset, BindError)) {
+      SendAutomationError(Socket, RequestId, BindError, TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    Target->ProcessEvent(Function, Params.Data());
+    Outputs = McpReadParamOutputs(Function, Params.Data());
+  } else {
+    Target->ProcessEvent(Function, nullptr);
+    Outputs = MakeShared<FJsonObject>();
+  }
+
+  TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
+  Data->SetStringField(TEXT("actorName"), ActorName);
+  Data->SetStringField(TEXT("functionName"), FunctionName);
+  // The object the call reached: the component's path when componentName named one. Ten function and target
+  // diagnostics (flags, thunk, ParmsSize, validity ...) rode on every reply while a silent no-op was chased; the
+  // script guard above was the cause, and they stayed as noise.
+  Data->SetStringField(TEXT("resolvedObject"), Target->GetPathName());
+  Data->SetObjectField(TEXT("outputs"), Outputs);
+  Data->SetArrayField(TEXT("unsetParameters"), Unset);
+
+  // The published output schema declares `value` ("Property value (any type)") and the capability example
+  // promises {"success":true,...,"value":true}, but only `outputs` was ever emitted -- so a caller that read
+  // the documented field got nothing while the real return sat under outputs.ReturnValue. Surface the return
+  // value under the documented name too; `outputs` stays for callers that already use it.
+  if (Outputs.IsValid())
+  {
+    const TSharedPtr<FJsonValue>* ReturnValue = Outputs->Values.Find(TEXT("ReturnValue"));
+    if (ReturnValue && ReturnValue->IsValid())
+    {
+      Data->SetField(TEXT("value"), *ReturnValue);
+    }
+  }
+  SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Function called"), Data);
+  return true;
+}

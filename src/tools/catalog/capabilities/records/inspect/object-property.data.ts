@@ -2,14 +2,14 @@
  * Object, property, and class introspection records (12 actions).
  */
 import type { CapabilityRecordSource } from '../../model.js';
-import { buildCoreRecord } from '../core/builder.js';
+import { ANY_EDITOR_STATE, buildCoreRecord } from '../core/builder.js';
 import { P } from './properties.js';
 
 const D = 'inspect';
 
 /**
  * What HandleInspectObjectAction actually returns
- * (Private/Domains/Environment/Inspection/McpAutomationBridge_EnvironmentHandlersInspectObject.cpp).
+ * (Private/Domains/Environment/Inspection/McpEnvInspectObject.cpp).
  *
  * These MUST be declared. McpProjectCanonicalOutput keeps only the properties a
  * record declares, so while this set was missing the native gateway stripped the
@@ -43,7 +43,7 @@ const INSPECT_OBJECT_OUTPUT = {
 
 /**
  * What a static or skeletal mesh asset adds
- * (Private/Domains/Environment/Inspection/McpAutomationBridge_EnvironmentHandlersInspectAssetMesh.cpp):
+ * (Private/Domains/Environment/Inspection/McpEnvInspectAssetMesh.cpp):
  * the slot table, with what LOD0 draws in each slot.
  */
 const MESH_DETAILS_OUTPUT = {
@@ -98,7 +98,7 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'inspect', action: 'get_mesh_details', dispatchAction: 'inspect_object', domain: D, family: 'object',
     summary: 'Inspect a static or skeletal mesh asset: size, bounds, pivot, LODs, and every material slot with the triangles and bounds of the geometry it covers. Any other object is refused with TYPE_MISMATCH.',
-    topics: ['material slot bounds', 'which slot is which part'],
+    topics: ['material slot bounds', 'which slot is which part', 'mesh size', 'mesh bounds', 'static mesh size', 'static mesh triangles'],
     whenToUse: ['A mesh asset\'s details must be read.', 'It is not known which material slot holds which part of a mesh (legs, hull, claws): each slot lists the triangles and mesh-space bounds of its LOD0 geometry.'],
     whenNotToUse: ['Prefer the canonical inspect_object verb.'],
     inputProps: { objectPath: P.objectPath, actorName: P.actorName, name: P.name, detailed: P.detailed, propertyNames: P.propertyNames },
@@ -122,13 +122,15 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
       rays: {
         type: 'array', minItems: 1, maxItems: 256,
         items: {
-          type: 'object', additionalProperties: false, required: ['origin', 'direction'],
+          type: 'object', additionalProperties: false,
           properties: {
             origin: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Ray start {x, y, z} in the mesh\'s local space, in cm; start outside the mesh to find its outer surface.' },
             direction: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Ray direction {x, y, z}; any length, it is normalized.' },
+            start: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Line start {x, y, z} in local space, with end in place of origin and direction (the form raycast_world takes).' },
+            end: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Line end {x, y, z} in local space; nothing past it is reported.' },
           },
         },
-        description: 'Rays in the mesh\'s local space; each answers in hits at the same index.',
+        description: 'Rays in the mesh\'s local space, each {origin, direction} or {start, end}; each answers in hits at the same index.',
       },
     },
     required: ['meshPath', 'rays'],
@@ -155,8 +157,131 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
       },
     },
   }),
+  // A model cannot see a mesh: an imported or generated one with a hole, a crack between unwelded vertices, an edge
+  // shared by three faces or faces turned inside out passed every other check.
+  buildCoreRecord({
+    parentTool: 'inspect', action: 'check_mesh', dispatchAction: 'check_mesh', domain: D, family: 'object',
+    editorStates: ANY_EDITOR_STATE,
+    summary: 'Check whether a static mesh\'s geometry is sound, from its source triangles: closed (watertight) or open with how many holes, edges shared by three or more faces, faces turned inside out, faces with no area, seams where faces do not share their corners, and how many separate parts it is made of, with its size, surface area and (when closed) volume.',
+    topics: ['check mesh', 'mesh holes', 'mesh has holes', 'watertight', 'non manifold edges', 'flipped normals', 'inside out faces', 'mesh parts', 'broken mesh', 'mesh volume'],
+    whenToUse: ['An imported, downloaded or generated mesh must be proven sound before it is placed, merged, used for collision or booleans, or shipped.', 'A mesh shows see-through gaps, black or inside-out faces, or splits into loose pieces.'],
+    whenNotToUse: ['Only the mesh\'s size, pivot, slots or triangle counts per material are needed (use inspect_object objectKind mesh).', 'The mesh must be cut into one asset per part (use manage_geometry split_mesh).'],
+    inputProps: {
+      meshPath: { type: 'string', description: 'Static mesh asset path, e.g. /Game/Meshes/SM_Rock. Its source triangles (LOD 0 as imported or built) are checked, so a Nanite mesh answers at full detail. A placed actor\'s mesh is named by get_components.' },
+    },
+    required: ['meshPath'],
+    effect: 'read',
+    costLatency: 'interactive',
+    exampleInput: { action: 'check_mesh', meshPath: '/Engine/BasicShapes/Cube' },
+    exampleOutput: {
+      success: true, message: 'Cube: 48 triangles in 1 part(s), closed.', meshPath: '/Engine/BasicShapes/Cube.Cube',
+      triangles: 48, vertices: 26, size: [100, 100, 100], surfaceArea: 60000, closed: true, volume: 1000000,
+      openEdges: 0, holes: 0, seamEdges: 0, nonManifoldEdges: 0, flippedEdges: 0, degenerateTriangles: 0, parts: 1,
+      largestParts: [{ triangles: 48, size: [100, 100, 100], center: [0, 0, 0] }],
+    },
+    outputProps: {
+      meshPath: { type: 'string', description: 'The mesh checked.' },
+      triangles: { type: 'number', description: 'Source triangles (LOD 0).' },
+      vertices: { type: 'number', description: 'Distinct corner positions (to 0.01 cm): corners at one place count once, whether or not the source shares the vertex.' },
+      size: { type: 'array', items: { type: 'number' }, description: 'Extent [x, y, z] in cm, in the mesh\'s own space.' },
+      surfaceArea: { type: 'number', description: 'Total face area in cm².' },
+      closed: { type: 'boolean', description: 'True when every edge joins exactly two faces (seams count as joined): the surface is watertight (a solid, not a sheet or a shell with gaps).' },
+      volume: { type: 'number', description: 'With closed: the volume it encloses, in cm³.' },
+      openEdges: { type: 'number', description: 'Edges with a face on one side only and none on the other at that place: the outlines of holes and open rims.' },
+      holes: { type: 'number', description: 'Separate outlines those open edges form (one per hole or open rim).' },
+      seamEdges: { type: 'number', description: 'Places where two faces meet without sharing their corners (split for flat shading or UV seams): the surface renders whole, but booleans, remeshing and collision built from the mesh need it welded.' },
+      nonManifoldEdges: { type: 'number', description: 'Edges shared by three or more faces (fins, faces stacked on one edge); they break booleans, remeshing and collision generation.' },
+      flippedEdges: { type: 'number', description: 'Edges (seams included) whose two faces wind the same way along them, so one of the two faces points inward (a face turned inside out renders dark or vanishes).' },
+      degenerateTriangles: { type: 'number', description: 'Faces with no area (slivers or a repeated corner).' },
+      parts: { type: 'number', description: 'Separate pieces: groups of faces joined by corners at the same place.' },
+      largestParts: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Up to 8 pieces, largest first: triangles, size [x, y, z] and center [x, y, z] in cm, in the mesh\'s own space.' },
+    },
+    outputRequired: ['meshPath', 'triangles', 'closed', 'parts'],
+  }),
+  // A model that cannot see a picture could not tell whether a shot showed the subject, how big, or how dark.
+  buildCoreRecord({
+    parentTool: 'inspect', action: 'describe_view', dispatchAction: 'describe_view', domain: D, family: 'object',
+    editorStates: ['edit', 'simulate'],
+    summary: 'Describe what the level viewport\'s camera sees, as text: each actor in view with its share of the frame, its box on screen, how bright it is drawn and its distance, the share that is background (sky, void), and the frame\'s brightness; or only the actors named, with what hides each one that is not seen. location and rotation place the camera first, as control_editor screenshot takes them.',
+    topics: ['what is visible', 'what the camera sees', 'describe view', 'describe frame', 'is it on screen', 'player on screen', 'screen coverage', 'check the camera shot', 'in shot', 'visible actors', 'frame brightness', 'too dark'],
+    whenToUse: ['A shot must be checked without looking at a picture: is the subject in view, how much of the frame it fills, where it sits, whether it is lit or lost in the dark.', 'A camera placement must be compared or tuned by numbers (subject coverage, sky share, brightness).'],
+    whenNotToUse: ['A picture is wanted (use control_editor screenshot).', 'Play In Editor runs: the level viewport does not show the running game (stop it, or use Simulate).', 'Whether collision blocks a line between two points (use raycast_world).'],
+    inputProps: {
+      actors: { type: 'array', items: { type: 'string' }, description: 'Only these actors (label, name or path): their rows under actors, and under notVisible each one that drew no pixel with its reason, outside the frame or hidden, with hiddenBy naming the actors drawn over its box (up to three, by share of the box). Names that match no actor are listed under notFound. limit does not apply.' },
+      location: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }, additionalProperties: false, description: 'Camera location {x, y, z} in cm; omitted, the viewport\'s current one. The camera stays there.' },
+      rotation: { type: 'object', properties: { pitch: { type: 'number' }, yaw: { type: 'number' }, roll: { type: 'number' } }, additionalProperties: false, description: 'Camera rotation {pitch, yaw, roll} in degrees; omitted, the viewport\'s current one.' },
+      limit: { type: 'number', description: 'Most actors to list, largest share first (default 20, at most 100); visibleActors counts them all.' },
+    },
+    required: [],
+    effect: 'read',
+    costLatency: 'interactive',
+    exampleInput: { action: 'describe_view', location: { x: 0, y: -600, z: 200 }, rotation: { pitch: -10, yaw: 90, roll: 0 } },
+    exampleOutput: {
+      success: true, message: '2 actor(s) in view; the largest is Floor at 41.2% of the frame.',
+      cameraLocation: { x: 0, y: -600, z: 200 }, cameraRotation: { pitch: -10, yaw: 90, roll: 0 }, visibleActors: 2,
+      actors: [
+        { name: 'Floor', class: 'StaticMeshActor', coverage: 41.2, box: [0, 52.4, 100, 100], brightness: 0.34, distance: 220 },
+        { name: 'Crate', class: 'StaticMeshActor', coverage: 6.8, box: [44.1, 38.2, 55.9, 61.3], brightness: 0.51, distance: 560 },
+      ],
+      background: 52, other: 0, brightness: { p10: 0.05, median: 0.31, p90: 0.62, clipped: 0, dark: 4.1 },
+    },
+    outputProps: {
+      cameraLocation: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Where the camera was.' },
+      cameraRotation: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Where it looked.' },
+      visibleActors: { type: 'number', description: 'Actors the game would draw with at least one pixel in the frame.' },
+      actors: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Largest share first: name (actor label), class, coverage (percent of the frame), box [left, top, right, bottom] in percent of the frame\'s width and height, brightness (0-1, as drawn) and distance (cm from the camera to its bounds). Editor icons and shapes hidden in game are left out.' },
+      background: { type: 'number', description: 'Percent of the frame where no object was drawn (sky, void).' },
+      other: { type: 'number', description: 'Percent drawn by what only the editor shows (icons, gizmos, shapes hidden in game) or no actor owns (BSP).' },
+      brightness: { type: 'object', properties: { p10: { type: 'number' }, median: { type: 'number' }, p90: { type: 'number' }, clipped: { type: 'number' }, dark: { type: 'number' } }, additionalProperties: false, description: 'The frame as drawn: p10, median and p90 brightness (0-1), and the percent of the frame clipped (a channel at full) or dark (below 0.05).' },
+      notVisible: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'With actors: each named actor that drew no pixel, as {name, reason (outside the frame; at the edge of the frame, mostly outside it; hidden behind what is drawn over its box; or not drawn with nothing nearer over it), inFrame (percent of its projected box inside the frame), hiddenBy [{name, share (percent of its box)}], which leaves out actors centred farther than it and the ground under it}.' },
+      notFound: { type: 'array', items: { type: 'string' }, description: 'With actors: the names that match no actor.' },
+    },
+    outputRequired: ['visibleActors', 'actors', 'background', 'brightness'],
+  }),
+  // A picture could only be judged by eye: no pass said which actor a region belongs to, how far it is or which way
+  // it faces.
+  buildCoreRecord({
+    parentTool: 'inspect', action: 'capture_passes', dispatchAction: 'capture_passes', domain: D, family: 'object',
+    editorStates: ['edit', 'simulate'],
+    summary: 'Capture the level viewport\'s view as machine-readable passes, aligned pixel for pixel: id (a PNG with one colour per actor, and the legend naming each colour\'s actor), depth (an EXR of the distance in cm) and normal (a PNG of the world normal, RGB = normal x 0.5 + 0.5), with a summary of each. location and rotation place the camera first, as describe_view and control_editor screenshot take them.',
+    topics: ['capture passes', 'id pass', 'object id', 'depth pass', 'depth map', 'normal pass', 'normal map of the view', 'segmentation mask', 'render passes'],
+    whenToUse: ['A frame must be analysed by a script, a probe or a model: which actor covers a region (id), how far each pixel is (depth), which way surfaces face (normal).', 'Regions of a screenshot must be attributed to actors, or distances in a shot measured.'],
+    whenNotToUse: ['A picture to look at is wanted (use control_editor screenshot).', 'Only which actors are in view and their share is needed (use describe_view, which writes no files).', 'Passes of a rendered sequence are needed (use manage_sequence add_render_pass).'],
+    inputProps: {
+      location: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }, additionalProperties: false, description: 'Camera location {x, y, z} in cm; omitted, the viewport\'s current one. The camera stays there.' },
+      rotation: { type: 'object', properties: { pitch: { type: 'number' }, yaw: { type: 'number' }, roll: { type: 'number' } }, additionalProperties: false, description: 'Camera rotation {pitch, yaw, roll} in degrees; omitted, the viewport\'s current one.' },
+      passes: { type: 'array', items: { type: 'string', enum: ['id', 'depth', 'normal'] }, description: 'Passes to write (default all three).' },
+      width: { type: 'number', description: 'Width of every pass in pixels (default 960, 64 to 4096); the height follows the viewport\'s shape so the passes line up with it.' },
+      outputPath: { type: 'string', description: 'Folder inside the project, project-relative or absolute (default Saved/Captures).' },
+      name: { type: 'string', description: 'File name prefix (default Passes_<date>_<time>): files are <name>_id.png, <name>_depth.exr and <name>_normal.png.' },
+    },
+    required: [],
+    effect: 'read',
+    costLatency: 'interactive',
+    exampleInput: { action: 'capture_passes', location: { x: 0, y: -600, z: 200 }, rotation: { pitch: -10, yaw: 90, roll: 0 }, name: 'Crate' },
+    exampleOutput: {
+      success: true, message: 'Captured 3 pass(es) at 960x404.', cameraLocation: { x: 0, y: -600, z: 200 }, cameraRotation: { pitch: -10, yaw: 90, roll: 0 },
+      fov: 90, width: 960, height: 404,
+      files: { id: 'X:/Games/MyGame/Saved/Captures/Crate_id.png', depth: 'X:/Games/MyGame/Saved/Captures/Crate_depth.exr', normal: 'X:/Games/MyGame/Saved/Captures/Crate_normal.png' },
+      ids: [{ color: '#ff3333', name: 'Floor', class: 'StaticMeshActor', coverage: 41.2 }, { color: '#33ffb2', name: 'Crate', class: 'StaticMeshActor', coverage: 6.8 }],
+      depth: { min: 220, median: 640, max: 2400, sky: 52 }, normal: { up: 61.3, down: 0, side: 38.7 },
+    },
+    outputProps: {
+      cameraLocation: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Where the camera was.' },
+      cameraRotation: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Where it looked.' },
+      fov: { type: 'number', description: 'Horizontal field of view in degrees.' },
+      width: { type: 'number', description: 'Pass width in pixels.' },
+      height: { type: 'number', description: 'Pass height in pixels.' },
+      files: { type: 'object', properties: { id: { type: 'string' }, depth: { type: 'string' }, normal: { type: 'string' } }, additionalProperties: false, description: 'Absolute path of each pass written.' },
+      ids: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'id: each actor in the id image, largest first (up to 256): color (#rrggbb in the PNG), name (actor label), class and coverage (percent of the frame). Black is background (sky, void), dark grey (#404040) what only the editor draws.' },
+      depth: { type: 'object', properties: { min: { type: 'number' }, median: { type: 'number' }, max: { type: 'number' }, sky: { type: 'number' } }, additionalProperties: false, description: 'depth: nearest, median and farthest distance of the drawn pixels in cm, and the percent that is sky (nothing within 100 km).' },
+      normal: { type: 'object', properties: { up: { type: 'number' }, down: { type: 'number' }, side: { type: 'number' } }, additionalProperties: false, description: 'normal: percent of the drawn pixels facing up (normal z above 0.7), down (below -0.7) and sideways.' },
+    },
+    outputRequired: ['files'],
+  }),
   buildCoreRecord({
     parentTool: 'inspect', action: 'raycast_world', dispatchAction: 'raycast_world', domain: D, family: 'object',
+    editorStates: ANY_EDITOR_STATE,
     summary: 'Trace lines through the level against collision and read what each one hits first: the point, the surface normal, the distance, the actor and the component. Finds the ground under a point, checks a line of sight, and proves a wall, floor or volume really blocks. Traces the running game while Play In Editor runs.',
     topics: ['line trace', 'raycast world', 'what is below', 'ground height', 'line of sight', 'does it block', 'collision test', 'trace channel'],
     whenToUse: [
@@ -241,9 +366,10 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'inspect', action: 'get_property', dispatchAction: 'get_property', domain: D, family: 'property',
+    editorStates: ANY_EDITOR_STATE,
     topics: ['read property', 'property value', 'get value', 'read field', 'actor property', 'object property', 'game instance variable', 'read live widget property', 'widget value during play'],
-    summary: 'Read a property value from a world actor, asset, or Blueprint class defaults (blueprintPath, or the Blueprint asset\'s own path), or several at once (propertyNames).',
-    whenToUse: ['A single property value must be read.', 'Several properties of one target must be read in one call (propertyNames).'],
+    summary: 'Read a property value from a world actor, asset, or Blueprint class defaults (blueprintPath, or the Blueprint asset\'s own path), several at once (propertyNames), or the same ones from several objects (objectPaths).',
+    whenToUse: ['A single property value must be read.', 'Several properties of one target must be read in one call (propertyNames).', 'The same properties must be read from several objects in one call (objectPaths), e.g. the state of every moving platform.'],
     whenNotToUse: ['All properties are needed; use inspect_object or inspect_cdo.'],
     // One requiredOneOf group only: the property name is the one the schema
     // enforces (propertyPath alone used to be refused by a required propertyName);
@@ -251,6 +377,7 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: {
       objectPath: P.runtimeObjectPath, actorName: P.actorName, name: P.name, blueprintPath: P.blueprintPath, propertyName: P.propertyName, propertyPath: P.propertyPath,
       propertyNames: { type: 'array', items: { type: 'string' }, minItems: 1, maxItems: 64, description: 'Several properties of the same target in one call, in place of propertyName: each read as a single call would (dotted paths too, such as CharacterMovement.MaxWalkSpeed). Answered under properties; a name that does not resolve is listed under missingProperties with the reason, and the others still answer.' },
+      objectPaths: { type: 'array', items: { type: 'string' }, minItems: 1, maxItems: 64, description: 'The same read on several objects in one call, in place of objectPath: each entry is a target as objectPath takes it (an actor by name or label, an asset, a class default, PlayerPawn), read as a single call would be, propertyNames included. Answered under targets; a target that cannot be read carries its error and the others still answer.' },
     },
     required: [],
     requiredOneOf: ['propertyName', 'propertyPath', 'propertyNames'],
@@ -259,16 +386,26 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
     exampleOutput: { success: true, message: 'Property read', value: 'PlayerStart_1' },
     outputProps: {
       value: P.valueRead,
+      targets: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, 'x-unreal-reflection-boundary': true, description: 'With objectPaths: each target as {objectPath as given, propertyName and value, or properties and missingProperties with propertyNames, error when it could not be read}.' },
       properties: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, 'x-unreal-reflection-boundary': true, description: 'With propertyNames: each property that resolved, as {propertyName (its own spelling), value}, plus propertyPath (the path as asked) when that differs, so two .Text reads stay apart.' },
       missingProperties: { type: 'array', items: { type: 'string' }, description: 'With propertyNames: each name that did not resolve, as "Name: reason".' },
     },
   }),
   buildCoreRecord({
     parentTool: 'inspect', action: 'set_property', dispatchAction: 'set_property', domain: D, family: 'property',
+    editorStates: ANY_EDITOR_STATE,
     topics: ['write property', 'set value', 'change property', 'modify property', 'edit property', 'set field', 'set property on actor', 'set game instance variable'],
-    summary: 'Write a property value on a world actor, asset, or Blueprint CDO, or several at once (properties).',
-    whenToUse: ['A single property value must be written.', 'Several properties of one target must be written in one call (properties).'],
-    whenNotToUse: ['The property is read-only or the target is a packed asset.'],
+    summary: 'Write a property value on a world actor, asset, or Blueprint CDO; several at once (properties), or the same on several objects (objectPaths).',
+    whenToUse: [
+      'A single property value must be written.',
+      'Several properties of one target must be written in one call (properties).',
+      'The same property must be written on several objects in one call (objectPaths), e.g. one volume on every ambient sound.',
+      'A placed actor\'s component property must be written ("StaticMeshComponent0.StaticMesh", "Mesh.BodyInstance.CollisionEnabled"): a StaticMesh, collision, SimulatePhysics or Mobility key goes through the component\'s own setter, as control_actor edit_component writes it.',
+    ],
+    whenNotToUse: [
+      'The property is read-only or the target is a packed asset.',
+      'A value the object works out from another of its settings: the object puts the write back and the call fails with PROPERTY_SET_FAILED naming both values, so change that setting instead. A value the object only adjusts (a clamp) is written, and the message names what it became.',
+    ],
     inputProps: {
       objectPath: P.runtimeObjectPath, actorName: P.actorName, name: P.name, blueprintPath: P.blueprintPath, propertyName: P.propertyName, propertyPath: P.propertyPath, value: P.value, markDirty: P.markDirty,
       properties: {
@@ -277,18 +414,18 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
         'x-unreal-reflection-boundary': true,
         description: 'Several writes on the same target in place of propertyName and value: {name or dotted path: value}, e.g. {"BoxExtent": {"X": 20, "Y": 90, "Z": 100}, "CollisionProfileName": "OverlapAllDynamic"}. Each is written as a single call would be and reported under properties; the call fails naming any that did not apply. watch applies to single writes only.',
       },
+      objectPaths: { type: 'array', items: { type: 'string' }, minItems: 1, maxItems: 64, description: 'The same write on several targets in one call, in place of objectPath: each entry is a target as objectPath takes it (an actor, "Actor.Component", an asset, a class default), written as a single call would be, with properties too. Answered under targets; the call fails naming each target that did not take the write, and the others keep it.' },
       // A UMG pop set off by a write ran on real time and ended between two calls; LivesPop was only
       // provable by slowing the asset 50x.
       watch: {
         type: 'object',
         description: 'Sample a property right after the write, in the same call, to see what the write sets off before it ends: a HUD pop or fade runs on real time, even with PIE paused, and is over before a later call can read it. The reply lists each value the property took with its time t in seconds (Lives on GameInstance with watch {objectPath: "WBP_HUD", propertyName: "LivesBox.RenderTransform"}).',
         properties: {
-          propertyName: { type: 'string', description: 'The property to sample; a dotted path reaches through widgets and structs (LivesBox.RenderTransform).' },
+          propertyName: { type: 'string', description: 'The property to sample; a dotted path reaches through widgets and structs (LivesBox.RenderTransform). Omitted, the property the call writes.' },
           objectPath: { type: 'string', description: 'The object to sample, as objectPath takes it (GameInstance, a live widget such as WBP_HUD); omitted, the object written.' },
           durationSeconds: { type: 'number', description: 'Real seconds to sample (default 0.5, at most 20).' },
           intervalSeconds: { type: 'number', description: 'Seconds between samples (default 0: every frame); a sample is kept only when the value changed.' },
         },
-        required: ['propertyName'],
         additionalProperties: false,
       },
     },
@@ -298,8 +435,11 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
     outputProps: {
       watch: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'With watch: objectPath, propertyName, samples ({t, value}, kept when the value changed), sampleCount, changed (it took more than one value) and frames.' },
       properties: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, 'x-unreal-reflection-boundary': true, description: 'With properties: each write as {propertyName, applied, value read back}.' },
-      applied: { type: 'number', description: 'With properties: how many writes applied.' },
-      instancesUpdated: { type: 'number', description: 'A write to a class default or component template: how many placed copies that still held the old default took the new one, as the details panel does; copies that override the value keep theirs. Absent for any other target.' },
+      targets: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, 'x-unreal-reflection-boundary': true, description: 'With objectPaths: each target as {objectPath as given, applied, the value read back (properties with properties), actorPath, saved, saveSkippedReason}.' },
+      applied: { type: 'number', description: 'With properties: how many writes applied; with objectPaths: how many targets.' },
+      saved: { type: 'boolean', description: 'Whether the target\'s package was written to disk after the write; with properties, the last write\'s save, which holds every write of the call. False with saveSkippedReason when nothing was saved.' },
+      saveSkippedReason: { type: 'string', description: 'Why nothing was saved: markDirty was false, a running-game or transient object (the change lasts until PIE stops), level content (saved with its level), engine content, or a save that failed (the change is only in memory).' },
+      instancesUpdated: { type: 'number', description: 'A write to a class default or component template: how many placed copies, and derived Blueprints\' defaults with their own copies, still held the old default and took the new one, as the details panel does; one that overrides the value keeps it. Absent for any other target.' },
       // Writing a Blueprint CDO only reaches instances spawned later once the
       // class is rebuilt, so the caller is told whether that recompile happened.
       blueprintCompiled: { type: 'boolean', description: 'True when the target was a Blueprint CDO and the Blueprint was recompiled, so the value now applies to newly spawned instances. The reply (value, actorPath, actorClass) is read back from the recompiled class default object and the Blueprint package is saved; a variable the Blueprint declares keeps the value as its default, and the call fails with PROPERTY_SET_FAILED, never success, when the compile did not keep it. A Default__ objectPath resolves to the Blueprint\'s current default object; a copy a compile left behind (a REINST_ class, or a Blueprint object in /Engine/Transient with no game running) fails with STALE_TARGET. False for plain world actors and assets, where no compile is involved.' },
@@ -352,7 +492,7 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
     },
     required: ['blueprintPath'],
     effect: 'read',
-    // The handler (McpAutomationBridge_PropertyHandlersCdoInspection.cpp) emits
+    // The handler (McpPropCdoInspection.cpp) emits
     // every field below. With NO outputProps declared, output projection kept
     // only {success, message} and the capability answered "CDO inspection
     // completed" carrying nothing — leaving Blueprint defaults unreadable.
@@ -379,7 +519,7 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: { structPath: P.structPath },
     required: ['structPath'],
     effect: 'read',
-    // The native handler (McpAutomationBridge_InspectStruct.cpp) returns its
+    // The native handler (McpInspectStruct.cpp) returns its
     // findings nested under `result`; with no outputProps declared the output
     // projection stripped the entire nested object and the capability answered
     // bare success — a layout reader that returned nothing.

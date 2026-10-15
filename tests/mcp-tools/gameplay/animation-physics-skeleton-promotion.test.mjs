@@ -3,7 +3,7 @@
  * animation_physics skeleton-promotion suite.
  *
  * Covers the eleven skeleton routes promoted from the hidden native dispatch
- * map (Private/Domains/Skeleton/McpAutomationBridge_SkeletonHandlers.cpp) onto
+ * map (Private/Domains/Skeleton/McpSkeletonHandlers.cpp) onto
  * the canonical animation_physics surface.
  *
  * Every optional parameter each promoted record declares is referenced by at

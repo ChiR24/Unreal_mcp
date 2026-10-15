@@ -1,0 +1,66 @@
+{
+  "description": "A goal for the player: the first time the player's pawn touches the actor, bGoalReached is set, OnGoalReached fires and GoalSound plays where the goal is; when NextLevel names a level, it opens GoalDelay seconds later. Other actors pass through it. The actor needs a component that overlaps pawns.",
+  "tag": "Goal",
+  "placeholders": {
+    "NextLevel": "Level to open once the goal is reached (its name or /Game path), or None to stay.",
+    "Delay": "Seconds between reaching the goal and opening NextLevel.",
+    "Sound": "Object path of the sound to play when reached, or None."
+  },
+  "variables": [
+    { "variableName": "NextLevel", "variableType": "Name", "defaultValue": "{{NextLevel}}", "category": "Goal", "instanceEditable": true },
+    { "variableName": "GoalDelay", "variableType": "Float", "defaultValue": "{{Delay}}", "category": "Goal", "instanceEditable": true },
+    { "variableName": "GoalSound", "variableType": "Object:/Script/Engine.SoundBase", "defaultValue": "{{Sound}}", "category": "Goal", "instanceEditable": true },
+    { "variableName": "bGoalReached", "variableType": "Bool", "defaultValue": false, "category": "Goal" }
+  ],
+  "dispatchers": [
+    { "name": "OnGoalReached", "parameters": [] }
+  ],
+  "customEvents": [
+    { "id": "goalOpen", "eventName": "OpenNextLevel" }
+  ],
+  "hooks": [
+    { "id": "goalTouch", "event": "ActorBeginOverlap" }
+  ],
+  "eventGraph": [
+    { "edit": "create_node", "id": "goalPlayer", "nodeType": "CallFunction", "memberName": "GetPlayerPawn", "memberClass": "/Script/Engine.GameplayStatics", "pinDefaults": { "PlayerIndex": 0 } },
+    { "edit": "create_node", "id": "goalIsPlayer", "nodeType": "CallFunction", "memberName": "EqualEqual_ObjectObject", "memberClass": "/Script/Engine.KismetMathLibrary" },
+    { "edit": "create_node", "id": "goalDone", "nodeType": "VariableGet", "memberName": "bGoalReached" },
+    { "edit": "create_node", "id": "goalNotDone", "nodeType": "CallFunction", "memberName": "Not_PreBool", "memberClass": "/Script/Engine.KismetMathLibrary" },
+    { "edit": "create_node", "id": "goalBoth", "nodeType": "CallFunction", "memberName": "BooleanAND", "memberClass": "/Script/Engine.KismetMathLibrary" },
+    { "edit": "create_node", "id": "goalBranch", "nodeType": "Branch" },
+    { "edit": "create_node", "id": "goalSet", "nodeType": "VariableSet", "memberName": "bGoalReached", "pinDefaults": { "bGoalReached": true } },
+    { "edit": "create_node", "id": "goalNotify", "nodeType": "CallDelegate", "memberName": "OnGoalReached" },
+    { "edit": "create_node", "id": "goalSound", "nodeType": "VariableGet", "memberName": "GoalSound" },
+    { "edit": "create_node", "id": "goalWhere", "nodeType": "CallFunction", "memberName": "K2_GetActorLocation", "memberClass": "/Script/Engine.Actor" },
+    { "edit": "create_node", "id": "goalPlay", "nodeType": "CallFunction", "memberName": "PlaySoundAtLocation", "memberClass": "/Script/Engine.GameplayStatics" },
+    { "edit": "create_node", "id": "goalLevel", "nodeType": "VariableGet", "memberName": "NextLevel" },
+    { "edit": "create_node", "id": "goalHasLevel", "nodeType": "CallFunction", "memberName": "NotEqual_NameName", "memberClass": "/Script/Engine.KismetMathLibrary", "pinDefaults": { "B": "None" } },
+    { "edit": "create_node", "id": "goalLevelBranch", "nodeType": "Branch" },
+    { "edit": "create_node", "id": "goalSelf", "nodeType": "Self" },
+    { "edit": "create_node", "id": "goalDelay", "nodeType": "VariableGet", "memberName": "GoalDelay" },
+    { "edit": "create_node", "id": "goalTimer", "nodeType": "CallFunction", "memberName": "K2_SetTimer", "memberClass": "/Script/Engine.KismetSystemLibrary", "pinDefaults": { "FunctionName": "OpenNextLevel", "bLooping": false } },
+    { "edit": "connect_pins", "from": "$goalTouch_event.OtherActor", "to": "$goalIsPlayer.A" },
+    { "edit": "connect_pins", "from": "$goalPlayer.ReturnValue", "to": "$goalIsPlayer.B" },
+    { "edit": "connect_pins", "from": "$goalDone.bGoalReached", "to": "$goalNotDone.A" },
+    { "edit": "connect_pins", "from": "$goalIsPlayer.ReturnValue", "to": "$goalBoth.A" },
+    { "edit": "connect_pins", "from": "$goalNotDone.ReturnValue", "to": "$goalBoth.B" },
+    { "edit": "connect_pins", "from": "$goalBoth.ReturnValue", "to": "$goalBranch.Condition" },
+    { "edit": "connect_pins", "from": "$goalSound.GoalSound", "to": "$goalPlay.Sound" },
+    { "edit": "connect_pins", "from": "$goalWhere.ReturnValue", "to": "$goalPlay.Location" },
+    { "edit": "connect_pins", "from": "$goalLevel.NextLevel", "to": "$goalHasLevel.A" },
+    { "edit": "connect_pins", "from": "$goalHasLevel.ReturnValue", "to": "$goalLevelBranch.Condition" },
+    { "edit": "connect_pins", "from": "$goalSelf.self", "to": "$goalTimer.Object" },
+    { "edit": "connect_pins", "from": "$goalDelay.GoalDelay", "to": "$goalTimer.Time" },
+    { "edit": "connect_pins", "from": "$goalTouch.then", "to": "$goalBranch.execute" },
+    { "edit": "connect_pins", "from": "$goalBranch.then", "to": "$goalSet.execute" },
+    { "edit": "connect_pins", "from": "$goalSet.then", "to": "$goalNotify.execute" },
+    { "edit": "connect_pins", "from": "$goalNotify.then", "to": "$goalPlay.execute" },
+    { "edit": "connect_pins", "from": "$goalPlay.then", "to": "$goalLevelBranch.execute" },
+    { "edit": "connect_pins", "from": "$goalLevelBranch.then", "to": "$goalTimer.execute" },
+
+    { "edit": "create_node", "id": "openLevel", "nodeType": "VariableGet", "memberName": "NextLevel" },
+    { "edit": "create_node", "id": "openGo", "nodeType": "CallFunction", "memberName": "OpenLevel", "memberClass": "/Script/Engine.GameplayStatics" },
+    { "edit": "connect_pins", "from": "$openLevel.NextLevel", "to": "$openGo.LevelName" },
+    { "edit": "connect_pins", "from": "$goalOpen.then", "to": "$openGo.execute" }
+  ]
+}

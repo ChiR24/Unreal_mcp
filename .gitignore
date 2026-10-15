@@ -83,8 +83,8 @@ Desktop.ini
 .vscode/c_cpp_properties.json
 .vscode/settings.json
 .agent/
-plugins/McpAutomationBridge/.clangd
-plugins/McpAutomationBridge/Source/McpAutomationBridge/ue_stubs.h
+plugins/EngineWire/.clangd
+plugins/EngineWire/Source/EngineWire/ue_stubs.h
 .sisyphus
 .claude/
 .opencode/

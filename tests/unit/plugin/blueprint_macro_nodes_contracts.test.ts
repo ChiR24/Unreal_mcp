@@ -10,11 +10,11 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-const domains = 'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Domains';
+const domains = 'plugins/EngineWire/Source/EngineWire/Private/Domains';
 const read = (file: string): string => readFileSync(resolve(process.cwd(), domains, file), 'utf8');
-const creation = read('BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersNodeCreation.cpp');
-const catalog = read('BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersNodeCatalog.cpp');
-const addNode = read('Blueprint/Graph/McpAutomationBridge_BlueprintHandlersAddNodeGraph.cpp');
+const creation = read('BlueprintGraph/McpBPGraphNodeCreation.cpp');
+const catalog = read('BlueprintGraph/McpBPGraphNodeCatalog.cpp');
+const addNode = read('Blueprint/Graph/McpBPAddNodeGraph.cpp');
 
 describe('Blueprint flow macros', () => {
   it('resolve to their StandardMacros graph names', () => {

@@ -67,7 +67,7 @@ const preview = (result: Record<string, unknown>): Promise<Record<string, unknow
 const nativeReceipt = (): string =>
   readFileSync(
     join(
-      'plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private',
+      'plugins', 'EngineWire', 'Source', 'EngineWire', 'Private',
       'MCP', 'Gateway', 'McpNativeGatewayExecuteReceiptBuild.cpp'
     ),
     'utf8'
@@ -159,7 +159,7 @@ describe('todo17 BB-062: the budget rule and its native mirror', () => {
 // comes back inline by default, fitted to 1600x900 when no resolution is given (a native-size PNG
 // is what used to blow the base64 cap); returnBase64 false keeps the file-only, full-size capture.
 describe('a screenshot hands its image back by default', () => {
-  const plugin = join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private');
+  const plugin = join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private');
   const read = (...segments: string[]): string => readFileSync(join(plugin, ...segments), 'utf8');
 
   it('returnBase64 defaults to true and an inline image without a resolution fits the box', () => {
@@ -172,18 +172,18 @@ describe('a screenshot hands its image back by default', () => {
   });
 
   it('both screenshot capabilities read the same default', () => {
-    expect(read('Domains', 'ControlEditor', 'McpAutomationBridge_ControlEditorScreenshotSupport.cpp'))
+    expect(read('Domains', 'ControlEditor', 'McpEditorScreenshotSupport.cpp'))
       .toMatch(/const bool bReturnBase64 = McpScreenshotReturnsImage\(Payload\);/u);
-    expect(read('Domains', 'Ui', 'McpAutomationBridge_UiHandlersScreenshot.cpp'))
+    expect(read('Domains', 'Ui', 'McpUiScreenshot.cpp'))
       .toMatch(/const bool bReturnBase64 = McpScreenshotReturnsImage\(Payload\);/u);
   });
 
   // The 1600x900 default downscales most captures, so each source names the size it was taken at.
   it('every downscaled capture reports viewportWidth and viewportHeight', () => {
-    const editor = read('Domains', 'ControlEditor', 'McpAutomationBridge_ControlEditorScreenshot.cpp');
+    const editor = read('Domains', 'ControlEditor', 'McpEditorScreenshot.cpp');
     expect(editor).toMatch(/if \(SourceSize\.X != ImageSize\.X \|\| SourceSize\.Y != ImageSize\.Y\) \{\s*Resp->SetNumberField\(TEXT\("viewportWidth"\), SourceSize\.X\);/u);
     expect(editor).toMatch(/if \(OutputSize != ViewportSize\) \{\s*Resp->SetNumberField\(TEXT\("viewportWidth"\), ViewportSize\.X\);/u);
-    expect(read('Domains', 'Ui', 'McpAutomationBridge_UiHandlersScreenshot.cpp'))
+    expect(read('Domains', 'Ui', 'McpUiScreenshot.cpp'))
       .toMatch(/if \(TargetSize != CapturedSize\) \{\s*Resp->SetNumberField\(TEXT\("viewportWidth"\), CapturedSize\.X\);/u);
   });
 });

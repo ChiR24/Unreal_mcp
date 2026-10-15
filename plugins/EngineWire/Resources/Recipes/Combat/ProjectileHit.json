@@ -1,0 +1,39 @@
+{
+  "description": "A projectile that hurts what it hits: on its first blocking hit it applies Damage to the actor hit (ApplyDamage, so health logic on that actor takes it) and destroys itself. At BeginPlay its CollisionComponent stops colliding with its owner (the weapon that spawned it) and its instigator (the pawn holding that weapon), so it never hits its own shooter.",
+  "tag": "ProjectileHit",
+  "placeholders": {
+    "Damage": "Damage dealt to the actor the projectile hits."
+  },
+  "variables": [
+    { "variableName": "Damage", "variableType": "Float", "defaultValue": "{{Damage}}", "category": "Combat", "instanceEditable": true }
+  ],
+  "hooks": [
+    { "id": "shotBegin", "event": "BeginPlay" },
+    { "id": "shotHit", "event": "Hit" }
+  ],
+  "eventGraph": [
+    { "edit": "create_node", "id": "ignoreBody", "nodeType": "VariableGet", "memberName": "CollisionComponent" },
+    { "edit": "create_node", "id": "ignoreOwnerOf", "nodeType": "CallFunction", "memberName": "GetOwner", "memberClass": "/Script/Engine.Actor" },
+    { "edit": "create_node", "id": "ignoreOwner", "nodeType": "CallFunction", "memberName": "IgnoreActorWhenMoving", "memberClass": "/Script/Engine.PrimitiveComponent", "pinDefaults": { "bShouldIgnore": true } },
+    { "edit": "create_node", "id": "ignoreShooterOf", "nodeType": "CallFunction", "memberName": "GetInstigator", "memberClass": "/Script/Engine.Actor" },
+    { "edit": "create_node", "id": "ignoreShooter", "nodeType": "CallFunction", "memberName": "IgnoreActorWhenMoving", "memberClass": "/Script/Engine.PrimitiveComponent", "pinDefaults": { "bShouldIgnore": true } },
+    { "edit": "connect_pins", "from": "$ignoreBody.CollisionComponent", "to": "$ignoreOwner.self" },
+    { "edit": "connect_pins", "from": "$ignoreOwnerOf.ReturnValue", "to": "$ignoreOwner.Actor" },
+    { "edit": "connect_pins", "from": "$ignoreBody.CollisionComponent", "to": "$ignoreShooter.self" },
+    { "edit": "connect_pins", "from": "$ignoreShooterOf.ReturnValue", "to": "$ignoreShooter.Actor" },
+    { "edit": "connect_pins", "from": "$shotBegin.then", "to": "$ignoreOwner.execute" },
+    { "edit": "connect_pins", "from": "$ignoreOwner.then", "to": "$ignoreShooter.execute" },
+
+    { "edit": "create_node", "id": "hitDamage", "nodeType": "VariableGet", "memberName": "Damage" },
+    { "edit": "create_node", "id": "hitBy", "nodeType": "CallFunction", "memberName": "GetInstigatorController", "memberClass": "/Script/Engine.Actor" },
+    { "edit": "create_node", "id": "hitCauser", "nodeType": "Self" },
+    { "edit": "create_node", "id": "hitApply", "nodeType": "CallFunction", "memberName": "ApplyDamage", "memberClass": "/Script/Engine.GameplayStatics" },
+    { "edit": "create_node", "id": "hitDestroy", "nodeType": "CallFunction", "memberName": "K2_DestroyActor", "memberClass": "/Script/Engine.Actor" },
+    { "edit": "connect_pins", "from": "$shotHit_event.Other", "to": "$hitApply.DamagedActor" },
+    { "edit": "connect_pins", "from": "$hitDamage.Damage", "to": "$hitApply.BaseDamage" },
+    { "edit": "connect_pins", "from": "$hitBy.ReturnValue", "to": "$hitApply.EventInstigator" },
+    { "edit": "connect_pins", "from": "$hitCauser.self", "to": "$hitApply.DamageCauser" },
+    { "edit": "connect_pins", "from": "$shotHit.then", "to": "$hitApply.execute" },
+    { "edit": "connect_pins", "from": "$hitApply.then", "to": "$hitDestroy.execute" }
+  ]
+}

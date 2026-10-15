@@ -8,7 +8,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { sliceBetween } from './plugin-contract-fixtures.js';
-const MODULE = join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge');
+const MODULE = join('plugins', 'EngineWire', 'Source', 'EngineWire');
 const GEOMETRY = join(MODULE, 'Private', 'Domains', 'Geometry');
 
 /** Block and line comments removed, so no assertion can be satisfied by prose. */
@@ -16,8 +16,8 @@ const strip = (source: string): string => source.replace(/\/\*[\s\S]*?\*\//gu, '
 const read = (...segments: readonly string[]): string => strip(readFileSync(join(GEOMETRY, ...segments), 'utf8'));
 
 describe('region picks triangles for the face operators and set_material_id', () => {
-  const region = (): string => read('Support', 'McpAutomationBridge_GeometryRegion.cpp');
-  const selection = (): string => read('Support', 'McpAutomationBridge_GeometrySelection.cpp');
+  const region = (): string => read('Support', 'McpGeometryRegion.cpp');
+  const selection = (): string => read('Support', 'McpGeometrySelection.cpp');
 
   it('the shared selection resolves a region and refuses it together with triangleIndices', () => {
     const source = selection();
@@ -28,9 +28,9 @@ describe('region picks triangles for the face operators and set_material_id', ()
 
   it('every face operator reads its selection through it and reports how many triangles it picked', () => {
     const files: ReadonlyArray<readonly [readonly string[], readonly string[]]> = [
-      [['Modeling', 'McpAutomationBridge_GeometryModelingExtrusion.cpp'], ['HandleExtrude', 'HandleInsetOutset', 'HandleBevel']],
-      [['Modeling', 'McpAutomationBridge_GeometryModelingOffsets.cpp'], ['HandleOffsetFaces']],
-      [['Topology', 'McpAutomationBridge_GeometryTopologyFaces.cpp'], ['HandlePoke']],
+      [['Modeling', 'McpGeometryModelingExtrusion.cpp'], ['HandleExtrude', 'HandleInsetOutset', 'HandleBevel']],
+      [['Modeling', 'McpGeometryModelingOffsets.cpp'], ['HandleOffsetFaces']],
+      [['Topology', 'McpGeometryTopologyFaces.cpp'], ['HandlePoke']],
     ];
     for (const [path, handlers] of files) {
       const source = read(...path);
@@ -43,7 +43,7 @@ describe('region picks triangles for the face operators and set_material_id', ()
   });
 
   it('poke takes the ids from the shared selection, so a region pokes the same triangles', () => {
-    const body = sliceBetween(read('Topology', 'McpAutomationBridge_GeometryTopologyFaces.cpp'), 'bool HandlePoke(', '\nbool ');
+    const body = sliceBetween(read('Topology', 'McpGeometryTopologyFaces.cpp'), 'bool HandlePoke(', '\nbool ');
     expect(body).toContain('ReadTriangleSelection(Self, RequestId, Socket, Mesh, Payload, Selection, bHasSelection, &Requested)');
     expect(body).not.toContain('TEXT("triangleIndices")');
   });
@@ -66,7 +66,7 @@ describe('region picks triangles for the face operators and set_material_id', ()
   });
 
   it('set_material_id selects through the same helper and writes the material id attribute', () => {
-    const source = read('Modeling', 'McpAutomationBridge_GeometryMaterialIds.cpp');
+    const source = read('Modeling', 'McpGeometryMatIds.cpp');
     expect(source).toContain('ReadTriangleSelection(Self, RequestId, Socket, Mesh, Payload, Selection, bHasSelection, &Selected)');
     expect(source).toContain('EditMesh.Attributes()->EnableMaterialID();');
     expect(source).toContain('MaterialIds->SetValue(TriangleId, MaterialId);');
@@ -75,6 +75,6 @@ describe('region picks triangles for the face operators and set_material_id', ()
 
 
   it('the dispatcher routes set_material_id to HandleSetMaterialId', () => {
-    expect(read('McpAutomationBridge_GeometryHandlers.cpp')).toContain('if (SubAction == TEXT("set_material_id")) return HandleSetMaterialId(this, RequestId, Payload, RequestingSocket);');
+    expect(read('McpGeometryHandlers.cpp')).toContain('if (SubAction == TEXT("set_material_id")) return HandleSetMaterialId(this, RequestId, Payload, RequestingSocket);');
   });
 });

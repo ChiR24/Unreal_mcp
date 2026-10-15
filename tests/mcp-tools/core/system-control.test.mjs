@@ -82,7 +82,7 @@ const testCases = [
   { scenario: 'Setup: create validation material', toolName: 'manage_asset', arguments: { action: 'create_material', name: 'M_SystemControlValidation', path: TEST_FOLDER }, expected: 'success|already exists' },
 
   // === ACTION ===
-  { scenario: 'ACTION: profile', toolName: 'system_control', arguments: { action: 'profile', profileType: 'cpu' }, expected: 'success' },
+  { scenario: 'ACTION: profile', toolName: 'system_control', arguments: { action: 'profile', profileType: 'CPU' }, expected: 'success' },
   { scenario: 'ACTION: show_fps', toolName: 'system_control', arguments: { action: 'show_fps', enabled: true }, expected: 'success' },
   // === CONFIG ===
   { scenario: 'CONFIG: set_quality', toolName: 'system_control', arguments: { action: 'set_quality', category: 'ViewDistance', level: 1 }, expected: 'success' },
@@ -169,8 +169,23 @@ const testCases = [
   { scenario: 'ACTION: validate_assets', toolName: 'system_control', arguments: { action: 'validate_assets', paths: [VALIDATION_MATERIAL] }, expected: 'success' },
   { scenario: 'ACTION: validate_assets assetPath', toolName: 'system_control', arguments: { action: 'validate_assets', assetPath: VALIDATION_MATERIAL }, expected: 'success' },
   { scenario: 'ACTION: validate_assets path recursive', toolName: 'system_control', arguments: { action: 'validate_assets', path: TEST_FOLDER, recursive: false }, expected: 'success' },
+  // Data Validation runs the project's and the engine's validators, which loading alone never did.
+  // create_cpp_class writes into the project's Source, so the suite runs only its refusals: each is refused before a
+  // file is written.
+  { scenario: 'ERROR: create_cpp_class refuses a class name that is no C++ identifier', toolName: 'system_control', arguments: { action: 'create_cpp_class', className: 'Bad Name', parentClass: 'Actor', moduleName: 'NoSuchModule_MCP', subfolder: 'MCPTest', classLocation: 'public' }, expected: 'error|INVALID_ARGUMENT' },
+  { scenario: 'ERROR: create_cpp_class refuses a subfolder that climbs out of the module', toolName: 'system_control', arguments: { action: 'create_cpp_class', className: 'McpProbeActor', parentClass: 'Actor', subfolder: '../Escape' }, expected: 'error|INVALID_ARGUMENT' },
+  { scenario: 'ERROR: create_cpp_class names the modules when the one asked for does not exist', toolName: 'system_control', arguments: { action: 'create_cpp_class', className: 'McpProbeActor', parentClass: 'Actor', moduleName: 'NoSuchModule_MCP', classLocation: 'private' }, expected: 'error|MODULE_NOT_FOUND' },
+  { scenario: 'ERROR: create_cpp_class refuses a parent that names no class', toolName: 'system_control', arguments: { action: 'create_cpp_class', className: 'McpProbeActor', parentClass: 'NoSuchClass_MCP' }, expected: 'error|CLASS_NOT_FOUND' },
+  { scenario: 'ACTION: validate_assets dataValidation', toolName: 'system_control', arguments: { action: 'validate_assets', assetPath: VALIDATION_MATERIAL, dataValidation: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.results', includesObject: { kind: 'asset', isValid: true }, label: 'the material loads and passes its validators' }] },
+  { scenario: 'ACTION: validate_assets dataValidation folder', toolName: 'system_control', arguments: { action: 'validate_assets', path: TEST_FOLDER, recursive: false, dataValidation: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.results', includesObject: { kind: 'directory' }, label: 'the folder row carries the verdict counts' }] },
+  { scenario: 'ACTION: validate_assets materialUsage folder', toolName: 'system_control', arguments: { action: 'validate_assets', path: TEST_FOLDER, recursive: false, materialUsage: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.results.0.materialUsageCount', gte: 0, label: 'the folder row counts the missing usage flags' }] },
   // === CONFIG ===
   { scenario: 'CONFIG: set_project_setting', toolName: 'system_control', arguments: { action: 'set_project_setting', section: PROJECT_SETTING_SECTION, key: PROJECT_SETTING_KEY, value: '1' }, expected: 'success' },
+  { scenario: 'CONFIG: set_project_setting takes the class name alone', toolName: 'system_control', arguments: { action: 'set_project_setting', section: 'Engine', key: PROJECT_SETTING_KEY, value: '1' }, expected: 'success', assertions: [{ path: 'structuredContent.result.section', equals: PROJECT_SETTING_SECTION, label: 'the name resolves to the class path' }] },
+  { scenario: 'ERROR: set_project_setting refuses a section that names no settings class', toolName: 'system_control', arguments: { action: 'set_project_setting', section: 'NoSuchSettingsClass', key: PROJECT_SETTING_KEY, value: '1' }, expected: 'error|No settings class' },
+  { scenario: 'INFO: configure_rendering reads the rendering methods', toolName: 'system_control', arguments: { action: 'configure_rendering' }, expected: 'success', captureResult: [{ key: 'render_globalIllumination', fromField: 'result.settings.globalIllumination' }, { key: 'render_reflections', fromField: 'result.settings.reflections' }, { key: 'render_shadows', fromField: 'result.settings.shadows' }, { key: 'render_antiAliasing', fromField: 'result.settings.antiAliasing' }, { key: 'render_hardwareRayTracing', fromField: 'result.settings.hardwareRayTracing' }, { key: 'render_meshDistanceFields', fromField: 'result.settings.meshDistanceFields' }, { key: 'render_megaLights', fromField: 'result.settings.megaLights' }, { key: 'render_bloom', fromField: 'result.settings.bloom' }, { key: 'render_autoExposure', fromField: 'result.settings.autoExposure' }, { key: 'render_motionBlur', fromField: 'result.settings.motionBlur' }] },
+  { scenario: 'CONFIG: configure_rendering turns the default bloom off', toolName: 'system_control', arguments: { action: 'configure_rendering', bloom: false }, expected: 'success', assertions: [{ path: 'structuredContent.result.settings.bloom', equals: false, label: 'bloom reads back off' }] },
+  { scenario: 'CONFIG: configure_rendering puts every setting back as it read', toolName: 'system_control', arguments: { action: 'configure_rendering', globalIllumination: '${captured:render_globalIllumination}', reflections: '${captured:render_reflections}', shadows: '${captured:render_shadows}', antiAliasing: '${captured:render_antiAliasing}', hardwareRayTracing: '${captured:render_hardwareRayTracing}', meshDistanceFields: '${captured:render_meshDistanceFields}', megaLights: '${captured:render_megaLights}', bloom: '${captured:render_bloom}', autoExposure: '${captured:render_autoExposure}', motionBlur: '${captured:render_motionBlur}' }, expected: 'success' },
   { scenario: 'ACTION: execute_python', toolName: 'system_control', arguments: { action: 'execute_python', code: 'print("system-control-ok")' }, expected: 'success' },
   { scenario: 'Setup: create execute_python file', toolName: 'system_control', arguments: { action: 'execute_python', code: CREATE_PYTHON_FILE_CODE }, expected: 'success' },
   // This result is asserted on the returned MCP response, so it also catches
@@ -181,7 +196,9 @@ const testCases = [
   { scenario: 'Cleanup: delete execute_python file', toolName: 'system_control', arguments: { action: 'execute_python', code: DELETE_PYTHON_FILE_CODE }, expected: 'success' },
   { scenario: 'Cleanup: remove project setting', toolName: 'system_control', arguments: { action: 'execute_python', code: CLEANUP_PROJECT_SETTING_CODE }, expected: 'success' },
   { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found' },
-  { scenario: 'ACTION: run_tests', toolName: 'system_control', arguments: { action: 'run_tests', filter: 'System.Core.Time.Comparison' }, expected: 'success' },
+  // run_tests answers with each test's result; it used to say only "check the Output Log".
+  { scenario: 'ACTION: run_tests', toolName: 'system_control', arguments: { action: 'run_tests', filter: 'System.Core.Math', maxTests: 3, timeoutSeconds: 30 }, expected: 'success', assertions: [{ path: 'structuredContent.result.tests', minLength: 1, label: 'each test run answers with its result' }] },
+  { scenario: 'ERROR: run_tests names a filter no test matches', toolName: 'system_control', arguments: { action: 'run_tests', filter: 'No.Such.Test.Group' }, expected: 'error|NOT_FOUND' },
 ];
 
 // === PERFORMANCE ACTIONS ===

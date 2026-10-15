@@ -11,7 +11,7 @@ import { capabilityIndex } from '../../../src/server/gateway/gateway-capability-
 import { validateAgainstCapabilitySchema } from '../../../src/server/gateway/gateway-schema-validate.js';
 import { isRecord } from '../../../src/utils/validation/type-guards.js';
 
-const DOMAINS = join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private', 'Domains');
+const DOMAINS = join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'Domains');
 
 /** Block and line comments removed, so no assertion can be satisfied by prose. */
 const code = (...segments: readonly string[]): string =>
@@ -19,7 +19,7 @@ const code = (...segments: readonly string[]): string =>
 
 describe('handlers answer what they did', () => {
   it('configure_item_stacking fails when no stacking property took the value', () => {
-    const source = code('Inventory', 'McpAutomationBridge_InventoryHandlersItemPresentation.cpp');
+    const source = code('Inventory', 'McpInventoryItemPresentation.cpp');
     expect(source).toMatch(/if \(ModifiedProps\.Num\(\) == 0\) \{\s*Bridge\.SendAutomationError\([\s\S]*?TEXT\("PROPERTY_NOT_FOUND"\)\);\s*return true;/u);
     expect(source).not.toContain('No stacking properties found');
   });
@@ -27,12 +27,12 @@ describe('handlers answer what they did', () => {
   it('create_enum and create_struct report the save result, not the request', () => {
     expect(code('AssetWorkflow', 'Enums', 'LifecycleEnums.cpp')).toContain('const bool bSaved = FinalizeEnum(Enum, bSave);');
     expect(code('AssetWorkflow', 'Enums', 'Shared.h')).toContain('return bSave && McpSafeAssetSave(Enum);');
-    expect(code('AssetWorkflow', 'Structs', 'McpAutomationBridge_AssetWorkflowStructsLifecycle.cpp'))
+    expect(code('AssetWorkflow', 'Structs', 'McpAssetStructsLifecycle.cpp'))
       .toContain('const bool bSaved = bSave && McpSafeAssetSave(S);');
   });
 
   it('get_metadata sends no debug field', () => {
-    expect(code('AssetWorkflow', 'Operations', 'McpAutomationBridge_AssetWorkflowMetadata.cpp')).not.toContain('debug_has_meta');
+    expect(code('AssetWorkflow', 'Operations', 'McpAssetMetadata.cpp')).not.toContain('debug_has_meta');
   });
 
   // A folder of 391 unsaved imported assets took minutes (one engine delete per asset) and two of them
@@ -50,12 +50,12 @@ describe('handlers answer what they did', () => {
     expect(verify).toContain('IsValid(FindObject<UObject>(nullptr, *ObjectPath))');
     expect(verify).toContain('if (OutRemaining) { OutRemaining->Add(SurvivorPath); }');
     expect(verify).not.toContain('without backing files remain');
-    expect(code('AssetWorkflow', 'Operations', 'McpAutomationBridge_AssetWorkflowAssetMutation.cpp'))
+    expect(code('AssetWorkflow', 'Operations', 'McpAssetAssetMutation.cpp'))
       .toContain('FailedToDeletePaths.Add(Left + TEXT(" (left in the deleted folder)"));');
   });
 
   it('bulk_delete never asks the engine for a confirmation dialog', () => {
-    const source = code('AssetWorkflow', 'Operations', 'McpAutomationBridge_AssetWorkflowBulkDelete.cpp');
+    const source = code('AssetWorkflow', 'Operations', 'McpAssetBulkDelete.cpp');
     expect(source).not.toContain('showConfirmation');
     expect(source).not.toContain('bShowConfirmation)');
   });
@@ -64,7 +64,7 @@ describe('handlers answer what they did', () => {
   // disk. And the first overwrite of an existing texture in a session built a new object over the
   // unloaded asset, whose source the editor then refused to save.
   it('a generated texture is saved for real or reported unsaved, and an existing one is loaded and refilled', () => {
-    const assets = code('Texture', 'McpAutomationBridge_TextureHandlersAssets.cpp');
+    const assets = code('Texture', 'McpTextureAssets.cpp');
     expect(assets).toContain('return McpSafeAssetSave(Texture);');
     expect(assets).not.toContain('bExistsOnDisk');
     expect(assets).toMatch(/LoadObject<UTexture2D>\(nullptr, \*ObjectPath/u);
@@ -74,26 +74,26 @@ describe('handlers answer what they did', () => {
   // A BlockingVolume from create_volume had the right bounds and blocked nothing: the brush had
   // polys but no BSP and no convex collision, so triggers and kill volumes never overlapped either.
   it('a volume brush gets its BSP and collision, as the editor\'s own volume placement builds them', () => {
-    const geometry = code('Volume', 'McpAutomationBridge_VolumeGeometry.cpp');
+    const geometry = code('Volume', 'McpVolumeGeometry.cpp');
     expect(geometry).toContain('FBSPOps::csgPrepMovingBrush(Volume);');
     expect(geometry.indexOf('CubeBuilder->Build(')).toBeLessThan(geometry.indexOf('csgPrepMovingBrush'));
-    expect(readFileSync(join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'McpAutomationBridge.Build.cs'), 'utf8'))
+    expect(readFileSync(join('plugins', 'EngineWire', 'Source', 'EngineWire', 'EngineWire.Build.cs'), 'utf8'))
       .toContain('"BSPUtils"');
   });
 
   // configure_exposure actorName "PostProcess" on a level with no volume failed ACTOR_NOT_FOUND,
   // while the same call with no name spawned one: a name that matches nothing now resolves alike.
   it('a post-process call naming a volume that does not exist resolves or creates one under that name', () => {
-    const support = code('Render', 'McpAutomationBridge_RenderSupport.h');
+    const support = code('Render', 'McpRenderSupport.h');
     expect(support).not.toContain('PostProcessVolume not found: %s');
     expect(support).toMatch(/if \(!Volume\)\s*\{\s*FString ResolveError;/u);
-    const resolver = readFileSync(join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private', 'Foundation', 'Render', 'McpPostProcessVolumeResolution.cpp'), 'utf8');
+    const resolver = readFileSync(join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'Foundation', 'Render', 'McpPostProcessVolumeResolution.cpp'), 'utf8');
     expect(resolver).toContain('PPV->SetActorLabel(Reference);');
   });
 
   // Seven instances of one parent cost seven describes and seven consents.
   it('create_material_instance makes a palette under one consent, each entry through the single handler', () => {
-    const create = code('MaterialAuthoring', 'Creation', 'McpAutomationBridge_MaterialAuthoringHandlersCreateMaterialInstance.cpp');
+    const create = code('MaterialAuthoring', 'Creation', 'McpMatCreateMatInst.cpp');
     expect(create).toContain('Payload->TryGetArrayField(TEXT("instances"), Instances)');
     expect(create).toMatch(/FMcpResponseCaptureRegistry::Get\(\)\.Begin\(StepId\);\s*HandleCreateMaterialInstance\(Bridge, StepId,/u);
     expect(create).toContain('Item->RemoveField(TEXT("instances"));');
@@ -101,8 +101,8 @@ describe('handlers answer what they did', () => {
   });
 
   it('a resized or combined texture keeps its source colour space', () => {
-    expect(code('Texture', 'McpAutomationBridge_TextureHandlersResize.cpp')).toContain('NewTexture->SRGB = SourceTexture->SRGB;');
-    expect(code('Texture', 'McpAutomationBridge_TextureHandlersCombine.cpp')).toContain('OutputTexture->SRGB = BaseTex->SRGB;');
+    expect(code('Texture', 'McpTextureResize.cpp')).toContain('NewTexture->SRGB = SourceTexture->SRGB;');
+    expect(code('Texture', 'McpTextureCombine.cpp')).toContain('OutputTexture->SRGB = BaseTex->SRGB;');
   });
 
   // UEditorAssetLibrary's reads answer false or null for every path while Play In Editor runs, so
@@ -116,14 +116,14 @@ describe('handlers answer what they did', () => {
       .filter((file) => /UEditorAssetLibrary::(?:DoesAssetExist|LoadAsset|FindAssetData|LoadBlueprintClass)\(/u
         .test(readFileSync(file, 'utf8').replace(/\/\*[\s\S]*?\*\//gu, ' ').replace(/\/\/[^\n]*/gu, ' ')));
     expect(offenders).toEqual([]);
-    expect(code('AssetWorkflow', 'Analysis', 'McpAutomationBridge_AssetWorkflowMaterialGraph.cpp'))
+    expect(code('AssetWorkflow', 'Analysis', 'McpAssetMatGraph.cpp'))
       .toContain('McpAssetExists(SafeAssetPath, &AssetData)');
   }, 60_000);
 
   // A GameMode whose Audio component plays MS_Music gave 0 matches for "MS_Music": object
   // references were skipped outright.
   it('find_text matches a reference to another asset by its path', () => {
-    const source = code('AssetQuery', 'McpAutomationBridge_AssetQueryFindText.cpp');
+    const source = code('AssetQuery', 'McpAssetQueryFindText.cpp');
     expect(source).toMatch(/else if \(const FObjectPropertyBase\* Ref = CastField<FObjectPropertyBase>\(Property\)\)/u);
     expect(source).toContain('Soft->GetPropertyValue(Data).ToString()');
     expect(source).toContain('!Path.StartsWith(TEXT("/Script/"))');
@@ -131,39 +131,89 @@ describe('handlers answer what they did', () => {
   });
 
   // {Direction: 0} on an enemy whose variable is Dir answered success "Variables updated", set
-  // nothing, and dirtied the level.
-  it('set_blueprint_variables fails when no name is a variable, and names the real ones', () => {
-    const source = code('ControlActor', 'McpAutomationBridge_ControlActorAdvanced.cpp');
-    expect(source).toMatch(/if \(Missing\.Num\(\) > 0 && Missing\.Num\(\) == \(\*VariablesPtr\)->Values\.Num\(\)\) \{/u);
+  // nothing, and dirtied the level. {Text, Size} on a sign with Label and Size set Size alone and
+  // still answered "Variables updated", the miss only in a warning.
+  it('set_blueprint_variables refuses the whole call when any name is not a variable, and names the real ones', () => {
+    const source = code('ControlActor', 'McpActorAdvanced.cpp');
+    expect(source).toContain('if (Missing.Num() > 0) {');
     expect(source).toContain('TEXT("PROPERTY_NOT_FOUND")');
     expect(source.indexOf('TEXT("PROPERTY_NOT_FOUND")')).toBeLessThan(source.indexOf('Found->Modify();'));
     expect(source).toContain('*McpBlueprintVariableList(ActorClass)');
+    expect(source).not.toContain('Property not found');
+  });
+
+  // A cart corral spawned around its carts read "sunk 97 units": the carts' tops were taken for the ground under it.
+  it('the placement ground probe skips what the actor encloses', () => {
+    const source = code('ControlActor', 'McpActorPlacementCheck.cpp');
+    const enclosed = source.indexOf('SelfBox.ExpandBy(1.0).IsInside(FBox::BuildAABB(HitOrigin, HitExtent))');
+    expect(enclosed).toBeGreaterThan(-1);
+    expect(enclosed).toBeLessThan(source.indexOf('bHasGround = true;'));
+  });
+
+  // A single spawn refused folder, which only a batch item took, and no action could file an existing actor.
+  it('a single spawn takes folder and tags before its placement is judged, and set_folder files placed actors', () => {
+    for (const file of ['McpActorSpawn.cpp', 'McpActorBPSpawn.cpp']) {
+      const source = code('ControlActor', file);
+      const organise = source.indexOf('McpApplySpawnOrganisation(Spawned, Payload);');
+      expect(organise, file).toBeGreaterThan(-1);
+      expect(organise, file).toBeLessThan(source.indexOf('McpDescribeActorPlacement(RequestId, Spawned,'));
+    }
+    expect(code('ControlActor', 'McpActorSpawnBatch.cpp')).toContain('void McpApplySpawnOrganisation(AActor *Actor, const TSharedPtr<FJsonObject> &Payload) {');
+    const tags = code('ControlActor', 'McpActorTags.cpp');
+    expect(tags).toContain('bool UEngineWireSubsystem::HandleControlActorSetFolder(');
+    expect(tags).toContain('Actor->SetFolderPath(FolderPath);');
+    expect(code('ControlActor', 'McpActorDispatch.cpp')).toContain('if (LowerSub == TEXT("set_folder"))');
+  });
+
+  // A spawn node's Class pin default added its ExposeOnSpawn pins, but the create step listed the pins from before.
+  it('a create step lists the node\'s pins as they are after its pinDefaults', () => {
+    const steps = code('BlueprintGraph', 'McpBPGraphBatchSteps.cpp');
+    const refresh = steps.indexOf('Entry->SetStringField(TEXT("pins"), DescribeNodePins(FindBatchNode(Context.Blueprint, Guid)));');
+    expect(refresh).toBeGreaterThan(steps.indexOf('ApplyPinDefaults(Context, Payload, Step, Guid, StepId, Entry)'));
+  });
+
+  // GateL = "S6_GateL" (a label, as every other call names actors) failed to load as a path, and the call still
+  // answered "Variables updated" with the miss only in a warning.
+  it('set_blueprint_variables takes an actor variable by label and fails the call when a value does not take', () => {
+    const source = code('ControlActor', 'McpActorAdvanced.cpp');
+    const support = code('ControlActor', 'McpActorSupport.h');
+    expect(source).toContain('McpActorRefsToPaths(Pair.Value, Property, [this](const FString &Name) { return FindActorByName(Name); });');
+    expect(support).toContain('Reference->PropertyClass->IsChildOf(AActor::StaticClass())');
+    expect(support).toContain('return Actor ? MakeShared<FJsonValueString>(Actor->GetPathName()) : Item;');
+    // An array of actors (FireFx) took paths only.
+    expect(support).toContain('CastField<FObjectProperty>(Array ? Array->Inner : Property)');
+    expect(support).toContain('for (const TSharedPtr<FJsonValue> &Item : Value->AsArray())');
+    expect(source).toContain('ApplyJsonValueToProperty(Found, Property, Value, ApplyError)');
+    const refusal = source.indexOf('TEXT("VARIABLE_NOT_SET")');
+    expect(refusal).toBeGreaterThan(-1);
+    expect(refusal).toBeLessThan(source.indexOf('TEXT("Variables updated")'));
+    expect(source, 'no success reply carries the failures as warnings').not.toContain('TEXT("Variables updated"), Data, Warnings');
   });
 
   it('get_blueprint with a property that misses names the variables the Blueprint has', () => {
-    expect(code('Blueprint', 'Queries', 'McpAutomationBridge_BlueprintHandlersGet.cpp'))
+    expect(code('Blueprint', 'Queries', 'McpBPGet.cpp'))
       .toMatch(/Its variables: %s\."\), \*PropertyName, \*McpBlueprintVariableList\(Generated\)\),\s*Resp, TEXT\("PROPERTY_NOT_FOUND"\)\);/u);
   });
 
   // {"RotOscillation": {"Pitch": {"Amplitude": 0.8}}} on a LegacyCameraShake became empty text and
   // vanished; create still answered "Blueprint created".
   it('create sets properties through the shared writer and names each one it did not set', () => {
-    const writer = code('BlueprintCreation', 'McpAutomationBridge_BlueprintCreationHandlersProperties.cpp');
+    const writer = code('BlueprintCreation', 'McpBPCreateProps.cpp');
     expect(writer).toContain('ApplyJsonValueToProperty(TargetObject, Property, Pair.Value, Error)');
     expect(writer).not.toContain('McpJsonScalarToString');
     expect(writer).toMatch(/if \(!Property\) \{\s*OutFailed\.Add\(/u);
-    const reply = code('BlueprintCreation', 'McpAutomationBridge_BlueprintCreationHandlersAssets.cpp');
+    const reply = code('BlueprintCreation', 'McpBPCreateAssets.cpp');
     expect(reply).toContain('ResultPayload->SetArrayField(TEXT("failedProperties")');
     expect(reply).toContain('of its properties were not set: %s');
   });
 
   it('a loot entry added after a removal takes a new key', () => {
-    expect(code('Inventory', 'McpAutomationBridge_InventoryHandlersLootTables.cpp')).toContain('NextIndexedPropertyIndex(');
+    expect(code('Inventory', 'McpInventoryLootTables.cpp')).toContain('NextIndexedPropertyIndex(');
   });
 
   // get_property "FadeAmount" on a PlayerCameraManager said only "not found in scope".
   it('a property path miss names the similar properties of that scope', () => {
-    const resolver = code('..', 'Foundation', 'BridgeHelpers', 'Properties', 'McpAutomationBridgeHelpersNestedPropertyPath.h');
+    const resolver = code('..', 'Foundation', 'BridgeHelpers', 'Properties', 'McpNestedPropPath.h');
     expect(resolver).toContain('static inline FString McpSimilarPropertyNames(const UStruct *Scope, const FString &Wanted)');
     expect(resolver).toMatch(/McpSimilarPropertyNames\(CurrentTypeScope, Segment\);\s*OutError = FString::Printf\(/u);
     expect(resolver).toContain('TEXT("; similar: ")');
@@ -172,7 +222,7 @@ describe('handlers answer what they did', () => {
   // create_audio_actor named its new component QuietComp, then get_property "QuietComp.bAutoActivate" on the actor
   // missed it: an instance component has no property behind it.
   it('a middle path segment may name an actor component exactly', () => {
-    const resolver = code('..', 'Foundation', 'BridgeHelpers', 'Properties', 'McpAutomationBridgeHelpersNestedPropertyPath.h');
+    const resolver = code('..', 'Foundation', 'BridgeHelpers', 'Properties', 'McpNestedPropPath.h');
     expect(resolver).toContain('!CurrentProperty && !bIsLastSegment ? Cast<AActor>(CurrentObject) : nullptr');
     expect(resolver).toContain('Component->GetName().Equals(Segment, ESearchCase::IgnoreCase)');
     expect(resolver, 'a struct member is no actor').toMatch(/ContainerPtrToValuePtr<void>\(CurrentContainer\);\s*CurrentObject = nullptr;/u);
@@ -181,7 +231,7 @@ describe('handlers answer what they did', () => {
   // A scale key without an {x,y} pair created the binding and an empty track, then answered
   // INVALID_ARGUMENT; the later valid key reported createdTrack false.
   it('a refused widget animation key or track leaves nothing behind', () => {
-    const keys = code('WidgetAuthoring', 'Support', 'McpAutomationBridge_WidgetAuthoringAnimationKeys.cpp');
+    const keys = code('WidgetAuthoring', 'Support', 'McpWidgetAnimKeys.cpp');
     const author = keys.slice(keys.indexOf('bool McpAuthorWidgetAnimationKey('));
     expect(author.indexOf('OutError = KeyValueError(Kind, TrackType, ValueField);')).toBeGreaterThan(-1);
     expect(author.indexOf('OutError = KeyValueError(Kind, TrackType, ValueField);')).toBeLessThan(author.indexOf('FindOrCreateBinding('));
@@ -190,9 +240,9 @@ describe('handlers answer what they did', () => {
   });
 
   it('widget animation track and key replies name the Widget Blueprint for the receipt', () => {
-    expect(code('WidgetAuthoring', 'Animation', 'McpAutomationBridge_WidgetAuthoringAnimationKeyframe.cpp'))
+    expect(code('WidgetAuthoring', 'Animation', 'McpWidgetAnimKeyframe.cpp'))
       .toContain('ResultJson->SetStringField(TEXT("widgetPath"), WidgetBlueprintPackagePath(WidgetBP));');
-    const core = code('WidgetAuthoring', 'Animation', 'McpAutomationBridge_WidgetAuthoringAnimationCore.cpp');
+    const core = code('WidgetAuthoring', 'Animation', 'McpWidgetAnimCore.cpp');
     expect(core).toContain('ResultJson->SetBoolField(TEXT("createdTrack"), Track.bCreatedTrack);');
     expect(core).not.toContain('TEXT("trackCreated")');
   });
@@ -214,7 +264,7 @@ describe('handlers answer what they did', () => {
 
   // set_pp_color_grading with {"saturation": 1.1} answered "applied" with every key under unsupportedSettings.
   it('a settings object where no key is a field fails and names the close fields', () => {
-    const settings = code('Render', 'McpAutomationBridge_RenderSupportSettings.h');
+    const settings = code('Render', 'McpRenderSupportSettings.h');
     expect(settings).toMatch(/if \(Unknown\.Num\(\) > 0 && OutApplied\.Num\(\) == AppliedBefore\)[\s\S]*?return false;/u);
     expect(settings).toContain('It->GetName().Contains(Key)');
     expect(settings, 'bOverride_ flags are no suggestion').toContain('!It->GetName().StartsWith(TEXT("bOverride_"))');
@@ -223,7 +273,7 @@ describe('handlers answer what they did', () => {
   // A custom node got its input before the wire feeding it; that mid-batch compile's
   // "missing input" stayed on a receipt whose final compile was clean.
   it('build_material_graph drops compile lines its final compile supersedes', () => {
-    const batch = code('MaterialAuthoring', 'McpAutomationBridge_MaterialAuthoringGraphBatch.cpp');
+    const batch = code('MaterialAuthoring', 'McpMatGraphBatch.cpp');
     expect(batch.indexOf('Bridge->ForgetCapturedMessages(')).toBeGreaterThan(-1);
     expect(batch.indexOf('Bridge->ForgetCapturedMessages(')).toBeLessThan(batch.indexOf('RunStep(CompileId, Compile);'));
   });
@@ -233,7 +283,7 @@ describe('handlers answer what they did', () => {
   // so every line of a saved material stayed (live: M_Toon, three "missing input" lines in warnings and engineWarnings
   // beside "compiles and was saved"); the receipt shows the disk path as its package path, which hid the mismatch.
   it('the compile lines it forgets are found by the asset file the engine prints for a saved material, not only by its object path', () => {
-    const batch = code('MaterialAuthoring', 'McpAutomationBridge_MaterialAuthoringGraphBatch.cpp');
+    const batch = code('MaterialAuthoring', 'McpMatGraphBatch.cpp');
 
     expect(batch).toContain('const FString PackageName = FPackageName::ObjectPathToPackageName(AssetPath);');
     expect(batch).toContain('const FString FileName = FPackageName::GetShortName(*PackageName) + FPackageName::GetAssetPackageExtension();');
@@ -253,18 +303,18 @@ describe('handlers answer what they did', () => {
   // wires two steps later was translated half-built ("Custom material X missing input 20 (OP)") once per step, and the lines
   // stood on a receipt whose final compile was clean, on top of N compiles for one edit.
   it('a step of build_material_graph leaves the recompile to the batch, and every batchable edit finishes through the one helper', () => {
-    const header = code('MaterialAuthoring', 'McpAutomationBridge_MaterialAuthoringHandlersPrivate.h');
-    const batch = code('MaterialAuthoring', 'McpAutomationBridge_MaterialAuthoringGraphBatch.cpp');
-    const compile = code('MaterialAuthoring', 'Properties', 'McpAutomationBridge_MaterialAuthoringHandlersCompileMaterial.cpp');
+    const header = code('MaterialAuthoring', 'McpMatPrivate.h');
+    const batch = code('MaterialAuthoring', 'McpMatGraphBatch.cpp');
+    const compile = code('MaterialAuthoring', 'Properties', 'McpMatCompileMat.cpp');
 
     expect(header).toMatch(/inline void McpFinishMaterialEdit\(const FString &RequestId, UObject \*Host\) \{\s*if \(Host && !FMcpResponseCaptureRegistry::Get\(\)\.IsCapturing\(RequestId\)\) \{ Host->PostEditChange\(\); \}\s*if \(Host\) \{ Host->MarkPackageDirty\(\); \}\s*\}/u);
     expect(header).toContain('#define FINALIZE_HOST() McpFinishMaterialEdit(RequestId, Material ? static_cast<UObject *>(Material) : static_cast<UObject *>(Function))');
     for (const file of [
-      ['Nodes', 'McpAutomationBridge_MaterialAuthoringHandlersAddMaterialNode.cpp'],
-      ['Nodes', 'McpAutomationBridge_MaterialAuthoringHandlersUseMaterialFunction.cpp'],
-      ['Nodes', 'McpAutomationBridge_MaterialAuthoringHandlersFunctionInputsOutputs.cpp'],
-      ['Properties', 'McpAutomationBridge_MaterialAuthoringHandlersSetMaterialEnum.cpp'],
-      ['Properties', 'McpAutomationBridge_MaterialAuthoringHandlersSetTwoSided.cpp'],
+      ['Nodes', 'McpMatAddMatNode.cpp'],
+      ['Nodes', 'McpMatUseMatFunction.cpp'],
+      ['Nodes', 'McpMatFunctionInputsOutputs.cpp'],
+      ['Properties', 'McpMatSetMatEnum.cpp'],
+      ['Properties', 'McpMatSetTwoSided.cpp'],
     ] as const) {
       const source = code('MaterialAuthoring', ...file);
       expect(source, file[1]).toContain('McpFinishMaterialEdit(RequestId, ');
@@ -279,20 +329,20 @@ describe('handlers answer what they did', () => {
   // update_custom_expression and connect_nodes answered with changes: [] for the material they edited.
   it('a material graph edit names the material it changed', () => {
     for (const file of [
-      ['Nodes', 'McpAutomationBridge_MaterialAuthoringHandlersUpdateCustomExpression.cpp'],
-      ['Nodes', 'McpAutomationBridge_MaterialAuthoringHandlersDeleteNode.cpp'],
-      ['Parameters', 'McpAutomationBridge_MaterialAuthoringHandlersAddParameter.cpp'],
+      ['Nodes', 'McpMatUpdateCustomExpr.cpp'],
+      ['Nodes', 'McpMatDeleteNode.cpp'],
+      ['Parameters', 'McpMatAddParam.cpp'],
     ] as const) {
       expect(code('MaterialAuthoring', ...file)).toContain('McpMaterialHostResult(HostOuter)');
     }
-    expect(code('MaterialAuthoring', 'Connections', 'McpAutomationBridge_MaterialAuthoringHandlersConnectNodes.cpp').split('McpMaterialHostResult(HostOuter)').length).toBe(5);
+    expect(code('MaterialAuthoring', 'Connections', 'McpMatConnectNodes.cpp').split('McpMaterialHostResult(HostOuter)').length).toBe(5);
   });
 
   // update_custom_expression ended in the edit helper (a recompile and a dirty mark) and answered "Custom expression updated.":
   // live, the material stayed in unsavedPackages and a broken edit went unseen. Called on its own it compiles, saves and
   // reports as compile_material does; as a step of build_material_graph it leaves both to the batch.
   it('update_custom_expression on its own saves the material and says whether it compiles, as compile_material does', () => {
-    const source = code('MaterialAuthoring', 'Nodes', 'McpAutomationBridge_MaterialAuthoringHandlersUpdateCustomExpression.cpp');
+    const source = code('MaterialAuthoring', 'Nodes', 'McpMatUpdateCustomExpr.cpp');
     const own = source.slice(source.indexOf('if (!FMcpResponseCaptureRegistry::Get().IsCapturing(RequestId)) {'));
 
     expect(source.indexOf('FINALIZE_HOST();'), 'after the edit').toBeLessThan(source.indexOf('IsCapturing(RequestId)'));
@@ -308,21 +358,21 @@ describe('handlers answer what they did', () => {
   // A Custom node's HLSL error (float3 .a) shows only once the asynchronous shader compile ends: read right after
   // PostEditChange, the build_material_graph batch answered "compiled": true while the default material rendered.
   it('compile errors are read after the shader compile, not just the translation', () => {
-    const compile = code('MaterialAuthoring', 'Properties', 'McpAutomationBridge_MaterialAuthoringHandlersCompileMaterial.cpp');
+    const compile = code('MaterialAuthoring', 'Properties', 'McpMatCompileMat.cpp');
 
     expect(compile, 'every shader, not the on-demand few a post-edit recompile asks for').toMatch(/Material->ForceRecompileForRendering\(\);\s*FMaterialResource \*Resource = MCP_GET_MATERIAL_RESOURCE\(Material\);/u);
     expect(compile).toMatch(/Resource->FinishCompilation\(\);\s*TArray<FString> Errors = Resource->GetCompileErrors\(\);/u);
     expect(compile, 'a failed shader map leaves none behind').toContain('if (Errors.Num() == 0 && !Resource->GetGameThreadShaderMap()) {');
     expect(compile).toContain('const TArray<FString> CompileErrors = McpMaterialCompileErrors(Material);');
-    expect(code('MaterialAuthoring', 'McpAutomationBridge_MaterialAuthoringGraphBatch.cpp'), 'the batch compiles through compile_material')
+    expect(code('MaterialAuthoring', 'McpMatGraphBatch.cpp'), 'the batch compiles through compile_material')
       .toContain('Compile->SetStringField(TEXT("subAction"), TEXT("compile_material"));');
   });
 
   // set_material_parameter with a parameters list answered {parameters, applied} and no assetPath, so the receipt
   // named nothing for a call that wrote an instance; every single-parameter setter answers it through AddVerification.
   it('set_material_parameter names the asset its parameters list wrote, as the single-parameter setters do', () => {
-    const list = code('MaterialAuthoring', 'Parameters', 'McpAutomationBridge_MaterialAuthoringHandlersSetMaterialParameter.cpp');
-    const setter = code('MaterialAuthoring', 'Parameters', 'McpAutomationBridge_MaterialAuthoringParameterValue.cpp');
+    const list = code('MaterialAuthoring', 'Parameters', 'McpMatSetMatParam.cpp');
+    const setter = code('MaterialAuthoring', 'Parameters', 'McpMatParamValue.cpp');
 
     expect(list).toMatch(
       /if \(Reply\.bSuccess\) \{\s*if \(OutChangedAssetPath && OutChangedAssetPath->IsEmpty\(\) && Reply\.Result\.IsValid\(\)\) \{\s*Reply\.Result->TryGetStringField\(TEXT\("assetPath"\), \*OutChangedAssetPath\);\s*\}\s*\} else \{/u
@@ -335,11 +385,15 @@ describe('handlers answer what they did', () => {
   // The parameter setter reads save from its own payload and a list entry carries only its own fields, so a
   // save:false given once for the call was dropped and every entry saved the asset.
   it('a parameters list gives every entry the call\'s own save flag unless the entry names one', () => {
-    const list = code('MaterialAuthoring', 'Parameters', 'McpAutomationBridge_MaterialAuthoringHandlersSetMaterialParameter.cpp');
-    const create = code('MaterialAuthoring', 'Creation', 'McpAutomationBridge_MaterialAuthoringHandlersCreateMaterialInstance.cpp');
-    const setter = code('MaterialAuthoring', 'Parameters', 'McpAutomationBridge_MaterialAuthoringParameterValue.cpp');
+    const list = code('MaterialAuthoring', 'Parameters', 'McpMatSetMatParam.cpp');
+    const create = code('MaterialAuthoring', 'Creation', 'McpMatCreateMatInst.cpp');
+    const setter = code('MaterialAuthoring', 'Parameters', 'McpMatParamValue.cpp');
 
     expect(setter).toContain('Payload->TryGetBoolField(TEXT("save"), bSave);');
+    // The reply says whether the write reached disk; it did not, so a refused save read as done.
+    expect(setter).toContain('const bool bSaved = bSave && McpSafeAssetSave(BaseMaterial);');
+    expect(setter).toContain('const bool bSaved = bSave && McpSafeAssetSave(Instance);');
+    expect(setter.split('Result->SetBoolField(TEXT("saved"), bSaved);'), 'both branches').toHaveLength(3);
     expect(list).toMatch(
       /One->SetStringField\(TEXT\("assetPath"\), AssetPath\);\s*if \(Shared\.IsValid\(\) && !One->HasField\(TEXT\("save"\)\) && Shared->HasField\(TEXT\("save"\)\)\) \{\s*One->SetField\(TEXT\("save"\), Shared->TryGetField\(TEXT\("save"\)\)\);\s*\}/u
     );
@@ -350,8 +404,8 @@ describe('handlers answer what they did', () => {
   // get_material_info listed the UMaterialExpressionParameter kinds only, so a material built from
   // TextureObjectParameters (BaseColor, Normal, ORM) answered its scalars and vectors and no textures.
   it('get_material_info lists texture parameters with their default texture and sampler type, and find_node matches them by name', () => {
-    const info = code('MaterialAuthoring', 'Queries', 'McpAutomationBridge_MaterialAuthoringHandlersGetMaterialInfo.cpp');
-    const find = code('MaterialAuthoring', 'Queries', 'McpAutomationBridge_MaterialAuthoringHandlersFindNode.cpp');
+    const info = code('MaterialAuthoring', 'Queries', 'McpMatGetMatInfo.cpp');
+    const find = code('MaterialAuthoring', 'Queries', 'McpMatFindNode.cpp');
 
     expect(info).toMatch(/if \(Expr->HasAParameterName\(\)\) \{\s*TSharedPtr<FJsonObject> ParamObj = McpHandlerUtils::CreateResultObject\(\);\s*ParamObj->SetStringField\(TEXT\("name"\), Expr->GetParameterName\(\)\.ToString\(\)\);[\s\S]*?AddTextureParameterFields\(Expr, ParamObj\);/u);
     expect(info).toMatch(/if \(Expr->HasAParameterName\(\)\) \{\s*ExprObj->SetStringField\(TEXT\("name"\), Expr->GetParameterName\(\)\.ToString\(\)\);/u);
@@ -370,14 +424,14 @@ describe('handlers answer what they did', () => {
   // which never reaches its material: the cached expression data every instance reads kept the old ParameterName until
   // some other call rebuilt the material.
   it('set_property on an object inside a material or material function rebuilds that material, as compile_material does', () => {
-    const access = code('Property', 'McpAutomationBridge_PropertyHandlersActorAccess.cpp');
-    const set = code('Property', 'McpAutomationBridge_PropertyHandlersObjectSet.cpp');
-    const compile = code('MaterialAuthoring', 'Properties', 'McpAutomationBridge_MaterialAuthoringHandlersCompileMaterial.cpp');
+    const access = code('Property', 'McpPropActorAccess.cpp');
+    const set = code('Property', 'McpPropObjectSet.cpp');
+    const compile = code('MaterialAuthoring', 'Properties', 'McpMatCompileMat.cpp');
 
     expect(access).toMatch(/bool RefreshMaterialHostAfterEdit\(UObject\* Edited\)\s*\{\s*UObject\* Host = Edited \? Edited->GetTypedOuter<UMaterial>\(\) : nullptr;\s*if \(!Host && Edited\)\s*\{\s*Host = Edited->GetTypedOuter<UMaterialFunction>\(\);\s*\}\s*if \(!Host\)\s*\{\s*return false;\s*\}\s*Host->PreEditChange\(nullptr\);\s*Host->PostEditChange\(\);\s*return true;\s*\}/u);
     expect(compile, 'the same two calls compile_material makes').toMatch(/Host->PreEditChange\(nullptr\);\s*Host->PostEditChange\(\);/u);
     expect(set).toMatch(/RefreshK2NodeTitleCacheIfNeeded\(RootObject\);\s*const bool bMaterialRebuilt = McpPropertyActorAccess::RefreshMaterialHostAfterEdit\(RootObject\);/u);
-    expect(set.indexOf('RefreshMaterialHostAfterEdit(RootObject)'), 'before the save, so the saved material is the rebuilt one').toBeLessThan(set.indexOf('McpSafeAssetSave(OwningPackage)'));
+    expect(set.indexOf('RefreshMaterialHostAfterEdit(RootObject)'), 'before the save, so the saved material is the rebuilt one').toBeLessThan(set.indexOf('McpPropertyTarget::SaveAfterWrite('));
     expect(set).toMatch(/if \(bMaterialRebuilt\) \{\s*ResultPayload->SetBoolField\(TEXT\("materialRebuilt"\), true\);\s*\}/u);
 
     const properties = capabilityIndex().byId.get('inspect.set_property')?.schemas.output.properties;
@@ -387,7 +441,7 @@ describe('handlers answer what they did', () => {
 
   // disconnect_nodes answered "Disconnect operation completed." with nothing unplugged.
   it('disconnect_nodes fails when no pin matched and unplugs a custom node input by label', () => {
-    const source = code('MaterialAuthoring', 'Connections', 'McpAutomationBridge_MaterialAuthoringHandlersDisconnectNodes.cpp');
+    const source = code('MaterialAuthoring', 'Connections', 'McpMatDisconnectNodes.cpp');
     expect(source).not.toContain('Disconnect operation completed');
     expect(source).toContain('Target = TargetExpr->GetInput(InputIndex);');
   });
@@ -395,17 +449,17 @@ describe('handlers answer what they did', () => {
   // A TextureObjectParameter added by type stayed named "None" and had no texture, so no
   // instance could set it; add_texture_sample dropped a path that did not load.
   it('texture nodes take their name and texture, and a texture that does not load fails', () => {
-    const generic = code('MaterialAuthoring', 'Nodes', 'McpAutomationBridge_MaterialAuthoringHandlersAddMaterialNode.cpp');
+    const generic = code('MaterialAuthoring', 'Nodes', 'McpMatAddMatNode.cpp');
     expect(generic).toContain('if (NewExpr->HasAParameterName()) {');
     expect(generic).toContain('TextureNode->AutoSetSampleType();');
-    const sample = code('MaterialAuthoring', 'Nodes', 'McpAutomationBridge_MaterialAuthoringHandlersAddTextureSample.cpp');
+    const sample = code('MaterialAuthoring', 'Nodes', 'McpMatAddTextureSample.cpp');
     expect(sample).toMatch(/if \(!ResolvedTexture\) \{\s*Bridge->SendAutomationError\([\s\S]*?TEXT\("ASSET_NOT_FOUND"\)\);/u);
     expect(sample).toContain('CreatedExpr->AutoSetSampleType();');
   });
 
   // revolve turned the same fixed vase at the origin whatever profile, name or place was asked.
   it('revolve turns the given profile, placed and named as asked', () => {
-    const source = code('Geometry', 'Primitives', 'McpAutomationBridge_GeometryPrimitivesShapes.cpp');
+    const source = code('Geometry', 'Primitives', 'McpGeometryPrimitivesShapes.cpp');
     expect(source).toContain('Payload->TryGetArrayField(TEXT("profile"), Profile)');
     expect(source).toContain('RevolveOptions.RevolveDegrees = ');
     expect(source).toContain('ProfilePoints, RevolveOptions, Steps, bCap, nullptr);');
@@ -415,7 +469,7 @@ describe('handlers answer what they did', () => {
 
   // Tuning one emitter took a call, a compile request and a save per value: twelve calls for one emitter.
   it('set_parameter_value writes a parameters list in one pass, reports every entry and saves once', () => {
-    const source = code('NiagaraAuthoring', 'McpAutomationBridge_NiagaraAuthoringHandlersParameterValues.cpp');
+    const source = code('NiagaraAuthoring', 'McpNiagaraParamValues.cpp');
     const between = (from: string, to?: string): string => source.slice(source.indexOf(from), to === undefined ? undefined : source.indexOf(to));
     const writer = between('static FParameterWrite WriteParameter(', 'static bool SetParameterValueList(');
     const list = between('static bool SetParameterValueList(', 'bool SetParameterValue(FActionContext& Context)');
@@ -433,20 +487,35 @@ describe('handlers answer what they did', () => {
     expect(single).toMatch(/Context\.Payload->TryGetArrayField\(TEXT\("parameters"\), Entries\) && Entries->Num\(\) > 0\)/u);
     expect(single).toMatch(/if \(!ParamName\.IsEmpty\(\)\)\s*\{\s*Context\.SendError\(TEXT\("Send parameters[^"]*not both\."\), TEXT\("INVALID_ARGUMENT"\)\);/u);
     expect(single, 'one parameter keeps its own errors and its own compile request').toContain('Context.SendError(Write.Error, Write.ErrorCode);');
-    expect(code('NiagaraAuthoring', 'McpAutomationBridge_NiagaraAuthoringHandlersParameters.cpp')).toContain('if (SubAction == TEXT("set_parameter_value")) return SetParameterValue(Context);');
+    expect(code('NiagaraAuthoring', 'McpNiagaraParams.cpp')).toContain('if (SubAction == TEXT("set_parameter_value")) return SetParameterValue(Context);');
+  });
+
+  // bind refused "ShapeLocation.Box Size" (a space is not an identifier character) although get_niagara_info lists it and
+  // set_parameter_value writes it, and it never looked past module calls, so "RandomRangeFloat.Minimum" was not an input.
+  it('bind_parameter_to_source takes the module and dynamic-input input names get_niagara_info lists', () => {
+    const params = code('NiagaraAuthoring', 'McpNiagaraParams.cpp');
+    expect(params).toContain('Function = FindDynamicInputCallInput(Graph, ParamName, Input);');
+    expect(params, 'only a variable the call creates is held to identifier characters').toContain(
+      'if (!bModuleInput && !ValidateNiagaraIdentifier(Context, ParamName, TEXT("parameterName"), true))');
+    expect(params).not.toContain('ValidateNiagaraIdentifier(Context, ParamName, TEXT("parameterName"), true) ||');
+    expect(code('NiagaraAuthoring', 'McpNiagaraDynamicInputResolve.cpp')).toContain('Call->GetCalledUsage() == ENiagaraScriptUsage::DynamicInput');
+    // get_niagara_info showed a bound dynamic-input input as its stale literal: only module calls' overrides were read.
+    const info = code('NiagaraAuthoring', 'McpNiagaraModuleInfo.cpp');
+    expect(info).toContain('if (Usage != ENiagaraScriptUsage::Module && Usage != ENiagaraScriptUsage::DynamicInput)');
+    expect(info).not.toContain('Module->GetCalledUsage() != ENiagaraScriptUsage::Module');
   });
 
   // A Ribbon Width written while InitializeParticle.Ribbon Width Mode was Unset changed nothing, and no call could see or flip the
   // switch: a static switch is a pin of the module's call node, not a rapid-iteration parameter.
   it('set_parameter_value sets a module static switch as the stack does, and get_niagara_info lists them', () => {
-    const values = code('NiagaraAuthoring', 'McpAutomationBridge_NiagaraAuthoringHandlersParameterValues.cpp');
-    const graph = code('NiagaraAuthoring', 'McpAutomationBridge_NiagaraAuthoringHandlersStackGraph.cpp');
+    const values = code('NiagaraAuthoring', 'McpNiagaraParamValues.cpp');
+    const graph = code('NiagaraAuthoring', 'McpNiagaraStackGraph.cpp');
 
     expect(values).toContain('SetModuleStaticSwitch(System, EmitterName, ParamName, Entry->TryGetField(TEXT("parameterValue")), SwitchError)');
-    expect(code('NiagaraAuthoring', 'McpAutomationBridge_NiagaraAuthoringHandlersContext.h')).toContain('Pin->Direction == EGPD_Input && Pin->bNotConnectable && !Pin->bOrphanedPin');
+    expect(code('NiagaraAuthoring', 'McpNiagaraContext.h')).toContain('Pin->Direction == EGPD_Input && Pin->bNotConnectable && !Pin->bOrphanedPin');
     expect(graph).toMatch(/Pin->DefaultValue = Default;\s*Node->MarkNodeRequiresSynchronization\([^;]*, true\);/u);
     expect(graph, 'an enum pin holds the entry name the type editor writes').toContain('Enum->GetNameStringByValue(EntryValue)');
-    const info = code('NiagaraAuthoring', 'McpAutomationBridge_NiagaraAuthoringHandlersInfoValidation.cpp');
+    const info = code('NiagaraAuthoring', 'McpNiagaraInfoValidate.cpp');
     expect(info).toContain('EmitterObj->SetObjectField(TEXT("staticSwitches"), CollectModuleStaticSwitches(Handle));');
     expect(info, 'and each renderer by the object path set_property writes').toContain('RendererObj->SetStringField(TEXT("objectPath"), Renderer->GetPathName());');
   });
@@ -454,23 +523,23 @@ describe('handlers answer what they did', () => {
   // A module for the particle spawn stack of an emitter with interpolated spawning found no stack: its script
   // runs as ParticleSpawnScriptInterpolated while the stack output says ParticleSpawnScript.
   it('add_niagara_module finds the spawn stack of an emitter with interpolated spawning', () => {
-    const source = code('NiagaraGraph', 'McpAutomationBridge_NiagaraGraphHandlers.cpp');
+    const source = code('NiagaraGraph', 'McpNiagaraGraphHandlers.cpp');
     expect(source).toContain('UNiagaraScript::IsEquivalentUsage(Candidate->GetUsage(), TargetScript->GetUsage())');
     expect(source).not.toContain('Candidate->GetUsage() == TargetScript->GetUsage()');
   });
 
   // A template module that worked against the values set (a size curve, wind) could not be switched off.
   it('set_emitter_properties turns stack modules on or off by name and refuses a name it cannot find', () => {
-    const systems = code('NiagaraAuthoring', 'McpAutomationBridge_NiagaraAuthoringHandlersSystems.cpp');
+    const systems = code('NiagaraAuthoring', 'McpNiagaraSystems.cpp');
     expect(systems).toMatch(/TryGetObjectField\(TEXT\("moduleEnabled"\), ModulesObj\)/u);
     expect(systems).toMatch(/Module->SetEnabledState\(bOn \? ENodeEnabledState::Enabled : ENodeEnabledState::Disabled, false\);\s*Module->MarkNodeRequiresSynchronization\(/u);
     expect(systems).toContain('TEXT("MODULE_NOT_FOUND")');
-    expect(code('NiagaraAuthoring', 'McpAutomationBridge_NiagaraAuthoringHandlersModuleInfo.cpp')).toContain('ModuleObj->SetBoolField(TEXT("enabled"), Module->IsNodeEnabled());');
+    expect(code('NiagaraAuthoring', 'McpNiagaraModuleInfo.cpp')).toContain('ModuleObj->SetBoolField(TEXT("enabled"), Module->IsNodeEnabled());');
   });
 
   // Every placed effect fired once at level start, whatever cue it was placed for.
   it('a Niagara effect can be placed switched off', () => {
-    const spawn = code('Effect', 'McpAutomationBridge_EffectHandlersNiagaraSpawn.cpp');
+    const spawn = code('Effect', 'McpEffectNiagaraSpawn.cpp');
     // SetAutoActivate is refused after registration (it only logs), so the flag is written directly.
     expect(spawn).toMatch(/GetJsonBoolField\(Context\.Payload, TEXT\("autoActivate"\), true\);\s*NiagaraComponent->bAutoActivate = bAutoActivate;/u);
     expect(spawn).not.toContain('SetAutoActivate(');
@@ -480,7 +549,7 @@ describe('handlers answer what they did', () => {
 
   // An activate key restarted a finished one-shot every frame of its section: a spark burst fired again and again.
   it('a particle track can fire a one-shot burst once with a trigger key', () => {
-    const tracks = code('Sequence', 'Cinematics', 'McpAutomationBridge_SequenceCinematicsTracks.cpp');
+    const tracks = code('Sequence', 'Cinematics', 'McpSeqCineTracks.cpp');
     expect(tracks).toMatch(/KeyName == TEXT\("trigger"\) \? EParticleKey::Trigger/u);
     const handler = tracks.slice(tracks.indexOf('bool HandleAddParticleTrack'));
     expect(handler.indexOf('particleKey must be activate, deactivate or trigger')).toBeLessThan(handler.indexOf('CreateBoundSection('));
@@ -488,13 +557,13 @@ describe('handlers answer what they did', () => {
 
   // A module added, wired or removed ran the old scripts and listed no inputs until something else compiled.
   it('a Niagara graph edit compiles the system before saving it', () => {
-    const save = code('NiagaraGraph', 'McpAutomationBridge_NiagaraGraphHandlersPrivate.h');
+    const save = code('NiagaraGraph', 'McpNiagaraGraphPrivate.h');
     expect(save).toMatch(/inline void SaveNiagaraGraphEdit\([^)]*\)\s*\{\s*System->RequestCompile\(false\);\s*System->MarkPackageDirty\(\);/u);
   });
 
   // create_niagara_ribbon and create_particle_trail authored LocationBasedRibbon, which spawns only on another emitter's location events.
   it('a default ribbon or trail effect spawns on its own', () => {
-    const source = code('Effect', 'McpAutomationBridge_EffectHandlersNiagaraAuthoring.cpp');
+    const source = code('Effect', 'McpEffectNiagaraAuthoring.cpp');
 
     expect(source).toContain('TEXT("/Niagara/Modules/Emitter/SpawnRate.SpawnRate")');
     expect(source, 'at a trail rate, not the module\'s 1 a second').toMatch(/Rate->SetNumberField\(TEXT\("parameterValue"\), 60\.0\);[\s\S]*?SetModuleInputValue\(&System, EmitterName, TEXT\("SpawnRate\.SpawnRate"\), Rate,/u);
@@ -505,15 +574,15 @@ describe('handlers answer what they did', () => {
 
   // Niagara objects made without RF_Transactional skipped undo and made every later edit's stack check warn.
   it('Niagara systems, emitters and renderers the tools make are transactional, and older systems are repaired on load', () => {
-    expect(code('NiagaraAuthoring', 'McpAutomationBridge_NiagaraAuthoringHandlersSystems.cpp').split('RF_Public | RF_Standalone | RF_Transactional')).toHaveLength(3);
-    expect(code('Effect', 'McpAutomationBridge_EffectHandlersNiagaraAuthoring.cpp')).toContain('NewObject<UNiagaraSystem>(Package, FName(*Name), RF_Public | RF_Standalone | RF_Transactional)');
-    expect(code('NiagaraAuthoring', 'McpAutomationBridge_NiagaraAuthoringHandlersRenderers.cpp')).toContain('NewObject<TRenderer>(Target.Emitter, NAME_None, RF_Transactional)');
-    expect(code('NiagaraAuthoring', 'McpAutomationBridge_NiagaraAuthoringHandlersContext.cpp')).toMatch(/System->SetFlags\(RF_Transactional\);\s*return System;/u);
+    expect(code('NiagaraAuthoring', 'McpNiagaraSystems.cpp').split('RF_Public | RF_Standalone | RF_Transactional')).toHaveLength(3);
+    expect(code('Effect', 'McpEffectNiagaraAuthoring.cpp')).toContain('NewObject<UNiagaraSystem>(Package, FName(*Name), RF_Public | RF_Standalone | RF_Transactional)');
+    expect(code('NiagaraAuthoring', 'McpNiagaraRenderers.cpp')).toContain('NewObject<TRenderer>(Target.Emitter, NAME_None, RF_Transactional)');
+    expect(code('NiagaraAuthoring', 'McpNiagaraContext.cpp')).toMatch(/System->SetFlags\(RF_Transactional\);\s*return System;/u);
   });
 
   // Every effect a creator authored also dropped a preview actor at the world origin of whatever level was open.
   it('an authored effect is placed in the level only when location asks for it', () => {
-    const source = code('Effect', 'McpAutomationBridge_EffectHandlersProceduralEffects.cpp');
+    const source = code('Effect', 'McpEffectProceduralEffects.cpp');
 
     expect(source).toMatch(/if \(!Context\.Payload->HasField\(TEXT\("location"\)\)\)\s*\{\s*Details->SetStringField\(TEXT\("systemPath"\), AuthoredSystemPath\);\s*Details->SetBoolField\(TEXT\("placed"\), false\);/u);
     expect(source.indexOf('HasField(TEXT("location"))'), 'checked before the placing call').toBeLessThan(source.lastIndexOf('return CreateNiagaraEffectFromPayload(Context, EffectName, AuthoredSystemPath, Details);'));
@@ -521,7 +590,7 @@ describe('handlers answer what they did', () => {
 
   // The editor sets a missing usage flag only outside PIE and never saves it, so a renderer material drew as the default material.
   it('a sprite or ribbon renderer material gets its Niagara usage flag, set and saved', () => {
-    const source = code('NiagaraAuthoring', 'McpAutomationBridge_NiagaraAuthoringHandlersRenderers.cpp');
+    const source = code('NiagaraAuthoring', 'McpNiagaraRenderers.cpp');
 
     expect(source).toContain('EnsureNiagaraUsage(Material, bSprite ? TEXT("bUsedWithNiagaraSprites") : TEXT("bUsedWithNiagaraRibbons"));');
     expect(source).toMatch(/Flag->SetPropertyValue_InContainer\(Base, true\);\s*Base->PostEditChange\(\);\s*McpSafeOperations::McpSafeAssetSave\(Base\);/u);
@@ -532,7 +601,10 @@ describe('handlers answer what they did', () => {
     const input = record?.schemas.input;
     const output = record?.schemas.output.properties;
 
-    expect(record?.routing.dispatchBy?.declaredBy?.parameters, 'a call that sends a list and no edit runs set_parameter_value').toEqual(['set_parameter_value']);
+    // A list is read by the system form and by a placed effect's form (with actorName, which only set_parameter reads,
+    // so a list sent with actorName and no edit still picks it).
+    expect(record?.routing.dispatchBy?.declaredBy?.parameters).toEqual(['set_parameter_value', 'set_parameter']);
+    expect(record?.routing.dispatchBy?.declaredBy?.actorName).toEqual(['set_parameter']);
     const ok = { edit: 'set_parameter_value', systemPath: '/Game/NS_Fire', parameters: [{ parameterName: 'InitializeParticle.Lifetime', parameterValue: 2 }, { parameterName: 'Size', parameterValue: [1, 2, 3] }] };
     expect(validateAgainstCapabilitySchema(ok, input)).toBeUndefined();
     expect(validateAgainstCapabilitySchema({ ...ok, parameters: [{ parameterName: 'Size' }] }, input)?.pointer, 'an entry without a value').toMatch(/^\/parameters\/0/u);
@@ -546,7 +618,7 @@ describe('handlers answer what they did', () => {
   // manage_level load of the level that is already open answered "Level loaded" in 34 ms with dirtyWorldPackagesBeforeLoad 0, while
   // get_summary listed that world under unsavedPackages: McpSafeLoadMap skips the open map, and only the headless path ever counted.
   describe('manage_level load of the level that is already open', () => {
-    const load = (): string => code('Level', 'Lifecycle', 'McpAutomationBridge_LevelHandlersLoad.cpp');
+    const load = (): string => code('Level', 'Lifecycle', 'McpLevelLoad.cpp');
     const compact = (): string => load().split(/\s+/u).join(' ');
 
     it('counts the dirty packages in every mode, before anything else decides', () => {
@@ -568,7 +640,7 @@ describe('handlers answer what they did', () => {
       expect(noop, 'a no-op neither stops a running PIE session nor loads').not.toContain('McpSafeLoadMap');
       expect(source.indexOf('if (bAlreadyOpen) {'), 'decided before the load runs').toBeLessThan(source.indexOf('const bool bLoaded = McpSafeLoadMap('));
       expect(compact()).toContain('Resp->SetBoolField(TEXT("alreadyLoaded"), !bReloaded); Resp->SetBoolField(TEXT("reloaded"), bReloaded);');
-      expect(compact()).toContain('TEXT("Level loaded"), LoadReply(true), FString());');
+      expect(compact()).toContain('TEXT("Level loaded"), LoadReply(true), bWasGameView);');
     });
 
     it('refuses the headless load over dirty packages only for a real load, and honours saveDirtyPackages in every mode', () => {
@@ -596,14 +668,14 @@ describe('handlers answer what they did', () => {
 describe('opening another level over unsaved level changes', () => {
   // Each caller, and the call that loads there: the check has to answer before it.
   const callers: readonly (readonly [readonly string[], string])[] = [
-    [['Level', 'Lifecycle', 'McpAutomationBridge_LevelHandlersLoad.cpp'], 'const bool bLoaded = McpSafeLoadMap('],
-    [['Level', 'Lifecycle', 'McpAutomationBridge_LevelHandlersCreate.cpp'], 'McpSafeLoadMap(SavePath, true)'],
-    [['ControlEditor', 'McpAutomationBridge_ControlEditorLevel.cpp'], 'McpSafeLoadMap(MapPathToLoad)'],
-    [['LevelStructure', 'McpAutomationBridge_LevelStructureLevelCreation.cpp'], 'LoadIfRequested(Result,'],
+    [['Level', 'Lifecycle', 'McpLevelLoad.cpp'], 'const bool bLoaded = McpSafeLoadMap('],
+    [['Level', 'Lifecycle', 'McpLevelCreate.cpp'], 'McpSafeLoadMap(SavePath, true)'],
+    [['ControlEditor', 'McpEditorLevel.cpp'], 'McpSafeLoadMap(MapPathToLoad)'],
+    [['LevelStructure', 'McpLevelStructureLevelCreation.cpp'], 'LoadIfRequested(Result,'],
   ];
 
   it('is refused in every mode by one shared check, which lists what would be lost', () => {
-    const safety = readFileSync(join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private', 'Safety', 'McpSafeOperationsMapLoad.h'), 'utf8');
+    const safety = readFileSync(join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'Safety', 'McpSafeOperationsMapLoad.h'), 'utf8');
     expect(safety).toContain('inline FString McpRefuseLoadOverUnsavedLevels(const FString& MapPath, const TCHAR* WayOut, TSharedPtr<FJsonObject>& OutDetails)');
     expect(safety).toContain('FEditorFileUtils::GetDirtyWorldPackages(Dirty);');
     expect(safety).toContain('OutDetails->SetArrayField(TEXT("unsavedPackages"), Names);');
@@ -619,7 +691,7 @@ describe('opening another level over unsaved level changes', () => {
   });
 
   it('manage_level load gets past it only with discardUnsaved or a save, and says so', () => {
-    const source = code('Level', 'Lifecycle', 'McpAutomationBridge_LevelHandlersLoad.cpp').split(/\s+/u).join(' ');
+    const source = code('Level', 'Lifecycle', 'McpLevelLoad.cpp').split(/\s+/u).join(' ');
     expect(source).toContain('Payload->TryGetBoolField(TEXT("discardUnsaved"), bDiscardUnsaved);');
     expect(source).toContain('const FString Loss = bDiscardUnsaved ? FString() : McpSafeOperations::McpRefuseLoadOverUnsavedLevels(');
     expect(source, 'the refusal names the /Game level, never the file it loads from').toContain('McpRefuseLoadOverUnsavedLevels( ExpectedLoadedPath,');
@@ -638,57 +710,57 @@ describe('the view of a running game', () => {
   const outputNames = (id: string): readonly string[] => Object.keys(capabilityIndex().byId.get(id)?.schemas.output.properties ?? {});
 
   it('eject switches the session the way the editor\'s Eject button does, and answers once the view has switched', () => {
-    const source = editorControl('Session', 'McpAutomationBridge_ControlEditorEject.cpp');
+    const source = editorControl('Session', 'McpEditorEject.cpp');
     expect(source).toContain('GEditor->RequestToggleBetweenPIEandSIE();');
     expect(source, 'there is no Eject console command').not.toMatch(/Exec\([^)]*Eject/u);
     expect(source).toContain('GetEjectedPieViewportClientForMcp()');
     expect(source).toContain('TEXT("EJECT_FAILED")');
-    expect(editorControl('McpAutomationBridge_ControlEditorPlay.cpp')).not.toContain('HandleControlEditorEject');
+    expect(editorControl('McpEditorPlay.cpp')).not.toContain('HandleControlEditorEject');
     expect(outputNames('control_editor.play')).toEqual(expect.arrayContaining(['ejected', 'alreadyEjected', 'view']));
   });
 
   it('set_camera refuses until the player is ejected, and says which view it moved', () => {
-    const camera = editorControl('McpAutomationBridge_ControlEditorCamera.cpp');
+    const camera = editorControl('McpEditorCamera.cpp');
     const setCamera = camera.slice(camera.indexOf('HandleControlEditorSetCamera('));
     const refusal = setCamera.indexOf('RefuseCameraMoveWhilePieFollowsPawnForMcp(');
     expect(refusal).toBeGreaterThan(-1);
     expect(refusal, 'the refusal comes before a viewport is picked').toBeLessThan(setCamera.indexOf('GetActiveEditorViewportClientForMcp()'));
     expect(setCamera).toContain('TEXT("pie_ejected")');
-    const support = editorControl('McpAutomationBridge_ControlEditorViewportSupport.cpp');
+    const support = editorControl('McpEditorViewportSupport.cpp');
     expect(support).toContain('TEXT("PIE_VIEW_NOT_EJECTED")');
     expect(support, 'the shared viewport lookup answers the ejected view first').toContain('if (FEditorViewportClient *Ejected = GetEjectedPieViewportClientForMcp()) {');
     expect(outputNames('control_editor.set_camera')).toEqual(expect.arrayContaining(['view', 'cameraLocation', 'cameraRotation']));
   });
 
   it('a screenshot of an ejected game is taken from the editor viewport that draws it, and a camera it cannot move is refused', () => {
-    const shot = editorControl('McpAutomationBridge_ControlEditorScreenshot.cpp');
+    const shot = editorControl('McpEditorScreenshot.cpp');
     expect(shot).toContain('Mode == TEXT("game_viewport") && !bEjectedView');
     expect(shot).toContain('GEditor->PlayWorld != nullptr && !bEjectedView && GEditor->GetPIEViewport() != nullptr');
     expect(shot).toContain('RefuseCameraMoveWhilePieFollowsPawnForMcp(this, Socket, RequestId,');
     expect(shot, 'the note that said location and rotation were ignored is gone').not.toContain('cameraNote');
-    expect(code('Ui', 'McpAutomationBridge_UiHandlersScreenshot.cpp')).toContain('Mode == TEXT("game_viewport") && GetEjectedPieViewportClientForMcp()');
+    expect(code('Ui', 'McpUiScreenshot.cpp')).toContain('Mode == TEXT("game_viewport") && GetEjectedPieViewportClientForMcp()');
     expect(outputNames('control_editor.screenshot')).toContain('view');
   });
 
   it('possess hands the player controller the pawn, and with no pawn brings an ejected player back', () => {
-    const session = editorControl('Session', 'McpAutomationBridge_ControlEditorEject.cpp');
+    const session = editorControl('Session', 'McpEditorEject.cpp');
     const possess = session.slice(session.indexOf('HandleControlEditorPossess('));
     expect(possess).toContain('Controller->Possess(Pawn);');
     expect(possess, 'the way back from eject is the same toggle').toContain('GEditor->RequestToggleBetweenPIEandSIE();');
     expect(possess, 'there is no POSSESS console command').not.toMatch(/Exec\([^)]*POSSESS/u);
-    expect(editorControl('McpAutomationBridge_ControlEditorPlay.cpp')).not.toContain('HandleControlEditorPossess(');
+    expect(editorControl('McpEditorPlay.cpp')).not.toContain('HandleControlEditorPossess(');
     expect(outputNames('control_editor.play')).toEqual(expect.arrayContaining(['possessed', 'returnedFromEject']));
   });
 
   it('the other level-viewport moves refuse while the player plays, and the view settings reach the game on screen', () => {
-    expect(editorControl('Camera', 'McpAutomationBridge_ControlEditorCameraFocus.cpp'))
+    expect(editorControl('Camera', 'McpEditorCameraFocus.cpp'))
       .toContain('RefuseCameraMoveWhilePieFollowsPawnForMcp(this, Socket, RequestId, TEXT("focus_actor"))');
-    const toggles = editorControl('McpAutomationBridge_ControlEditorViewportToggles.cpp');
+    const toggles = editorControl('McpEditorViewportToggles.cpp');
     const gameView = toggles.slice(toggles.indexOf('HandleControlEditorSetGameView('));
     const refusal = gameView.indexOf('TEXT("PIE_VIEW_NOT_EJECTED")');
     expect(refusal).toBeGreaterThan(-1);
     expect(refusal, 'refused before the hidden level viewport is toggled').toBeLessThan(gameView.indexOf('Client->SetGameView('));
-    const viewMode = editorControl('McpAutomationBridge_ControlEditorViewMode.cpp');
+    const viewMode = editorControl('McpEditorViewMode.cpp');
     expect(viewMode).toMatch(/ApplyViewMode\(ViewModeIndex,\s*true,\s*GEditor->GameViewport->EngineShowFlags\)/u);
     expect(viewMode).toContain('Controller->PlayerCameraManager->SetFOV(static_cast<float>(Fov));');
   });
@@ -699,19 +771,19 @@ describe('the material slots of a mesh asset', () => {
   const outputNames = (id: string): readonly string[] => Object.keys(capabilityIndex().byId.get(id)?.schemas.output.properties ?? {});
 
   it('set_mesh_materials loads each material strictly, fails on a refused entry and never saves engine content', () => {
-    const slots = code('AssetWorkflow', 'Materials', 'McpAutomationBridge_AssetWorkflowMeshMaterialSlots.h');
+    const slots = code('AssetWorkflow', 'Materials', 'McpAssetMeshMatSlots.h');
     expect(slots).toContain('McpLoadAsset(SafePath)');
     expect(slots, 'a material that does not load is refused, never replaced by a default').not.toContain('McpLoadMaterialWithFallback');
-    const handler = code('AssetWorkflow', 'Materials', 'McpAutomationBridge_AssetWorkflowMeshMaterials.cpp');
+    const handler = code('AssetWorkflow', 'Materials', 'McpAssetMeshMats.cpp');
     expect(handler).toContain('TEXT("MATERIAL_SLOTS_PARTIAL")');
     expect(handler).toContain('TEXT("MATERIAL_SLOTS_REFUSED")');
     expect(handler).toContain('TEXT("engine content is not saved")');
-    expect(code('AssetWorkflow', 'McpAutomationBridge_AssetWorkflowHandlers.cpp')).toContain('McpMeshMaterials::HandleSetMeshMaterials(');
+    expect(code('AssetWorkflow', 'McpAssetHandlers.cpp')).toContain('McpMeshMaterials::HandleSetMeshMaterials(');
     expect(outputNames('asset.process_asset')).toEqual(expect.arrayContaining(['materialSlots', 'applied', 'refused', 'saved']));
   });
 
   it('mesh details attribute each LOD0 section to the slot its MaterialIndex names', () => {
-    const mesh = code('Environment', 'Inspection', 'McpAutomationBridge_EnvironmentHandlersInspectAssetMesh.cpp');
+    const mesh = code('Environment', 'Inspection', 'McpEnvInspectAssetMesh.cpp');
     expect(mesh).toContain('Slots[Section.MaterialIndex]');
     expect(mesh).toContain('TEXT("slotBoundsAvailable")');
     expect(mesh).toContain('TEXT("triangles")');
@@ -720,7 +792,7 @@ describe('the material slots of a mesh asset', () => {
 });
 
 describe('the main inputs of a material', () => {
-  const inputs = code('MaterialAuthoring', 'McpAutomationBridge_MaterialAuthoringMainInputs.h');
+  const inputs = code('MaterialAuthoring', 'McpMatMainInputs.h');
 
   it('take the names other shading models show for the same pins', () => {
     expect(inputs).toContain('PinName == TEXT("Cloth") || PinName == TEXT("CustomData0")) return TEXT("ClearCoat");');
@@ -730,9 +802,9 @@ describe('the main inputs of a material', () => {
   });
 
   it('list every accepted pin when connect or disconnect does not know the one asked for', () => {
-    const connect = code('MaterialAuthoring', 'Connections', 'McpAutomationBridge_MaterialAuthoringHandlersConnectNodes.cpp');
+    const connect = code('MaterialAuthoring', 'Connections', 'McpMatConnectNodes.cpp');
     expect(connect).toContain('Unknown input on main node: %s. Main inputs: %s."), *InputName, *ListMainMaterialInputs(Material)');
-    const disconnect = code('MaterialAuthoring', 'Connections', 'McpAutomationBridge_MaterialAuthoringHandlersDisconnectNodes.cpp');
+    const disconnect = code('MaterialAuthoring', 'Connections', 'McpMatDisconnectNodes.cpp');
     expect(disconnect).toContain('GetMainMaterialInput(Material, NormalizeMaterialInputName(PinName))');
     expect(disconnect).toContain('*ListMainMaterialInputs(Material)');
   });
@@ -740,13 +812,14 @@ describe('the main inputs of a material', () => {
 
 describe('object and class references in a property bag', () => {
   const objects = readFileSync(
-    join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private', 'Foundation', 'BridgeHelpers', 'Properties', 'McpAutomationBridgeHelpersPropertyApplyObjects.h'),
+    join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'Foundation', 'BridgeHelpers', 'Properties', 'McpPropApplyObjects.h'),
     'utf8',
   ).replace(/\/\*[\s\S]*?\*\//gu, ' ').replace(/\/\/[^\n]*/gu, ' ');
 
   it('null, "" and "None" clear a hard or soft reference (edit_scs ChildActorClass "None" was refused)', () => {
     expect(objects).toContain('ValueField->AsString().Equals(TEXT("None"), ESearchCase::IgnoreCase)');
-    expect(objects).toMatch(/if \(bClearReference\) \{\s*OP->SetObjectPropertyValue_InContainer\(TargetContainer, nullptr\);/u);
+    expect(objects).toMatch(/if \(bClearReference\) \{\s*return Assign\(nullptr\);/u);
+    expect(objects).toMatch(/if \(!MeshOwner\) \{\s*OP->SetObjectPropertyValue_InContainer\(TargetContainer, Value\);/u);
     expect(objects).toMatch(/if \(bClearReference\) \{\s*\*SoftPtr = FSoftObjectPtr\(\);/u);
   });
 
@@ -759,43 +832,43 @@ describe('Nanite bakes and rebuilds', () => {
   it('convert_to_nanite turns Nanite on in the settings the new mesh copies and replies with what the mesh holds', () => {
     // From 5.1 the asset takes NaniteSettings whole and its bEnabled defaults to false, so bEnableNanite alone
     // baked plain meshes while the reply echoed naniteEnabled: true.
-    const conversion = code('Geometry', 'Support', 'McpAutomationBridge_GeometryAssetConversion.cpp');
+    const conversion = code('Geometry', 'Support', 'McpGeometryAssetConversion.cpp');
     expect(conversion).toContain('CreateOptions.NaniteSettings.bEnabled = bNanite;');
     expect(conversion).toContain('Result->SetBoolField(TEXT("naniteEnabled"), bNaniteOn);');
     expect(conversion).toContain('TEXT("NANITE_NOT_ENABLED")');
   });
 
   it('nanite_rebuild_mesh rebuilds and saves on every version, reads the result back, and both routes share it', () => {
-    const nanite = code('AssetWorkflow', 'Optimization', 'McpAutomationBridge_AssetWorkflowNanite.cpp');
+    const nanite = code('AssetWorkflow', 'Optimization', 'McpAssetNanite.cpp');
     expect(nanite).toContain('StaticMesh->Build(true);');
     expect(nanite).toMatch(/if \(!McpSafeAssetSave\(StaticMesh\)\) \{[\s\S]*?TEXT\("SAVE_FAILED"\)/u);
     expect(nanite).toContain('Resp->SetBoolField(TEXT("naniteEnabled"), After.bEnabled);');
     expect(nanite).not.toContain('PositionPrecision = 8');
-    expect(code('Render', 'McpAutomationBridge_RenderHandlers.cpp')).toContain('return HandleNaniteRebuildMesh(RequestId, SubAction, Payload, RequestingSocket);');
+    expect(code('Render', 'McpRenderHandlers.cpp')).toContain('return HandleNaniteRebuildMesh(RequestId, SubAction, Payload, RequestingSocket);');
   });
 });
 
 describe('graph batches, PIE spawns and trigger volumes', () => {
   it('a build_graph pre-check knows the custom events earlier create_node steps make', () => {
     // A batch that created a custom event and then called it was refused with FUNCTION_NOT_FOUND before anything ran.
-    const batch = code('BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersBatch.cpp');
+    const batch = code('BlueprintGraph', 'McpBPGraphBatch.cpp');
     expect(batch).toMatch(/NodeType\.Equals\(TEXT\("CustomEvent"\), ESearchCase::IgnoreCase\)[\s\S]{0,200}?Declared\.Add\(/u);
     // ...and the event exists on the skeleton class by then, as add_event's does, so the call node resolves.
-    const events = code('BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersCustomEvents.cpp');
+    const events = code('BlueprintGraph', 'McpBPGraphCustomEvents.cpp');
     expect(events).toMatch(/EventNode->CustomFunctionName = FName\(\*EventName\);\s*Context\.FinalizeNode\(NodeCreator, EventNode, X, Y\);\s*FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified\(Context\.Blueprint\);/u);
   });
 
   it('a spawned static mesh actor is made movable before its mesh is set, so a spawn during PIE keeps the mesh', () => {
-    const spawn = code('ControlActor', 'McpAutomationBridge_ControlActorSpawn.cpp');
+    const spawn = code('ControlActor', 'McpActorSpawn.cpp');
     expect(spawn.indexOf('MeshComponent->SetMobility(EComponentMobility::Movable);'))
       .toBeLessThan(spawn.indexOf('MeshComponent->SetStaticMesh(ResolvedStaticMesh);'));
   });
 
   it('the placement check leaves trigger and pickup volumes out of what an actor intersects', () => {
     // A pawn standing in a trigger box read as intersecting the trigger's actor.
-    const placement = code('ControlActor', 'McpAutomationBridge_ControlActorPlacementCheck.cpp');
-    expect(placement).toContain('GetCollisionResponseToChannel(Channel) == ECR_Block');
-    expect(placement).toContain('!McpBlocksSolids(A) || !McpBlocksSolids(B)');
+    const shapes = code('ControlActor', 'Placement', 'McpPlacementShapes.cpp');
+    expect(shapes).toContain('GetCollisionResponseToChannel(Channel) == ECR_Block');
+    expect(shapes).toContain('!McpBlocksSolids(A) || !McpBlocksSolids(B)');
   });
 });
 
@@ -803,7 +876,7 @@ describe('receipts of input edits and deletes', () => {
   // map_action saved the mapping context but its receipt listed no change: the context was named only inside nested
   // verification objects, which changes[] never reads.
   it('every Enhanced Input edit names the asset it saved in changedAssets', () => {
-    const mappings = code('Input', 'McpAutomationBridge_InputHandlersMappings.cpp');
+    const mappings = code('Input', 'McpInputMappings.cpp');
     expect(mappings).toContain('const bool bSaved = SaveLoadedAssetThrottled(Context, true);');
     expect(mappings).toContain('SetInputChangedAsset(Result, Context, bSaved);');
     expect(mappings).toContain('SetInputChangedAsset(Result, bChanged ? Context : nullptr, bSaved);');
@@ -811,34 +884,34 @@ describe('receipts of input edits and deletes', () => {
   });
 
   it('a trigger or modifier already there, or an input asset that already exists, is reported as no change', () => {
-    const triggers = code('Input', 'McpAutomationBridge_InputHandlersTriggerModifiers.cpp');
+    const triggers = code('Input', 'McpInputTriggerModifiers.cpp');
     expect(triggers).toContain('SetInputChangedAsset(Result, bAlreadyPresent ? nullptr : InAction, bSaved);');
     expect(triggers).toContain('SetInputChangedAsset(Result, bAlreadyPresent ? nullptr : ModifiedAsset, bSaved);');
-    const creation = code('Input', 'McpAutomationBridge_InputHandlersCreation.cpp');
+    const creation = code('Input', 'McpInputCreation.cpp');
     expect(creation).toContain('SetInputChangedAsset(Result, bChanged ? ExistingAsset : nullptr, bSaved);');
     expect(creation).toContain('bUpgrade, bSaved);');
     // Enabling a context changes the running game, not the asset.
-    expect(code('Input', 'McpAutomationBridge_InputHandlersRuntimeQueries.cpp')).toMatch(/AddVerification\(Result, Context\);\s*McpHandlerUtils::MarkNoAssetsChanged\(Result\);/u);
+    expect(code('Input', 'McpInputRuntimeQueries.cpp')).toMatch(/AddVerification\(Result, Context\);\s*McpHandlerUtils::MarkNoAssetsChanged\(Result\);/u);
   });
 
   it('an asset delete and an environment delete name what they removed', () => {
     // asset.delete of an input action answered deletedCount 1 with an empty changes[].
-    const mutation = code('AssetWorkflow', 'Operations', 'McpAutomationBridge_AssetWorkflowAssetMutation.cpp');
+    const mutation = code('AssetWorkflow', 'Operations', 'McpAssetAssetMutation.cpp');
     expect(mutation).toContain('DeletedPaths.Add(FPackageName::ObjectPathToPackageName(SafePath));');
     expect(mutation).toContain('Resp->SetArrayField(TEXT("deleted"), DeletedArray);');
-    expect(code('Environment', 'McpAutomationBridge_EnvironmentHandlersBuildDeletion.cpp'))
+    expect(code('Environment', 'McpEnvBuildDeletion.cpp'))
       .toContain('McpAddStringArrayField(Context.Resp, TEXT("deleted"), DeletedTargets);');
   });
 
   // A folder move and a legacy input mapping did their work while their receipts listed no change: the
   // reply named the folders and the ini only in fields changes[] never reads.
   it('a folder move names both folders in modifiedPaths, once something moved', () => {
-    expect(code('AssetWorkflow', 'Rename', 'McpAutomationBridge_AssetFolderMove.cpp')).toMatch(
+    expect(code('AssetWorkflow', 'Rename', 'McpAssetFolderMove.cpp')).toMatch(
       /if \(bMoved\)\s*\{[\s\S]{0,200}?Folders\.Add\(MakeShared<FJsonValueString>\(SourceFolder\)\);\s*Folders\.Add\(MakeShared<FJsonValueString>\(DestinationFolder\)\);\s*Result->SetArrayField\(TEXT\("modifiedPaths"\), Folders\);/u);
   });
 
   it('a legacy input mapping names DefaultInput.ini when it changed it, not for a mapping already there', () => {
-    expect(code('Input', 'McpAutomationBridge_InputHandlersLegacyMappings.cpp')).toMatch(
+    expect(code('Input', 'McpInputLegacyMappings.cpp')).toMatch(
       /if \(bUpdatedDefaultConfig && \(bRemove \|\| BeforeCount == 0\)\)\s*\{[\s\S]{0,200}?Paths\.Add\(MakeShared<FJsonValueString>\(TEXT\("Config\/DefaultInput\.ini"\)\)\);\s*Result->SetArrayField\(TEXT\("modifiedPaths"\), Paths\);/u);
   });
 });
@@ -847,7 +920,7 @@ describe('widget input on a minimized editor', () => {
   // A minimized editor paints no widget, so a widget graph's Delay never fires: a timed widget stayed up and
   // widget_list kept listing it with no word on why.
   it('widget_list and widget_click warn while the window showing Play In Editor is minimized', () => {
-    const source = code('ControlEditor', 'McpAutomationBridge_ControlEditorWidgetInput.cpp');
+    const source = code('ControlEditor', 'McpEditorWidgetInput.cpp');
     expect(source).toMatch(/if \(Viewport\) \{\s*Window = Viewport->GetWindow\(\);\s*\}\s*if \(Window\.IsValid\(\) && Window->IsWindowMinimized\(\)\) \{/u);
     expect(source).toContain('Resp->SetArrayField(TEXT("warnings"), Warnings);');
     expect(source).toMatch(/FString &Message\) \{\s*WarnWhenPieWindowMinimizedForMcp\(Resp\);\s*if \(InputType == TEXT\("widget_list"\)\)/u);
@@ -858,11 +931,11 @@ describe('foliage edit receipts', () => {
   // Painting foliage answered changes: []: the reply named the foliage actor only as
   // foliageActorPath, which a read (get_foliage_instances) reports too.
   it('a foliage paint, add or remove names the foliage actor it changed', () => {
-    expect(code('Foliage', 'McpAutomationBridge_FoliageHandlersPrivate.h')).toContain('Resp->SetArrayField(TEXT("affectedActors"), Changed);');
-    expect(code('Foliage', 'McpAutomationBridge_FoliageHandlersPaint.cpp')).toContain('McpFoliageHandlers::SetFoliageActorChanged(Resp, IFA);');
-    expect(code('Foliage', 'McpAutomationBridge_FoliageHandlersInstances.cpp')).toContain('McpFoliageHandlers::SetFoliageActorChanged(Resp, IFA);');
-    expect(code('Foliage', 'McpAutomationBridge_FoliageHandlersQueries.cpp')).toMatch(/if \(RemovedCount > 0\) \{\s*McpFoliageHandlers::SetFoliageActorChanged\(Resp, IFA\);\s*\}/u);
-    expect(code('Foliage', 'McpAutomationBridge_FoliageHandlersGetInstances.cpp')).not.toContain('SetFoliageActorChanged');
+    expect(code('Foliage', 'McpFoliagePrivate.h')).toContain('Resp->SetArrayField(TEXT("affectedActors"), Changed);');
+    expect(code('Foliage', 'McpFoliagePaint.cpp')).toContain('McpFoliageHandlers::SetFoliageActorChanged(Resp, IFA);');
+    expect(code('Foliage', 'McpFoliageInsts.cpp')).toContain('McpFoliageHandlers::SetFoliageActorChanged(Resp, IFA);');
+    expect(code('Foliage', 'McpFoliageQueries.cpp')).toMatch(/if \(RemovedCount > 0\) \{\s*McpFoliageHandlers::SetFoliageActorChanged\(Resp, IFA\);\s*\}/u);
+    expect(code('Foliage', 'McpFoliageGetInsts.cpp')).not.toContain('SetFoliageActorChanged');
   });
 });
 
@@ -870,9 +943,9 @@ describe('Blueprint create with an unresolved parent class', () => {
   // A camera shake asked for under the wrong module (/Script/GameplayCameras.LegacyCameraShake) came out an Actor
   // Blueprint answering "Blueprint created", with only a list of shake properties that did not exist on it.
   it('a create whose named parent class resolves to nothing is refused and names classes with that name', () => {
-    const parents = code('BlueprintCreation', 'McpAutomationBridge_BlueprintCreationHandlersParentClasses.cpp');
+    const parents = code('BlueprintCreation', 'McpBPCreateParentClasses.cpp');
     expect(parents).toMatch(/if \(!ResolvedParent && !Context\.ParentClassSpec\.IsEmpty\(\)\) \{\s*const FString Candidates = ClassesNamedLikeForMcp\(Context\.ParentClassSpec\);[\s\S]{0,600}?return nullptr;\s*\}/u);
-    expect(code('BlueprintCreation', 'McpAutomationBridge_BlueprintCreationHandlersAssets.cpp')).toMatch(
+    expect(code('BlueprintCreation', 'McpBPCreateAssets.cpp')).toMatch(
       /UFactory \*Factory = CreateBlueprintFactory\(Context, ParentError\);\s*if \(!Factory\) \{[\s\S]{0,200}?TEXT\("CLASS_NOT_FOUND"\)\);\s*return true;\s*\}/u);
   });
 });
@@ -881,7 +954,7 @@ describe('mesh view of a placed actor', () => {
   // inspect_object objectKind mesh declares actorName, yet refused a placed StaticMeshActor as "not a static or
   // skeletal mesh"; reading a placed prop's mesh took a second lookup for its path.
   it('the mesh view follows a placed actor or component to the one mesh it draws, and names each when there are several', () => {
-    const source = code('Environment', 'Inspection', 'McpAutomationBridge_EnvironmentHandlersInspectObject.cpp');
+    const source = code('Environment', 'Inspection', 'McpEnvInspectObject.cpp');
     expect(source).toContain('UObject *Mesh = McpMeshDrawnBy(TargetObject, Several);');
     expect(source).toMatch(/if \(!Several\.IsEmpty\(\)\)\s*\{[\s\S]{0,300}?TEXT\("AMBIGUOUS_TARGET"\)\);\s*return true;\s*\}/u);
     expect(source).toContain('Resp->SetStringField(TEXT("meshOf"), MeshOf);');
@@ -892,9 +965,26 @@ describe('mesh view of a placed actor', () => {
 describe('multi-property reads of dotted paths', () => {
   // get_property with propertyNames TitleText.Text and SubtitleText.Text answered two rows both named "Text".
   it('a multi-property read echoes each dotted path as asked under propertyPath, keeping the resolved propertyName', () => {
-    const source = code('Property', 'McpAutomationBridge_PropertyHandlersObjectGet.cpp');
+    const source = code('Property', 'McpPropObjectGet.cpp');
     expect(source).toContain('Row->SetStringField(TEXT("propertyName"), Resolved);');
     expect(source).toMatch(/if \(!Wanted\.Equals\(Resolved, ESearchCase::CaseSensitive\)\) \{\s*Row->SetStringField\(TEXT\("propertyPath"\), Wanted\);\s*\}/u);
+  });
+});
+
+describe('one read on several objects', () => {
+  // Eight platforms' state took eight get_property calls, or a list filtered by a shared name.
+  it('objectPaths runs the read on each object under a captured id and answers every one, misses included', () => {
+    const source = code('Property', 'McpPropObjectGet.cpp');
+    expect(source).toContain('for (const TCHAR *Field : {TEXT("objectPaths"), TEXT("actorName"), TEXT("name"), TEXT("blueprintPath")}) One->RemoveField(Field);');
+    expect(source).toContain('FString::Printf(TEXT("%s#target%d"), *RequestId, Targets.Num())');
+    expect(source).toContain('{TEXT("propertyName"), TEXT("value"), TEXT("properties"), TEXT("missingProperties")}');
+    expect(source).toMatch(/if \(Reply\.bSuccess\) \+\+Read;\s*else Row->SetStringField\(TEXT\("error"\), Reply\.Message\);/u);
+    expect(source).toContain('Data->SetArrayField(TEXT("targets"), Targets);');
+  });
+  // A missing object answered "Unable to find object" once per property name, each under missingProperties.
+  it('an object that is not there is named once, before any property is read', () => {
+    const source = code('Property', 'McpPropObjectGet.cpp');
+    expect(source).toMatch(/if \(!McpHandlerUtils::ResolveObjectFromPath\(Path\)\) \{\s*Row->SetStringField\(TEXT\("error"\), McpHandlerUtils::DescribeObjectNotFound\(Path\)\);\s*Targets\.Add\(MakeShared<FJsonValueObject>\(Row\)\);\s*continue;\s*\}/u);
   });
 });
 
@@ -902,8 +992,8 @@ describe('list reads struct members of an actor', () => {
   // list propertyNames reported Settings.BloomIntensity "missing" on a post process volume while get_property read it:
   // list only followed Component.Property, never a struct member of the actor itself.
   it('list falls back to the get_property resolver for struct members and deeper paths', () => {
-    const source = code('ControlActor', 'List', 'McpAutomationBridge_ControlActorList.cpp');
-    expect(source).toMatch(/if \(FProperty \*Nested = McpResolvePropertyPath\(Actor, Wanted, Container, Resolved, Error\)\) \{\s*MCP_PROPERTY_EXPORT_TEXT\(Nested, Value, Nested->ContainerPtrToValuePtr<void>\(Container\), nullptr, nullptr, PPF_None\);\s*Properties->SetStringField\(Wanted, Value\);/u);
+    const source = code('ControlActor', 'List', 'McpActorList.cpp');
+    expect(source).toMatch(/if \(FProperty \*Nested = McpResolvePropertyPath\(Actor, Wanted, Container, Resolved, Error\)\) \{\s*Properties->SetField\(Wanted, McpPropertyReflection::ExportPropertyToJsonValueOrText\(Container, Nested\)\);/u);
   });
 });
 
@@ -911,8 +1001,8 @@ describe('multi-property writes on class defaults', () => {
   // set_property properties {CharMoveComp.bCanWalkOffLedges, CharMoveComp.PerchRadiusThreshold} on a Character Blueprint recompiled and
   // saved the Blueprint while its receipt listed no change: the batch kept only actor fields from each write.
   it('a multi-property write names the asset it saved and how many placed copies took the new default', () => {
-    const source = code('Property', 'McpAutomationBridge_PropertyHandlersObjectSet.cpp');
-    expect(source).toContain('TEXT("assetPath"), TEXT("materialRebuilt")}) {');
+    const source = code('Property', 'McpPropObjectSetBatch.cpp');
+    expect(source).toContain('TEXT("assetPath"), TEXT("materialRebuilt"), TEXT("saved"), TEXT("saveSkippedReason")}) {');
     expect(source).toContain('if (InstancesUpdated >= 0.0) Data->SetNumberField(TEXT("instancesUpdated"), InstancesUpdated);');
   });
 });
@@ -921,14 +1011,14 @@ describe('removing a widget subtree', () => {
   // remove_widget RootCanvas moved only the canvas out of the WidgetTree: its descendants kept their names (and the
   // class kept their variables), so adding the same names back was refused with a bare "Name is already in use."
   it('removing a widget takes its whole subtree out of the tree and refreshes the class', () => {
-    const source = code('WidgetAuthoring', 'Support', 'McpAutomationBridge_WidgetAuthoringManipulation.cpp');
+    const source = code('WidgetAuthoring', 'Support', 'McpWidgetManipulation.cpp');
     expect(source).toMatch(/TArray<UWidget\*> Removed\{TargetWidget\};\s*UWidgetTree::GetChildWidgets\(TargetWidget, Removed\);/u);
     expect(source).toMatch(/for \(UWidget\* Widget : Removed\)\s*\{\s*Widget->Rename\(nullptr, GetTransientPackage\(\), REN_DontCreateRedirectors \| REN_DoNotDirty\);\s*Widget->MarkAsGarbage\(\);\s*\}/u);
     expect(source).toMatch(/MarkWidgetBlueprintModifiedAndSave\(WidgetBP\);\s*WidgetAuthoringHelpers::RefreshWidgetBlueprintClass\(WidgetBP\);\s*ResultJson->SetBoolField\(TEXT\("success"\), true\);\s*ResultJson->SetStringField\(TEXT\("widgetPath"\), WidgetPath\);\s*ResultJson->SetStringField\(TEXT\("removedWidget"\)/u);
   });
 
   it('a name the Blueprint refuses for a new widget is named in the refusal', () => {
-    const source = code('WidgetAuthoring', 'Support', 'McpAutomationBridge_WidgetAuthoringValidation.cpp');
+    const source = code('WidgetAuthoring', 'Support', 'McpWidgetValidate.cpp');
     expect(source).toMatch(/FString::Printf\(TEXT\("'%s': %s"\), \*Name\.ToString\(\), \*INameValidatorInterface::GetErrorString\(Name\.ToString\(\), Result\)\);/u);
   });
 });
@@ -937,10 +1027,10 @@ describe('simulated keys and focused PIE widgets', () => {
   // simulate_input key_tap Enter in PIE went straight to the viewport client, so a focused menu button never saw it
   // (handledByPIE false, handledBySlate false) while a real Enter pressed it.
   it('a key goes through the Slate focus path while a widget inside the PIE viewport holds focus', () => {
-    const widgetInput = code('ControlEditor', 'McpAutomationBridge_ControlEditorWidgetInput.cpp');
+    const widgetInput = code('ControlEditor', 'McpEditorWidgetInput.cpp');
     expect(widgetInput).toMatch(/if \(!ViewportWidget\.IsValid\(\) \|\| !SlateApp\.HasUserFocusedDescendants\(ViewportWidget\.ToSharedRef\(\), 0\)\) \{\s*return false;\s*\}/u);
     expect(widgetInput).toContain('bOutHandled = InputEvent == IE_Released ? SlateApp.ProcessKeyUpEvent(KeyEvent) : SlateApp.ProcessKeyDownEvent(KeyEvent);');
-    const routing = code('ControlEditor', 'McpAutomationBridge_ControlEditorInputRouting.cpp');
+    const routing = code('ControlEditor', 'McpEditorInputRouting.cpp');
     expect(routing).toMatch(/bRoutedToPIE = RouteKeyToFocusedPieWidgetForMcp\(InputKey, InputEvent, bHandledBySlate\) \|\|\s*RouteKeyToPIEForMcp\(InputKey, InputEvent, bHandledByPIE\);/u);
   });
 });
@@ -950,28 +1040,42 @@ describe('Blueprints that depend on a changed Widget Blueprint', () => {
   // with "Attempted to access missing property 'none'" while it read up to date: the engine only relinks a
   // dependent by name, and the removal left it pointing at nothing.
   it('a widget class refresh compiles every Blueprint that depends on it in full', () => {
-    const source = code('WidgetAuthoring', 'Support', 'McpAutomationBridge_WidgetAuthoringLoading.cpp');
+    const source = code('WidgetAuthoring', 'Support', 'McpWidgetLoading.cpp');
     expect(source).toMatch(/const bool bCompiled = McpSafeCompileBlueprint\(WidgetBP\);\s*TArray<UBlueprint\*> Dependents;\s*FBlueprintEditorUtils::GetDependentBlueprints\(WidgetBP, Dependents\);\s*for \(UBlueprint\* Dependent : Dependents\)\s*\{\s*McpSafeCompileBlueprint\(Dependent\);\s*\}\s*return bCompiled;/u);
   });
 });
 
 describe('connect_pins on pins added on demand', () => {
+  // "FromNode 'K2Node_CallFunction_3' pins: execute, ..., Key, . ToNode ...": both nodes, hidden pins, a dangling comma.
+  it('PIN_NOT_FOUND names the pin that missed and joins the visible pins of its node', () => {
+    const pins = code('BlueprintGraph', 'McpBPGraphPinMutations.cpp');
+    expect(pins).toContain('TEXT("No %s pin \'%s\' on \'%s\'. Its pins: %s.")');
+    expect(pins).toContain('if (Pin && !Pin->bHidden)');
+    expect(pins, 'no list with a dangling separator, no log copy').not.toContain('FromPinsList');
+  });
+
   // A build_graph step connecting a Sequence's then_2 stopped the batch with PIN_NOT_FOUND ("pins: execute, then_0,
   // then_1"): the editor adds that pin on demand, the tool never did.
   it('connect_pins grows a node that adds pins on demand to the pin it names, and takes back pins added in vain', () => {
-    const growth = code('BlueprintGraph', 'PinMutations', 'McpAutomationBridge_BlueprintGraphPinGrowth.cpp');
+    const growth = code('BlueprintGraph', 'PinMutations', 'McpBPGraphPinGrowth.cpp');
     expect(growth).toMatch(/IK2Node_AddPinInterface\* Growable = Cast<IK2Node_AddPinInterface>\(Node\)/u);
     expect(growth).toMatch(/Growable->AddInputPin\(\);\s*Pin = Context\.FindPin\(Node, PinName\);/u);
     expect(growth).toMatch(/if \(!Pin && !Before\.Contains\(Extra\)\) Growable->RemoveInputPin\(Extra\);/u);
-    const source = code('BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersPinMutations.cpp');
+    const source = code('BlueprintGraph', 'McpBPGraphPinMutations.cpp');
     expect(source).toContain('UEdGraphPin* FromPin = FindOrGrowPin(Context, FromNode, FromPinName);');
     expect(source).toContain('UEdGraphPin* ToPin = FindOrGrowPin(Context, ToNode, ToPinName);');
+  });
+
+  // A batch link the engine made through an int-to-float conversion node answered connected false, as if it failed.
+  it('counts a link through the inserted conversion node as connected', () => {
+    const source = code('BlueprintGraph', 'McpBPGraphPinMutations.cpp');
+    expect(source).toContain('Result->SetBoolField(TEXT("connected"), FromPin->LinkedTo.Contains(ToPin) || (LinkedToNode(FromPin) && LinkedToNode(ToPin)));');
   });
 
   // nodeType GetAllActorsOfClass, listed by create_node, answered NODE_TYPE_NOT_FOUND: it was aliased to a K2Node
   // class Unreal does not have, while the node is a plain call of the GameplayStatics function.
   it('GetAllActorsOfClass and GetActorOfClass create function calls', () => {
-    const catalog = code('BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersNodeCatalog.cpp');
+    const catalog = code('BlueprintGraph', 'McpBPGraphNodeCatalog.cpp');
     expect(catalog).toMatch(/\{TEXT\("GetAllActorsOfClass"\),\s*MakeTuple\(TEXT\("UGameplayStatics"\), TEXT\("GetAllActorsOfClass"\)\)\}/u);
     expect(catalog).toMatch(/\{TEXT\("GetActorOfClass"\),\s*MakeTuple\(TEXT\("UGameplayStatics"\), TEXT\("GetActorOfClass"\)\)\}/u);
     expect(catalog).not.toContain('K2Node_GetAllActorsOfClass');
@@ -979,7 +1083,7 @@ describe('connect_pins on pins added on demand', () => {
 
   // A Switch on Int made over MCP had only its Default pin: a link to case 17 answered PIN_NOT_FOUND.
   it('a Switch on Int grows to the case a link names, and takes back cases added in vain', () => {
-    const growth = code('BlueprintGraph', 'PinMutations', 'McpAutomationBridge_BlueprintGraphPinGrowth.cpp');
+    const growth = code('BlueprintGraph', 'PinMutations', 'McpBPGraphPinGrowth.cpp');
     expect(growth).toMatch(/Switch->AddPinToSwitchNode\(\);\s*Pin = Context\.FindPin\(Node, PinName\);/u);
     expect(growth).toMatch(/if \(!Pin && !Before\.Contains\(Extra\)\) Switch->RemovePinFromSwitchNode\(Extra\);/u);
   });
@@ -989,7 +1093,7 @@ describe('a spawnable added from a class', () => {
   // add_spawnable stored the class default object as the template; a recompile of the Blueprint replaced it and
   // the binding spawned nothing ("does not have a valid object template").
   it('gets a template the sequence owns', () => {
-    const source = code('Sequence', 'McpAutomationBridge_SequenceHandlersSpawnables.cpp');
+    const source = code('Sequence', 'McpSeqSpawnables.cpp');
     expect(source).toContain('static_cast<UMovieSceneSequence *>(LevelSeq)->CreateSpawnable(ResolvedClass)');
     expect(source).not.toContain('GetDefaultObject()');
   });
@@ -998,31 +1102,31 @@ describe('a spawnable added from a class', () => {
 describe('sequence duplicates and the render queue', () => {
   // A duplicated sequence stayed in memory only, while a created one was saved: an editor exit lost the copies.
   it('a duplicated sequence is saved like a created one', () => {
-    const source = code('Sequence', 'McpAutomationBridge_SequenceHandlersAssetLibrary.cpp');
+    const source = code('Sequence', 'McpSeqAssetLibrary.cpp');
     expect(source).toMatch(/if \(DuplicatedSeq\) \{[^}]*McpSafeAssetSave\(DuplicatedSeq\);/u);
   });
 
   // A render whose game loaded another level hung past its deadline and kept the queue busy until the editor
   // closed: once the cancel wait runs out, its Play In Editor session is ended.
   it('a render still running after the cancel wait has its Play In Editor session ended', () => {
-    const source = code('Sequence', 'MovieRender', 'McpAutomationBridge_SequenceMovieRenderCompletion.cpp');
+    const source = code('Sequence', 'MovieRender', 'McpSeqMRQCompletion.cpp');
     expect(source).toMatch(/State->bCancellationDeadlineExpired && Cast<UMoviePipelinePIEExecutor>\(Executor\) &&\s*GEditor && GEditor->PlayWorld\)\s*GEditor->RequestEndPlayMap\(\);/u);
   });
 
   // The queue keeps every job (a finished one renders again with the next unrestricted start) and refuses
   // new ones past its limit; nothing could take a job out, so a long session hit the limit for good.
   it('render jobs can be removed, one or all, but not mid-render', () => {
-    const source = code('Sequence', 'MovieRender', 'McpAutomationBridge_SequenceMovieRenderJobCreation.cpp');
+    const source = code('Sequence', 'MovieRender', 'McpSeqMRQJobCreation.cpp');
     expect(source).toContain('Queue->DeleteAllJobs();');
     expect(source).toContain('Queue->DeleteJob(Job);');
     expect(source).toMatch(/QueueSubsystem->GetActiveExecutor\(\) \|\| QueueSubsystem->IsRendering\(\)\)\s*return SendError/u);
-    const routing = code('Sequence', 'MovieRender', 'McpAutomationBridge_SequenceMovieRenderRouting.cpp');
+    const routing = code('Sequence', 'MovieRender', 'McpSeqMRQRouting.cpp');
     expect(routing).toContain('{TEXT("remove_render_job"), &HandleRemoveRenderJob}');
   });
 
   // "MRQ render pass configured." named neither the pass nor the job, so a caller could not tell the ui pass landed.
   it('add_render_pass names the passes it added and the job', () => {
-    const source = code('Sequence', 'MovieRender', 'McpAutomationBridge_SequenceMovieRenderPasses.cpp');
+    const source = code('Sequence', 'MovieRender', 'McpSeqMRQPasses.cpp');
     expect(source).toContain('TEXT("Render pass %s added to %s."),');
     expect(source).toContain('*FString::Join(Passes, TEXT(", ")), *Job->JobName)');
   });
@@ -1030,7 +1134,7 @@ describe('sequence duplicates and the render queue', () => {
   // create took path as a folder only, while every other sequence action reads it as the sequence's own path: a
   // full path with no name answered "sequence_create requires name".
   it('create reads a path that is no folder as the new sequence itself', () => {
-    const source = code('Sequence', 'McpAutomationBridge_SequenceHandlersAssetCreation.cpp');
+    const source = code('Sequence', 'McpSeqAssetCreation.cpp');
     expect(source).toMatch(/if \(!Probe\.IsEmpty\(\) && !DoesAssetDirectoryExistOnDisk\(Probe\)\) \{\s*Name = FPackageName::GetShortName\(Probe\);\s*Folder = FPackageName::GetLongPackagePath\(Probe\);/u);
     expect(source.indexOf('DoesAssetDirectoryExistOnDisk(Probe)')).toBeLessThan(source.indexOf('sequence_create requires name'));
   });
@@ -1040,7 +1144,7 @@ describe('tapped keys while the game is paused', () => {
   // key_tap Enter reached a focused menu button that never clicked: the release waited on game time, which a pause
   // menu stops, so the key stayed down for the 600 s grace.
   it('a tapped key is released on wall time while the game is paused', () => {
-    const source = code('ControlEditor', 'McpAutomationBridge_ControlEditorInput.cpp');
+    const source = code('ControlEditor', 'McpEditorInput.cpp');
     expect(source).toContain('const bool bGameClock = bGameTime && !bWorldGone && !Live->IsPaused();');
     expect(source).toContain('(bGameClock ? Live->GetTimeSeconds() < EndGameTime : FPlatformTime::Seconds() < EndHoldWall)');
   });
@@ -1051,16 +1155,16 @@ describe('actors moved from code', () => {
   // raycast_world missed it there: in the editor world a body moved from code kept its collision queries on the old
   // spot, so only where the old and new footprints overlapped did a trace hit.
   it('a move made from code ends as the editor ends its own moves, with its bodies rebuilt where it stands', () => {
-    const helper = code('..', 'Foundation', 'BridgeHelpers', 'Actors', 'McpAutomationBridgeHelpersActorMove.h');
+    const helper = code('..', 'Foundation', 'BridgeHelpers', 'Actors', 'McpActorMove.h');
     expect(helper).toMatch(/if \(!World \|\| World->IsGameWorld\(\)\)\s*return;\s*Actor->PostEditMove\(true\);/u);
     expect(helper).toMatch(/if \(Primitive->IsPhysicsStateCreated\(\)\)\s*Primitive->RecreatePhysicsState\(\);/u);
-    expect(code('ControlActor', 'McpAutomationBridge_ControlActorTransform.cpp'))
+    expect(code('ControlActor', 'McpActorTransform.cpp'))
       .toMatch(/Found->SetActorScale3D\(Scale\);\s*McpFinishEditorMove\(Found\);/u);
-    expect(code('ControlActor', 'McpAutomationBridge_ControlActorSnapshots.cpp'))
+    expect(code('ControlActor', 'McpActorSnapshots.cpp'))
       .toMatch(/Found->SetActorTransform\(SavedTransform\);\s*McpFinishEditorMove\(Found\);/u);
-    expect(code('ControlActor', 'Placement', 'McpAutomationBridge_CoplanarFix.cpp'))
+    expect(code('ControlActor', 'Placement', 'McpCoplanarFix.cpp'))
       .toMatch(/ETeleportType::TeleportPhysics\);\s*McpFinishEditorMove\(Actor\);/u);
-    const property = code('Property', 'McpAutomationBridge_PropertyHandlersActorAccess.cpp');
+    const property = code('Property', 'McpPropActorAccess.cpp');
     expect(property).toMatch(/Actor->SetActorLocation\(NewLoc\);\s*McpFinishEditorMove\(Actor\);/u);
     expect(property).toMatch(/Actor->SetActorRotation\(NewRot\);\s*McpFinishEditorMove\(Actor\);/u);
     expect(property).toMatch(/Actor->SetActorScale3D\(NewScale\);\s*McpFinishEditorMove\(Actor\);/u);
@@ -1072,7 +1176,7 @@ describe('material and widget authoring', () => {
   // pin 'RGB' not found": a Custom source only matched its extra outputs by name, never the default output's
   // aliases or channel letters, which every other node takes.
   it('a Custom node source resolves names, aliases and channel letters like any other node', () => {
-    const source = code('MaterialAuthoring', 'Connections', 'McpAutomationBridge_MaterialAuthoringHandlersConnectNodes.cpp');
+    const source = code('MaterialAuthoring', 'Connections', 'McpMatConnectNodes.cpp');
     expect(source).not.toContain('CustomSource->AdditionalOutputs');
     expect(source).toMatch(/if \(SourceOutputIndex == INDEX_NONE && Outputs\.Num\(\) > 0 && ParseChannelMask\(SourcePin, Channels\)\)/u);
   });
@@ -1080,11 +1184,11 @@ describe('material and widget authoring', () => {
   // add_widget_tree took a texture but no material, so a panel drawn by a UI material needed a second call to set
   // its brush by reflection.
   it('a widget tree node takes a material as an Image or Border brush', () => {
-    const tree = code('WidgetAuthoring', 'Templates', 'McpAutomationBridge_WidgetAuthoringTreeBuild.cpp');
+    const tree = code('WidgetAuthoring', 'Templates', 'McpWidgetTreeBuild.cpp');
     expect(tree).toContain('TEXT("shadowColor"), TEXT("material")};');
     expect(tree).toMatch(/if \(!Material\.IsEmpty\(\) && Type != TEXT\("Image"\) && Type != TEXT\("Border"\)\)/u);
     expect(tree).toContain('if (!Material.IsEmpty() && !McpLoadSpecMaterial(Material))');
-    const props = code('WidgetAuthoring', 'Templates', 'McpAutomationBridge_WidgetAuthoringSpecProps.cpp');
+    const props = code('WidgetAuthoring', 'Templates', 'McpWidgetSpecProps.cpp');
     expect(props).toMatch(/Brush\.SetResourceObject\(Material\);\s*Brush\.DrawAs = ESlateBrushDrawType::Image;/u);
     expect(props).toContain('if (UBorder* Border = Cast<UBorder>(Widget)) { Border->SetBrush(Brush); Border->SetBrushColor(FLinearColor::White); }');
     expect(props).toContain('if (UImage* MaterialImage = Cast<UImage>(Widget)) { MaterialImage->SetBrush(Brush); }');
@@ -1093,21 +1197,21 @@ describe('material and widget authoring', () => {
   // create_material with materialDomain "UserInterface" (the Details panel says "User Interface") was refused,
   // and the refused call had already made the material, so the retry with "UI" hit "already exists".
   it('create_material checks its enum settings before it makes anything, and takes the Details panel labels', () => {
-    const create = code('MaterialAuthoring', 'Creation', 'McpAutomationBridge_MaterialAuthoringHandlersCreateMaterial.cpp');
+    const create = code('MaterialAuthoring', 'Creation', 'McpMatCreateMat.cpp');
     const check = create.indexOf('if (!ApplyMaterialEnumFields(nullptr, Payload, EnumError))');
     expect(check).toBeGreaterThan(-1);
     expect(check).toBeLessThan(create.indexOf('CreatePackage('));
     expect(check).toBeLessThan(create.indexOf('PrepareNewMaterialAsset('));
-    const setters = code('MaterialAuthoring', 'Properties', 'McpAutomationBridge_MaterialAuthoringHandlersSetMaterialEnum.cpp');
+    const setters = code('MaterialAuthoring', 'Properties', 'McpMatSetMatEnum.cpp');
     expect(setters.match(/if \(Material\) Material->/gu)).toHaveLength(3);
-    const parse = code('MaterialAuthoring', 'Properties', 'McpAutomationBridge_MaterialAuthoringEnumParsing.cpp');
+    const parse = code('MaterialAuthoring', 'Properties', 'McpMatEnumParsing.cpp');
     expect(parse).toContain('Enum->GetDisplayNameTextByIndex(Index).ToString().Replace(TEXT(" "), TEXT(""))');
     expect(parse).toContain('Wanted.Equals(Label, ESearchCase::IgnoreCase)');
   });
 
   // A widget animation took one call per key.
   it('add_animation_keyframe writes a keys batch, checking every key before writing any', () => {
-    const handler = code('WidgetAuthoring', 'Animation', 'McpAutomationBridge_WidgetAuthoringAnimationKeyframe.cpp');
+    const handler = code('WidgetAuthoring', 'Animation', 'McpWidgetAnimKeyframe.cpp');
     expect(handler).toContain('Payload->TryGetArrayField(TEXT("keys"), KeyList)');
     expect(handler).toContain('Merged->RemoveField(TEXT("keys"));');
     expect(handler).toContain('FString(Pair.Key.Len(), *Pair.Key)');
@@ -1115,21 +1219,21 @@ describe('material and widget authoring', () => {
     expect(checked).toBeGreaterThan(-1);
     expect(checked).toBeLessThan(handler.indexOf('McpAuthorWidgetAnimationKey('));
     expect(handler).toContain('ResultJson->SetNumberField(TEXT("keysAdded"), Keys.Num());');
-    const keys = code('WidgetAuthoring', 'Support', 'McpAutomationBridge_WidgetAuthoringAnimationKeys.h');
+    const keys = code('WidgetAuthoring', 'Support', 'McpWidgetAnimKeys.h');
     expect(keys).toContain('FString KeyValueError(const FString& Kind, const FString& TrackType, const TSharedPtr<FJsonValue>& Value);');
   });
 
   // Wiring a new animation into PlayAnimation stopped with "Variable not found": the animation was only a property
   // of the generated class after the next compile.
   it('create_widget_animation compiles the Widget Blueprint so a graph can read the animation at once', () => {
-    const core = code('WidgetAuthoring', 'Animation', 'McpAutomationBridge_WidgetAuthoringAnimationCore.cpp');
+    const core = code('WidgetAuthoring', 'Animation', 'McpWidgetAnimCore.cpp');
     expect(core).toMatch(/RegisterAnimationGuid\(WidgetBP, NewAnim\);\s*FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified\(WidgetBP\);\s*RefreshWidgetBlueprintClass\(WidgetBP\);\s*McpSafeAssetSave\(WidgetBP\);/u);
   });
 
   // Re-keying a frame answered "4 keys in the track" for a 3-key track: the new key went in beside the old one on
   // the same frame.
   it('a widget animation key on an occupied frame replaces the key there', () => {
-    const keys = code('WidgetAuthoring', 'Support', 'McpAutomationBridge_WidgetAuthoringAnimationKeysInternal.h');
+    const keys = code('WidgetAuthoring', 'Support', 'McpWidgetAnimKeysInternal.h');
     expect(keys).toMatch(/for \(int32 Existing = Channel->GetData\(\)\.FindKey\(Frame\); Existing != INDEX_NONE; Existing = Channel->GetData\(\)\.FindKey\(Frame\)\)\s*\{\s*Channel->GetData\(\)\.RemoveKey\(Existing\);\s*\}\s*const float FloatValue/u);
   });
 });
@@ -1138,10 +1242,101 @@ describe('Make and Break nodes of structs with native functions', () => {
   // Breaking a velocity with create_node BreakStruct (structPath Vector) compiled with "The structure cannot be
   // broken using generic 'break' node Break Vector": the editor breaks such a struct with its native function.
   it('a Make or Break of a struct with a native make or break builds that function node', () => {
-    const dynamic = code('BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersNodeCreationDynamic.cpp');
+    const dynamic = code('BlueprintGraph', 'McpBPGraphNodeCreationDynamic.cpp');
     expect(dynamic).toContain('NodeClass->IsChildOf(UK2Node_MakeStruct::StaticClass()) ? TEXT("HasNativeMake") : TEXT("HasNativeBreak")');
     expect(dynamic).toMatch(/FindObject<UFunction>\(nullptr, \*Native\)\)\s*\{\s*FGraphNodeCreator<UK2Node_CallFunction> NativeCreator\(\*Context\.TargetGraph\);/u);
     expect(dynamic.indexOf('HasNativeBreak')).toBeLessThan(dynamic.indexOf('NewObject<UEdGraphNode>(Context.TargetGraph, NodeClass)'));
+  });
+});
+
+describe('opening a level answers once the level has settled', () => {
+  // A screenshot right after open_level showed placeholder textures and editor icons: the reply came the moment the
+  // load returned, and the load had switched the viewport's game view off.
+  it('both load paths reply through the settle wait and keep game view', () => {
+    const open = code('ControlEditor', 'McpEditorLevel.cpp');
+    expect(open).toContain('McpReplyWhenLevelSettles(WeakThis, Socket, RequestId, TEXT("Level opened"), Resp, bWasGameView);');
+    expect(open).toContain('const int32 Streaming = IStreamingManager::Get().GetNumWantingResources();');
+    expect(open).toContain('View->SetGameView(true);');
+    const load = code('Level', 'Lifecycle', 'McpLevelLoad.cpp');
+    expect(load).toContain('McpReplyWhenLevelSettles(TWeakObjectPtr<UEngineWireSubsystem>(&Subsystem), RequestingSocket, RequestId,');
+  });
+});
+
+describe('get_widget_animation reads what an animation does', () => {
+  // A widget animation could be built key by key but read back by name only, and its track count read 0: the
+  // tracks live on the widgets the animation binds, not in its unbound list.
+  it('walks the bindings for the widget, its tracks and every channel key', () => {
+    const queries = code('WidgetAuthoring', 'Animation', 'McpWidgetAnimQueries.cpp');
+    expect(queries).toContain('for (const FMovieSceneBinding& Binding : Anim->MovieScene->GetBindings())');
+    expect(queries).toContain('TrackCount += Binding.GetTracks().Num();');
+    expect(queries).toContain('Section->GetChannelProxy().GetChannel<FMovieSceneFloatChannel>(Index)');
+    expect(queries).toContain('TEXT("translation.x"), TEXT("translation.y"), TEXT("angle"), TEXT("scale.x")');
+  });
+});
+
+describe('configure_rendering', () => {
+  // set_project_setting took raw property names and enum spellings and never said a change waited for a restart.
+  it('checks every value before writing any, applies the console variable live and names restart-only changes', () => {
+    const render = code('Ui', 'McpUiRenderSettings.cpp');
+    expect(render.indexOf('Writes.Add(Write);')).toBeLessThan(render.indexOf('McpWriteSetting(Write.Property, Settings, Write.Value);'));
+    expect(render).toContain('Variable->Set(*LexToString(Write.Value), ECVF_SetByProjectSetting);');
+    expect(render).toContain('Write.Property->HasMetaData(TEXT("ConfigRestartRequired"))');
+    expect(render).toContain('Settings->TryUpdateDefaultConfigFile(FString(), false)');
+    // The settings object's own change handler can raise dialogs no one is there to answer.
+    expect(render).not.toContain('PostEditChangeProperty');
+  });
+});
+
+describe('skeletal mesh import', () => {
+  // A skeleton could only take an animation alone: a character could not be imported onto an existing skeleton,
+  // nor its physics asset or morph targets chosen, and the reply named whichever asset the importer listed first.
+  it('binds the mesh to a named skeleton with importMesh and takes the physics and morph choices', () => {
+    const options = code('AssetWorkflow', 'Operations', 'McpAssetFbxImportOptions.h');
+    expect(options).toContain('const bool bTakeAlone = Skel != nullptr && !Options.bImportMesh;');
+    expect(options).toContain('Fbx->ImportUI->bCreatePhysicsAsset = Physics == nullptr && Options.CreatePhysicsAsset.Get(true);');
+    expect(options).toContain('Fbx->ImportUI->SkeletalMeshImportData->bImportMorphTargets = Options.ImportMorphTargets.GetValue();');
+    expect(options).toContain('OutErrorCode = TEXT("PHYSICS_ASSET_NOT_FOUND");');
+  });
+
+  it('answers with the mesh and what it is bound to, not the first asset listed', () => {
+    const options = code('AssetWorkflow', 'Operations', 'McpAssetFbxImportOptions.h');
+    expect(options).toContain('for (UClass *Kind : {USkeletalMesh::StaticClass(), UStaticMesh::StaticClass(), UAnimSequence::StaticClass(), UObject::StaticClass()})');
+    const handler = code('AssetWorkflow', 'Operations', 'McpAssetImportDuplicate.cpp');
+    expect(handler).toContain('UObject *Asset = McpPickPrimaryImport(ImportedAssets);');
+    expect(handler).toContain('McpDescribeImport(ImportedAssets, Asset, ImportedAsset, Resp);');
+  });
+});
+
+describe('analyze_animation reads a sequence from its own frames', () => {
+  // get_animation_info gave length, notifies and curves only; how a clip moves could not be read without playing it.
+  it('samples every frame up to the cap, the first and last always in, with the root motion left on the root', () => {
+    const analysis = code('AnimationAuthoring', 'Analysis', 'McpAnimAnalysis.cpp');
+    expect(analysis).toContain('const int32 Frame = FMath::RoundToInt(double(Sample) * (Keys - 1) / (Count - 1));');
+    expect(analysis).toContain('Options.bExtractRootMotion = false;');
+    expect(analysis).toContain('UAnimPoseExtensions::GetAnimPoseAtFrame(Sequence, Frame, Options, Pose);');
+    // A foot is planted within contactHeight of its lowest point; a montage is refused, not half-read.
+    expect(analysis).toContain('Path[Index].Z <= Lowest + ContactHeight');
+    expect(analysis).toContain('TEXT("NOT_A_SEQUENCE")');
+    expect(analysis).toContain('McpHandlerUtils::MarkNoAssetsChanged(Response);');
+  });
+});
+
+describe('animation graph nodes by class', () => {
+  // create_node took only a full AnimGraphNode_ class name, and put a Sequence Player in an EventGraph, where it
+  // compiled clean and never ran.
+  it('a short name resolves to the animation node after every Blueprint spelling', () => {
+    const catalog = code('BlueprintGraph', 'McpBPGraphNodeCatalog.cpp');
+    expect(catalog).toContain('return Found ? Found : FindClass(TArray<FString>{Compact, FString::Printf(TEXT("AnimGraphNode_%s"), *Compact)});');
+    expect(catalog).toContain('!DisplayName.Replace(TEXT(" "), TEXT("")).Contains(Filter)');
+  });
+
+  it('both create doors refuse a node the graph cannot hold', () => {
+    const dynamic = code('BlueprintGraph', 'McpBPGraphNodeCreationDynamic.cpp');
+    expect(dynamic).toContain('NodeClass->GetDefaultObject<UEdGraphNode>()->CanCreateUnderSpecifiedSchema(Schema)');
+    expect(dynamic.indexOf('DescribeGraphMismatch(NodeClass, Context.TargetGraph)')).toBeLessThan(dynamic.indexOf('NewObject<UEdGraphNode>(Context.TargetGraph, NodeClass)'));
+    const addNode = code('Blueprint', 'Graph', 'McpBPAddNodeGraph.cpp');
+    expect(addNode).toContain('McpBlueprintGraphHandlers::DescribeGraphMismatch(NodeClass, TargetGraph)');
+    expect(addNode).toContain('OutErrorCode = TEXT("NODE_NOT_ALLOWED_IN_GRAPH");');
   });
 });
 
@@ -1149,20 +1344,22 @@ describe('asset queries point at what they found', () => {
   // Searching for a sound found nothing although a PlaySound2D node played it: an asset picked on a pin is
   // DefaultObject, which the scan never read.
   it('find_text matches the asset picked on a graph pin by its path', () => {
-    const scan = code('AssetQuery', 'McpAutomationBridge_AssetQueryFindText.cpp');
+    const scan = code('AssetQuery', 'McpAssetQueryFindText.cpp');
     expect(scan).toContain('Reference(Asset, Where, Pin->PinName.ToString(), Pin->DefaultObject ? Pin->DefaultObject->GetPathName() : FString());');
     expect(scan).toMatch(/void Reference\(const FString& Asset, const FString& Where, const FString& Field, const FString& Path\)\s*\{\s*if \(!Path\.IsEmpty\(\) && !Path\.StartsWith\(TEXT\("\/Script\/"\)\)/u);
   });
 
-  // "Which Blueprints call StartCameraFade" found nothing: node titles were never searched.
+  // "Which Blueprints call StartCameraFade" found nothing: node titles were never searched. A call node's list title is
+  // its function's name, so "Play Sound at Location" found no call until the title the graph shows was matched too.
   it('find_text matches a graph node by its title', () => {
-    expect(code('AssetQuery', 'McpAutomationBridge_AssetQueryFindText.cpp'))
-      .toContain('Hit(Asset, Where, TEXT("node"), Node->GetNodeTitle(ENodeTitleType::ListView).ToString());');
+    const scan = code('AssetQuery', 'McpAssetQueryFindText.cpp');
+    expect(scan).toContain('const FString ListTitle = Node->GetNodeTitle(ENodeTitleType::ListView).ToString();');
+    expect(scan).toContain('Hit(Asset, Where, TEXT("node"), ListTitle.Contains(Query, Case) ? ListTitle : Node->GetNodeTitle(ENodeTitleType::FullTitle)');
   });
 
   // lookup=graph on a MetaSound answered "Asset does not have a graph structure".
   it('analyze_graph names the action that reads a MetaSound, Niagara or Behavior Tree graph', () => {
-    const report = code('AssetWorkflow', 'Analysis', 'McpAutomationBridge_AssetWorkflowGraphReport.cpp');
+    const report = code('AssetWorkflow', 'Analysis', 'McpAssetGraphReport.cpp');
     for (const reader of [
       '{TEXT("MetaSoundSource"), TEXT("manage_audio"), TEXT("get_metasound_graph")}',
       '{TEXT("NiagaraSystem"), TEXT("manage_effect"), TEXT("get_niagara_info")}',
@@ -1179,10 +1376,10 @@ describe('function overrides', () => {
   // A widget's OnKeyDown added with add_function compiled as a new function nothing called: it took no
   // signature from the parent. The graph was also made twice and the second entry node deleted afterwards.
   it('add_function makes a parent function override with its signature, in one graph creation', () => {
-    const add = code('Blueprint', 'Functions', 'McpAutomationBridge_BlueprintHandlersAddFunction.cpp');
+    const add = code('Blueprint', 'Functions', 'McpBPAddFunction.cpp');
     expect(add).toMatch(/AddFunctionGraph<UClass>\(Blueprint, NewGraph,\s*OverrideClass == nullptr, OverrideClass\);/u);
     expect(add).not.toContain('CreateFunctionGraph<UFunction>');
-    const resolve = code('Blueprint', 'Functions', 'McpAutomationBridge_BlueprintHandlersAddFunctionResult.cpp');
+    const resolve = code('Blueprint', 'Functions', 'McpBPAddFunctionResult.cpp');
     expect(resolve).toContain('Owner == Blueprint->GeneratedClass || !UEdGraphSchema_K2::CanKismetOverrideFunction(Parent)');
     expect(resolve).toContain('if (UEdGraphSchema_K2::FunctionCanBePlacedAsEvent(Parent))');
     expect(resolve).toContain('Resp->SetStringField(TEXT("overrides"), OverrideClass->GetName() + TEXT("::") + FuncName);');
@@ -1193,16 +1390,28 @@ describe('start minimized', () => {
   // The editor came up already minimized, so the start-minimized ticker never saw it on screen, kept waiting, and
   // put away the first restore made over the bridge minutes later.
   it('the start-minimized hold begins the first time the window is on screen, minimized or not', () => {
-    const lifecycle = readFileSync(join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private', 'Core', 'Subsystem',
-      'McpAutomationBridgeSubsystemLifecycle.cpp'), 'utf8').replace(/\/\*[\s\S]*?\*\//gu, ' ').replace(/\/\/[^\n]*/gu, ' ');
+    const lifecycle = readFileSync(join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'Core', 'Subsystem',
+      'EngineWireSubsystemLifecycle.cpp'), 'utf8').replace(/\/\*[\s\S]*?\*\//gu, ' ').replace(/\/\/[^\n]*/gu, ' ');
     expect(lifecycle).toMatch(/Root->IsVisible\(\)\)\s*\{\s*if \(!Root->IsWindowMinimized\(\)\)\s*\{\s*MinimizeWindowForMcp\(Root\.ToSharedRef\(\)\);\s*\}\s*if \(\*HoldUntil == 0\.0\)/u);
+  });
+
+  // A restore asked for 3 minutes after launch was put away again within seconds; one 23 s later stayed up.
+  it('a restore made over the bridge ends the hold, and a timed run leaves a window restored meanwhile up', () => {
+    const lifecycle = readFileSync(join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'Core', 'Subsystem',
+      'EngineWireSubsystemLifecycle.cpp'), 'utf8');
+    expect(lifecycle).toMatch(/CreateLambda\(\[GiveUpAt, HoldUntil\]\(float\)\s*\{\s*if \(McpWindowRestoreCount\(\) != 0\)\s*\{\s*return false;/u);
+    const windows = code('ControlEditor', 'McpEditorScreenshotWindows.cpp');
+    expect(windows).toMatch(/::SetWindowPlacement\(Hwnd, &Placement\);\s*\}\s*\+\+GMcpWindowRestoreCount;/u);
+    expect(windows).toMatch(/\} else \{\s*\+\+GMcpWindowRestoreCount;\s*RestoreWindowForCaptureForMcp\(Root\.ToSharedRef\(\)\);/u);
+    expect(windows).toContain('Hold.RestoreCount = GMcpWindowRestoreCount;');
+    expect(windows).toContain('if (Hold.bWindowRestored && Hold.RestoreCount == GMcpWindowRestoreCount) {');
   });
 });
 
 describe('save game slots', () => {
   // The slot name becomes the .sav file name, so a separator or ".." would reach a file outside SaveGames.
   it('a slot name cannot leave Saved/SaveGames', () => {
-    const saves = code('SystemControl', 'McpAutomationBridge_SystemControlHandlersSaveGames.cpp');
+    const saves = code('SystemControl', 'McpSystemSaveGames.cpp');
     for (const refused of ['TEXT("..")', 'TEXT("/")', 'TEXT("\\\\")', 'TEXT(":")']) {
       expect(saves).toContain(`OutSlot.Contains(${refused})`);
     }
@@ -1211,7 +1420,7 @@ describe('save game slots', () => {
 
   // A slot is written only after every requested property resolved and converted, and the reply is read back from disk.
   it('edit_save_game writes after the properties apply and answers what it reloads', () => {
-    const saves = code('SystemControl', 'McpAutomationBridge_SystemControlHandlersSaveGames.cpp');
+    const saves = code('SystemControl', 'McpSystemSaveGames.cpp');
     expect(saves.indexOf('ApplySavedProperties(Self, RequestId, RequestingSocket, Save, *Props)'))
       .toBeLessThan(saves.indexOf('UGameplayStatics::SaveGameToSlot(Save, Slot, User)'));
     expect(saves).toContain('USaveGame* Reloaded = bSaved ? UGameplayStatics::LoadGameFromSlot(Slot, User) : nullptr;');
@@ -1222,16 +1431,16 @@ describe('save game slots', () => {
 describe('search scope and mesh-particle materials', () => {
   // find_text narrowed to /Game/UI still read every actor of the open level elsewhere: 148 hits, 3 of them asked for.
   it('find_text reads the open level only under the searched paths unless includeLevel says otherwise', () => {
-    expect(code('AssetQuery', 'McpAutomationBridge_AssetQueryFindText.cpp'))
+    expect(code('AssetQuery', 'McpAssetQueryFindText.cpp'))
       .toContain('if (World && FindTextIncludesLevel(Payload, Filter.PackagePaths, World))');
-    const scope = code('AssetQuery', 'McpAutomationBridge_AssetQueryHandlersPrivate.h');
+    const scope = code('AssetQuery', 'McpAssetQueryPrivate.h');
     expect(scope).toContain('if (Payload->TryGetBoolField(TEXT("includeLevel"), bInclude))');
     expect(scope).toContain('Level.StartsWith(Path.ToString() + TEXT("/"))');
   });
 
   // Sprite and ribbon materials got their Niagara usage flag saved; a mesh renderer's mesh materials did not.
   it('add_mesh_renderer_module flags the mesh materials for mesh particles', () => {
-    expect(code('NiagaraAuthoring', 'McpAutomationBridge_NiagaraAuthoringHandlersRenderers.cpp'))
+    expect(code('NiagaraAuthoring', 'McpNiagaraRenderers.cpp'))
       .toContain('EnsureNiagaraUsage(Slot.MaterialInterface, TEXT("bUsedWithNiagaraMeshParticles"));');
   });
 });
@@ -1243,7 +1452,7 @@ describe('material batch steps', () => {
     const { MANAGE_ASSET_FOLDS } = await import('../../../src/tools/catalog/capabilities/records/folds/manage-asset.folds.js');
     const fold = MANAGE_ASSET_FOLDS.find((spec) => spec.primary === 'add_material_node');
     const members = fold && !Array.isArray(fold.members) ? fold.members : {};
-    const resolver = readFileSync(join(DOMAINS, 'MaterialAuthoring', 'McpAutomationBridge_MaterialAuthoringBatchSteps.h'), 'utf8');
+    const resolver = readFileSync(join(DOMAINS, 'MaterialAuthoring', 'McpMatBatchSteps.h'), 'utf8');
     const named = Object.fromEntries([...resolver.matchAll(/Kind == TEXT\("(\w+)"\)\)\s*\{\s*return TEXT\("(\w+)"\);/gu)].map((m) => [m[1], m[2]]));
     const resolve = (kind: string): string => (kind === 'node' ? 'add_material_node' : kind === 'batch' ? 'build_material_graph' : named[kind] ?? `add_${kind}`);
     expect(resolver).toMatch(/if \(Kind == TEXT\("node"\)\)\s*\{\s*return Edit;/u);
@@ -1252,7 +1461,7 @@ describe('material batch steps', () => {
     for (const [kind, action] of Object.entries(members)) {
       expect(resolve(kind)).toBe(action);
     }
-    expect(code('MaterialAuthoring', 'McpAutomationBridge_MaterialAuthoringGraphBatch.cpp'))
+    expect(code('MaterialAuthoring', 'McpMatGraphBatch.cpp'))
       .toContain('!IsBatchableMaterialEdit(Edit = McpMaterialBatchStepEdit(Edit, *StepPtr))');
   });
 });
@@ -1260,7 +1469,7 @@ describe('material batch steps', () => {
 describe('widget previews', () => {
   // A design-mode preview drew every widget, Collapsed ones too: a hidden controls card or NEW RECORD pill showed.
   it('preview_widget gives each widget the visibility the game creates it with', () => {
-    const preview = code('WidgetAuthoring', 'Support', 'McpAutomationBridge_WidgetAuthoringPreview.cpp');
+    const preview = code('WidgetAuthoring', 'Support', 'McpWidgetPreview.cpp');
     // GetVisibility() reads the Slate widget, which design mode forces visible: the saved property is read instead.
     expect(preview).toContain('*VisibilityProperty->ContainerPtrToValuePtr<ESlateVisibility>(Child);');
     expect(preview).toContain('Cached->SetVisibility(UWidget::ConvertSerializedVisibilityToRuntime(Saved));');
@@ -1271,7 +1480,7 @@ describe('widget previews', () => {
   // The first preview after the editor started drew material brushes blank, unannounced: the editor compiles a
   // material's Slate shaders when it is first drawn, so the wait has to follow a draw and be followed by another.
   it('preview_widget waits for shaders on request and always reports them', () => {
-    const preview = code('WidgetAuthoring', 'Support', 'McpAutomationBridge_WidgetAuthoringPreview.cpp');
+    const preview = code('WidgetAuthoring', 'Support', 'McpWidgetPreview.cpp');
     expect(preview.indexOf('McpDrawWidgetPreview(WidgetBP')).toBeLessThan(preview.indexOf('McpDeferForShaderCompile(Payload'));
     expect(preview).toContain('McpAddShaderCompileState(ResultJson, Payload);');
   });
@@ -1280,7 +1489,7 @@ describe('widget previews', () => {
 // The meter is read once per editor frame: at about 5 fps two recordings read 20-30 dB apart that were not.
 describe('sound measurement', () => {
   it('a Sound Wave also reports the level of its own samples', () => {
-    const measure = code('Audio', 'McpAutomationBridge_AudioHandlersMeasure.cpp');
+    const measure = code('Audio', 'McpAudioMeasure.cpp');
     expect(measure).toContain('Wave->GetImportedSoundWaveData(Pcm, SampleRate, Channels)');
     expect(measure).toContain('McpAddWaveLevels(Run->Wave.Get(), Data);');
     const properties = capabilityIndex().byId.get('manage_audio.play_sound')?.schemas.output.properties;
@@ -1289,10 +1498,1373 @@ describe('sound measurement', () => {
 
   // A batch that removed a voice's synth nodes, then named a node class the registry did not hold, saved the voice gutted.
   it('a MetaSound batch looks up every add_node class before any step runs', () => {
-    const batch = code('AudioAuthoring', 'MetaSound', 'McpAutomationBridge_AudioAuthoringHandlersMetaSoundBatch.cpp');
+    const batch = code('AudioAuthoring', 'MetaSound', 'McpAudioMetaSoundBatch.cpp');
     expect(batch.indexOf('ResolveMetaSoundAddNodeClass(*StepObj)')).toBeGreaterThan(-1);
     expect(batch.indexOf('ResolveMetaSoundAddNodeClass(*StepObj)')).toBeLessThan(batch.indexOf('HandleMetaSoundNodeActions(StepSubAction'));
-    expect(code('AudioAuthoring', 'McpAutomationBridge_AudioAuthoringHandlersMetaSoundNodes.cpp'))
+    expect(code('AudioAuthoring', 'McpAudioMetaSoundNodes.cpp'))
       .toContain('const FMcpMetaSoundNodeClassRequest Request = ResolveMetaSoundAddNodeClass(Params);');
+  });
+});
+
+// Removing DefaultSceneRoot answered "removed from SCS" while the compile put it straight back with the mesh still under
+// it, so a mesh meant to be the physics root never was.
+describe('removing a Blueprint\'s root component hands its place to a child', () => {
+  it('remove_scs_component promotes the removed node\'s children and reads the tree back', () => {
+    const source = code('SCS', 'McpSCSRemoveComponent.cpp');
+    expect(source).toContain('SCS->RemoveNodeAndPromoteChildren(NodeToRemove);');
+    expect(source).toContain('TEXT("SCS_ROOT_REQUIRED")');
+    expect(source).toContain('TEXT("SCS_REMOVE_REVERTED")');
+    expect(source).not.toContain('SCS->RemoveNode(');
+  });
+
+  // Removing a Buoyancy component answered newRoot "WaterContact": actor components are SCS roots too.
+  it('names a new root only when the scene root went, and only a scene component', () => {
+    const source = code('SCS', 'McpSCSRemoveComponent.cpp');
+    expect(source).toContain('Node->ComponentTemplate->IsA<USceneComponent>()');
+    expect(source).toContain('const bool bWasRoot = IsSceneRootNode(NodeToRemove) && SCS->GetRootNodes().Contains(NodeToRemove);');
+    expect(source).toContain('SCS->GetRootNodes().FindByPredicate(IsSceneRootNode)');
+  });
+});
+
+// set_default changed the class default while every placed actor kept the old value under a success reply.
+describe('a class default reaches the actors already placed', () => {
+  it('set_default carries the new value to placed actors that still held the old default', () => {
+    const source = code('Blueprint', 'Graph', 'McpBPSetDefaultLiteral.cpp');
+    expect(source).toContain('CDO->GetArchetypeInstances(Instances);');
+    expect(source).toContain('Property->Identical(Property->ContainerPtrToValuePtr<void>(InstanceContainer), OldValue)');
+    expect(source).toContain('Result->SetNumberField(TEXT("instancesUpdated"), InstancesUpdated);');
+  });
+});
+
+// A BuoyancyComponent added to a Blueprint never asked for the begin-overlap a water body sends at level load, so every
+// placed floater sank.
+describe('a Blueprint given buoyancy floats where it is placed', () => {
+  it('asks for the water\'s begin-overlap at level load', () => {
+    expect(code('SCS', 'McpSCSHandlers.cpp')).toContain('McpEnableWaterOverlaps(CDO);');
+    expect(code('Blueprint', 'Components', 'McpBPModifyScsFinalize.cpp'))
+      .toContain('McpSCSHandlers::EnableLoadOverlapsForBuoyancy(LocalBP);');
+  });
+
+  // A StaticMeshActor-based floater sank with no warning: its mesh makes no overlap events, so the water's
+  // begin-overlap never reached the buoyancy component.
+  it('turns overlap events on for the root, on the Blueprint path and the water tool alike', () => {
+    const lookup = code('..', 'Foundation', 'BridgeHelpers', 'Properties', 'McpComponentLookup.h');
+    expect(lookup).toContain('Actor->bGenerateOverlapEventsDuringLevelStreaming = true;');
+    expect(lookup).toContain('Root->SetGenerateOverlapEvents(true);');
+    expect(code('Environment', 'Runtime', 'McpEnvTimeWater.cpp')).toContain('McpEnableWaterOverlaps(TargetActor);');
+  });
+});
+
+// A struct read left out every field that was zero (BuoyancyData without BuoyancyDamp2 = 0, its default 1), so the
+// reader could not tell a zero from a field the read did not show.
+describe('struct reads write every field', () => {
+  it('exports a struct against itself, so no field is compared away', () => {
+    const source = readFileSync(join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'Foundation', 'Reflection', 'McpPropertyReflection.cpp'), 'utf8');
+    expect(source).toContain('StructProp->Struct->ExportText(Exported, StructValue, StructValue, nullptr, 0, nullptr, true);');
+  });
+});
+
+// Six frame steps at speed 0.1 answered "Stepped 6 frame(s)" for 0.02 s of game time.
+describe('a frame step says the speed it ran at', () => {
+  it('names the game speed and the game time it advanced', () => {
+    const source = code('ControlEditor', 'McpEditorPlay.cpp');
+    expect(source).toContain('Resp->SetNumberField(TEXT("timeDilation"), Dilation);');
+    expect(source).toContain('Resp->SetNumberField(TEXT("gameSeconds"), Stepped * FApp::GetFixedDeltaTime() * Dilation);');
+  });
+});
+
+// A capture that restored the minimized editor photographed the frame drawn before it was minimized.
+describe('a full-window screenshot shows the view as it is now', () => {
+  it('a capture that restored the editor redraws and waits before taking the picture', () => {
+    const source = code('ControlEditor', 'McpEditorScreenshot.cpp');
+    expect(source).toContain('Payload->SetBoolField(TEXT("_windowRestoredForCapture"), true);');
+    expect(source).toContain('GEditor->RedrawAllViewports(true);');
+  });
+});
+
+// An expression with a unary minus at step 7 stopped a build_graph batch after 7 nodes were already made.
+describe('a graph batch checks its expressions before any step runs', () => {
+  it('describes every Expression step in the pre-check, bools the batch declares included', () => {
+    const steps = code('BlueprintGraph', 'McpBPGraphBatchSteps.cpp');
+    expect(steps).toContain('McpBlueprintMathExpression::DescribeProblems(Blueprint, Expression, DeclaredBools)');
+    expect(steps).toContain('DeclaredBools.Add(FName(*Name));');
+    const batch = code('BlueprintGraph', 'McpBPGraphBatch.cpp');
+    expect(batch.indexOf('DescribeExpressionStep(Context.Blueprint, **Step, DeclaredBools)')).toBeGreaterThan(-1);
+    expect(batch.indexOf('DescribeExpressionStep(')).toBeLessThan(batch.indexOf('RunBatchStep(Context, State'));
+  });
+
+  // A true/false value used as a number parses, and only the Blueprint compile refused it, 134 steps later.
+  it('names a comparison or a bool variable used as an operand of + - * / %, in the batch and the single set', () => {
+    const math = code('BlueprintGraph', 'Expression', 'McpBPGraphMathExpr.cpp');
+    expect(math).toMatch(/DescribeOperatorMisuse\(Blueprint, Expression, ExtraBools\) \+ TEXT\(" "\) \+\s*DescribeBoolArithmetic\(Blueprint, Expression, ExtraBools\);/u);
+    const types = code('BlueprintGraph', 'Expression', 'McpBPGraphMathExprTypes.cpp');
+    expect(types).toContain('static const TArray<FString> Arithmetic = {TEXT("+"), TEXT("-"), TEXT("*"), TEXT("/"), TEXT("%")};');
+    expect(types).toContain('if (Depth == 0 && TrueFalse.Contains(Parts[At]))');
+    expect(types, 'a call result is never judged').toContain('LeftFirst = LeftFirst > 0 && IsNameToken(Parts[LeftFirst - 1]) ? INDEX_NONE : LeftFirst;');
+    const mutations = code('BlueprintGraph', 'McpBPGraphNodeMutations.cpp');
+    expect(mutations.indexOf('McpBlueprintMathExpression::DescribeBoolArithmetic(Context.Blueprint, Value)'))
+      .toBeLessThan(mutations.indexOf('bHandled = McpTrySetNodeAssetPropertyForMcp(TargetNode, PropertyName, Value);'));
+  });
+
+  // An arrange_nodes after 69 steps stopped the batch there, the 69 applied.
+  it('refuses a step the batch does not run in the pre-check, before any step', () => {
+    const batch = code('BlueprintGraph', 'McpBPGraphBatch.cpp');
+    expect(batch).toContain('const bool bRuns = IsBatchableEdit(Edit);');
+    expect(batch).toContain(': DescribeUnbatchableEdit(Edit); !Bad.IsEmpty())');
+    expect(batch.indexOf('const bool bRuns = IsBatchableEdit(Edit);')).toBeLessThan(batch.indexOf('RunBatchStep(Context, State'));
+    expect(code('BlueprintGraph', 'McpBPGraphBatchSteps.cpp')).toContain('return DescribeUnbatchableEdit(Edit);');
+  });
+
+  // "T - Next < 0 || T - Next >= 0.07" was refused as "'T' is a number": the check read the token beside || alone.
+  it('judges each whole operand of && and ||, up to the next && || comma or enclosing bracket', () => {
+    const math = code('BlueprintGraph', 'Expression', 'McpBPGraphMathExpr.cpp');
+    expect(math).toContain('Notes.Append(DescribeNumberLogic(Blueprint, Parts, ExtraBools));');
+    expect(math, 'no verdict from the neighbouring token').not.toContain('Comparisons.Contains(Prev)');
+    const types = code('BlueprintGraph', 'Expression', 'McpBPGraphMathExprTypes.cpp');
+    expect(types).toContain('if (Depth < 0 || (Depth == 0 && (Parts[At] == TEXT("&&") || Parts[At] == TEXT("||") || Parts[At] == TEXT(","))))');
+    expect(types).toContain('const TPair<int32, int32> Operand = LogicalOperand(Parts, Index, Step);');
+    expect(types, 'a comparison on the operand level makes it true/false').toContain('bNumber = !bCall && !(Depth == 0 && NotJudged.Contains(Parts[At]));');
+  });
+
+  // "A != (B > 0 && C)" with A no bool variable failed as a bare "does not parse": A had become a number input.
+  it('names a lone number input compared by == or != with a true/false value, and says what an input is', () => {
+    const types = code('BlueprintGraph', 'Expression', 'McpBPGraphMathExprTypes.cpp');
+    expect(types).toContain('const bool bEquality = Parts[Index] == TEXT("==") || Parts[Index] == TEXT("!=");');
+    expect(types, 'only a name that is the whole operand under C precedence').toContain('IsEqualityEdge(Parts, RightLast + 1)');
+    expect(types, 'the literals true and false are bools').toContain('Name.Equals(TEXT("true"), ESearchCase::IgnoreCase)');
+    const mutations = code('BlueprintGraph', 'McpBPGraphNodeMutations.cpp');
+    expect(mutations).toContain('A name that is not a variable is a number input, never true/false and never a vector: ');
+  });
+
+  // Every caller wrote vec(-170, 10, z) or 0.5 * -x first and got a refusal: the node has no unary minus.
+  it('writes a unary minus as a subtraction from zero before the node parses it, in the single set and the batch', () => {
+    const minus = code('BlueprintGraph', 'Expression', 'McpBPGraphMathExprMinus.cpp');
+    expect(minus).toContain('FString RewriteUnaryMinus(const FString& Expression)');
+    expect(minus).toContain('TEXT("(0 - %s)")');
+    expect(minus, 'only after a bracket, a comma or an operator').toContain('FCString::Strchr(TEXT("(,+-*/%<>=!&|"), Prev)');
+    expect(minus, '1e-5 keeps its exponent').toContain("FChar::ToLower(Text[End - 1]) == TEXT('e')");
+    const mutations = code('BlueprintGraph', 'McpBPGraphNodeMutations.cpp');
+    const rewrite = mutations.indexOf('Value = McpBlueprintMathExpression::RewriteUnaryMinus(Value);');
+    expect(rewrite).toBeGreaterThan(-1);
+    expect(rewrite).toBeLessThan(mutations.indexOf('McpBlueprintMathExpression::DescribeBoolArithmetic(Context.Blueprint, Value)'));
+    const steps = code('BlueprintGraph', 'McpBPGraphBatchSteps.cpp');
+    const stepRewrite = steps.indexOf('Expression = McpBlueprintMathExpression::RewriteUnaryMinus(Expression);');
+    expect(stepRewrite).toBeGreaterThan(-1);
+    expect(stepRewrite).toBeLessThan(steps.indexOf('DescribeProblems(Blueprint, Expression, DeclaredBools)'));
+  });
+});
+
+// No capability added code to a project: a C++ class meant leaving the tool for the editor's wizard or an IDE.
+describe('create_cpp_class adds a class the way the editor\'s New C++ Class does, without its dialogs', () => {
+  it('drives GameProjectUtils::AddCodeToProject unattended, after refusing unsafe input', () => {
+    const source = code('SystemControl', 'McpSystemCppClass.cpp');
+    const guard = source.indexOf('TGuardValue<bool> Unattended(GIsRunningUnattendedScript, true);');
+    expect(guard, 'a wizard message box would block the game thread').toBeGreaterThan(-1);
+    expect(guard).toBeLessThan(source.indexOf('GameProjectUtils::AddCodeToProject('));
+    // A subfolder of a module without Public/Private got #include "Sub/X.h" from the engine, which did not compile.
+    for (const check of ['if (!IsCppIdentifier(ClassName))', 'if (!IsSafeSubfolder(Subfolder))', 'GameProjectUtils::IsValidBaseClassForCreation(ParentClass, Module)', '!ParentClass->HasAnyClassFlags(CLASS_Native)', 'if (!bSplit && !Subfolder.IsEmpty())']) {
+      expect(source.indexOf(check), check).toBeGreaterThan(-1);
+      expect(source.indexOf(check), check).toBeLessThan(guard);
+    }
+    expect(source, 'the files written but not compiled is a failure, not a success').toContain('TEXT("COMPILE_FAILED")');
+    // Adding the class can reload the project file and empty the engine's module list: a pointer into it read freed
+    // strings ("All source code for '<garbage>' must exist within ...").
+    const copy = source.indexOf('const FModuleContextInfo Module = *Found;');
+    expect(copy).toBeGreaterThan(-1);
+    expect(copy).toBeLessThan(guard);
+    expect(source).toContain('GameProjectUtils::AddCodeToProject(ClassName, ClassPath, Module, Parent,');
+    const handlers = code('SystemControl', 'McpSystemHandlers.cpp');
+    expect(handlers).toContain('McpSystemControlHandlers::HandleCreateCppClass(this, RequestId, Payload,');
+    expect(handlers).toContain('Lower != TEXT("create_cpp_class")');
+  });
+});
+
+// A duplicated Blueprint's variables got new GUIDs, and its Math Expressions, which store member references as the
+// source's {GUID}, failed to compile until each expression was set again by name.
+describe('a duplicated Blueprint keeps its Math Expressions bound to its own variables', () => {
+  it('rewrites each source GUID to the variable name and rebuilds the node, before the copy is saved', () => {
+    const copy = code('BlueprintGraph', 'Expression', 'McpBPGraphMathExprCopy.cpp');
+    expect(copy).toContain('FBlueprintEditorUtils::FindMemberVariableNameByGuid(&Source, Guid)');
+    expect(copy).toContain('Node->ReconstructNode();');
+    // The engine compiled the copy before the rebind; those 20 errors stayed on the reply and the copy stayed dirty.
+    expect(copy).toContain('Bridge->ForgetCapturedMessages([&CopyPath](const FString &Line) { return Line.Contains(CopyPath); });');
+    expect(copy).toContain('FKismetEditorUtilities::CompileBlueprint(&Copy);');
+    const handler = code('AssetWorkflow', 'Operations', 'McpAssetImportDuplicate.cpp');
+    expect(handler).toContain('McpBlueprintMathExpression::RebindDuplicatedExpressions(*Source, *CopyBlueprint);');
+    expect(handler.indexOf('PrepareCopy(SourcePath, NewAsset);')).toBeGreaterThan(-1);
+    expect(handler.indexOf('PrepareCopy(SourcePath, NewAsset);')).toBeLessThan(handler.indexOf('McpSafeAssetSave(NewAsset)'));
+    expect(handler.indexOf('PrepareCopy(SourceAssetPath, Copy);')).toBeGreaterThan(-1);
+    expect(handler.indexOf('PrepareCopy(SourceAssetPath, Copy);')).toBeLessThan(handler.indexOf('McpSafeAssetSave(Copy)'));
+  });
+});
+
+// get_component_details sent every property the class declares (195 for a Niagara component) on every call.
+describe('a component read sends property values only when asked', () => {
+  it('dumps them for propertyNames or detailed, as inspect_object does', () => {
+    expect(code('Environment', 'Inspection', 'McpEnvInspectComponent.cpp')).toContain(
+      'if (PropertyNames.Num() > 0 || GetJsonBoolField(Payload, TEXT("detailed"), false))');
+  });
+});
+
+// An emitter built in one Niagara system had to be rebuilt module by module in the next.
+describe('add_emitter copies another system\'s emitter as the editor paste does', () => {
+  it('adds through the engine utility, cuts the source as parent and brings the user parameters it reads', () => {
+    const copy = code('NiagaraAuthoring', 'McpNiagaraEmitterCopy.cpp');
+    expect(copy).toContain('FNiagaraEditorUtilities::AddEmitterToSystem(*System, *SourceEmitter');
+    expect(copy).toContain('MCP_GET_EMITTER_DATA(*Added)->RemoveParent();');
+    expect(copy).toContain('Source->GetExposedParameters().CopyParameterData(Target, Param);');
+    expect(copy).toContain('TEXT("EMITTER_INHERITS")');
+    expect(code('NiagaraAuthoring', 'McpNiagaraSystems.cpp')).toContain('return CopyEmitterFromSystem(Context);');
+  });
+});
+
+// get_niagara_info sent every emitter's inputs and switches, about 15 KB per system.
+describe('a Niagara read narrows to one emitter and the named modules', () => {
+  it('skips other emitters and keeps only the named modules\' entries', () => {
+    const info = code('NiagaraAuthoring', 'McpNiagaraInfoValidate.cpp');
+    expect(info).toContain('Handle.GetName().ToString() != OnlyEmitter');
+    expect(info).toContain('KeepModuleEntries(EmitterObj, ModuleNames);');
+    expect(info).toContain('TEXT("EMITTER_NOT_FOUND")');
+  });
+});
+
+// A dozen fire lights each took an edit_component call for one property.
+describe('a component property goes onto many actors in one call', () => {
+  it('resolves actorNames, writes the named component of each in one transaction, and rows only what did not take', () => {
+    expect(code('ControlActor', 'McpActorComponentProps.cpp')).toContain(
+      'McpSetComponentPropertiesOnActors(*this, Socket, RequestId, Actors, Missing, ComponentName, PropertiesObject);');
+    const many = code('ControlActor', 'McpActorComponentDetails.cpp');
+    expect(many).toContain('FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Set Component Properties")),');
+    expect(many).toContain('Data->SetNumberField(TEXT("updatedActors"), Updated.Num());');
+    expect(many).toContain('Rows.Num() == 0 ? FString() : FString(TEXT("PARTIAL_FAILURE"))');
+  });
+});
+
+// A force added to an update stack landed after Solve Forces and Velocity, so the system failed "The module has unmet
+// dependencies." (on the generic add, with no word of it in the reply), and that message named neither the module nor a fix.
+describe('a Niagara module goes where its dependencies hold', () => {
+  it('inserts before the first module providing a post-dependency, on both add paths, and names the issue in full', () => {
+    const order = code('NiagaraGraph', 'McpNiagaraModuleOrder.h');
+    expect(order).toContain('Dependency.Type == ENiagaraModuleDependencyType::PostDependency && OtherData->ProvidedDependencies.Contains(Dependency.Id)');
+    expect(order, 'a missing provider goes before the module that asked for it').toContain(
+      'Dependency.Type == ENiagaraModuleDependencyType::PreDependency && Data->ProvidedDependencies.Contains(Dependency.Id)');
+    expect(order, 'the engine GetOrderedModuleNodes is not exported').not.toContain('GetOrderedModuleNodes(');
+    const generic = code('NiagaraGraph', 'McpNiagaraGraphHandlers.cpp');
+    expect(generic).toContain('McpNiagaraModuleOrder::DependencyInsertIndex(*ModuleScript, *OutputNode)');
+    expect(generic).toContain('ModuleScript, *OutputNode, StackIndex);');
+    expect(generic).toContain('McpNiagaraAuthoringHandlers::CollectNiagaraSystemStackIssues(System, StackErrors, StackWarnings);');
+    expect(code('NiagaraAuthoring', 'McpNiagaraStackGraph.cpp')).toContain('McpNiagaraModuleOrder::DependencyInsertIndex(*ModuleScript, *TargetOutput)');
+    const issues = code('NiagaraAuthoring', 'McpNiagaraStackIssues.cpp');
+    expect(issues).toContain('FString Message = Entry->GetDisplayName().ToString() + TEXT(": ") + Short;');
+    expect(issues).toContain('for (const UNiagaraStackEntry::FStackIssueFix& Fix : Issue.GetFixes())');
+    // Each error was in stackErrors, again in warnings and the receipt, with a count, a flag and a dependency list.
+    const context = code('NiagaraAuthoring', 'McpNiagaraContext.cpp');
+    expect(context).toContain('Context.Result->SetArrayField(TEXT("stackErrors"), Errors);');
+    expect(context).not.toContain('hasUnmetDependencies');
+    expect(code('NiagaraAuthoring', 'McpNiagaraContext.h')).not.toContain('dependencyHint');
+    expect(code('..', 'MCP', 'Execute', 'McpNativeReceiptEnrichment.cpp')).not.toContain('TEXT("stackErrors")');
+  });
+});
+
+// set_parameter on a placed effect answered "Niagara parameter set" for a name its system lacks (the component's
+// setter adds any name), wrote a Vector parameter as Float unless told, reached only the actor's first component,
+// and left the level unmarked, so the value was lost at the next start unless another edit had dirtied it.
+describe('a placed effect takes only the user parameters its system has', () => {
+  it('resolves each name and type from the system, names the component, and marks the level', () => {
+    const params = code('Effect', 'McpEffectNiagaraRuntimeParams.cpp');
+    expect(params).toContain('System->GetExposedParameters().ReadParameterVariables()');
+    expect(params).toContain('Write.Code = TEXT("PARAM_NOT_FOUND");');
+    expect(params).toContain('const FString Kind = UserTypeKind(Var->GetType());');
+    expect(params).toContain('Component->GetName().Equals(ComponentName, ESearchCase::IgnoreCase)');
+    expect(params).toContain('Component->Modify();');
+    expect(params).toContain('TEXT("PARAMETER_BATCH_INCOMPLETE")');
+    expect(params).not.toContain('FindComponentByClass<UNiagaraComponent>()');
+  });
+});
+
+// A duplicated Niagara system could not start until something compiled it: every component playing the copy logged
+// "Error initializing data interfaces. Completing system." and stopped.
+describe('a duplicated Niagara system can play at once', () => {
+  it('compiles the copy and waits for it before the copy is saved', () => {
+    const handler = code('AssetWorkflow', 'Operations', 'McpAssetImportDuplicate.cpp');
+    expect(handler).toContain('if (UNiagaraSystem *System = Cast<UNiagaraSystem>(Copy)) {');
+    expect(handler).toContain('System->RequestCompile(false);');
+    expect(handler).toContain('System->WaitForCompilationComplete(false, false);');
+  });
+});
+
+// set_default answered instancesUpdated 2 for a class with no placed copies: it counted editor preview actors.
+describe('a class default counts only the actors placed in a level', () => {
+  it('skips preview copies when counting instancesUpdated', () => {
+    const source = code('Blueprint', 'Graph', 'McpBPSetDefaultLiteral.cpp');
+    expect(source).toContain('World->WorldType == EWorldType::Editor || World->WorldType == EWorldType::PIE');
+  });
+});
+
+// A listed BuoyancyData left out BuoyancyDamp2 = 0: the list read exported structs against zero defaults.
+describe('listed struct values show their zero fields', () => {
+  it('exports a value against itself in the shared property reader and the list fallback', () => {
+    const reader = readFileSync(join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'Foundation', 'Reflection', 'McpPropertyReflectionUtilities.cpp'), 'utf8');
+    expect(reader).toContain('MCP_PROPERTY_EXPORT_TEXT(Property, Result, Value, Value, nullptr, PPF_None);');
+    const reflection = readFileSync(join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'Foundation', 'Reflection', 'McpPropertyReflection.cpp'), 'utf8');
+    expect(reflection).toContain('MCP_PROPERTY_EXPORT_TEXT(Property, Text, Value, Value, nullptr, PPF_None);');
+    expect(reflection).toContain('StructProp->Struct->ExportText(Exported, StructValue, StructValue, nullptr, 0, nullptr, true);');
+  });
+});
+
+// A paused motion run at interval 0 answered 74 copies of the same t=0 sample.
+describe('a paused motion run repeats no sample', () => {
+  it('samples only when game time moved since the last sample', () => {
+    const source = code('ControlActor', 'McpActorMotionSample.cpp');
+    expect(source).toContain('const bool bAdvanced = Run.Samples.Num() == 0 || Now > Run.LastSampleGame;');
+    expect(source).toContain('Run.LastSampleGame = GameTime;');
+  });
+});
+
+// edit_scs modify added a component with no attachTo under DefaultSceneRoot and said nothing about where it went.
+describe('a batch-added component says where it was attached', () => {
+  it('reports attachedTo when the operation named no parent, on both add paths', () => {
+    const resolve = code('Blueprint', 'Components', 'McpBPScsParentResolve.h');
+    expect(resolve).toContain('OpSummary->SetStringField(TEXT("attachedTo"), Where);');
+    const ops = code('Blueprint', 'Components', 'McpBPModifyScsComponentOps.cpp');
+    expect(ops.match(/McpScsParent::ReportParent\(/gu)?.length).toBe(2);
+  });
+});
+
+// A child Blueprint's edit_scs could not touch a part of its parent Blueprint: get_scs listed it as inherited, while
+// modify and attachTo answered that it was neither the Blueprint's own component nor one it inherits.
+describe('a child Blueprint edits and attaches to its parent Blueprint parts', () => {
+  it('modify edits the child override of a parent part, undone when nothing lands', () => {
+    const ops = code('Blueprint', 'Components', 'McpBPModifyScsComponentOps.cpp');
+    expect(ops).toContain('Template = McpPropertyCdoComponents::FindCdoComponent(LocalBP, LocalBP->GeneratedClass->GetDefaultObject(), ComponentName, true, &Created.Handler, &Created.Key);');
+    expect(ops).toMatch(/if \(!bAnySuccess\) \{\s*Created\.Rollback\(\);/u);
+  });
+  it('attachTo names a parent Blueprint part by variable, as the Components panel does', () => {
+    const resolve = code('Blueprint', 'Components', 'McpBPScsParentResolve.h');
+    expect(resolve).toMatch(/if \(bInherited && Node->GetVariableName\(\)\.ToString\(\)\.Equals\(Name, ESearchCase::IgnoreCase\)\) Found = Node;/u);
+    expect(resolve).toContain('if (USCS_Node *InheritedNode = FindInheritedScsSceneNode(Blueprint, Trimmed)) {');
+    expect(resolve).toContain('Child->SetParent(InheritedNode);');
+  });
+  // add_scs_component parentComponent "Hanger" on a child Blueprint answered "Parent component not found" while
+  // edit_scs attachTo took the same part.
+  it('add_scs_component parentComponent takes a parent Blueprint part too, and lists them when nothing matches', () => {
+    const add = code('SCS', 'McpSCSAddComponent.cpp');
+    expect(add).toContain('InheritedParent = ParentNode ? nullptr : McpScsParent::FindInheritedScsSceneNode(Blueprint, ParentComponentName);');
+    expect(add).toMatch(/\} else if \(InheritedParent\) \{\s*NewNode->SetParent\(InheritedParent\);/u);
+    expect(add).toContain('Names.AddUnique(GetSCSNodeName(Node) + TEXT(" (inherited)"));');
+  });
+  // get_blueprint_details listed a restyled gate's Tag as the parent's price tag while every placed copy drew the
+  // child's cube: the listings read the node's own template, never the child's override of it.
+  it('reads list a parent part as the child override has it, marked overridden', () => {
+    const header = code('Property', 'McpPropCdoComponents.h');
+    expect(header).toMatch(/if \(Bp->SimpleConstructionScript && Bp->SimpleConstructionScript->GetAllNodes\(\)\.Contains\(Node\)\)\s*\{\s*break;/u);
+    expect(header).toContain('Handler->GetOverridenComponentTemplate(FComponentKey(Node))');
+    expect(code('Environment', 'Inspection', 'McpEnvInspectBP.cpp')).toContain('McpPropertyCdoComponents::EffectiveTemplate(Blueprint, Node, &bOverridden)');
+    expect(code('Property', 'McpPropCdoInspection.cpp')).toContain('McpPropertyCdoComponents::EffectiveTemplate(Blueprint, Node, &bOverridden)');
+    expect(code('Blueprint', 'Components', 'McpBPScsGet.cpp')).toContain('McpPropertyCdoComponents::EffectiveTemplate(Blueprint, Node, &bOverridden);');
+    expect(code('Blueprint', 'Queries', 'McpBPGet.cpp')).toContain('UObject *Template = Node ? McpPropertyCdoComponents::EffectiveTemplate(BP, Node) : nullptr;');
+  });
+});
+
+// add_scs_component with a properties bag answered success without saying which properties took their value.
+describe('a component add names the properties it set', () => {
+  it('echoes appliedProperties on the single add path', () => {
+    const source = code('Blueprint', 'Components', 'McpBPScsAddComponent.cpp');
+    expect(source).toContain('AppliedNames.Add(MakeShared<FJsonValueString>(PropName));');
+    expect(source).toContain('Result->SetArrayField(TEXT("appliedProperties"), AppliedNames);');
+  });
+});
+
+// Setting a Float member's default to 2.5 answered success with default 0: the text was read from the struct's first
+// bytes (a String) instead of the member's own offset.
+describe('a struct member default lands on its own member', () => {
+  it('converts in a scratch copy and reads the value back at the member offset', () => {
+    const source = code('AssetWorkflow', 'Structs', 'McpAssetStructsHelpers.cpp');
+    expect(source).toContain('FStructOnScope Scratch(S);');
+    expect(source).toContain('const void* Value = Prop->ContainerPtrToValuePtr<void>(Container);');
+    expect(source).not.toContain('const_cast<uint8*>(DefaultInstance)');
+  });
+});
+
+// fix_coplanar left twelve flush pier sections as a staircase after four passes: the smaller piece of every pair moved,
+// so each section of a row moved the same way as its neighbour and stayed in its plane.
+describe('a row of flush pieces is parted in one pass', () => {
+  it('2-colours the touching faces and moves only one colour', () => {
+    const plan = code('ControlActor', 'Placement', 'McpCoplanarPlan.cpp');
+    expect(plan).toContain('const TMap<FMcpFaceKey, bool> Moves = McpCoplanarColour(Hits, Sides);');
+    expect(plan).toMatch(/Moves\.Add\(Next, !bMoves\);/u);
+    expect(plan).toMatch(/Swap\(Mover, Still\);\s*Shift = -Shift;/u);
+    expect(code('ControlActor', 'Placement', 'McpCoplanarFix.cpp'))
+      .toContain('const TMap<AActor*, FMcpCoplanarPlan> Plans = PlanCoplanarPass(Hits, Distance, Inside);');
+  });
+
+  // An ocean was reported as a coplanar pair of its two water info meshes, which no view ever draws.
+  it('skips meshes kept out of the main view', () => {
+    const faces = code('ControlActor', 'Placement', 'McpCoplanarFaces.cpp');
+    expect(faces).toContain('return Component->bRenderInMainPass && Component->GetClass()->GetFName() != TEXT("WaterBodyInfoMeshComponent");');
+    expect(faces).toContain('!McpCoplanarDrawnInView(Component))');
+  });
+});
+
+// A delete listed a struct as "still on disk because the package is still loaded" after the package was unloaded and
+// the system had accepted the file delete; the file was gone at the next editor start.
+describe('a file delete the system accepted counts as done', () => {
+  it('trusts the accepted delete over a file that still shows while a handle is open', () => {
+    const source = readFileSync(join(DOMAINS, '..', 'Safety', 'McpSafeOperationsAssetDelete.h'), 'utf8');
+    expect(source).toContain('const bool bDeleted = IFileManager::Get().Delete(');
+    expect(source).toContain('return bDeleted || !FPackageName::DoesPackageExist(PackageName);');
+  });
+});
+
+// A Niagara set_parameter that landed answered OUTPUT_SCHEMA_VIOLATION: it sent applied: true while the capability's
+// applied is the count of a parameters batch. It also refused LinearColor, the type add_user_parameter takes.
+describe('a Niagara parameter write answers in the capability shape', () => {
+  it('sends no boolean applied and takes LinearColor as Color', () => {
+    const source = code('Effect', 'McpEffectNiagaraRuntimeParams.cpp');
+    expect(source, 'only a parameters entry says applied: true or false').not.toContain('Response->SetBoolField(TEXT("applied")');
+    expect(source).toContain('Response->SetNumberField(TEXT("applied"), Results.Num() - Failed.Num());');
+    expect(source).toContain('(Kind == TEXT("Color") && TypeHint.Equals(TEXT("LinearColor"), ESearchCase::IgnoreCase))');
+  });
+});
+
+// A set_property batch on an asset never said whether the package reached disk; the single write did.
+describe('a property batch says whether it saved', () => {
+  it('carries saved and saveSkippedReason from the writes', () => {
+    const source = code('Property', 'McpPropObjectSetBatch.cpp');
+    expect(source).toMatch(/TEXT\("materialRebuilt"\), TEXT\("saved"\), TEXT\("saveSkippedReason"\)\}\)/u);
+  });
+});
+
+// set_property markDirty false still left the level unsaved: Modify() marks the package dirty unless told not to.
+describe('a property write with markDirty false leaves the package clean', () => {
+  it('passes markDirty to Modify', () => {
+    const source = code('Property', 'McpPropObjectSet.cpp');
+    expect(source).toContain('RootObject->Modify(bMarkDirty);');
+    expect(source).not.toContain('RootObject->Modify();');
+  });
+});
+
+// save_all with assetPaths said "left 1 other dirty package(s) unsaved" without saying which.
+describe('save_all names the packages it left unsaved', () => {
+  it('lists them under leftDirtyPackages', () => {
+    const source = code('ControlEditor', 'McpEditorAssets.cpp');
+    expect(source).toMatch(/LeftDirty\+\+;\s*LeftDirtyPackages\.Add\(Package->GetName\(\)\);/u);
+    expect(source).toContain('Resp->SetArrayField(TEXT("leftDirtyPackages"), MakeStringArray(LeftDirtyPackages));');
+  });
+
+  // resume answered "PIE session resumed" while the game held its own pause (a title screen): nothing ticked.
+  it('resume fails GAME_PAUSED naming the pauser unless unpauseGame lifts the game pause', () => {
+    const play = code('ControlEditor', 'McpEditorPlay.cpp');
+    expect(play).toContain('if (Settings && Settings->GetPauserPlayerState() && GetJsonBoolField(Payload, TEXT("unpauseGame"))) {');
+    expect(play).toContain('UGameplayStatics::SetGamePaused(GEditor->PlayWorld, false);');
+    expect(play).toMatch(/Paused->SetStringField\(TEXT\("pausedBy"\), Pauser->GetName\(\)\);\s*SendStandardErrorResponse\(this, Socket, RequestId, TEXT\("GAME_PAUSED"\)/u);
+    // play answered "started" while the minimized editor froze the game's title screen, which held the game paused.
+    expect(play).toContain('if (bStarted && Root.IsValid() && Root->IsWindowMinimized()) {');
+  });
+
+  // A material given a usage flag while a mesh was loading was never marked dirty: assetPaths naming it saved 0.
+  it('writes a named package the editor holds even when it is not marked dirty', () => {
+    const source = code('ControlEditor', 'McpEditorAssets.cpp');
+    expect(source).toMatch(/for \(const FString& Name : OnlyPackages\) \{\s*ProcessPackage\(FindPackage\(nullptr, \*Name\)\);/u);
+  });
+});
+
+// raycast_world ignoreActors refused PlayerPawn, a name control_actor and set_property take while PIE runs.
+describe('the shared actor lookup takes the running game\'s role names', () => {
+  it('falls back to ResolveRuntimeRole when no actor has the name', () => {
+    const source = code('..', 'Foundation', 'HandlerUtils', 'McpHandlerUtilsActors.cpp');
+    expect(source).toMatch(/if \(AActor\* Actor = FindActorByNameInWorldForMcp\(World, ActorName, true\)\)\s*\{\s*return Actor;\s*\}\s*return Cast<AActor>\(ResolveRuntimeRole\(ActorName\)\);/u);
+  });
+});
+
+// update_custom_expression answered with the whole HLSL it was sent.
+describe('a custom expression update does not echo its code', () => {
+  it('leaves code out of the reply', () => {
+    expect(code('MaterialAuthoring', 'Nodes', 'McpMatUpdateCustomExpr.cpp')).not.toContain('SetStringField(TEXT("code")');
+  });
+});
+
+// get_splines_info with actorName gave local points while its listing gave world ones; an ocean shoreline read as world
+// was off by the actor's location.
+describe('a spline read names both point spaces', () => {
+  it('adds worldLocation beside the local location', () => {
+    const source = code('Spline', 'McpSplineQueries.cpp');
+    expect(source).toContain('PointObj->SetObjectField(TEXT("worldLocation"), McpHandlerUtils::VectorToJson(SplineComp->GetLocationAtSplinePoint(i, ESplineCoordinateSpace::World)));');
+  });
+});
+
+// add_scs_component of a buoyancy component said parent "(root)" while its verification said it attaches to nothing.
+describe('an actor component added to a Blueprint is not reported under the root', () => {
+  it('names no parent for a component that is not a scene component', () => {
+    const source = code('SCS', 'McpSCSAddComponent.cpp');
+    expect(source).toContain('const bool bSceneComponent = CompClass->IsChildOf(USceneComponent::StaticClass());');
+    expect(source).toContain('!bSceneComponent ? TEXT("(none - not a scene component)")');
+  });
+});
+
+// A spawn batch item with "label" kept the class label and the reply never mentioned the key.
+describe('a spawn batch names the item keys it ignored', () => {
+  it('lists unread keys per item and keeps those items under report failures', () => {
+    const source = code('ControlActor', 'McpActorSpawnBatch.cpp');
+    expect(source).toContain('Entry->SetStringField(TEXT("ignoredKeys"), FString::Join(Ignored, TEXT(", ")));');
+    expect(source).toContain('!Entry->HasField(TEXT("ignoredKeys"));');
+  });
+});
+
+// A boat's or a ship's roll over time could not be sampled: motion samples carried location and velocity only.
+describe('motion samples carry rotation when it changes', () => {
+  it('writes rotation on the first sample and on each one where it moved', () => {
+    const source = code('ControlActor', 'McpActorMotionSample.cpp');
+    expect(source).toContain('if (!Run.LastRotation.IsSet() || !Rotation.Equals(Run.LastRotation.GetValue(), 0.05)) {');
+    expect(source).toContain('Sample->SetArrayField(TEXT("rotation"), McpMotionVec(FVector(Rotation.Pitch, Rotation.Yaw, Rotation.Roll)));');
+  });
+});
+
+// connect_pins missed a cast's "AsPrimitive Component" when it was written "AsPrimitiveComponent".
+describe('a pin named without its spaces still connects', () => {
+  it('compares pin names with spaces and underscores dropped after the exact tries', () => {
+    const source = code('BlueprintGraph', 'Context', 'McpBPGraphContextEditor.cpp');
+    expect(source).toContain('auto Squash = [](FString S) { S.ReplaceInline(TEXT(" "), TEXT("")); S.ReplaceInline(TEXT("_"), TEXT("")); return S; };');
+    expect(source).toContain('Squash(Pin->PinName.ToString()).Equals(Squashed, ESearchCase::IgnoreCase)');
+  });
+});
+
+// A StaticMeshActor's mesh took its mesh's default collision back when it next registered, and a Blueprint's
+// CollisionProfileName change never reached its placed copies.
+describe('a static mesh collision change holds', () => {
+  it('a static mesh set to a collision mode stops using its mesh default collision, and its placed copies follow', () => {
+    const lookup = readFileSync(join(DOMAINS, '..', 'Foundation', 'BridgeHelpers', 'Properties', 'McpComponentLookup.h'), 'utf8');
+    expect(lookup).toMatch(/Primitive->SetCollisionEnabled\(static_cast<ECollisionEnabled::Type>\(Enabled\)\);[\s\S]*?Mesh->bUseDefaultCollision = false;/u);
+    expect(code('Blueprint', 'Components', 'McpBPScsPropagate.h')).toContain('TEXT("bUseDefaultCollision")})');
+  });
+});
+
+// set_property of CollisionEnabled on a placed mesh answered success while the collision profile had put the old value back.
+describe('a property write the object put back fails', () => {
+  it('reads the value again after the change handling and fails when it is the value from before the write', () => {
+    const source = code('Property', 'McpPropObjectSet.cpp');
+    const before = source.indexOf('const FString BeforeText = bCompare ? McpPropertyTarget::ValueText(Property, TargetContainer) : FString();');
+    const after = source.indexOf('const FString AfterText = bCompare && !bDefaultObject ? McpPropertyTarget::ValueText(Property, TargetContainer) : WrittenText;');
+    expect(before, 'taken before the write').toBeGreaterThan(-1);
+    expect(before).toBeLessThan(source.indexOf('McpPropertyTarget::WriteValue(RootObject, EffectivePropertyName, Property, TargetContainer, ValueField, ConversionError)'));
+    expect(after, 'after the object\'s own change handling').toBeGreaterThan(source.indexOf('RootObject->PostEditChangeProperty(Changed);'));
+    expect(after, 'and before a Blueprint compile replaces the object').toBeLessThan(source.indexOf('FKismetEditorUtilities::CompileBlueprint(ResolvedBlueprint);'));
+    expect(source).toMatch(/if \(bAdjusted && AfterText == BeforeText\)\s*\{\s*CreatedOverride\.Rollback\(\);/u);
+    expect(source).toMatch(/the object works it out from another of its settings, so change that "\s*"one instead\./u);
+    expect(source, 'an adjusted value is a success that names it').toContain('object\'s own change handling made it \'%s\'.');
+  });
+
+  it('saves through the shared helper, with the same skip reasons', () => {
+    const target = code('Property', 'McpPropTarget.cpp');
+    expect(target).toContain('bool SaveAfterWrite(UObject* Target, UBlueprint* Blueprint, bool bMarkDirty, FString& OutSkipReason)');
+    expect(target).toContain('} else if (McpSafeAssetSave(OwningPackage)) {');
+    expect(target).toContain('OutSkipReason = TEXT("level content is saved with its level");');
+  });
+});
+
+// set_property of "StaticMeshComponent0.StaticMesh" on a placed actor wrote the raw property, and the engine's
+// KnownStaticMesh ensure fired; a raw CollisionEnabled was put back by the mesh's default collision.
+describe('a component key with a setter is written through the setter', () => {
+  it('set_property routes a setter key of a component, or of the component a placed actor path names first', () => {
+    const target = code('Property', 'McpPropTarget.cpp');
+    expect(target).toContain('if (!Component || !McpIsComponentSetterKey(Component, Key)) {');
+    expect(target).toContain('McpApplyComponentProperties(Component, Bag, Applied, Warnings);');
+    expect(target, 'the actor property holding it, or its own name').toContain('Held->GetObjectPropertyValue_InContainer(Actor)');
+    expect(code('ControlActor', 'McpActorComponentProps.cpp'))
+      .toContain('bool McpIsComponentSetterKey(const UActorComponent *Component, const FString &Name) {');
+    expect(code('Property', 'McpPropCdoPropagation.cpp'), 'placed copies take it the same way')
+      .toContain('McpPropertyTarget::WriteValue(Instance, Path, Property, Container, Value, Error)');
+  });
+});
+
+// edit_scs set_property StaticMesh wrote the template's raw property (and the push to placed copies copied it raw), so
+// the engine's KnownStaticMesh ensure fired on the template.
+describe('a component mesh goes through SetStaticMesh', () => {
+  it('the shared JSON writer and the push to placed copies set a StaticMeshComponent mesh through its setter', () => {
+    const writer = readFileSync(join(DOMAINS, '..', 'Foundation', 'BridgeHelpers', 'Properties', 'McpPropApplyObjects.h'), 'utf8');
+    expect(writer, 'a struct member or function parameter named StaticMesh is not the component\'s')
+      .toContain('Cast<UClass>(Property->GetOwnerUField())');
+    expect(writer).toContain('Owner->IsChildOf(UStaticMeshComponent::StaticClass())');
+    expect(writer).toContain('MeshOwner->SetStaticMesh(Cast<UStaticMesh>(Value));');
+    expect(writer, 'set and clear alike').toContain('return Assign(Res);');
+    expect(writer).toContain('return Assign(nullptr);');
+    expect(code('Blueprint', 'Components', 'McpBPScsPropagate.h'))
+      .toContain('Mesh->SetStaticMesh(McpStaticMeshOwner(TemplateProp, TemplateContainer)->GetStaticMesh());');
+  });
+});
+
+// A parent Blueprint's class default reached its own placed copies, not a child Blueprint's default or the child's copies.
+describe('a class default reaches derived Blueprints that never overrode it', () => {
+  it('collects derived defaults and their copies whose whole archetype chain still holds the old value', () => {
+    const source = code('Property', 'McpPropCdoPropagation.cpp');
+    expect(source).toContain('for (UObject* Each = Instance; Each && Each != Template; Each = Each->GetArchetype())');
+    expect(source).toContain('Instance->IsTemplate() && !McpPropertyTarget::IsSupersededTarget(Instance)');
+    expect(source).not.toContain('Instance->GetArchetype() != Template');
+  });
+});
+
+// A water body's wave generator took MaxAmplitude while the waves kept their old height: only the generator heard it.
+describe('an instanced subobject write tells its owner', () => {
+  it('walks up the owners through the instanced property holding each one', () => {
+    const target = code('Property', 'McpPropTarget.cpp');
+    expect(target).toContain('if (It->HasAnyPropertyFlags(CPF_InstancedReference) && It->GetObjectPropertyValue_InContainer(Owner) == Edited) {');
+    expect(target).toContain('Owner->PostEditChangeProperty(Changed);');
+    const set = code('Property', 'McpPropObjectSet.cpp');
+    expect(set.indexOf('McpPropertyTarget::NotifyOwners(RootObject);')).toBeGreaterThan(set.indexOf('RootObject->PostEditChangeProperty(Changed);'));
+  });
+});
+
+// attachTo "Root" on a Blueprint with a component named Root landed on the DefaultSceneRoot above it.
+describe('a component named like the root alias is the parent it names', () => {
+  it('treats Root, RootComponent and DefaultSceneRoot as the root only when no component has that name', () => {
+    const scs = code('SCS', 'McpSCSHandlers.cpp');
+    expect(scs).toContain('bool IsSCSRootAlias(USimpleConstructionScript *SCS, const FString &Name) {');
+    expect(scs).toContain('!FindSCSNodeByVariableName(SCS, Name);');
+    expect(code('SCS', 'McpSCSAddComponent.cpp')).toContain('IsSCSRootAlias(SCS, ParentComponentName)');
+    expect(code('SCS', 'McpSCSReparent.cpp')).toContain('IsSCSRootAlias(SCS, NewParentName)');
+  });
+});
+
+// A Blueprint component's properties bag refused SimulatePhysics: the field is BodyInstance.bSimulatePhysics.
+describe('a bool named without its b prefix resolves', () => {
+  it('tries the b-prefixed bool for a last segment and for a bare nested name', () => {
+    const resolver = code('..', 'Foundation', 'BridgeHelpers', 'Properties', 'McpNestedPropPath.h');
+    expect(resolver).toContain('CastField<FBoolProperty>(FindFProperty<FProperty>(CurrentTypeScope, FName(*(TEXT("b") + Segment))));');
+    expect(resolver).toContain('McpCollectNestedMemberPaths(RootObject->GetClass(), FName(*(TEXT("b") + PropertyPath)), FString(), Candidates);');
+  });
+});
+
+// Writing four buoyancy pontoons echoed every runtime field of each one (LocalForce, WaterHeight ...): 4 KB per call.
+describe('a written struct echoes its editable fields', () => {
+  it('leaves runtime fields out of a write echo, for a struct and an array of them, and reads stay whole', () => {
+    const reflection = code('..', 'Foundation', 'Reflection', 'McpPropertyReflection.cpp');
+    expect(reflection).toContain('if (!It->HasAnyPropertyFlags(CPF_Edit))');
+    expect(reflection).toContain('return bLeftOut && !Fields.IsEmpty() ?');
+    expect(reflection).toContain('FStructProperty* StructProp = CastField<FStructProperty>(ArrayProp ? ArrayProp->Inner : Property);');
+    expect(code('Property', 'McpPropObjectSet.cpp')).toContain('McpPropertyReflection::ExportWrittenValueToJson(TargetContainer, Property)');
+    expect(code('Property', 'McpPropObjectGet.cpp')).not.toContain('ExportWrittenValueToJson');
+  });
+});
+
+// A 108-step graph build answered some 70 rows of {"index":N,"edit":"connect_pins","connected":true,"success":true}.
+describe('a batch lists the steps that have something to say', () => {
+  it('counts plain successful steps in succeeded and lists the rest, in the graph, material and MetaSound batches', () => {
+    const fields = code('..', 'Foundation', 'BridgeHelpers', 'Responses', 'McpJsonFields.h');
+    expect(fields).toContain('static inline TArray<TSharedPtr<FJsonValue>> McpListTellingSteps(const TArray<TSharedPtr<FJsonValue>>& Results)');
+    expect(fields).toContain('Step->Values.Num() == Plain');
+    // Through McpSetBatchSteps, which also leaves out an empty results or nodeIds.
+    expect(fields).toMatch(/const TArray<TSharedPtr<FJsonValue>> Telling = McpListTellingSteps\(Results\);\s*if \(Telling\.Num\(\) > 0\)/u);
+    expect(fields).toContain('if (NodeIds.IsValid() && NodeIds->Values.Num() > 0)');
+    expect(code('BlueprintGraph', 'McpBPGraphBatch.cpp')).toContain('McpSetBatchSteps(Result, Results, NodeIds);');
+    expect(code('MaterialAuthoring', 'McpMatGraphBatch.cpp')).toContain('McpSetBatchSteps(Result, Results, NodeIds);');
+    expect(code('AudioAuthoring', 'MetaSound', 'McpAudioMetaSoundBatch.cpp')).toContain('McpSetBatchSteps(Response, Results, NodeIds);');
+  });
+
+  it('lists the failing step last on a failed batch, alone once the steps before it were undone', () => {
+    const batch = code('BlueprintGraph', 'McpBPGraphBatch.cpp');
+    expect(batch).toContain('Details->SetArrayField(TEXT("results"), Results);');
+    expect(batch.indexOf('McpBlueprintBehaviour::UndoBatch(')).toBeLessThan(batch.indexOf('Details->SetArrayField(TEXT("results"), Results);'));
+    expect(code('BlueprintGraph', 'Behaviour', 'McpBPBehaviourSnapshot.cpp')).toContain('Results.RemoveAt(0, FailedIndex);');
+    // The message is cut at 512 characters: what happened to the Blueprint goes before the step's own error.
+    expect(batch).toContain('TEXT("build_graph stopped at operations[%d]. %s %s"), Index,');
+  });
+
+  // A type error at step 5 left the two variables and three nodes the steps before it made.
+  it('undoes the steps before a failing one, from a snapshot taken before step 0', () => {
+    const batch = code('BlueprintGraph', 'McpBPGraphBatch.cpp');
+    expect(batch).toContain('bCompile ? McpBlueprintBehaviour::TakeSnapshot(Context.Blueprint) : McpBlueprintBehaviour::FSnapshot();');
+    expect(batch.indexOf('McpBlueprintBehaviour::TakeSnapshot(')).toBeLessThan(batch.indexOf('RunBatchStep(Context, State'));
+    expect(batch).toContain('McpBlueprintBehaviour::UndoBatch(Context.Blueprint, Before, *Steps, Results)');
+    expect(batch, 'a failed batch names no removed node').not.toContain('Details->SetObjectField(TEXT("nodeIds"), NodeIds);');
+    const snapshot = code('BlueprintGraph', 'Behaviour', 'McpBPBehaviourSnapshot.cpp');
+    expect(snapshot).toMatch(/Detail::Restore\(Blueprint, Before, MakeShared<FJsonObject>\(\)\);\s*if \(!Before\.bPackageDirty\)/u);
+    expect(snapshot, 'what it cannot put back is named').toContain('set on a node that was already there');
+    // Removing a new Math Expression took its sub-graph along; removing that graph's tunnel node crashed the editor.
+    expect(snapshot).toContain('FBlueprintEditorUtils::FindBlueprintForGraph(Graph) != Blueprint');
+    expect(code('BlueprintGraph', 'Behaviour', 'McpBPBehaviourOwnership.cpp')).toContain('FBlueprintEditorUtils::FindBlueprintForGraph(Graph) != Blueprint');
+  });
+
+  // A created node's row repeated its id beside the batch's nodeIds map.
+  it('leaves the node id out of a row whose step has an id', () => {
+    const fields = code('..', 'Foundation', 'BridgeHelpers', 'Responses', 'McpJsonFields.h');
+    expect(fields).toMatch(/if \(Step\.IsValid\(\) && Step->HasField\(TEXT\("id"\)\) && \(Step->HasField\(TEXT\("nodeGuid"\)\) \|\| Step->HasField\(TEXT\("nodeId"\)\)\)\)\s*\{\s*Step = MakeShared<FJsonObject>\(\*Step\);\s*Step->RemoveField\(TEXT\("nodeGuid"\)\);\s*Step->RemoveField\(TEXT\("nodeId"\)\);/u);
+  });
+});
+
+// manage_blueprint create sent { path } answered only "Missing required parameter 'savePath'", and path looked accepted.
+describe('a missing required parameter names the keys sent in its place', () => {
+  it('adds the keys the action does not take to the native refusal', () => {
+    const source = code('..', 'MCP', 'Execute', 'McpNativeGatewaySchemaValidation.cpp');
+    expect(source).toContain('if (!(*Properties)->HasField(Entry.Key)) Stray.Add(Entry.Key);');
+    expect(source).toContain('TEXT("; sent %s, which this action does not take")');
+    expect(source).toContain('McpSchemaKeywords::JoinPointer(Pointer, Missing[0]), Message + StrayNote);');
+  });
+
+  // spawn sent { assetPath } answered only "At least one of [classPath, ...] must be provided".
+  it('adds them to a missing at-least-one-of group too', () => {
+    const source = code('..', 'MCP', 'Execute', 'McpNativeGatewaySchemaValidation.cpp');
+    expect(source).toMatch(/CheckRequiredOneOf\(Object, Schema, Pointer, OutViolation\)\)\s*\{\s*OutViolation\.Message \+= StrayNote;/u);
+  });
+});
+
+// get_stats in Play In Editor read a 21 ms game thread, 8 ms of it the editor's own UI, while the world ticked in 10.5.
+describe('performance stats give the game\'s own share of the frame', () => {
+  it('times each world\'s tick from the subsystem\'s start and reports the measured world\'s as worldTickMs', () => {
+    const lifecycle = code('..', 'Core', 'Subsystem', 'EngineWireSubsystemLifecycle.cpp');
+    expect(lifecycle).toContain('McpWorldTickTimer::Start();');
+    expect(lifecycle).toContain('McpWorldTickTimer::Stop();');
+    const timer = code('..', 'Foundation', 'Diagnostics', 'McpWorldTickTimer.cpp');
+    expect(timer).toContain('FWorldDelegates::OnWorldTickStart.AddLambda(');
+    expect(timer).toContain('FWorldDelegates::OnWorldPostActorTick.AddLambda(');
+    expect(timer).toContain('FWorldDelegates::OnWorldTickStart.Remove(GMcpWorldTickStartHandle);');
+    const stats = code('Environment', 'Inspection', 'McpEnvInspectStats.cpp');
+    expect(stats).toContain('if (WorldTickMs >= 0.0) Resp->SetNumberField(TEXT("worldTickMs"), WorldTickMs);');
+  });
+
+  // With the editor minimized the render and RHI times read the same on every call and the GPU time 150-750 ms.
+  it('says when the editor window is minimized, so the render times are stale', () => {
+    const stats = code('Environment', 'Inspection', 'McpEnvInspectStats.cpp');
+    expect(stats).toMatch(/if \(Root\.IsValid\(\) && Root->IsWindowMinimized\(\)\)\s*\{\s*Resp->SetBoolField\(TEXT\("windowMinimized"\), true\);/u);
+  });
+
+  // A game holding most of the GPU slowed every frame; only the viewport's "Video memory has been exhausted" line said so.
+  it('says how far video memory is over budget, from the renderer\'s own figure', () => {
+    const stats = code('Environment', 'Inspection', 'McpEnvInspectStats.cpp');
+    expect(stats).toContain('const double VideoOverMB = double(GDemotedLocalMemorySize) / (1024.0 * 1024.0);');
+    expect(stats).toContain('if (VideoOverMB >= 1.0) Resp->SetNumberField(TEXT("videoMemoryOverBudgetMB"), FMath::RoundToDouble(VideoOverMB));');
+  });
+});
+
+// get_splines_info with actorName answered the spline at the top level and again under splines; save_all carried every
+// count its message gives as a field.
+describe('a reply says each thing once', () => {
+  it('answers one spline only under splines', () => {
+    const source = code('Spline', 'McpSplineQueries.cpp');
+    expect(source).not.toContain('Result->SetNumberField(TEXT("pointCount")');
+    expect(source).not.toContain('Result->SetArrayField(TEXT("points")');
+  });
+
+  it('reads a new variable back once, without the request echoed beside it or metadata copying its name', () => {
+    const add = code('Blueprint', 'Variables', 'McpBPAddVariable.cpp');
+    expect(add).not.toContain('Response->SetStringField(TEXT("variableType"), VarType);');
+    expect(add).not.toContain('Variable already exists; no changes applied.');
+    const vars = code('Blueprint', 'Variables', 'McpBPVariableIntrospection.cpp');
+    expect(vars).toContain('Metadata->RemoveField(TEXT("DisplayName"));');
+  });
+
+  it('names a compiled Blueprint once', () => {
+    expect(code('Blueprint', 'Queries', 'McpBPCompile.cpp')).not.toContain('Out->SetStringField(TEXT("blueprintPath"), Path);');
+  });
+
+  it('says a compile cleared undo history without the paragraph on why', () => {
+    expect(code('..', 'Foundation', 'BridgeHelpers', 'Blueprints', 'McpBPDiag.h')).not.toContain('undoBufferResetReason');
+  });
+
+  it('lets save_all\'s message carry the counts', () => {
+    const source = code('ControlEditor', 'McpEditorAssets.cpp');
+    expect(source).not.toContain('Resp->SetNumberField(TEXT("savedCount")');
+    expect(source).toContain('if (FailedPackages.Num() > 0) Resp->SetArrayField(TEXT("failedPackages"), MakeStringArray(FailedPackages));');
+  });
+});
+
+// There was no way to make a Material Parameter Collection or give it parameters, so a level-wide value (wetness, wind
+// strength) could not drive several materials at once.
+describe('a Material Parameter Collection can be made and read', () => {
+  it('creates or updates a collection, works on copies so a refused row changes nothing, and never removes a parameter', () => {
+    const create = code('MaterialAuthoring', 'Creation', 'McpMatCreateParamCollection.cpp');
+    expect(create).toContain('TArray<FCollectionScalarParameter> Scalars = Collection ? Collection->ScalarParameters : TArray<FCollectionScalarParameter>();');
+    expect(create).toContain('return FString::Printf(TEXT("\'%s\' is already a parameter of the other kind, and a collection\'s names are shared"), *Name);');
+    expect(create.indexOf('Bridge->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("%s; nothing was changed."), *Error), TEXT("INVALID_ARGUMENT"));'))
+      .toBeLessThan(create.indexOf('NewObject<UMaterialParameterCollection>('));
+    expect(create).toContain('Collection->PostEditChange();');
+    // A new vector started all zero, so an [r, g, b] default came out with alpha 0.
+    expect(create).toContain('bAdded ? 1.f : Param.DefaultValue.A');
+    expect(create).not.toMatch(/ScalarParameters\.Remove|VectorParameters\.Remove|\.Empty\(\)/u);
+    const handlers = code('MaterialAuthoring', 'McpMatHandlers.cpp');
+    expect(handlers).toContain('McpMaterialAuthoringHandlers::HandleCreateParameterCollection(this, RequestId, SubAction, Payload, Socket)');
+    const routing = readFileSync(join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'MCP', 'Routing',
+      'McpConsolidatedActionRoutingAssets.h'), 'utf8');
+    expect(routing).toContain('TEXT("create_parameter_collection")');
+  });
+
+  it('a CollectionParameter node takes its collection, refusing one that lacks the parameter before the node exists', () => {
+    const node = code('MaterialAuthoring', 'Nodes', 'McpMatAddMatNode.cpp');
+    expect(node.indexOf('!NodeCollection->GetParameterId(Wanted).IsValid()')).toBeLessThan(node.indexOf('NewObject<UMaterialExpression>('));
+    expect(node).toMatch(/CastChecked<UMaterialExpressionCollectionParameter>\(NewExpr\)->Collection = NodeCollection;\s*NewExpr->PostEditChange\(\);/u);
+  });
+});
+
+// A merged mesh (a library pack imported as one asset) could only be placed whole.
+describe('split_mesh makes one static mesh per part', () => {
+  it('groups the triangles itself, checks every name and the object count before it creates anything, and keeps each part to the slots it uses', () => {
+    const split = code('Geometry', 'Support', 'McpGeometrySplitMesh.cpp');
+    // An imported mesh came apart into ten thousand loose faces, and the pooled Geometry Script split raised an ensure
+    // past a thousand pieces and let them all go.
+    expect(split).not.toContain('UDynamicMeshPool');
+    expect(split).not.toContain('SplitMeshByComponents');
+    expect(split).toContain('Components.FindConnectedTriangles();');
+    expect(split, 'swept along X').toContain('for (int32 J = I + 1; J < Order.Num() && Pieces[Order[J]].Box.Min.X <= Reach.Max.X; ++J)');
+    expect(split).toContain('UE::Geometry::FDynamicSubmesh3 Submesh(&Mesh, Group.Triangles);');
+    expect(split.indexOf('McpAssetExists(Path)')).toBeLessThan(split.indexOf('CreateNewStaticMeshAssetFromMesh('));
+    expect(split.indexOf('Kept.Num() > MaxParts')).toBeLessThan(split.indexOf('CreateNewStaticMeshAssetFromMesh('));
+    // dryRun answers the meshes and creates none, so a split can be tuned first.
+    expect(split.indexOf('if (bDryRun)')).toBeLessThan(split.indexOf('CreateNewStaticMeshAssetFromMesh('));
+    expect(split).toContain('UGeometryScriptLibrary_MeshMaterialFunctions::CompactMaterialIDs(Part, SourceMaterials, PartMaterials);');
+    expect(split, 'small objects go after grouping, and the largest first, so a repeat of a larger one is the one dropped')
+      .toContain('Groups.Sort([](const FMcpTriangleGroup& A, const FMcpTriangleGroup& B) { return A.Triangles.Num() > B.Triangles.Num(); });');
+    const handlers = code('Geometry', 'McpGeometryHandlers.cpp');
+    expect(handlers).toContain('if (SubAction == TEXT("split_mesh")) return HandleSplitMesh(this, RequestId, Payload, RequestingSocket);');
+  });
+});
+
+// validate_assets only loaded each asset: one its project or engine validators reject passed as valid.
+describe('validate_assets runs Data Validation on request', () => {
+  it('asks the editor validator subsystem for each loaded asset and turns a rejected one invalid', () => {
+    const check = code('SystemControl', 'McpSystemAssetValidate.cpp');
+    expect(check).toContain('GetJsonBoolField(Payload, TEXT("dataValidation")) && GEditor');
+    expect(check).toContain('Validator->IsAssetValid(FAssetData(Asset), Errors, Warnings, EDataValidationUsecase::Script);');
+    expect(check).toContain('if (Asset && Validator && McpRunDataValidation(Validator, Asset, Row) == EDataValidationResult::Invalid) {');
+    expect(check).toContain('if (Counts[0] > 0) {');
+  });
+});
+
+// run_tests typed "automation RunTests" into the console and answered "check the Output Log".
+describe('run_tests runs each test and answers with its result', () => {
+  const tests = code('SystemControl', 'McpSystemTests.cpp');
+
+  it('drives each test as the engine automation worker does and reads what it reported', () => {
+    expect(tests).not.toContain('automation RunTests');
+    expect(tests).toContain('Framework.StartTestByName(Test.GetTestName(), 0);');
+    expect(tests).toContain('if (!bTimedOut && !(Framework.ExecuteLatentCommands() && Framework.ExecuteNetworkCommands())) {');
+    expect(tests).toContain('Run.Current->GetExecutionInfo(Info);');
+    expect(tests).toContain('const bool bPassed = Run.Current->GetLastExecutionSuccessState() && !bTimedOut;');
+    expect(tests).toContain('for (const FAutomationExecutionEntry& Entry : Info.GetEntries()) {');
+  });
+
+  // StopTest and ExecuteLatentCommands check() that a test is running: a test the framework refused to start
+  // (Play In Editor, a slow task, an unknown name) must never reach them.
+  it('only stops a test the framework really started, and never runs beside another runner or a game', () => {
+    expect(tests).toMatch(/Framework\.StartTestByName\(Test\.GetTestName\(\), 0\);\s*Run\.Current = GIsAutomationTesting \? Framework\.GetCurrentTest\(\) : nullptr;\s*if \(Run\.Current\) \{/u);
+    // The editor's automation worker may finish the test first: only a test still running, and still ours, is stopped here.
+    expect(tests).toContain('if (GIsAutomationTesting && Framework.GetCurrentTest() == Run.Current) {');
+    expect(tests).toContain('const bool bBlocked = GIsAutomationTesting || (GEditor && GEditor->PlayWorld);');
+    expect(tests).toContain('TEXT("PIE_RUNNING")');
+    expect(tests).toContain('TEXT("AUTOMATION_BUSY")');
+    // A test still running at its timeout has its queued commands dropped before it is stopped.
+    expect(tests).toMatch(/if \(bTimedOut\) \{\s*Framework\.DequeueAllCommands\(\);/u);
+  });
+});
+
+// A model cannot see a mesh: a hole, a crack, a fin or a face turned inside out passed every other check.
+describe('check_mesh reads the soundness of a mesh from its source topology', () => {
+  it('counts open, non-manifold and flipped edges from the faces each source edge joins', () => {
+    const check = code('Environment', 'Inspection', 'McpEnvInspectMeshCheck.cpp');
+    expect(check).toContain('const FMeshDescription *Description = Mesh ? Mesh->GetMeshDescription(0) : nullptr;');
+    expect(check).toContain('const TArrayView<const FTriangleID> Faces = Description->GetEdgeConnectedTriangleIDs(Edge);');
+    expect(check).toContain('Flipped += First.From != First.To && First.From == Runs(Faces[1], From, To).From ? 1 : 0;');
+    // Faces split along a seam (corners at one place, not shared) are joined, not a hole, and still checked for winding.
+    expect(check).toContain('Flipped += Seen.Count == 1 && Seen.From == Run.From ? 1 : 0;');
+    expect(check).toContain('Weld[Vertex.GetValue()] = Found ? *Found : WeldIds.Add(Key, WeldIds.Num());');
+    // Only a closed surface reports a volume.
+    expect(check).toContain('const bool bClosed = TriangleCount > 0 && Open == 0 && NonManifold == 0;');
+    expect(check).toContain('McpHandlerUtils::MarkNoAssetsChanged(Result);');
+    const inspect = code('Environment', 'Inspection', 'McpEnvInspect.cpp');
+    expect(inspect).toContain('return HandleInspectMeshCheckAction(*this, RequestId, Payload, RequestingSocket);');
+  });
+});
+
+// A particle system advanced (or a component edited) right before a capture drew its old state: its render data is
+// only sent at the end of the next frame, so the picture missed it.
+describe('an editor viewport capture shows what changed since the last frame', () => {
+  it('sends the world\'s pending render updates before every frame it draws', () => {
+    const windows = code('ControlEditor', 'McpEditorScreenshotWindows.cpp');
+    expect(windows).toMatch(/if \(World\) \{\s*World->SendAllEndOfFrameUpdates\(\);\s*\}\s*Viewport->Draw\(\);\s*FlushRenderingCommands\(\);/u);
+    const screenshot = code('ControlEditor', 'McpEditorScreenshot.cpp');
+    expect(screenshot).toContain('DrawViewportFramesForMcp(Viewport, CaptureClient ? CaptureClient->GetWorld() : nullptr, bCameraMoved ? 3 : 1);');
+  });
+});
+
+// advance_simulation answered "advanced" for a finished, paused or never-started system, which the engine steps
+// without a word; activate answered active true while its system was still waiting to start.
+describe('a Niagara advance or activate says what the system did', () => {
+  it('reads the age reached, and refuses when the system did not move', () => {
+    const lifecycle = code('Effect', 'McpEffectNiagaraLifecycle.cpp');
+    expect(lifecycle).toContain('const double AgeBefore = McpNiagaraAge(NiagaraComponent);');
+    expect(lifecycle).toMatch(/if \(Age <= AgeBefore\)\s*\{[\s\S]*?TEXT\("NOT_ADVANCED"\)\);\s*return true;/u);
+    expect(lifecycle).toContain('Response->SetBoolField(TEXT("complete"), bComplete);');
+    expect(lifecycle).toMatch(/if \(GetJsonBoolField\(Context\.Payload, TEXT\("reset"\)\)\)\s*\{\s*NiagaraComponent->ResetSystem\(\);/u);
+    expect(lifecycle).toContain('Response->SetBoolField(TEXT("active"), bActive);');
+    expect(lifecycle).not.toContain('SetBoolField(TEXT("active"), true)');
+  });
+});
+
+// A mesh only spawned in play drew the default material there and in a cooked game, with only a log warning: the
+// editor sets a material's usage flag while it draws the mesh outside play.
+describe('validate_assets materialUsage lists the usage flags a cooked game would miss', () => {
+  it('checks Nanite, skeletal, instanced and spline uses on meshes and Blueprint components, and fails the row', () => {
+    const usage = code('SystemControl', 'McpSystemMaterialUsage.cpp');
+    expect(usage).toContain('const FMcpUsageNeed McpNaniteNeed{MATUSAGE_Nanite, TEXT("Nanite"), TEXT("bUsedWithNanite")};');
+    expect(usage).toContain('Base->MaterialDomain != MD_Surface || Base->bUsedAsSpecialEngineMaterial)');
+    // A placement preview set bUsedWithNanite in memory and left the material unsaved: the check passed and the
+    // cooked game would still have missed the flag.
+    expect(usage, 'a flag set but unsaved is reported').toContain(': McpUsagePending(Owner, Need.Usage) ? static_cast<UObject *>(Owner)');
+    // A mesh's asynchronous build finishing set the flag while the editor could not mark the material dirty: nothing
+    // was unsaved and the file still lacked it. The engine keeps its own record until the material is saved.
+    expect(usage, 'the engine record of flags awaiting a save').toContain('return Material->IsUsageFlagDirty(Usage);');
+    expect(usage, 'a 5.8 instance owns its flags').toContain('UMaterialInterface *Owner = Interface->IsA<UMaterialInstanceDynamic>() ? Base : Interface;');
+    // ...which 5.8 sets on an instance outside that record, with only a log line.
+    expect(usage).toContain('const TCHAR *Marker = TEXT(" needed to set usage flag ");');
+    expect(usage, 'kept until the file is written').toContain('IFileManager::Get().GetTimeStamp(*FPaths::ConvertRelativePathToFull(File)) < Given;');
+    expect(usage, 'whole seconds, as a file time is').toContain('FDateTime(Now.GetYear(), Now.GetMonth(), Now.GetDay(), Now.GetHour(), Now.GetMinute(), Now.GetSecond())');
+    const lifecycle = code('..', 'Core', 'Subsystem', 'EngineWireSubsystemLifecycle.cpp');
+    expect(lifecycle).toContain('McpSystemControlHandlers::McpWatchMaterialUsage(true);');
+    expect(lifecycle).toContain('McpSystemControlHandlers::McpWatchMaterialUsage(false);');
+    expect(usage, 'the parent\'s native components and the construction script\'s').toContain('TInlineComponentArray<UPrimitiveComponent *> Parts(Defaults);');
+    expect(usage).toContain('Cast<UPrimitiveComponent>(Node->ComponentTemplate)');
+    const validate = code('SystemControl', 'McpSystemAssetValidate.cpp');
+    expect(validate).toContain('const bool bUsage = GetJsonBoolField(Payload, TEXT("materialUsage"));');
+    expect(validate).toMatch(/Row->SetArrayField\(TEXT\("materialUsage"\), Missing\);\s*FailRow\(Row\);/u);
+    expect(validate).toContain('Row->SetNumberField(TEXT("materialUsageCount"), UsageCount);');
+  });
+
+  // The edit_scs placement preview drew a Nanite part, which set the flag and left the material dirty (or, while the
+  // mesh was still building, not even dirty); saving only the Blueprint left the flag off on disk.
+  it('saves the project materials a placement preview gave a flag, once the preview world is gone', () => {
+    const placement = code('ControlActor', 'Placement', 'McpPartPlacement.cpp');
+    for (const audit of ['FPartAudit AuditBlueprintParts(', 'FPartAudit AuditBlueprintPartsUsingMesh(']) {
+      const body = placement.slice(placement.indexOf(audit));
+      expect(body.indexOf('const FMcpPreviewMaterialSaver Saver(Blueprint);'), audit).toBeGreaterThan(-1);
+      expect(body.indexOf('const FMcpPreviewMaterialSaver Saver(Blueprint);'), audit).toBeLessThan(body.indexOf('FPreviewScene Scene;'));
+    }
+    const saver = code('ControlActor', 'Placement', 'McpPlacementMaterials.cpp');
+    // The compile can set the flag before the preview: the saver asks which needed flags are set but unsaved.
+    expect(saver).toContain('McpSystemControlHandlers::McpMissingMaterialUsage(Blueprint.Get())');
+    expect(saver, 'project content only').toContain('Material->GetOutermost()->GetName().StartsWith(TEXT("/Game/")) && McpSafeOperations::McpSafeAssetSave(Material)');
+  });
+});
+
+// A model that cannot see a picture could not tell what a shot shows.
+describe('describe_view counts what the game draws in the camera view', () => {
+  it('reads a fresh id map, leaves editor-only drawing out, and refuses a running game', () => {
+    const view = code('Environment', 'Inspection', 'McpEnvInspectViewContents.cpp');
+    expect(view).toMatch(/Viewport->InvalidateHitProxy\(\);\s*const TArray<FColor> &Ids = Viewport->GetRawHitProxyData\(/u);
+    expect(view).toContain('const bool bGameDraws = Actor && !(Component && (Component->IsEditorOnly() || Component->bHiddenInGame));');
+    expect(view).toContain('if (GEditor->PlayWorld && !GEditor->bIsSimulatingInEditor)');
+    expect(view).toContain('DrawViewportFramesForMcp(Viewport, Client->GetWorld(), bMoved ? 3 : 1);');
+    expect(view).toContain('McpHandlerUtils::MarkNoAssetsChanged(Result);');
+    const inspect = code('Environment', 'Inspection', 'McpEnvInspect.cpp');
+    expect(inspect).toContain('return HandleInspectViewContentsAction(*this, RequestId, Payload, RequestingSocket);');
+  });
+
+  // Checking one prop from a camera meant reading every row of a 40-actor frame, and a missing one said nothing.
+  it('lists only the actors named and says why each unseen one is not drawn', () => {
+    const view = code('Environment', 'Inspection', 'McpEnvInspectViewContents.cpp');
+    expect(view).toContain('Payload->TryGetArrayField(TEXT("actors"), Requested);');
+    expect(view).toContain('NotVisible.Add(MakeShared<FJsonValueObject>(McpDescribeUnseenActor(Actor, *Client, Size, Ids, Proxies)));');
+    expect(view).toContain('if (Requested && !Named.Contains(Row.Actor))');
+    const unseen = code('Environment', 'Inspection', 'McpEnvInspectViewUnseen.cpp');
+    expect(unseen, 'the level editor keeps the horizontal field of view').toContain('FMath::Tan(FMath::DegreesToRadians(Client.ViewFOV * 0.5))');
+    expect(unseen).toContain('TEXT("outside the frame")');
+    expect(unseen, 'what is drawn over its box, frontmost id per pixel').toContain('Covers.FindOrAdd(Proxy->Kind == EMcpViewKind::Actor ? Proxy->Actor : nullptr) += 1;');
+    // A storefront behind a balloon cluster at the frame edge was named as what hid it.
+    expect(unseen, 'ground under it, or an actor centred farther, cannot hide it').toContain('const bool bGround = Other.Max.Z < Middle.Z && (bUnder || Other.GetSize().Z < 0.25 * Bounds.GetSize().Z);');
+    // An editor-only sprite made an 84 cm robot a 256 cm cube.
+    expect(unseen, 'the box of what the game draws').toContain('if (Part->IsRegistered() && Part->IsVisible() && !Part->bHiddenInGame && !Part->IsEditorOnly())');
+    expect(unseen).toContain('Row->SetNumberField(TEXT("inFrame"), InFrame);');
+    expect(unseen).toContain('InFrame < 50.0 ? TEXT("at the edge of the frame, mostly outside it")');
+  });
+});
+
+// A frame could only be judged by eye: no pass said which actor a region belongs to, how far it is or which way it
+// faces.
+describe('capture_passes writes aligned id, depth and normal passes of the level view', () => {
+  it('captures depth and normal at the view\'s own camera, field of view and shape, and paints ids per actor', () => {
+    const passes = code('Environment', 'Inspection', 'McpEnvInspectCapturePasses.cpp');
+    expect(passes).toContain('McpCapturePass(Client->GetWorld(), Camera, Facing, Client->ViewFOV, Size, SCS_SceneDepth)');
+    expect(passes).toContain('McpCapturePass(Client->GetWorld(), Camera, Facing, Client->ViewFOV, Size, SCS_Normal)');
+    expect(passes).toContain('const FIntPoint Size(Width, FMath::Max(1, FMath::RoundToInt(double(Width) * ViewSize.Y / ViewSize.X)));');
+    expect(passes).toMatch(/Viewport->InvalidateHitProxy\(\);\s*const TArray<FColor> &Ids = Viewport->GetRawHitProxyData\(/u);
+    expect(passes).toContain('Capture->DestroyComponent();');
+    expect(passes).toContain('if (Files->Values.Num() < Passes.Num())');
+    const ids = code('Environment', 'Inspection', 'McpEnvInspectViewContents.cpp');
+    expect(ids).toContain('FMcpViewProxy McpViewProxyOf(const FColor &Id)');
+  });
+});
+
+// A mesh could not leave the editor; the exporters' option dialogs and message log would also have stopped or
+// pulled up the editor.
+describe('export_mesh writes a file through the editor exporters, unattended', () => {
+  it('runs the export task automated, with dialogs and the log window held off, and checks the file', () => {
+    const exporter = code('AssetWorkflow', 'Export', 'McpAssetMeshExport.cpp');
+    expect(exporter).toContain('Task->bAutomated = true;');
+    expect(exporter).toContain('Task->bPrompt = false;');
+    expect(exporter).toMatch(/TGuardValue<bool> Unattended\(GIsAutomationTesting, true\);\s*bExported = UExporter::RunAssetExportTask\(Task\);/u);
+    expect(exporter).toContain('if (!McpResolveProjectFilePath(Requested, File, PathError))');
+    expect(exporter).toContain('if (!bExported || Bytes <= 0)');
+    // Files written beside it are the ones new or changed since the export began, not every recent file there.
+    expect(exporter).toContain('if (Path != File && (!Was || *Was != Now.Value) && Written.Num() < McpMaxListedFiles)');
+    const assets = code('AssetWorkflow', 'McpAssetHandlers.cpp');
+    expect(assets).toContain('return McpMeshExport::HandleExportMesh(this, RequestId, Payload, RequestingSocket);');
+  });
+});
+
+// A Control Rig could be created but its graph and hierarchy could not be edited or read.
+describe('edit_control_rig edits a rig through its own controllers and keeps what a batch applied', () => {
+  it('stops at the first failing step, then compiles and saves the steps before it', () => {
+    const edit = code('AnimationAuthoring', 'ControlRig', 'McpControlRigGraphEdit.cpp');
+    expect(edit).toContain('for (int32 Index = 0; Index < Steps.Num() && Failed == INDEX_NONE; ++Index)');
+    expect(edit).toMatch(/if \(Applied > 0\)\s*\{\s*FCompilerResultsLog Results;\s*FKismetEditorUtilities::CompileBlueprint\(Edit\.Rig, EBlueprintCompileOptions::None, &Results\);/u);
+    expect(edit).toContain('Edit.Graph->AddUnitNodeFromStructPath(Struct->GetPathName(), TEXT("Execute"), Position, GetJsonStringField(Step, TEXT("name")), true);');
+    // A set pin answers the value as stored, read back off the pin.
+    expect(edit).toContain('Extra->SetStringField(TEXT("value"), Pin->GetDefaultValue());');
+    const hierarchy = code('AnimationAuthoring', 'ControlRig', 'McpControlRigHierarchyEdit.cpp');
+    expect(hierarchy).toContain('Edit.Hierarchy->ImportBones(Skeleton, NAME_None, true, true, false, true);');
+    expect(hierarchy).toContain('Extra->SetNumberField(TEXT("bones"), Skeleton->GetReferenceSkeleton().GetNum());');
+    const read = code('AnimationAuthoring', 'ControlRig', 'McpControlRigGraphRead.cpp');
+    expect(read).toContain('McpHandlerUtils::MarkNoAssetsChanged(Response);');
+  });
+});
+
+// A game camera's FOV of 50 drew 64 degrees across on a wider viewport (the project kept the vertical FOV), so points
+// placed on the frame from the reported FOV landed well off.
+describe('a game screenshot says the field of view the frame was drawn with', () => {
+  it('reads both angles off the local player projection, beside the camera setting', () => {
+    const shot = code('Ui', 'McpUiScreenshot.cpp');
+    expect(shot).toContain('LocalPlayer->GetProjectionData(Viewport, Projection)');
+    expect(shot, 'an orthographic camera has no field of view').toContain('Projection.ProjectionMatrix.M[3][3] == 0.0f');
+    expect(shot).toContain('RenderedFov.X = FMath::RadiansToDegrees(2.0 * FMath::Atan(1.0 / Projection.ProjectionMatrix.M[0][0]));');
+    const support = code('Ui', 'McpUiScreenshotSupport.cpp');
+    expect(support).toContain('Resp->SetNumberField(TEXT("horizontalFov")');
+    expect(support).toContain('Resp->SetNumberField(TEXT("verticalFov")');
+  });
+});
+
+// stop answered "Play in Editor stopped" as it queued the request; the session ended on a later editor tick (10 s later
+// in a minimized editor), so the next call could still land in the play world.
+describe('stop answers once the play session has ended', () => {
+  it('waits on a ticker for the play world to go, and says when it did not within 20 s', () => {
+    const play = code('ControlEditor', 'McpEditorPlay.cpp');
+    const stop = play.slice(play.indexOf('HandleControlEditorStop('), play.indexOf('HandleControlEditorSetGameSpeed('));
+    expect(stop).toContain('GEditor->RequestEndPlayMap();');
+    expect(stop).toContain('const bool bStopped = !GEditor || !GEditor->PlayWorld;');
+    expect(stop).toContain('TEXT("PIE_STOP_TIMEOUT")');
+    expect(stop.indexOf('RequestEndPlayMap'), 'no reply before the ticker').toBeLessThan(stop.indexOf('SendAutomationResponse(Socket, RequestId, bStopped'));
+  });
+});
+
+// A Fab pack of 32 meshes with default-material slots took one call and one consent per mesh.
+describe('mesh_materials sets one slot map on many meshes', () => {
+  it('passes over a slot a mesh lacks, fails on an entry no mesh has, and loads every material first', () => {
+    const many = code('AssetWorkflow', 'Materials', 'McpAssetMeshMatsMany.cpp');
+    expect(many).toContain('if (!ResolveSlot(Slots, Wanted[Entry].Key, Assignment.Index, Reason, Code)) continue;');
+    expect(many).toContain('if (!Used[Entry]) Problems.Add(');
+    expect(many.indexOf('Material = LoadMaterial(MaterialText, Reason, Code);'), 'materials load before any mesh changes')
+      .toBeLessThan(many.indexOf('SetOnOneOfMany(PathValue.IsValid()'));
+    const single = code('AssetWorkflow', 'Materials', 'McpAssetMeshMats.cpp');
+    expect(single).toMatch(/if \(AssetPath\.IsEmpty\(\) && Payload->TryGetArrayField\(TEXT\("assetPaths"\), Paths\) && Paths && Paths->Num\(\) > 0\)\s*\{\s*return SetOnManyMeshes\(/u);
+  });
+});
+
+// A material batch's auto-placed nodes, 400 apart, were reported as overlapping: the width estimate read the object
+// name ("MaterialExpressionTextureSampleParameter2D_0", 408 px) instead of the title the editor draws.
+describe('material node extents follow the title the editor draws', () => {
+  it('measures the caption lines, not the object name', () => {
+    const header = code('MaterialAuthoring', 'McpMatPrivate.h');
+    const estimate = header.slice(header.indexOf('inline void EstimateMaterialNodeExtent('), header.indexOf('inline FString AddMaterialNodePlacementFields('));
+    expect(estimate).toContain('Expr->GetCaption(Captions);');
+    expect(estimate).not.toContain('Expr->GetName()');
+  });
+});
+
+describe('a sound that never ends by itself', () => {
+  // A steam hiss built as a one-shot MetaSound, its On Finished never wired, went on PlaySoundAtLocation with no word:
+  // the node returns nothing to stop, so every play ran until the level unloaded, one more copy per call.
+  it('every compile names a PlaySound2D or PlaySoundAtLocation node whose own sound never ends', () => {
+    const check = readFileSync(
+      join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'Foundation', 'BridgeHelpers', 'Blueprints', 'McpBPSoundCheck.cpp'),
+      'utf8',
+    );
+    expect(check).toContain('const bool bForgotten = Name == TEXT("PlaySoundAtLocation") || Name == TEXT("PlaySound2D");');
+    expect(check).toContain('const FString Endless = bForgotten ? McpAudioAuthoring::DescribeEndlessSound(Sound) : FString();');
+    const ends = code('AudioAuthoring', 'MetaSound', 'McpAudioMetaSoundGraphRead.cpp');
+    expect(ends).toMatch(/if \(Sound->IsLooping\(\)\)\s*\{\s*return TEXT\("loops"\);/u);
+    expect(ends).toContain('const FName OnFinished(TEXT("UE.Source.OneShot.OnFinished"));');
+    expect(ends).toMatch(/Page\.Edges\.ContainsByPredicate\(\s*\[Finished\]\(const FMetasoundFrontendEdge& Edge\) \{ return Edge\.ToNodeID == Finished->NodeID; \}\)/u);
+    expect(ends).toMatch(/if \(!bFired\)\s*\{\s*return TEXT\("is a one-shot MetaSound that never fires On Finished"\);/u);
+  });
+});
+
+describe('a batch names a literal only when the engine stored something else', () => {
+  // A MetaSound batch of 13 set_default steps answered 13 rows of {appliedValue: "380.000000"} for 380, and a graph
+  // batch echoed every pin default it set, so the rows that mattered drowned in repeats.
+  it('MetaSound and Blueprint graph batches drop an appliedValue equal to the literal asked for', () => {
+    const fields = readFileSync(
+      join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'Foundation', 'BridgeHelpers', 'Responses', 'McpJsonFields.h'),
+      'utf8',
+    );
+    expect(fields).toContain('static inline bool McpAppliedValueDiffers(const TSharedPtr<FJsonValue>& Requested, const FString& Applied)');
+    expect(fields).toMatch(/if \(Requested->Type == EJson::Boolean\)[\s\S]*?if \(Requested->TryGetNumber\(Number\)\)/u);
+    expect(code('AudioAuthoring', 'MetaSound', 'McpAudioMetaSoundBatch.cpp'))
+      .toContain('McpAppliedValueDiffers((*StepObj)->TryGetField(TEXT("defaultValue")), Applied)');
+    const steps = code('BlueprintGraph', 'McpBPGraphBatchSteps.cpp');
+    expect(steps).toContain('McpAppliedValueDiffers(Pair.Value, AppliedValue)');
+    expect(steps).toMatch(/if \(Applied->Values\.Num\(\) > 0\)\s*\{?\s*Entry->SetObjectField\(TEXT\("pinDefaults"\), Applied\);/u);
+    expect(steps).toContain('Entry->RemoveField(TEXT("appliedValue"));');
+  });
+});
+
+describe('MetaSound node classes can be listed', () => {
+  // A fire crackle needed a random trigger filter, and nothing listed which node classes exist: the class name was a
+  // guess until add_node refused it.
+  it('list_metasound_nodes searches class name, display name and category, sorted, cut at limit', () => {
+    const search = code('AudioAuthoring', 'MetaSound', 'McpAudioMetaSoundNodeSearch.cpp');
+    expect(search).toContain('Metasound::Frontend::ISearchEngine::Get().FindAllClasses(false)');
+    expect(search).toContain('SquashName(Dotted + TEXT("|") + Meta.GetDisplayName().ToString() + TEXT("|") + Category).Contains(Filter, ESearchCase::IgnoreCase)');
+    // Ranked by where the filter hits the class's own name, the engine's UE nodes first within a tier, then by name:
+    // "Trigger" was led by enum conversions, then by Crossfade "Trigger Route" variants.
+    expect(search).toMatch(/const int32 Tier = Name\.Equals\(Filter, ESearchCase::IgnoreCase\) \? 0 : Name\.StartsWith\(Filter, ESearchCase::IgnoreCase\) \? 1\s*: Name\.Contains\(Filter, ESearchCase::IgnoreCase\) \? 2 : 3;/u);
+    expect(search).toContain('Rank.Add(Dotted, Tier * 2 + (Meta.GetClassName().Namespace.ToString().Equals(TEXT("UE"), ESearchCase::IgnoreCase) ? 0 : 1));');
+    expect(search).toContain('return Rank[A] != Rank[B] ? Rank[A] < Rank[B] : A.Compare(B, ESearchCase::CaseSensitive) < 0;');
+    expect(search).toContain('Response->SetBoolField(TEXT("truncated"), Names.Num() > Limit);');
+    expect(code('AudioAuthoring', 'MetaSound', 'McpAudioMetaSoundGraphRead.cpp')).toMatch(/if \(SubAction == TEXT\("list_metasound_nodes"\)\)\s*\{\s*return ListMetaSoundNodeClasses\(Params, Response\);/u);
+  });
+});
+
+describe('a component under a parent Blueprint part verifies', () => {
+  // add_scs_component parentComponent "Hanger" (a parent Blueprint's part) attached the node, then failed
+  // SCS_VERIFICATION_FAILED: the check accepted a parent recorded on the node only when it was native.
+  it('a parent recorded on the node matches whether it is native or a parent Blueprint part', () => {
+    const scs = code('SCS', 'McpSCSHandlers.cpp');
+    expect(scs).toMatch(/if \(Node->ParentComponentOrVariableName\.IsNone\(\)\) \{\s*return false;/u);
+    expect(scs).toContain('const bool bNativeParent = !ParentNode && !Node->ParentComponentOrVariableName.IsNone();');
+    expect(scs).not.toContain('!Node->bIsParentComponentNative || Node->ParentComponentOrVariableName.IsNone()');
+  });
+  it('a MetaSound class with no variant is named without ".None"', () => {
+    expect(code('AudioAuthoring', 'MetaSound', 'McpAudioMetaSoundNodeSearch.cpp'))
+      .toContain('const FString Variant = ClassName.Variant.IsNone() ? FString() : ClassName.Variant.ToString();');
+  });
+});
+
+describe('lists that only repeated the request are gone', () => {
+  // create_material_instance with nine parameters answered nine {parameterName, applied: true} rows, and every edit_scs
+  // operation carried its milliseconds and the subsystem call that made it.
+  it('a parameter list names only the values that did not apply', () => {
+    const params = code('MaterialAuthoring', 'Parameters', 'McpMatSetMatParam.cpp');
+    expect(params).not.toContain('Entry->SetBoolField(TEXT("applied"), Reply.bSuccess);');
+    expect(params).toMatch(/Entry->SetStringField\(TEXT\("error"\), Why\);\s*OutResults\.Add\(MakeShared<FJsonValueObject>\(Entry\)\);/u);
+    expect(params).toContain('Data->SetNumberField(TEXT("applied"), Entries->Num() - Failed.Num());');
+    expect(code('MaterialAuthoring', 'Creation', 'McpMatCreateMatInst.cpp')).toMatch(/if \(Failed\.Num\(\) > 0\) \{\s*Result->SetArrayField\(TEXT\("parameters"\), Results\);/u);
+  });
+  it('edit_scs operations carry no timing or subsystem detail', () => {
+    expect(code('Blueprint', 'Components', 'McpBPModifyScs.cpp')).not.toContain('TEXT("durationMs")');
+    expect(code('Blueprint', 'Components', 'McpBPModifyScsComponentOps.cpp')).not.toContain('TEXT("additionMethod")');
+  });
+});
+
+describe('a console command returns what it logged on other threads', () => {
+  // au.DumpActiveSounds listed every sound but the last: the audio thread logged it after Exec returned, and the log
+  // passes other threads' lines on only when it flushes, by which time the capture was gone.
+  it('flushes threaded logs until the log is quiet before the capture is removed', () => {
+    const console = code('ConsoleCommand', 'McpConsoleHandlers.cpp');
+    expect(console).toMatch(/for \(int32 Quiet = 0, Waited = 0; Quiet < 3 && Waited < 25; \+\+Waited\)\s*\{\s*const int32 Before = LogCapture\.Lines\.Num\(\);\s*FPlatformProcess::Sleep\(0\.02f\);\s*GLog->FlushThreadedLogs\(\);/u);
+    expect(console.indexOf('GLog->FlushThreadedLogs();')).toBeLessThan(console.indexOf('GLog->RemoveOutputDevice(&LogCapture);'));
+  });
+});
+
+describe('a parameter no pin takes is refused before anything is made', () => {
+  // add_function inputs [{name: "Speed", type: "flaot"}] made a wildcard pin and answered success, and a nameless entry
+  // was skipped; a graph custom event dropped a type it could not build and removed the old event before checking.
+  it('add_function and add_event check every {name, type} first', () => {
+    const resolver = code('..', 'Foundation', 'Blueprint', 'McpBlueprintUtilsTypeResolver.cpp');
+    expect(resolver).toMatch(/if \(Name\.TrimStartAndEnd\(\)\.IsEmpty\(\)\)\s*\{\s*return FString::Printf/u);
+    expect(resolver).toMatch(/const FTypeResolutionResult Resolved = ResolvePinType\(Type\);\s*if \(!Resolved\.bSuccess\)/u);
+    const fn = code('Blueprint', 'Functions', 'McpBPAddFunction.cpp');
+    expect(fn).toContain('McpBlueprintUtils::DescribeInvalidParam(Outputs, TEXT("outputs"))');
+    expect(fn.indexOf('McpBlueprintUtils::DescribeInvalidParam(Inputs, TEXT("inputs"))')).toBeGreaterThan(0);
+    expect(fn.indexOf('DescribeInvalidParam(Inputs')).toBeLessThan(fn.indexOf('FBlueprintEditorUtils::CreateNewGraph('));
+    const event = code('Blueprint', 'Events', 'McpBPAddEventCustom.cpp');
+    expect(event.indexOf('DescribeInvalidParam(Params, TEXT("parameters"))')).toBeGreaterThan(0);
+    expect(event.indexOf('DescribeInvalidParam(Params')).toBeLessThan(event.indexOf('FGraphNodeCreator<UK2Node_CustomEvent>'));
+  });
+  it('a graph custom event refuses a type it cannot build and keeps the old event', () => {
+    const events = code('BlueprintGraph', 'McpBPGraphCustomEvents.cpp');
+    expect(events).toContain('Context.SendError(Error, TEXT("TYPE_RESOLUTION_FAILED"));');
+    expect(events.indexOf('RemoveExistingCustomEvents(Context.Blueprint, EventName);'))
+      .toBeGreaterThan(events.indexOf('if (!AddParameters(Context, TemporaryFunction, *Parameters))'));
+    const params = code('BlueprintGraph', 'McpBPGraphCustomEventParams.cpp');
+    expect(params).toMatch(/PinType\.PinCategory == UEdGraphSchema_K2::PC_Byte\)\s*\{\s*FByteProperty/u);
+    expect(params).toContain('ObjectProperty->PropertyClass = ReferenceClass;');
+    expect(params).toContain('ClassProperty->MetaClass = ReferenceClass;');
+  });
+});
+
+describe('a pin descriptor says when it holds many values', () => {
+  // An Array<Int> event input read back as pinType "int", the same as one int, and an enum or soft reference pin named
+  // no sub-type: get_node_details and every pin summary only named one for an object, class or struct.
+  it('both pin serializers add pinSubType, container and a map value type through one helper', () => {
+    const queries = code('BlueprintGraph', 'McpBPGraphQueries.cpp');
+    expect(queries).toMatch(/if \(PinType\.PinSubCategoryObject\.IsValid\(\)\)\s*\{\s*PinObject->SetStringField\(TEXT\("pinSubType"\)/u);
+    expect(queries).toContain('PinObject->SetStringField(TEXT("container"), PinType.IsArray() ? TEXT("array") : PinType.IsSet() ? TEXT("set") : TEXT("map"));');
+    expect(queries).toContain('PinObject->SetStringField(TEXT("valueType"), Value.TerminalSubCategoryObject.IsValid()');
+    for (const file of ['McpBPGraphQueries.cpp', 'McpBPGraphDetails.cpp']) {
+      const source = code('BlueprintGraph', file);
+      expect(source).toContain('AddPinTypeFields(PinObject, Pin->PinType);');
+      expect(source).not.toContain('Pin->PinType.PinCategory == TEXT("struct")) &&');
+    }
+  });
+});
+
+describe('an enum type keeps its enum when compiled', () => {
+  // add_variable Enum:/Script/Engine.EMovementMode compiled to an int32 property: the resolver made a PC_Enum pin, and
+  // the compiler has no PC_Enum case ("Failed to resolve the type-subtype, create a generic property"). A custom event
+  // with that parameter failed to compile as "out-of-date". The editor's type picker makes a byte pin naming the enum.
+  it('the shared resolver makes byte pins for enums, and struct summaries read them as enums', () => {
+    const base = code('..', 'Foundation', 'Blueprint', 'McpBlueprintUtilsBaseTypes.cpp');
+    expect(base).not.toContain('MakePin(K2::PC_Enum');
+    expect(base.split('MakePin(K2::PC_Byte, NAME_None, Enum)').length - 1).toBe(2);
+    // A bare enum name (EMovementMode) is no path FindObject takes; both resolvers scan for it by name.
+    expect(base).toContain('for (TObjectIterator<UEnum> It; It && !Enum; ++It)');
+    expect(code('BlueprintGraph', 'McpBPGraphPinTypes.cpp')).toContain('for (TObjectIterator<UEnum> It; It && !Enum; ++It)');
+    const summary = code('AssetWorkflow', 'Structs', 'McpAssetStructsTypeHelpers.cpp');
+    expect(summary).toMatch(/Pin\.PinCategory == UEdGraphSchema_K2::PC_Byte && Cast<UEnum>\(Pin\.PinSubCategoryObject\.Get\(\)\)/u);
+    expect(summary).toContain('Vt.TerminalCategory == UEdGraphSchema_K2::PC_Enum || Vt.TerminalCategory == UEdGraphSchema_K2::PC_Byte');
+  });
+});
+
+describe('remove_variable takes a list under one consent', () => {
+  // Removing eight variables took sixteen calls: one name per call, and a describe for each consent.
+  it('reads variableNames like set_variable_metadata and checks every name before removing any', () => {
+    const remove = code('Blueprint', 'Variables', 'McpBPVariableRemovalRename.cpp');
+    expect(remove).toContain('TArray<FString> VarNames = McpReadVariableNames(LocalPayload);');
+    expect(remove.indexOf('McpMatchVariableNames(Blueprint, VarNames, Missing, Known);'))
+      .toBeLessThan(remove.indexOf('FBlueprintEditorUtils::RemoveMemberVariable(Blueprint, FName(*Name));'));
+    expect(remove).toContain('Nothing was removed.');
+    const metadata = code('Blueprint', 'Variables', 'McpBPVariableMetadata.cpp');
+    expect(metadata).toContain('TArray<FString> VarNames = McpReadVariableNames(LocalPayload);');
+    expect(metadata).toContain('McpMatchVariableNames(Blueprint, VarNames, Missing, Known);');
+  });
+});
+
+describe('a graph filter finds what reads or moves a variable', () => {
+  // A Tick that set the customs boom every frame froze the Set Relative Rotation that raised it; filter "Arm" listed
+  // the getters and setters but not that node, so the competing writer had to be found by hand.
+  it('matches a node whose input is wired from a variable or component getter of that name', () => {
+    const queries = code('BlueprintGraph', 'McpBPGraphQueries.cpp');
+    expect(queries).toContain('#include "K2Node_VariableGet.h"');
+    expect(queries).toMatch(/Pin->Direction == EGPD_Input && Linked \? Cast<UK2Node_VariableGet>\(Linked->GetOwningNode\(\)\) : nullptr;\s*if \(Getter && Matches\(Getter->GetVarNameString\(\)\)\)/u);
+  });
+});
+
+describe('a motion sample reports the velocity an actor moves at', () => {
+  // A runaway cart moved by SetActorLocation crossed 570 cm/s while every sample said velocity [0, 0, 0].
+  it('falls back to the velocity the sampled positions show when the engine reports none', () => {
+    const sample = code('ControlActor', 'McpActorMotionSample.cpp');
+    expect(sample).toContain('(Location - Run.Last) / (GameTime - Run.LastSampleGame)');
+    expect(sample).toContain('McpMotionVec(Actor->GetVelocity().IsNearlyZero() ? Moved : Actor->GetVelocity())');
+  });
+});
+
+describe('a graph read lists the nodes that do nothing', () => {
+  // Deleting the MoveComponentTo nodes a physics rework replaced left two unlinked Get Arm getters behind; the
+  // compiler says nothing about such leftovers, so nothing found them.
+  it('unusedOnly keeps an unreached call or an unread pure node, never a chain start', () => {
+    const queries = code('BlueprintGraph', 'McpBPGraphQueries.cpp');
+    expect(queries).toContain('return bExecIn ? !bExecInLinked : (!bExecOut && bDataOut && !bDataOutLinked);');
+    expect(queries).toContain('Context.Payload->TryGetBoolField(TEXT("unusedOnly"), bUnusedOnly);');
+    expect(queries).toContain('(bUnusedOnly && !NodeDoesNothing(Node))');
+  });
+});
+
+describe('a Niagara module add names the module as its inputs go by', () => {
+  // The reply said CurlForce and Scale Sprite Size, while set_parameter_value wanted CurlNoiseForce.Noise Strength
+  // and ScaleSpriteSize.Uniform Curve Scale.
+  it('reads the name back from the module the stack made', () => {
+    const modules = code('NiagaraAuthoring', 'McpNiagaraParticleModules.cpp');
+    expect(modules).toContain('const UNiagaraNodeFunctionCall* Added = AddModuleToEmitterStack(Handle, ModulePath, Module->Usage, ModuleName);');
+    expect(modules).toContain('ModuleName = Added->GetFunctionName();');
+  });
+});
+
+describe('a listed or sampled property reads as a JSON value', () => {
+  // list propertyNames answered "False", "2.200000" and an array of actors as one quoted export string, while
+  // get_property answered the same properties as false, 2.2 and an array of paths.
+  it('list and motion samples use the exporter get_property uses, with export text only where it has no form', () => {
+    const reflection = code('..', 'Foundation', 'Reflection', 'McpPropertyReflection.cpp');
+    expect(reflection).toMatch(/ExportPropertyToJsonValueOrText\(void\* TargetContainer, FProperty\* Property\)\s*\{\s*TSharedPtr<FJsonValue> Json = ExportPropertyToJsonValue\(TargetContainer, Property\);/u);
+    const list = code('ControlActor', 'List', 'McpActorList.cpp');
+    expect(list).toContain('McpPropertyReflection::ExportPropertyToJsonValueOrText(Owner, Property)');
+    expect(list).toContain('McpPropertyReflection::ExportPropertyToJsonValueOrText(Container, Nested)');
+    expect(list).not.toContain('GetPropertyValueAsString');
+    expect(code('ControlActor', 'McpActorMotionSample.cpp'))
+      .toContain('Values->SetField(Watched.Label, McpPropertyReflection::ExportPropertyToJsonValueOrText(Owner, Property));');
+  });
+});
+
+describe('a folder delete counts the assets it held', () => {
+  // Deleting a folder of two assets answered "deletedCount": 1, the one path asked for.
+  it('reads the folder from the asset registry before it goes, and counts a single asset as one', () => {
+    const mutation = code('AssetWorkflow', 'Operations', 'McpAssetAssetMutation.cpp');
+    expect(mutation).toMatch(/GetAssetsByPath\(FName\(\*SafePath\), InFolder,\s*true\);/u);
+    expect(mutation).toContain('DeletedAssets += InFolder.Num();');
+    expect(mutation).toContain('++DeletedAssets;');
+    expect(mutation).toContain('Resp->SetNumberField(TEXT("deletedCount"), DeletedAssets);');
+  });
+});
+
+describe('a level viewport screenshot says when the viewport is not realtime', () => {
+  // A fire placed in the level showed no flame in an editor screenshot: nothing ticks in a viewport that is not realtime.
+  it('warns from the client it photographed', () => {
+    const shot = code('ControlEditor', 'McpEditorScreenshot.cpp');
+    expect(shot).toContain('if (CaptureClient && !CaptureClient->IsRealtime()) {');
+    expect(shot).toContain('The level viewport is not realtime');
+  });
+});
+
+describe('a float property reads as it was typed', () => {
+  // LightDecay 2.2 read back as 2.200000047683716: the float was widened to double before it was written out.
+  it('writes a float through its seven significant digits, in arrays, maps, sets and Niagara module inputs too', () => {
+    const reflection = code('..', 'Foundation', 'Reflection', 'McpPropertyReflection.cpp');
+    expect(reflection).toContain('return FCString::Atod(*FString::Printf(TEXT("%.7g"), Value));');
+    expect(reflection).toContain('ReadableFloat(FloatProp->GetPropertyValue_InContainer(TargetContainer))');
+    const niagara = code('NiagaraAuthoring', 'McpNiagaraInfoValidate.cpp');
+    expect(niagara.match(/McpPropertyReflection::ReadableFloat\(/gu)).toHaveLength(2);
+    const arrays = code('..', 'Foundation', 'Reflection', 'McpPropertyReflectionArrays.cpp');
+    expect(arrays).toContain('return ExportPropertyToJsonValueOrText(ElemPtr, Inner);');
+  });
+});
+
+describe('a world edit in a paused game says nothing will move', () => {
+  // A character moved into a game its title card had paused stayed in the air where it was put: it read as broken gravity.
+  it('flags the paused play world on every reply and warns on world edits, on both transports', () => {
+    const responses = code('..', 'Core', 'Subsystem', 'EngineWireSubsystemResponses.cpp');
+    expect(responses).toMatch(/ContextWorld->IsPlayInEditor\(\) && ContextWorld->IsPaused\(\)\)\s*\{\s*EffectiveResult->SetBoolField\(TEXT\("gamePaused"\), true\);/u);
+    const native = code('..', 'MCP', 'Execute', 'McpNativeReceiptEnrichment.cpp');
+    const stdio = readFileSync(join('src', 'server', 'gateway', 'gateway-execute-dispatch.ts'), 'utf8');
+    const warning = 'The game is paused (a title screen, a pause menu or control_editor pause): nothing it moves or simulates advances until play resumes (control_editor resume with unpauseGame).';
+    expect(native).toContain(warning);
+    expect(stdio).toContain(warning);
+    expect(stdio).toContain('(isRecord(details) && details.gamePaused === true)');
+  });
+});
+
+describe('an undeclared key that is a declared parameter value names that parameter', () => {
+  // get_transform with motion: true answered "allowed: ..., readMode, ..." and never said motion was a readMode value.
+  it('builds the hint natively as the TypeScript gateway does', () => {
+    const hints = code('..', 'MCP', 'Execute', 'Request', 'McpNativeGatewayParameterHints.h');
+    expect(hints).toContain('return FString::Printf(TEXT("did you mean %s: \'%s\'; "), *Name, *Text);');
+    const keywords = code('..', 'MCP', 'Execute', 'McpNativeGatewaySchemaKeywords.cpp');
+    expect(keywords).toContain('const FString EnumHint = McpParameterHints::EnumValueHint(Key, Properties, Declared);');
+    expect(keywords).toContain('EnumHint.IsEmpty() ? *Hint : *EnumHint');
+  });
+});
+
+describe('a transform reads as it was typed', () => {
+  // A 90 degree yaw read 89.99999999999999 and a camera y 1710.5776600334307: noise from the transform math.
+  it('rounds every vector and rotator of a reply to ten significant digits', () => {
+    const transforms = code('..', 'Foundation', 'HandlerUtils', 'McpHandlerUtilsTransforms.h');
+    expect(transforms).toContain('FCString::Atod(*FString::Printf(TEXT("%.10g"), Value))');
+    for (const field of ['Vector.X', 'Vector.Y', 'Vector.Z', 'Rotator.Pitch', 'Rotator.Yaw', 'Rotator.Roll']) {
+      expect(transforms.split(`ReadableDouble(${field})`).length - 1, field).toBe(2);
+    }
   });
 });

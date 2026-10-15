@@ -216,6 +216,19 @@ describe('the add script: a listing that is not content for a project', () => {
     expect(run.results[0]).toMatchObject({ accepted: true });
   });
 
+  // The choice used to read only the eight codes it reports, so a pack naming unreal-engine tenth was added as its glb.
+  it('finds the unreal-engine build however late the listing names it, and reports eight codes', async () => {
+    const late = ['blender', 'unity', 'fbx', 'glb', 'obj', 'additional-files', 'cinema-4d', '3ds-max', 'maya', 'unreal-engine'];
+    const asset = { distributionMethod: 'asset_pack', versions: [{ name: 'Pack', uid: 'v', engineVersions: ['UE_5.8'] }] };
+    const run = await runPageScript(
+      addScript(),
+      routes(asset, 'unreal-engine', listing({ user: { sellerName: 'Some Studio' }, assetFormats: late.map((code) => ({ assetFormatType: { code } })) })),
+      `fab_csrftoken=${CSRF}`,
+    );
+
+    expect(run.results[0]).toMatchObject({ accepted: true, formatCode: 'unreal-engine', formatCodes: late.slice(0, 8) });
+  });
+
   it('refuses a MetaHuman listing as itself, before anything is claimed', async () => {
     const run = await runPageScript(
       addScript(),

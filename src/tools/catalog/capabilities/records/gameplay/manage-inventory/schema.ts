@@ -2,7 +2,7 @@
  * Exact per-action schema vocabulary for manage_inventory.
  *
  * Every parameter name below is consumed by a native handler under
- * plugins/McpAutomationBridge/.../Private/Domains/Inventory/ (the
+ * plugins/EngineWire/.../Private/Domains/Inventory/ (the
  * GetPayloadString/Number/Bool reads in the *Handlers*.cpp shards). Nothing is
  * declared that no handler reads, which is why `actorName` and an input
  * `assetPath` are absent: no inventory sub-action reads either one.

@@ -31,7 +31,7 @@ const testCases = [
   {
     scenario: 'Setup: create replicated actor blueprint',
     toolName: 'manage_blueprint',
-    arguments: { action: 'create_blueprint', name: ACTOR_BP_NAME, path: TEST_FOLDER, parentClass: 'Actor' },
+    arguments: { action: 'create_blueprint', name: ACTOR_BP_NAME, savePath: TEST_FOLDER, parentClass: 'Actor' },
     expected: 'success|already exists',
     assertions: [{ path: 'structuredContent.result.assetPath', equals: EXPECTED_ACTOR_BP_ASSET_PATH, label: 'network actor blueprint created' }]
   },
@@ -41,7 +41,7 @@ const testCases = [
   {
     scenario: 'Setup: create network character blueprint',
     toolName: 'manage_blueprint',
-    arguments: { action: 'create_blueprint', name: CHARACTER_BP_NAME, path: TEST_FOLDER, parentClass: 'Character' },
+    arguments: { action: 'create_blueprint', name: CHARACTER_BP_NAME, savePath: TEST_FOLDER, parentClass: 'Character' },
     expected: 'success|already exists',
     assertions: [{ path: 'structuredContent.result.assetPath', equals: EXPECTED_CHARACTER_BP_ASSET_PATH, label: 'network character blueprint created' }]
   },
@@ -579,8 +579,11 @@ const testCases = [
     { scenario: 'CONFIG: set_input_trigger', toolName: 'manage_networking', arguments: { action: 'set_input_trigger', actionPath: INPUT_ACTION, triggerType: 'Pressed' }, expected: 'success' },
     { scenario: 'CONFIG: set_input_trigger again keeps one trigger', toolName: 'manage_networking', arguments: { action: 'set_input_trigger', actionPath: INPUT_ACTION, triggerType: 'Pressed' }, expected: 'success', assertions: [{ path: 'structuredContent.result.success', equals: true, label: 'repeated set_input_trigger succeeds without stacking' }] },
     { scenario: 'CONFIG: set_input_modifier', toolName: 'manage_networking', arguments: { action: 'set_input_modifier', contextPath: INPUT_CONTEXT, actionPath: INPUT_ACTION, key: 'SpaceBar', modifierType: 'Negate' }, expected: 'success' },
+    // A remap moves the mapping whole: a remove-then-add lost the Negate set on SpaceBar just above.
+    { scenario: 'ACTION: map_input_action replaceKey moves a mapping to another key with its modifier', toolName: 'manage_networking', arguments: { action: 'map_input_action', contextPath: INPUT_CONTEXT, actionPath: INPUT_ACTION, key: 'E', replaceKey: 'SpaceBar' }, expected: 'success', assertions: [{ path: 'structuredContent.result.replacedKey', equals: 'SpaceBar', label: 'SpaceBar no longer fires the action' }, { path: 'structuredContent.result.modifierCount', equals: 1, label: 'the Negate on SpaceBar moved to E' }] },
+    { scenario: 'ERROR: map_input_action replaceKey names a key the action is not mapped to', toolName: 'manage_networking', arguments: { action: 'map_input_action', contextPath: INPUT_CONTEXT, actionPath: INPUT_ACTION, key: 'Q', replaceKey: 'SpaceBar' }, expected: 'error|NOT_FOUND' },
     // === DELETE ===
-    { scenario: 'DELETE: remove_mapping', toolName: 'manage_networking', arguments: { action: 'remove_mapping', contextPath: INPUT_CONTEXT, actionPath: INPUT_ACTION, key: 'SpaceBar' }, expected: 'success|not found' },
+    { scenario: 'DELETE: remove_mapping', toolName: 'manage_networking', arguments: { action: 'remove_mapping', contextPath: INPUT_CONTEXT, actionPath: INPUT_ACTION, key: 'E' }, expected: 'success|not found' },
     // === TOGGLE ===
     // A context is enabled on a running local player, so outside PIE the call is refused.
     { scenario: 'TOGGLE: enable_input_mapping outside PIE is refused', toolName: 'manage_networking', arguments: { action: 'enable_input_mapping', contextPath: INPUT_CONTEXT }, expected: 'error|PIE_NOT_RUNNING' },

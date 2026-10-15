@@ -23,13 +23,13 @@ export const P = {
   name: S('Name for the new Blueprint or asset.'),
   newName: S('New name for a renamed variable, function, or component.'),
   parentClass: S('Parent class path for Blueprint creation (e.g. /Script/Engine.Actor).'),
-  blueprintType: S('Blueprint type hint for creation.'),
+  blueprintType: S('Picks the parent class when parentClass is absent: Actor, Pawn, Character or FunctionLibrary; Interface makes a Blueprint Interface (its functions with add_function, taken on with implement_interface).'),
   // SCS / components
   componentType: S('Component class name to add.'),
   componentClass: S('Component class path for SCS node creation.'),
   componentName: S('Name for the SCS component node.'),
-  parentComponent: S('Parent SCS node name for reparenting.'),
-  attachTo: S('Socket or parent component to attach to.'),
+  parentComponent: S('Parent component to put the component under: one of this Blueprint\'s own, a parent Blueprint\'s scene component, or a native one (Mesh, CapsuleComponent).'),
+  attachTo: S('Socket or parent component to attach to: one of this Blueprint\'s own, a parent Blueprint\'s part, or a native one (Mesh, CapsuleComponent).'),
   location: { type: 'object', description: 'Relative location {x, y, z} for an SCS component template.', additionalProperties: true, 'x-unreal-reflection-boundary': true },
   rotation: { type: 'object', description: 'Relative rotation {pitch, yaw, roll} for an SCS component template.', additionalProperties: true, 'x-unreal-reflection-boundary': true },
   scale: { type: 'object', description: 'Relative scale {x, y, z} for an SCS component template, or {x, y} for a widget render transform.', additionalProperties: true, 'x-unreal-reflection-boundary': true },
@@ -44,7 +44,7 @@ export const P = {
   oldName: S('Current variable name before renaming.'),
   category: S('Category folder for the variable.'),
   isReplicated: B('Whether the variable is replicated.'),
-  isPublic: B('Whether the variable is exposed to the editor/BP graph.'),
+  isPublic: B('Instance Editable (the editor\'s eye toggle): true, the default when left out, shows the variable on placed instances in the Details panel; false keeps it to the Blueprint itself.'),
   // Metadata
   propertyName: S('Property name to set on the CDO or component.'),
   propertyValue: { description: 'Value to assign to the property. An object or class reference takes a path (a Blueprint class path ends in _C); null or "None" clears it.' },
@@ -62,14 +62,16 @@ export const P = {
   },
   // Graph
   graphName: S('Target graph name (Event Graph, Construction Script, etc.).'),
-  nodeType: S('The node to create: CallFunction (memberName, plus memberClass for a function of another class), Event (eventName: BeginPlay, Tick), CustomEvent (customEventName), VariableGet or VariableSet (memberName), Cast (targetClass), InputAxisEvent (inputAxisName), Branch, Sequence, Select, Switch, SwitchOnInt, SwitchOnEnum, SwitchOnString, DoOnce, DoN, FlipFlop, Gate, MultiGate, ForLoop, ForEachLoop, WhileLoop (each also WithBreak), MakeArray, MakeStruct and BreakStruct (structPath), SpawnActorFromClass, GetAllActorsOfClass, Self, Timeline, Reroute, Comment; a common function by name (PrintString, Delay, SetActorLocation, GetPlayerPawn, GetActorOfClass, IsValid, PlaySound2D); or a K2Node class name that inspect_graph info=node_types lists. For create_struct_make_break_nodes: make or break.'),
+  nodeType: S('The node to create: CallFunction (memberName, plus memberClass for a function of another class), Event (eventName: BeginPlay, Tick), CustomEvent (customEventName), VariableGet or VariableSet (memberName), Cast (targetClass), InputAxisEvent (inputAxisName), Branch, Sequence, Select, Switch, SwitchOnInt, SwitchOnEnum, SwitchOnString, DoOnce, DoN, FlipFlop, Gate, MultiGate, ForLoop, ForEachLoop, WhileLoop (each also WithBreak), MakeArray, MakeStruct and BreakStruct (structPath), SpawnActorFromClass, GetAllActorsOfClass, Self, CallDelegate (memberName: an event dispatcher, memberClass: another class\'s), BindEvent (the same, plus eventName: a Bind Event node and a custom event with the dispatcher\'s inputs wired to it, eventNodeGuid in the reply),Timeline (timelineName; edit_timeline keys its tracks), Reroute, Comment, MathExpression (its formula goes in set_node_property Expression) (a Switch on Int is made with only Default: wire a case by its number, from "$id.0", "$id.1"..., and the case pin is added; a Sequence or a commutative math node grows its inputs the same way); a common function by name (PrintString, Delay, SetActorLocation, GetPlayerPawn, GetActorOfClass, IsValid, PlaySound2D); or a K2Node class name that inspect_graph info=node_types lists. In an Animation Blueprint\'s AnimGraph or a state\'s graph (graphName), any animation node by class: AnimGraphNode_TwoBoneIK, TwoBoneIK or Two Bone IK (info=node_types with filter IK lists them; animation_physics configure_anim_graph_node set_value sets its settings); a node the graph cannot hold is refused (NODE_NOT_ALLOWED_IN_GRAPH). For create_struct_make_break_nodes: make or break.'),
   nodeId: S('Id of an existing node: the nodeGuid edit_graph returned when it made the node, or a nodeId inspect_graph lists.'),
   nodeName: S('Human-readable node name.'),
   memberName: S('Member (function/variable/event) name the node represents.'),
   memberClass: S('Member class (function, variable, event, etc.).'),
   targetClass: S(
     'Target class for a node that carries one: a Cast target, a CreateWidget or '
-      + 'SpawnActor class, or the subsystem a Get Subsystem node returns. Required '
+      + 'SpawnActor class, the subsystem a Get Subsystem node returns, or the class '
+      + 'GetAllActorsOfClass and GetActorOfClass look for (their result is then typed to it, '
+      + 'so a ForEach element wires to its functions). Required '
       + 'for cast and subsystem nodes, whose type is stored on the node itself and '
       + 'cannot be set afterwards.',
   ),
@@ -101,19 +103,19 @@ export const P = {
   customEventName: S('Custom event name to create.'),
   parameters: {
     type: 'array',
-    description: 'Function/event parameter descriptors.',
+    description: 'Event parameters, each {name, type}. Types: bool, byte, int, int64, float, double, string, name, text, vector, vector2d, rotator, transform, color, linearcolor, object, class, a class, struct or enum name (Actor, HitResult), Object:/Script/Engine.Actor, Struct:<path>, Enum:<path>, and Array<T>, Set<T> or Map<Key,Value>. A nameless entry or a type no pin takes is refused (TYPE_RESOLUTION_FAILED) before anything changes.',
     items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
     'x-unreal-reflection-boundary': true,
   },
   inputs: {
     type: 'array',
-    description: 'Function input parameter descriptors.',
+    description: 'Function inputs, each {name, type}, with the types add_event parameters take (Float, Vector, Actor, Array<Int> ...). A nameless entry or a type no pin takes is refused (TYPE_RESOLUTION_FAILED) before anything changes.',
     items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
     'x-unreal-reflection-boundary': true,
   },
   outputs: {
     type: 'array',
-    description: 'Function output parameter descriptors.',
+    description: 'Function outputs (its return values), each {name, type}, with the types inputs take.',
     items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
     'x-unreal-reflection-boundary': true,
   },

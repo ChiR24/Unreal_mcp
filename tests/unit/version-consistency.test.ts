@@ -10,7 +10,7 @@ const readText = (rel: string): string => readFileSync(resolve(process.cwd(), re
 // gate with no literal for the workflow to rewrite.
 const CANONICAL = (JSON.parse(readText('package.json')) as { version: string }).version;
 
-const UPLUGIN = 'plugins/McpAutomationBridge/McpAutomationBridge.uplugin';
+const UPLUGIN = 'plugins/EngineWire/EngineWire.uplugin';
 
 // The four sources bump-version.yml rewrites. The TS server reads package.json
 // and the native server reads the .uplugin VersionName at runtime, so there are
@@ -57,6 +57,17 @@ describe('version source consistency', () => {
     expect(Version).toBe(Number(major) * 10000 + Number(minor) * 100 + Number(patch));
   });
 
+  it('keeps the .uplugin SupportedTargetPlatforms in step with its modules', () => {
+    // Without the top-level list UBT walks this editor-only plugin's dependencies when
+    // building for Android and stops at the first desktop-only one (Interchange).
+    const { SupportedTargetPlatforms, Modules } = JSON.parse(readText(UPLUGIN)) as {
+      SupportedTargetPlatforms?: string[];
+      Modules: Array<{ PlatformAllowList?: string[] }>;
+    };
+    expect(SupportedTargetPlatforms).toBeDefined();
+    for (const { PlatformAllowList } of Modules) expect(PlatformAllowList).toEqual(SupportedTargetPlatforms);
+  });
+
   it('bump-version.yml rewrites every source', () => {
     const workflow = readText('.github/workflows/bump-version.yml');
     for (const source of SOURCES) {
@@ -65,7 +76,7 @@ describe('version source consistency', () => {
   });
 
   it('the plugin reports its VersionName in bridge_ack, under the name the server reads', () => {
-    const ack = readText('plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Transport/Connection/McpConnectionManagerAuthority.cpp');
+    const ack = readText('plugins/EngineWire/Source/EngineWire/Private/Transport/Connection/McpConnectionManagerAuthority.cpp');
     expect(ack).toMatch(/SetStringField\(TEXT\("pluginVersion"\), Plugin->GetDescriptor\(\)\.VersionName\)/u);
     expect(readText('src/automation/message-schema.ts')).toContain('metadata?.pluginVersion');
   });

@@ -8,7 +8,7 @@
  * schemas, not inputs.
  *
  * Paths are relative to
- * plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Domains/Sequence/.
+ * plugins/EngineWire/Source/EngineWire/Private/Domains/Sequence/.
  */
 import type { JsonObject } from '../../model.js';
 import { bool, int, num, str, strArr } from '../shared/schema-props.js';
@@ -16,7 +16,7 @@ import { bool, int, num, str, strArr } from '../shared/schema-props.js';
 
 /**
  * ApplyNumberAliases(Primary, Alias, NestedObject, PropertyPath) in
- * Cinematics/McpAutomationBridge_SequenceCinematicsCameras.cpp:49-88 makes
+ * Cinematics/McpSeqCineCameras.cpp:49-88 makes
  * `lens`, `filmback`, and `focus` OBJECTS whose members mirror the top-level
  * primary/alias pair -- they are not scalars.
  */

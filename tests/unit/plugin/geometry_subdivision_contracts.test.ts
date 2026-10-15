@@ -7,7 +7,7 @@ import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-const MODULE = join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge');
+const MODULE = join('plugins', 'EngineWire', 'Source', 'EngineWire');
 const GEOMETRY = join(MODULE, 'Private', 'Domains', 'Geometry');
 
 /** Block and line comments removed, so no assertion can be satisfied by prose. */
@@ -16,7 +16,7 @@ const read = (...segments: readonly string[]): string => strip(readFileSync(join
 const readModule = (...segments: readonly string[]): string => strip(readFileSync(join(MODULE, ...segments), 'utf8'));
 
 describe('subdivide schemes drive the engine\'s FSubdividePoly over a polygroup cage', () => {
-  const schemes = (): string => read('Mesh', 'McpAutomationBridge_GeometrySubdivideSchemes.cpp');
+  const schemes = (): string => read('Mesh', 'McpGeometrySubdivideSchemes.cpp');
 
   it('maps catmull_clark, loop and bilinear to their FSubdividePoly schemes', () => {
     expect(schemes()).toContain(
@@ -26,7 +26,7 @@ describe('subdivide schemes drive the engine\'s FSubdividePoly over a polygroup 
   });
 
   it('subdivide sends every scheme but pn here and keeps pn on the PN tessellation', () => {
-    const reduction = read('Mesh', 'McpAutomationBridge_GeometryMeshReduction.cpp');
+    const reduction = read('Mesh', 'McpGeometryMeshReduction.cpp');
     expect(reduction).toMatch(/if \(Scheme != TEXT\("pn"\)\)\s*\{\s*return SubdivideByScheme\(Self, RequestId, Socket, \*Target, ActorName, Scheme, Iterations\);/u);
     expect(reduction).toContain('ApplyPNTessellation(Mesh, FGeometryScriptPNTessellateOptions(), 1, nullptr)');
     expect(reduction).toContain('Scheme != TEXT("catmull_clark") && Scheme != TEXT("loop") && Scheme != TEXT("bilinear")');
@@ -99,11 +99,11 @@ describe('subdivide schemes drive the engine\'s FSubdividePoly over a polygroup 
     expect(source).toContain('Modules.LoadModule(TEXT("ModelingComponentsEditorOnly"))');
     expect(source.match(/TEXT\("SUBDIVISION_UNAVAILABLE"\)/gu)).toHaveLength(2);
 
-    const build = readModule('McpAutomationBridge.Build.cs');
+    const build = readModule('EngineWire.Build.cs');
     expect(build).toContain('AddOptionalModule(Target, EngineDir, "ModelingComponentsEditorOnly", "ModelingComponentsEditorOnly", true)');
     expect(build).toContain('"MCP_HAS_SUBDIVIDE_POLY=1" : "MCP_HAS_SUBDIVIDE_POLY=0"');
 
-    const descriptor = JSON.parse(readFileSync(join('plugins', 'McpAutomationBridge', 'McpAutomationBridge.uplugin'), 'utf8')) as { Plugins: Array<{ Name: string; Optional?: boolean }> };
+    const descriptor = JSON.parse(readFileSync(join('plugins', 'EngineWire', 'EngineWire.uplugin'), 'utf8')) as { Plugins: Array<{ Name: string; Optional?: boolean }> };
     expect(descriptor.Plugins.find((plugin) => plugin.Name === 'MeshModelingToolset')).toMatchObject({ Optional: true });
   });
 });

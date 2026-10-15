@@ -1,8 +1,9 @@
 /**
- * System operations records (18): run_ubt, package_project, package_status,
+ * System operations records (19): run_ubt, package_project, package_status,
  * launch_build, run_tests, subscribe, unsubscribe, read_log, list_output_files,
  * delete_output_file, list_save_games, edit_save_game, spawn_category, execute_python,
- * set_project_setting, get_project_settings, validate_assets, lumen_update_scene.
+ * set_project_setting, get_project_settings, validate_assets, lumen_update_scene,
+ * create_cpp_class.
  */
 import type { CapabilityRecordSource } from '../../model.js';
 import { buildCoreRecord } from '../core/builder.js';
@@ -10,6 +11,43 @@ import { buildCoreRecord } from '../core/builder.js';
 const PT = 'system_control';
 
 export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
+  // Adding code to a project had no capability: every C++ class meant leaving the tool for the editor's wizard or an
+  // IDE. The handler drives the wizard's own GameProjectUtils::AddCodeToProject, unattended.
+  buildCoreRecord({
+    parentTool: PT,
+    action: 'create_cpp_class',
+    domain: 'build',
+    family: 'build',
+    // No "add code to project": it took "add file to project" from asset import on the TS door.
+    topics: ['create c++ class', 'new c++ class', 'add c++ class', 'create cpp file', 'c++ source file', 'c++ header file', 'native class', 'c++ actor class', 'c++ component'],
+    summary: 'Create a new C++ class in a project module, as the editor\'s New C++ Class does: a header and a .cpp from a parent class (Actor, Character, ActorComponent, Object ..., or None for a plain class), then the editor\'s own compile.',
+    whenToUse: ['Gameplay logic or a base class belongs in C++: a new class file pair must be added to the project source.'],
+    whenNotToUse: ['A Blueprint class is enough (use manage_blueprint create).', 'Existing C++ only needs compiling (use run_ubt, or console_command LiveCoding.Compile).'],
+    inputProps: {
+      className: { type: 'string', description: 'The class name without its prefix: MyActor makes AMyActor (an Actor parent), MyThing makes UMyThing (an Object parent). Letters, digits and _.' },
+      parentClass: { type: 'string', description: 'The C++ class to derive from, by name or path (Actor, Character, Pawn, ActorComponent, SceneComponent, Object, BlueprintFunctionLibrary, /Script/Engine.GameModeBase), or None for a plain C++ class. A Blueprint class is refused: derive from its C++ parent.' },
+      moduleName: { type: 'string', description: 'The project module that gets the files; default the module named after the project, else its first runtime module. A wrong name lists the modules.' },
+      subfolder: { type: 'string', description: 'Folder under the module\'s Public (or Private) folder, such as Gameplay/Pickups; default none. A module without Public and Private folders refuses one: its own folder is no include path, so the class would not compile there.' },
+      classLocation: { type: 'string', enum: ['public', 'private'], description: 'public (default): header in Public, .cpp in Private; private: both in Private. A module without those folders takes both files in its own folder.' },
+    },
+    required: ['className', 'parentClass'],
+    outputProps: {
+      className: { type: 'string', description: 'The C++ class name with its prefix (AMyActor).' },
+      headerPath: { type: 'string', description: 'Absolute path of the new header.' },
+      cppPath: { type: 'string', description: 'Absolute path of the new .cpp.' },
+      moduleName: { type: 'string', description: 'The module the class went into.' },
+      classPath: { type: 'string', description: 'The class\'s path once compiled (/Script/<Module>.<Name>), for a class with a UObject parent.' },
+      compiled: { type: 'boolean', description: 'Whether the editor compiled the module after adding the files (Live Coding or hot reload, as its settings say); a Live Coding compile has only started when this answers, and read_log category LogLiveCoding says whether it succeeded.' },
+      note: { type: 'string', description: 'What the class needs before it can be used: a build, a restart, or nothing.' },
+    },
+    outputRequired: [],
+    effect: 'write',
+    behavior: { longRunning: true },
+    costLatency: 'long-running',
+    costResources: 'high',
+    exampleInput: { action: 'create_cpp_class', className: 'PickupBase', parentClass: 'Actor', subfolder: 'Gameplay' },
+    exampleOutput: { success: true, message: 'Created APickupBase in MyGame', className: 'APickupBase', moduleName: 'MyGame', headerPath: 'C:/Projects/MyGame/Source/MyGame/Public/Gameplay/PickupBase.h', cppPath: 'C:/Projects/MyGame/Source/MyGame/Private/Gameplay/PickupBase.cpp', classPath: '/Script/MyGame.PickupBase', compiled: true },
+  }),
   buildCoreRecord({
     parentTool: PT,
     action: 'run_ubt',
@@ -46,7 +84,7 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
     // "maps to cook packaging settings" found nothing here: "packaging" folds to "packag", which
     // never matches "package", and cooking had no name of its own.
     aliases: ['system_control.cook_maps'],
-    topics: ['package project', 'packaging the game', 'build game', 'maps to cook', 'shipping build'],
+    topics: ['package project', 'packaging the game', 'build game', 'maps to cook', 'shipping build', 'package for windows', 'cook content'],
     summary: 'Start a project package (cook, stage, pak, archive) and return a jobId to poll; the build runs asynchronously in the editor.',
     whenToUse: ['A cooked, staged, archived build of the project is needed.'],
     whenNotToUse: ['Only a code target must be compiled (use run_ubt).', 'The result of an already-started package is wanted (use package_status).'],
@@ -144,18 +182,43 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'run_tests',
     domain: 'build',
     family: 'build',
-    topics: ['automation tests', 'run tests', 'test suite', 'functional tests'],
-    summary: 'Run the automation test suite via the manage_tests bridge action with an optional filter.',
-    whenToUse: ['The project automation tests must be executed.'],
-    whenNotToUse: ['A single ad-hoc console command is needed.'],
-    inputProps: { filter: { type: 'string', description: 'Optional test name filter.' } },
+    topics: ['automation tests', 'run tests', 'test suite', 'functional tests', 'test results'],
+    summary: 'Run automation tests in the editor, one after another, and answer with each one\'s result: passed or not, its duration, and the errors and warnings it reported.',
+    whenToUse: ['The project automation tests must be executed and their results read.'],
+    whenNotToUse: ['A single ad-hoc console command is needed.', 'Play In Editor is running: the automation framework starts no test while a game runs (stop it first).'],
+    inputProps: {
+      filter: { type: 'string', description: 'Run the tests whose full path contains this, ignoring case (System.Core.Math, Project.MyGame). Omitted, every test is a match, capped by maxTests. Functional tests (Project.Functional Tests.<map>.<test>) open their map in the editor.' },
+      maxTests: { type: 'number', description: 'Run at most this many of the matching tests, in the order the editor lists them (default 50, at most 200); matched says how many there were.' },
+      timeoutSeconds: { type: 'number', description: 'Stop a test still running after this many seconds and count it failed (default 60, at most 600).' },
+    },
     required: [],
+    outputProps: {
+      tests: {
+        type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
+        description: 'One row per test run: name (its full path), passed, durationSeconds, errorCount and errors, warningCount and warnings (the first 10 of each), and a note when it timed out or was not run.',
+      },
+      matched: { type: 'number', description: 'Tests matching the filter, run or not.' },
+      passed: { type: 'number', description: 'Tests that passed.' },
+      failed: { type: 'number', description: 'Tests that failed or timed out.' },
+      notRun: { type: 'number', description: 'Tests the framework did not start (another run or Play In Editor began meanwhile).' },
+      allPassed: { type: 'boolean', description: 'True when at least one test ran and every test passed.' },
+    },
+    outputRequired: ['tests', 'matched', 'passed', 'failed', 'allPassed'],
     effect: 'write',
     behavior: { longRunning: true },
     costLatency: 'long-running',
     costResources: 'medium',
     dispatchAction: 'manage_tests',
-    exampleInput: { action: 'run_tests', filter: 'MyProject' },
+    exampleInput: { action: 'run_tests', filter: 'System.Core.Math.Vector', maxTests: 10 },
+    exampleOutput: {
+      success: true,
+      message: 'Ran 1 of 1 matching test(s): 1 passed, 0 failed',
+      tests: [{ name: 'System.Core.Math.Vector Normalization', passed: true, durationSeconds: 0.002 }],
+      matched: 1,
+      passed: 1,
+      failed: 0,
+      allPassed: true,
+    },
   }),
   buildCoreRecord({
     parentTool: PT,
@@ -377,7 +440,7 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
     exampleInput: { action: 'spawn_category', categoryName: 'AI', enabled: true },
   }),
   // execute_python XOR contract: the native handler
-  // (plugins/McpAutomationBridge/.../Private/Domains/SystemControl/McpAutomationBridge_SystemControlHandlersPython.cpp)
+  // (plugins/EngineWire/.../Private/Domains/SystemControl/McpSystemPython.cpp)
   // rejects supplying BOTH code and file ("Provide either 'code' or 'file', not both").
   // The schema keyword is at-least-one, the handler is XOR, so a both-supplied
   // request passes gateway validation and fails at the handler with INVALID_ARGUMENT.
@@ -426,10 +489,14 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
     domain: 'project',
     family: 'project',
     summary: 'Set one setting (section and key): applied to the live settings object and saved where the editor itself saves that class, the project Default<Config>.ini for a project setting, the user Saved config for a per-user one (EditorPerProjectUserSettings). configFile names the file written.',
-    whenToUse: ['A single project setting value must be written.'],
+    topics: ['set start level', 'change default map', 'startup map'],
+    whenToUse: [
+      'A single project setting value must be written.',
+      'The level the game or the editor opens first must change: section GameMapsSettings, key GameDefaultMap (the game and a packaged build) or EditorStartupMap (the editor), value the level as /Game/Maps/L_Main.L_Main.',
+    ],
     whenNotToUse: ['The full settings document must be read (use get_project_settings).'],
     inputProps: {
-      section: { type: 'string', description: 'Settings section: a settings class path such as /Script/EngineSettings.GeneralProjectSettings, or its short name.' },
+      section: { type: 'string', description: 'Settings section: a settings class path such as /Script/EngineSettings.GameMapsSettings, its class name (GameMapsSettings), or a raw ini section in brackets ([SystemSettings]); a name that is none of these is refused.' },
       key: { type: 'string', description: 'Setting key.' },
       value: { type: 'string', description: 'Setting value.' },
     },
@@ -450,7 +517,7 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['A single setting must be written (use set_project_setting).'],
     inputProps: {
       key: { type: 'string', description: 'Single config property to read from the section; the reply then carries key and value.' },
-      section: { type: 'string', description: 'Settings section.' },
+      section: { type: 'string', description: 'Settings section: a class path such as /Script/EngineSettings.GameMapsSettings, or its class name (GameMapsSettings).' },
       category: { type: 'string', description: 'A section by friendly name instead of section: general, maps, packaging, rendering, input, physics, collision, audio, engine, navigation.' },
     },
     required: [],
@@ -476,26 +543,82 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
     dispatchAction: 'system_control',
     exampleInput: { action: 'get_project_settings', section: '/Script/EngineSettings.GeneralProjectSettings' },
   }),
+  // set_project_setting took raw property names and enum spellings, and never said a change waited for a restart.
+  buildCoreRecord({
+    parentTool: PT,
+    action: 'configure_rendering',
+    domain: 'project',
+    family: 'project',
+    topics: ['render settings', 'rendering settings', 'lumen', 'virtual shadow maps', 'anti aliasing', 'tsr', 'hardware ray tracing', 'mesh distance fields', 'megalights', 'default bloom', 'auto exposure', 'motion blur'],
+    summary: 'Set or read the project\'s rendering methods by plain name: global illumination and reflections (lumen, screen_space, none), shadows (virtual, maps), anti-aliasing (tsr, taa, fxaa, msaa, none), hardware ray tracing, mesh distance fields, MegaLights, and the default bloom, auto exposure and motion blur. Each change is saved to DefaultEngine.ini and applied live where its console variable allows; the reply reads every setting back and lists the ones that wait for an editor restart.',
+    whenToUse: ['A project must switch to or away from Lumen, virtual shadow maps or TSR, or turn hardware ray tracing or distance fields on.', 'A stylized game must drop the default auto exposure, bloom or motion blur.', 'The current rendering methods must be read (send no setting).'],
+    whenNotToUse: ['One post-process volume or camera must look different (use build_environment configure_post_process).', 'Any other project setting (use set_project_setting).'],
+    inputProps: {
+      globalIllumination: { type: 'string', enum: ['lumen', 'screen_space', 'none'], description: 'Dynamic global illumination method.' },
+      reflections: { type: 'string', enum: ['lumen', 'screen_space', 'none'], description: 'Reflection method.' },
+      shadows: { type: 'string', enum: ['virtual', 'maps'], description: 'Shadow map method: virtual shadow maps or classic shadow maps.' },
+      antiAliasing: { type: 'string', enum: ['tsr', 'taa', 'fxaa', 'msaa', 'none'], description: 'Default anti-aliasing method.' },
+      hardwareRayTracing: { type: 'boolean', description: 'Support hardware ray tracing (applies after an editor restart).' },
+      meshDistanceFields: { type: 'boolean', description: 'Generate mesh distance fields, which software Lumen traces (applies after an editor restart).' },
+      megaLights: { type: 'boolean', description: 'Use MegaLights by default (UE 5.5 and later; listed under unavailable on older engines).' },
+      bloom: { type: 'boolean', description: 'Bloom on by default.' },
+      autoExposure: { type: 'boolean', description: 'Auto exposure on by default.' },
+      motionBlur: { type: 'boolean', description: 'Motion blur on by default.' },
+    },
+    required: [],
+    outputProps: {
+      settings: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Every setting above as it reads after the call, by the same names and values.' },
+      changed: { type: 'array', items: { type: 'string' }, description: 'The settings this call changed.' },
+      restartRequired: { type: 'array', items: { type: 'string' }, description: 'Changed settings that take effect only after the editor restarts (control_editor restart_editor).' },
+      unavailable: { type: 'array', items: { type: 'string' }, description: 'Settings this engine version does not have; nothing was written for them.' },
+      note: { type: 'string', description: 'A setting that cannot work as set, such as Lumen without distance fields or hardware ray tracing.' },
+    },
+    outputRequired: [],
+    effect: 'write',
+    costLatency: 'interactive',
+    dispatchAction: 'system_control',
+    exampleInput: { action: 'configure_rendering', globalIllumination: 'lumen', shadows: 'virtual', antiAliasing: 'tsr', meshDistanceFields: true },
+  }),
   buildCoreRecord({
     parentTool: PT,
     action: 'validate_assets',
     domain: 'project',
     family: 'project',
-    topics: ['check they load', 'broken', 'fail to load', 'content folder', 'find broken assets', 'verify assets'],
-    summary: 'Check that assets load without error: each asset path, or every asset under a folder (recursive by default); returns isValid, per-path results (asset, directory or missing, with a message) and the checked and invalid counts.',
-    whenToUse: ['Asset references must be validated before use.'],
+    topics: ['check they load', 'broken', 'fail to load', 'content folder', 'find broken assets', 'verify assets', 'data validation', 'run validators', 'material usage flags', 'missing usage flag', 'default material in packaged game', 'check materials before packaging', 'nanite material usage'],
+    summary: 'Check that assets load without error, with dataValidation that they pass the project\'s and the engine\'s Data Validation (the editor\'s Validate Assets), and with materialUsage that their meshes\' materials carry the usage flags a cooked game needs: each asset path, or every asset under a folder (recursive by default); returns isValid, per-path results and the checked and invalid counts.',
+    whenToUse: ['Asset references must be validated before use.', 'Assets must pass Data Validation (the editor\'s Validate Assets) before they are relied on or shipped.', 'Before packaging: materialUsage finds the meshes a cooked game would draw with the default material.'],
     whenNotToUse: ['A single asset must be imported or created (use manage_asset).'],
     inputProps: {
       paths: { type: 'array', items: { type: 'string' }, description: 'Asset paths to validate.' },
       assetPath: { type: 'string', description: 'Single asset path to validate.' },
       path: { type: 'string', description: 'Another single asset or folder path; validated alongside assetPath when both are given.' },
       recursive: { type: 'boolean', description: 'For a folder path, include its subfolders (default true).' },
+      dataValidation: { type: 'boolean', description: 'Also run Data Validation on every asset that loads (default false): an asset row gains dataValidation (valid, invalid or notValidated, the last when no validator checks that kind of asset) with its errors and warnings, a folder row the count of each verdict and issues (up to 20 assets with errors or warnings). An invalid asset makes its row invalid.' },
+      materialUsage: { type: 'boolean', description: 'Also list the material usage flags the assets\' meshes need and their materials lack (default false): a Nanite static mesh\'s slots, a skeletal mesh\'s, and a Blueprint\'s mesh components (Nanite, instanced, spline or skeletal), as materialUsage [{material, usage, property, unsaved, component, asset}] (a folder: at most 40, with materialUsageCount). The editor sets such a flag only while it draws the mesh outside play, so a mesh that only appears in play draws the default material there and in a cooked game; set property true on the material (inspect set_property) to fix one. unsaved true: the editor set the flag (drawing a preview or loading a mesh sets it) but it is not on disk yet; save that material (control_editor save_all with assetPaths). On UE 5.8 a material instance holds its own flags, so material can name the instance. A missing flag makes its row invalid.' },
     },
     required: [],
+    outputProps: {
+      isValid: { type: 'boolean', description: 'True when every path loaded (and, with dataValidation, none was invalid; with materialUsage, no flag was missing).' },
+      results: {
+        type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
+        description: 'One row per path: path, isValid, kind (asset, directory, missing or invalid), message, assetCount for a folder, with dataValidation its verdict, errors, warnings or issues, and with materialUsage the missing flags (materialUsage, and materialUsageCount for a folder).',
+      },
+      checkedCount: { type: 'number', description: 'Paths checked.' },
+      invalidCount: { type: 'number', description: 'Paths that failed.' },
+    },
+    outputRequired: ['isValid', 'results'],
     effect: 'read',
     costLatency: 'interactive',
     dispatchAction: 'system_control',
-    exampleInput: { action: 'validate_assets', paths: ['/Game/Materials/M_Base'] },
+    exampleInput: { action: 'validate_assets', paths: ['/Game/Materials/M_Base'], dataValidation: true },
+    exampleOutput: {
+      success: true,
+      message: 'Asset validation completed; all assets valid',
+      isValid: true,
+      results: [{ path: '/Game/Materials/M_Base', isValid: true, kind: 'asset', message: 'Asset loaded successfully', dataValidation: 'valid' }],
+      checkedCount: 1,
+      invalidCount: 0,
+    },
   }),
   buildCoreRecord({
     parentTool: PT,

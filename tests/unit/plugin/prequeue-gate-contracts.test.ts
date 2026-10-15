@@ -14,7 +14,7 @@ const privateSource = (...parts: string[]): string =>
   readFileSync(
     resolve(
       process.cwd(),
-      'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private',
+      'plugins/EngineWire/Source/EngineWire/Private',
       ...parts
     ),
     'utf8'
@@ -37,9 +37,9 @@ const authorization = (): string => privateSource('Foundation', 'McpCapabilityAu
 
 const PRIVATE_ROOT = resolve(
   process.cwd(),
-  'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private'
+  'plugins/EngineWire/Source/EngineWire/Private'
 );
-const CANONICAL_HEADER = 'McpAutomationBridgeHelpersAssetPathCanonical.h';
+const CANONICAL_HEADER = 'McpAssetPathCanonical.h';
 
 // A `/Content` -> `/Game` alias map cannot be written without a `/Content`
 // STRING LITERAL, so "no such literal outside the one shared place" tests the
@@ -56,19 +56,19 @@ const pluginSourceFiles = (): string[] =>
 // group) resolve a WRITE target and must run the whole canonicalizer; the rest
 // only need the shared boundary-aware root map.
 const CONVERGED_EXECUTORS = [
-  'Core/Subsystem/McpAutomationBridgeSubsystemEditorCommands.cpp',
-  'Domains/AnimationAuthoring/McpAutomationBridge_AnimationAuthoringSupport.cpp',
-  'Domains/Texture/McpAutomationBridge_TextureHandlersShared.cpp'
+  'Core/Subsystem/EngineWireSubsystemEditorCommands.cpp',
+  'Domains/AnimationAuthoring/McpAnimSupport.cpp',
+  'Domains/Texture/McpTextureShared.cpp'
 ];
 const CONVERGED_ALIAS_SITES = [
-  'Domains/SystemControl/McpAutomationBridge_SystemControlHandlersAssetValidation.cpp',
-  'Domains/Sequence/McpAutomationBridge_SequenceHandlersAssetCreation.cpp',
-  'Domains/Sequence/Media/McpAutomationBridge_SequenceMediaReflection.cpp',
-  'Domains/AudioAuthoring/McpAutomationBridge_AudioAuthoringHandlersAssetSupport.cpp',
-  'Domains/AssetWorkflow/Operations/McpAutomationBridge_AssetWorkflowRedirectors.cpp',
-  'Domains/AssetWorkflow/Operations/McpAutomationBridge_AssetWorkflowBulkSelection.h',
-  'Domains/AssetWorkflow/Analysis/McpAutomationBridge_AssetWorkflowReports.cpp',
-  'Domains/GameFramework/McpAutomationBridge_GameFrameworkHandlersContext.cpp'
+  'Domains/SystemControl/McpSystemAssetValidate.cpp',
+  'Domains/Sequence/McpSeqAssetCreation.cpp',
+  'Domains/Sequence/Media/McpSeqMediaReflect.cpp',
+  'Domains/AudioAuthoring/McpAudioAssetSupport.cpp',
+  'Domains/AssetWorkflow/Operations/McpAssetRedirectors.cpp',
+  'Domains/AssetWorkflow/Operations/McpAssetBulkSelection.h',
+  'Domains/AssetWorkflow/Analysis/McpAssetReports.cpp',
+  'Domains/GameFramework/McpGameFrameworkContext.cpp'
 ];
 
 describe('Task 40 — both transports gate before anything is enqueued', () => {
@@ -181,8 +181,8 @@ describe('the gate and the dispatcher cannot resolve DIFFERENT actions', () => {
   // delete. Both resolve in the gate's own order (subAction first) so they
   // agree with it even if the ingest guard is ever bypassed.
   const SUBACTION_FIRST: ReadonlyArray<readonly [string, string[]]> = [
-    ['system_control', ['Domains', 'SystemControl', 'McpAutomationBridge_SystemControlHandlers.cpp']],
-    ['control_actor', ['Domains', 'ControlActor', 'McpAutomationBridge_ControlActorDispatch.cpp']]
+    ['system_control', ['Domains', 'SystemControl', 'McpSystemHandlers.cpp']],
+    ['control_actor', ['Domains', 'ControlActor', 'McpActorDispatch.cpp']]
   ];
 
   it.each(SUBACTION_FIRST)('the %s dispatcher reads subAction before action', (_name, parts) => {

@@ -1,0 +1,194 @@
+#include "Domains/Environment/McpEnvShared.h"
+
+namespace McpEnvironmentHandlers {
+bool McpTryGetBoolFromPayloadOrSettings(const TSharedPtr<FJsonObject> &Payload, const TCHAR *FieldName, bool &OutValue)
+{
+    if (!Payload.IsValid())
+    {
+        return false;
+    }
+
+    if (Payload->TryGetBoolField(FieldName, OutValue))
+    {
+        return true;
+    }
+
+    const TSharedPtr<FJsonObject> *SettingsObj = nullptr;
+    return Payload->TryGetObjectField(TEXT("settings"), SettingsObj) && SettingsObj && SettingsObj->IsValid() &&
+           (*SettingsObj)->TryGetBoolField(FieldName, OutValue);
+}
+bool McpReadLandscapeSplinePoint(const TSharedPtr<FJsonValue> &PointValue, FVector &OutPoint)
+{
+    if (!PointValue.IsValid())
+    {
+        return false;
+    }
+
+    // Accept [x, y, z] (z optional) as well as objects.
+    const TArray<TSharedPtr<FJsonValue>> *PointArray = nullptr;
+    if (PointValue->TryGetArray(PointArray) && PointArray && PointArray->Num() >= 2)
+    {
+        double Components[3] = {0.0, 0.0, 0.0};
+        for (int32 Index = 0; Index < 3 && Index < PointArray->Num(); ++Index)
+        {
+            if (!(*PointArray)[Index].IsValid() || !(*PointArray)[Index]->TryGetNumber(Components[Index]))
+            {
+                return false;
+            }
+        }
+        OutPoint = FVector(Components[0], Components[1], Components[2]);
+        return true;
+    }
+
+    const TSharedPtr<FJsonObject> *PointObject = nullptr;
+    if (!PointValue->TryGetObject(PointObject) || !PointObject || !PointObject->IsValid())
+    {
+        return false;
+    }
+
+    // {x, y[, z]} in either case; z defaults to 0 (the landscape snaps it).
+    auto TryReadVector = [](const TSharedPtr<FJsonObject> &VectorObject, FVector &OutVector) -> bool
+    {
+        if (!VectorObject.IsValid())
+        {
+            return false;
+        }
+
+        double X = 0.0;
+        double Y = 0.0;
+        double Z = 0.0;
+        const bool bHasX = VectorObject->TryGetNumberField(TEXT("x"), X) || VectorObject->TryGetNumberField(TEXT("X"), X);
+        const bool bHasY = VectorObject->TryGetNumberField(TEXT("y"), Y) || VectorObject->TryGetNumberField(TEXT("Y"), Y);
+        if (!bHasX || !bHasY)
+        {
+            return false;
+        }
+        if (!VectorObject->TryGetNumberField(TEXT("z"), Z))
+        {
+            VectorObject->TryGetNumberField(TEXT("Z"), Z);
+        }
+
+        OutVector = FVector(X, Y, Z);
+        return true;
+    };
+
+    const TSharedPtr<FJsonObject> *LocationObject = nullptr;
+    for (const TCHAR *Key : {TEXT("location"), TEXT("position"), TEXT("point")})
+    {
+        if ((*PointObject)->TryGetObjectField(Key, LocationObject) && LocationObject && LocationObject->IsValid())
+        {
+            return TryReadVector(*LocationObject, OutPoint);
+        }
+    }
+
+    return TryReadVector(*PointObject, OutPoint);
+}
+TArray<TObjectPtr<ULandscapeSplineSegment>> *McpGetLandscapeSplineSegments(ULandscapeSplinesComponent *SplinesComponent)
+{
+    if (!SplinesComponent)
+    {
+        return nullptr;
+    }
+
+#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3)
+    return &SplinesComponent->GetSegments();
+#else
+    FArrayProperty *SegmentsProperty = FindFProperty<FArrayProperty>(SplinesComponent->GetClass(), TEXT("Segments"));
+    return SegmentsProperty
+               ? SegmentsProperty->ContainerPtrToValuePtr<TArray<TObjectPtr<ULandscapeSplineSegment>>>(SplinesComponent)
+               : nullptr;
+#endif
+}
+TArray<TObjectPtr<ULandscapeSplineControlPoint>> *McpGetLandscapeSplineControlPoints(ULandscapeSplinesComponent *SplinesComponent)
+{
+    if (!SplinesComponent)
+    {
+        return nullptr;
+    }
+
+#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3)
+    return &SplinesComponent->GetControlPoints();
+#else
+    FArrayProperty *ControlPointsProperty = FindFProperty<FArrayProperty>(SplinesComponent->GetClass(), TEXT("ControlPoints"));
+    return ControlPointsProperty
+               ? ControlPointsProperty->ContainerPtrToValuePtr<TArray<TObjectPtr<ULandscapeSplineControlPoint>>>(SplinesComponent)
+               : nullptr;
+#endif
+}
+void McpClearLandscapeSplines(ULandscapeSplinesComponent *SplinesComponent)
+{
+    if (!SplinesComponent)
+    {
+        return;
+    }
+
+    TArray<TObjectPtr<ULandscapeSplineSegment>> *Segments = McpGetLandscapeSplineSegments(SplinesComponent);
+    TArray<TObjectPtr<ULandscapeSplineControlPoint>> *ControlPoints = McpGetLandscapeSplineControlPoints(SplinesComponent);
+    if (!Segments || !ControlPoints)
+    {
+        return;
+    }
+
+    for (TObjectPtr<ULandscapeSplineSegment> &SegmentPtr : *Segments)
+    {
+        if (ULandscapeSplineSegment *Segment = SegmentPtr.Get())
+        {
+            Segment->Modify();
+            Segment->DeleteSplinePoints();
+        }
+    }
+    for (TObjectPtr<ULandscapeSplineControlPoint> &ControlPointPtr : *ControlPoints)
+    {
+        if (ULandscapeSplineControlPoint *ControlPoint = ControlPointPtr.Get())
+        {
+            ControlPoint->Modify();
+            ControlPoint->DeleteSplinePoints();
+        }
+    }
+
+    Segments->Empty();
+    ControlPoints->Empty();
+}
+ULandscapeSplineSegment *McpAddLandscapeSplineSegment(ULandscapeSplinesComponent *SplinesComponent,
+                                                            ULandscapeSplineControlPoint *Start,
+                                                            ULandscapeSplineControlPoint *End)
+{
+    if (!SplinesComponent || !Start || !End || Start == End)
+    {
+        return nullptr;
+    }
+
+    TArray<TObjectPtr<ULandscapeSplineSegment>> *Segments = McpGetLandscapeSplineSegments(SplinesComponent);
+    if (!Segments)
+    {
+        return nullptr;
+    }
+
+    ULandscapeSplineSegment *Segment = NewObject<ULandscapeSplineSegment>(SplinesComponent, NAME_None, RF_Transactional);
+    if (!Segment)
+    {
+        return nullptr;
+    }
+
+    Segments->Add(Segment);
+    Segment->Connections[0].ControlPoint = Start;
+    Segment->Connections[1].ControlPoint = End;
+    Segment->Connections[0].SocketName = Start->GetBestConnectionTo(End->Location);
+    Segment->Connections[1].SocketName = End->GetBestConnectionTo(Start->Location);
+
+    FVector StartLocation;
+    FRotator StartRotation;
+    FVector EndLocation;
+    FRotator EndRotation;
+    Start->GetConnectionLocationAndRotation(Segment->Connections[0].SocketName, StartLocation, StartRotation);
+    End->GetConnectionLocationAndRotation(Segment->Connections[1].SocketName, EndLocation, EndRotation);
+    Segment->Connections[0].TangentLen = static_cast<float>((EndLocation - StartLocation).Size());
+    Segment->Connections[1].TangentLen = Segment->Connections[0].TangentLen;
+    Segment->AutoFlipTangents();
+
+    Start->ConnectedSegments.Add(FLandscapeSplineConnection(Segment, 0));
+    End->ConnectedSegments.Add(FLandscapeSplineConnection(Segment, 1));
+    return Segment;
+}
+
+} // namespace McpEnvironmentHandlers

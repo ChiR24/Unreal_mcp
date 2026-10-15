@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest';
 // handlers take a caller-supplied `objectPath` and then read or write ANY
 // reflected property on whatever it resolves to. Object resolution accepts
 // `/Script/` paths, and a `/Script/` path names a native class object or its CDO
-// — including `/Script/McpAutomationBridge.Default__McpAutomationBridgeSettings`,
+// — including `/Script/EngineWire.Default__EngineWireSettings`,
 // which carries `CapabilityToken`, `ScopedCapabilityTokens`,
 // `bRequireCapabilityToken` and `bAllowNonLoopback` as reflected UPROPERTYs and is
 // re-read by the authorization path on every connection.
@@ -23,7 +23,7 @@ import { describe, expect, it } from 'vitest';
 
 const PRIVATE_ROOT = resolve(
   process.cwd(),
-  'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private'
+  'plugins/EngineWire/Source/EngineWire/Private'
 );
 
 const privateSource = (...parts: string[]): string =>
@@ -31,13 +31,13 @@ const privateSource = (...parts: string[]): string =>
 
 const guard = (): string => privateSource('Safety', 'McpSafeReflectionTarget.h');
 const objectGet = (): string =>
-  privateSource('Domains', 'Property', 'McpAutomationBridge_PropertyHandlersObjectGet.cpp');
+  privateSource('Domains', 'Property', 'McpPropObjectGet.cpp');
 const objectSet = (): string =>
-  privateSource('Domains', 'Property', 'McpAutomationBridge_PropertyHandlersObjectSet.cpp');
+  privateSource('Domains', 'Property', 'McpPropObjectSet.cpp');
 // get/set resolve their target through ResolvePropertyTarget, which runs the
 // first guard; the handlers re-assert it after any component-template re-point.
 const propertyTarget = (): string =>
-  privateSource('Domains', 'Property', 'McpAutomationBridge_PropertyHandlersTarget.cpp');
+  privateSource('Domains', 'Property', 'McpPropTarget.cpp');
 const FIRST_GUARD = 'McpPropertyTarget::ResolvePropertyTarget(';
 const HANDLER_GUARD = 'McpSafeReflectionTarget::IsAddressable(RootObject)';
 
@@ -138,7 +138,7 @@ describe('the reflection surface refuses /Script targets', () => {
     const firstGuardAt = source.indexOf(FIRST_GUARD);
     const secondGuardAt = source.lastIndexOf(HANDLER_GUARD);
     const reassignAt = source.indexOf('RootObject = CompTemplate;');
-    const modifyAt = source.indexOf('RootObject->Modify()');
+    const modifyAt = source.indexOf('RootObject->Modify(bMarkDirty)');
     expect(firstGuardAt).toBeGreaterThan(-1);
     expect(reassignAt, 'the component-template branch must still exist').toBeGreaterThan(-1);
     expect(secondGuardAt, 'the boundary must be re-asserted on the re-pointed target').toBeGreaterThan(
@@ -189,9 +189,9 @@ describe('the reflection surface refuses /Script targets', () => {
   it('the container handlers thread OutDenied and report OBJECT_NOT_ADDRESSABLE for a denied target', () => {
     const containerFiles = propertyDomainFiles().filter(
       (file) =>
-        file !== 'McpAutomationBridge_PropertyHandlersObjectGet.cpp' &&
-        file !== 'McpAutomationBridge_PropertyHandlersObjectSet.cpp' &&
-        file !== 'McpAutomationBridge_PropertyHandlersTarget.cpp'
+        file !== 'McpPropObjectGet.cpp' &&
+        file !== 'McpPropObjectSet.cpp' &&
+        file !== 'McpPropTarget.cpp'
     );
     expect(containerFiles.length).toBeGreaterThan(0);
     for (const file of containerFiles) {
@@ -214,11 +214,11 @@ describe('the reflection surface refuses /Script targets', () => {
 // or a write-scoped caller could sample the plugin's own settings object.
 describe('set_property watch stays inside the reflection boundary', () => {
   it('checks the watched object and is resolved before anything is written', () => {
-    const watch = privateSource('Domains', 'Property', 'McpAutomationBridge_PropertyHandlersObjectWatch.cpp');
+    const watch = privateSource('Domains', 'Property', 'McpPropObjectWatch.cpp');
     expect(watch).toContain('McpSafeReflectionTarget::IsAddressable(Object)');
     const set = objectSet();
     const parse = set.indexOf('McpPropertyWatch::ParseWatch(');
     expect(parse).toBeGreaterThan(-1);
-    expect(parse).toBeLessThan(set.indexOf('RootObject->Modify();'));
+    expect(parse).toBeLessThan(set.indexOf('RootObject->Modify(bMarkDirty);'));
   });
 });

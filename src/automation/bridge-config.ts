@@ -16,7 +16,9 @@ import type { AutomationBridgeOptions } from './types.js';
 
 type BridgeConfigLogger = Pick<Logger, 'debug' | 'warn' | 'error'>;
 
-const BRIDGE_SETTINGS_SECTION = '/Script/McpAutomationBridge.McpAutomationBridgeSettings';
+const BRIDGE_SETTINGS_SECTION = '/Script/EngineWire.EngineWireSettings';
+/** Where the settings lived before the plugin was renamed EngineWire; the plugin still reads it. */
+const LEGACY_BRIDGE_SETTINGS_SECTION = '/Script/McpAutomationBridge.McpAutomationBridgeSettings';
 const BRIDGE_SETTINGS_CATEGORY = 'Game';
 
 /**
@@ -33,7 +35,8 @@ function readProjectListenPort(log: BridgeConfigLogger): number | null {
     }
 
     try {
-        const raw = readProjectIniValue(projectPath, BRIDGE_SETTINGS_CATEGORY, BRIDGE_SETTINGS_SECTION, 'ListenPorts');
+        const raw = readProjectIniValue(projectPath, BRIDGE_SETTINGS_CATEGORY, BRIDGE_SETTINGS_SECTION, 'ListenPorts')
+            ?? readProjectIniValue(projectPath, BRIDGE_SETTINGS_CATEGORY, LEGACY_BRIDGE_SETTINGS_SECTION, 'ListenPorts');
         if (raw === undefined) {
             return null;
         }

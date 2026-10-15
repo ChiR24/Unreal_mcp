@@ -19,6 +19,12 @@ describe('asset.process_asset mesh_materials', () => {
     expect(record?.routing.dispatchBy?.declaredBy?.collisionType).toEqual(['mesh_collision']);
   });
 
+  // A Fab pack of 32 meshes took 64 calls (one call and one consent per mesh).
+  it('takes assetPaths, as lods does, so one call sets a whole pack', () => {
+    expect(record?.routing.dispatchBy?.declaredBy?.assetPaths).toEqual(['lods', 'mesh_materials']);
+    expect(String((properties.assetPaths as { description?: string } | undefined)?.description)).toContain('passing over a slot a mesh lacks');
+  });
+
   it('takes a slot by index or by name, and a material path, in every entry', () => {
     const items = (properties.materials as { items?: { properties?: Record<string, { type?: unknown }>; required?: string[] } } | undefined)?.items;
     expect(items?.properties?.slot?.type).toEqual(['integer', 'string']);

@@ -1,0 +1,342 @@
+// Copyright (c) 2024 EngineWire Contributors
+
+#include "EngineWireSubsystem.h"
+#include "Foundation/BridgeHelpers/McpHelpers.h"
+#include "Foundation/HandlerUtils/McpHandlerUtils.h"
+
+#include "Dom/JsonObject.h"
+#include "Misc/Paths.h"
+
+#include "AssetRegistry/AssetRegistryModule.h"
+#include "AssetToolsModule.h"
+#include "AutomatedAssetImportData.h"
+#include "Domains/AssetWorkflow/Operations/McpAssetFbxImportOptions.h"
+#include "Domains/BlueprintGraph/Expression/McpBPGraphMathExpr.h"
+#include "EditorAssetLibrary.h"
+#include "Engine/Blueprint.h"
+#include "IAssetTools.h"
+#include "NiagaraSystem.h"
+
+namespace {
+// A Blueprint copy's variables get new GUIDs, and its Math Expressions still named the source's (they failed to
+// compile until each expression was set again by name). A Niagara system copy could not start until something
+// compiled it: every component playing it logged "Error initializing data interfaces" and stopped.
+void PrepareCopy(const FString &SourcePath, UObject *Copy) {
+  UBlueprint *CopyBlueprint = Cast<UBlueprint>(Copy);
+  if (UBlueprint *Source = CopyBlueprint ? Cast<UBlueprint>(McpLoadAsset(SourcePath)) : nullptr) {
+    McpBlueprintMathExpression::RebindDuplicatedExpressions(*Source, *CopyBlueprint);
+  }
+  if (UNiagaraSystem *System = Cast<UNiagaraSystem>(Copy)) {
+    System->RequestCompile(false);
+    System->WaitForCompilationComplete(false, false);
+  }
+}
+} // namespace
+
+bool UEngineWireSubsystem::HandleImportAsset(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+  FString DestinationPath;
+  Payload->TryGetStringField(TEXT("destinationPath"), DestinationPath);
+  FString SourcePath;
+  Payload->TryGetStringField(TEXT("sourcePath"), SourcePath);
+
+  if (DestinationPath.IsEmpty() || SourcePath.IsEmpty()) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("sourcePath and destinationPath required"),
+                           nullptr, TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  FString ResolvedSourcePath;
+  FString SourcePathError;
+  if (!McpResolveProjectFilePath(
+          SourcePath, ResolvedSourcePath, SourcePathError)) {
+    SendAutomationResponse(
+        Socket, RequestId, false, SourcePathError, nullptr,
+        TEXT("SECURITY_VIOLATION"));
+    return true;
+  }
+
+  // Verify source file exists
+  if (!FPaths::FileExists(ResolvedSourcePath)) {
+    SendAutomationResponse(
+        Socket, RequestId, false,
+        FString::Printf(TEXT("Source file not found: %s"), *SourcePath),
+        nullptr, TEXT("SOURCE_NOT_FOUND"));
+    return true;
+  }
+
+  // Sanitize destination path
+  FString SafeDestPath = SanitizeProjectRelativePath(DestinationPath);
+  if (SafeDestPath.IsEmpty()) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           McpPathRefusalMessage(TEXT("destinationPath"), DestinationPath), nullptr,
+                           TEXT("INVALID_PATH"));
+    return true;
+  }
+
+  const FMcpFbxImportOptions FbxOptions = McpReadFbxImportOptions(Payload);
+  const bool bOverwrite = GetJsonBoolField(Payload, TEXT("overwrite"), false);
+  // Declared and never read: an imported asset stayed an unsaved package.
+  const bool bSave = GetJsonBoolField(Payload, TEXT("save"), true);
+
+  FString DestPath = FPaths::GetPath(SafeDestPath);
+  FString DestName = FPaths::GetBaseFilename(SafeDestPath);
+
+  // If destination is just a folder, use that
+  if (FPaths::GetExtension(SafeDestPath).IsEmpty()) {
+    DestPath = SafeDestPath;
+    DestName = FPaths::GetBaseFilename(SourcePath);
+  }
+
+  // Sanitize DestName: UE asset names cannot contain spaces or dots
+  DestName.ReplaceInline(TEXT(" "), TEXT("_"));
+  DestName.ReplaceInline(TEXT("."), TEXT("_"));
+
+  // Defer the import to the next tick to avoid TaskGraph recursion issues with
+  // UE 5.7+ Interchange Framework. See issue #137.
+  // We use SetTimerForNextTick to ensure we're completely outside of any
+  // TaskGraph callback chain before invoking the import.
+  if (GEditor) {
+    TWeakObjectPtr<UEngineWireSubsystem> WeakThis(this);
+    GEditor->GetTimerManager()->SetTimerForNextTick(
+        [WeakThis, RequestId, ResolvedSourcePath, DestPath, DestName, Socket,
+         FbxOptions, bOverwrite, bSave]() {
+          UEngineWireSubsystem *StrongThis = WeakThis.Get();
+          if (!StrongThis) {
+            return;
+          }
+
+          IAssetTools &AssetTools = FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools").Get();
+          UAutomatedAssetImportData *ImportData = NewObject<UAutomatedAssetImportData>();
+          ImportData->bReplaceExisting = true;
+          ImportData->DestinationPath = DestPath;
+          ImportData->Filenames = {ResolvedSourcePath};
+          FString SetupError, SetupCode;
+          ImportData->Factory = McpMakeFbxFactory(ImportData, FbxOptions, SetupError, SetupCode);
+          if (SetupError.IsEmpty() && ImportData->Factory != nullptr) {
+            McpClearFbxImportTarget(DestPath, DestName, ResolvedSourcePath,
+                                    bOverwrite, SetupError, SetupCode);
+          }
+          if (!SetupError.IsEmpty()) {
+            StrongThis->SendAutomationResponse(Socket, RequestId, false,
+                                               SetupError, nullptr, SetupCode);
+            return;
+          }
+          TArray<UObject *> ImportedAssets =
+              AssetTools.ImportAssetsAutomated(ImportData);
+
+          // ImportAssetsAutomated can return nullptr entries, and its order puts no mesh first.
+          UObject *Asset = McpPickPrimaryImport(ImportedAssets);
+
+          if (Asset) {
+            // Compute the final asset path. If we rename, use the destination
+            // path/name since RenameAssets may invalidate the Asset pointer.
+            FString FinalAssetPath;
+            bool bRenameSucceeded = true;
+
+            // Rename if needed
+            if (Asset->GetName() != DestName) {
+              FAssetRenameData RenameData(Asset, DestPath, DestName);
+              bRenameSucceeded = AssetTools.RenameAssets({RenameData});
+              // After rename, compute path from destination (Asset pointer may
+              // be stale)
+              FinalAssetPath = DestPath / DestName + TEXT(".") + DestName;
+            } else {
+              // No rename needed, safe to use the asset's current path
+              FinalAssetPath = Asset->GetPathName();
+            }
+
+            TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+            Resp->SetBoolField(TEXT("success"), true);
+            Resp->SetStringField(TEXT("assetPath"), FinalAssetPath);
+            if (!bRenameSucceeded) {
+              Resp->SetBoolField(TEXT("renameWarning"), true);
+            }
+            // Add verification data
+            UObject *ImportedAsset = McpLoadAsset(FinalAssetPath);
+            if (ImportedAsset) {
+              McpHandlerUtils::AddVerification(Resp, ImportedAsset);
+            }
+            McpDescribeImport(ImportedAssets, Asset, ImportedAsset, Resp);
+            Resp->SetBoolField(TEXT("saved"), bSave && ImportedAsset && McpSafeAssetSave(ImportedAsset));
+            StrongThis->SendAutomationResponse(
+                Socket, RequestId, true,
+                bRenameSucceeded ? TEXT("Asset imported")
+                                 : TEXT("Asset imported but rename failed"),
+                Resp, FString());
+          } else {
+            StrongThis->SendAutomationResponse(
+                Socket, RequestId, false,
+                FString::Printf(TEXT("Failed to import asset from '%s'"),
+                                 *ResolvedSourcePath),
+                nullptr, TEXT("IMPORT_FAILED"));
+          }
+        });
+  } else {
+    // Fallback: GEditor not available (shouldn't happen in editor context)
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("Editor not available for deferred import"),
+                           nullptr, TEXT("EDITOR_NOT_AVAILABLE"));
+  }
+
+  return true;
+}
+
+bool UEngineWireSubsystem::HandleDuplicateAsset(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+  FString SourcePath;
+  Payload->TryGetStringField(TEXT("sourcePath"), SourcePath);
+  FString DestinationPath;
+  Payload->TryGetStringField(TEXT("destinationPath"), DestinationPath);
+
+  if (SourcePath.IsEmpty() || DestinationPath.IsEmpty()) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("sourcePath and destinationPath required"),
+                           nullptr, TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  // A bare destination name stays beside the source.
+  DestinationPath = McpHandlerUtils::ResolveSiblingAssetPath(SourcePath, DestinationPath);
+
+  // The published schema is {sourcePath, destinationPath: folder, newName}.
+  // Passing a folder straight to DuplicateAsset used to "succeed" while
+  // creating nothing usable (the folder name became the asset name), so
+  // resolve folder + newName (or the source's own name) to a full asset path.
+  FString NewName;
+  Payload->TryGetStringField(TEXT("newName"), NewName);
+  NewName.TrimStartAndEndInline();
+  // With newName the folder need not exist yet: a not-yet-created "/Game/X/FX" used to lose its last
+  // segment and land the copy in "/Game/X". Only an existing asset there means a full asset path.
+  const bool bDestinationIsFolder =
+      UEditorAssetLibrary::DoesDirectoryExist(DestinationPath) || DestinationPath.EndsWith(TEXT("/")) ||
+      (!NewName.IsEmpty() && !McpAssetExists(DestinationPath));
+  if (!NewName.IsEmpty()) {
+    const FString Folder = bDestinationIsFolder
+                               ? DestinationPath
+                               : FPaths::GetPath(DestinationPath);
+    DestinationPath = Folder / NewName;
+  } else if (bDestinationIsFolder) {
+    DestinationPath = DestinationPath / FPaths::GetBaseFilename(SourcePath);
+  }
+
+  const FString SourcePathAsGiven = SourcePath;
+  const FString DestinationPathAsGiven = DestinationPath;
+  SourcePath = SanitizeProjectRelativePath(SourcePath);
+  DestinationPath = SanitizeProjectRelativePath(DestinationPath);
+  if (SourcePath.IsEmpty() || DestinationPath.IsEmpty()) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           SourcePath.IsEmpty() ? McpPathRefusalMessage(TEXT("sourcePath"), SourcePathAsGiven)
+                                                : McpPathRefusalMessage(TEXT("destinationPath"), DestinationPathAsGiven),
+                           nullptr, TEXT("SECURITY_VIOLATION"));
+    return true;
+  }
+
+  // If the source path is a directory, perform a deep duplication of all
+  // assets under that folder into the destination folder, preserving
+  // relative structure. This powers the "Deep Duplication - Duplicate
+  // Folder" scenario in tests.
+  if (UEditorAssetLibrary::DoesDirectoryExist(SourcePath)) {
+    // Ensure the destination root exists
+    UEditorAssetLibrary::MakeDirectory(DestinationPath);
+
+    FAssetRegistryModule &AssetRegistryModule =
+        FModuleManager::LoadModuleChecked<FAssetRegistryModule>(
+            TEXT("AssetRegistry"));
+    FARFilter Filter;
+    Filter.PackagePaths.Add(FName(*SourcePath));
+    Filter.bRecursivePaths = true;
+
+    // NOTE: ScanPathsSynchronous() was removed to prevent GameThread blocking.
+    // Asset listing uses cached AssetRegistry data exclusively.
+    // LIMITATION: Assets not yet indexed by the editor's background scanner
+    // will NOT appear. Use Content Browser "Rescan" or rescan_content_directory.
+    TArray<FAssetData> Assets;
+    AssetRegistryModule.Get().GetAssets(Filter, Assets);
+
+    int32 DuplicatedCount = 0;
+    int32 SavedCount = 0;
+    for (const FAssetData &Asset : Assets) {
+      // PackageName is the long package path (e.g.,
+      // /Game/Tests/DeepCopy/Source/M_Source)
+      const FString SourceAssetPath = Asset.PackageName.ToString();
+
+      FString RelativePath;
+      if (SourceAssetPath.StartsWith(SourcePath)) {
+        RelativePath = SourceAssetPath.RightChop(SourcePath.Len());
+      } else {
+        // Should not happen for the filtered set, but skip if it does.
+        continue;
+      }
+
+      const FString TargetAssetPath =
+          DestinationPath + RelativePath; // preserves any subfolders
+      const FString TargetFolderPath = FPaths::GetPath(TargetAssetPath);
+      if (!TargetFolderPath.IsEmpty()) {
+        UEditorAssetLibrary::MakeDirectory(TargetFolderPath);
+      }
+
+      // A duplicate lives only in memory until saved; unsaved, it was gone after the next editor start.
+      if (UObject *Copy = UEditorAssetLibrary::DuplicateAsset(SourceAssetPath, TargetAssetPath)) {
+        PrepareCopy(SourceAssetPath, Copy);
+        ++DuplicatedCount;
+        SavedCount += McpSafeAssetSave(Copy) ? 1 : 0;
+      }
+    }
+
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+    const bool bSuccess = DuplicatedCount > 0;
+    Resp->SetBoolField(TEXT("success"), bSuccess);
+    Resp->SetStringField(TEXT("sourcePath"), SourcePath);
+    Resp->SetStringField(TEXT("destinationPath"), DestinationPath);
+    Resp->SetNumberField(TEXT("duplicatedCount"), DuplicatedCount);
+    Resp->SetNumberField(TEXT("savedCount"), SavedCount);
+
+    if (bSuccess) {
+      SendAutomationResponse(Socket, RequestId, true, TEXT("Folder duplicated"),
+                             Resp, FString());
+    } else {
+      SendAutomationResponse(Socket, RequestId, false,
+                             TEXT("No assets duplicated"), Resp,
+                             TEXT("DUPLICATE_FAILED"));
+    }
+    return true;
+  }
+
+  // Fallback: single-asset duplication
+  if (!McpAssetExists(SourcePath)) {
+    SendAutomationResponse(
+        Socket, RequestId, false,
+        FString::Printf(TEXT("Source asset not found: %s"), *SourcePath),
+        nullptr, TEXT("ASSET_NOT_FOUND"));
+    return true;
+  }
+
+  if (McpAssetExists(DestinationPath)) {
+    SendAutomationResponse(
+        Socket, RequestId, false,
+        FString::Printf(TEXT("Destination asset already exists: %s"),
+                        *DestinationPath),
+        nullptr, TEXT("DESTINATION_EXISTS"));
+    return true;
+  }
+
+  if (UObject *NewAsset = UEditorAssetLibrary::DuplicateAsset(SourcePath, DestinationPath)) {
+    PrepareCopy(SourcePath, NewAsset);
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetStringField(TEXT("assetPath"), DestinationPath);
+    Resp->SetBoolField(TEXT("saved"), McpSafeAssetSave(NewAsset));
+    McpHandlerUtils::AddVerification(Resp, NewAsset);
+    SendAutomationResponse(Socket, RequestId, true, TEXT("Asset duplicated"),
+                           Resp, FString());
+  } else {
+    SendAutomationResponse(Socket, RequestId, false, TEXT("Duplicate failed"),
+                           nullptr, TEXT("DUPLICATE_FAILED"));
+  }
+  return true;
+}
+

@@ -11,7 +11,7 @@ import vm from 'node:vm';
 
 const fabModule = resolve(
   process.cwd(),
-  'plugins/McpAutomationBridge/Source/McpAutomationBridgeFab/Private',
+  'plugins/EngineWire/Source/EngineWireFab/Private',
 );
 
 /** Every `R"JS( ... )JS"` literal of a C++ file, in order, concatenated the way adjacent literals are. */

@@ -1,0 +1,302 @@
+#include "Domains/ControlActor/McpActorSupport.h"
+#include "Core/Requests/McpResponseCaptureRegistry.h"
+#include "Domains/ControlActor/Placement/McpCoplanarFaces.h"
+#include "Domains/ControlActor/Placement/McpSpawnRepeat.h"
+#include "Physics/Experimental/PhysInterface_Chaos.h"
+
+// spawn_batch: place many actors in one request. Each item runs through the
+// ordinary spawn handler under a synthetic request id whose reply is captured
+// (FMcpResponseCaptureRegistry), so a batch item behaves exactly like a single
+// spawn. Laying out a level was otherwise one round trip per block.
+
+namespace {
+constexpr int32 MaxSpawnBatchItems = 500;
+// Actors once each item's repeat is unrolled (McpSpawnRepeat).
+constexpr int32 MaxSpawnBatchActors = 1000;
+
+// Every key a batch item is read for: the spawn's own, then the material, organisation and variables steps.
+// Anything else (a "label" meant as actorName) was dropped without a word.
+bool IsSpawnItemKey(const FString &Key) {
+  static const TSet<FString> Keys = {
+      TEXT("classPath"), TEXT("actorClass"), TEXT("blueprintPath"), TEXT("meshPath"), TEXT("actorName"),
+      TEXT("location"), TEXT("rotation"), TEXT("scale"), TEXT("variables"), TEXT("materialPath"),
+      TEXT("componentName"), TEXT("materialSlot"), TEXT("allComponents"), TEXT("folder"), TEXT("tags"),
+      TEXT("spawnKind"), TEXT("properties")};
+  return Keys.Contains(Key);
+}
+
+// The item's own fields over the batch's shared `defaults`.
+TSharedPtr<FJsonObject> MergeSpawnItem(const TSharedPtr<FJsonObject> &Defaults,
+                                       const TSharedPtr<FJsonObject> &Item) {
+  TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
+  if (Defaults.IsValid()) {
+    Out->Values = Defaults->Values;
+  }
+  for (const TPair<FString, TSharedPtr<FJsonValue>> &Pair : Item->Values) {
+    Out->SetField(Pair.Key, Pair.Value);
+  }
+  return Out;
+}
+} // namespace
+
+// Outliner folder and tags need no handler of their own.
+void McpApplySpawnOrganisation(AActor *Actor, const TSharedPtr<FJsonObject> &Payload) {
+  FString Folder;
+  if (Actor && Payload->TryGetStringField(TEXT("folder"), Folder) && !Folder.IsEmpty()) {
+    Actor->SetFolderPath(FName(*Folder));
+  }
+  const TArray<TSharedPtr<FJsonValue>> *Tags = nullptr;
+  if (Actor && Payload->TryGetArrayField(TEXT("tags"), Tags)) {
+    for (const TSharedPtr<FJsonValue> &Tag : *Tags) {
+      const FString TagName = Tag.IsValid() ? Tag->AsString() : FString();
+      if (!TagName.IsEmpty()) {
+        Actor->Tags.AddUnique(FName(*TagName));
+      }
+    }
+  }
+}
+
+bool UEngineWireSubsystem::HandleControlActorSpawnBatch(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+  const TArray<TSharedPtr<FJsonValue>> *Items = nullptr;
+  if (!Payload->TryGetArrayField(TEXT("actors"), Items) || Items->Num() == 0 ||
+      Items->Num() > MaxSpawnBatchItems) {
+    SendStandardErrorResponse(
+        this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+        FString::Printf(TEXT("spawn_batch needs an `actors` array of 1-%d items, each "
+                             "a spawn payload ({classPath|blueprintPath|meshPath, "
+                             "actorName, location, rotation, scale, materialPath, "
+                             "folder, tags, repeat})."),
+                        MaxSpawnBatchItems),
+        nullptr);
+    return true;
+  }
+  const TSharedPtr<FJsonObject> *DefaultsPtr = nullptr;
+  Payload->TryGetObjectField(TEXT("defaults"), DefaultsPtr);
+  const TSharedPtr<FJsonObject> Defaults = DefaultsPtr ? *DefaultsPtr : nullptr;
+  // Each item over the defaults with its repeat unrolled, before anything spawns; null marks an item that is not an object.
+  TArray<TSharedPtr<FJsonObject>> Expanded;
+  for (const TSharedPtr<FJsonValue> &Value : *Items) {
+    const TSharedPtr<FJsonObject> *ItemObj = nullptr;
+    FString RepeatError;
+    if (!Value.IsValid() || !Value->TryGetObject(ItemObj)) {
+      Expanded.Add(nullptr);
+    } else if (!McpSpawnRepeat::Expand(MergeSpawnItem(Defaults, *ItemObj), MaxSpawnBatchActors, Expanded,
+                                       RepeatError)) {
+      SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"), RepeatError, nullptr);
+      return true;
+    }
+  }
+
+  // One undo step for the whole batch: each item's spawn, material and variables below run captured, and leave
+  // the step to this one.
+  const TUniquePtr<FMcpScopedEditorTransaction> Transaction = McpBeginSpawnTransaction(RequestId);
+  FMcpResponseCaptureRegistry &Capture = FMcpResponseCaptureRegistry::Get();
+  TArray<TSharedPtr<FJsonValue>> Results;
+  // An item without actorName is labelled after its mesh ("Cube" for 300 of them), so its
+  // unique name is the only address a later call has; report: failures used to drop it.
+  TArray<TSharedPtr<FJsonValue>> Unnamed;
+  TArray<FString> Failures;
+  // The actors that spawned, by the name each result carries, whatever `report` keeps of the
+  // results: what the receipt lists as changes and gives an actor handle apiece.
+  TArray<FString> Affected;
+  int32 SpawnedCount = 0;
+  int32 PlacementWarnings = 0;
+  int32 IgnoredItems = 0;
+  TArray<TPair<AActor *, TSharedPtr<FJsonObject>>> Placed;
+  for (int32 Index = 0; Index < Expanded.Num(); ++Index) {
+    TSharedPtr<FJsonObject> Entry = McpHandlerUtils::CreateResultObject();
+    Entry->SetNumberField(TEXT("index"), Index);
+    Results.Add(MakeShared<FJsonValueObject>(Entry));
+
+    const TSharedPtr<FJsonObject> Item = Expanded[Index];
+    if (!Item.IsValid()) {
+      Entry->SetBoolField(TEXT("success"), false);
+      Entry->SetStringField(TEXT("error"), TEXT("item is not an object"));
+      Failures.Add(FString::Printf(TEXT("#%d: item is not an object"), Index));
+      continue;
+    }
+    const bool bNamed = Item->HasField(TEXT("actorName"));
+    TArray<FString> Ignored;
+    for (const TPair<FString, TSharedPtr<FJsonValue>> &Pair : Item->Values) {
+      if (!IsSpawnItemKey(Pair.Key)) {
+        Ignored.Add(Pair.Key);
+      }
+    }
+    if (Ignored.Num() > 0) {
+      Entry->SetStringField(TEXT("ignoredKeys"), FString::Join(Ignored, TEXT(", ")));
+      ++IgnoredItems;
+    }
+
+    const FString SpawnId = FString::Printf(TEXT("%s#spawn%d"), *RequestId, Index);
+    Capture.Begin(SpawnId);
+    HandleControlActorSpawn(SpawnId, Item, Socket);
+    const FMcpCapturedResponse Reply = Capture.End(SpawnId);
+    FString ActorPath;
+    if (!Reply.bSuccess || !Reply.Result.IsValid() ||
+        !Reply.Result->TryGetStringField(TEXT("actorPath"), ActorPath)) {
+      const FString Error = Reply.Message.IsEmpty() ? TEXT("spawn failed") : Reply.Message;
+      Entry->SetBoolField(TEXT("success"), false);
+      Entry->SetStringField(TEXT("error"), Error);
+      Entry->SetStringField(TEXT("errorCode"), Reply.ErrorCode);
+      Failures.Add(FString::Printf(TEXT("#%d: %s"), Index, *Error));
+      if (!bNamed) {
+        Unnamed.Add(MakeShared<FJsonValueString>(FString()));
+      }
+      continue;
+    }
+    ++SpawnedCount;
+    Entry->SetBoolField(TEXT("success"), true);
+    Entry->SetStringField(TEXT("path"), ActorPath);
+    AActor *Actor = FindActorByName(ActorPath, true);
+    if (!bNamed) {
+      Unnamed.Add(MakeShared<FJsonValueString>(Actor ? Actor->GetName() : FString()));
+    }
+    // A spawned actor that no lookup finds is listed by its path, so the list still counts it.
+    const FString Shown = Actor ? (bNamed ? Actor->GetActorLabel() : Actor->GetName()) : ActorPath;
+    Affected.Add(Shown);
+    if (Actor) {
+      // Its folder and tags were applied by the spawn itself (McpApplySpawnOrganisation).
+      Entry->SetStringField(TEXT("name"), Shown);
+    }
+
+    // Per-instance Blueprint variables (e.g. a block's Kind), same handler as
+    // set_blueprint_variables. An empty object sets nothing and is not a
+    // failure: generated layouts emit `variables: {}` for plain items, and the
+    // whole batch used to come back SPAWN_BATCH_INCOMPLETE with every actor placed.
+    const TSharedPtr<FJsonObject> *VariablesObj = nullptr;
+    if (Item->TryGetObjectField(TEXT("variables"), VariablesObj) && VariablesObj != nullptr &&
+        (*VariablesObj)->Values.Num() > 0) {
+      TSharedPtr<FJsonObject> VariablesPayload = MakeShared<FJsonObject>();
+      VariablesPayload->SetStringField(TEXT("actorName"), ActorPath);
+      VariablesPayload->SetField(TEXT("variables"), Item->TryGetField(TEXT("variables")));
+      const FString VariablesId = SpawnId + TEXT("#variables");
+      Capture.Begin(VariablesId);
+      HandleControlActorSetBlueprintVariables(VariablesId, VariablesPayload, Socket);
+      const FMcpCapturedResponse VariablesReply = Capture.End(VariablesId);
+      // Reply envelope: { data: { updated: [...] }, warnings: [...] }.
+      const TSharedPtr<FJsonObject> *VariablesData = nullptr;
+      const TArray<TSharedPtr<FJsonValue>> *Updated = nullptr;
+      const TArray<TSharedPtr<FJsonValue>> *Warnings = nullptr;
+      if (VariablesReply.Result.IsValid()) {
+        if (VariablesReply.Result->TryGetObjectField(TEXT("data"), VariablesData)) {
+          (*VariablesData)->TryGetArrayField(TEXT("updated"), Updated);
+        }
+        VariablesReply.Result->TryGetArrayField(TEXT("warnings"), Warnings);
+      }
+      if (Updated) {
+        Entry->SetArrayField(TEXT("variablesSet"), *Updated);
+      }
+      const int32 Wanted = (*VariablesObj)->Values.Num();
+      if (!VariablesReply.bSuccess || !Updated || Updated->Num() != Wanted) {
+        FString Why = VariablesReply.Message;
+        if (Warnings) {
+          for (const TSharedPtr<FJsonValue> &Warning : *Warnings) {
+            Why += TEXT(" ") + Warning->AsString();
+          }
+        }
+        Entry->SetStringField(TEXT("variablesError"), Why);
+        Failures.Add(FString::Printf(TEXT("#%d variables: set %d of %d (%s)"), Index,
+                                     Updated ? Updated->Num() : 0, Wanted, *Why));
+      }
+    }
+
+    // Same handler as set_material, aimed at the exact actor just spawned.
+    FString MaterialPath;
+    if (Item->TryGetStringField(TEXT("materialPath"), MaterialPath) && !MaterialPath.IsEmpty()) {
+      TSharedPtr<FJsonObject> MaterialPayload = MakeShared<FJsonObject>();
+      MaterialPayload->SetStringField(TEXT("actorName"), ActorPath);
+      MaterialPayload->SetStringField(TEXT("materialPath"), MaterialPath);
+      for (const TCHAR *Key : {TEXT("componentName"), TEXT("materialSlot"), TEXT("allComponents")}) {
+        if (Item->HasField(Key)) {
+          MaterialPayload->SetField(Key, Item->TryGetField(Key));
+        }
+      }
+      const FString MaterialId = SpawnId + TEXT("#material");
+      Capture.Begin(MaterialId);
+      HandleControlActorSetMaterial(MaterialId, MaterialPayload, Socket);
+      const FMcpCapturedResponse MaterialReply = Capture.End(MaterialId);
+      Entry->SetBoolField(TEXT("materialApplied"), MaterialReply.bSuccess);
+      if (!MaterialReply.bSuccess) {
+        Entry->SetStringField(TEXT("materialError"), MaterialReply.Message);
+        Failures.Add(FString::Printf(TEXT("#%d material: %s"), Index, *MaterialReply.Message));
+      }
+    }
+    const FString PropertiesError = McpApplySpawnItemProperties(Actor, Item);
+    if (!PropertiesError.IsEmpty()) {
+      Entry->SetStringField(TEXT("propertiesError"), PropertiesError);
+      Failures.Add(FString::Printf(TEXT("#%d properties: %s"), Index, *PropertiesError));
+    }
+
+    if (Actor) {
+      Placed.Emplace(Actor, Entry);
+    }
+  }
+  // Where each ended up (set_transform's placement facts), tagged (mcp.placement.ok), furnished and coloured: a spawn
+  // run inside the batch leaves the check to here. Judged once the whole batch stands, since a pipe measured before
+  // the supports later in the batch existed was reported floating over the deck.
+  // A body spawned above reaches the physics scene's queries only on the scene's next update, so the ground trace went
+  // through a desk this batch placed and the monitor on it read "floating 91 units". The editor world's scene is not
+  // running, so it is flushed here; a running game's scene is left to its own tick.
+  UWorld *SpawnWorld = Placed.Num() > 0 ? Placed[0].Key->GetWorld() : nullptr;
+  if (SpawnWorld && !SpawnWorld->IsGameWorld() && SpawnWorld->GetPhysicsScene()) {
+    FPhysInterface_Chaos::FlushScene(SpawnWorld->GetPhysicsScene());
+  }
+  TMap<AActor *, TSharedPtr<FJsonObject>> Rows;
+  for (const TPair<AActor *, TSharedPtr<FJsonObject>> &Item : Placed) {
+    McpPlacement::DescribePlacement(Item.Key, Item.Value);
+    PlacementWarnings += Item.Value->HasField(TEXT("placementWarning")) ? 1 : 0;
+    Rows.Add(Item.Key, Item.Value);
+  }
+  PlacementWarnings += McpCoplanar::AddCoplanarToRows(Rows);
+
+  TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
+  // report: "failures" keeps only the items that went wrong: a 130-actor
+  // layout echoed every path and name back, ~15K characters of "success". An item that
+  // spawned but looks misplaced (sunk, floating, intersecting) stays: finding it is the point. A batch of more
+  // than 20 items defaults to it (117 hung ceiling parts answered 45K characters); the receipt names every actor.
+  FString Report;
+  if (!Payload->TryGetStringField(TEXT("report"), Report) && Results.Num() > 20) {
+    Report = TEXT("failures");
+  }
+  if (Report == TEXT("failures")) {
+    Results.RemoveAll([](const TSharedPtr<FJsonValue> &Value) {
+      const TSharedPtr<FJsonObject> Entry = Value->AsObject();
+      return Entry->GetBoolField(TEXT("success")) && !Entry->HasField(TEXT("materialError")) &&
+             !Entry->HasField(TEXT("variablesError")) && !Entry->HasField(TEXT("propertiesError")) &&
+             !Entry->HasField(TEXT("placementWarning")) && !Entry->HasField(TEXT("ignoredKeys"));
+    });
+    Data->SetStringField(TEXT("report"), Report);
+  }
+  Data->SetArrayField(TEXT("results"), Results);
+  Data->SetArrayField(TEXT("affectedActors"), McpHandlerUtils::ToJsonStringArray(Affected));
+  if (Unnamed.Num() > 0) {
+    Data->SetArrayField(TEXT("unnamedActors"), Unnamed);
+  }
+  Data->SetNumberField(TEXT("spawned"), SpawnedCount);
+  Data->SetNumberField(TEXT("failed"), Failures.Num());
+  Data->SetNumberField(TEXT("placementWarnings"), PlacementWarnings);
+  if (Transaction) {
+    Transaction->DescribeInto(Data);
+  }
+  if (Failures.Num() > 0) {
+    // Actors that did spawn stay in the level; the results say which.
+    SendAutomationResponse(
+        Socket, RequestId, false,
+        FString::Printf(TEXT("Spawned %d of %d actors; %d problem(s): %s"), SpawnedCount,
+                        Expanded.Num(), Failures.Num(), *FString::Join(Failures, TEXT("; "))),
+        Data, TEXT("SPAWN_BATCH_INCOMPLETE"));
+    return true;
+  }
+  FString Message = FString::Printf(TEXT("Spawned %d actors"), SpawnedCount);
+  if (PlacementWarnings > 0) {
+    Message += FString::Printf(TEXT("; %d with a placement warning (results[].placementWarning)"), PlacementWarnings);
+  }
+  if (IgnoredItems > 0) {
+    Message += FString::Printf(TEXT("; %d with keys no spawn reads, ignored (results[].ignoredKeys; actorName names "
+                                    "an actor)"), IgnoredItems);
+  }
+  SendAutomationResponse(Socket, RequestId, true, Message, Data);
+  return true;
+}

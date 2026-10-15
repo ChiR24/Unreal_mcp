@@ -13,7 +13,7 @@ import { isRecord } from '../../../src/utils/validation/type-guards.js';
 
 import { sliceBetween } from './plugin-contract-fixtures.js';
 
-const PRIVATE = join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private');
+const PRIVATE = join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private');
 
 /** Block and line comments removed, so no assertion can be satisfied by prose. */
 function stripComments(source: string): string {
@@ -31,7 +31,7 @@ function paramDescription(capability: string, param: string): string {
 }
 
 describe('get_graph_details filter reads what a node\'s pins hold', () => {
-  const queries = (): string => read('Domains', 'BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersQueries.cpp');
+  const queries = (): string => read('Domains', 'BlueprintGraph', 'McpBPGraphQueries.cpp');
 
   it('a node matches by title or name, a pin default value, a text default or a default object path', () => {
     const helper = queries().slice(queries().indexOf('NodeMatchesGraphFilter('));
@@ -44,7 +44,7 @@ describe('get_graph_details filter reads what a node\'s pins hold', () => {
   });
 
   it('the listing loop filters through it, so the paging counts agree', () => {
-    expect(queries()).toMatch(/if \(!Filter\.IsEmpty\(\) && !NodeMatchesGraphFilter\(Node, Title, SquashedFilter\)\)/u);
+    expect(queries()).toMatch(/if \(\(!Filter\.IsEmpty\(\) && !NodeMatchesGraphFilter\(Node, Title, SquashedFilter\)\) \|\|\s*\(bUnusedOnly && !NodeDoesNothing\(Node\)\)\)/u);
   });
 
   it('the filter description says so', () => {
@@ -56,18 +56,48 @@ describe('get_graph_details filter reads what a node\'s pins hold', () => {
   });
 });
 
+// A wired Size pin read "defaultValue": "0.0", an output pin carried one, and a library call's hidden self pin
+// named the class default object: none of them is a value the compiled graph uses.
+describe('a pin descriptor names a literal only on a visible input nothing is wired to', () => {
+  it('both pin serializers share the one rule', () => {
+    const queries = read('Domains', 'BlueprintGraph', 'McpBPGraphQueries.cpp');
+
+    expect(queries).toContain('if (Pin.bHidden || Pin.Direction != EGPD_Input || Pin.LinkedTo.Num() > 0)');
+    expect(queries).toContain('AddPinDefaultFields(PinObject, *Pin);');
+    expect(read('Domains', 'BlueprintGraph', 'McpBPGraphDetails.cpp')).toContain('AddPinDefaultFields(PinObject, *Pin);');
+  });
+});
+
+// A create step's expression was dropped: the Math Expression came back with no pins, and the batch answered success.
+describe('a build_graph create step takes a Math Expression formula', () => {
+  const steps = (): string => read('Domains', 'BlueprintGraph', 'McpBPGraphBatchSteps.cpp');
+
+  it('sets it through set_node_property Expression, before pinDefaults name its inputs', () => {
+    expect(steps()).toContain('RunStep(Parent, Payload, TEXT("set_node_property"), StepId + TEXT(".expression"), Unused)');
+    expect(steps()).toMatch(/ApplyExpression\(Context, Payload, Guid, StepId, Entry, OutErrorCode\);\s*DefaultsError = DefaultsError\.IsEmpty\(\) \? ApplyPinDefaults\(/u);
+  });
+
+  it('checks it before any step runs, as it checks an Expression property step', () => {
+    expect(steps()).toContain('Edit == TEXT("create_node") && Step.TryGetStringField(TEXT("expression"), Expression)');
+  });
+
+  it('the batch description says so', () => {
+    expect(paramDescription('blueprint.edit_graph', 'operations')).toMatch(/MathExpression with expression/u);
+  });
+});
+
 describe('a function the memberClass lacks names the classes that do declare it', () => {
   it('searches every loaded class, not only the function libraries', () => {
     const search = sliceBetween(
-      read('Domains', 'BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlers.cpp'),
+      read('Domains', 'BlueprintGraph', 'McpBPGraphHandlers.cpp'),
       'FString DescribeDeclaringClasses(',
-      'bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(',
+      'bool UEngineWireSubsystem::HandleBlueprintGraphAction(',
     );
 
     expect(search).toContain('It->FindFunctionByName(WantedName, EIncludeSuperFlag::ExcludeSuper)');
     expect(search).not.toContain('UBlueprintFunctionLibrary');
     expect(search).toContain("retry with memberClass '%s'");
-    expect(read('Domains', 'BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersPrivate.h'))
+    expect(read('Domains', 'BlueprintGraph', 'McpBPGraphPrivate.h'))
       .toContain('return DescribeDeclaringClasses(Class, Wanted);');
   });
 });
@@ -107,7 +137,7 @@ describe('variableType: the description lists what the type resolver accepts', (
 });
 
 describe('build_graph: an overlapping explicit position moves the node instead of stopping the batch', () => {
-  const placement = (): string => read('Domains', 'BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersBatchPlacement.cpp');
+  const placement = (): string => read('Domains', 'BlueprintGraph', 'McpBPGraphBatchPlacement.cpp');
 
   it('walks the overlap guard\'s suggestions for many hops, then the auto grid; the old six-retry cap is gone', () => {
     const source = placement();
@@ -132,7 +162,7 @@ describe('build_graph: an overlapping explicit position moves the node instead o
     expect(source).toMatch(/if \(Moves > 0 && !bAuto && Reply\.bSuccess && Reply\.Result\.IsValid\(\)\)/u);
     expect(source).toMatch(/Requested position \(%d, %d\) overlaps %s; the node was placed at \(%d, %d\) instead\./u);
     expect(source).toMatch(/Reply\.Result->SetStringField\(TEXT\("placementWarning"\), Warning\);/u);
-    expect(read('Domains', 'BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersBatchSteps.cpp')).toContain('TEXT("placementWarning")');
+    expect(read('Domains', 'BlueprintGraph', 'McpBPGraphBatchSteps.cpp')).toContain('TEXT("placementWarning")');
   });
 
   it('the batch description says so, and where a step\'s placementWarning appears', () => {
@@ -153,7 +183,7 @@ describe('build_graph: an overlapping explicit position moves the node instead o
 // the batch answered success.
 describe('create_node: a Make/Break struct node gets its struct or is refused', () => {
   it('sets StructType from structPath before the pins are allocated', () => {
-    const dynamic = read('Domains', 'BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersNodeCreationDynamic.cpp');
+    const dynamic = read('Domains', 'BlueprintGraph', 'McpBPGraphNodeCreationDynamic.cpp');
     expect(dynamic).toContain('NodeClass->IsChildOf(UK2Node_StructOperation::StaticClass())');
     expect(dynamic).toMatch(/needs structPath: a Blueprint Struct asset/u);
     expect(dynamic.indexOf('StructNode->StructType = StructType;')).toBeGreaterThan(-1);
@@ -166,7 +196,7 @@ describe('create_node: a Make/Break struct node gets its struct or is refused', 
 });
 
 describe('a VariableGet of a widget: compile once when the class is stale, and never claim a set flag is false', () => {
-  const source = (): string => read('Domains', 'BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersVariableNodes.cpp');
+  const source = (): string => read('Domains', 'BlueprintGraph', 'McpBPGraphVariableNodes.cpp');
 
   it('a flagged widget with no property compiles the Blueprint once and looks again, but not during play', () => {
     expect(source()).toMatch(
@@ -187,7 +217,7 @@ describe('a VariableGet of a widget: compile once when the class is stale, and n
 });
 
 describe('add_event with componentName binds a Widget Blueprint widget\'s event as it binds a component\'s', () => {
-  const bound = (): string => read('Domains', 'Blueprint', 'Events', 'McpAutomationBridge_BlueprintHandlersAddEventComponentBound.cpp');
+  const bound = (): string => read('Domains', 'Blueprint', 'Events', 'McpBPAddEventComponentBound.cpp');
 
   it('a widget variable of the generated class is a bindable object property beside the components', () => {
     const source = bound();
@@ -214,8 +244,8 @@ describe('add_event with componentName binds a Widget Blueprint widget\'s event 
 });
 
 describe('an edit_graph reply names the Blueprint it ran on', () => {
-  const shared = (): string => read('Domains', 'BlueprintGraph', 'Context', 'McpAutomationBridge_BlueprintGraphHandlersContextShared.cpp');
-  const batch = (): string => read('Domains', 'BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersBatch.cpp');
+  const shared = (): string => read('Domains', 'BlueprintGraph', 'Context', 'McpBPGraphContextShared.cpp');
+  const batch = (): string => read('Domains', 'BlueprintGraph', 'McpBPGraphBatch.cpp');
 
   it('NameBlueprint writes blueprintPath unless an assetPath is there, and changedAssets for a change', () => {
     const body = shared().slice(shared().indexOf('void FActionContext::NameBlueprint('), shared().indexOf('void FActionContext::SendResponse('));
@@ -244,7 +274,7 @@ describe('an edit_graph reply names the Blueprint it ran on', () => {
 
 // "Which Blueprints show a TextRender label" took one get_scs per Blueprint.
 describe('get_scs scans a folder for a component class', () => {
-  const source = read('Domains', 'Blueprint', 'Components', 'McpAutomationBridge_BlueprintHandlersScsGet.cpp');
+  const source = read('Domains', 'Blueprint', 'Components', 'McpBPScsGet.cpp');
 
   it('takes path without blueprintPath as a folder scan, capped and sorted', () => {
     expect(source).toMatch(/if \(!Folder\.IsEmpty\(\) && RequestedBlueprint\.IsEmpty\(\)\) \{\s*return SendScsFolderScan\(/u);
@@ -276,7 +306,7 @@ describe('get_scs scans a folder for a component class', () => {
 
 // Reading what an event does (Bounce, TakeHit, an enemy's stomp test) took one pin call per hop.
 describe('get_node_details followExec lists what runs after a node', () => {
-  const source = read('Domains', 'BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersDetails.cpp');
+  const source = read('Domains', 'BlueprintGraph', 'McpBPGraphDetails.cpp');
 
   it('walks exec outputs only, once per node, capped at 50', () => {
     expect(source).toContain('Out->PinType.PinCategory != UEdGraphSchema_K2::PC_Exec');
@@ -294,7 +324,7 @@ describe('get_node_details followExec lists what runs after a node', () => {
 // input had to be guessed before a later step could wire it.
 describe('an add_event batch step lists the pins of the event it made', () => {
   it('looks the node up across the Blueprint when the step prepared no graph', () => {
-    expect(read('Domains', 'BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersBatchPlacement.cpp'))
+    expect(read('Domains', 'BlueprintGraph', 'McpBPGraphBatchPlacement.cpp'))
       .toContain('DescribeNodePins(Step.TargetGraph ? Step.FindNode(Guid) : FindBatchNode(Parent.Blueprint, Guid))');
   });
 });
@@ -302,12 +332,12 @@ describe('an add_event batch step lists the pins of the event it made', () => {
 // A HitStop event added by a batch sat at (0, 0), over whatever the graph had at its origin.
 describe('an add_event batch step without a position takes an auto grid slot', () => {
   it('places add_event like a create step', () => {
-    expect(read('Domains', 'BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersBatchPlacement.cpp'))
+    expect(read('Domains', 'BlueprintGraph', 'McpBPGraphBatchPlacement.cpp'))
       .toContain('(bCreates || Edit == TEXT("add_event")) && !Payload->HasField(TEXT("posX"))');
   });
 
   it('keeps hidden pins (a library call\'s self, LatentInfo) out of a chain\'s inputs', () => {
-    expect(read('Domains', 'BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersDetails.cpp')).toContain('In->bHidden');
+    expect(read('Domains', 'BlueprintGraph', 'McpBPGraphDetails.cpp')).toContain('In->bHidden');
   });
 });
 
@@ -315,11 +345,11 @@ describe('an add_event batch step without a position takes an auto grid slot', (
 // "Class not found": the documented Blueprint path names the Blueprint, not its class.
 describe('a Blueprint asset path resolves wherever a graph node takes a class', () => {
   it('Cast, VariableGet/Set memberClass and event memberClass fall back to the class-pin resolver', () => {
-    const special = read('Domains', 'BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersSpecialNodes.cpp');
+    const special = read('Domains', 'BlueprintGraph', 'McpBPGraphSpecialNodes.cpp');
     expect(special).toContain('TargetClass = ResolveTargetClassFromString(TargetClassName);');
-    expect(read('Domains', 'BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersVariableNodes.cpp'))
+    expect(read('Domains', 'BlueprintGraph', 'McpBPGraphVariableNodes.cpp'))
       .toContain('OwnerClass = ResolveTargetClassFromString(MemberClassName);');
-    expect(read('Domains', 'BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersFunctionEventNodes.cpp'))
+    expect(read('Domains', 'BlueprintGraph', 'McpBPGraphFunctionEventNodes.cpp'))
       .toContain('TargetClass = ResolveTargetClassFromString(MemberClass);');
   });
 });
@@ -328,10 +358,10 @@ describe('a Blueprint asset path resolves wherever a graph node takes a class', 
 // (x 7646) landed at x 46464, a wire across the graph.
 describe('build_graph settles auto-placed nodes beside what they are wired to', () => {
   it('records each auto-placed node and settles them after the last step, before the compile', () => {
-    const placement = read('Domains', 'BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersBatchPlacement.cpp');
+    const placement = read('Domains', 'BlueprintGraph', 'McpBPGraphBatchPlacement.cpp');
     expect(placement).toContain('State.AutoPlacedGuids.Add(CreatedGuid)');
     expect(placement).toContain('FindNearestFreeSlot(Node->GetGraph(), Anchor.X, Anchor.Y, Width, Height, Node, X, Y, PreferDX)');
-    const batch = read('Domains', 'BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersBatch.cpp');
+    const batch = read('Domains', 'BlueprintGraph', 'McpBPGraphBatch.cpp');
     const settle = batch.indexOf('SettleAutoPlacedNodes(Context.Blueprint, State)');
     expect(settle).toBeGreaterThan(-1);
     expect(settle).toBeLessThan(batch.indexOf('McpCompileBlueprintWithDiagnostics'));
@@ -339,7 +369,7 @@ describe('build_graph settles auto-placed nodes beside what they are wired to', 
 
   // A pure node settled before the Branch reading it went beside the variable it reads, 1640 units away.
   it('a node waits for the neighbour it belongs beside, and a stalled pass relaxes one node at a time', () => {
-    const placement = read('Domains', 'BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersBatchPlacement.cpp');
+    const placement = read('Domains', 'BlueprintGraph', 'McpBPGraphBatchPlacement.cpp');
     expect(placement).toContain('Best.bBetterPending = PendingRank < Best.Rank;');
     expect(placement).toContain('if (Anchor.bBetterPending && !bRelax)');
     expect(placement).toContain('Index < Pending.Num() && !(bRelax && bMoved)');
@@ -347,7 +377,7 @@ describe('build_graph settles auto-placed nodes beside what they are wired to', 
 
   // In the HUD's zig-zag Tick chain, PlayAnimation run by a new Branch took the nearest free slot up-left of it.
   it('a taken spot is replaced on the anchor side, the other side only when that side has none nearby', () => {
-    const placement = read('Domains', 'BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersBatchPlacement.cpp');
+    const placement = read('Domains', 'BlueprintGraph', 'McpBPGraphBatchPlacement.cpp');
     expect(placement).toContain('const int32 PreferDX = Anchor.Rank == 0 || Anchor.Rank == 3 ? 1 : -1;');
     const layout = read('Foundation', 'GraphLayout', 'McpGraphNodeExtent.h');
     expect(layout).toContain('const UEdGraphNode* IgnoreNode, float& OutX, float& OutY, int32 PreferDX = 0)');
@@ -362,14 +392,14 @@ describe('build_graph settles auto-placed nodes beside what they are wired to', 
 
 describe('arrange_nodes moves listed nodes beside what they are wired to', () => {
   it('parks the listed nodes, settles them like auto-placed batch nodes, and puts back the ones that found no anchor', () => {
-    const source = read('Domains', 'BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersDeleteNodes.cpp');
+    const source = read('Domains', 'BlueprintGraph', 'McpBPGraphDeleteNodes.cpp');
     const park = source.indexOf('Node->NodePosY = -1000000;');
     const settle = source.indexOf('GraphBatch::SettleAutoPlacedNodes(Context.Blueprint, State)');
     expect(park).toBeGreaterThan(-1);
     expect(settle).toBeGreaterThan(park);
     expect(source).toContain('if (Unmoved.Contains(Node))');
-    expect(read('Domains', 'BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersNodeMutations.cpp')).toContain('ArrangeNodes(Context)');
-    expect(read('Core', 'Subsystem', 'McpAutomationBridgeSubsystemHandlerRegistration.cpp')).toContain('TEXT("arrange_nodes")');
+    expect(read('Domains', 'BlueprintGraph', 'McpBPGraphNodeMutations.cpp')).toContain('ArrangeNodes(Context)');
+    expect(read('Core', 'Subsystem', 'EngineWireSubsystemHandlerRegistration.cpp')).toContain('TEXT("arrange_nodes")');
   });
 });
 
@@ -377,9 +407,9 @@ describe('arrange_nodes moves listed nodes beside what they are wired to', () =>
 // so the receipt listed no change; set_metadata had the same gap.
 describe('Blueprint metadata writes name the Blueprint they changed', () => {
   it('both metadata handlers add the asset verification fields', () => {
-    expect(read('Domains', 'Blueprint', 'Variables', 'McpAutomationBridge_BlueprintHandlersVariableMetadata.cpp'))
+    expect(read('Domains', 'Blueprint', 'Variables', 'McpBPVariableMetadata.cpp'))
       .toContain('McpHandlerUtils::AddVerification(Resp, Blueprint);');
-    expect(read('Domains', 'Blueprint', 'Metadata', 'McpAutomationBridge_BlueprintHandlersSetMetadata.cpp'))
+    expect(read('Domains', 'Blueprint', 'Metadata', 'McpBPSetMetadata.cpp'))
       .toContain('McpHandlerUtils::AddVerification(Resp, BP);');
   });
 });
@@ -387,7 +417,7 @@ describe('Blueprint metadata writes name the Blueprint they changed', () => {
 // Seeing where a graph's nodes sit took one inspect_graph info=node read per node.
 describe('graph details list each node position', () => {
   it('get_graph_details adds x and y to every node row', () => {
-    const queries = read('Domains', 'BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersQueries.cpp');
+    const queries = read('Domains', 'BlueprintGraph', 'McpBPGraphQueries.cpp');
     expect(queries).toContain('NodeObject->SetNumberField(TEXT("x"), Node->NodePosX);');
     expect(queries).toContain('NodeObject->SetNumberField(TEXT("y"), Node->NodePosY);');
   });
@@ -398,8 +428,8 @@ describe('graph details list each node position', () => {
 // answered success: CameraBoom kept its yaw while TargetArmLength changed.
 describe('an edit_scs operation takes location, rotation and scale directly on it, as it takes them in transform', () => {
   const scs = (file: string): string => read('Domains', 'Blueprint', 'Components', file);
-  const transform = (): string => scs('McpAutomationBridge_BlueprintHandlersScsTransform.h');
-  const ops = (): string => scs('McpAutomationBridge_BlueprintHandlersModifyScsComponentOps.cpp');
+  const transform = (): string => scs('McpBPScsTransform.h');
+  const ops = (): string => scs('McpBPModifyScsComponentOps.cpp');
 
   it('folds the three keys into transform, a part already there winning, before either op handler reads it', () => {
     const fold = sliceBetween(transform(), 'inline void FoldDirect(', 'inline TArray<FString> Apply(');
@@ -421,7 +451,7 @@ describe('an edit_scs operation takes location, rotation and scale directly on i
     expect(modify).toContain('McpScsTransform::Apply(Template, Op, Defaults, bAnySuccess)');
     expect(modify).toContain('Rejected.Append(McpScsPropertyBag::Apply(Template, PropertiesObj, Defaults, bAnySuccess));');
     expect(modify).toContain('OpSummary->SetArrayField(TEXT("rejectedProperties"), Values);');
-    expect(scs('McpAutomationBridge_BlueprintHandlersModifyScsFinalize.cpp')).toMatch(/did not apply %s/u);
+    expect(scs('McpBPModifyScsFinalize.cpp')).toMatch(/did not apply %s/u);
   });
 
   it('names a transform that is not an object, a component that has none and a part it cannot read; writes nothing when no part was readable', () => {
@@ -455,9 +485,9 @@ describe('an edit_scs operation takes location, rotation and scale directly on i
 // named a transform or properties.
 describe('an edit_scs add_component operation applies the mesh and material it names, and names one that did not land', () => {
   const scs = (file: string): string => read('Domains', 'Blueprint', 'Components', file);
-  const fields = (): string => scs('McpAutomationBridge_BlueprintHandlersScsOpFields.h');
-  const assets = (): string => scs('McpAutomationBridge_BlueprintHandlersScsTemplateAssets.h');
-  const ops = (): string => scs('McpAutomationBridge_BlueprintHandlersModifyScsComponentOps.cpp');
+  const fields = (): string => scs('McpBPScsOpFields.h');
+  const assets = (): string => scs('McpBPScsTemplateAssets.h');
+  const ops = (): string => scs('McpBPModifyScsComponentOps.cpp');
 
   it('one predicate decides whether an add has anything to hand on: a placement, properties, a mesh or a material, null being nothing', () => {
     const predicate = fields().slice(fields().indexOf('inline bool ScsOpHasEdits('));
@@ -506,10 +536,10 @@ describe('an edit_scs add_component operation applies the mesh and material it n
 // componentType), then answered "Component class not found": the add operation read only componentClass.
 describe('an edit_scs add takes its class from componentType as well as componentClass, wherever one decides or reads it', () => {
   const scs = (file: string): string => read('Domains', 'Blueprint', 'Components', file);
-  const fields = (): string => scs('McpAutomationBridge_BlueprintHandlersScsOpFields.h');
-  const state = (): string => scs('McpAutomationBridge_BlueprintHandlersModifyScsState.cpp');
-  const single = (): string => scs('McpAutomationBridge_BlueprintHandlersScsAddComponent.cpp');
-  const batchAdd = (): string => sliceBetween(scs('McpAutomationBridge_BlueprintHandlersModifyScsComponentOps.cpp'), 'void ApplyModifyScsAddComponent(', 'void ApplyModifyScsComponentOperation(');
+  const fields = (): string => scs('McpBPScsOpFields.h');
+  const state = (): string => scs('McpBPModifyScsState.cpp');
+  const single = (): string => scs('McpBPScsAddComponent.cpp');
+  const batchAdd = (): string => sliceBetween(scs('McpBPModifyScsComponentOps.cpp'), 'void ApplyModifyScsAddComponent(', 'void ApplyModifyScsComponentOperation(');
 
   it('one reader takes componentClass, component_class and componentType, in that order', () => {
     expect(fields()).toMatch(/inline FString ScsOpComponentClass\(const TSharedPtr<FJsonObject> &Op\)\s*\{\s*return McpGetFirstStringField\(Op, \{TEXT\("componentClass"\), TEXT\("component_class"\), TEXT\("componentType"\)\}\);/u);
@@ -581,13 +611,13 @@ describe('the edit_scs record names every variant that reads a class or attach p
   });
 
   it('the handlers read what the record declares for those variants', () => {
-    const single = scs('McpAutomationBridge_BlueprintHandlersScsAddComponent.cpp');
-    const batchAdd = sliceBetween(scs('McpAutomationBridge_BlueprintHandlersModifyScsComponentOps.cpp'), 'void ApplyModifyScsAddComponent(', 'void ApplyModifyScsComponentOperation(');
+    const single = scs('McpBPScsAddComponent.cpp');
+    const batchAdd = sliceBetween(scs('McpBPModifyScsComponentOps.cpp'), 'void ApplyModifyScsAddComponent(', 'void ApplyModifyScsComponentOperation(');
 
     expect(single).toContain('const FString ComponentClass = ScsOpComponentClass(Payload);');
     expect(single).toContain('ScsFirstOf(Payload, TEXT("parent_component"), TEXT("parentComponent"))');
     expect(single).toContain('ParentName = ScsFieldOrEmpty(Payload, TEXT("attachTo"));');
-    expect(scs('McpAutomationBridge_BlueprintHandlersModifyScsState.cpp')).toContain('const bool bIsAdd = !ScsOpComponentClass(Op).IsEmpty();');
+    expect(scs('McpBPModifyScsState.cpp')).toContain('const bool bIsAdd = !ScsOpComponentClass(Op).IsEmpty();');
     expect(batchAdd).toContain('Op->TryGetStringField(TEXT("attachTo"), AttachToName);');
   });
 });
@@ -596,7 +626,7 @@ describe('graph edits that used to answer success while doing nothing useful', (
   // A Set node's value pin carries the variable's name but is its input; a batch that named it as a
   // link's source failed, though the node's one output of that type (Output_Get) was meant.
   it('connect_pins takes a Set node\'s variable-named source pin as its one same-type output', () => {
-    const connect = read('Domains', 'BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersPinMutations.cpp');
+    const connect = read('Domains', 'BlueprintGraph', 'McpBPGraphPinMutations.cpp');
     expect(connect).toMatch(/FromPin->Direction == EGPD_Input && ToPin->Direction == EGPD_Input/u);
     expect(connect).toMatch(/Pin->Direction == EGPD_Output && Pin->PinType == FromPin->PinType/u);
     expect(connect).toContain('if (SameTypeOutputs.Num() == 1) FromPin = SameTypeOutputs[0];');
@@ -605,15 +635,43 @@ describe('graph edits that used to answer success while doing nothing useful', (
 
   // "-1" (no unary minus) left a math expression node with no pins under a success reply.
   it('a math expression that does not parse is refused and the node keeps its old expression', () => {
-    const mutations = read('Domains', 'BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersNodeMutations.cpp');
+    const mutations = read('Domains', 'BlueprintGraph', 'McpBPGraphNodeMutations.cpp');
     expect(mutations).toContain('TEXT("K2Node_MathExpression")');
     expect(mutations).toMatch(/McpTrySetNodeAssetPropertyForMcp\(TargetNode, PropertyName, OldExpression\);/u);
     expect(mutations).toContain('TEXT("EXPRESSION_INVALID")');
+    // "x && !y" failed as a bare "does not parse": the refusal names unary ! and && on a number input.
+    expect(mutations).toContain('DescribeProblems(Context.Blueprint, Value)');
   });
 
   // create_framework_class documents short class names, but "GameModeBase" answered NOT_FOUND.
-  it('a framework class parent given by short name resolves like every other class parameter', () => {
-    const utilities = read('Domains', 'GameFramework', 'McpAutomationBridge_GameFrameworkHandlersUtilities.cpp');
-    expect(utilities).toContain('if (!ClassPath.Contains(TEXT("/"))) return ResolveClassByName(ClassPath);');
+  // A short name, a class path or a Blueprint path all resolve as every other class parameter does; appending _C to a
+  // Blueprint asset path looked up a path that never exists and put "Failed to find object" in a working reply.
+  it('a framework class given by short name or Blueprint path resolves like every other class parameter', () => {
+    const utilities = read('Domains', 'GameFramework', 'McpGameFrameworkUtils.cpp');
+    expect(utilities).toContain('    return ResolveClassByName(ClassPath);');
+    expect(utilities).not.toContain('BPPath += TEXT("_C");');
+  });
+});
+
+// The editor shows K2_AddLocalRotation as AddLocalRotation; that name failed FUNCTION_NOT_FOUND on SceneComponent.
+describe('a call node takes a function by the name the editor shows', () => {
+  it('tries K2_<name> when the name itself is not found, on the memberClass and on the default classes alike', () => {
+    const source = read('Domains', 'BlueprintGraph', 'McpBPGraphHandlers.cpp');
+    const resolve = sliceBetween(source, 'UFunction* ResolveGraphCallFunction(', 'UFunction* ResolveCallNodeFunction(');
+
+    expect(source).toMatch(/Class->FindFunctionByName\(\*\(TEXT\("K2_"\) \+ Name\)\)/u);
+    expect(resolve).toContain('FindCallableNamed(OutResolvedClass, MemberName)');
+    expect(resolve).toContain('FindCallableNamed(Candidate, MemberName)');
+    expect(resolve).not.toMatch(/->FindFunctionByName\(\*MemberName\)/u);
+  });
+
+  // TextRenderComponent's SetText is native only: a node made from it failed the Blueprint's compile, while the
+  // editor's Set Text is K2_SetText.
+  it('prefers the K2_ twin when the plain name is not Blueprint-callable', () => {
+    const source = read('Domains', 'BlueprintGraph', 'McpBPGraphHandlers.cpp');
+    const helper = sliceBetween(source, 'static UFunction* FindCallableNamed(', 'UFunction* ResolveGraphCallFunction(');
+
+    expect(helper).toContain('Function->HasAnyFunctionFlags(FUNC_BlueprintCallable | FUNC_BlueprintPure)');
+    expect(helper).toContain('return Twin ? Twin : Function;');
   });
 });

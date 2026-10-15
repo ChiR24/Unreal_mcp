@@ -1,0 +1,230 @@
+#include "Domains/AssetWorkflow/Structs/McpAssetStructsShared.h"
+#include "Editor.h"
+#include "ScopedTransaction.h"
+#include "Foundation/BridgeHelpers/Security/McpProjectPaths.h"
+#include "Misc/FileHelper.h"
+#include "Serialization/JsonReader.h"
+#include "Serialization/JsonSerializer.h"
+
+
+bool HandleStructImportActions(UEngineWireSubsystem& Bridge, const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
+{
+    const FString Lower = Action.ToLower();
+
+    if (Lower == TEXT("import_struct"))
+    {
+        FString Name = GetJsonStringField(Payload, TEXT("name"));
+        FString Path = GetJsonStringField(Payload, TEXT("path"), TEXT("/Game/Structs"));
+        FString StructPath = GetJsonStringField(Payload, TEXT("structPath"));
+        bool bSave = GetJsonBoolField(Payload, TEXT("save"), true);
+
+        const TArray<TSharedPtr<FJsonValue>>* MembersArr = nullptr;
+        // sourcePath: a JSON file inside the project holding the member list,
+        // either a bare array or an object with a members array (the shape
+        // export_struct returns). It was declared and never read.
+        TArray<TSharedPtr<FJsonValue>> FileMembers;
+        const FString SourcePath = GetJsonStringField(Payload, TEXT("sourcePath"));
+        if (!Payload->TryGetArrayField(TEXT("members"), MembersArr) && !SourcePath.IsEmpty())
+        {
+            FString ResolvedPath, PathError, Text;
+            if (!McpResolveProjectFilePath(SourcePath, ResolvedPath, PathError))
+            {
+                Bridge.SendAutomationError(RequestingSocket, RequestId, PathError, TEXT("SECURITY_VIOLATION"));
+                return true;
+            }
+            TSharedPtr<FJsonValue> Parsed;
+            const bool bRead = FFileHelper::LoadFileToString(Text, *ResolvedPath);
+            const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(Text);
+            if (!bRead || !FJsonSerializer::Deserialize(Reader, Parsed) || !Parsed.IsValid())
+            {
+                Bridge.SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("sourcePath '%s' is not a readable JSON file."), *SourcePath), TEXT("INVALID_SOURCE"));
+                return true;
+            }
+            const TSharedPtr<FJsonObject>* FileObj = nullptr;
+            const TArray<TSharedPtr<FJsonValue>>* Nested = nullptr;
+            if (Parsed->Type == EJson::Array) { FileMembers = Parsed->AsArray(); }
+            else if (Parsed->TryGetObject(FileObj) && (*FileObj)->TryGetArrayField(TEXT("members"), Nested) && Nested) { FileMembers = *Nested; }
+            MembersArr = &FileMembers;
+        }
+        if (!MembersArr || MembersArr->Num() == 0)
+        {
+            Bridge.SendAutomationError(RequestingSocket, RequestId,
+                TEXT("Missing required parameter: members (array), or sourcePath naming a JSON file that holds one"), TEXT("MISSING_PARAMETER"));
+            return true;
+        }
+
+        UUserDefinedStruct* S = nullptr;
+        FString FinalName = Name;
+        FString PackageName;
+
+        if (!StructPath.IsEmpty())
+        {
+            S = LoadObject<UUserDefinedStruct>(nullptr, *StructPath);
+            if (!S)
+            {
+                Bridge.SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Struct not found: %s"), *StructPath), TEXT("ASSET_NOT_FOUND"));
+                return true;
+            }
+            PackageName = S->GetOutermost()->GetName();
+            FinalName = S->GetName();
+        }
+        else
+        {
+            if (FinalName.IsEmpty())
+            {
+                Bridge.SendAutomationError(RequestingSocket, RequestId,
+                    TEXT("Missing required parameter: name (or structPath)"), TEXT("MISSING_PARAMETER"));
+                return true;
+            }
+            FString PathError;
+            FString SanitizedName = SanitizeAssetName(FinalName);
+            if (!ValidateAssetCreationPath(Path, SanitizedName, PackageName, PathError))
+            {
+                Bridge.SendAutomationError(RequestingSocket, RequestId, PathError, TEXT("PACKAGE_CREATE_FAILED"));
+                return true;
+            }
+            UPackage* Package = CreatePackage(*PackageName);
+            if (!Package)
+            {
+                Bridge.SendAutomationError(RequestingSocket, RequestId,
+                    TEXT("Failed to create package"), TEXT("PACKAGE_CREATE_FAILED"));
+                return true;
+            }
+            S = CreateUnseededUserStruct(Package, SanitizedName);
+            if (!S)
+            {
+                Bridge.SendAutomationError(RequestingSocket, RequestId,
+                    TEXT("Failed to create user defined struct"), TEXT("ASSET_CREATE_FAILED"));
+                return true;
+            }
+            FinalName = SanitizedName;
+        }
+
+        const FName SelfPath = StructPath.IsEmpty()
+            ? FName(*FString::Printf(TEXT("%s.%s"), *PackageName, *FinalName))
+            : FName(*StructPath);
+        TArray<FParsedMember> ParsedMembers;
+        TArray<FString> Failures;
+        if (!ValidateStructMembers(*MembersArr, SelfPath, ParsedMembers, Failures))
+        {
+            TArray<TSharedPtr<FJsonValue>> FailureArr;
+            FailureArr.Reserve(Failures.Num());
+            for (const FString& Failure : Failures)
+            {
+                FailureArr.Add(MakeShared<FJsonValueString>(Failure));
+            }
+            TSharedPtr<FJsonObject> ValidationResult = McpHandlerUtils::CreateResultObject();
+            ValidationResult->SetStringField(TEXT("assetPath"), PackageName + TEXT(".") + FinalName);
+            ValidationResult->SetStringField(TEXT("structName"), FinalName);
+            ValidationResult->SetNumberField(TEXT("imported"), 0);
+            ValidationResult->SetNumberField(TEXT("failed"), Failures.Num());
+            ValidationResult->SetArrayField(TEXT("failures"), FailureArr);
+            Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
+                FString::Printf(TEXT("Struct import validation failed: %d member(s) rejected"), Failures.Num()),
+                ValidationResult);
+            return true;
+        }
+
+        // Snapshot the existing members BEFORE mutation so a failed import can
+        // be rolled back to the exact pre-import state.
+        TArray<FStructVariableDescription> Snapshot = FStructureEditorUtils::GetVarDesc(S);
+
+        const bool bCreatedNew = StructPath.IsEmpty();
+
+        // Wrap the remove-then-add sequence in a transaction. Each
+        // FStructureEditorUtils::RemoveVariable/AddVariable opens its own nested
+        // transaction that merges into this one, so cancelling it atomically
+        // undoes the whole replace on a partial apply failure.
+        FScopedTransaction Transaction(NSLOCTEXT("EngineWire", "ImportStruct", "Import Struct Members"));
+
+        TArray<FGuid> Existing;
+        for (const FStructVariableDescription& Var : FStructureEditorUtils::GetVarDesc(S))
+        {
+            Existing.Add(Var.VarGuid);
+        }
+        for (const FGuid& G : Existing)
+        {
+            FStructureEditorUtils::RemoveVariable(S, G);
+        }
+
+        TArray<FString> ApplyFailures;
+        int32 Applied = ApplyParsedStructMembers(S, ParsedMembers, ApplyFailures);
+
+        if (Applied < ParsedMembers.Num())
+        {
+            // Partial failure: roll back the mutation so the struct is left
+            // intact, then report the rejected members. Do NOT compile, dirty,
+            // register, or save a half-mutated struct.
+            Transaction.Cancel();
+
+            TSharedPtr<FJsonObject> FailureResult = McpHandlerUtils::CreateResultObject();
+            FailureResult->SetStringField(TEXT("assetPath"), PackageName + TEXT(".") + FinalName);
+            FailureResult->SetStringField(TEXT("structName"), FinalName);
+            FailureResult->SetNumberField(TEXT("imported"), Applied);
+            FailureResult->SetNumberField(TEXT("failed"), ApplyFailures.Num());
+            FailureResult->SetNumberField(TEXT("restoredMembers"), Snapshot.Num());
+            TArray<TSharedPtr<FJsonValue>> FailureArr;
+            FailureArr.Reserve(ApplyFailures.Num());
+            for (const FString& Failure : ApplyFailures)
+            {
+                FailureArr.Add(MakeShared<FJsonValueString>(Failure));
+            }
+            FailureResult->SetArrayField(TEXT("failures"), FailureArr);
+            Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
+                FString::Printf(TEXT("Struct import partially failed: %d of %d member(s) applied, %d rejected (struct rolled back)"),
+                    Applied, ParsedMembers.Num(), ApplyFailures.Num()),
+                FailureResult);
+            return true;
+        }
+
+        FStructureEditorUtils::CompileStructure(S);
+        S->GetOutermost()->MarkPackageDirty();
+        if (bCreatedNew)
+        {
+            // Only register creation for genuinely new structs. On the update
+            // path the asset is already in the registry and is refreshed when
+            // the package is marked dirty / saved (IAssetRegistry has no
+            // AssetUpdated in this engine version).
+            FAssetRegistryModule::AssetCreated(S);
+        }
+        if (bSave)
+        {
+            McpSafeAssetSave(S);
+        }
+
+        // Auto-trigger dependent refresh so Blueprints/DataTables pointing at this
+        // struct stay consistent after the import mutation (issue #510).
+        McpRefreshStructDependents(S);
+
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+        Result->SetStringField(TEXT("assetPath"), PackageName + TEXT(".") + FinalName);
+        Result->SetStringField(TEXT("structName"), FinalName);
+        Result->SetNumberField(TEXT("imported"), Applied);
+        Result->SetNumberField(TEXT("failed"), ApplyFailures.Num());
+        Result->SetStringField(TEXT("status"), UserDefinedStructureStatusToString(S->Status));
+        McpHandlerUtils::AddVerification(Result, S);
+        if (ApplyFailures.Num() > 0)
+        {
+            TArray<TSharedPtr<FJsonValue>> FailureArr;
+            FailureArr.Reserve(ApplyFailures.Num());
+            for (const FString& Failure : ApplyFailures)
+            {
+                FailureArr.Add(MakeShared<FJsonValueString>(Failure));
+            }
+            Result->SetArrayField(TEXT("failures"), FailureArr);
+            Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
+                FString::Printf(TEXT("Struct imported %d member(s) but %d failed"), Applied, ApplyFailures.Num()), Result);
+        }
+        else
+        {
+            Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
+                TEXT("Struct imported"), Result);
+        }
+        return true;
+    }
+
+    return false;
+}
+

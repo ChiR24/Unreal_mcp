@@ -1,0 +1,218 @@
+#include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Domains/Blueprint/Components/McpBPScsParentResolve.h"
+
+#include "Domains/SCS/McpSCSHandlers.h"
+#include "Domains/SCS/McpSCSSupport.h"
+
+#include "Foundation/BridgeHelpers/McpHelpers.h"
+#include "Foundation/HandlerUtils/McpHandlerUtils.h"
+
+#include "Engine/Blueprint.h"
+#include "Engine/SCS_Node.h"
+#include "Engine/SimpleConstructionScript.h"
+#include "Kismet2/BlueprintEditorUtils.h"
+
+using namespace McpSCSHandlers;
+
+TSharedPtr<FJsonObject>
+FSCSHandlers::ReparentSCSComponent(const FString &BlueprintPath,
+                                   const FString &ComponentName,
+                                   const FString &NewParentName) {
+  TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+
+  UBlueprint *Blueprint = LoadScsBlueprint(BlueprintPath, Result);
+  if (!Blueprint) {
+    return Result;
+  }
+
+  USimpleConstructionScript *SCS = Blueprint->SimpleConstructionScript;
+
+  USCS_Node *ComponentNode = FindSCSNodeByVariableName(SCS, ComponentName);
+
+  if (!ComponentNode) {
+    Result->SetBoolField(TEXT("success"), false);
+    Result->SetStringField(
+        TEXT("error"),
+        FString::Printf(TEXT("Component not found: %s"), *ComponentName));
+    return Result;
+  }
+
+  USCS_Node *NewParentNode = nullptr;
+  if (!NewParentName.IsEmpty()) {
+    const bool bRootSynonym = IsSCSRootAlias(SCS, NewParentName);
+    if (bRootSynonym) {
+      const TArray<USCS_Node *> &Roots = SCS->GetRootNodes();
+      for (USCS_Node *R : Roots) {
+        if (R && R != ComponentNode && R->GetVariableName().IsValid() &&
+            R->GetVariableName().ToString().Equals(TEXT("DefaultSceneRoot"),
+                                                   ESearchCase::IgnoreCase)) {
+          NewParentNode = R;
+          break;
+        }
+      }
+      if (!NewParentNode) {
+        for (USCS_Node *R : Roots) {
+          if (R && R != ComponentNode) {
+            NewParentNode = R;
+            break;
+          }
+        }
+      }
+    }
+
+    if (!NewParentNode) {
+      NewParentNode = FindSCSNodeByVariableName(SCS, NewParentName);
+    }
+
+    // An inherited native component (ACharacter's Mesh, CapsuleComponent, ...)
+    // has no USCS_Node, so reparenting onto one answered SCS_PARENT_NOT_FOUND
+    // even though the editor does it with a drag. SetParent records the native
+    // parent on the node itself, which is how the editor stores it too.
+    if (!NewParentNode) {
+      FString ResolvedAs;
+      FString AttachError;
+      if (McpScsParent::AttachNodeToNamedParent(Blueprint, SCS, ComponentNode,
+                                                NewParentName, ResolvedAs,
+                                                AttachError) &&
+          ResolvedAs == TEXT("inherited")) {
+        // Every other exit from this handler runs FinalizeBlueprintSCSChange;
+        // this one only marked the Blueprint modified, so a reparent onto an
+        // inherited component was reported as success but never compiled or
+        // saved and did not survive a restart.
+        bool bInheritedCompiled = false;
+        bool bInheritedSaved = false;
+        FinalizeBlueprintSCSChange(Blueprint, bInheritedCompiled, bInheritedSaved);
+        Result->SetBoolField(TEXT("success"), true);
+        Result->SetStringField(TEXT("message"),
+                               FString::Printf(TEXT("Reparented %s under inherited component %s"),
+                                               *ComponentName, *NewParentName));
+        Result->SetStringField(TEXT("parentKind"), TEXT("inherited"));
+        Result->SetBoolField(TEXT("compiled"), bInheritedCompiled);
+        Result->SetBoolField(TEXT("saved"), bInheritedSaved);
+        AddSCSNodeVerification(Result, SCS, ComponentNode);
+        return Result;
+      }
+      Result->SetBoolField(TEXT("success"), false);
+      const FString ParentError =
+          bRootSynonym
+              ? FString::Printf(TEXT("Requested root parent alias '%s' could not be resolved to an SCS root node"),
+                                *NewParentName)
+              : AttachError;
+      Result->SetStringField(TEXT("error"), ParentError);
+      Result->SetStringField(TEXT("errorCode"), TEXT("SCS_PARENT_NOT_FOUND"));
+      AddSCSNodeVerification(Result, SCS, ComponentNode);
+      return Result;
+    }
+  }
+
+  if (NewParentNode == ComponentNode) {
+    Result->SetBoolField(TEXT("success"), false);
+    Result->SetStringField(TEXT("error"),
+                           TEXT("Cannot reparent a component to itself"));
+    Result->SetStringField(TEXT("errorCode"), TEXT("SCS_SELF_REPARENT"));
+    AddSCSNodeVerification(Result, SCS, ComponentNode);
+    return Result;
+  }
+
+  const FString ExpectedParentName =
+      NewParentNode ? GetSCSNodeName(NewParentNode) : FString();
+  const FString ParentDisplayName =
+      ExpectedParentName.IsEmpty() ? FString(TEXT("(root)")) : ExpectedParentName;
+
+  auto IsDescendantOf = [](USCS_Node *A, USCS_Node *B) -> bool {
+    if (!A || !B) {
+      return false;
+    }
+    TArray<USCS_Node *> Stack;
+    Stack.Add(A);
+    while (Stack.Num() > 0) {
+      USCS_Node *Cur = Stack.Pop(MCP_DISALLOW_SHRINKING);
+      if (!Cur) {
+        continue;
+      }
+      const TArray<USCS_Node *> &Kids = Cur->GetChildNodes();
+      for (USCS_Node *K : Kids) {
+        if (!K) {
+          continue;
+        }
+        if (K == B) {
+          return true;
+        }
+        Stack.Add(K);
+      }
+    }
+    return false;
+  };
+
+  USCS_Node *OldParent = FindSCSParentNode(SCS, ComponentNode);
+
+  if ((NewParentNode == nullptr && OldParent == nullptr &&
+       IsSCSRootNode(SCS, ComponentNode)) ||
+      (OldParent != nullptr && NewParentNode == OldParent)) {
+    Result->SetBoolField(TEXT("success"), true);
+    Result->SetStringField(
+        TEXT("message"),
+        TEXT("Component already under requested parent; no changes made"));
+    AddSCSNodeVerification(Result, SCS, ComponentNode);
+    McpHandlerUtils::AddVerification(Result, Blueprint);
+    return Result;
+  }
+
+  if (NewParentNode && IsDescendantOf(ComponentNode, NewParentNode)) {
+    Result->SetBoolField(TEXT("success"), false);
+    Result->SetStringField(
+        TEXT("error"),
+        TEXT("Cannot create circular parent-child relationship"));
+    return Result;
+  }
+
+  if (OldParent) {
+    OldParent->RemoveChildNode(ComponentNode);
+  } else {
+    const bool bReparentingToRoot = (NewParentNode == nullptr);
+    if (!bReparentingToRoot) {
+      SCS->RemoveNode(ComponentNode);
+    }
+  }
+
+  if (NewParentNode) {
+    NewParentNode->AddChildNode(ComponentNode);
+  } else {
+    SCS->AddNode(ComponentNode);
+  }
+
+  FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+  bool bCompiled = false;
+  bool bSaved = false;
+  FinalizeBlueprintSCSChange(Blueprint, bCompiled, bSaved);
+
+  USCS_Node *VerifiedNode = FindSCSNodeByVariableName(SCS, ComponentName);
+  if (!VerifiedNode ||
+      !SCSParentMatches(SCS, VerifiedNode, ExpectedParentName)) {
+    Result->SetBoolField(TEXT("success"), false);
+    Result->SetStringField(
+        TEXT("error"),
+        FString::Printf(TEXT("Verification failed: Component '%s' was not reparented to '%s'"),
+                        *ComponentName, *ParentDisplayName));
+    Result->SetStringField(TEXT("errorCode"),
+                           TEXT("SCS_REPARENT_VERIFICATION_FAILED"));
+    if (VerifiedNode) {
+      AddSCSNodeVerification(Result, SCS, VerifiedNode);
+    }
+    Result->SetBoolField(TEXT("compiled"), bCompiled);
+    Result->SetBoolField(TEXT("saved"), bSaved);
+    return Result;
+  }
+
+  Result->SetBoolField(TEXT("success"), true);
+  Result->SetStringField(
+      TEXT("message"),
+      FString::Printf(TEXT("Component '%s' reparented to '%s'"), *ComponentName,
+                      *ParentDisplayName));
+  Result->SetBoolField(TEXT("compiled"), bCompiled);
+  Result->SetBoolField(TEXT("saved"), bSaved);
+  AddSCSNodeVerification(Result, SCS, VerifiedNode);
+  McpHandlerUtils::AddVerification(Result, Blueprint);
+
+  return Result;
+}

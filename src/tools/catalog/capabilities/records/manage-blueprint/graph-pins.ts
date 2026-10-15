@@ -27,7 +27,7 @@ export const GRAPH_PINS_RECORDS: readonly CapabilityRecordSource[] = [
     // successful link was indistinguishable from a no-op: "Pin connection
     // complete" and nothing else. `connected` is read back off the graph.
     outputProps: {
-      connected: { type: 'boolean', description: 'Whether the two pins are linked after the call, read back from the graph rather than inferred from the schema call.' },
+      connected: { type: 'boolean', description: 'Whether the two pins are linked after the call, directly or through the conversion node the engine inserted between differing pin types (conversionInserted), read back from the graph rather than inferred from the schema call.' },
       sourcePinName: { type: 'string', description: 'Source pin that was actually used — the first output pin when fromPinName named none.' },
       targetPinName: { type: 'string', description: 'Target pin that was actually used.' },
       sourcePinType: { type: 'string', description: 'Pin category of the source pin (exec, object, real, ...).' },
@@ -54,8 +54,8 @@ export const GRAPH_PINS_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'break_pin_links',
     family: FAMILY,
     domain: DOMAIN,
-    summary: 'Break all links from one pin on a graph node.',
-    whenToUse: ['All links from a specific pin must be removed.'],
+    summary: 'Break (disconnect) every link of one pin on a graph node, leaving the pin unwired.',
+    whenToUse: ['All links from a specific pin must be removed (disconnect or unlink a wire).'],
     whenNotToUse: ['A single link should be redirected (use connect_pins after breaking).'],
     inputProps: { blueprintPath: P.blueprintPath, graphName: P.graphName, nodeId: P.nodeId, pinName: P.pinName, nodeGuid: P.nodeGuid },
     required: ['blueprintPath', 'pinName'],
@@ -77,10 +77,14 @@ export const GRAPH_PINS_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['A pin default value is the target (use set_pin_default_value).'],
     inputProps: {
       blueprintPath: P.blueprintPath, graphName: P.graphName, nodeId: P.nodeId, propertyName: P.propertyName, nodeGuid: P.nodeGuid,
-      propertyValue: { ...P.propertyValue, description: "set_node_property: text for NodeComment, a number for NodePosX or NodePosY, true or false for bCommentBubbleVisible or bDisabled, Enabled, Disabled or DevelopmentOnly for EnabledState, an asset path for a reflected field. set_pin_default_value: the pin's new default as text: a number, true or false, an enum value name, a vector as X,Y,Z (0,150,110), a rotator as P,Y,R, or an asset path." },
+      propertyValue: { ...P.propertyValue, description: "set_node_property: text for NodeComment, a number for NodePosX or NodePosY, true or false for bCommentBubbleVisible or bDisabled, Enabled, Disabled or DevelopmentOnly for EnabledState, the text of a Math Expression node's Expression (each other name becomes a number input pin, except one the Blueprint has a variable of, which reads that variable; a number input is never a vector, so add to a location as VECT(x, y, z + 20) from its parts; a comparison used as a number is refused: write SelectFloat(1, 0, A > B); an input pin is never true/false, so join true/false values from other nodes with BooleanAND, BooleanOR or BooleanXOR nodes), an asset path for a reflected field. set_pin_default_value: the pin's new default as text: a number, true or false, an enum value name, a vector as X,Y,Z (0,150,110), a rotator as P,Y,R, or an asset path." },
     },
     required: ['blueprintPath', 'propertyName', 'propertyValue'],
     requiredOneOf: ['nodeId', 'nodeGuid'],
+    outputProps: {
+      inputPins: { type: 'array', items: { type: 'string' }, description: 'Expression: the input pins the parsed expression made, the names to wire.' },
+      boundToMembers: { type: 'array', items: { type: 'string' }, description: 'Expression: names that read the Blueprint\'s own variable of that name instead of making a pin; rename the input to get a pin.' },
+    },
     effect: 'write',
     behavior: { idempotency: 'idempotent', safeToRetry: true },
     latency: 'instant',

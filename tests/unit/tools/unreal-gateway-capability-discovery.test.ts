@@ -216,9 +216,13 @@ describe('describe returns one capability contract with its EXACT action schema'
     const input = result.inputSchema as Row;
     expect(isRecord(input)).toBe(true);
     expect(Object.keys(input.properties as Row).sort()).toEqual([
+      'createPhysicsAsset',
       'destinationPath',
       'importAnimations',
+      'importMesh',
+      'importMorphTargets',
       'overwrite',
+      'physicsAssetPath',
       'save',
       'skeletonPath',
       'sourcePath'
@@ -227,12 +231,16 @@ describe('describe returns one capability contract with its EXACT action schema'
     expect(input.additionalProperties).toBe(false);
   });
 
-  it('projects the same six parameters into the compact list', () => {
+  it('projects the same ten parameters into the compact list', () => {
     const parameters = result.parameters as Row[];
     expect(parameters.map((row) => row.name).sort()).toEqual([
+      'createPhysicsAsset',
       'destinationPath',
       'importAnimations',
+      'importMesh',
+      'importMorphTargets',
       'overwrite',
+      'physicsAssetPath',
       'save',
       'skeletonPath',
       'sourcePath'
@@ -244,8 +252,8 @@ describe('describe returns one capability contract with its EXACT action schema'
 
   it('never leaks a union-sized parameter catalog', () => {
     // The pre-Task-24 union catalog for manage_asset carried 161 parameters.
-    expect((result.parameters as Row[]).length).toBe(6);
-    expect(result.parameterCount).toBe(6);
+    expect((result.parameters as Row[]).length).toBe(10);
+    expect(result.parameterCount).toBe(10);
   });
 
   it('publishes the output contract and the per-record hashes', () => {
@@ -297,9 +305,13 @@ describe('describe drills into exactly one parameter', () => {
     expect(result.success).toBe(false);
     expect(result.errorCode).toBe('UNKNOWN_PARAM');
     expect(result.availableParameters).toEqual([
+      'createPhysicsAsset',
       'destinationPath',
       'importAnimations',
+      'importMesh',
+      'importMorphTargets',
       'overwrite',
+      'physicsAssetPath',
       'save',
       'skeletonPath',
       'sourcePath'

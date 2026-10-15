@@ -1,0 +1,41 @@
+#pragma once
+
+#include "CoreMinimal.h"
+
+class FJsonObject;
+class FMcpBridgeWebSocket;
+class UEngineWireSubsystem;
+class UWidget;
+
+namespace WidgetAuthoringHandlers
+{
+using FWidgetAuthoringActionHandler = bool (*)(UEngineWireSubsystem&, const FString&, const FString&, const TSharedPtr<FJsonObject>&, TSharedPtr<FMcpBridgeWebSocket>, TSharedPtr<FJsonObject>);
+
+bool HandleWidgetAuthoringCreation(UEngineWireSubsystem& Subsystem, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, TSharedPtr<FJsonObject> ResultJson);
+bool HandleWidgetAuthoringTypedComponents(UEngineWireSubsystem& Subsystem, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, TSharedPtr<FJsonObject> ResultJson);
+bool HandleWidgetAuthoringTypedPanels(UEngineWireSubsystem& Subsystem, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, TSharedPtr<FJsonObject> ResultJson);
+
+// The one add_<widget> flow: construct WidgetClass in the widget blueprint at
+// `widgetPath`, let Configure apply the payload's properties, insert it through
+// SafeAddWidgetToTree (rolled back on failure), save, validate and reply.
+bool AddConfiguredWidget(UEngineWireSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, TSharedPtr<FJsonObject> ResultJson, UClass* WidgetClass,
+    const TCHAR* DefaultSlotName, const TCHAR* Label, TFunctionRef<void(UWidget*)> Configure);
+bool HandleWidgetAuthoringInfo(UEngineWireSubsystem& Subsystem, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, TSharedPtr<FJsonObject> ResultJson);
+bool HandleWidgetAuthoringCanvasSlotGeometry(UEngineWireSubsystem& Subsystem, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, TSharedPtr<FJsonObject> ResultJson);
+bool HandleWidgetAuthoringSlotAppearance(UEngineWireSubsystem& Subsystem, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, TSharedPtr<FJsonObject> ResultJson);
+bool HandleWidgetAuthoringStyleClipping(UEngineWireSubsystem& Subsystem, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, TSharedPtr<FJsonObject> ResultJson);
+bool HandleWidgetAuthoringEventBindings(UEngineWireSubsystem& Subsystem, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, TSharedPtr<FJsonObject> ResultJson);
+bool HandleWidgetAuthoringAnimationCore(UEngineWireSubsystem& Subsystem, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, TSharedPtr<FJsonObject> ResultJson);
+bool HandleWidgetAuthoringPreview(UEngineWireSubsystem& Subsystem, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, TSharedPtr<FJsonObject> ResultJson);
+bool HandleWidgetAuthoringGenericComponent(UEngineWireSubsystem& Subsystem, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, TSharedPtr<FJsonObject> ResultJson);
+bool HandleWidgetAuthoringManipulation(UEngineWireSubsystem& Subsystem, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, TSharedPtr<FJsonObject> ResultJson);
+bool HandleWidgetAuthoringDuplicate(UEngineWireSubsystem& Subsystem, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, TSharedPtr<FJsonObject> ResultJson);
+bool HandleWidgetAuthoringAdvancedStyling(UEngineWireSubsystem& Subsystem, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, TSharedPtr<FJsonObject> ResultJson);
+bool HandleWidgetAuthoringAnimationQueries(UEngineWireSubsystem& Subsystem, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, TSharedPtr<FJsonObject> ResultJson);
+bool HandleWidgetAuthoringLocalization(UEngineWireSubsystem& Subsystem, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, TSharedPtr<FJsonObject> ResultJson);
+bool HandleWidgetAuthoringHudElements(UEngineWireSubsystem& Subsystem, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, TSharedPtr<FJsonObject> ResultJson);
+bool HandleWidgetAuthoringTreeBuild(UEngineWireSubsystem& Subsystem, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, TSharedPtr<FJsonObject> ResultJson);
+bool HandleWidgetAuthoringScreens(UEngineWireSubsystem& Subsystem, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, TSharedPtr<FJsonObject> ResultJson);
+bool HandleWidgetAuthoringPropertyBindings(UEngineWireSubsystem& Subsystem, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, TSharedPtr<FJsonObject> ResultJson);
+}

@@ -1,0 +1,269 @@
+#include "Domains/AssetWorkflow/DataTables/Shared.h"
+#include "Domains/AssetWorkflow/Structs/McpAssetStructsShared.h"
+
+
+namespace
+{
+    UScriptStruct* ResolveRowStruct(const FString& StructPath, TSharedPtr<FJsonObject>& OutResult)
+    {
+        UScriptStruct* S = LoadObject<UScriptStruct>(nullptr, *StructPath);
+        if (!S) { OutResult = McpDataTableMakeError(TEXT("ASSET_NOT_FOUND"), *FString::Printf(TEXT("No struct at rowStructPath '%s'."), *StructPath)); }
+        return S;
+    }
+
+    // set_data_table_row_struct and set_struct_as_row_struct: bind the struct at
+    // rowStructPath to the table at dataTablePath. set_struct_as_row_struct used
+    // to read an undeclared structPath and only compiled the struct, so it could
+    // never succeed through the gateway and never touched the table.
+    void BindDataTableRowStruct(const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject>& OutResult)
+    {
+        TSharedPtr<FJsonObject> R;
+        UDataTable* Table = ResolveDataTable(Params, R);
+        if (!Table) { OutResult = R; return; }
+        FString RowStructPath = GetJsonStringField(Params, TEXT("rowStructPath"));
+        bool bMigrateExistingRows = GetJsonBoolField(Params, TEXT("migrateExistingRows"), true);
+        bool bClearExisting = GetJsonBoolField(Params, TEXT("clearExisting"), false);
+        if (RowStructPath.IsEmpty()) { OutResult = McpDataTableMakeError(TEXT("MISSING_PARAMETER"), TEXT("rowStructPath is required (e.g. /Game/Structs/S_WeaponRow).")); return; }
+        UScriptStruct* RowStruct = ResolveRowStruct(RowStructPath, OutResult);
+        if (!RowStruct) { return; }
+
+        // A user-defined struct with errors cannot back a table; compile a dirty
+        // one first so the table sees its current layout.
+        if (UUserDefinedStruct* UserStruct = Cast<UUserDefinedStruct>(RowStruct))
+        {
+            FString ValidityMsg;
+            if (FStructureEditorUtils::IsStructureValid(UserStruct, nullptr, &ValidityMsg) != FStructureEditorUtils::EStructureError::Ok)
+            {
+                OutResult = McpDataTableMakeError(TEXT("INVALID_OPERATION"), *FString::Printf(TEXT("Struct '%s' is not valid as a row struct: %s"), *RowStructPath, *ValidityMsg));
+                return;
+            }
+            if (UserStruct->Status != EUserDefinedStructureStatus::UDSS_UpToDate) { FStructureEditorUtils::CompileStructure(UserStruct); }
+        }
+
+        // A populated table whose rows are neither migrated nor cleared would
+        // lose every row when the RowStruct is reassigned: their memory is sized
+        // for the old layout and is invalid under the new one. Reject that up
+        // front so the caller must opt into a destructive change via
+        // migrateExistingRows or clearExisting before any rows are removed.
+        TArray<FName> ExistingNames = Table->GetRowNames();
+        if (ExistingNames.Num() > 0 && !bMigrateExistingRows && !bClearExisting)
+        {
+            OutResult = McpDataTableMakeError(
+                TEXT("INVALID_OPERATION"),
+                TEXT("Cannot change the row struct of a populated data table unless migrateExistingRows=true or clearExisting=true; doing so would erase all existing rows."));
+            return;
+        }
+
+        // Existing rows were allocated under the current RowStruct layout;
+        // reassigning RowStruct invalidates that memory, so snapshot first to
+        // migrate compatible rows and report incompatible ones.
+        const bool bMigrate = bMigrateExistingRows && !bClearExisting && Table->RowStruct;
+        TArray<TPair<FName, TSharedPtr<FJsonObject>>> Snapshots;
+        if (bMigrate)
+        {
+            for (const FName& N : ExistingNames)
+            {
+                const uint8* RowMem = Table->FindRowUnchecked(N);
+                if (RowMem) { Snapshots.Add(TPair<FName, TSharedPtr<FJsonObject>>(N, McpExportDataTableRow(Table->RowStruct, RowMem))); }
+            }
+        }
+
+        // Drop old-layout rows before reassigning the struct: their memory is
+        // sized for the previous layout and would be corrupt under the new one.
+        for (const FName& N : ExistingNames) { Table->RemoveRow(N); }
+
+        Table->RowStruct = RowStruct;
+        Table->OnDataTableChanged();
+
+        // Re-import snapshot rows; failures go to invalidRows (never silent loss).
+        int32 MigratedCount = 0;
+        TArray<TSharedPtr<FJsonValue>> InvalidRows;
+        for (const TPair<FName, TSharedPtr<FJsonObject>>& Snap : Snapshots)
+        {
+            uint8* RowMem = nullptr;
+            FString Err;
+            if (McpBuildDataTableRow(RowStruct, Snap.Value, RowMem, Err))
+            {
+                MCP_DATATABLE_ADD_ROW(Table, Snap.Key, RowMem);
+                McpFreeDataTableRow(RowStruct, RowMem);
+                ++MigratedCount;
+                continue;
+            }
+            TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
+            Entry->SetStringField(TEXT("rowName"), Snap.Key.ToString());
+            Entry->SetStringField(TEXT("reason"), Err);
+            InvalidRows.Add(MakeShared<FJsonValueObject>(Entry));
+        }
+        const bool bSaved = McpDataTableSaveIfRequested(Params, Table);
+
+        OutResult = McpHandlerUtils::CreateResultObject();
+        OutResult->SetBoolField(TEXT("updated"), true);
+        OutResult->SetStringField(TEXT("dataTablePath"), Table->GetPathName());
+        OutResult->SetStringField(TEXT("rowStructPath"), RowStruct->GetPathName());
+        OutResult->SetBoolField(TEXT("hasRowStruct"), Table->RowStruct == RowStruct);
+        OutResult->SetBoolField(TEXT("migratedExistingRows"), bMigrate);
+        OutResult->SetNumberField(TEXT("migratedCount"), MigratedCount);
+        OutResult->SetNumberField(TEXT("skipped"), InvalidRows.Num());
+        OutResult->SetArrayField(TEXT("invalidRows"), InvalidRows);
+        OutResult->SetBoolField(TEXT("saved"), bSaved);
+        McpHandlerUtils::AddVerification(OutResult, Table);
+    }
+}
+
+bool HandleDataTableAction(
+    FString Action,
+    const TSharedPtr<FJsonObject>& Params,
+    TSharedPtr<FJsonObject>& OutResult)
+{
+    const FString Lower = Action.ToLower();
+
+    // === create_data_table ===
+    if (Lower == TEXT("create_data_table"))
+    {
+        FString DataTablePath = GetJsonStringField(Params, TEXT("dataTablePath"));
+        FString Name = GetJsonStringField(Params, TEXT("name"));
+        FString Path = GetJsonStringField(Params, TEXT("path"), TEXT("/Game/DataTables"));
+        FString RowStructPath = GetJsonStringField(Params, TEXT("rowStructPath"));
+        if (Name.IsEmpty() && !DataTablePath.IsEmpty())
+        {
+            if (LoadObject<UDataTable>(nullptr, *DataTablePath))
+            {
+                OutResult = McpDataTableMakeError(TEXT("ASSET_ALREADY_EXISTS"), *FString::Printf(TEXT("A data table already exists at '%s'."), *DataTablePath));
+                return true;
+            }
+            if (!DataTablePath.Split(TEXT("/"), &Path, &Name, ESearchCase::CaseSensitive, ESearchDir::FromEnd)) { Name = DataTablePath; }
+        }
+        if (Name.IsEmpty() || RowStructPath.IsEmpty()) { OutResult = McpDataTableMakeError(TEXT("MISSING_PARAMETER"), TEXT("create_data_table needs rowStructPath plus either name (with optional path) or dataTablePath.")); return true; }
+
+        FString PathError, PackageName, SanitizedName = SanitizeAssetName(Name);
+        if (!ValidateAssetCreationPath(Path, SanitizedName, PackageName, PathError)) { OutResult = McpDataTableMakeError(TEXT("PACKAGE_CREATE_FAILED"), *PathError); return true; }
+
+        UScriptStruct* RowStruct = ResolveRowStruct(RowStructPath, OutResult);
+        if (!RowStruct) { return true; }
+
+        UPackage* Package = CreatePackage(*PackageName);
+        if (!Package) { OutResult = McpDataTableMakeError(TEXT("PACKAGE_CREATE_FAILED"), TEXT("Failed to create package")); return true; }
+
+        UDataTable* Table = NewObject<UDataTable>(Package, FName(*SanitizedName), RF_Public | RF_Standalone);
+        if (!Table) { OutResult = McpDataTableMakeError(TEXT("ASSET_CREATE_FAILED"), TEXT("Failed to create data table")); return true; }
+
+        Table->RowStruct = RowStruct;
+        Table->OnDataTableChanged();
+        FAssetRegistryModule::AssetCreated(Table);
+        const bool bSaved = McpDataTableSaveIfRequested(Params, Table);
+
+        OutResult = McpHandlerUtils::CreateResultObject();
+        OutResult->SetBoolField(TEXT("created"), true);
+        OutResult->SetStringField(TEXT("assetPath"), PackageName + TEXT(".") + SanitizedName);
+        OutResult->SetStringField(TEXT("rowStructPath"), RowStructPath);
+        OutResult->SetBoolField(TEXT("hasRowStruct"), true);
+        OutResult->SetBoolField(TEXT("saved"), bSaved);
+        McpHandlerUtils::AddVerification(OutResult, Table);
+        return true;
+    }
+
+    // === create_row_struct ===
+    if (Lower == TEXT("create_row_struct"))
+    {
+        FString RowStructPath = GetJsonStringField(Params, TEXT("rowStructPath"));
+        FString Name = GetJsonStringField(Params, TEXT("name"));
+        FString Path = GetJsonStringField(Params, TEXT("path"), TEXT("/Game/Structs"));
+        if (Name.IsEmpty() && !RowStructPath.IsEmpty())
+        {
+            if (LoadObject<UUserDefinedStruct>(nullptr, *RowStructPath))
+            {
+                OutResult = McpDataTableMakeError(TEXT("ASSET_ALREADY_EXISTS"), *FString::Printf(TEXT("A struct already exists at '%s'."), *RowStructPath));
+                return true;
+            }
+            if (!RowStructPath.Split(TEXT("/"), &Path, &Name, ESearchCase::CaseSensitive, ESearchDir::FromEnd)) { Name = RowStructPath; }
+        }
+        if (Name.IsEmpty()) { OutResult = McpDataTableMakeError(TEXT("MISSING_PARAMETER"), TEXT("create_row_struct needs name (with optional path) or rowStructPath.")); return true; }
+
+        FString PathError, PackageName, SanitizedName = SanitizeAssetName(Name);
+        if (!ValidateAssetCreationPath(Path, SanitizedName, PackageName, PathError)) { OutResult = McpDataTableMakeError(TEXT("PACKAGE_CREATE_FAILED"), *PathError); return true; }
+
+        // The schema declares `members` ([{memberName, memberType}] or [{name, type}]).
+        // They used to be ignored, and the engine refuses to delete a struct's
+        // last variable, so the result was a struct holding only the seeded
+        // placeholder MemberVar_0. Validate before creating anything.
+        TArray<FParsedMember> ParsedMembers;
+        TArray<FString> MemberFailures;
+        const TArray<TSharedPtr<FJsonValue>>* MembersArray = nullptr;
+        if (Params->TryGetArrayField(TEXT("members"), MembersArray) && MembersArray)
+        {
+            ValidateStructMembers(*MembersArray, FName(*(PackageName + TEXT(".") + SanitizedName)), ParsedMembers, MemberFailures);
+            if (MemberFailures.Num() > 0) { OutResult = McpDataTableMakeError(TEXT("INVALID_MEMBER"), *FString::Join(MemberFailures, TEXT("; "))); return true; }
+        }
+
+        UPackage* Package = CreatePackage(*PackageName);
+        if (!Package) { OutResult = McpDataTableMakeError(TEXT("PACKAGE_CREATE_FAILED"), TEXT("Failed to create package")); return true; }
+
+        UUserDefinedStruct* S = CreateUnseededUserStruct(Package, SanitizedName);
+        if (S) { FStructureEditorUtils::CompileStructure(S); }
+        if (!S) { OutResult = McpDataTableMakeError(TEXT("ASSET_CREATE_FAILED"), TEXT("Failed to create user defined struct")); return true; }
+
+        int32 AppliedMembers = 0;
+        if (ParsedMembers.Num() > 0)
+        {
+            TArray<FGuid> Placeholders;
+            for (const FStructVariableDescription& Var : FStructureEditorUtils::GetVarDesc(S)) { Placeholders.Add(Var.VarGuid); }
+            AppliedMembers = ApplyParsedStructMembers(S, ParsedMembers, MemberFailures);
+            // Only now can the seeded placeholder go (it is no longer the last variable).
+            for (const FGuid& G : Placeholders) { FStructureEditorUtils::RemoveVariable(S, G); }
+            FStructureEditorUtils::CompileStructure(S);
+        }
+
+        FAssetRegistryModule::AssetCreated(S);
+        const bool bSaved = McpDataTableSaveIfRequested(Params, S);
+
+        OutResult = McpHandlerUtils::CreateResultObject();
+        OutResult->SetBoolField(TEXT("created"), true);
+        OutResult->SetStringField(TEXT("assetPath"), PackageName + TEXT(".") + SanitizedName);
+        OutResult->SetStringField(TEXT("structName"), SanitizedName);
+        OutResult->SetBoolField(TEXT("usableAsRowStruct"), true);
+        OutResult->SetBoolField(TEXT("saved"), bSaved);
+        TArray<TSharedPtr<FJsonValue>> MemberJson;
+        for (const FStructVariableDescription& Var : FStructureEditorUtils::GetVarDesc(S)) { MemberJson.Add(MakeShared<FJsonValueObject>(VariableDescriptionToJson(Var))); }
+        OutResult->SetArrayField(TEXT("members"), MemberJson);
+        OutResult->SetNumberField(TEXT("memberCount"), MemberJson.Num());
+        OutResult->SetNumberField(TEXT("appliedMembers"), AppliedMembers);
+        if (MemberFailures.Num() > 0) { OutResult->SetStringField(TEXT("memberFailures"), FString::Join(MemberFailures, TEXT("; "))); }
+        if (ParsedMembers.Num() == 0) { OutResult->SetStringField(TEXT("note"), TEXT("No members supplied; the struct holds the engine placeholder MemberVar_0 until add_struct_member is used.")); }
+        McpHandlerUtils::AddVerification(OutResult, S);
+        return true;
+    }
+
+    // === set_data_table_row_struct / set_struct_as_row_struct ===
+    if (Lower == TEXT("set_data_table_row_struct") || Lower == TEXT("set_struct_as_row_struct"))
+    {
+        BindDataTableRowStruct(Params, OutResult);
+        return true;
+    }
+
+    // === get_row_struct ===
+    if (Lower == TEXT("get_row_struct"))
+    {
+        TSharedPtr<FJsonObject> R;
+        UDataTable* Table = ResolveDataTable(Params, R);
+        if (!Table) { OutResult = R; return true; }
+
+        OutResult = McpHandlerUtils::CreateResultObject();
+        if (Table->RowStruct)
+        {
+            OutResult->SetBoolField(TEXT("hasRowStruct"), true);
+            OutResult->SetStringField(TEXT("rowStructPath"), Table->RowStruct->GetPathName());
+        }
+        else
+        {
+            OutResult->SetBoolField(TEXT("hasRowStruct"), false);
+        }
+        McpHandlerUtils::AddVerification(OutResult, Table);
+        return true;
+    }
+
+    // === Row-scoped actions ===
+    if (HandleDataTableRowActions(Lower, Params, OutResult)) { return true; }
+
+    OutResult = McpDataTableMakeError(TEXT("UNKNOWN_ACTION"), *FString::Printf(TEXT("Unknown data table action '%s'."), *Lower));
+    return true;
+}

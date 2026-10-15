@@ -23,7 +23,7 @@ import { describe, expect, it } from 'vitest';
 const here = dirname(fileURLToPath(import.meta.url));
 const fabModuleRoot = resolve(
   here,
-  '../../../plugins/McpAutomationBridge/Source/McpAutomationBridgeFab',
+  '../../../plugins/EngineWire/Source/EngineWireFab',
 );
 
 function listSources(directory: string): string[] {
@@ -188,7 +188,7 @@ describe('Fab bridge: credentials cannot reach a response or a log', () => {
     const providerHeader = readFileSync(
       resolve(
         here,
-        '../../../plugins/McpAutomationBridge/Source/McpAutomationBridge/Public/McpFabTypes.h',
+        '../../../plugins/EngineWire/Source/EngineWire/Public/McpFabTypes.h',
       ),
       'utf8',
     );
@@ -235,7 +235,7 @@ describe('Fab bridge: credentials cannot reach a response or a log', () => {
 describe('Fab bridge: mutating console commands are blocked by the console-command policy', () => {
   it('the native generated policy blocks the Fab commands as first tokens', () => {
     const nativePolicy = readFileSync(
-      resolve(here, '../../../plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Domains/ConsoleCommand/McpAutomationBridge_ConsoleCommandPolicy.generated.h'),
+      resolve(here, '../../../plugins/EngineWire/Source/EngineWire/Private/Domains/ConsoleCommand/McpConsolePolicy.generated.h'),
       'utf8',
     );
     expect(nativePolicy).toContain('TEXT("mcp.fab.addtoproject")');

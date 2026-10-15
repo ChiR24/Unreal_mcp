@@ -95,8 +95,10 @@ export const ASSET_RECORDS: readonly CapabilityRecordSource[] = [
     whenToUse: ['A different level must be loaded into the editor.'],
     whenNotToUse: ['The level is already loaded.',
       'Open levels have unsaved changes: opening another level would drop them, so the call is refused with DIRTY_PACKAGES, listing them in unsavedPackages. Save first (manage_level save), or use manage_level load, which takes saveDirtyPackages or discardUnsaved.'],
-    inputProps: { levelPath: P.levelPath, path: P.path, assetPath: P.assetPath },
+    inputProps: { levelPath: P.levelPath },
     required: ['levelPath'],
+    outputProps: { settledSeconds: { type: 'number', description: 'How long the reply waited for the level to settle (its water, streamed textures and effects drawn), so a screenshot right after shows the level as it looks.' }, texturesStillStreaming: { type: 'number', description: 'Textures still streaming in when the wait ended at its cap; absent when streaming had gone quiet.' }, },
+    outputRequired: [],
     effect: 'write',
     costLatency: 'interactive', costResources: 'medium',
     exampleInput: { action: 'open_level', levelPath: '/Game/Maps/EntryMap' },
@@ -108,7 +110,7 @@ export const ASSET_RECORDS: readonly CapabilityRecordSource[] = [
     whenToUse: ['The viewport must frame a specific actor.'],
     whenNotToUse: ['The actor does not exist in the current level.',
       'Play In Editor runs and the player is not ejected: the level viewport is hidden behind the game, so this is refused with PIE_VIEW_NOT_EJECTED (eject first, or point the game camera with set_camera cameraOp=view_target).'],
-    inputProps: { actorName: P.actorName, name: P.name },
+    inputProps: { actorName: P.actorName },
     required: ['actorName'],
     effect: 'read',
    
@@ -123,10 +125,13 @@ export const ASSET_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: {
       // Saving everything also wrote out unrelated work someone had open, and the
       // contract pointed at a per-asset save that did not exist.
-      assetPaths: { type: 'array', items: { type: 'string' }, description: 'Save only these assets or levels, e.g. ["/Game/UI/WBP_Menu"], and leave every other dirty package as it is; omit to save everything dirty.' },
+      assetPaths: { type: 'array', items: { type: 'string' }, description: 'Save only these assets or levels, e.g. ["/Game/UI/WBP_Menu"], and leave every other dirty package as it is; omit to save everything dirty. A named asset the editor has loaded is written even when it is not marked dirty (a material usage flag the editor set while loading).' },
     },
     required: [],
-    outputProps: { compensation: COMPENSATION },
+    outputProps: {
+      compensation: COMPENSATION,
+      leftDirtyPackages: { type: 'array', items: { type: 'string' }, description: 'With assetPaths: the other packages that still hold unsaved changes, left as they were.' },
+    },
     effect: 'write',
     costLatency: 'interactive', costResources: 'medium',
     exampleInput: { action: 'save_all' },

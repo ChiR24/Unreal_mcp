@@ -15,7 +15,7 @@ import { isRecord } from '../../../src/utils/validation/type-guards.js';
 
 type Row = { name: string; variants?: string[] };
 
-const PRIVATE = join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private');
+const PRIVATE = join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private');
 const nativeDescribe = readFileSync(join(PRIVATE, 'MCP', 'Gateway', 'McpNativeGatewayDescribe.cpp'), 'utf8');
 
 describe('describe names the variants that read a parameter', () => {
@@ -125,23 +125,23 @@ describe('a path the handlers read under either spelling is declared by every va
   });
 
   it('the handlers read the spellings the records declare', () => {
-    const loader = code('MaterialAuthoring', 'McpAutomationBridge_MaterialAuthoringHandlersPrivate.h');
+    const loader = code('MaterialAuthoring', 'McpMatPrivate.h');
     expect(loader).toMatch(/#define LOAD_MATERIAL_OR_FUNCTION_OR_RETURN\(\)[\s\S]*?TEXT\("assetPath"\)[\s\S]*?TEXT\("materialPath"\)/u);
     // find_node, the connections, properties, chain and subgraph reads, and node details, all through the loader
-    for (const file of ['FindNode', 'GetNodeConnections', 'GetNodeProperties', 'GetNodeChain', 'GetConnectedSubgraph']) {
-      expect(code('MaterialAuthoring', 'Queries', `McpAutomationBridge_MaterialAuthoringHandlers${file}.cpp`), file).toContain('LOAD_MATERIAL_OR_FUNCTION_OR_RETURN();');
+    for (const file of ['FindNode', 'GetNodeConnections', 'GetNodeProps', 'GetNodeChain', 'GetConnectedSubgraph']) {
+      expect(code('MaterialAuthoring', 'Queries', `McpMat${file}.cpp`), file).toContain('LOAD_MATERIAL_OR_FUNCTION_OR_RETURN();');
     }
-    for (const file of [['Queries', 'McpAutomationBridge_MaterialAuthoringHandlersGetMaterialInfo.cpp'], ['Queries', 'McpAutomationBridge_MaterialAuthoringHandlersGetMaterialNodeDetails.cpp'], ['Properties', 'McpAutomationBridge_MaterialAuthoringHandlersCompileMaterial.cpp']]) {
+    for (const file of [['Queries', 'McpMatGetMatInfo.cpp'], ['Queries', 'McpMatGetMatNodeDetails.cpp'], ['Properties', 'McpMatCompileMat.cpp']]) {
       const source = code('MaterialAuthoring', ...file);
       expect(source, file.join('/')).toContain('TEXT("assetPath")');
       expect(source, file.join('/')).toContain('TEXT("materialPath")');
     }
-    expect(code('MaterialAuthoring', 'McpAutomationBridge_MaterialAuthoringHandlers.cpp')).toContain('SubAction = TEXT("get_material_info");');
+    expect(code('MaterialAuthoring', 'McpMatHandlers.cpp')).toContain('SubAction = TEXT("get_material_info");');
   });
 
   it('the niagara handlers resolve the asset from assetPath, systemPath or system', () => {
-    const context = code('NiagaraAuthoring', 'McpAutomationBridge_NiagaraAuthoringHandlersContext.cpp');
-    const info = code('NiagaraAuthoring', 'McpAutomationBridge_NiagaraAuthoringHandlersInfoValidation.cpp');
+    const context = code('NiagaraAuthoring', 'McpNiagaraContext.cpp');
+    const info = code('NiagaraAuthoring', 'McpNiagaraInfoValidate.cpp');
 
     expect(context).toMatch(/Context\.SystemPath = GetJsonStringField\(Payload, TEXT\("systemPath"\)\);\s*if \(Context\.SystemPath\.IsEmpty\(\)\)\s*\{\s*Context\.SystemPath = GetJsonStringField\(Payload, TEXT\("system"\)\);\s*\}\s*if \(Context\.SystemPath\.IsEmpty\(\)\)\s*\{\s*Context\.SystemPath = Context\.AssetPath;\s*\}/u);
     expect(info).toContain('if (Context.AssetPath.IsEmpty() && Context.SystemPath.IsEmpty())');
@@ -190,15 +190,15 @@ describe('the Niagara system edits and the Behavior Tree graph route declare the
   });
 
   it('the Niagara handlers read both spellings on both routes, and a miss names both', () => {
-    const context = code('NiagaraAuthoring', 'McpAutomationBridge_NiagaraAuthoringHandlersContext.cpp');
-    const graph = code('NiagaraGraph', 'McpAutomationBridge_NiagaraGraphHandlers.cpp');
+    const context = code('NiagaraAuthoring', 'McpNiagaraContext.cpp');
+    const graph = code('NiagaraGraph', 'McpNiagaraGraphHandlers.cpp');
 
     expect(context).toContain('Context.AssetPath = GetJsonStringField(Payload, TEXT("assetPath"));');
     expect(context).toMatch(/Context\.SystemPath = GetJsonStringField\(Payload, TEXT\("systemPath"\)\);\s*if \(Context\.SystemPath\.IsEmpty\(\)\)\s*\{\s*Context\.SystemPath = GetJsonStringField\(Payload, TEXT\("system"\)\);\s*\}\s*if \(Context\.SystemPath\.IsEmpty\(\)\)\s*\{\s*Context\.SystemPath = Context\.AssetPath;\s*\}/u);
     expect(graph).toMatch(/Payload->TryGetStringField\(TEXT\("assetPath"\), AssetPath\);[\s\S]*?Payload->TryGetStringField\(TEXT\("systemPath"\), AssetPath\);/u);
     expect(context.split("Missing 'systemPath' (or 'assetPath'): the Niagara System.")).toHaveLength(3);
-    for (const file of ['DynamicInput', 'Parameters']) {
-      expect(code('NiagaraAuthoring', `McpAutomationBridge_NiagaraAuthoringHandlers${file}.cpp`), file).toContain("Missing 'systemPath' (or 'assetPath'): the Niagara System.");
+    for (const file of ['DynamicInput', 'Params']) {
+      expect(code('NiagaraAuthoring', `McpNiagara${file}.cpp`), file).toContain("Missing 'systemPath' (or 'assetPath'): the Niagara System.");
     }
   });
 
@@ -219,14 +219,14 @@ describe('the Niagara system edits and the Behavior Tree graph route declare the
   });
 
   it('the Behavior Tree handlers read what the records declare: the graph route both spellings, the asset route behaviorTreePath', () => {
-    const helper = code('BehaviorTree', 'McpAutomationBridge_BehaviorTreeHandlersPrivate.h');
-    const dispatch = code('BehaviorTree', 'McpAutomationBridge_BehaviorTreeHandlers.cpp');
+    const helper = code('BehaviorTree', 'McpBTPrivate.h');
+    const dispatch = code('BehaviorTree', 'McpBTHandlers.cpp');
 
     expect(helper).toMatch(/inline FString ReadBehaviorTreePath\(const TSharedPtr<FJsonObject>& Payload\)\s*\{\s*FString Path;\s*if \(!Payload->TryGetStringField\(TEXT\("assetPath"\), Path\) \|\| Path\.IsEmpty\(\)\) \{\s*Payload->TryGetStringField\(TEXT\("behaviorTreePath"\), Path\);\s*\}\s*return Path;\s*\}/u);
-    expect(code('BehaviorTree', 'McpAutomationBridge_BehaviorTreeHandlersGraph.cpp')).toContain('const FString AssetPath = ReadBehaviorTreePath(Context.Payload);');
+    expect(code('BehaviorTree', 'McpBTGraph.cpp')).toContain('const FString AssetPath = ReadBehaviorTreePath(Context.Payload);');
     expect(dispatch.split('LoadBehaviorTreeForGraph(').length - 1, 'one loader for add_node, connect_nodes, remove_node, break_connections, set_node_properties and add_subnode').toBe(1);
     for (const file of ['Assets', 'Decorators', 'NodeConfig']) {
-      const source = code('AI', 'BehaviorTree', `McpAutomationBridge_AIHandlersBehaviorTree${file}.cpp`);
+      const source = code('AI', 'BehaviorTree', `McpAIBehaviorTree${file}.cpp`);
       expect(source, file).toContain('TEXT("behaviorTreePath")');
       expect(source, `${file} reads no assetPath`).not.toContain('TEXT("assetPath")');
     }

@@ -5,8 +5,8 @@
  * and apply_force.
  */
 import type { CapabilityRecordSource } from '../../model.js';
-import { buildCoreRecord } from '../core/builder.js';
-import { DOMAIN, P } from './properties.js';
+import { ANY_EDITOR_STATE, buildCoreRecord } from '../core/builder.js';
+import { DOMAIN, P, PLACEMENT_FACTS } from './properties.js';
 
 const FAMILY_TRANSFORM = 'transform';
 const FAMILY_PHYSICS = 'physics';
@@ -31,7 +31,15 @@ const TRANSFORM_INPUT = {
       required: ['actorName'],
       additionalProperties: false,
     },
-    description: 'Many actors in one call, each {actorName, location? or offset?, rotation?, scale?} with its own values (an omitted part keeps its current value); every actor is reported, and the call fails naming any that did not move.',
+    description: 'Many actors in one call, each {actorName, location? or offset?, rotation?, scale?} with its own values; a part an item leaves out takes the call\'s own location, offset, rotation or scale when given, else keeps its current value. Every actor is reported, and the call fails naming any that did not move.',
+  },
+  actorNames: {
+    type: 'array', items: { type: 'string' }, minItems: 1, maxItems: 500,
+    description: 'Many actors given the same change: the location, offset, rotation or scale beside it (forty frost caps rescaled by one scale, a group raised by one offset). Reported as actors is.',
+  },
+  report: {
+    type: 'string', enum: ['all', 'failures'],
+    description: 'With actors or actorNames: which items results lists, all (default) or only those that failed or look misplaced (placementWarning); movedActors counts every actor either way.',
   },
 };
 
@@ -69,12 +77,14 @@ const TRANSFORM_OUTPUT_PROPS = {
   },
   results: {
     type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
-    description: 'actors: one entry per actor (actorName, success, read-back location/rotation/scale, placementWarning, error).',
+    description: 'actors or actorNames: one entry per actor (actorName, success, read-back location/rotation/scale, placementWarning, coplanarFaces, error), its placement checked once every actor in the call has moved; report failures keeps only the failed and misplaced ones.',
   },
-  movedActors: { type: 'number', description: 'actors: how many actors took their transform.' },
+  movedActors: { type: 'number', description: 'actors or actorNames: how many actors took their transform.' },
+  report: { type: 'string', description: 'Echoes report when it narrowed results.' },
+  ...PLACEMENT_FACTS,
   affectedActors: {
     type: 'array', items: { type: 'string' },
-    description: 'actors: the actors that took their transform, each by name and once; the receipt lists them as changes, with an actor handle each.',
+    description: 'actors or actorNames: the actors that took their transform, each by name and once; the receipt lists them as changes, with an actor handle each.',
   },
 } as const;
 
@@ -82,16 +92,17 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_actor',
     action: 'set_transform',
+    editorStates: ANY_EDITOR_STATE,
     domain: DOMAIN,
     family: FAMILY_TRANSFORM,
     topics: ['move actor', 'set actor location', 'set position', 'rotate actor', 'set rotation', 'scale actor', 'teleport actor', 'translate'],
     aliases: ['control_actor.move', 'control_actor.move_actor'],
-    summary: 'Move, rotate or scale an actor by setting its world transform (location, rotation, scale) or moving it by an offset, or many actors in one call with actors.',
-    whenToUse: ['An actor must be moved, rotated, or rescaled in one call.', 'Several actors each need their own new location, rotation or scale (actors).', 'A group of actors must shift by the same amount (actors, each with offset).'],
+    summary: 'Move, rotate or scale an actor by setting its world transform (location, rotation, scale) or moving it by an offset, or many actors in one call: actors gives each its own, actorNames gives all the same.',
+    whenToUse: ['An actor must be moved, rotated, or rescaled in one call.', 'Several actors each need their own new location, rotation or scale (actors).', 'A group of actors must shift, turn or rescale by the same amount (actorNames with offset, rotation or scale).'],
     whenNotToUse: ['Only the transform needs to be read (use get_transform).'],
     inputProps: TRANSFORM_INPUT,
     required: [],
-    requiredOneOf: ['actorName', 'actors'],
+    requiredOneOf: ['actorName', 'actors', 'actorNames'],
     effect: 'write',
     behavior: { idempotency: 'idempotent' },
     exampleInput: { action: 'set_transform', actorName: 'Cube1', location: [10, 20, 30], rotation: [0, 90, 0], scale: [1, 1, 1] },
@@ -101,6 +112,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_actor',
     action: 'teleport_actor',
+    editorStates: ANY_EDITOR_STATE,
     domain: DOMAIN,
     family: FAMILY_TRANSFORM,
     summary: 'Alias of set_transform. The bridge dispatches both names to the same handler.',
@@ -108,7 +120,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['Use set_transform to avoid alias normalization.'],
     inputProps: TRANSFORM_INPUT,
     required: [],
-    requiredOneOf: ['actorName', 'actors'],
+    requiredOneOf: ['actorName', 'actors', 'actorNames'],
     effect: 'write',
     behavior: { idempotency: 'idempotent' },
     exampleInput: { action: 'teleport_actor', actorName: 'Cube1', location: [5, 5, 5] },
@@ -118,6 +130,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_actor',
     action: 'set_actor_location',
+    editorStates: ANY_EDITOR_STATE,
     domain: DOMAIN,
     family: FAMILY_TRANSFORM,
     summary: 'Alias of set_transform (location-only intent); normalizes to set_transform.',
@@ -125,7 +138,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['Use set_transform for the full transform verb.'],
     inputProps: TRANSFORM_INPUT,
     required: [],
-    requiredOneOf: ['actorName', 'actors'],
+    requiredOneOf: ['actorName', 'actors', 'actorNames'],
     effect: 'write',
     behavior: { idempotency: 'idempotent' },
     exampleInput: { action: 'set_actor_location', actorName: 'Cube1', location: [100, 0, 0] },
@@ -135,6 +148,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_actor',
     action: 'set_actor_rotation',
+    editorStates: ANY_EDITOR_STATE,
     domain: DOMAIN,
     family: FAMILY_TRANSFORM,
     summary: 'Alias of set_transform (rotation-only intent); normalizes to set_transform.',
@@ -142,7 +156,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['Use set_transform for the full transform verb.'],
     inputProps: TRANSFORM_INPUT,
     required: [],
-    requiredOneOf: ['actorName', 'actors'],
+    requiredOneOf: ['actorName', 'actors', 'actorNames'],
     effect: 'write',
     behavior: { idempotency: 'idempotent' },
     exampleInput: { action: 'set_actor_rotation', actorName: 'Cube1', rotation: [0, 45, 0] },
@@ -152,6 +166,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_actor',
     action: 'set_actor_scale',
+    editorStates: ANY_EDITOR_STATE,
     domain: DOMAIN,
     family: FAMILY_TRANSFORM,
     summary: 'Alias of set_transform (scale-only intent); normalizes to set_transform.',
@@ -159,7 +174,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['Use set_transform for the full transform verb.'],
     inputProps: TRANSFORM_INPUT,
     required: [],
-    requiredOneOf: ['actorName', 'actors'],
+    requiredOneOf: ['actorName', 'actors', 'actorNames'],
     effect: 'write',
     behavior: { idempotency: 'idempotent' },
     exampleInput: { action: 'set_actor_scale', actorName: 'Cube1', scale: [2, 2, 2] },
@@ -169,6 +184,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_actor',
     action: 'get_transform',
+    editorStates: ANY_EDITOR_STATE,
     domain: DOMAIN,
     family: FAMILY_TRANSFORM,
     topics: ['actor location', 'actor position', 'actor rotation', 'where is the actor'],
@@ -191,21 +207,24 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
     ...buildCoreRecord({
       parentTool: 'control_actor',
       action: 'sample_motion',
+      editorStates: ANY_EDITOR_STATE,
       domain: DOMAIN,
       family: FAMILY_TRANSFORM,
-      topics: ['sample motion', 'record trajectory', 'track actor over time', 'watch actor move', 'jump height'],
-      summary: 'Watch an actor over game time in Play-In-Editor and return its location, velocity and chosen properties at every interval, plus start/end and min/max extents, in one call; it can also press keys at exact game times (inputs) and wait for another actor\'s property to change before it starts (startWhen).',
+      topics: ['sample motion', 'record trajectory', 'track actor over time', 'watch actor move', 'jump height', 'foot sliding', 'bone position over time'],
+      summary: 'Watch an actor over game time in Play-In-Editor and return its location, velocity, rotation and chosen properties at every interval, plus start/end and min/max extents, in one call; it can also follow points on the actor (bones, sockets, components) with their height over the ground, press keys at exact game times (inputs) and wait for another actor\'s property to change before it starts (startWhen).',
       whenToUse: [
         'A jump, spring launch, moving platform, enemy patrol or fall must be proven in PIE without a sleep-and-poll loop.',
         'The peak height, landing point or path of a moving actor is needed.',
         'An input must land at an exact moment (jump when a platform appears): inputs and startWhen run the whole timeline inside one call, so the caller\'s own delay between calls cannot shift it.',
+        'Feet must be proven to plant without sliding, sinking or floating, or a hand or muzzle must be followed: points with groundTrace measure it per point.',
+        'A pawn dies, or a trigger fires, and what touched it is unknown: overlaps names every actor that began touching it, sample by sample.',
       ],
       whenNotToUse: ['Only the current transform is needed (use get_transform).', 'Nothing is playing: the editor world does not simulate (start PIE with control_editor.play).'],
       inputProps: {
         actorName: P.pieActorName,
         durationSeconds: { type: 'number', description: 'Game seconds to watch (default 2, at most 30). Game time, so a clock slowed with set_game_speed still covers the same span of play; a run that needs more wall-clock time than maxRealSeconds stops there (endedBecause realTimeCap).' },
         intervalSeconds: { type: 'number', description: 'Game seconds between samples (default 0.05; 0 samples every frame). At most 400 samples are kept.' },
-        propertyNames: { type: 'array', items: { type: 'string' }, description: 'Actor properties read at every sample, e.g. ["bDead", "HP"], or a component\'s as "Component.Property" ("Visual.RelativeScale3D" catches a squash on landing), the component by its name or by the actor property that holds it ("CharacterMovement.MaxWalkSpeed"); a name that resolves to nothing is listed under missingProperties.' },
+        propertyNames: { type: 'array', items: { type: 'string' }, description: 'Actor properties read at every sample, each as JSON (a number, true or false, the name of an enum value, the path of an object, or an array of them), e.g. ["bDead", "HP"], or a component\'s as "Component.Property" ("Visual.RelativeScale3D" catches a squash on landing), the component by its name or by the actor property that holds it ("CharacterMovement.MaxWalkSpeed"); a name that resolves to nothing is listed under missingProperties.' },
         maxRealSeconds: { type: 'number', description: 'Wall-clock cap (default 25, at most 50): the run stops here and reports how much game time it covered, so a long run or an editor throttled to 3 fps still answers before a client that gives up at 30 s. Raise it only for a client that waits longer.' },
         inputs: {
           type: 'array',
@@ -221,12 +240,19 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
           },
           description: 'Keys pressed and released at exact game times during the run (at most 32), e.g. [{"key":"D","atSeconds":0,"holdSeconds":2},{"key":"SpaceBar","atSeconds":0.6,"holdSeconds":0.2}]. A key still held when the run ends is released.',
         },
+        points: {
+          type: 'array', items: { type: 'string' }, maxItems: 8,
+          description: 'Places on the actor sampled with it (at most 8): a component by its name (LegL), a bone or socket of any of its components (foot_l, hand_r), or a component\'s own socket as Component.Socket (Weapon.Muzzle). Each sample\'s points gives each one\'s world location [x, y, z]; a name the actor lacks is refused with the names it has. Fewer samples are kept with points: 400 x 2 / (2 + points).',
+        },
+        groundTrace: { type: 'boolean', description: 'With points: each sample\'s aboveGround gives each point\'s height over the first surface below it that blocks Visibility (the actor and what is attached to it ignored), negative when the point is inside that surface, and pointStats sums up its contact.' },
+        contactCm: { type: 'number', description: 'With groundTrace: how far above its own lowest height a point still counts as planted (default 2 cm), so an ankle bone that never reaches the floor still counts as down when the foot is.' },
+        overlaps: { type: 'boolean', description: 'Also watch which actors overlap the watched one, checked every frame: a sample names those that began (overlapsBegan) or stopped (overlapsEnded) touching it since the sample before, and overlapped lists every actor it touched. Finds what killed a pawn, what a pickup or trigger fired on, or an enemy wandering into a spawn point.' },
         startWhen: {
           type: 'object',
           properties: {
             actorName: { type: 'string', description: 'Actor whose property starts the run.' },
             propertyName: { type: 'string', description: 'That actor\'s property, as propertyNames reads it: bActorEnableCollision, or a component\'s as Component.Property (CharacterMovement.MovementMode starts the run on a landing when equals is MOVE_Walking).' },
-            equals: { description: 'Value that starts the run, as samples show it ("True", "False", 3).' },
+            equals: { description: 'Value that starts the run, as samples show it (true, false, 3, "Walking").' },
             waitForChange: { type: 'boolean', description: 'Default true: start only when the value BECOMES equals (a platform appearing), not while it already is.' },
             maxWaitSeconds: { type: 'number', description: 'Game seconds to wait before giving up with endedBecause startWhenTimeout (default 10, at most 30).' },
           },
@@ -240,12 +266,13 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
         actorName: { type: 'string', description: 'The actor watched.' },
         samples: {
           type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
-          description: 'One entry per sample: t (game seconds since the start), location [x, y, z], velocity [x, y, z], properties.',
+          description: 'One entry per sample: t (game seconds since the start), location [x, y, z], velocity [x, y, z] (cm/s: the movement or physics velocity, or for an actor moved by setting its location, the one its positions show since the sample before), rotation [pitch, yaw, roll] in degrees (on the first sample and on each one where it changed, so a sample without it still has the last one written), properties, with points their world locations (points) and heights over the ground (aboveGround, with groundTrace; a point with nothing below it within 10 m is left out), and with overlaps the actors that began or stopped touching it since the sample before (overlapsBegan, overlapsEnded).',
         },
+        overlapped: { type: 'array', items: { type: 'string' }, description: 'With overlaps: every actor that touched the watched one during the run, first touch first; empty when nothing did.' },
         sampleCount: { type: 'number', description: 'How many samples were taken.' },
         gameSeconds: { type: 'number', description: 'Game time covered.' },
         realSeconds: { type: 'number', description: 'Wall-clock time the run took.' },
-        endedBecause: { type: 'string', description: 'duration, realTimeCap, sampleCap, actorDestroyed (a PIE death that reloads the level ends here), worldEnded (PIE stopped), startWhenTimeout (startWhen never happened within maxWaitSeconds) or gamePaused (game time stood still for 3 s: a title or pause menu holds the game; the warning says how to get past it).' },
+        endedBecause: { type: 'string', description: 'duration, realTimeCap, sampleCap, actorDestroyed (the actor was destroyed while its level kept running), levelChanged (the game loaded a level and PIE runs on in it: a death that reloads the level, or travel to the next one), worldEnded (PIE stopped),startWhenTimeout (startWhen never happened within maxWaitSeconds) or gamePaused (game time stood still for 3 s: a title or pause menu holds the game; the warning says how to get past it).' },
         inputsApplied: {
           type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
           description: 'One entry per input: key, at, hold, and down/up, the game seconds since the start when it was pressed and released (up is when the run ended for a key still held).',
@@ -256,6 +283,10 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
         min: { type: 'array', items: { type: 'number' }, description: 'Smallest x, y and z sampled (the lowest point is min[2]).' },
         max: { type: 'array', items: { type: 'number' }, description: 'Largest x, y and z sampled (the peak height is max[2]).' },
         missingProperties: { type: 'array', items: { type: 'string' }, description: 'propertyNames the actor\'s class does not have.' },
+        pointStats: {
+          type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true,
+          description: 'Per point: min and max [x, y, z] over the run; with groundTrace also minAboveGround and maxAboveGround (a negative minimum means it sank into the surface, a large one that it never touched it), contactSeconds (time spent planted) and contactSlip (cm it moved across the ground while planted: a planted foot that slides shows here).',
+        },
         windowRestored: { type: 'boolean', description: 'True when the editor window was minimized: a minimized editor runs PIE at about 3 fps, so it was put back on screen, without taking focus, before the run and is minimized again when the run ends. The background CPU throttle (Use Less CPU when in Background) is off for the run only, whatever the window did.' },
       },
       outputRequired: [],
@@ -263,9 +294,9 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
       costLatency: 'interactive',
       exampleInput: { action: 'sample_motion', actorName: 'PlayerPawn', durationSeconds: 1.5, propertyNames: ['bDead'] },
       exampleOutput: {
-        success: true, message: '31 samples of BP_Mario_C_0 over 1.50 game seconds (duration)',
-        actorName: 'BP_Mario_C_0', sampleCount: 31, gameSeconds: 1.5, realSeconds: 3.2, endedBecause: 'duration',
-        samples: [{ t: 0, location: [8500, 0, 56.1], velocity: [0, 0, 0], properties: { bDead: 'False' } }],
+        success: true, message: '31 samples of BP_Hero_C_0 over 1.50 game seconds (duration)',
+        actorName: 'BP_Hero_C_0', sampleCount: 31, gameSeconds: 1.5, realSeconds: 3.2, endedBecause: 'duration',
+        samples: [{ t: 0, location: [8500, 0, 56.1], velocity: [0, 0, 0], rotation: [0, 90, 0], properties: { bDead: false } }],
         start: [8500, 0, 56.1], end: [9310, 0, 130.2], min: [8500, 0, 56.1], max: [9310, 0, 302.4],
       },
     }),
@@ -273,7 +304,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_actor',
     action: 'apply_force',
-    topics: ['push actor', 'apply impulse'],
+    topics: ['push actor', 'apply impulse', 'add impulse'],
     domain: DOMAIN,
     family: FAMILY_PHYSICS,
     summary: 'Apply a physics force vector to an actor, auto-enabling simulation on failure.',

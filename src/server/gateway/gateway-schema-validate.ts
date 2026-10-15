@@ -97,7 +97,18 @@ export function describeUndeclaredParameter(
   const near = declared
     .filter((name) => score(name) > 0)
     .sort((a, b) => (score(b) - score(a)) || (a.length - b.length) || (a < b ? -1 : a > b ? 1 : 0));
-  const hint = near.length > 0 ? `did you mean '${near[0]}'; ` : '';
+  // A key that is one of a declared parameter's values (motion for readMode) is that parameter set to it: the list
+  // named readMode and never said motion was one of its values. Mirrors McpParameterHints::EnumValueHint.
+  const enumHint = declared
+    .map((name) => {
+      const schema = properties?.[name];
+      const value = isRecord(schema) && Array.isArray(schema.enum)
+        ? schema.enum.find((entry) => typeof entry === 'string' && entry.toLowerCase() === lowerKey)
+        : undefined;
+      return typeof value === 'string' ? `did you mean ${name}: '${value}'; ` : undefined;
+    })
+    .find((entry) => entry !== undefined);
+  const hint = enumHint ?? (near.length > 0 ? `did you mean '${near[0]}'; ` : '');
   const ranked = [...near, ...declared.filter((name) => score(name) === 0)];
   const listed = ranked.slice(0, MAX_LISTED_PARAMETERS);
   const more = ranked.length > listed.length ? ` and ${ranked.length - listed.length} more` : '';
@@ -205,6 +216,14 @@ function validateObject(
   pointer: string
 ): SchemaViolation | undefined {
   const properties = isRecord(schema.properties) ? schema.properties : undefined;
+  // A key the action does not take, sent beside a missing one, is usually that field misnamed (path for savePath,
+  // assetPath for meshPath): the refusal named only the missing field, and the stray key looked accepted.
+  const strayNote = (): string => {
+    const stray = schema.additionalProperties === false
+      ? Object.keys(value).filter((key) => properties === undefined || !Object.hasOwn(properties, key))
+      : [];
+    return stray.length === 0 ? '' : `; sent ${stray.join(', ')}, which this action does not take`;
+  };
 
   if (Array.isArray(schema.required)) {
     for (const name of schema.required) {
@@ -212,7 +231,7 @@ function validateObject(
         return {
           reason: 'missing-required',
           pointer: `${pointer}/${name}`,
-          message: describeMissingParameter(name, properties)
+          message: `${describeMissingParameter(name, properties)}${strayNote()}`
         };
       }
     }
@@ -225,7 +244,7 @@ function validateObject(
       return {
         reason: 'required-one-of',
         pointer: `${pointer}/requiredOneOf`,
-        message: `At least one of [${group.join(', ')}] must be provided`
+        message: `At least one of [${group.join(', ')}] must be provided${strayNote()}`
       };
     }
   }
@@ -336,13 +355,19 @@ export function applyDeclaredDefaults(
 // Anything else (a typo'd key, a short or over-long array, a non-numeric component)
 // falls through to the schema's guided type error instead of being silently truncated
 // or having keys dropped. In a set of four keys the last one (w / a) is optional, so
-// three of four are required. The sets and their order are mirrored by
+// three of four are required. A shorter set never stands in for a longer one the
+// schema declares: ['x','y'] does not match a schema that also declares z, or a
+// two-number array would ship as {x, y} and the handler would fill z with its
+// default. pitch/yaw/roll comes first: a rotation that also declares x/y/z aliases
+// (sequence.cinematic.create_cinematic_asset) reads an array as [pitch, yaw, roll],
+// the order every rotation array in the catalogue documents, and its handler reads
+// pitch/yaw/roll only. The sets and their order are mirrored by
 // McpNativeGatewayVectorCoercion.cpp and pinned by
 // tests/unit/tools/vector-shape-coercion-parity.test.ts — change both or neither.
 export const VECTOR_KEY_SETS: ReadonlyArray<readonly string[]> = [
+  ['pitch', 'yaw', 'roll'],
   ['x', 'y', 'z', 'w'],
   ['x', 'y', 'z'],
-  ['pitch', 'yaw', 'roll'],
   ['r', 'g', 'b', 'a'],
   ['width', 'height'],
   ['x', 'y']
@@ -367,12 +392,22 @@ function objectToVector(value: Record<string, unknown>): number[] | undefined {
   return undefined;
 }
 
+// True when a longer set that contains every key of `keys` has a further key the
+// schema declares — that longer set describes the schema, so `keys` must not match.
+function isShadowedByLongerSet(keys: readonly string[], declared: readonly string[]): boolean {
+  return VECTOR_KEY_SETS.some((longer) =>
+    longer.length > keys.length
+    && keys.every((key) => longer.includes(key))
+    && longer.some((key) => !keys.includes(key) && declared.includes(key)));
+}
+
 function vectorToObject(values: readonly number[], propertySchema: Record<string, unknown>): Record<string, number> | undefined {
   const declared = isRecord(propertySchema.properties) ? Object.keys(propertySchema.properties) : [];
   if (declared.length === 0) return undefined;
   for (const keys of VECTOR_KEY_SETS) {
     const required = keys.length === 4 ? keys.length - 1 : keys.length;
     if (!keys.slice(0, required).every((key) => declared.includes(key))) continue;
+    if (isShadowedByLongerSet(keys, declared)) continue;
     const consumed = keys.filter((key) => declared.includes(key));
     // Over-long arrays would silently drop their tail; short arrays below the
     // required prefix would fabricate handler defaults. Both refuse instead.
@@ -395,6 +430,7 @@ export function coerceVectorShapes(args: Record<string, unknown>, schema: unknow
     if (types.includes('array') && !types.includes('object') && isRecord(value) && !Array.isArray(value)) {
       replacement = objectToVector(value);
     } else if (types.includes('object') && !types.includes('array') && Array.isArray(value) && value.every(isFiniteNumber)) {
+      // Only arrays of finite numbers coerce (the native twin checks the same before reading numbers).
       replacement = vectorToObject(value, propertySchema);
     } else if (types.includes('array') && Array.isArray(value) && isRecord(propertySchema.items)) {
       // Batch items (actors: [{location: {x, y, z}}]) take the same shapes as the single form.

@@ -22,9 +22,14 @@ const testCases = [
 
   // === PLAYBACK / PIE STATE ===
   { scenario: 'PLAYBACK: play', toolName: 'control_editor', arguments: { action: 'play' }, expected: 'success' },
+  // propertyNames are read on the actor itself as well as on its components, and a name found nowhere is listed.
+  { scenario: 'INFO: runtime_report reads the actor\'s own properties while the game runs', toolName: 'inspect', arguments: { action: 'runtime_report', actorName: PIE_PAWN, propertyNames: ['InitialLifeSpan', 'NoSuchProperty'] }, expected: 'success', assertions: [{ path: 'structuredContent.result.actors.0.properties.InitialLifeSpan', equals: 0, label: 'read on the actor' }, { path: 'structuredContent.result.propertiesNotFound.0', equals: 'NoSuchProperty', label: 'the unknown name is listed once' }] },
   { scenario: 'ACTION: set_view_target', toolName: 'control_editor', arguments: { action: 'set_view_target', actorName: FOCUS_ACTOR, blendTime: 0 }, expected: 'success' },
   { scenario: 'ACTION: set_game_view_target objectPath', toolName: 'control_editor', arguments: { action: 'set_game_view_target', objectPath: FOCUS_ACTOR, blendTime: 0.1 }, expected: 'success' },
   { scenario: 'ACTION: possess', toolName: 'control_editor', arguments: { action: 'possess', actorName: PIE_PAWN }, expected: 'success|NOT_IN_PIE' },
+  // The reply leaves while a held key is still down, so it names the pawn to read once the key is released.
+  { scenario: 'ACTION: apply_damage hits an actor in the running game', toolName: 'manage_combat', arguments: { action: 'apply_damage', actorName: PIE_PAWN, damage: 10, causerName: FOCUS_ACTOR, damageType: '/Script/Engine.DamageType' }, expected: 'success', assertions: [{ path: 'structuredContent.result.damageApplied', equals: 10, label: 'the pawn took the hit' }] },
+  { scenario: 'ACTION: simulate_input in PIE names the pawn the key drives', toolName: 'control_editor', arguments: { action: 'simulate_input', type: 'key_tap', key: 'W' }, expected: 'success', assertions: [{ path: 'structuredContent.result.pawn', equals: PIE_PAWN, label: 'the possessed pawn is named' }] },
   // The game draws its view target's camera until the player is ejected: there is no free camera to move, and the refusal names the fix.
   { scenario: 'ERROR: set_camera while the player is not ejected', toolName: 'control_editor', arguments: { action: 'set_camera', location: cameraLocation, rotation: cameraRotation }, expected: 'error|PIE_VIEW_NOT_EJECTED' },
   { scenario: 'ERROR: screenshot from a camera while the player is not ejected', toolName: 'control_editor', arguments: { action: 'screenshot', mode: 'editor_viewport', resolution: '320x180', location: cameraLocation, rotation: cameraRotation }, expected: 'error|PIE_VIEW_NOT_EJECTED' },
@@ -40,7 +45,12 @@ const testCases = [
   { scenario: 'OPTIONAL: start_recording with durationSeconds and frameRate', toolName: 'control_editor', arguments: { action: 'start_recording', name: `Recording_Opt_${ts}`, durationSeconds: 1, frameRate: 30 }, expected: 'success' },
   { scenario: 'PLAYBACK: stop_recording after optional capture', toolName: 'control_editor', arguments: { action: 'stop_recording' }, expected: 'success' },
   { scenario: 'PLAYBACK: pause', toolName: 'control_editor', arguments: { action: 'pause' }, expected: 'success' },
-  { scenario: 'PLAYBACK: resume', toolName: 'control_editor', arguments: { action: 'resume' }, expected: 'success' },
+  // A pawn teleported into a paused game floats where it was put; the reply and its receipt say why.
+  { scenario: 'VERIFY: a world edit while paused says nothing will move', toolName: 'control_actor', arguments: { action: 'set_transform', actorName: PIE_PAWN, location: { x: 180, y: 0, z: 400 } }, expected: 'success', assertions: [{ path: 'structuredContent.result.details.gamePaused', equals: true, label: 'the reply flags the paused play world' }, { path: 'structuredContent.receipt.warnings.1', includes: 'The game is paused', label: 'and the receipt says nothing will move' }] },
+  { scenario: 'VERIFY: world settings read the pause', toolName: 'inspect', arguments: { action: 'get_world_settings' }, expected: 'success', assertions: [{ path: 'structuredContent.result.isPaused', equals: true, label: 'the play world reads paused' }] },
+  // A game that pauses itself (a title screen) stays paused with the editor's pause off: resume says so.
+  { scenario: 'PLAYBACK: resume', toolName: 'control_editor', arguments: { action: 'resume' }, expected: 'success|GAME_PAUSED' },
+  { scenario: 'PLAYBACK: resume with unpauseGame', toolName: 'control_editor', arguments: { action: 'resume', unpauseGame: true }, expected: 'success' },
   { scenario: 'CONFIG: set_game_speed', toolName: 'control_editor', arguments: { action: 'set_game_speed', speed: 0.5 }, expected: 'success' },
   { scenario: 'CONFIG: set_fixed_delta_time', toolName: 'control_editor', arguments: { action: 'set_fixed_delta_time', deltaTime: 0.01667 }, expected: 'success' },
   { scenario: 'CONFIG: set_fixed_delta_time off', toolName: 'control_editor', arguments: { action: 'set_fixed_delta_time', deltaTime: 0 }, expected: 'success' },
@@ -128,7 +138,6 @@ const testCases = [
   { scenario: 'Cleanup: delete spawned actors', toolName: 'control_actor', arguments: { action: 'delete', actorNames: [FOCUS_ACTOR, PIE_PAWN] }, expected: 'success|not found' },
   // open_level refuses to drop unsaved level changes (DIRTY_PACKAGES), and the delete above made some.
   { scenario: 'Setup: save the cleanup before leaving the level', toolName: 'control_editor', arguments: { action: 'save_all' }, expected: 'success' },
-  { scenario: 'ACTION: open_level via path alias', toolName: 'control_editor', arguments: { action: 'open_level', path: '/Game/MCPTest/MainLevel' }, expected: 'success' },
   { scenario: 'ACTION: open_level', toolName: 'control_editor', arguments: { action: 'open_level', levelPath: '/Game/MCPTest/MainLevel' }, expected: 'success' },
 ];
 

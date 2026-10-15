@@ -1,0 +1,164 @@
+#pragma once
+
+#include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/HandlerUtils/McpHandlerUtils.h"
+
+#include "Dom/JsonObject.h"
+#include "Foundation/BridgeHelpers/McpHelpers.h"
+#include "EngineWireSubsystem.h"
+#include "Transport/WebSocket/McpBridgeWebSocket.h"
+#include "Misc/EngineVersionComparison.h"
+
+#include "AI/NavigationSystemBase.h"
+#include "Editor.h"
+#include "Engine/Blueprint.h"
+#include "Engine/SCS_Node.h"
+#include "Engine/SimpleConstructionScript.h"
+#include "Engine/World.h"
+#include "EngineUtils.h"
+#include "Kismet2/BlueprintEditorUtils.h"
+#include "NavAreas/NavArea.h"
+#include "NavAreas/NavArea_Default.h"
+#include "NavAreas/NavArea_Null.h"
+#include "NavAreas/NavArea_Obstacle.h"
+#include "NavLinkCustomComponent.h"
+#include "NavMesh/NavMeshBoundsVolume.h"
+#include "NavMesh/RecastNavMesh.h"
+#include "NavModifierComponent.h"
+#include "Navigation/NavLinkProxy.h"
+#include "NavigationSystem.h"
+
+namespace McpNavigationHandlers
+{
+inline bool IsValidActorName(const FString& Name)
+{
+    return !Name.IsEmpty()
+        && !Name.Contains(TEXT(".."))
+        && !Name.Contains(TEXT("/"))
+        && !Name.Contains(TEXT("\\"))
+        && !Name.Contains(TEXT(":"));
+}
+
+inline bool IsValidNavigationPath(const FString& Path)
+{
+    return !Path.IsEmpty() && IsValidAssetPath(Path);
+}
+
+inline ENavLinkDirection::Type ParseNavLinkDirection(const FString& Direction)
+{
+    if (Direction == TEXT("LeftToRight"))
+    {
+        return ENavLinkDirection::LeftToRight;
+    }
+    if (Direction == TEXT("RightToLeft"))
+    {
+        return ENavLinkDirection::RightToLeft;
+    }
+    return ENavLinkDirection::BothWays;
+}
+
+inline ANavLinkProxy* FindNavLinkProxyByName(UWorld* World, const FString& ActorName)
+{
+    if (!World)
+    {
+        return nullptr;
+    }
+    for (TActorIterator<ANavLinkProxy> It(World); It; ++It)
+    {
+        if (It->GetActorLabel() == ActorName || It->GetName() == ActorName)
+        {
+            return *It;
+        }
+    }
+    return nullptr;
+}
+
+// The NavLinkProxy the payload's actorName names in the editor world; replies and returns null when actorName is
+// missing or unsafe, there is no editor world, or nothing matches.
+ANavLinkProxy* ResolveNavLinkOrReply(
+    UEngineWireSubsystem* Self,
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket);
+
+// create_nav_link_proxy / create_smart_link: a NavLinkProxy at location linking startPoint to endPoint -- as a point
+// link, or (bSmart) through its smart link component.
+bool SpawnNavLink(
+    UEngineWireSubsystem* Self,
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket,
+    bool bSmart);
+
+bool HandleConfigureNavMeshSettings(
+    UEngineWireSubsystem* Self,
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket);
+
+bool HandleSetNavAgentProperties(
+    UEngineWireSubsystem* Self,
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket);
+
+bool HandleRebuildNavigation(
+    UEngineWireSubsystem* Self,
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket);
+
+bool HandleCreateNavModifierComponent(
+    UEngineWireSubsystem* Self,
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket);
+
+bool HandleSetNavAreaClass(
+    UEngineWireSubsystem* Self,
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket);
+
+bool HandleConfigureNavAreaCost(
+    UEngineWireSubsystem* Self,
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket);
+
+bool HandleCreateNavLinkProxy(
+    UEngineWireSubsystem* Self,
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket);
+
+bool HandleConfigureNavLink(
+    UEngineWireSubsystem* Self,
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket);
+
+bool HandleSetNavLinkType(
+    UEngineWireSubsystem* Self,
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket);
+
+bool HandleCreateSmartLink(
+    UEngineWireSubsystem* Self,
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket);
+
+bool HandleConfigureSmartLinkBehavior(
+    UEngineWireSubsystem* Self,
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket);
+
+bool HandleGetNavigationInfo(
+    UEngineWireSubsystem* Self,
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket);
+}

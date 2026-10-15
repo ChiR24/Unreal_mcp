@@ -23,6 +23,7 @@ Entry: `src/server/tool-registry-gateway.ts` → `handleUnrealGatewayCall()` swi
 | `gateway-dispatch-by.ts` | folded families: `applyFoldedPins()` and `inferSelector()` before validation, `resolveDispatchAction()` after; `unreadVariantParams()` warns about a sent param only other variants read |
 | `gateway-execute-dispatch.ts` | `runCapability()` → `handleManageToolsCall` (manage_tools) or `executeAutomationRequest(tools, parentTool, { ...params, action }, controls)`; output held to the declared schema |
 | `gateway-execute-idempotency.ts`, `idempotency-ledger.ts` | principal-scoped ledger (cap 1024; native mirror cap 4096 — change both) |
+| `gateway-task-results.ts` | calls that answered "still running" (`answerWhileRunning` in `gateway-execute.ts`, past `STILL_RUNNING_AFTER_MS`, any call without `timeoutMs`) and their compacted final replies, last 32, read by `manage_tools get_task_result`; native mirror `Private/MCP/DynamicTools/McpTaskResults` |
 | `gateway-execute-envelope.ts`, `gateway-receipt-context.ts` | success/error envelopes, receipts |
 | `direct-call-migration.ts` | `DIRECT_TOOL_CALL_REMOVED` receipt for direct canonical-name calls |
 | `gateway-guidance.ts` | `closestMatches()` + `buildNextCall()` |

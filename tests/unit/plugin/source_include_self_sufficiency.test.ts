@@ -10,7 +10,7 @@
 // declaration disappears.
 //
 // That is not hypothetical. Adding one file under Domains/ControlEditor broke
-// Domains/Misc/McpAutomationBridge_MiscHandlersWorldObjects.cpp with twelve
+// a world-objects handler in the former Misc domain with twelve
 // "identifier not found" errors for helpers it had always used and never
 // included; the Misc domain prelude included only CoreMinimal.h. The failure
 // points at a file nobody touched, which makes it expensive to read.
@@ -26,7 +26,7 @@ import { describe, expect, it } from 'vitest';
 
 const privateRoot = resolve(
   process.cwd(),
-  'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private',
+  'plugins/EngineWire/Source/EngineWire/Private',
 );
 
 /** Helpers declared in one shared header and used across many domains. */
@@ -35,24 +35,28 @@ const SHARED_HELPERS =
 
 /** Either the umbrella or the specific header satisfies the requirement. */
 const DECLARING_HEADERS: readonly string[] = [
-  'Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h',
-  'Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersJsonFields.h',
+  'Foundation/BridgeHelpers/McpHelpers.h',
+  'Foundation/BridgeHelpers/Responses/McpJsonFields.h',
 ];
 
 /** The asset registry reads that replaced UEditorAssetLibrary's, which refuse every call during Play. */
 const ASSET_HELPERS = /\b(?:McpAssetExists|McpLoadAsset)\s*\(/u;
 const ASSET_HEADERS: readonly string[] = [
-  'Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h',
-  'Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h',
+  'Foundation/BridgeHelpers/McpHelpers.h',
+  'Foundation/BridgeHelpers/Blueprints/McpBPPaths.h',
 ];
 
 /** The wording of a refused path, declared where SanitizeProjectRelativePath is: every caller of one needs the other. */
 const PATH_REFUSAL_HELPERS = /\bMcpPathRefusalMessage\s*\(/u;
 const PATH_REFUSAL_HEADERS: readonly string[] = [
-  'Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h',
-  'Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersProjectPaths.h',
-  'Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersProjectPathsRefusal.h',
+  'Foundation/BridgeHelpers/McpHelpers.h',
+  'Foundation/BridgeHelpers/Security/McpProjectPaths.h',
+  'Foundation/BridgeHelpers/Security/McpProjectPathsRefusal.h',
 ];
+
+/** The response and result helpers: adding one placement file left a renderer-settings handler without them. */
+const HANDLER_UTILS = /\bMcpHandlerUtils::/u;
+const withoutComments = (body: string): string => body.replace(/\/\*[\s\S]*?\*\//gu, '').replace(/\/\/.*$/gmu, '');
 
 const INCLUDE = /#include\s+"([^"]+)"/gu;
 
@@ -115,6 +119,28 @@ describe('plugin translation units do not borrow declarations from unity-blob ne
     const users = [...sources].filter(([path, body]) => path.endsWith('.cpp') && ASSET_HELPERS.test(body));
     expect(users.length).toBeGreaterThan(50);
     expect(users.map(([path]) => path).filter((path) => !reachesDeclaringHeader(path, ASSET_HEADERS)).sort()).toEqual([]);
+  });
+
+  it('every user of the handler utils includes a header that declares them', () => {
+    const headers = [...sources].filter(([path, body]) => path.endsWith('.h') && /\bnamespace McpHandlerUtils\b/u.test(body)).map(([path]) => path);
+    const users = [...sources].filter(([path, body]) => path.endsWith('.cpp') && HANDLER_UTILS.test(withoutComments(body)));
+    expect(headers.length).toBeGreaterThan(4);
+    expect(users.length).toBeGreaterThan(50);
+    expect(users.map(([path]) => path).filter((path) => !reachesDeclaringHeader(path, headers)).sort()).toEqual([]);
+  });
+
+  // The save and load wrappers live in namespace McpSafeOperations; Safety/McpSafeOperations.h (and a few domain
+  // preludes) bring them out with a using. A placement file that included only the inner header compiled while a blob
+  // neighbour supplied the using, then failed when adding a materials file reshuffled the blobs.
+  it('every unqualified call of a safe save or load wrapper sees a using that names it', () => {
+    for (const helper of ['McpSafeAssetSave', 'McpSafeLevelSave', 'McpSafeLoadMap']) {
+      const using = new RegExp(`using\\s+McpSafeOperations::${helper}\\s*;|using\\s+namespace\\s+McpSafeOperations\\b`, 'u');
+      const call = new RegExp(`(?<!::)\\b${helper}\\s*\\(`, 'u');
+      const providers = [...sources].filter(([, body]) => using.test(withoutComments(body))).map(([path]) => path);
+      const users = [...sources].filter(([path, body]) => path.endsWith('.cpp') && !path.startsWith('Safety/') && call.test(withoutComments(body)));
+      expect(users.length, helper).toBeGreaterThan(0);
+      expect(users.map(([path]) => path).filter((path) => !providers.includes(path) && !reachesDeclaringHeader(path, providers)).sort(), helper).toEqual([]);
+    }
   });
 
   it('every user of the path refusal wording includes the header that declares it', () => {

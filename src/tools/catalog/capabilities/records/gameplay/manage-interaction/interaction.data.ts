@@ -2,9 +2,6 @@
  * manage_interaction records. Action order is the canonical record sequence the
  * generated parent action enum is assembled from.
  *
- * The destruction actions target an editor-world actor by name rather than an
- * asset path, so they declare `actorName` and nothing else — that is the only
- * field McpAutomationBridge_InteractionHandlersDestruction.cpp reads for them.
  * The create_* actions place their asset with `folder`, not `path`, matching
  * the GetJsonStringField(Payload, TEXT("folder"), ...) reads in the native shards.
  */
@@ -37,8 +34,11 @@ export const INTERACTION_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   interactionRecord({
     action: 'configure_door_properties',
-    summary: 'Configure persistent door properties.',
-    whenToUse: ['An existing door needs a new open angle, open time or locked state; fields left out keep their value.'],
+    summary: 'Configure persistent door properties, or make the door follow a switch.',
+    whenToUse: [
+      'An existing door needs a new open angle, open time or locked state; fields left out keep their value.',
+      'A door must open and shut with a switch or lever (switchPath); each placed door then gets its placed switch as LinkedSwitch (control_actor.set_blueprint_variables).',
+    ],
     whenNotToUse: [
       'The Blueprint does not exist yet or lacks the components its create step adds (use manage_interaction.create_interactable).',
       'One placed actor needs its own values, not the Blueprint default (use control_actor.set_blueprint_variables).',
@@ -48,6 +48,7 @@ export const INTERACTION_RECORDS: readonly CapabilityRecordSource[] = [
       openAngle: NP.openAngle,
       openTime: NP.openTime,
       locked: NP.locked,
+      switchPath: { ...NP.switchPath, description: 'The switch, lever or trigger Blueprint (from create_interactable) the door follows: on when switched on, shut when off. The door is then locked against opening when a pawn walks up, unless locked is given.' },
     },
     required: ['doorPath'],
     exampleInput: {
@@ -85,7 +86,7 @@ export const INTERACTION_RECORDS: readonly CapabilityRecordSource[] = [
   interactionRecord({
     action: 'configure_switch_properties',
     summary: 'Configure persistent switch properties.',
-    whenToUse: ['An existing switch needs a different type, a toggle-back rule or a reset delay; fields left out keep their value.'],
+    whenToUse: ['An existing switch needs a different type (a pressure_plate is on while stood on, a button or lever flips per press), a toggle-back rule or a reset delay; fields left out keep their value.'],
     whenNotToUse: [
       'The Blueprint does not exist yet or lacks the components its create step adds (use manage_interaction.create_interactable).',
       'One placed actor needs its own values, not the Blueprint default (use control_actor.set_blueprint_variables).',
@@ -106,13 +107,21 @@ export const INTERACTION_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   interactionRecord({
     action: 'create_chest_actor',
-    summary: 'Create a chest actor Blueprint asset.',
-    whenToUse: ['A chest Blueprint is needed with a base mesh, a lid mesh on a pivot, a trigger sphere and an optional locked state.'],
+    summary: 'Create a chest actor Blueprint asset whose lid opens when a pawn comes near.',
+    whenToUse: ['A chest Blueprint is needed with a base mesh, a lid mesh on a pivot, a trigger sphere and an optional locked state; its lid swings open (pitch, over openTime) while a pawn overlaps the trigger and the chest is unlocked.'],
     whenNotToUse: [
       'An actor must be placed in the level from an existing Blueprint (use control_actor.spawn).',
       'An existing door, chest or switch only needs new settings (use manage_interaction.configure_interactable).',
     ],
-    inputProps: { name: NP.name, folder: NP.folder, locked: NP.locked },
+    inputProps: {
+      name: NP.name,
+      folder: NP.folder,
+      locked: NP.locked,
+      openAngle: NP.openAngle,
+      openTime: NP.openTime,
+      autoClose: NP.autoClose,
+      autoCloseDelay: NP.autoCloseDelay,
+    },
     required: ['name'],
     exampleInput: {
       action: 'create_chest_actor',
@@ -124,8 +133,8 @@ export const INTERACTION_RECORDS: readonly CapabilityRecordSource[] = [
   interactionRecord({
     action: 'create_door_actor',
     topics: ['door', 'new door', 'door actor', 'openable door', 'door that opens'],
-    summary: 'Create a door actor Blueprint asset.',
-    whenToUse: ['A door Blueprint is needed with a pivot, a door mesh and a trigger box, plus open-angle, timing, lock and key variables.'],
+    summary: 'Create a door actor Blueprint asset that opens when a pawn comes near.',
+    whenToUse: ['A door Blueprint is needed with a pivot, a door mesh and a trigger box, plus open-angle, timing, lock and key variables; the door swings open (yaw, over openTime) while a pawn overlaps the trigger and it is unlocked, and autoClose shuts it autoCloseDelay seconds after the last pawn leaves. Calling it again on an existing door adds that opening logic.'],
     whenNotToUse: [
       'An actor must be placed in the level from an existing Blueprint (use control_actor.spawn).',
       'An existing door, chest or switch only needs new settings (use manage_interaction.configure_interactable).',
@@ -185,7 +194,7 @@ export const INTERACTION_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Create a lever actor Blueprint asset.',
     // Same whenToUse line as create_switch_actor on purpose: the fold merges them, and a seventh
     // distinct line would push create_interaction_component's out of the six a folded list keeps.
-    whenToUse: ['A switch, button or lever needs an actor Blueprint with mesh parts and an overlap sphere as its trigger.'],
+    whenToUse: ['A switch, button or lever needs an actor Blueprint with mesh parts and an overlap sphere as its trigger; a pawn walking into it switches it and OnSwitchChanged(bActivated) fires, which a door can follow (configure_interactable setting door, switchPath).'],
     whenNotToUse: [
       'An actor must be placed in the level from an existing Blueprint (use control_actor.spawn).',
       'Switch type, toggle and reset settings must be editable later, which only a switch Blueprint allows.',
@@ -197,7 +206,7 @@ export const INTERACTION_RECORDS: readonly CapabilityRecordSource[] = [
   interactionRecord({
     action: 'create_switch_actor',
     summary: 'Create a switch actor Blueprint asset.',
-    whenToUse: ['A switch, button or lever needs an actor Blueprint with mesh parts and an overlap sphere as its trigger.'],
+    whenToUse: ['A switch, button or lever needs an actor Blueprint with mesh parts and an overlap sphere as its trigger; a pawn walking into it switches it and OnSwitchChanged(bActivated) fires, which a door can follow (configure_interactable setting door, switchPath).'],
     whenNotToUse: [
       'An actor must be placed in the level from an existing Blueprint (use control_actor.spawn).',
       'An existing door, chest or switch only needs new settings (use manage_interaction.configure_interactable).',
@@ -214,7 +223,7 @@ export const INTERACTION_RECORDS: readonly CapabilityRecordSource[] = [
   interactionRecord({
     action: 'create_trigger_actor',
     summary: 'Create a trigger actor Blueprint asset.',
-    whenToUse: ['A reusable overlap-volume Blueprint is needed with a box, sphere or capsule as its root shape.'],
+    whenToUse: ['A reusable overlap-volume Blueprint is needed with a box, sphere or capsule as its root shape; it is on while a pawn is inside and fires OnSwitchChanged(bActivated), which a door can follow.'],
     whenNotToUse: [
       'An actor must be placed in the level from an existing Blueprint (use control_actor.spawn).',
       'A single trigger volume is wanted in the level with no Blueprint asset (use manage_level_structure.create_volume).',

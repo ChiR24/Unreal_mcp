@@ -1,6 +1,6 @@
 # PROJECT KNOWLEDGE BASE
 
-MCP tooling for Unreal Engine 5.0-5.8. Server package version `0.6.0-beta-c`; bridge plugin version `0.6.0-beta-c` (separate `.uplugin`). Two user-facing surfaces: a TypeScript stdio MCP server, and the bridge plugin's WebSocket transport and optional native `/mcp` HTTP/SSE transport.
+MCP tooling for Unreal Engine 5.0-5.8. Server package version `0.6.0-beta-e`; bridge plugin version `0.6.0-beta-e` (separate `.uplugin`). Two user-facing surfaces: a TypeScript stdio MCP server, and the bridge plugin's WebSocket transport and optional native `/mcp` HTTP/SSE transport.
 
 Area-specific guidance lives in nested `AGENTS.md` files (see **AREA GUIDES** below). This root file is the workspace-wide view; do not duplicate their detail here.
 
@@ -20,10 +20,10 @@ Area-specific guidance lives in nested `AGENTS.md` files (see **AREA GUIDES** be
 |   |-- services/                # health monitor, readiness, telemetry
 |   |-- tools/                   # catalog/ (contracts), dynamic/, handlers/foundation/ (bridge boundary)
 |   `-- types/ utils/            # utils: collections commands config logging paths responses serialization validation
-|-- plugins/McpAutomationBridge/ # the ONLY plugin; editor-only UE (bridge + native MCP + Fab adapter)
-|   |-- Source/McpAutomationBridge/{Public (19), Private/}
+|-- plugins/EngineWire/ # the ONLY plugin; editor-only UE (bridge + native MCP + Fab adapter)
+|   |-- Source/EngineWire/{Public (19), Private/}
 |   |   Private/: Core(26) Domains(1016 / 55 domains) Foundation(92) MCP(137) Safety(18) Transport(21) Tests(25) UI(2)
-|   `-- Source/McpAutomationBridgeFab/     # Fab asset-store adapter module (delay-loaded, optional)
+|   `-- Source/EngineWireFab/     # Fab asset-store adapter module (delay-loaded, optional)
 |-- tests/                       # Vitest unit tests + custom MCP integration runner
 |-- scripts/                     # generators, packaging, sync, smoke
 |-- docs/                        # protocol, security, testing, gateway client guide, generated action reference
@@ -69,7 +69,7 @@ There is no TypeScript action layer: `execute` forwards `{ action, ...params }` 
 | `executeAutomationRequest()` | TS fn | `src/tools/handlers/foundation/dispatch/automation-request-dispatch.ts` | Validated TS-to-Unreal request boundary |
 | `AutomationBridge.sendAutomationRequest()` | TS method | `src/automation/bridge.ts` | WebSocket send + request correlation |
 | `routeStdoutLogsToStderr()` | TS fn | `src/server/server-factory.ts` | Keeps logs off JSON-RPC stdout |
-| `UMcpAutomationBridgeSubsystem` | C++ class | `.../Public/McpAutomationBridgeSubsystem.h` (+ `Private/Core/Subsystem/`) | Request queue + `AutomationHandlers`, native MCP startup |
+| `UEngineWireSubsystem` | C++ class | `.../Public/EngineWireSubsystem.h` (+ `Private/Core/Subsystem/`) | Request queue + `AutomationHandlers`, native MCP startup |
 | `ProcessPendingAutomationRequests()` | C++ method | `.../Private/Core/Subsystem/...RequestQueue.cpp` | Game-thread queue drain (16/tick); every editor action passes here |
 | `FMcpNativeTransport` | C++ class | `.../Private/MCP/Transport/McpNativeTransport.h` | Native `/mcp` HTTP/SSE JSON-RPC endpoint |
 
@@ -82,7 +82,7 @@ There is no TypeScript action layer: `execute` forwards `{ action, ...params }` 
 ### Security Boundaries
 - Loopback-only by default. Non-loopback requires `MCP_AUTOMATION_ALLOW_NON_LOOPBACK=true` (TS) or `bAllowNonLoopback` (plugin). The two flags are independent surfaces (the TS bridge is a WebSocket *client* to the plugin socket, not a second server).
 - **Fail-closed LAN coupling**: the native MCP transport refuses to bind non-loopback unless `bRequireCapabilityToken` is also enabled, so a LAN-exposed surface can never start without auth. The TS stdio bridge has no server socket of its own, so its non-loopback opt-in is the Node.js `MCP_AUTOMATION_ALLOW_NON_LOOPBACK`/`MCP_AUTOMATION_HOST=0.0.0.0` pair, which must be paired with capability-token planning on the plugin side. Loopback default-allow means any LAN client can call any tool unauthenticated once exposed.
-- Capability-token auth: `X-MCP-Capability-Token` (native MCP) and `bridge_hello.capabilityToken` (WebSocket) when enabled. **On by default since 0.5.30** (`bRequireCapabilityToken` default `true`): the plugin auto-generates a per-install token at `<ProjectRoot>/Saved/MCP/capability-token` (raw UTF-8, 64 lowercase hex chars, no trailing newline; C++ is the sole writer, the TS bridge reads it at handshake time via `UE_PROJECT_PATH`, resolution order = explicit `CapabilityToken` → env `MCP_AUTOMATION_CAPABILITY_TOKEN` → token file, fail-closed, never logged). Tokens are compared in **constant time** (`McpConstantTimeTokenEquals` in `plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Foundation/McpSecureTokenCompare.h`) on both transports, so comparison time never leaks how much of a token matched.
+- Capability-token auth: `X-MCP-Capability-Token` (native MCP) and `bridge_hello.capabilityToken` (WebSocket) when enabled. **On by default since 0.5.30** (`bRequireCapabilityToken` default `true`): the plugin auto-generates a per-install token at `<ProjectRoot>/Saved/MCP/capability-token` (raw UTF-8, 64 lowercase hex chars, no trailing newline; C++ is the sole writer, the TS bridge reads it at handshake time via `UE_PROJECT_PATH`, resolution order = explicit `CapabilityToken` → env `MCP_AUTOMATION_CAPABILITY_TOKEN` → token file, fail-closed, never logged). Tokens are compared in **constant time** (`McpConstantTimeTokenEquals` in `plugins/EngineWire/Source/EngineWire/Private/Foundation/McpSecureTokenCompare.h`) on both transports, so comparison time never leaks how much of a token matched.
 - Paths limited to `/Game`, `/Engine`, `/Script`, `/Temp`, `/Niagara`, the content mounts the connected editor reports (`bridge_ack.contentRoots`, kept current by `content_roots_changed`), plus sanitized `MCP_ADDITIONAL_PATH_PREFIXES`. File keys keep the static roots plus `/Saved` and `/tmp`. Preserve `/Game/...` normalization; do not add code depending on unnormalized `/Content/...`. The `/Content` alias is mapped in ONE shared canonicalizer — route new path handling through it rather than re-implementing the alias.
 
 ### Capability Authorization (fail-closed, plugin is the sole authority)
@@ -137,7 +137,7 @@ Every automation request is gated **before it reaches the editor queue**. The Ty
 - **No knip / ts-prune** (evaluated 2026-09-19, rejected): integration cases load at run time and source-contract tests read files as text, so its findings are noise. Dead code is found by reading; `noUnusedLocals`/`noUnusedParameters` are on.
 
 ## UNIQUE STYLES
-- 23 canonical parent tools hide their actions behind action enums; 394 records (239 of them folded families) keep 1,504 `{tool, action}` pairs callable.
+- 23 canonical parent tools hide their actions behind action enums; 405 records (239 of them folded families) keep 1,518 `{tool, action}` pairs callable.
 - Dynamic tool management exists in both TS and native MCP; `manage_tools` and `inspect` are protected, the `core` category is fixed.
 - The plugin is responsibility-split: `Core` routes, `Domains` implement, `Foundation` shares primitives, `Safety` wraps hazardous editor ops, `Transport` owns sockets.
 - Discovery is progressive and never dumps full schemas; invalid calls return `suggestions` plus an executable `nextCall`. A direct call to a canonical tool name returns a `DIRECT_TOOL_CALL_REMOVED` receipt whose `nextCall` re-runs it through `unreal`.
@@ -181,9 +181,9 @@ npx vitest run tests/unit/<file>.test.ts
 - `src/utils/AGENTS.md` — path/command security, logging, response validation.
 - `src/types/AGENTS.md` — shared type contracts.
 
-**Unreal plugin** (all under `plugins/McpAutomationBridge/`)
+**Unreal plugin** (all under `plugins/EngineWire/`)
 - `AGENTS.md` — plugin scope, cross-surface rules, packaging.
-- `Source/McpAutomationBridge/Private/Core/AGENTS.md` — request queue, game-thread dispatch, the handler table.
+- `Source/EngineWire/Private/Core/AGENTS.md` — request queue, game-thread dispatch, the handler table.
 - `.../Private/Domains/AGENTS.md` — 55 domain implementations + dispatch contract.
 - `.../Private/Domains/BlueprintGraph/Behaviour/AGENTS.md` — `McpBlueprintBehaviour::Author`: gameplay logic written into Blueprint assets from recipe files.
 - `.../Private/Foundation/AGENTS.md` — reflection, handler utils, shared primitives.

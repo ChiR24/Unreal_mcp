@@ -1,0 +1,88 @@
+#pragma once
+
+#include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/HandlerUtils/McpHandlerUtils.h"
+
+#include "Dom/JsonObject.h"
+#include "Core/Module/EngineWireGlobals.h"
+#include "Foundation/BridgeHelpers/McpHelpers.h"
+#include "EngineWireSubsystem.h"
+
+class UProjectileMovementComponent;
+class USphereComponent;
+class UBoxComponent;
+
+#include "Engine/Blueprint.h"
+#include "Engine/BlueprintGeneratedClass.h"
+#include "Factories/BlueprintFactory.h"
+#include "Kismet2/BlueprintEditorUtils.h"
+#include "Kismet2/KismetEditorUtilities.h"
+#include "EdGraphSchema_K2.h"
+#include "AssetRegistry/AssetRegistryModule.h"
+#include "AssetToolsModule.h"
+#include "Misc/PackageName.h"
+#include "HAL/FileManager.h"
+#include "GameFramework/Actor.h"
+#include "GameFramework/DamageType.h"
+#include "GameFramework/ProjectileMovementComponent.h"
+#include "Components/StaticMeshComponent.h"
+#include "Components/SkeletalMeshComponent.h"
+#include "Components/SphereComponent.h"
+#include "Components/CapsuleComponent.h"
+#include "Components/BoxComponent.h"
+#include "Components/SceneComponent.h"
+#include "Engine/StaticMesh.h"
+#include "Engine/SkeletalMesh.h"
+#include "Particles/ParticleSystem.h"
+#include "Sound/SoundCue.h"
+#include "Materials/Material.h"
+#include "Animation/AnimMontage.h"
+#include "NiagaraSystem.h"
+#include "NiagaraComponent.h"
+
+#include "Domains/Combat/McpCombatBPHelpers.h"
+
+namespace McpCombatHandlers
+{
+struct FCombatActionContext
+{
+    UEngineWireSubsystem& Bridge;
+    const FString& RequestId;
+    const FString& Action;
+    TSharedPtr<FJsonObject> Payload;
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket;
+    FString SubAction;
+    FString Name;
+    FString Path;
+    FString BlueprintPath;
+
+    void SendAutomationError(
+        TSharedPtr<FMcpBridgeWebSocket> TargetSocket,
+        const FString& ResponseRequestId,
+        const FString& Message,
+        const FString& ErrorCode) const
+    {
+        Bridge.SendAutomationError(TargetSocket, ResponseRequestId, Message, ErrorCode);
+    }
+
+    void SendAutomationResponse(
+        TSharedPtr<FMcpBridgeWebSocket> TargetSocket,
+        const FString& ResponseRequestId,
+        bool bSuccess,
+        const FString& Message,
+        const TSharedPtr<FJsonObject>& Result = nullptr,
+        const FString& ErrorCode = FString()) const
+    {
+        Bridge.SendAutomationResponse(TargetSocket, ResponseRequestId, bSuccess, Message, Result, ErrorCode);
+    }
+
+    bool HandleWeaponCore() const;
+    bool HandleWeaponFiring() const;
+    bool HandleProjectileActions() const;
+    bool HandleDamageTypes() const;
+    bool HandleDamageExecution() const;
+    bool HandleWeaponEquipment() const;
+    bool HandleInfoActions() const;
+    bool HandleRuntimeDamage() const;
+};
+}

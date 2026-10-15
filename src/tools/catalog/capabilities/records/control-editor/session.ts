@@ -3,7 +3,7 @@
  * possess.
  */
 import type { CapabilityRecordSource } from '../../model.js';
-import { buildCoreRecord } from '../core/builder.js';
+import { ANY_EDITOR_STATE, buildCoreRecord } from '../core/builder.js';
 import { P } from './properties.js';
 
 const F = 'session';
@@ -12,6 +12,7 @@ const D = 'editor';
 export const SESSION_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_editor', action: 'play', domain: D, family: F,
+    editorStates: ANY_EDITOR_STATE,
     topics: ['play in editor', 'pie', 'start pie', 'start game', 'run game', 'press play', 'simulate'],
     aliases: ['control_editor.start_pie'],
     summary: 'Start Play-In-Editor (PIE) session; answers once the play world has begun play.',
@@ -25,6 +26,7 @@ export const SESSION_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'control_editor', action: 'stop', domain: D, family: F,
+    editorStates: ANY_EDITOR_STATE,
     topics: ['stop pie', 'stop game', 'end play', 'exit pie'],
     summary: 'Stop the running PIE session.',
     whenToUse: ['The PIE session must be terminated.'],
@@ -37,6 +39,7 @@ export const SESSION_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'control_editor', action: 'stop_pie', dispatchAction: 'stop',
+    editorStates: ANY_EDITOR_STATE,
     domain: D, family: F,
     summary: 'Stop the running PIE session (alias for stop).',
     whenToUse: ['The PIE session must be terminated using the stop_pie alias.'],
@@ -49,6 +52,7 @@ export const SESSION_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'control_editor', action: 'pause', domain: D, family: F,
+    editorStates: ANY_EDITOR_STATE,
     summary: 'Pause the running PIE session.',
     whenToUse: ['PIE must be paused without stopping.'],
     whenNotToUse: ['PIE is not running or already paused.'],
@@ -60,10 +64,13 @@ export const SESSION_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'control_editor', action: 'resume', domain: D, family: F,
+    editorStates: ANY_EDITOR_STATE,
     summary: 'Resume a paused PIE session.',
-    whenToUse: ['A paused PIE session must resume.'],
+    whenToUse: ['A paused PIE session must resume.', 'The running game paused itself (a title screen or a pause menu) and must run again for a test: pass unpauseGame.'],
     whenNotToUse: ['PIE is not paused.'],
-    inputProps: {},
+    inputProps: {
+      unpauseGame: { type: 'boolean', description: 'Also lift a pause the game holds itself (SetGamePaused from its pause menu or a title screen), as its own unpause does. Without it, a game that paused itself fails the call with GAME_PAUSED and pausedBy: the editor pause is off, but nothing ticks.' },
+    },
     required: [],
     effect: 'write', behavior: { idempotency: 'idempotent' },
    
@@ -71,6 +78,7 @@ export const SESSION_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'control_editor', action: 'eject', domain: D, family: F,
+    editorStates: ANY_EDITOR_STATE,
     summary: 'Eject the player from its pawn in PIE, as the editor\'s Eject button does: the session switches to Simulate in Editor and the view becomes a free camera that set_camera moves and screenshot photographs. Answers once the view has switched.',
     whenToUse: ['The player must detach from the possessed pawn.', 'The view of a running game must be placed for a screenshot: eject, then set_camera.'],
     whenNotToUse: ['PIE is not running (NO_ACTIVE_SESSION).', 'The game must keep playing from the pawn: an ejected player no longer drives it.'],
@@ -89,6 +97,7 @@ export const SESSION_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'control_editor', action: 'possess', domain: D, family: F,
+    editorStates: ANY_EDITOR_STATE,
     summary: 'Possess a pawn in PIE: the player controller takes the pawn named by actorName. Without actorName it brings an ejected player back to its own pawn, as the editor\'s Possess button does (the way back from eject). Answers once the player is back in the game.',
     whenToUse: ['The player must take control of a specific pawn.', 'An ejected player must return to the game (no actorName).'],
     whenNotToUse: ['PIE is not running (NOT_IN_PIE).', 'The actor is not a pawn (INVALID_TARGET).'],

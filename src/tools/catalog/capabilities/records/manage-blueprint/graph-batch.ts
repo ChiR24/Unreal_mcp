@@ -34,16 +34,20 @@ export const GRAPH_BATCH_RECORDS: readonly CapabilityRecordSource[] = [
         'x-unreal-reflection-boundary': true,
         description: 'Steps run in order, 1-200. Each is {edit, ...that edit\'s own params}. Member steps come before the nodes '
           + 'that use them: add_variable (variableName, variableType as add_variable takes it: basic, class, struct, enum and container '
-          + 'types, defaultValue, isPublic, category), add_function '
+          + 'types, defaultValue, isPublic, exposeOnSpawn, category), add_function '
           + '(functionName, inputs, outputs, pure, isPublic; its body steps set graphName to the function name; with an id, "$id" '
           + 'is its entry node and "$id_return" its return node, which exists when outputs are declared), add_event '
           + '(customEventName and parameters, or componentName plus eventName for a component or Widget Blueprint widget delegate, '
           + 'e.g. PlayButton with OnClicked) and add_event_dispatcher '
           + '(dispatcherName, parameters [{name, type}]). Node steps: create_node, connect_pins, set_pin_default_value, '
-          + 'set_node_property, create_reroute_node. create_node also takes nodeType CallDelegate (memberName: a dispatcher), '
+          + 'set_node_property, create_reroute_node. create_node also takes nodeType CallDelegate (memberName: a dispatcher, '
+          + 'memberClass: another class\'s), BindEvent (the same: a Bind Event node and a custom event, eventName, wired to it; '
+          + 'with an id, "$id_event" is that event, whose then pin runs when the dispatcher fires, and the object bound goes to '
+          + '"$id.self"), '
           + 'Message (memberClass: an interface, memberName: its function), AsyncTask (memberClass: the task or async-action '
-          + 'class, memberName: its static factory; event graphs only) and FunctionResult (one more return node in a function '
-          + 'graph). Optional per step: id (names the created node; later steps use "$id" in fromNodeId, toNodeId and nodeId), '
+          + 'class, memberName: its static factory; event graphs only), FunctionResult (one more return node in a function '
+          + 'graph) and MathExpression with expression (the formula, checked and set as set_node_property Expression sets '
+          + 'it, before pinDefaults, which can then name its inputs). Optional per step: id (names the created node; later steps use "$id" in fromNodeId, toNodeId and nodeId), '
           + 'from and to ("$id.PinName" shorthand for connect_pins), pinDefaults (create_node only: {PinName: value} applied '
           + 'to the new node; a read-only pin such as Set Text\'s Value gets a MakeLiteral node wired into it). "$entry" is '
           + 'the graph\'s own entry node (a Construction Script or function graph starts there: from "$entry.then"). A create '
@@ -51,14 +55,16 @@ export const GRAPH_BATCH_RECORDS: readonly CapabilityRecordSource[] = [
           + 'free position instead, and its result says where in placementWarning, so a crowded row never stops the batch (a '
           + 'single create_node call still refuses an overlap). Every function, variable, dispatcher and async factory a step names is '
           + 'checked before any step runs, so a misspelled one fails the batch with nothing applied; any other failure stops '
-          + 'the batch at that step, and that step leaves nothing behind (a member step included), in whichever graph it ran.',
+          + 'the batch at that step and undoes the steps before it (members, nodes, links and pin defaults, in every graph), '
+          + 'so a failed batch leaves the Blueprint as it was: fix that step and send the whole batch again. Only a '
+          + 'set_node_property on a node that was already there stays, and the error names it.',
       },
     },
     required: ['blueprintPath', 'operations'],
     outputProps: {
-      results: { type: 'array', items: ITEM, 'x-unreal-reflection-boundary': true, description: 'Per-step outcome: index, edit, id, success, error, nodeGuid, resultNodeGuid (add_function), pins (for created nodes), connected, appliedValue, placementWarning (a create step that was moved off an overlapping position, or placed where it still overlaps).' },
-      nodeIds: { type: 'object', additionalProperties: { type: 'string' }, description: 'Step id -> node guid for every node the batch created or reused; an add_function step with an id also adds "<id>_return" for its return node.' },
-      succeeded: { type: 'number', description: 'Steps that completed.' },
+      results: { type: 'array', items: ITEM, 'x-unreal-reflection-boundary': true, description: 'Per-step outcome: index, edit, id, success, error, nodeGuid, resultNodeGuid (add_function), pins (for created nodes), connected, appliedValue, placementWarning (a create step that was moved off an overlapping position, or placed where it still overlaps), inputPins and boundToMembers (a Math Expression\'s Expression step: the pins it made, and the names that read member variables instead). A step that ran and has nothing more to say (a plain connect_pins, an add_variable) is counted in succeeded, not listed; a failed batch lists only the step that failed, with its error.' },
+      nodeIds: { type: 'object', additionalProperties: { type: 'string' }, description: 'Step id -> node guid for every node the batch created or reused; an add_function step with an id also adds "<id>_return" for its return node. Absent when a step failed: its nodes were removed.' },
+      succeeded: { type: 'number', description: 'Steps that completed; 0 when a step failed, since the steps before it were undone.' },
       failedIndex: { type: 'number', description: 'Index of the step that stopped the batch (failures only).' },
       compiled: { type: 'boolean', description: 'True when the Blueprint compiles after the batch (warnings allowed).' },
       compilerStatus: { type: 'string', description: 'Blueprint status after the final compile.' },

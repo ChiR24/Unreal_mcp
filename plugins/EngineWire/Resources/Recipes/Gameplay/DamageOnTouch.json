@@ -1,0 +1,22 @@
+{
+  "description": "Damages whatever starts to overlap the actor: ApplyDamage with TouchDamage, the actor as the damage causer. Actors with health lose it (a negative TouchDamage heals them); others ignore it. The actor needs a component that overlaps pawns.",
+  "tag": "DamageOnTouch",
+  "placeholders": {
+    "Damage": "Damage dealt on each touch, a number other than 0 (negative heals)."
+  },
+  "variables": [
+    { "variableName": "TouchDamage", "variableType": "Float", "defaultValue": "{{Damage}}", "category": "Damage", "instanceEditable": true }
+  ],
+  "hooks": [
+    { "id": "touch", "event": "ActorBeginOverlap" }
+  ],
+  "eventGraph": [
+    { "edit": "create_node", "id": "touchAmount", "nodeType": "VariableGet", "memberName": "TouchDamage" },
+    { "edit": "create_node", "id": "touchSelf", "nodeType": "Self" },
+    { "edit": "create_node", "id": "touchApply", "nodeType": "CallFunction", "memberName": "ApplyDamage", "memberClass": "/Script/Engine.GameplayStatics" },
+    { "edit": "connect_pins", "from": "$touch_event.OtherActor", "to": "$touchApply.DamagedActor" },
+    { "edit": "connect_pins", "from": "$touchAmount.TouchDamage", "to": "$touchApply.BaseDamage" },
+    { "edit": "connect_pins", "from": "$touchSelf.self", "to": "$touchApply.DamageCauser" },
+    { "edit": "connect_pins", "from": "$touch.then", "to": "$touchApply.execute" }
+  ]
+}

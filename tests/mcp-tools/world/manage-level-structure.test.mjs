@@ -50,7 +50,7 @@ const testCases = [
   { scenario: 'CREATE: create_minimap_volume', toolName: 'manage_level_structure', arguments: { action: 'create_minimap_volume', volumeName: MINIMAP_VOLUME, location: { x: 0, y: 0, z: 0 }, extent: { x: 1000, y: 1000, z: 1000 }, volumeLocation: { x: 0, y: 0, z: 0 }, volumeExtent: { x: 1000, y: 1000, z: 1000 } }, expected: 'success|world partition|already exists' },
 
   // === LEVEL BLUEPRINT ===
-  { scenario: 'ACTION: open_level_blueprint', toolName: 'manage_level_structure', arguments: { action: 'open_level_blueprint', levelName: LEVEL_NAME }, expected: 'success' },
+  { scenario: 'ACTION: open_level_blueprint', toolName: 'manage_level_structure', arguments: { action: 'open_level_blueprint' }, expected: 'success' },
   { scenario: 'ADD: add_level_blueprint_node', toolName: 'manage_level_structure', arguments: { action: 'add_level_blueprint_node', nodeClass: 'K2Node_ExecutionSequence', nodeName: SEQUENCE_NODE, nodePosition: { x: 200, y: 100 } }, expected: 'success|already exists|not found' },
   { scenario: 'ADD: add_level_blueprint_node with functionName', toolName: 'manage_level_structure', arguments: { action: 'add_level_blueprint_node', nodeClass: 'K2Node_CallFunction', functionName: 'PrintString' }, expected: 'success' },
   { scenario: 'REMOVE: remove_level_blueprint_node by name', toolName: 'manage_level_structure', arguments: { action: 'remove_level_blueprint_node', nodeName: 'K2Node_CallFunction_0', nodeId: '0F806A8F437089C69734C4BE30FA3B9D', save: false }, expected: 'success|not found' },
@@ -83,7 +83,8 @@ const testCases = [
   { scenario: 'Cleanup: delete streaming volume', toolName: 'control_actor', arguments: { action: 'delete', actorName: STREAMING_VOLUME }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete test actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: TEST_ACTOR }, expected: 'success|not found' },
   { scenario: 'Cleanup: unload sublevel', toolName: 'manage_level', arguments: { action: 'unload', levelPath: SUBLEVEL_PATH }, expected: 'success|not loaded|not found' },
-  { scenario: 'Cleanup: delete created levels', toolName: 'manage_level', arguments: { action: 'delete', levelPaths: [SUBLEVEL_PATH, LEVEL_PATH] }, expected: 'success|not found' },
+  { scenario: 'Cleanup: delete SUBLEVEL_PATH', toolName: 'manage_level', arguments: { action: 'delete', levelPath: SUBLEVEL_PATH }, expected: 'success|not found' },
+  { scenario: 'Cleanup: delete LEVEL_PATH', toolName: 'manage_level', arguments: { action: 'delete', levelPath: LEVEL_PATH }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete data layer asset', toolName: 'manage_asset', arguments: { action: 'delete', path: `/Game/DataLayers/${DATA_LAYER}`, force: true }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete HLOD asset', toolName: 'manage_asset', arguments: { action: 'delete', path: `${HLOD_FOLDER}/${HLOD_LAYER}`, force: true }, expected: 'success|not found' },
 ];

@@ -1,9 +1,9 @@
 # Copilot instructions for Unreal MCP
 
 ## Architecture
-- This is a dual-process system: the TypeScript MCP server lives in `src/`, and the Unreal Editor bridge plugin lives in `plugins/McpAutomationBridge/`.
+- This is a dual-process system: the TypeScript MCP server lives in `src/`, and the Unreal Editor bridge plugin lives in `plugins/EngineWire/`.
 - Typical flow is the single `unreal` gateway tool -> capability lookup + strict schema validation -> `executeAutomationRequest()` -> WebSocket bridge -> C++ subsystem queue -> game-thread handler. There is no TypeScript per-action layer; only `manage_tools` runs in process.
-- Keep workspace-wide guidance here and rely on the closer `AGENTS.md` files for area-specific detail under `src/tools/`, `src/server/gateway/`, `src/automation/`, `tests/`, and `plugins/McpAutomationBridge/`.
+- Keep workspace-wide guidance here and rely on the closer `AGENTS.md` files for area-specific detail under `src/tools/`, `src/server/gateway/`, `src/automation/`, `tests/`, and `plugins/EngineWire/`.
 
 ## Critical constraints
 - Keep stdout JSON-only. Runtime logs must go through the project logger; do not use `console.log` in runtime code. See `routeStdoutLogsToStderr()` in `src/server/server-factory.ts`.
@@ -12,7 +12,7 @@
 - Preserve path normalization. Prefer `/Game/...` asset paths and do not add new code that depends on `/Content/...` input staying unnormalized.
 
 ## UE 5.7 safety
-- Do not use `UPackage::SavePackage()` in plugin code. Use the safe wrappers under `plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Safety/`.
+- Do not use `UPackage::SavePackage()` in plugin code. Use the safe wrappers under `plugins/EngineWire/Source/EngineWire/Private/Safety/`.
 - For Blueprint component templates, let SCS own nodes and templates through `CreateNode()` and `AddNode()` patterns.
 - Do not introduce new `ANY_PACKAGE` usage; use modern lookup patterns such as `nullptr` where required by newer UE versions.
 
@@ -38,7 +38,7 @@
 ## Making changes
 - New MCP action flow:
 	1. Author a capability record under `src/tools/catalog/capabilities/records/<parent>/` declaring exactly the params the handler reads, then run `npm run registry:generate`.
-	2. Implement the Unreal side under `plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Domains/<Domain>/` and make sure its parent tool reaches it in `Core/Subsystem/...HandlerRegistration.cpp`.
+	2. Implement the Unreal side under `plugins/EngineWire/Source/EngineWire/Private/Domains/<Domain>/` and make sure its parent tool reaches it in `Core/Subsystem/...HandlerRegistration.cpp`.
 	3. Add an integration case under `tests/mcp-tools/` covering every optional param (`npm run test:params` is strict).
 - Keep TypeScript strict. Avoid `as any` in runtime code.
 - Do not hand-bump versions: the `bump-version.yml` workflow rewrites all four version files (`package.json`, `package-lock.json`, `server.json`, the `.uplugin`).
@@ -46,4 +46,4 @@
 ## Reference points
 - Use `src/tools/handlers/foundation/dispatch/automation-request-dispatch.ts` for the one bridge send path (`executeAutomationRequest()`).
 - Use `tests/AGENTS.md` for integration test conventions, expected result strings, and timeout tiers.
-- Use `plugins/McpAutomationBridge/AGENTS.md` for plugin-side patterns and Unreal-specific caveats.
+- Use `plugins/EngineWire/AGENTS.md` for plugin-side patterns and Unreal-specific caveats.

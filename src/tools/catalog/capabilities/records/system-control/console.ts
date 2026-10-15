@@ -3,7 +3,7 @@
  * execute_command, console_command, set_cvar, set_resolution, set_fullscreen.
  */
 import type { CapabilityRecordSource } from '../../model.js';
-import { buildCoreRecord } from '../core/builder.js';
+import { ANY_EDITOR_STATE, buildCoreRecord } from '../core/builder.js';
 
 const PT = 'system_control';
 
@@ -59,6 +59,7 @@ export const CONSOLE_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: PT,
     action: 'execute_command',
+    editorStates: ANY_EDITOR_STATE,
     domain: 'console',
     family: 'console',
     summary: 'Execute a single validated console command string on the engine.',
@@ -76,10 +77,12 @@ export const CONSOLE_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: PT,
     action: 'console_command',
+    editorStates: ANY_EDITOR_STATE,
     domain: 'console',
     family: 'console',
     summary: 'Execute a validated, non-empty console command (empty input is rejected).',
-    whenToUse: ['A console command must be run with explicit empty-input rejection.'],
+    topics: ['active sounds', 'live coding', 'compile c++', 'recompile code', 'hot reload'],
+    whenToUse: ['A console command must be run with explicit empty-input rejection.', 'The sounds playing right now must be listed (is the music still on, did a loop stop): au.DumpActiveSounds puts each one with its asset, owner and volume in output.', 'C++ must be recompiled while the editor runs: LiveCoding.Compile (read_log shows the result; a Live Coding patch is lost when the editor restarts, so a lasting change needs a full build with the editor closed).'],
     whenNotToUse: ['The command is empty or whitespace-only.'],
     inputProps: { command: { type: 'string', description: 'The non-empty console command to execute.' } },
     required: ['command'],

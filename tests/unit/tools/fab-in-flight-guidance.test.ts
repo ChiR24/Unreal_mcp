@@ -74,7 +74,7 @@ describe('a refusal that names the call which settles it', () => {
 
   it('native: the completion copies an executable nextCall out of the handler result on a failure', () => {
     const pending = readFileSync(
-      join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private', 'MCP', 'Transport', 'McpNativeTransportPendingRequests.cpp'),
+      join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'MCP', 'Transport', 'McpNativeTransportPendingRequests.cpp'),
       'utf8'
     ).replace(/\/\/[^\n]*/gu, ' ');
     expect(pending).toMatch(/if \(!bSuccess\)\s*\{\s*AddHandlerNextCall\(ReportedResult, Result\);/u);

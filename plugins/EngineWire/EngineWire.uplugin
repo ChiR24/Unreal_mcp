@@ -1,0 +1,227 @@
+{
+  "FileVersion": 3,
+  "Version": 600,
+  "VersionName": "0.6.0-beta-e",
+  "FriendlyName": "EngineWire",
+  "Description": "Editor automation bridge enabling AI assistants (Claude, Cursor, etc.) to control Unreal Engine via Model Context Protocol (MCP). Provides broad automation coverage for assets, actors, levels, animation, AI, Niagara, materials, foliage, landscapes, and more. Supports UE 5.0-5.8 Preview with TLS/SSL security.",
+  "Category": "Editor|Automation|AI",
+  "CreatedBy": "ChiR24",
+  "CreatedByURL": "https://github.com/ChiR24/Unreal_mcp",
+  "DocsURL": "https://github.com/ChiR24/Unreal_mcp#readme",
+  "MarketplaceURL": "",
+  "SupportURL": "https://github.com/ChiR24/Unreal_mcp/discussions",
+  "CanContainContent": false,
+  "IsBetaVersion": true,
+  "IsExperimentalVersion": true,
+  "EnabledByDefault": true,
+  "SupportsUEBuildSystem": true,
+  "SupportedTargetPlatforms": [
+    "Win64",
+    "Mac",
+    "Linux"
+  ],
+  "Modules": [
+    {
+      "Name": "EngineWire",
+      "Type": "Editor",
+      "LoadingPhase": "Default",
+      "PlatformAllowList": [
+        "Win64",
+        "Mac",
+        "Linux"
+      ]
+    },
+    {
+      "Name": "EngineWireFab",
+      "Type": "Editor",
+      "LoadingPhase": "Default",
+      "PlatformAllowList": [
+        "Win64",
+        "Mac",
+        "Linux"
+      ]
+    }
+  ],
+  "Plugins": [
+    {
+      "Name": "PythonScriptPlugin",
+      "Enabled": true
+    },
+    {
+      "Name": "EditorScriptingUtilities",
+      "Enabled": true
+    },
+    {
+      "Name": "LevelSequenceEditor",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "Niagara",
+      "Enabled": true
+    },
+    {
+      "Name": "NiagaraEditor",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "BehaviorTreeEditor",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "EnvironmentQueryEditor",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "ControlRig",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "RigVM",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "IKRig",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "ChaosVehiclesPlugin",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "AnimationData",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "ProceduralMeshComponent",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "Interchange",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "InterchangeOpenUSD",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "DataValidation",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "EnhancedInput",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "GeometryScripting",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "GeometryProcessing",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "MeshModelingToolset",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "ChaosCloth",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "GameplayAbilities",
+      "Enabled": true
+    },
+    {
+      "Name": "Metasound",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "StateTree",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "SmartObjects",
+      "Enabled": true
+    },
+    {
+      "Name": "MassGameplay",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "OnlineSubsystem",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "OnlineSubsystemUtils",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "Synthesis",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "PCG",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "MovieRenderPipeline",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "MoviePipelineMaskRenderPass",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "Takes",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "ElectraPlayer",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "StructUtils",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "Fab",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "Bridge",
+      "Enabled": true,
+      "Optional": true
+    }
+  ]
+}

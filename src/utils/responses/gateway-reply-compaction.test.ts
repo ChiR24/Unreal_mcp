@@ -66,6 +66,21 @@ describe('compactGatewayReply', () => {
       success: true, operation: 'execute', data: { details: { changedAssets: ['/Game/A'] } }
     }) as { data: unknown };
     expect(unlisted.data, 'a change the receipt does not list stays').toEqual({ details: { changedAssets: ['/Game/A'] } });
+    const many = compactGatewayReply({
+      success: true, operation: 'execute', receipt: { changes: ['/Game/Maps/Port'] },
+      data: { applied: 2, details: { changedEntities: ['/Game/Maps/Port'] } }
+    }) as { data: unknown };
+    expect(many.data, 'the entities a many-object write names, once the receipt lists them').toEqual({ applied: 2 });
+    const removed = compactGatewayReply({
+      success: true, operation: 'execute', receipt: { changes: ['/Game/A', '/Game/B'] },
+      data: { details: { deletedCount: 2, deleted: ['/Game/A', '/Game/B'] } }
+    }) as { data: unknown };
+    expect(removed.data, 'a delete names its paths once, in the receipt').toEqual({ details: { deletedCount: 2 } });
+    const moved = compactGatewayReply({
+      success: true, operation: 'execute', receipt: { changes: ['Cap_1', 'Cap_2'] },
+      data: { movedActors: 2, affectedActors: ['Cap_1', 'Cap_2'] }
+    }) as { data: unknown };
+    expect(moved.data, 'a many-actor call names its actors once, in the receipt').toEqual({ movedActors: 2 });
     const failed = compactGatewayReply({ success: false, operation: 'execute', message: 'No.', result: { missing: ['/Game/B'] } });
     expect(failed, 'a failure keeps its detail').toMatchObject({ result: { missing: ['/Game/B'] } });
   });

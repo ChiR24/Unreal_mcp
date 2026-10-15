@@ -90,13 +90,13 @@ export const OPERATIONS_POWER_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Write metadata key/value pairs to a level asset via the shared metadata bridge route.',
     whenToUse: ['Level asset metadata must be written.'],
     whenNotToUse: ['The target is not a /Game level asset path.'],
-    inputProps: { levelPath: P.levelPath, assetPath: P.assetPath, metadata: P.metadata },
+    inputProps: { levelPath: P.levelPath, metadata: P.metadata },
     required: ['levelPath', 'metadata'],
     effect: 'write', behavior: { idempotency: 'idempotent' },
     exampleInput: { action: 'set_metadata', levelPath: '/Game/Maps/Demo', metadata: { author: 'MCP' } },
   }),
   // The native Level dispatch has always routed `set_level_world_settings`
-  // (McpAutomationBridge_LevelHandlers.cpp), but no record published it, so the
+  // (McpLevelHandlers.cpp), but no record published it, so the
   // only way to set a level's GameMode override through the gateway was to fall
   // back to system_control.execute_python. Published here against the same
   // native action; the handler re-validates and reports what it applied.

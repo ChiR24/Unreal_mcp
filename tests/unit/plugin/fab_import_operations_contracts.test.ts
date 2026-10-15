@@ -12,10 +12,10 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-const plugin = resolve(process.cwd(), 'plugins/McpAutomationBridge/Source');
+const plugin = resolve(process.cwd(), 'plugins/EngineWire/Source');
 const fab = (file: string): string =>
-  readFileSync(resolve(plugin, 'McpAutomationBridgeFab/Private', file), 'utf8');
-const core = (file: string): string => readFileSync(resolve(plugin, 'McpAutomationBridge', file), 'utf8');
+  readFileSync(resolve(plugin, 'EngineWireFab/Private', file), 'utf8');
+const core = (file: string): string => readFileSync(resolve(plugin, 'EngineWire', file), 'utf8');
 
 /** Comment bodies explain the rules, so rule checks ignore them. */
 const code = (text: string): string =>
@@ -52,9 +52,9 @@ describe('the Fab add answers when Fab accepts, not when the import ends', () =>
 
   it('answers a full queue with the import at its head and the call that reads it', () => {
     expect(code(fab('McpFabAddReply.cpp'))).toMatch(/It is working on %s \(operation %s, %s%s, %\.0f s in\)\. Poll asset\.query_marketplace with lookup=fab_import_status/u);
-    const handler = code(core('Private/Domains/AssetWorkflow/Operations/McpAutomationBridge_AssetWorkflowFabAdd.cpp'));
+    const handler = code(core('Private/Domains/AssetWorkflow/Operations/McpAssetFabAdd.cpp'));
     expect(handler).toMatch(/QUEUE_FULL[\s\S]*MakeStatusNextCall\(Result\.OperationId\)/u);
-    const json = code(core('Private/Domains/AssetWorkflow/Fab/McpAutomationBridge_FabImportJson.h'));
+    const json = code(core('Private/Domains/AssetWorkflow/Fab/McpFabImportJson.h'));
     expect(json).toContain('TEXT("fab_import_status")');
     expect(json).toContain('TEXT("query_marketplace")');
   });
@@ -64,20 +64,20 @@ describe('the Fab add answers when Fab accepts, not when the import ends', () =>
     expect(dedup).toContain('McpFabImportOperations::OptionsKeyOf(Open.OperationId) != OptionsKey');
     expect(dedup).toContain('TEXT("ADD_ALREADY_RUNNING")');
     expect(add).toContain('McpFabImportOperations::Begin(ListingId, OptionsKey)');
-    const handler = code(core('Private/Domains/AssetWorkflow/Operations/McpAutomationBridge_AssetWorkflowFabAdd.cpp'));
+    const handler = code(core('Private/Domains/AssetWorkflow/Operations/McpAssetFabAdd.cpp'));
     expect(handler).toContain('Options.RequestKey = Destination + TEXT("|") + AssetName;');
     expect(handler).toMatch(/ADD_ALREADY_RUNNING[\s\S]*MakeStatusNextCall\(Result\.OperationId\)/u);
   });
 
   it('points at a relocation capability that exists', () => {
-    const handler = core('Private/Domains/AssetWorkflow/Operations/McpAutomationBridge_AssetWorkflowFabAdd.cpp');
+    const handler = core('Private/Domains/AssetWorkflow/Operations/McpAssetFabAdd.cpp');
     expect(handler).not.toContain('asset.migrate_assets');
     expect(handler).toContain('asset.move');
   });
 });
 
 describe('the Fab import status read', () => {
-  const status = code(core('Private/Domains/AssetWorkflow/Fab/McpAutomationBridge_AssetWorkflowFabImportStatus.cpp'));
+  const status = code(core('Private/Domains/AssetWorkflow/Fab/McpAssetFabImportStatus.cpp'));
 
   it('is served from the operation store, never from the page', () => {
     expect(status).toContain('Provider->GetImportStatus(');
@@ -86,14 +86,14 @@ describe('the Fab import status read', () => {
 
   it('only looks up a plain id, so nothing path-shaped is ever matched', () => {
     expect(status).toMatch(/McpFabImportJson::IsPlainKey\(Key\)/u);
-    expect(code(core('Private/Domains/AssetWorkflow/Fab/McpAutomationBridge_FabImportJson.h')))
+    expect(code(core('Private/Domains/AssetWorkflow/Fab/McpFabImportJson.h')))
       .toMatch(/FChar::IsAlnum\(Ch\)/u);
   });
 
   it('is dispatched and declared like every other asset action', () => {
-    expect(code(core('Private/Domains/AssetWorkflow/McpAutomationBridge_AssetWorkflowHandlers.cpp')))
+    expect(code(core('Private/Domains/AssetWorkflow/McpAssetHandlers.cpp')))
       .toContain('get_fab_import_status');
-    expect(core('Public/McpAutomationBridgeSubsystemAssetWorkflowDeclarations.h')).toContain('HandleGetFabImportStatus');
+    expect(core('Public/EngineWireSubsystemAssetWorkflowDeclarations.h')).toContain('HandleGetFabImportStatus');
   });
 });
 
@@ -127,7 +127,7 @@ describe('the Fab log capture', () => {
   });
 
   it('is stopped when the module shuts down, so no device outlives it', () => {
-    expect(code(fab('McpAutomationBridgeFabModule.cpp'))).toContain('McpFabLogCapture::Stop();');
+    expect(code(fab('EngineWireFabModule.cpp'))).toContain('McpFabLogCapture::Stop();');
   });
 });
 
@@ -137,7 +137,7 @@ describe('the Fab mesh-merging guard', () => {
   it('reaches Interchange by reflection only, so the module takes no build dependency on it', () => {
     expect(guard).toContain('FindObject<UClass>(nullptr, AssetsPipelinePath)');
     expect(guard).not.toMatch(/#include\s+"Interchange/u);
-    const build = readFileSync(resolve(plugin, 'McpAutomationBridgeFab/McpAutomationBridgeFab.Build.cs'), 'utf8');
+    const build = readFileSync(resolve(plugin, 'EngineWireFab/EngineWireFab.Build.cs'), 'utf8');
     expect(build).not.toMatch(/Interchange/u);
   });
 
@@ -164,7 +164,7 @@ describe('the Fab mesh-merging guard', () => {
 });
 
 describe('the post-import save', () => {
-  const post = code(core('Private/Domains/AssetWorkflow/Fab/McpAutomationBridge_FabPostImport.cpp'));
+  const post = code(core('Private/Domains/AssetWorkflow/Fab/McpFabPostImport.cpp'));
 
   it('saves through the safe wrapper, and only what the import left dirty', () => {
     expect(post).toContain('McpSafeOperations::McpSafeAssetSave(Package)');
@@ -187,7 +187,7 @@ describe('the post-import save', () => {
   });
 
   it('is what the add hands the adapter', () => {
-    const handler = code(core('Private/Domains/AssetWorkflow/Operations/McpAutomationBridge_AssetWorkflowFabAdd.cpp'));
+    const handler = code(core('Private/Domains/AssetWorkflow/Operations/McpAssetFabAdd.cpp'));
     expect(handler).toContain('McpFabPostImport::Run(Result, Paths, Destination, AssetName);');
     expect(handler).toContain('McpFabPostImport::SaveAgain(Result, Paths);');
     expect(code(fab('McpFabAddOperation.cpp'))).toContain('Options.PostImport, Options.SaveAgain');
@@ -198,7 +198,7 @@ describe('the post-import save', () => {
 // registry has stopped announcing assets, so a save made when the registry went quiet ran too early or was undone.
 describe('what the engine finishes after the registry went quiet', () => {
   const watcher = code(fab('Import/McpFabImportWatcher.cpp'));
-  const post = code(core('Private/Domains/AssetWorkflow/Fab/McpAutomationBridge_FabPostImport.cpp'));
+  const post = code(core('Private/Domains/AssetWorkflow/Fab/McpFabPostImport.cpp'));
 
   it('does not settle while Interchange is working, for a bounded time', () => {
     expect(watcher).toMatch(/Count > 0 && Watch->InterchangeWaited < MaxInterchangeWaitSeconds && McpFabInterchange::IsActive\(\)/u);
@@ -228,7 +228,7 @@ describe('what the engine finishes after the registry went quiet', () => {
   });
 
   it('says in capitals, in the line a caller reads first and in the note, which packages are not saved', () => {
-    const status = code(core('Private/Domains/AssetWorkflow/Fab/McpAutomationBridge_AssetWorkflowFabImportStatus.cpp'));
+    const status = code(core('Private/Domains/AssetWorkflow/Fab/McpAssetFabImportStatus.cpp'));
     expect(status).toContain('package(s) are NOT SAVED (unsavedPackages)');
     expect(status).toContain('TEXT(" %d package(s) are NOT SAVED."), Unsaved');
     // Whatever the phase: a partial or failed import can leave packages in memory too.
@@ -268,10 +268,10 @@ describe('the Fab add queue', () => {
   });
 
   it('is listed by the status read, which reads it from the store like everything else', () => {
-    const status = code(core('Private/Domains/AssetWorkflow/Fab/McpAutomationBridge_AssetWorkflowFabImportStatus.cpp'));
+    const status = code(core('Private/Domains/AssetWorkflow/Fab/McpAssetFabImportStatus.cpp'));
     expect(status).toContain('Provider->GetImportQueue(Queue);');
     expect(status).toContain('TEXT("queue")');
-    expect(code(fab('McpAutomationBridgeFabModule.cpp'))).toContain('McpFabImportOperations::ListQueue(');
+    expect(code(fab('EngineWireFabModule.cpp'))).toContain('McpFabImportOperations::ListQueue(');
   });
 });
 
@@ -303,7 +303,7 @@ describe('a refused download says which step failed', () => {
 });
 
 describe('a quality tier named by the caller', () => {
-  const handler = code(core('Private/Domains/AssetWorkflow/Operations/McpAutomationBridge_AssetWorkflowFabAdd.cpp'));
+  const handler = code(core('Private/Domains/AssetWorkflow/Operations/McpAssetFabAdd.cpp'));
   const add = code(fab('McpFabAddOperation.cpp'));
   const script = code(fab('McpFabAddToProject.cpp'));
 
@@ -332,5 +332,25 @@ describe('a quality tier named by the caller', () => {
     expect(reply).toContain('TEXT("QUALITY_NOT_AVAILABLE")');
     expect(reply).toMatch(/publishes no '%s' quality for %s\. It offers: %s\./u);
     expect(reply).toMatch(/Nothing was downloaded\./u);
+  });
+});
+
+describe('an import is only what it brought, and a pack is not done while it downloads', () => {
+  const watcher = code(fab('Import/McpFabImportWatcher.cpp'));
+  const scope = code(fab('Import/McpFabImportScope.cpp'));
+
+  it('counts no asset another call made meanwhile in a folder the project already had', () => {
+    expect(watcher).toContain('const TSet<FString> OldTops = McpFabImportScope::TopFolders(Before);');
+    expect(watcher).toMatch(/Before\.Contains\(Path\) \|\| Path\.Contains\(TEXT\(":"\)\) \|\| !McpFabImportScope::Counts\(Path, OldTops\)/u);
+    expect(scope).toContain('return Top == TEXT("/Game/Fab") || (!Top.IsEmpty() && !OldTops.Contains(Top));');
+  });
+
+  it('neither settles nor runs out while Fab still shows the download', () => {
+    const hold = watcher.indexOf('if (McpFabImportOperations::IsDownloadShowing(OperationId))');
+    expect(hold, 'the ticker must ask whether the download is still on screen').toBeGreaterThan(-1);
+    const body = watcher.slice(hold, watcher.indexOf('}', hold));
+    expect(body).toContain('Watch->QuietFor = 0.0;');
+    expect(body).toContain('Ceiling = FMath::Max(Ceiling, FMath::Min(Watch->Elapsed + BaseCeilingSeconds, LongestCeilingSeconds));');
+    expect(code(fab('Import/McpFabImportCancel.cpp'))).toMatch(/IsDownloadShowing[\s\S]*?McpFabDownloadProgress::Read\(ToastName\(\*Op\)\)\.bFound/u);
   });
 });

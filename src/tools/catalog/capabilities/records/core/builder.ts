@@ -15,6 +15,13 @@ import { actionInputSchema, behavior, EMPTY_OUTPUT, outputSchema, policy, schema
 type EffectType = 'read' | 'write' | 'destructive';
 type EditorState = 'edit' | 'pie' | 'simulate';
 
+/**
+ * A capability that works whatever the editor is doing: in the level editor and while a game runs (Play In Editor or
+ * Simulate), acting on the running game's world then. Every record defaults to edit only, which told a caller that
+ * the calls used to test a running game (spawn, transforms, properties, input, screenshots) do not work there.
+ */
+export const ANY_EDITOR_STATE: readonly EditorState[] = ['edit', 'pie', 'simulate'];
+
 export type CoreRecordSpec = {
   readonly parentTool: string;
   readonly action: string;

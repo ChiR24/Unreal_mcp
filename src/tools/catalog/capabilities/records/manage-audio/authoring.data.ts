@@ -36,6 +36,19 @@ const GET_METASOUND_GRAPH_EXAMPLE: { readonly input: JsonObject; readonly output
 // Every audio asset edit saves unless told not to; manage_networking shares the bare `save` pin with the opposite default.
 const SAVE = { type: 'boolean', description: 'Persist the asset to disk (default true); false leaves the change in memory only.' } as const;
 const PARENT_CLASS = { type: 'string', description: 'Canonical /Game SoundClass asset path of the parent class.' } as const;
+// innerRadius gives a box one size on all three axes, and a hall or corridor zone is no cube.
+const BOX_EXTENT = {
+  type: 'object',
+  description: 'A Box shape\'s half-size on each axis in cm, {x, y, z}, each above 0: a zone the length of a hall without '
+    + 'reaching as far sideways. It replaces the size innerRadius gives a box; another shape is refused.',
+  properties: {
+    x: { type: 'number', description: 'Half-size along X, cm.' },
+    y: { type: 'number', description: 'Half-size along Y, cm.' },
+    z: { type: 'number', description: 'Half-size along Z, cm.' },
+  },
+  required: ['x', 'y', 'z'],
+  additionalProperties: false,
+} as const;
 
 const a = (action: string, summary: string, params: readonly string[], required: readonly string[], outputs: readonly string[] = [], outputRequired: readonly string[] = [], plugins: readonly string[] = [], requiredOneOf?: readonly string[]): CapabilityRecordSource => {
   const record = utilityRecord({
@@ -59,19 +72,28 @@ export const AUDIO_AUTHORING_RECORDS: readonly CapabilityRecordSource[] = [
     ['assetPath', 'soundClassPath', 'volumeAdjuster', 'pitchAdjuster', 'applyToChildren', 'fadeInTime', 'fadeOutTime', 'save'], ['assetPath', 'soundClassPath']),
   a('add_source_effect', 'Add an effect to a Source Effect Chain: a new preset of effectType, or an existing preset asset by effectPresetPath.',
     ['assetPath', 'effectType', 'effectPresetPath', 'bypass', 'save'], ['assetPath'], [], [], [], ['effectType', 'effectPresetPath']),
-  { ...(withInputProps(a('build_metasound', 'Run many MetaSound graph edits in one call: add nodes, inputs and outputs, connect pins and set literals, with $id references between steps.', ['assetPath'], ['assetPath', 'operations'], ['nodeIds', 'results'], [], META), {
+  { ...(withInputProps(a('build_metasound', 'Run many MetaSound graph edits in one call: add nodes, inputs and outputs, connect pins and set literals, with $id references between steps.', ['assetPath'], ['assetPath', 'operations'], ['nodeIds', 'results', 'saved'], [], META), {
     operations: {
       type: 'array', items: OBJ_ITEM, 'x-unreal-reflection-boundary': true,
       description: 'Steps run in order, 1-200, stopping at the first failure; every add_node class is looked up first, so a node '
-        + 'class the registry does not hold fails the batch with nothing applied. Each is {edit, ...the params of that edit}: edit is '
+        + 'class the registry does not hold fails the batch with nothing applied, and so is every pin a connect or set_default names '
+        + 'on a node the batch adds (a wrong one fails with PIN_NOT_FOUND and that node\'s pins). Each is {edit, ...the params of that edit}: edit is '
         + 'add_node, connect, disconnect, remove_node, set_default, add_input or add_output (the add_metasound_node, connect_metasound_nodes, '
         + 'disconnect_metasound_nodes, remove_metasound_node, set_metasound_default, add_metasound_input, add_metasound_output params). Optional per step: id (names the node '
         + 'it creates; later steps use "$id" in nodeId/nodeIds/sourceNodeId/targetNodeId), from/to ("$id.PinName" shorthand for '
         + 'connect; interface nodes such as the On Play input are named with the explicit fields).',
     },
-    save: { type: 'boolean', description: 'Save the MetaSound after each step (default true); false leaves every edit in memory only.' },
+    save: { type: 'boolean', description: 'Save the MetaSound once, after the steps (default true); a batch that stops at a failing step saves the steps before it. false leaves every edit in memory only.' },
   })), examples: [{ title: 'Build a one-oscillator MetaSound', ...BUILD_METASOUND_EXAMPLE }] },
-  a('configure_distance_attenuation', 'Configure distance attenuation.', ['assetPath', 'innerRadius', 'falloffDistance', 'distanceAlgorithm', 'save'], ['assetPath']),
+  withInputProps(a('configure_distance_attenuation', 'Configure distance attenuation: inner radius (or a box\'s size per axis), falloff distance and curve, and air absorption (a low-pass that muffles the sound with distance).',
+    ['assetPath', 'innerRadius', 'falloffDistance', 'distanceAlgorithm', 'save'], ['assetPath']), {
+    extent: BOX_EXTENT,
+    attenuateWithLPF: { type: 'boolean', description: 'Air absorption on or off: a low-pass whose cutoff drops with distance. Sending any lpf value turns it on unless this is false.' },
+    lpfRadiusMin: { type: 'number', description: 'Distance in cm where the low-pass starts closing; nearer than this the cutoff is lpfFrequencyAtMin.' },
+    lpfRadiusMax: { type: 'number', description: 'Distance in cm where the cutoff reaches lpfFrequencyAtMax.' },
+    lpfFrequencyAtMin: { type: 'number', description: 'Low-pass cutoff in Hz at lpfRadiusMin and nearer (20000 leaves the sound unfiltered).' },
+    lpfFrequencyAtMax: { type: 'number', description: 'Low-pass cutoff in Hz at lpfRadiusMax and beyond (900 sounds like a distant, muffled engine).' },
+  }),
   a('configure_mix_eq', 'Configure Sound Mix equalization: the four bands through eqSettings, or the low, mid, highMid and high fields.',
     ['assetPath', 'applyEQ', 'eqPriority', 'eqSettings', 'lowFrequency', 'lowGain', 'midFrequency', 'midGain', 'highMidFrequency', 'highMidGain', 'highFrequency', 'highGain', 'save'], ['assetPath']),
   a('configure_occlusion', 'Configure audio occlusion.', ['assetPath', 'enable', 'occlusionVolumeScale', 'occlusionFilterScale', 'occlusionInterpolationTime', 'save'], ['assetPath']),
@@ -86,12 +108,24 @@ export const AUDIO_AUTHORING_RECORDS: readonly CapabilityRecordSource[] = [
     tool: T, action: 'get_metasound_graph', family: 'metasound', summary: 'Read a MetaSound graph: every node with its input literals, the links by pin name, and the graph inputs and outputs.',
     params: ['assetPath'], required: ['assetPath'], effect: 'read', plugins: META,
     outputs: ['assetPath', 'nodeCount', 'edgeCount', 'nodes', 'edges', 'graphInputs', 'graphOutputs'], outputRequired: ['nodes', 'edges'],
-  }), ['read metasound graph', 'metasound nodes', 'list metasound nodes', 'inspect metasound', 'metasound links']), examples: [{ title: 'Read a one-oscillator MetaSound', ...GET_METASOUND_GRAPH_EXAMPLE }] },
+  }), ['read metasound graph', 'metasound nodes', 'inspect metasound', 'metasound links']), examples: [{ title: 'Read a one-oscillator MetaSound', ...GET_METASOUND_GRAPH_EXAMPLE }] },
+  // A node's class name was a guess until add_node refused it: nothing listed what the registry holds.
+  { ...withInputProps(withTopics(utilityRecord({
+    tool: T, action: 'list_metasound_nodes', family: 'metasound', summary: 'List the MetaSound node classes the engine has, by part of their class name, display name or category, with what each does and, with includePins, its input and output pins: the nodeClassName add_node takes.',
+    params: [], effect: 'read', plugins: META,
+    outputs: ['nodeClasses', 'matchCount', 'truncated'], outputRequired: ['nodeClasses'],
+  }), ['list metasound nodes', 'metasound node classes', 'available metasound nodes', 'find metasound node', 'metasound node library']), {
+    filter: { type: 'string', description: 'Part of a class name, display name or category, spaces and case ignored ("Trigger", "Envelope", "Filters"); omitted, every class up to limit.' },
+    includePins: { type: 'boolean', description: 'Also list each class\'s input and output pins as "Name (Type)", the names connect and set_default take.' },
+    limit: { type: 'number', minimum: 1, maximum: 200, description: 'At most this many classes (default 50), those whose own name equals, starts with or contains filter first, the engine\'s UE nodes first among those, then by name; matchCount and truncated say what was left out.' },
+  }), examples: [{ title: 'Find the trigger nodes', input: { action: 'list_metasound_nodes', filter: 'Trigger Filter', includePins: true }, output: { success: true, message: '1 node classes match', nodeClasses: [{ nodeClassName: 'UE.Trigger Filter', category: 'Triggers', description: 'When triggered, Heads has the given probability chance to trigger, otherwise it\'s Tail.', inputs: ['Trigger (Trigger)', 'Reset (Trigger)', 'Seed (Int32)', 'Probability (Float)'], outputs: ['Heads (Trigger)', 'Tails (Trigger)'] }], matchCount: 1, truncated: false } }] },
   a('connect_metasound_nodes', 'Connect two MetaSound graph pins.', ['assetPath', 'sourceNodeId', 'sourceOutputName', 'targetNodeId', 'targetInputName', 'save'], ['assetPath', 'sourceNodeId', 'sourceOutputName', 'targetNodeId', 'targetInputName'], [], [], META),
   a('create_attenuation_settings', 'Create attenuation settings and return the asset path.', ['name', 'path', 'innerRadius', 'falloffDistance', 'save'], ['name'], ['assetPath'], ['assetPath']),
   a('create_dialogue_voice', 'Create a Dialogue Voice asset and return its path.', ['name', 'path', 'gender', 'plurality', 'save'], ['name'], ['assetPath'], ['assetPath']),
   a('create_dialogue_wave', 'Create a Dialogue Wave asset and return its path; wavePath or speakerPath adds its first context mapping.', ['name', 'path', 'spokenText', 'wavePath', 'speakerPath', 'save'], ['name'], ['assetPath'], ['assetPath']),
-  a('create_metasound', 'Create a MetaSound asset, named by name and path or by its full assetPath, and return its asset path. A MetaSound already at that path is refused (ASSET_EXISTS), never replaced.', ['name', 'path', 'assetPath', 'save'], [], ['assetPath'], ['assetPath'], META, ['name', 'assetPath']),
+  withInputProps(a('create_metasound', 'Create a MetaSound asset, named by name and path or by its full assetPath, and return its asset path. A MetaSound already at that path is refused (ASSET_EXISTS), never replaced. A one-shot source (the default: On Play in, On Finished out) is never virtualized by the engine, so one left playing on an AudioComponent that starts out of earshot is dropped for good; make a drone, hum or ambience with oneShot false.', ['name', 'path', 'assetPath', 'oneShot', 'save'], [], ['assetPath', 'oneShot'], ['assetPath'], META, ['name', 'assetPath']), {
+    oneShot: { type: 'boolean', description: 'false makes a continuous source with no On Finished output: the engine treats it as looping, so a hum or ambience whose AudioComponent starts out of earshot resumes when the listener comes near. Default true (it plays until On Finished fires).' },
+  }),
   a('create_reverb_effect', 'Create a Reverb Effect asset and return its path.', ['name', 'path', 'density', 'diffusion', 'gain', 'gainHF', 'decayTime', 'decayHFRatio', 'save'], ['name'], ['assetPath'], ['assetPath']),
   a('create_source_effect_chain', 'Create a Source Effect Chain asset and return its path.', ['name', 'path', 'save'], ['name'], ['assetPath'], ['assetPath']),
   withInputProps(a('create_submix_effect', 'Create a Sound Submix whose effect chain holds a new submix effect preset of effectType, and return its path.', ['name', 'path', 'effectType', 'save'], ['name', 'effectType'], ['assetPath'], ['assetPath']), {
@@ -120,5 +154,7 @@ export const AUDIO_AUTHORING_RECORDS: readonly CapabilityRecordSource[] = [
     ['doppler effect', 'pitch shift moving sound']),
   a('set_cue_concurrency', 'Assign concurrency settings to a Sound Cue.', ['assetPath', 'concurrencyPath', 'save'], ['assetPath']),
   withTopics(a('set_dialogue_context', 'Add a context mapping to a Dialogue Wave: who speaks it, to whom, and which SoundWave plays.', ['assetPath', 'speakerPath', 'targetVoices', 'soundWavePath', 'localizationKeyFormat', 'replace', 'save'], ['assetPath']), ['link sound to speaker']),
-  a('set_sound_attenuation', 'Create or update sound attenuation settings.', ['name', 'path', 'innerRadius', 'falloffDistance', 'attenuationShape', 'falloffMode', 'save'], ['name'], ['assetPath'], ['assetPath']),
+  withInputProps(a('set_sound_attenuation', 'Create or update sound attenuation settings; a Box shape takes its size per axis with extent.', ['name', 'path', 'innerRadius', 'falloffDistance', 'attenuationShape', 'falloffMode', 'save'], ['name'], ['assetPath'], ['assetPath']), {
+    extent: BOX_EXTENT,
+  }),
 ];

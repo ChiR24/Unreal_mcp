@@ -1,0 +1,284 @@
+#pragma once
+
+#include "CoreMinimal.h"
+#include "Engine/DeveloperSettings.h"
+#include "McpCapabilityScopes.h"
+#include "EngineWireSettings.generated.h"
+
+// Store these settings in the project's config (DefaultGame.ini) and expose
+// them in Project Settings -> Plugins. Use defaultconfig so the values are
+// written to the project's default INI file when persisted.
+
+UCLASS(config=Game, defaultconfig, meta = (DisplayName = "EngineWire"))
+class ENGINEWIRE_API UEngineWireSettings : public UDeveloperSettings
+{
+    GENERATED_BODY()
+
+public:
+    UEngineWireSettings();
+
+    /** If true, the plugin will always start a listening WebSocket server on startup and accept inbound MCP connections. */
+    UPROPERTY(config, EditAnywhere, Category = "Connection")
+    bool bAlwaysListen;
+
+    /** Host to bind the listening sockets. Default: 127.0.0.1 (loopback).
+     * To bind to LAN addresses (e.g., 0.0.0.0 or 192.168.x.x), enable bAllowNonLoopback in Security settings.
+     */
+    UPROPERTY(config, EditAnywhere, Category = "Connection")
+    FString ListenHost;
+
+    /** Comma-separated list of ports to listen on. Example: "8090,8091" */
+    UPROPERTY(config, EditAnywhere, Category = "Connection")
+    FString ListenPorts;
+
+    UPROPERTY(config, EditAnywhere, Category = "Security")
+    FString CapabilityToken;
+
+    /** Scoped capability tokens for the documented migration window. Each narrows
+     * authority and never widens it; a scoped token may list only
+     * Read/Write/Destructive, never Admin. The legacy CapabilityToken above maps
+     * explicitly to Admin. Configured settings remain the only durable storage. */
+    UPROPERTY(config, EditAnywhere, Category = "Security|Scoped Tokens")
+    TArray<FMcpScopedCapabilityToken> ScopedCapabilityTokens;
+
+    UPROPERTY(config, EditAnywhere, Category = "Connection", meta = (ClampMin = "0.0"))
+    float AutoReconnectDelay;
+
+    /** When true, require a capability token for incoming connections (enforces matching token). */
+    UPROPERTY(config, EditAnywhere, Category = "Security")
+    bool bRequireCapabilityToken;
+
+    /** SECURITY WARNING: When enabled, allows the WebSocket and native MCP
+     * transports to bind to non-loopback addresses. This exposes editor
+     * automation to the local network. Default: false.
+     */
+    UPROPERTY(config, EditAnywhere, Category = "Security")
+    bool bAllowNonLoopback;
+
+    /** Maximum output width or height accepted by Movie Render Queue. */
+    UPROPERTY(config, EditAnywhere, Category = "Security|Movie Render Queue",
+        meta = (ClampMin = "1", ClampMax = "16384"))
+    int32 MaxMovieRenderResolutionDimension;
+
+    /** Maximum per-session MCP requests per minute (HTTP/SSE only). Counts
+     *  every request method, not just tool calls. 0 disables the cap. */
+    UPROPERTY(config, EditAnywhere, Category = "Security|Native MCP Rate Limit",
+        meta = (ClampMin = "0"))
+    int32 MaxClientRequestsPerMinute = 600;
+
+    /** Maximum per-session MCP tool calls per minute (HTTP/SSE only). 0
+     *  disables the cap. */
+    UPROPERTY(config, EditAnywhere, Category = "Security|Native MCP Rate Limit",
+        meta = (ClampMin = "0"))
+    int32 MaxClientToolCallsPerMinute = 120;
+
+    /** Maximum width multiplied by height accepted by Movie Render Queue. */
+    UPROPERTY(config, EditAnywhere, Category = "Security|Movie Render Queue",
+        meta = (ClampMin = "1"))
+    int64 MaxMovieRenderPixelCount;
+
+    /** Maximum effective output frames accepted per MRQ job, including handles. */
+    UPROPERTY(config, EditAnywhere, Category = "Security|Movie Render Queue",
+        meta = (ClampMin = "1"))
+    int32 MaxMovieRenderFrameCount;
+
+    /** Maximum effective output frame rate accepted by Movie Render Queue. */
+    UPROPERTY(config, EditAnywhere, Category = "Security|Movie Render Queue",
+        meta = (ClampMin = "1", ClampMax = "240"))
+    int32 MaxMovieRenderEffectiveFrameRate = 240;
+
+    /** Maximum handle frames accepted on either side of an MRQ shot. */
+    UPROPERTY(config, EditAnywhere, Category = "Security|Movie Render Queue",
+        meta = (ClampMin = "0"))
+    int32 MaxMovieRenderHandleFrameCount;
+
+    /** Maximum spatial or temporal anti-aliasing sample count. */
+    UPROPERTY(config, EditAnywhere, Category = "Security|Movie Render Queue",
+        meta = (ClampMin = "1"))
+    int32 MaxMovieRenderSampleCount;
+
+    /** Maximum spatial x temporal anti-aliasing sample product. */
+    UPROPERTY(config, EditAnywhere, Category = "Security|Movie Render Queue",
+        meta = (ClampMin = "1"))
+    int32 MaxMovieRenderCombinedSampleCount;
+
+    /** Maximum console variables accepted in one MRQ configuration request. */
+    UPROPERTY(config, EditAnywhere, Category = "Security|Movie Render Queue",
+        meta = (ClampMin = "0"))
+    int32 MaxMovieRenderConsoleVariables;
+
+    /** Exact MRQ console-variable names that automation may set. */
+    UPROPERTY(config, EditAnywhere, Category = "Security|Movie Render Queue")
+    TArray<FString> MovieRenderConsoleVariableAllowlist;
+
+    /** Maximum absolute value accepted for an allowlisted MRQ console variable. */
+    UPROPERTY(config, EditAnywhere, Category = "Security|Movie Render Queue",
+        meta = (ClampMin = "0.0"))
+    float MaxMovieRenderConsoleVariableMagnitude;
+
+    /** Executor classes that callers may select explicitly. */
+    UPROPERTY(config, EditAnywhere, Category = "Security|Movie Render Queue")
+    TArray<FString> MovieRenderExecutorClassAllowlist;
+
+    /** Burn-in widget classes that callers may select explicitly. */
+    UPROPERTY(config, EditAnywhere, Category = "Security|Movie Render Queue")
+    TArray<FString> MovieRenderBurnInClassAllowlist;
+
+    UPROPERTY(config, EditAnywhere, Category = "Security|Movie Render Queue",
+        meta = (ClampMin = "1"))
+    int32 MaxMovieRenderEnabledJobs;
+
+    /** Maximum total jobs retained in the Movie Render Queue. */
+    UPROPERTY(config, EditAnywhere, Category = "Security|Movie Render Queue",
+        meta = (ClampMin = "1"))
+    int32 MaxMovieRenderQueueJobs;
+
+    UPROPERTY(config, EditAnywhere, Category = "Security|Movie Render Queue",
+        meta = (ClampMin = "1"))
+    int64 MaxMovieRenderAggregateWork;
+
+    /** Maximum frame-number zero padding accepted in output settings. */
+    UPROPERTY(config, EditAnywhere, Category = "Security|Movie Render Queue",
+        meta = (ClampMin = "1"))
+    int32 MaxMovieRenderZeroPadFrameNumbers;
+
+    UPROPERTY(config, EditAnywhere, Category = "Security|Movie Render Queue",
+        meta = (ClampMin = "1"))
+    int32 MaxMovieRenderOutputScanFiles;
+
+    UPROPERTY(config, EditAnywhere, Category = "Security|Take Recorder")
+    TArray<FString> TakeRecorderSourceClassAllowlist;
+
+    /** Maximum number of actor or class entries accepted by one Take Recorder request. */
+    UPROPERTY(config, EditAnywhere, Category = "Security|Take Recorder",
+        meta = (ClampMin = "1"))
+    int32 MaxTakeRecorderSourceItems;
+
+    /** Maximum length accepted for Take Recorder actor names and class paths. */
+    UPROPERTY(config, EditAnywhere, Category = "Security|Take Recorder",
+        meta = (ClampMin = "1"))
+    int32 MaxTakeRecorderStringLength;
+
+    /** Maximum server-side MRQ wait deadline in milliseconds. */
+    UPROPERTY(config, EditAnywhere, Category = "Security|Movie Render Queue",
+        meta = (ClampMin = "1"))
+    int32 MaxMovieRenderTimeoutMs;
+
+    /** Maximum time to wait for a timed-out executor to settle after cancellation. */
+    UPROPERTY(config, EditAnywhere, Category = "Security|Movie Render Queue",
+        meta = (ClampMin = "1", ClampMax = "30000"))
+    int32 MaxMovieRenderCancellationWaitMs;
+
+    /** Enable TLS for the automation bridge WebSocket server. */
+    UPROPERTY(config, EditAnywhere, Category = "Security")
+    bool bEnableTls;
+
+    /** PEM certificate path used for TLS (server). */
+    UPROPERTY(config, EditAnywhere, Category = "Security")
+    FString TlsCertificatePath;
+
+    /** PEM private key path used for TLS (server). */
+    UPROPERTY(config, EditAnywhere, Category = "Security")
+    FString TlsPrivateKeyPath;
+
+    /** Max inbound WebSocket messages per minute before disconnect (0 = disabled). */
+    UPROPERTY(config, EditAnywhere, Category = "Security", meta = (ClampMin = "0"))
+    int32 MaxMessagesPerMinute;
+
+    /** Max inbound automation_request messages per minute before disconnect (0 = disabled). */
+    UPROPERTY(config, EditAnywhere, Category = "Security", meta = (ClampMin = "0"))
+    int32 MaxAutomationRequestsPerMinute;
+
+    /** When true, the plugin will open multiple listen sockets provided by ListenPorts. */
+    UPROPERTY(config, EditAnywhere, Category = "Connection")
+    bool bMultiListen;
+
+    // Heartbeat settings
+    /** How many seconds without a heartbeat before a connection is considered timed out. If <= 0, heartbeat timeout checking is disabled. */
+    UPROPERTY(config, EditAnywhere, Category = "Heartbeat", meta = (ClampMin = "0.0"))
+    float HeartbeatTimeoutSeconds;
+
+    // Server socket tuning
+    /** Backlog parameter passed to listen() when creating the listening socket. If <= 0, engine default will be used. */
+    UPROPERTY(config, EditAnywhere, Category = "Connection")
+    int32 ListenBacklog;
+
+    /** How long (seconds) the server socket thread should sleep when no incoming connection; small values reduce CPU but increase latency. If <= 0, engine default will be used. */
+    UPROPERTY(config, EditAnywhere, Category = "Connection", meta = (ClampMin = "0.0"))
+    float AcceptSleepSeconds;
+
+    /** Frequency, in seconds, for the subsystem ticker. If <= 0, engine default will be used. */
+    UPROPERTY(config, EditAnywhere, Category = "Debug", meta = (ClampMin = "0.0"))
+    float TickerIntervalSeconds;
+
+    // ── Native MCP Streamable HTTP ──────────────────────────────────────
+
+    /** Enable native MCP Streamable HTTP endpoint (POST /mcp).
+     * AI clients (Claude Code, Cursor, etc.) connect directly without the TypeScript bridge.
+     * Requires editor restart after changing. */
+    UPROPERTY(config, EditAnywhere, Category = "Native MCP",
+        meta = (DisplayName = "Enable Native MCP Server"))
+    bool bEnableNativeMCP = false;
+
+    /** Port for the native MCP HTTP server. Must differ from WebSocket ports. */
+    UPROPERTY(config, EditAnywhere, Category = "Native MCP",
+        meta = (DisplayName = "Native MCP Port", EditCondition = "bEnableNativeMCP",
+                ClampMin = "1024", ClampMax = "65535"))
+    int32 NativeMCPPort = 3000;
+
+    /** Load all 23 canonical tools on startup. */
+    UPROPERTY(config, EditAnywhere, Category = "Native MCP",
+        meta = (DisplayName = "Load All Tools on Start", EditCondition = "bEnableNativeMCP"))
+    bool bLoadAllToolsOnStart = true;
+
+    /** Additional instructions sent to AI clients in the MCP initialize response.
+     * Use this to describe your project, conventions, or constraints.
+     * Appended after the default server instructions from server-info.json. */
+    UPROPERTY(config, EditAnywhere, Category = "Native MCP",
+        meta = (DisplayName = "Server Instructions", EditCondition = "bEnableNativeMCP",
+                MultiLine = "true"))
+    FString NativeMCPInstructions;
+
+private:
+    static volatile int32& EditGenerationCounter()
+    {
+        static volatile int32 Counter = 0;
+        return Counter;
+    }
+
+public:
+    virtual FName GetCategoryName() const override { return FName(TEXT("Plugins")); }
+    virtual FText GetSectionText() const override;
+
+    // Where the settings lived before the plugin was renamed EngineWire. A project with
+    // nothing under the current section still reads this one (see PostInitProperties).
+    static constexpr const TCHAR* LegacyConfigSection = TEXT("/Script/McpAutomationBridge.McpAutomationBridgeSettings");
+    virtual void PostInitProperties() override;
+
+    // Bumped on every settings edit so caches derived from these values (the
+    // capability-principal candidate table) rebuild without re-reading settings
+    // on every request. Never derived from, and never reveals, a token.
+    static int32 GetEditGeneration()
+    {
+        return FPlatformAtomics::AtomicRead(&EditGenerationCounter());
+    }
+
+    // These settings are the automation channel's security posture and hold its tokens:
+    // no automation read or write may reach them. The resolved class is checked as well as
+    // the text, since a short-name lookup finds this class under any casing or module path.
+    // The old section name is covered too: its values still load when the new one is empty.
+    static bool IsAutomationTarget(const FString& SectionOrCategory, const UClass* Resolved)
+    {
+        return SectionOrCategory.Contains(TEXT("EngineWire"), ESearchCase::IgnoreCase) ||
+               SectionOrCategory.Contains(TEXT("McpAutomationBridge"), ESearchCase::IgnoreCase) ||
+               (Resolved && Resolved->IsChildOf(StaticClass()));
+    }
+
+    // Persist changed properties immediately when edited in Project Settings
+    virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override
+    {
+        Super::PostEditChangeProperty(PropertyChangedEvent);
+        FPlatformAtomics::InterlockedIncrement(&EditGenerationCounter());
+        SaveConfig();
+    }
+};

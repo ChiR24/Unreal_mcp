@@ -3,9 +3,9 @@
  * delete/destroy_actor/delete_by_tag.
  */
 import type { CapabilityRecordSource } from '../../model.js';
-import { buildCoreRecord } from '../core/builder.js';
+import { ANY_EDITOR_STATE, buildCoreRecord } from '../core/builder.js';
 import { bool, num, str } from '../shared/schema-props.js';
-import { DOMAIN, P } from './properties.js';
+import { DOMAIN, P, PLACEMENT_FACTS } from './properties.js';
 
 const FAMILY_SPAWN = 'spawn';
 const FAMILY_LIFECYCLE = 'lifecycle';
@@ -18,24 +18,13 @@ const SPAWN_UNDO = {
   description: 'Whether editor undo takes the spawn back: {undoable: true, transactionScope: "Spawn Actors"} (control_editor undo removes every actor the call made), or {undoable: false, reasonCode, reason}.',
 } as const;
 
-// Where the actor ended up: the placement check set_transform runs, so a mesh whose pivot is its bounds centre does not
-// sit half under the floor behind a bare success. Each fact is present only when the check could measure it.
-const SPAWN_PLACEMENT = {
-  groundZ: num('Z of the solid surface under the actor; absent when nothing is below it.'),
-  groundClearance: num('How far the bottom of the actor\'s bounds sits above that surface; negative means it is sunk into it.'),
-  placementWarning: str('Present when the placement looks wrong: it intersects other actors, is sunk below the surface under it (the bottom of its bounds is under it, wherever its pivot is; suggestedLocation rests it), floats more than 50 units above it, or has nothing below it (an actor held up from the side is mounted, never floating: see mountedOn). Tag the actor mcp.placement.ok when that is deliberate and it is never reported.'),
-  mountedOn: str('The actor this one hangs on from the side (a window band flush on a hall, an awning on a facade): its bounds touch or overlap that actor\'s vertical face, so it is held up and is not reported floating or without a surface below. Present only then.'),
-  overlappingActors: {
+// Outliner folder and actor tags, as a spawn_batch item takes them; a single spawn refused folder.
+const SPAWN_ORGANISATION = {
+  folder: str('Outliner folder path for the new actor (Level/Signs), made when missing.'),
+  tags: {
     type: 'array',
-    items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
-    'x-unreal-reflection-boundary': true,
-    description: 'The actors it intersects (up to 8): actorName, actorClass, penetrationDepth.',
-  },
-  suggestedLocation: {
-    type: 'object',
-    additionalProperties: true,
-    'x-unreal-reflection-boundary': true,
-    description: 'The actor location (x, y, z) that rests the actor on the surface under it: its own location raised by the depth it is sunk, whatever its pivot. Present only when it is sunk.',
+    items: { type: 'string' },
+    description: 'Actor tags for the new actor: delete_by_tag removes them again, and mcp.placement.ok marks a deliberate overlap before the placement is judged.',
   },
 } as const;
 
@@ -43,6 +32,7 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_actor',
     action: 'spawn',
+    editorStates: ANY_EDITOR_STATE,
     domain: DOMAIN,
     family: FAMILY_SPAWN,
     topics: ['spawn actor', 'place actor', 'add actor to level', 'create actor', 'spawn cube', 'spawn static mesh', 'instantiate class'],
@@ -61,11 +51,12 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
       location: P.location,
       rotation: P.rotation,
       scale: P.scale,
+      ...SPAWN_ORGANISATION,
     },
     required: [],
     // The handler places a mesh actor for a bare meshPath; the schema refused that call before it got there.
     requiredOneOf: ['classPath', 'actorClass', 'meshPath'],
-    outputProps: { name: P.actorName, undo: SPAWN_UNDO, ...SPAWN_PLACEMENT },
+    outputProps: { name: P.actorName, undo: SPAWN_UNDO, ...PLACEMENT_FACTS },
     outputRequired: [],
     effect: 'write',
     costLatency: 'interactive',
@@ -84,6 +75,7 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_actor',
     action: 'spawn_blueprint',
+    editorStates: ANY_EDITOR_STATE,
     domain: DOMAIN,
     family: FAMILY_SPAWN,
     topics: ['spawn blueprint actor', 'place blueprint in level', 'instantiate blueprint'],
@@ -92,7 +84,7 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
     whenToUse: ['A Blueprint instance must be placed in the scene.'],
     whenNotToUse: ['A native class instance is needed (use spawn).'],
     // `scale` is read and applied by the native handler
-    // (McpAutomationBridge_ControlActorBlueprintSpawn.cpp: bHasScale ->
+    // (McpActorBPSpawn.cpp: bHasScale ->
     // SetActorScale3D) and echoed in its response, but was undeclared here.
     // With additionalProperties:false the gateway rejected it as an
     // UNDECLARED_PARAMETER, so spawning a scaled Blueprint actor needed a
@@ -103,6 +95,7 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
       location: P.location,
       rotation: P.rotation,
       scale: P.scale,
+      ...SPAWN_ORGANISATION,
     },
     required: ['blueprintPath'],
     // `required` already demands blueprintPath; declaring it as the variant's
@@ -110,7 +103,7 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
     // classPath/actorClass, so a bare spawn is refused by the schema instead
     // of by the handler.
     requiredOneOf: ['blueprintPath'],
-    outputProps: { name: P.actorName, undo: SPAWN_UNDO, ...SPAWN_PLACEMENT },
+    outputProps: { name: P.actorName, undo: SPAWN_UNDO, ...PLACEMENT_FACTS },
     outputRequired: [],
     effect: 'write',
     costLatency: 'interactive',
@@ -128,12 +121,17 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_actor',
     action: 'spawn_batch',
+    editorStates: ANY_EDITOR_STATE,
     domain: DOMAIN,
     family: FAMILY_SPAWN,
-    topics: ['spawn many actors', 'batch spawn', 'place many actors', 'lay out level', 'build level layout'],
+    topics: ['spawn many actors', 'batch spawn', 'place many actors', 'lay out level', 'build level layout',
+      'row of actors', 'grid of actors'],
     summary:
       'Spawn many actors in one call; each item is a spawn payload, optionally with a material, Blueprint variables, outliner folder and tags.',
-    whenToUse: ['More than a couple of actors must be placed, such as laying out a level.'],
+    whenToUse: [
+      'More than a couple of actors must be placed, such as laying out a level.',
+      'A row or grid of the same actor must be placed (an item\'s repeat).',
+    ],
     whenNotToUse: ['A single actor is needed (use spawn).'],
     // Each item runs through the single-spawn handler in-process (native
     // HandleControlActorSpawnBatch), so an item takes exactly spawn's fields.
@@ -145,8 +143,13 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
         description: 'Actors to spawn, 1-500. Each is a spawn payload: classPath, blueprintPath or meshPath, plus '
           + 'actorName, location, rotation, scale ([x, y, z] arrays). Optional per item: materialPath (applied like '
           + 'set_material; componentName/materialSlot/allComponents narrow it), variables ({name: value} Blueprint '
-          + 'variables set on the new instance, like set_blueprint_variables), folder (outliner folder path), tags '
-          + '(actor tags; delete_by_tag removes the batch again). Items that fail are reported; the rest still spawn.',
+          + 'variables set on the new instance, like set_blueprint_variables; in a running game they are set before its '
+          + 'BeginPlay, so it starts with them), properties ({name: value} set on the root component, or on componentName\'s, '
+          + 'as edit_component sets them: a light\'s Intensity, LightColor and AttenuationRadius), folder (outliner folder path), tags '
+          + '(actor tags; delete_by_tag removes the batch again), repeat ({count, offset [x, y, z], rows, rowOffset '
+          + '[x, y, z]}: count x rows copies of the item, each moved from its location by offset per copy and rowOffset '
+          + 'per row, actorName numbered _1, _2, ...; a row of racks, a grid of lights; at most 1000 actors once '
+          + 'unrolled). Items that fail are reported; the rest still spawn. Parts meant to hang in the air or sit inside another (ceiling ducts, lights, a flange on a pipe) take the tag mcp.placement.ok (defaults.tags covers the whole batch), so the reply keeps only what needs fixing.',
       },
       defaults: {
         type: 'object',
@@ -157,24 +160,25 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
       report: {
         type: 'string',
         enum: ['all', 'failures'],
-        description: 'Which items results lists: all (default), or failures only (items that failed to spawn or to take '
+        description: 'Which items results lists: all, or failures only (items that failed to spawn or to take '
           + 'their material or variables, and items with a placementWarning); spawned and failed still count every item. '
-          + 'Use failures for big layouts.',
+          + 'Default all, or failures for a batch of more than 20 items once repeats are unrolled; the receipt still names every actor.',
       },
     },
     required: ['actors'],
     requiredOneOf: ['actors'],
     outputProps: {
       spawned: num('Actors spawned.'),
-      failed: num('Items that failed to spawn or to take their material.'),
-      placementWarnings: num('Items that spawned but look misplaced (sunk into the surface under them, floating, intersecting other actors or with nothing below); each carries its placementWarning in results. A warning is not a failure: it changes neither failed nor success.'),
+      failed: num('Items that failed to spawn or to take their material, variables or properties.'),
+      placementWarnings: num('Items that spawned but look misplaced (sunk into the surface under them, floating, intersecting other actors, with nothing below, or with a face flickering against another actor\'s in the same plane); each carries its placementWarning in results. A warning is not a failure: it changes neither failed nor success.'),
       results: {
         type: 'array',
         items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
         'x-unreal-reflection-boundary': true,
-        description: 'Per item (only the failed ones and those with a placementWarning under report: failures): index, success, '
-          + 'name, path, error, errorCode, variablesSet, variablesError, materialApplied, materialError, and the placement '
-          + 'facts set_transform reports (groundZ, groundClearance, placementWarning, overlappingActors, suggestedLocation), '
+        description: 'Per item (only the failed ones and those with a placementWarning or ignoredKeys under report: failures, the default past 20 items): '
+          + 'index (its place in the batch once repeats are unrolled), success, name, path, error, errorCode, variablesSet, variablesError, materialApplied, materialError, propertiesError, '
+          + 'ignoredKeys (the item\'s keys no spawn reads, such as a "label" meant as actorName), and the placement '
+          + 'facts set_transform reports (groundZ, groundClearance, placementWarning, overlappingActors, coplanarFaces, suggestedLocation), '
           + 'measured after the item took its tags, variables and material, so an item tagged mcp.placement.ok is never '
           + 'reported. name is the label the item asked for, or the unique actor name when it gave no actorName.',
       },
@@ -268,6 +272,7 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_actor',
     action: 'delete',
+    editorStates: ANY_EDITOR_STATE,
     domain: DOMAIN,
     family: FAMILY_LIFECYCLE,
     topics: ['delete actor', 'destroy actor', 'remove actor from level', 'delete selected actor', 'delete spawned actor', 'delete object'],
@@ -286,6 +291,7 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_actor',
     action: 'destroy_actor',
+    editorStates: ANY_EDITOR_STATE,
     domain: DOMAIN,
     family: FAMILY_LIFECYCLE,
     summary:
@@ -303,6 +309,7 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_actor',
     action: 'delete_by_tag',
+    editorStates: ANY_EDITOR_STATE,
     domain: DOMAIN,
     family: FAMILY_LIFECYCLE,
     summary: 'Permanently delete every actor matching a gameplay tag, or any of several tags in one call.',

@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 const sanitization = readFileSync(
   resolve(
     process.cwd(),
-    'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Core/Subsystem/McpAutomationBridgeSubsystemResponseSanitization.h',
+    'plugins/EngineWire/Source/EngineWire/Private/Core/Subsystem/EngineWireSubsystemResponseSanitization.h',
   ),
   'utf8',
 );
@@ -28,15 +28,15 @@ describe('response identity redaction contracts', () => {
 const consoleCommand = readFileSync(
   resolve(
     process.cwd(),
-    'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Domains/ConsoleCommand/McpAutomationBridge_ConsoleCommandHandlers.cpp',
+    'plugins/EngineWire/Source/EngineWire/Private/Domains/ConsoleCommand/McpConsoleHandlers.cpp',
   ),
   'utf8',
 );
 
 describe('console_command output redaction contracts', () => {
   it('runs captured output and log text through the per-line engine sanitizer', () => {
-    expect(consoleCommand).toContain('#include "Core/Subsystem/McpAutomationBridgeSubsystemResponseSanitization.h"');
-    expect(consoleCommand).toContain('Line = McpAutomationBridgeSubsystemResponse::SanitizeEngineErrorForResponse(Line);');
+    expect(consoleCommand).toContain('#include "Core/Subsystem/EngineWireSubsystemResponseSanitization.h"');
+    expect(consoleCommand).toContain('Line = EngineWireSubsystemResponse::SanitizeEngineErrorForResponse(Line);');
     expect(consoleCommand).toContain('const FString BoundedOutput = SanitizeLines(BoundText(');
     expect(consoleCommand).toMatch(/const FString BoundedLog =\s+SanitizeLines\(BoundText\(/);
   });
@@ -45,14 +45,14 @@ describe('console_command output redaction contracts', () => {
 const launchBuild = readFileSync(
   resolve(
     process.cwd(),
-    'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Domains/SystemControl/McpAutomationBridge_SystemControlHandlersLaunchBuild.cpp',
+    'plugins/EngineWire/Source/EngineWire/Private/Domains/SystemControl/McpSystemLaunchBuild.cpp',
   ),
   'utf8',
 );
 
 describe('launch_build log tail redaction contracts', () => {
   it('runs the packaged game log tail through the same sanitizer read_log uses', () => {
-    expect(launchBuild).toContain('#include "Core/Subsystem/McpAutomationBridgeSubsystemResponseSanitization.h"');
-    expect(launchBuild).toMatch(/Tail\.Add\(MakeShared<FJsonValueString>\(McpAutomationBridgeSubsystemResponse::SanitizeEngineErrorForResponse\(\s*FMcpLogHistory::KeepDiagnosticFileName\(Lines\[Index\]\)\)\)\);/);
+    expect(launchBuild).toContain('#include "Core/Subsystem/EngineWireSubsystemResponseSanitization.h"');
+    expect(launchBuild).toMatch(/Tail\.Add\(MakeShared<FJsonValueString>\(EngineWireSubsystemResponse::SanitizeEngineErrorForResponse\(\s*FMcpLogHistory::KeepDiagnosticFileName\(Lines\[Index\]\)\)\)\);/);
   });
 });

@@ -14,7 +14,7 @@ import { ALL_CAPABILITY_RECORDS } from '../../../src/tools/catalog/capabilities/
 import type { CapabilityRecord } from '../../../src/tools/catalog/capabilities/model.js';
 
 const PRIVATE = join(
-  'plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private'
+  'plugins', 'EngineWire', 'Source', 'EngineWire', 'Private'
 );
 
 function nativeSource(...segments: readonly string[]): string {
@@ -59,7 +59,7 @@ describe('todo18 BB-007: get_interaction_info declares what the native reader em
 
   it('native reader still emits the canonical assetPath', () => {
     const source = code(
-      nativeSource('Domains', 'Interaction', 'McpAutomationBridge_InteractionHandlersInfo.cpp')
+      nativeSource('Domains', 'Interaction', 'McpInteractionInfo.cpp')
     );
 
     expect(source).toContain('SetStringField(TEXT("assetPath"), ResolvedPath)');
@@ -74,7 +74,7 @@ describe('todo18 BB-008: every mutation receipt carries canonical identity', () 
     Chest: 2, Components: 2, Door: 2, Lever: 1, Switch: 2, Triggers: 1,
   } as const;
   const source = (name: string): string =>
-    code(nativeSource('Domains', 'Interaction', `McpAutomationBridge_InteractionHandlers${name}.cpp`));
+    code(nativeSource('Domains', 'Interaction', `McpInteraction${name}.cpp`));
 
   it.each(Object.keys(EXPECTED_FINISHES) as (keyof typeof EXPECTED_FINISHES)[])(
     '%s finishes every mutating handler through SendInteractableResult', (name) => {
@@ -83,20 +83,20 @@ describe('todo18 BB-008: every mutation receipt carries canonical identity', () 
     });
 
   it('the finisher and Interface each stamp evidence once', () => {
-    expect(source('BlueprintVariables')).toContain('McpAutomationBridgeHelpersMutationEvidence.h');
-    expect(source('BlueprintVariables').match(/AddMutationEvidence\(/gu) ?? []).toHaveLength(1);
+    expect(source('BPVariables')).toContain('McpMutationEvidence.h');
+    expect(source('BPVariables').match(/AddMutationEvidence\(/gu) ?? []).toHaveLength(1);
     expect(source('Interface').match(/AddMutationEvidence\(/gu) ?? []).toHaveLength(1);
   });
 
   it('create_door_actor keeps its verification (the finisher verifies every Blueprint it saves)', () => {
-    expect(source('BlueprintVariables')).toContain('McpHandlerUtils::AddVerification(Result, Blueprint)');
+    expect(source('BPVariables')).toContain('McpHandlerUtils::AddVerification(Result, Blueprint)');
     expect(source('Door')).toMatch(/SendInteractableResult\(Subsystem, RequestId, RequestingSocket, DoorBP,/u);
   });
 });
 
 describe('todo18 BB-009a: duplicate create_interactable_interface refuses before any mutation', () => {
   const iface = (): string =>
-    code(nativeSource('Domains', 'Interaction', 'McpAutomationBridge_InteractionHandlersInterface.cpp'));
+    code(nativeSource('Domains', 'Interaction', 'McpInteractionInterface.cpp'));
 
   it('checks McpAssetExists BEFORE CreatePackage', () => {
     const source = iface();
@@ -129,9 +129,9 @@ describe('todo18 BB-009a: duplicate create_interactable_interface refuses before
 
 describe('todo18 BB-009b: configure_door_properties validates target class before mutating', () => {
   const door = (): string =>
-    code(nativeSource('Domains', 'Interaction', 'McpAutomationBridge_InteractionHandlersDoor.cpp'));
+    code(nativeSource('Domains', 'Interaction', 'McpInteractionDoor.cpp'));
   const loader = (): string => {
-    const source = code(nativeSource('Domains', 'Interaction', 'McpAutomationBridge_InteractionHandlersBlueprintVariables.cpp'));
+    const source = code(nativeSource('Domains', 'Interaction', 'McpInteractionBPVariables.cpp'));
     const start = source.indexOf('UBlueprint* LoadInteractableBlueprint(');
     return source.slice(start, source.indexOf('\n}', start));
   };

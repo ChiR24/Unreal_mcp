@@ -12,17 +12,22 @@
         "edit_anim_graph",
         "edit_animation",
         "create_control_rig",
+        "edit_control_rig",
+        "get_control_rig",
+        "list_rig_units",
         "setup_ik",
         "edit_montage",
         "play_montage",
         "setup_ragdoll",
         "configure_vehicle",
         "setup_physics_simulation",
+        "create_physical_material",
         "edit_blend_space",
         "setup_retargeting",
         "skin_mesh_to_skeleton",
         "configure_anim_graph_node",
         "get_animation_info",
+        "analyze_animation",
         "cleanup",
         "create_skeleton",
         "edit_skeleton",
@@ -82,11 +87,14 @@
         "conditionVariable",
         "connectToOutput",
         "constraintName",
+        "contactHeight",
+        "controlType",
         "createConstraints",
         "createIfMissing",
         "crossfadeDuration",
         "curveName",
         "deltas",
+        "density",
         "depth",
         "direction",
         "dragCoefficient",
@@ -96,12 +104,17 @@
         "enableRootMotion",
         "endFrame",
         "engine",
+        "feet",
         "forceRootLock",
         "frame",
         "frameRate",
+        "friction",
+        "frictionCombineMode",
+        "from",
         "fromSection",
         "fromState",
         "geomType",
+        "global",
         "gridDivisions",
         "groupName",
         "height",
@@ -114,6 +127,7 @@
         "kind",
         "layerSetup",
         "length",
+        "limit",
         "limits",
         "linearDamping",
         "location",
@@ -121,6 +135,7 @@
         "machineName",
         "markerName",
         "mass",
+        "maxSamples",
         "maxValue",
         "meshLodIndex",
         "meshPath",
@@ -132,6 +147,7 @@
         "morphTargets",
         "name",
         "newBoneName",
+        "node",
         "nodeId",
         "nodeName",
         "notifyClass",
@@ -139,19 +155,23 @@
         "numFrames",
         "outputPath",
         "overwrite",
+        "parent",
         "parentBoneName",
         "parentClass",
         "path",
         "physicsAssetName",
         "physicsAssetPath",
+        "pin",
         "pitch",
         "playRate",
         "poseNames",
+        "position",
         "positionX",
         "positionY",
         "priorityOrder",
         "profileName",
         "propertyName",
+        "query",
         "radius",
         "ragdoll",
         "rebuildBlendParameters",
@@ -159,6 +179,8 @@
         "relativeRotation",
         "relativeScale",
         "removeChildren",
+        "restitution",
+        "restitutionCombineMode",
         "retargeterPath",
         "rootBoneName",
         "rootMotionRootLock",
@@ -188,7 +210,9 @@
         "stateMachineName",
         "stateName",
         "states",
+        "staticFriction",
         "staticMeshPath",
+        "steps",
         "suffix",
         "targetBoneName",
         "targetChain",
@@ -199,12 +223,14 @@
         "targetWeightInterpolationSpeed",
         "threshold",
         "time",
+        "to",
         "toSection",
         "toState",
         "trackIndex",
         "transitions",
         "transmission",
         "treeName",
+        "unit",
         "value",
         "vehicleType",
         "verticalAxisName",
@@ -271,7 +297,7 @@
           },
           "assetPath": {
             "type": "string",
-            "description": "Canonical /Game asset path."
+            "description": "Animation Sequence asset path, e.g. /Game/Anims/A_Run (a montage or blend space is refused: analyze the sequences it plays)."
           },
           "assetType": {
             "type": "string",
@@ -455,6 +481,21 @@
             "type": "string",
             "description": "Name of the created physics constraint."
           },
+          "contactHeight": {
+            "type": "number",
+            "description": "cm above a foot's lowest point that still counts as planted (default 5)."
+          },
+          "controlType": {
+            "type": "string",
+            "enum": [
+              "transform",
+              "float",
+              "bool",
+              "position",
+              "rotator"
+            ],
+            "description": "add_control: the value the control drives (default transform)."
+          },
           "createConstraints": {
             "type": "boolean",
             "description": "Create joint constraints between bodies."
@@ -479,6 +520,10 @@
               "x-unreal-reflection-boundary": true
             },
             "description": "Per-vertex morph target position deltas."
+          },
+          "density": {
+            "type": "number",
+            "description": "Density in g/cm3, which sets mass from volume (water is 1)."
           },
           "depth": {
             "type": "number",
@@ -537,6 +582,15 @@
               "set_axis_settings",
               "set_interpolation_settings",
               "rebuild",
+              "add_unit",
+              "connect",
+              "disconnect",
+              "set_pin",
+              "remove_node",
+              "import_bones",
+              "add_null",
+              "add_control",
+              "remove_element",
               "auto",
               "set",
               "copy",
@@ -553,7 +607,7 @@
               "set_deltas",
               "import"
             ],
-            "description": "Which configure anim graph node variant to run."
+            "description": "The edit to make (each step of steps names its own)."
           },
           "element": {
             "type": "string",
@@ -588,6 +642,13 @@
             },
             "description": "Engine settings: maxRPM, maxTorque, gears (forward gear count)."
           },
+          "feet": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Foot bones to check (default every bone whose name holds foot but not ik, e.g. foot_l and foot_r)."
+          },
           "forceRootLock": {
             "type": "boolean",
             "description": "Whether root motion is force-locked to the reference pose."
@@ -600,6 +661,24 @@
             "type": "number",
             "description": "Frames per second (default 30)."
           },
+          "friction": {
+            "type": "number",
+            "description": "Kinetic friction, 0 (ice) to 1 and above (rubber); the engine default is 0.7."
+          },
+          "frictionCombineMode": {
+            "type": "string",
+            "enum": [
+              "Average",
+              "Min",
+              "Multiply",
+              "Max"
+            ],
+            "description": "How this surface and the one it touches combine their friction: Min lets the slipperier (or deader) one win, Max the grippier (or bouncier) one; Average when not set."
+          },
+          "from": {
+            "type": "string",
+            "description": "connect, disconnect: the output pin, Node.Pin as get_control_rig lists it; execution runs from the event's execute pin to each unit's (ExecutePin in UE 5.8)."
+          },
           "fromSection": {
             "type": "string",
             "description": "Source montage section."
@@ -611,6 +690,10 @@
           "geomType": {
             "type": "string",
             "description": "Body primitive: Sphyl, Box, Sphere, TaperedCapsule, MultiConvexHull or SingleConvexHull."
+          },
+          "global": {
+            "type": "boolean",
+            "description": "add_bone, add_null: location, rotation and scale are in rig space, not relative to the parent."
           },
           "gridDivisions": {
             "type": "number",
@@ -699,6 +782,10 @@
             "type": "number",
             "description": "Capsule length between the end caps (default 20)."
           },
+          "limit": {
+            "type": "number",
+            "description": "Most units to list (default 50, up to 500); matched counts them all."
+          },
           "limits": {
             "type": "object",
             "additionalProperties": false,
@@ -735,12 +822,26 @@
             "description": "Linear damping value."
           },
           "location": {
-            "type": "array",
-            "items": {
-              "type": "number"
-            },
-            "minItems": 3,
-            "maxItems": 3,
+            "oneOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 3,
+                "maxItems": 3,
+                "description": "World or relative location as [x, y, z]."
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 3,
+                "maxItems": 3,
+                "description": "add_bone, add_null, add_control: location [x, y, z] in cm (a control's offset), relative to the parent unless global."
+              }
+            ],
             "description": "World or relative location as [x, y, z]."
           },
           "lodIndex": {
@@ -758,6 +859,10 @@
           "mass": {
             "type": "number",
             "description": "Mass value."
+          },
+          "maxSamples": {
+            "type": "number",
+            "description": "Frames sampled, spread evenly with the first and last always in (default 300, at most 2000; a shorter clip samples every frame)."
           },
           "maxValue": {
             "type": "number",
@@ -806,6 +911,10 @@
             "type": "string",
             "description": "Replacement bone name."
           },
+          "node": {
+            "type": "string",
+            "description": "One node's name: only that node, with every struct member pin by its full path."
+          },
           "nodeId": {
             "type": "string",
             "description": "The node GUID; an alternative to nodeName."
@@ -834,6 +943,10 @@
             "type": "boolean",
             "description": "Overwrite an existing asset with the same name."
           },
+          "parent": {
+            "type": "string",
+            "description": "add_bone, add_null, add_control: the parent element's name (a bone, null or control); omitted, the top of the hierarchy."
+          },
           "parentBoneName": {
             "type": "string",
             "description": "Parent bone name."
@@ -854,6 +967,10 @@
             "type": "string",
             "description": "Canonical /Game PhysicsAsset path."
           },
+          "pin": {
+            "type": "string",
+            "description": "set_pin: the pin, Node.Pin; a struct member has its own pin (SetTransform.Item.Name, SetTransform.Transform.Translation.X)."
+          },
           "pitch": {
             "type": "number",
             "description": "Aim offset pitch in degrees."
@@ -868,6 +985,15 @@
               "type": "string"
             },
             "description": "Distinct names for the poses in frame order; frames without a name keep the engine default name."
+          },
+          "position": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2,
+            "description": "add_unit: graph position [x, y] (default right of the last node)."
           },
           "positionX": {
             "type": "number",
@@ -888,6 +1014,10 @@
           "propertyName": {
             "type": "string",
             "description": "The property: a member of the node's settings struct (Alpha, PlayRate, bLoopAnimation, Sequence) or of the graph node (NodeComment), with dots for a nested one (Node.PlayRate). On an asset player the asset property (Sequence, BlendSpace) is written through the node's own setter and read back, and fails when the node did not take it; any other property is written by reflection and its stored value read back."
+          },
+          "query": {
+            "type": "string",
+            "description": "Words to match in the unit's name, display name, category or keywords (spaces ignored), e.g. two bone, aim, set transform."
           },
           "radius": {
             "type": "number",
@@ -937,6 +1067,20 @@
             "type": "boolean",
             "description": "Whether child bones are removed with the target bone."
           },
+          "restitution": {
+            "type": "number",
+            "description": "Bounce, 0 (none) to 1 (keeps all its speed)."
+          },
+          "restitutionCombineMode": {
+            "type": "string",
+            "enum": [
+              "Average",
+              "Min",
+              "Multiply",
+              "Max"
+            ],
+            "description": "How this surface and the one it touches combine their bounce: Min lets the slipperier (or deader) one win, Max the grippier (or bouncier) one; Average when not set."
+          },
           "retargeterPath": {
             "type": "string",
             "description": "An existing IK Retargeter to bake through. Omit to auto-build one by characterizing both skeletons and mapping their chains."
@@ -968,6 +1112,15 @@
                 "minItems": 3,
                 "maxItems": 3,
                 "description": "Rotation as [pitch, yaw, roll] in degrees."
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 3,
+                "maxItems": 3,
+                "description": "add_bone, add_null, add_control: rotation [pitch, yaw, roll] in degrees."
               }
             ],
             "description": "Box or capsule rotation relative to the bone as [pitch, yaw, roll]."
@@ -996,6 +1149,15 @@
                 "minItems": 3,
                 "maxItems": 3,
                 "description": "Bone scale as [x, y, z] (default [1, 1, 1])."
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 3,
+                "maxItems": 3,
+                "description": "add_bone, add_null, add_control: scale [x, y, z] (default 1)."
               }
             ],
             "description": "Bone scale as [x, y, z] (default [1, 1, 1])."
@@ -1103,9 +1265,22 @@
             },
             "description": "States to create, as [{ name }]."
           },
+          "staticFriction": {
+            "type": "number",
+            "description": "Friction at rest, before a body starts to slide."
+          },
           "staticMeshPath": {
             "type": "string",
             "description": "StaticMesh to skin, e.g. a coat downloaded as a rigid mesh."
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true
+            },
+            "description": "Several edits in order, each an object with edit and its own fields as above; the first that fails stops the rest, and those before it stay (failedStep names it)."
           },
           "suffix": {
             "type": "string",
@@ -1146,6 +1321,10 @@
           "time": {
             "type": "number",
             "description": "Time in seconds."
+          },
+          "to": {
+            "type": "string",
+            "description": "connect, disconnect: the input pin, Node.Pin."
           },
           "toSection": {
             "type": "string",
@@ -1202,6 +1381,10 @@
             "type": "string",
             "description": "Comment/name for the blend node (alias of name)."
           },
+          "unit": {
+            "type": "string",
+            "description": "add_unit: the unit, as an object path (/Script/ControlRig.RigUnit_SetTransform), its struct name with or without RigUnit_ (SetTransform), or its display name."
+          },
           "value": {
             "oneOf": [
               {
@@ -1209,6 +1392,14 @@
               },
               {
                 "description": "The value: a number, boolean or string, an {x,y,z} or {r,g,b,a} object for a struct, or for an asset property the asset path (/Game/Anims/A_Idle)."
+              },
+              {
+                "type": [
+                  "string",
+                  "number",
+                  "boolean"
+                ],
+                "description": "set_pin: the value as text (Bone, foot_l), a number, or true/false."
               }
             ],
             "description": "Property value (any type)."
@@ -1295,17 +1486,22 @@
               "edit_anim_graph",
               "edit_animation",
               "create_control_rig",
+              "edit_control_rig",
+              "get_control_rig",
+              "list_rig_units",
               "setup_ik",
               "edit_montage",
               "play_montage",
               "setup_ragdoll",
               "configure_vehicle",
               "setup_physics_simulation",
+              "create_physical_material",
               "edit_blend_space",
               "setup_retargeting",
               "skin_mesh_to_skeleton",
               "configure_anim_graph_node",
               "get_animation_info",
+              "analyze_animation",
               "cleanup",
               "create_skeleton",
               "edit_skeleton",
@@ -1566,7 +1762,7 @@
           },
           "amplitude": {
             "type": "number",
-            "description": "Wave amplitude."
+            "description": "Same as waveHeight; waveHeight wins when both are given."
           },
           "aperture": {
             "type": "number",
@@ -1906,26 +2102,50 @@
           },
           "density": {
             "type": "number",
-            "description": "Foliage density."
+            "description": "Fog density, the height fog's FogDensity (0.02 a light haze, 0.05 and up a thick fog)."
           },
           "direction": {
-            "type": "object",
-            "description": "Direction rotation.",
-            "properties": {
-              "pitch": {
-                "type": "number",
-                "description": "Pitch"
+            "oneOf": [
+              {
+                "type": "object",
+                "description": "Direction rotation.",
+                "properties": {
+                  "pitch": {
+                    "type": "number",
+                    "description": "Pitch"
+                  },
+                  "yaw": {
+                    "type": "number",
+                    "description": "Yaw"
+                  },
+                  "roll": {
+                    "type": "number",
+                    "description": "Roll"
+                  }
+                },
+                "additionalProperties": false
               },
-              "yaw": {
-                "type": "number",
-                "description": "Yaw"
-              },
-              "roll": {
-                "type": "number",
-                "description": "Roll"
+              {
+                "type": "object",
+                "description": "Wind direction: its yaw sets where the waves travel.",
+                "properties": {
+                  "pitch": {
+                    "type": "number",
+                    "description": "Pitch"
+                  },
+                  "yaw": {
+                    "type": "number",
+                    "description": "Yaw"
+                  },
+                  "roll": {
+                    "type": "number",
+                    "description": "Roll"
+                  }
+                },
+                "additionalProperties": false
               }
-            },
-            "additionalProperties": false
+            ],
+            "description": "Direction rotation."
           },
           "directionalLightActorPath": {
             "type": "string",
@@ -2619,23 +2839,47 @@
             "description": "Spline points."
           },
           "position": {
-            "type": "object",
-            "description": "Position {x, y, z}.",
-            "properties": {
-              "x": {
-                "type": "number",
-                "description": "X"
+            "oneOf": [
+              {
+                "type": "object",
+                "description": "Point position relative to the spline actor {x, y, z}: its local space, the location get_splines_info with actorName reports (worldLocation is where the point lies in the level).",
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "description": "X"
+                  },
+                  "y": {
+                    "type": "number",
+                    "description": "Y"
+                  },
+                  "z": {
+                    "type": "number",
+                    "description": "Z"
+                  }
+                },
+                "additionalProperties": false
               },
-              "y": {
-                "type": "number",
-                "description": "Y"
-              },
-              "z": {
-                "type": "number",
-                "description": "Z"
+              {
+                "type": "object",
+                "description": "Position {x, y, z}.",
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "description": "X"
+                  },
+                  "y": {
+                    "type": "number",
+                    "description": "Y"
+                  },
+                  "z": {
+                    "type": "number",
+                    "description": "Z"
+                  }
+                },
+                "additionalProperties": false
               }
-            },
-            "additionalProperties": false
+            ],
+            "description": "Point position relative to the spline actor {x, y, z}: its local space, the location get_splines_info with actorName reports (worldLocation is where the point lies in the level)."
           },
           "properties": {
             "type": "object",
@@ -3060,7 +3304,7 @@
           },
           "steepness": {
             "type": "number",
-            "description": "Wave steepness."
+            "description": "Crest sharpness of the short waves, 0 (smooth swell) to 1 (peaked); the long waves take about half. Keep it under about 0.3: steep crests from many waves fold the surface over itself."
           },
           "strength": {
             "type": "number",
@@ -3188,11 +3432,11 @@
           },
           "waveHeight": {
             "type": "number",
-            "description": "Wave height."
+            "description": "Height (amplitude) of the largest wave in cm; the body's other waves shrink to 15% of it, as a real sea's do. A calm harbour is about 5-10, open sea 50 or more."
           },
           "waveLength": {
             "type": "number",
-            "description": "Wave length."
+            "description": "Wavelength of the longest wave in cm, crest to crest; the shortest waves are 13% of it (a harbour is about 1500-2500)."
           },
           "width": {
             "type": "number",
@@ -3271,6 +3515,7 @@
         "get_components",
         "list",
         "add_tag",
+        "set_folder",
         "find_by_tag",
         "find",
         "audit_placement",
@@ -3298,6 +3543,7 @@
         "componentName",
         "componentNames",
         "componentType",
+        "contactCm",
         "defaults",
         "deleteScope",
         "distance",
@@ -3309,6 +3555,7 @@
         "folder",
         "force",
         "functionName",
+        "groundTrace",
         "info",
         "inputs",
         "intervalSeconds",
@@ -3328,7 +3575,10 @@
         "near",
         "newName",
         "offset",
+        "overlaps",
         "parentActor",
+        "points",
+        "profile",
         "properties",
         "propertyName",
         "propertyNames",
@@ -3339,6 +3589,7 @@
         "relativeRotation",
         "renameObject",
         "report",
+        "responses",
         "rotation",
         "scale",
         "snapToTarget",
@@ -3381,7 +3632,21 @@
                 "items": {
                   "type": "string"
                 },
+                "description": "Several actors to change in one call and one undo step, in place of actorName; names not found are listed back under missing, and the actors changed under affectedActors (which the receipt lists as changes, with an actor handle each)."
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "Several actors to give the same material in one call and one undo step, in place of actorName; each is reported under results, and the actors changed under affectedActors (which the receipt lists as changes, with an actor handle each); the call fails naming any that did not take it."
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Several actors to move in one call and one undo step, in place of actorName; names not found are listed back under missing, and the actors moved under affectedActors."
               },
               {
                 "type": "array",
@@ -3402,7 +3667,16 @@
                 "items": {
                   "type": "string"
                 },
-                "description": "Several actors to toggle in one call and one undo step, in place of actorName; names not found are listed back under missing, and the actors changed under affectedActors (which the receipt lists as changes, with an actor handle each)."
+                "description": "Several actors whose component of componentName takes the same properties in one call and one undo step, in place of actorName (a row of point lights, each LightComponent0). The actors changed are counted in updatedActors and listed under affectedActors (which the receipt lists as changes), names that matched no actor come back in missing, and an actor whose component did not take everything is a results row {actorName, error} that fails the call PARTIAL_FAILURE."
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 1,
+                "maxItems": 500,
+                "description": "Many actors given the same change: the location, offset, rotation or scale beside it (forty frost caps rescaled by one scale, a group raised by one offset). Reported as actors is."
               }
             ],
             "description": "Actor names to act on (batch delete)."
@@ -3417,7 +3691,7 @@
                   "x-unreal-reflection-boundary": true
                 },
                 "x-unreal-reflection-boundary": true,
-                "description": "Actors to spawn, 1-500. Each is a spawn payload: classPath, blueprintPath or meshPath, plus actorName, location, rotation, scale ([x, y, z] arrays). Optional per item: materialPath (applied like set_material; componentName/materialSlot/allComponents narrow it), variables ({name: value} Blueprint variables set on the new instance, like set_blueprint_variables), folder (outliner folder path), tags (actor tags; delete_by_tag removes the batch again). Items that fail are reported; the rest still spawn."
+                "description": "Actors to spawn, 1-500. Each is a spawn payload: classPath, blueprintPath or meshPath, plus actorName, location, rotation, scale ([x, y, z] arrays). Optional per item: materialPath (applied like set_material; componentName/materialSlot/allComponents narrow it), variables ({name: value} Blueprint variables set on the new instance, like set_blueprint_variables; in a running game they are set before its BeginPlay, so it starts with them), properties ({name: value} set on the root component, or on componentName's, as edit_component sets them: a light's Intensity, LightColor and AttenuationRadius), folder (outliner folder path), tags (actor tags; delete_by_tag removes the batch again), repeat ({count, offset [x, y, z], rows, rowOffset [x, y, z]}: count x rows copies of the item, each moved from its location by offset per copy and rowOffset per row, actorName numbered _1, _2, ...; a row of racks, a grid of lights; at most 1000 actors once unrolled). Items that fail are reported; the rest still spawn. Parts meant to hang in the air or sit inside another (ceiling ducts, lights, a flange on a pipe) take the tag mcp.placement.ok (defaults.tags covers the whole batch), so the reply keeps only what needs fixing."
               },
               {
                 "type": "array",
@@ -3470,7 +3744,7 @@
                   ],
                   "additionalProperties": false
                 },
-                "description": "Many actors in one call, each {actorName, location? or offset?, rotation?, scale?} with its own values (an omitted part keeps its current value); every actor is reported, and the call fails naming any that did not move."
+                "description": "Many actors in one call, each {actorName, location? or offset?, rotation?, scale?} with its own values; a part an item leaves out takes the call's own location, offset, rotation or scale when given, else keeps its current value. Every actor is reported, and the call fails naming any that did not move."
               },
               {
                 "type": "array",
@@ -3483,7 +3757,7 @@
                     },
                     "variables": {
                       "type": "object",
-                      "description": "Blueprint variable name to value map.",
+                      "description": "Blueprint variable name to value map. An actor variable, or an array of them, takes each actor by its label or name as list shows it (\"Door_1\", [\"Fire_1\", \"Fire_2\"]) or by its object path.",
                       "additionalProperties": true,
                       "x-unreal-reflection-boundary": true
                     }
@@ -3497,7 +3771,7 @@
                 "description": "Many actors in one call, each {actorName, variables} with its own values; every actor is reported, the actors that took a variable come back under affectedActors (which the receipt lists as changes, with an actor handle each), and the call fails naming any that did not take all of its variables."
               }
             ],
-            "description": "Actors to spawn, 1-500. Each is a spawn payload: classPath, blueprintPath or meshPath, plus actorName, location, rotation, scale ([x, y, z] arrays). Optional per item: materialPath (applied like set_material; componentName/materialSlot/allComponents narrow it), variables ({name: value} Blueprint variables set on the new instance, like set_blueprint_variables), folder (outliner folder path), tags (actor tags; delete_by_tag removes the batch again). Items that fail are reported; the rest still spawn."
+            "description": "Actors to spawn, 1-500. Each is a spawn payload: classPath, blueprintPath or meshPath, plus actorName, location, rotation, scale ([x, y, z] arrays). Optional per item: materialPath (applied like set_material; componentName/materialSlot/allComponents narrow it), variables ({name: value} Blueprint variables set on the new instance, like set_blueprint_variables; in a running game they are set before its BeginPlay, so it starts with them), properties ({name: value} set on the root component, or on componentName's, as edit_component sets them: a light's Intensity, LightColor and AttenuationRadius), folder (outliner folder path), tags (actor tags; delete_by_tag removes the batch again), repeat ({count, offset [x, y, z], rows, rowOffset [x, y, z]}: count x rows copies of the item, each moved from its location by offset per copy and rowOffset per row, actorName numbered _1, _2, ...; a row of racks, a grid of lights; at most 1000 actors once unrolled). Items that fail are reported; the rest still spawn. Parts meant to hang in the air or sit inside another (ceiling ducts, lights, a flange on a pipe) take the tag mcp.placement.ok (defaults.tags covers the whole batch), so the reply keeps only what needs fixing."
           },
           "allComponents": {
             "type": "boolean",
@@ -3528,11 +3802,11 @@
           },
           "collisionEnabled": {
             "type": "boolean",
-            "description": "Desired collision enabled state."
+            "description": "Turn collision on (true) or off (false). Omitted with profile or responses, the mode stays as the preset sets it."
           },
           "componentName": {
             "type": "string",
-            "description": "Component of the parent actor to attach to (default its root): on a character built from several meshes, the mesh that owns the bone."
+            "description": "Call the function on this component of the actor instead of on the actor itself (refused with COMPONENT_NOT_FOUND when the actor has none of that name)."
           },
           "componentNames": {
             "type": "array",
@@ -3544,6 +3818,10 @@
           "componentType": {
             "type": "string",
             "description": "Component class to add."
+          },
+          "contactCm": {
+            "type": "number",
+            "description": "With groundTrace: how far above its own lowest height a point still counts as planted (default 2 cm), so an ankle bone that never reaches the floor still counts as down when the foot is."
           },
           "defaults": {
             "type": "object",
@@ -3612,6 +3890,10 @@
           "functionName": {
             "type": "string",
             "description": "Actor function name to call."
+          },
+          "groundTrace": {
+            "type": "boolean",
+            "description": "With points: each sample's aboveGround gives each point's height over the first surface below it that blocks Visibility (the actor and what is attached to it ignored), negative when the point is inside that surface, and pointStats sums up its contact."
           },
           "info": {
             "type": "string",
@@ -3779,13 +4061,29 @@
             ],
             "description": "Move by [dx, dy, dz] from where the actor stands now, instead of to an absolute location; give one or the other."
           },
+          "overlaps": {
+            "type": "boolean",
+            "description": "Also watch which actors overlap the watched one, checked every frame: a sample names those that began (overlapsBegan) or stopped (overlapsEnded) touching it since the sample before, and overlapped lists every actor it touched. Finds what killed a pawn, what a pickup or trigger fired on, or an enemy wandering into a spawn point."
+          },
           "parentActor": {
             "type": "string",
             "description": "Parent actor name to attach to."
           },
+          "points": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 8,
+            "description": "Places on the actor sampled with it (at most 8): a component by its name (LegL), a bone or socket of any of its components (foot_l, hand_r), or a component's own socket as Component.Socket (Weapon.Muzzle). Each sample's points gives each one's world location [x, y, z]; a name the actor lacks is refused with the names it has. Fewer samples are kept with points: 400 x 2 / (2 + points)."
+          },
+          "profile": {
+            "type": "string",
+            "description": "A collision preset of the project (BlockAll, BlockAllDynamic, OverlapAll, OverlapAllDynamic, NoCollision, Pawn, Trigger, PhysicsActor...); an unknown name is refused with the list. The reply reads the preset back."
+          },
           "properties": {
             "type": "object",
-            "description": "Component property key-value pairs. Each key is a name or dotted path, as propertyName takes it (BodyInstance.CollisionEnabled works).",
+            "description": "Component property key-value pairs. Each key is a name or dotted path, as propertyName takes it (BodyInstance.CollisionEnabled works). Collision goes through the component setters: CollisionProfileName (a preset), CollisionEnabled, CollisionResponses ({\"Pawn\": \"Ignore\"}), PhysMaterialOverride (a physical material path, None to clear).",
             "additionalProperties": true,
             "x-unreal-reflection-boundary": true
           },
@@ -3800,17 +4098,17 @@
                 "items": {
                   "type": "string"
                 },
-                "description": "Actor properties read at every sample, e.g. [\"bDead\", \"HP\"], or a component's as \"Component.Property\" (\"Visual.RelativeScale3D\" catches a squash on landing), the component by its name or by the actor property that holds it (\"CharacterMovement.MaxWalkSpeed\"); a name that resolves to nothing is listed under missingProperties."
+                "description": "Actor properties read at every sample, each as JSON (a number, true or false, the name of an enum value, the path of an object, or an array of them), e.g. [\"bDead\", \"HP\"], or a component's as \"Component.Property\" (\"Visual.RelativeScale3D\" catches a squash on landing), the component by its name or by the actor property that holds it (\"CharacterMovement.MaxWalkSpeed\"); a name that resolves to nothing is listed under missingProperties."
               },
               {
                 "type": "array",
                 "items": {
                   "type": "string"
                 },
-                "description": "Property or Blueprint variable names to read on every listed actor, returned per actor under properties, e.g. Kind and Content, or a component's as \"Component.Property\" (StaticMeshComponent.LDMaxDrawDistance, Visual.RelativeScale3D; the component by its name, or by the actor property that holds it, as CharacterMovement.MaxWalkSpeed), keyed as asked. A name that an actor lacks, or whose component it lacks, is listed under missingProperties for that actor."
+                "description": "Property or Blueprint variable names to read on every listed actor, returned per actor under properties, each as JSON (a number, true or false, the name of an enum value, the path of an object, or an array of them), e.g. Kind and Content, or a component's as \"Component.Property\" (StaticMeshComponent.LDMaxDrawDistance, Visual.RelativeScale3D; the component by its name, or by the actor property that holds it, as CharacterMovement.MaxWalkSpeed), keyed as asked. A name that an actor lacks, or whose component it lacks, is listed under missingProperties for that actor."
               }
             ],
-            "description": "Actor properties read at every sample, e.g. [\"bDead\", \"HP\"], or a component's as \"Component.Property\" (\"Visual.RelativeScale3D\" catches a squash on landing), the component by its name or by the actor property that holds it (\"CharacterMovement.MaxWalkSpeed\"); a name that resolves to nothing is listed under missingProperties."
+            "description": "Actor properties read at every sample, each as JSON (a number, true or false, the name of an enum value, the path of an object, or an array of them), e.g. [\"bDead\", \"HP\"], or a component's as \"Component.Property\" (\"Visual.RelativeScale3D\" catches a squash on landing), the component by its name or by the actor property that holds it (\"CharacterMovement.MaxWalkSpeed\"); a name that resolves to nothing is listed under missingProperties."
           },
           "propertyPath": {
             "type": "string",
@@ -3858,7 +4156,13 @@
               "all",
               "failures"
             ],
-            "description": "Which items results lists: all (default), or failures only (items that failed to spawn or to take their material or variables, and items with a placementWarning); spawned and failed still count every item. Use failures for big layouts."
+            "description": "Which items results lists: all, or failures only (items that failed to spawn or to take their material or variables, and items with a placementWarning); spawned and failed still count every item. Default all, or failures for a batch of more than 20 items once repeats are unrolled; the receipt still names every actor."
+          },
+          "responses": {
+            "type": "object",
+            "description": "How the components answer each named channel, {\"Pawn\": \"Ignore\", \"Visibility\": \"Block\"}: an engine channel (WorldStatic, WorldDynamic, Pawn, Visibility, Camera, PhysicsBody, Vehicle, Destructible) or one the project added, by its name; each Block, Overlap or Ignore. Applied after profile, so the preset then reads Custom; the reply reads each channel back.",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
           },
           "rotation": {
             "type": "array",
@@ -3912,7 +4216,7 @@
                 "description": "That actor's property, as propertyNames reads it: bActorEnableCollision, or a component's as Component.Property (CharacterMovement.MovementMode starts the run on a landing when equals is MOVE_Walking)."
               },
               "equals": {
-                "description": "Value that starts the run, as samples show it (\"True\", \"False\", 3)."
+                "description": "Value that starts the run, as samples show it (true, false, 3, \"Walking\")."
               },
               "waitForChange": {
                 "type": "boolean",
@@ -3949,11 +4253,23 @@
             "default": "add"
           },
           "tags": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "Several actor tags at once, in place of tag: every actor carrying any of them is deleted under one consent."
+            "oneOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Actor tags for the new actor: delete_by_tag removes them again, and mcp.placement.ok marks a deliberate overlap before the placement is judged."
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Several actor tags at once, in place of tag: every actor carrying any of them is deleted under one consent."
+              }
+            ],
+            "description": "Actor tags for the new actor: delete_by_tag removes them again, and mcp.placement.ok marks a deliberate overlap before the placement is judged."
           },
           "transformMode": {
             "type": "string",
@@ -3972,7 +4288,7 @@
           },
           "variables": {
             "type": "object",
-            "description": "Blueprint variable name to value map.",
+            "description": "Blueprint variable name to value map. A name the actor does not have refuses the whole call before anything is set; the error lists the variables it does have. An actor variable takes the other actor by label, name or path. A value that does not take (an object path that loads nothing) fails the call, naming it; the variables that did take are listed under updated.",
             "additionalProperties": true,
             "x-unreal-reflection-boundary": true
           },
@@ -3997,6 +4313,7 @@
               "get_components",
               "list",
               "add_tag",
+              "set_folder",
               "find_by_tag",
               "find",
               "audit_placement",
@@ -4105,6 +4422,7 @@
         "toolName",
         "toolset",
         "type",
+        "unpauseGame",
         "unthrottle",
         "validateOnly",
         "value",
@@ -4138,7 +4456,7 @@
             "items": {
               "type": "string"
             },
-            "description": "Save only these assets or levels, e.g. [\"/Game/UI/WBP_Menu\"], and leave every other dirty package as it is; omit to save everything dirty."
+            "description": "Save only these assets or levels, e.g. [\"/Game/UI/WBP_Menu\"], and leave every other dirty package as it is; omit to save everything dirty. A named asset the editor has loaded is written even when it is not marked dirty (a material usage flag the editor set while loading)."
           },
           "blendTime": {
             "type": "number",
@@ -4245,7 +4563,7 @@
           },
           "holdSeconds": {
             "type": "number",
-            "description": "Keep injecting inputAction, or keep a raw key_down/key_tap key pressed, for this many seconds of GAME time so the pawn actually travels (default 0: an action lasts one frame, a key_down stays down until key_up, a key_tap lets go after 0.1s). Game time, not wall time: under set_game_speed 0.05 a 2s hold still delivers 2s of in-game input, which takes 40s of real time. A key_up for the same action or key stops the hold early."
+            "description": "Keep injecting inputAction, or keep a raw key_down/key_tap key pressed, for this many seconds of GAME time so the pawn actually travels (default 0: an action lasts one frame, a key_down stays down until key_up, a key_tap lets go after 0.1s). Game time, not wall time: under set_game_speed 0.05 a 2s hold still delivers 2s of in-game input, which takes 40s of real time. A key_up for the same action or key stops the hold early. The reply comes back at once, while the key is still down: read the pawn after the hold, or press and watch in one call with control_actor sample_motion inputs."
           },
           "id": {
             "type": "integer",
@@ -4335,7 +4653,7 @@
                     "description": "z"
                   }
                 },
-                "description": "editor_viewport (and game_viewport while the player is ejected): put the camera here first, in the same call ({x, y, z}); it stays there. That is the level viewport camera, or, while Play In Editor runs with the player ejected, the ejected view. While Play In Editor runs and the player is not ejected there is no free camera to move and the call is refused with PIE_VIEW_NOT_EJECTED (eject first, or point the game camera with set_camera cameraOp=view_target), exactly as set_camera is.",
+                "description": "editor_viewport (and game_viewport while the player is ejected): put the camera here first, in the same call ({x, y, z}); it stays there. Water and streamed texture detail follow the view over the next frames, which this call does not wait for: after a jump far from the last view (or right after a level opens) the picture can show black water or soft textures, so capture again from the same spot, or move with set_camera first. That is the level viewport camera, or, while Play In Editor runs with the player ejected, the ejected view. While Play In Editor runs and the player is not ejected there is no free camera to move and the call is refused with PIE_VIEW_NOT_EJECTED (eject first, or point the game camera with set_camera cameraOp=view_target), exactly as set_camera is.",
                 "additionalProperties": false
               }
             ],
@@ -4365,7 +4683,7 @@
           },
           "path": {
             "type": "string",
-            "description": "Directory or file path."
+            "description": "Directory to save the PNG in, inside the project (relative to it, or absolute under it). Default Saved/Screenshots (game_viewport: Saved/Screenshots/WindowsEditor). A path outside the project is refused."
           },
           "preferences": {
             "type": "object",
@@ -4480,6 +4798,10 @@
             "type": "string",
             "description": "Input event type (key_down, key_up, key_tap = press then release, mouse_click, mouse_move), or widget_list / widget_click to operate the live UMG of a PIE session."
           },
+          "unpauseGame": {
+            "type": "boolean",
+            "description": "Also lift a pause the game holds itself (SetGamePaused from its pause menu or a title screen), as its own unpause does. Without it, a game that paused itself fails the call with GAME_PAUSED and pausedBy: the editor pause is off, but nothing ticks."
+          },
           "unthrottle": {
             "type": "boolean",
             "description": "Also turn off Use Less CPU when in Background (EditorPerformanceSettings.bThrottleCPUWhenNotForeground) for this editor session; it is not saved, so the next launch throttles again. Default true; ignored with minimize."
@@ -4573,6 +4895,9 @@
         "inspect_object",
         "get_blueprint_details",
         "raycast_mesh",
+        "check_mesh",
+        "describe_view",
+        "capture_passes",
         "raycast_world",
         "get_property",
         "set_property",
@@ -4592,6 +4917,7 @@
       "parameterNames": [
         "actorName",
         "actorNames",
+        "actors",
         "blueprintPath",
         "channel",
         "className",
@@ -4606,19 +4932,23 @@
         "info",
         "kind",
         "limit",
+        "location",
         "lookup",
         "markDirty",
         "meshPath",
         "name",
         "objectKind",
         "objectPath",
+        "objectPaths",
         "offset",
         "outputPath",
+        "passes",
         "properties",
         "propertyName",
         "propertyNames",
         "propertyPath",
         "rays",
+        "rotation",
         "snapshotName",
         "snapshotOp",
         "statsKind",
@@ -4626,7 +4956,8 @@
         "tag",
         "traceComplex",
         "value",
-        "watch"
+        "watch",
+        "width"
       ],
       "inputSchema": {
         "type": "object",
@@ -4641,6 +4972,13 @@
               "type": "string"
             },
             "description": "Several world actors to act on in one call, in place of actorName; names not found are listed back."
+          },
+          "actors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Only these actors (label, name or path): their rows under actors, and under notVisible each one that drew no pixel with its reason, outside the frame or hidden, with hiddenBy naming the actors drawn over its box (up to three, by share of the box). Names that match no actor are listed under notFound. limit does not apply."
           },
           "blueprintPath": {
             "type": "string",
@@ -4690,7 +5028,7 @@
           },
           "detailed": {
             "type": "boolean",
-            "description": "Return detailed property/component information."
+            "description": "Every property the component's class declares, as text (up to 200): a Niagara or mesh component declares about 200, most of the reply. Prefer propertyNames."
           },
           "editorState": {
             "type": "string",
@@ -4741,6 +5079,22 @@
             "type": "number",
             "description": "Maximum objects to return (default 100)."
           },
+          "location": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              },
+              "z": {
+                "type": "number"
+              }
+            },
+            "additionalProperties": false,
+            "description": "Camera location {x, y, z} in cm; omitted, the viewport's current one. The camera stays there."
+          },
           "lookup": {
             "type": "string",
             "enum": [
@@ -4758,7 +5112,7 @@
           },
           "meshPath": {
             "type": "string",
-            "description": "Static mesh asset path, e.g. /Game/Meshes/SM_Rock. Rays meet its source triangles, so a Nanite mesh answers at full detail."
+            "description": "Static mesh asset path, e.g. /Game/Meshes/SM_Rock. Its source triangles (LOD 0 as imported or built) are checked, so a Nanite mesh answers at full detail. A placed actor's mesh is named by get_components."
           },
           "name": {
             "type": "string",
@@ -4781,6 +5135,29 @@
             "type": "string",
             "description": "Object path of the world actor or asset (e.g. /Game/Maps/Demo.Demo_PersistentLevel)."
           },
+          "objectPaths": {
+            "oneOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 1,
+                "maxItems": 64,
+                "description": "The same read on several objects in one call, in place of objectPath: each entry is a target as objectPath takes it (an actor by name or label, an asset, a class default, PlayerPawn), read as a single call would be, propertyNames included. Answered under targets; a target that cannot be read carries its error and the others still answer."
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 1,
+                "maxItems": 64,
+                "description": "The same write on several targets in one call, in place of objectPath: each entry is a target as objectPath takes it (an actor, \"Actor.Component\", an asset, a class default), written as a single call would be, with properties too. Answered under targets; the call fails naming each target that did not take the write, and the others keep it."
+              }
+            ],
+            "description": "The same read on several objects in one call, in place of objectPath: each entry is a target as objectPath takes it (an actor by name or label, an asset, a class default, PlayerPawn), read as a single call would be, propertyNames included. Answered under targets; a target that cannot be read carries its error and the others still answer."
+          },
           "offset": {
             "type": "number",
             "description": "Matching objects to skip before the first one returned, for paging (default 0); hasMore says whether more follow."
@@ -4788,6 +5165,18 @@
           "outputPath": {
             "type": "string",
             "description": "File to also write the export to, inside the project (relative to it, or absolute under it), e.g. Saved/Exports/Actor.t3d. A path outside the project is refused with INVALID_PATH."
+          },
+          "passes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "id",
+                "depth",
+                "normal"
+              ]
+            },
+            "description": "Passes to write (default all three)."
           },
           "properties": {
             "oneOf": [
@@ -4817,6 +5206,20 @@
                 "items": {
                   "type": "string"
                 },
+                "description": "Properties to read, each a name or dotted path: read on each matching actor itself (its Blueprint variables, such as bIsOpen, land in the actor properties) and on each reported component (in that component properties). A name found on none of the listed actors is listed once in propertiesNotFound."
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Property values to add to the reply, by name (Intensity, bIsActive), as text under properties; a name the class lacks is listed under missingProperties. CollisionResponses reads every channel's response on a primitive component ({\"Pawn\": \"Ignore\", ...}). Without propertyNames or detailed no property values come back."
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "Specific property names to include."
               },
               {
@@ -4829,7 +5232,7 @@
                 "description": "Several properties of the same target in one call, in place of propertyName: each read as a single call would (dotted paths too, such as CharacterMovement.MaxWalkSpeed). Answered under properties; a name that does not resolve is listed under missingProperties with the reason, and the others still answer."
               }
             ],
-            "description": "Several properties of the same target in one call, in place of propertyName: each read as a single call would (dotted paths too, such as CharacterMovement.MaxWalkSpeed). Answered under properties; a name that does not resolve is listed under missingProperties with the reason, and the others still answer."
+            "description": "Properties to read, each a name or dotted path: read on each matching actor itself (its Blueprint variables, such as bIsOpen, land in the actor properties) and on each reported component (in that component properties). A name found on none of the listed actors is listed once in propertiesNotFound."
           },
           "propertyPath": {
             "type": "string",
@@ -4844,10 +5247,6 @@
                 "items": {
                   "type": "object",
                   "additionalProperties": false,
-                  "required": [
-                    "origin",
-                    "direction"
-                  ],
                   "properties": {
                     "origin": {
                       "type": "object",
@@ -4860,10 +5259,22 @@
                       "additionalProperties": true,
                       "x-unreal-reflection-boundary": true,
                       "description": "Ray direction {x, y, z}; any length, it is normalized."
+                    },
+                    "start": {
+                      "type": "object",
+                      "additionalProperties": true,
+                      "x-unreal-reflection-boundary": true,
+                      "description": "Line start {x, y, z} in local space, with end in place of origin and direction (the form raycast_world takes)."
+                    },
+                    "end": {
+                      "type": "object",
+                      "additionalProperties": true,
+                      "x-unreal-reflection-boundary": true,
+                      "description": "Line end {x, y, z} in local space; nothing past it is reported."
                     }
                   }
                 },
-                "description": "Rays in the mesh's local space; each answers in hits at the same index."
+                "description": "Rays in the mesh's local space, each {origin, direction} or {start, end}; each answers in hits at the same index."
               },
               {
                 "type": "array",
@@ -4895,6 +5306,22 @@
               }
             ],
             "description": "Lines in world space; each answers in hits at the same index."
+          },
+          "rotation": {
+            "type": "object",
+            "properties": {
+              "pitch": {
+                "type": "number"
+              },
+              "yaw": {
+                "type": "number"
+              },
+              "roll": {
+                "type": "number"
+              }
+            },
+            "additionalProperties": false,
+            "description": "Camera rotation {pitch, yaw, roll} in degrees; omitted, the viewport's current one."
           },
           "snapshotName": {
             "type": "string",
@@ -4939,7 +5366,7 @@
             "properties": {
               "propertyName": {
                 "type": "string",
-                "description": "The property to sample; a dotted path reaches through widgets and structs (LivesBox.RenderTransform)."
+                "description": "The property to sample; a dotted path reaches through widgets and structs (LivesBox.RenderTransform). Omitted, the property the call writes."
               },
               "objectPath": {
                 "type": "string",
@@ -4954,10 +5381,11 @@
                 "description": "Seconds between samples (default 0: every frame); a sample is kept only when the value changed."
               }
             },
-            "required": [
-              "propertyName"
-            ],
             "additionalProperties": false
+          },
+          "width": {
+            "type": "number",
+            "description": "Width of every pass in pixels (default 960, 64 to 4096); the height follows the viewport's shape so the passes line up with it."
           },
           "action": {
             "type": "string",
@@ -4965,6 +5393,9 @@
               "inspect_object",
               "get_blueprint_details",
               "raycast_mesh",
+              "check_mesh",
+              "describe_view",
+              "capture_passes",
               "raycast_world",
               "get_property",
               "set_property",
@@ -6088,6 +6519,7 @@
         "process_asset",
         "set_metadata",
         "create_render_target",
+        "export_mesh",
         "edit_material_instance",
         "nanite_rebuild_mesh",
         "bulk_delete",
@@ -6147,6 +6579,7 @@
         "classNames",
         "clearExisting",
         "code",
+        "collectionPath",
         "collisionType",
         "color",
         "columnTypes",
@@ -6156,6 +6589,7 @@
         "constA",
         "constB",
         "coordinateIndex",
+        "createPhysicsAsset",
         "cursor",
         "curvePoints",
         "dataTablePath",
@@ -6198,6 +6632,8 @@
         "hardness",
         "height",
         "importAnimations",
+        "importMesh",
+        "importMorphTargets",
         "inBlack",
         "inWhite",
         "includeLevel",
@@ -6284,6 +6720,7 @@
         "payload",
         "persistence",
         "physicalMaterialPath",
+        "physicsAssetPath",
         "pinName",
         "posX",
         "posY",
@@ -6315,6 +6752,7 @@
         "samples",
         "save",
         "savePath",
+        "scalars",
         "scale",
         "seamless",
         "searchScope",
@@ -6367,6 +6805,7 @@
         "valueName",
         "values",
         "varGuid",
+        "vectors",
         "virtualTextureStreaming",
         "width",
         "x",
@@ -6454,7 +6893,7 @@
                 "items": {
                   "type": "string"
                 },
-                "description": "Several asset paths to process in one call."
+                "description": "Several asset paths to process in one call: lods generates LODs for each; mesh_materials sets the same materials entries on each mesh by slot name, passing over a slot a mesh lacks (an entry no mesh has fails the call), as a whole imported pack needs."
               }
             ],
             "description": "Absolute paths of the downloaded pack files. Used with folderName to synthesize a single-entry envelope when payload is omitted."
@@ -6538,6 +6977,10 @@
             "type": "string",
             "description": "HLSL code."
           },
+          "collectionPath": {
+            "type": "string",
+            "description": "Material Parameter Collection a CollectionParameter node reads (name picks its parameter); a collection that does not load, or lacks the parameter, adds nothing and fails, listing its parameters."
+          },
           "collisionType": {
             "type": "string",
             "enum": [
@@ -6587,6 +7030,10 @@
           "coordinateIndex": {
             "type": "number",
             "description": "UV channel index (default 0)."
+          },
+          "createPhysicsAsset": {
+            "type": "boolean",
+            "description": "Skeletal mesh: make a physics asset for it (default true); false makes none."
           },
           "cursor": {
             "type": "string",
@@ -6666,6 +7113,10 @@
               {
                 "type": "string",
                 "description": "Folder for the copy, e.g. /Game/Structs, when destinationName is given, the path ends in \"/\" or the folder exists; the copy is destinationPath/destinationName, or keeps the source name without one. Otherwise the full new asset path, e.g. /Game/Structs/S_WeaponRow_V2. A copy onto an existing struct is refused with ALREADY_EXISTS."
+              },
+              {
+                "type": "string",
+                "description": "The folder the asset goes in, e.g. /Game/Imports (it keeps the source file's name), or an object path such as /Game/Chars/SK_Hero.SK_Hero to name it."
               }
             ],
             "description": "A /Game folder to move what the import created to, for example /Game/Props/Barriers. The layout beneath the import's own folder (StaticMeshes, Materials, Textures) is kept under it. Omit to leave the import where Fab put it. The shared master materials in /Game/Fab/Materials, MaterialFunctions and Textures never move, and a unreal-engine pack is left where Fab put it."
@@ -6786,7 +7237,7 @@
           },
           "format": {
             "type": "string",
-            "description": "Pixel format."
+            "description": "File format; default glb, or the extension outputPath ends in. glb and gltf are scaled to meters with materials converted to glTF PBR; fbx and obj keep centimeters."
           },
           "freeOnly": {
             "type": "boolean",
@@ -6824,6 +7275,14 @@
           "importAnimations": {
             "type": "boolean",
             "description": "Import animation takes from an FBX. Off by default, which imports mesh only."
+          },
+          "importMesh": {
+            "type": "boolean",
+            "description": "With skeletonPath: import the skeletal mesh onto that skeleton (its takes too when importAnimations) instead of the take alone."
+          },
+          "importMorphTargets": {
+            "type": "boolean",
+            "description": "Skeletal mesh: import its morph targets (blend shapes)."
           },
           "inBlack": {
             "type": "number",
@@ -6956,6 +7415,7 @@
               "landscape",
               "post_process",
               "function",
+              "parameter_collection",
               "metadata",
               "tags"
             ],
@@ -7173,7 +7633,7 @@
           },
           "name": {
             "type": "string",
-            "description": "DataTable name."
+            "description": "Asset name."
           },
           "neverStream": {
             "type": "boolean",
@@ -7394,7 +7854,7 @@
               "x-unreal-reflection-boundary": true
             },
             "x-unreal-reflection-boundary": true,
-            "description": "Several parameter values at once, each {parameterName, parameterType (scalar | vector | texture), value, or texturePath for a texture}; every entry is reported, and the call fails naming any that did not apply."
+            "description": "Several parameter values at once, each {parameterName, parameterType (scalar | vector | texture), value, or texturePath for a texture}; applied counts those that took, and an entry that did not is listed under parameters with why and fails the call."
           },
           "parentMaterial": {
             "type": "string",
@@ -7481,6 +7941,10 @@
           "physicalMaterialPath": {
             "type": "string",
             "description": "Physical material the layer applies, e.g. /Game/Physics/PM_Grass."
+          },
+          "physicsAssetPath": {
+            "type": "string",
+            "description": "Skeletal mesh: an existing physics asset to use instead of making one."
           },
           "pinName": {
             "type": "string",
@@ -7646,6 +8110,14 @@
             "type": "string",
             "description": "Package path for the instance."
           },
+          "scalars": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true
+            },
+            "description": "Scalar parameters, each {name, default}: a name the collection lacks is added, one it has takes the new default (0 when a new one gives none)."
+          },
           "scale": {
             "type": "number",
             "description": "Noise scale (default 1)."
@@ -7690,7 +8162,7 @@
           },
           "skeletonPath": {
             "type": "string",
-            "description": "Existing skeleton to import the take against, e.g. /Game/Chars/SK_Hero_Skeleton. Set it to import the animation ALONE; omit it to import mesh and animation together. Implies importAnimations."
+            "description": "Existing skeleton, e.g. /Game/Chars/SK_Hero_Skeleton. Alone it imports the FBX's animation take ALONE against it (implies importAnimations); with importMesh it binds the imported skeletal mesh to it instead, so the mesh shares that skeleton's animations."
           },
           "sourceControlOp": {
             "type": "string",
@@ -7888,6 +8360,14 @@
             "type": "string",
             "description": "Stable member GUID."
           },
+          "vectors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true
+            },
+            "description": "Vector parameters, each {name, default}: default as [r, g, b, a] or {r, g, b, a} (alpha 1 when omitted); a name the collection lacks is added, one it has takes the new default."
+          },
           "virtualTextureStreaming": {
             "type": "boolean",
             "description": "Enable VT streaming."
@@ -7922,6 +8402,7 @@
               "process_asset",
               "set_metadata",
               "create_render_target",
+              "export_mesh",
               "edit_material_instance",
               "nanite_rebuild_mesh",
               "bulk_delete",
@@ -7979,6 +8460,7 @@
         "configure_sound_class",
         "configure_sound_attenuation",
         "get_metasound_graph",
+        "list_metasound_nodes",
         "create_audio_asset",
         "get_audio_info",
         "set_dialogue_context"
@@ -7990,6 +8472,7 @@
         "applyToChildren",
         "assetPath",
         "attachPointName",
+        "attenuateWithLPF",
         "attenuationPath",
         "attenuationShape",
         "autoPlay",
@@ -8013,6 +8496,7 @@
         "enableReverbSend",
         "eqPriority",
         "eqSettings",
+        "extent",
         "fade",
         "fadeInTime",
         "fadeOutTime",
@@ -8020,6 +8504,7 @@
         "fadeType",
         "falloffDistance",
         "falloffMode",
+        "filter",
         "gain",
         "gainHF",
         "gender",
@@ -8027,12 +8512,14 @@
         "highGain",
         "highMidFrequency",
         "highMidGain",
+        "includePins",
         "indefinite",
         "innerRadius",
         "inputName",
         "inputType",
         "kind",
         "lfeBleed",
+        "limit",
         "localizationKeyFormat",
         "location",
         "loopCount",
@@ -8040,6 +8527,10 @@
         "lowFrequency",
         "lowGain",
         "lowPassFilterFrequency",
+        "lpfFrequencyAtMax",
+        "lpfFrequencyAtMin",
+        "lpfRadiusMax",
+        "lpfRadiusMin",
         "maxSeconds",
         "midFrequency",
         "midGain",
@@ -8052,6 +8543,7 @@
         "occlusionFilterScale",
         "occlusionInterpolationTime",
         "occlusionVolumeScale",
+        "oneShot",
         "operations",
         "outputName",
         "outputType",
@@ -8120,6 +8612,10 @@
           "attachPointName": {
             "type": "string",
             "description": "Socket or bone name to attach the sound to."
+          },
+          "attenuateWithLPF": {
+            "type": "boolean",
+            "description": "Air absorption on or off: a low-pass whose cutoff drops with distance. Sending any lpf value turns it on unless this is false."
           },
           "attenuationPath": {
             "type": "string",
@@ -8223,7 +8719,7 @@
             "description": "Whether the feature is enabled."
           },
           "enableReverbSend": {
-            "type": "string",
+            "type": "boolean",
             "description": "Whether the sound sends to reverb."
           },
           "eqPriority": {
@@ -8235,6 +8731,30 @@
             "description": "Four-band EQ as {frequencyCenter0..3, gain0..3, bandwidth0..3}; a missing key keeps its value.",
             "additionalProperties": true,
             "x-unreal-reflection-boundary": true
+          },
+          "extent": {
+            "type": "object",
+            "description": "A Box shape's half-size on each axis in cm, {x, y, z}, each above 0: a zone the length of a hall without reaching as far sideways. It replaces the size innerRadius gives a box; another shape is refused.",
+            "properties": {
+              "x": {
+                "type": "number",
+                "description": "Half-size along X, cm."
+              },
+              "y": {
+                "type": "number",
+                "description": "Half-size along Y, cm."
+              },
+              "z": {
+                "type": "number",
+                "description": "Half-size along Z, cm."
+              }
+            },
+            "required": [
+              "x",
+              "y",
+              "z"
+            ],
+            "additionalProperties": false
           },
           "fade": {
             "type": "string",
@@ -8270,6 +8790,10 @@
             "type": "string",
             "description": "Attenuation falloff mode."
           },
+          "filter": {
+            "type": "string",
+            "description": "Part of a class name, display name or category, spaces and case ignored (\"Trigger\", \"Envelope\", \"Filters\"); omitted, every class up to limit."
+          },
           "gain": {
             "type": "number",
             "description": "Reverb master volume (0 to 1)."
@@ -8297,6 +8821,10 @@
           "highMidGain": {
             "type": "number",
             "description": "Linear gain of EQ band 2 (0 to 4)."
+          },
+          "includePins": {
+            "type": "boolean",
+            "description": "Also list each class's input and output pins as \"Name (Type)\", the names connect and set_default take."
           },
           "indefinite": {
             "type": "boolean",
@@ -8336,6 +8864,12 @@
             "type": "number",
             "description": "Share of the sound sent to the LFE channel (0 to 1)."
           },
+          "limit": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 200,
+            "description": "At most this many classes (default 50), those whose own name equals, starts with or contains filter first, the engine's UE nodes first among those, then by name; matchCount and truncated say what was left out."
+          },
           "localizationKeyFormat": {
             "type": "string",
             "description": "Localization key format of the context (default {ContextHash})."
@@ -8368,6 +8902,22 @@
           "lowPassFilterFrequency": {
             "type": "number",
             "description": "Low-pass filter cutoff frequency in Hz."
+          },
+          "lpfFrequencyAtMax": {
+            "type": "number",
+            "description": "Low-pass cutoff in Hz at lpfRadiusMax and beyond (900 sounds like a distant, muffled engine)."
+          },
+          "lpfFrequencyAtMin": {
+            "type": "number",
+            "description": "Low-pass cutoff in Hz at lpfRadiusMin and nearer (20000 leaves the sound unfiltered)."
+          },
+          "lpfRadiusMax": {
+            "type": "number",
+            "description": "Distance in cm where the cutoff reaches lpfFrequencyAtMax."
+          },
+          "lpfRadiusMin": {
+            "type": "number",
+            "description": "Distance in cm where the low-pass starts closing; nearer than this the cutoff is lpfFrequencyAtMin."
           },
           "maxSeconds": {
             "type": "number",
@@ -8422,6 +8972,10 @@
             "type": "number",
             "description": "Volume scale applied while occluded (0-1)."
           },
+          "oneShot": {
+            "type": "boolean",
+            "description": "false makes a continuous source with no On Finished output: the engine treats it as looping, so a hum or ambience whose AudioComponent starts out of earshot resumes when the listener comes near. Default true (it plays until On Finished fires)."
+          },
           "operations": {
             "type": "array",
             "items": {
@@ -8430,7 +8984,7 @@
               "x-unreal-reflection-boundary": true
             },
             "x-unreal-reflection-boundary": true,
-            "description": "Steps run in order, 1-200, stopping at the first failure; every add_node class is looked up first, so a node class the registry does not hold fails the batch with nothing applied. Each is {edit, ...the params of that edit}: edit is add_node, connect, disconnect, remove_node, set_default, add_input or add_output (the add_metasound_node, connect_metasound_nodes, disconnect_metasound_nodes, remove_metasound_node, set_metasound_default, add_metasound_input, add_metasound_output params). Optional per step: id (names the node it creates; later steps use \"$id\" in nodeId/nodeIds/sourceNodeId/targetNodeId), from/to (\"$id.PinName\" shorthand for connect; interface nodes such as the On Play input are named with the explicit fields)."
+            "description": "Steps run in order, 1-200, stopping at the first failure; every add_node class is looked up first, so a node class the registry does not hold fails the batch with nothing applied, and so is every pin a connect or set_default names on a node the batch adds (a wrong one fails with PIN_NOT_FOUND and that node's pins). Each is {edit, ...the params of that edit}: edit is add_node, connect, disconnect, remove_node, set_default, add_input or add_output (the add_metasound_node, connect_metasound_nodes, disconnect_metasound_nodes, remove_metasound_node, set_metasound_default, add_metasound_input, add_metasound_output params). Optional per step: id (names the node it creates; later steps use \"$id\" in nodeId/nodeIds/sourceNodeId/targetNodeId), from/to (\"$id.PinName\" shorthand for connect; interface nodes such as the On Play input are named with the explicit fields)."
           },
           "outputName": {
             "type": "string",
@@ -8477,11 +9031,11 @@
             "description": "Replace the context mapping of the same speaker instead of adding another (default false)."
           },
           "reverbDistanceMax": {
-            "type": "string",
+            "type": "number",
             "description": "Distance at which the reverb wet level reaches its maximum."
           },
           "reverbDistanceMin": {
-            "type": "string",
+            "type": "number",
             "description": "Distance at which the reverb send starts."
           },
           "reverbEffect": {
@@ -8489,11 +9043,11 @@
             "description": "Canonical /Game ReverbEffect asset path."
           },
           "reverbWetLevelMax": {
-            "type": "string",
+            "type": "number",
             "description": "Maximum reverb wet level (0-1)."
           },
           "reverbWetLevelMin": {
-            "type": "string",
+            "type": "number",
             "description": "Minimum reverb wet level (0-1)."
           },
           "rotation": {
@@ -8622,7 +9176,7 @@
             "description": "Volume multiplier."
           },
           "volumeAdjuster": {
-            "type": "string",
+            "type": "number",
             "description": "Volume multiplier applied by the mix modifier."
           },
           "wavePath": {
@@ -8642,6 +9196,7 @@
               "configure_sound_class",
               "configure_sound_attenuation",
               "get_metasound_graph",
+              "list_metasound_nodes",
               "create_audio_asset",
               "get_audio_info",
               "set_dialogue_context"
@@ -8670,10 +9225,13 @@
         "edit_variable",
         "remove_variable",
         "edit_graph",
+        "edit_timeline",
         "delete_node",
         "inspect_graph",
         "add_function",
         "remove_function",
+        "implement_interface",
+        "add_behaviour",
         "probe_handle",
         "edit_widget_blueprint",
         "preview_widget",
@@ -8686,6 +9244,7 @@
         "bind_widget",
         "edit_widget_animation",
         "delete_animation",
+        "get_widget_animation",
         "get_widget_info",
         "add_game_widget",
         "create_widget_template"
@@ -8695,13 +9254,17 @@
         "activeIndex",
         "alignment",
         "alwaysShowScrollbar",
+        "amount",
         "anchorMax",
         "anchorMin",
         "angle",
         "animationName",
         "applyAndSave",
         "attachTo",
+        "autoPlay",
         "autoWrap",
+        "barName",
+        "behaviour",
         "bindingKind",
         "bindingSource",
         "blueprintPath",
@@ -8711,7 +9274,10 @@
         "brushSize",
         "buttons",
         "category",
+        "chaseRange",
+        "checkpointTag",
         "clipping",
+        "collectorClass",
         "colorAndOpacity",
         "columnCount",
         "columns",
@@ -8721,14 +9287,19 @@
         "componentNames",
         "componentType",
         "contentColorAndOpacity",
+        "cooldown",
         "copyStyleFrom",
         "cornerRadius",
         "createIfMissing",
         "createMode",
         "customEventName",
+        "damage",
+        "dashSpeed",
         "defaultValue",
+        "delay",
         "deleteScope",
         "delta",
+        "destroyOnDeath",
         "duration",
         "edit",
         "elements",
@@ -8736,10 +9307,13 @@
         "eventName",
         "eventType",
         "explicitWrapWidth",
+        "exposeOnSpawn",
         "fadeTime",
+        "fallHeight",
         "fillColorAndOpacity",
         "fillValue",
         "filter",
+        "fireRate",
         "folder",
         "followExec",
         "font",
@@ -8749,9 +9323,11 @@
         "fromPinName",
         "functionName",
         "graphName",
+        "heal",
         "heightOverride",
         "hintText",
         "hoverSoundPath",
+        "ignoreTimeDilation",
         "includePins",
         "includeProgressBar",
         "index",
@@ -8762,7 +9338,9 @@
         "inputAxisName",
         "inputType",
         "inputs",
+        "interfacePath",
         "interpolation",
+        "interval",
         "isChecked",
         "isEnabled",
         "isMarquee",
@@ -8770,25 +9348,35 @@
         "isReplicated",
         "itemCount",
         "items",
+        "jumpKey",
         "justification",
         "key",
         "keyLabel",
         "keys",
         "kind",
+        "label",
+        "launchVelocity",
         "layoutProperty",
         "left",
+        "length",
         "letterSpacing",
         "limit",
         "location",
+        "look",
+        "loop",
         "mapSize",
+        "mappingContextPath",
         "materialPath",
+        "maxAlive",
         "maxDesiredHeight",
         "maxDesiredWidth",
+        "maxHealth",
         "maxValue",
         "maxVisibleObjectives",
         "memberClass",
         "memberName",
         "meshPath",
+        "message",
         "metadata",
         "minDesiredHeight",
         "minDesiredSlotHeight",
@@ -8799,6 +9387,7 @@
         "namespace",
         "newName",
         "newParent",
+        "nextLevel",
         "nodeGuid",
         "nodeId",
         "nodeIds",
@@ -8815,6 +9404,7 @@
         "outlineColor",
         "outlineWidth",
         "outputs",
+        "overrideXY",
         "padding",
         "parameters",
         "parentClass",
@@ -8823,6 +9413,7 @@
         "path",
         "percent",
         "pinName",
+        "points",
         "posX",
         "posY",
         "position",
@@ -8830,13 +9421,18 @@
         "positionY",
         "preset",
         "pressSoundPath",
+        "projectileClass",
+        "projectileSpeed",
         "properties",
         "propertyName",
         "propertyValue",
         "pure",
+        "radius",
+        "remove",
         "renderOpacity",
         "resolution",
         "responseCount",
+        "restartDelay",
         "right",
         "rotation",
         "rowCount",
@@ -8858,9 +9454,13 @@
         "sizeY",
         "slotName",
         "slotPadding",
+        "soundPath",
         "sourceNode",
         "sourcePin",
+        "spawnClass",
+        "sprintSpeed",
         "stepSize",
+        "stopDistance",
         "stretch",
         "stretchDirection",
         "stringKey",
@@ -8870,17 +9470,23 @@
         "targetNode",
         "targetPin",
         "text",
+        "textName",
         "textStyle",
         "texturePath",
         "time",
+        "timelineName",
         "title",
         "toNodeId",
         "toPinName",
         "top",
         "trackType",
+        "tracks",
         "translation",
         "tree",
         "typeface",
+        "unusedOnly",
+        "useLastKeyframe",
+        "usePathfinding",
         "userSpecifiedScale",
         "value",
         "variableName",
@@ -8888,6 +9494,7 @@
         "variableType",
         "visibility",
         "waitForShaders",
+        "waitTime",
         "widgetKind",
         "widgetPath",
         "widthOverride",
@@ -8915,6 +9522,10 @@
             "type": "boolean",
             "description": "Always show scrollbar."
           },
+          "amount": {
+            "type": "number",
+            "description": "With collectorClass: added each time (default 1)."
+          },
           "anchorMax": {
             "type": "object",
             "additionalProperties": true,
@@ -8933,7 +9544,7 @@
           },
           "animationName": {
             "type": "string",
-            "description": "Widget animation name."
+            "description": "The animation to read in full; omitted, every animation is listed with its timing."
           },
           "applyAndSave": {
             "type": "boolean",
@@ -8941,11 +9552,42 @@
           },
           "attachTo": {
             "type": "string",
-            "description": "Socket or parent component to attach to."
+            "description": "Socket or parent component to attach to: one of this Blueprint's own, a parent Blueprint's part, or a native one (Mesh, CapsuleComponent)."
+          },
+          "autoPlay": {
+            "type": "boolean",
+            "description": "Start when the game starts, without a Play call."
           },
           "autoWrap": {
             "type": "boolean",
             "description": "Enable text auto-wrap."
+          },
+          "barName": {
+            "type": "string",
+            "description": "The ProgressBar in the widget that shows the health (default HealthBar_Bar, the bar of the health bar piece). A bar named here must already be in the widget."
+          },
+          "behaviour": {
+            "type": "string",
+            "enum": [
+              "health",
+              "damage_on_touch",
+              "pickup",
+              "sprint",
+              "shoot",
+              "chase",
+              "patrol",
+              "controls",
+              "respawn",
+              "goal",
+              "launch_pad",
+              "teleporter",
+              "spawner",
+              "dash",
+              "health_hud",
+              "counter_hud",
+              "game_over"
+            ],
+            "description": "Which add behaviour variant to run."
           },
           "bindingKind": {
             "type": "string",
@@ -8973,7 +9615,7 @@
           },
           "blueprintType": {
             "type": "string",
-            "description": "Blueprint type hint for creation."
+            "description": "Picks the parent class when parentClass is absent: Actor, Pawn, Character or FunctionLibrary; Interface makes a Blueprint Interface (its functions with add_function, taken on with implement_interface)."
           },
           "bottom": {
             "type": "number",
@@ -9003,6 +9645,14 @@
             "type": "string",
             "description": "Category folder for the variable."
           },
+          "chaseRange": {
+            "type": "number",
+            "description": "Distance within which the pawn chases the player, in units: chase defaults to 2000, and a patrol chases only when given one (default 0, or the range of a chase it takes over)."
+          },
+          "checkpointTag": {
+            "type": "string",
+            "description": "Actor tag that marks a checkpoint (default Checkpoint)."
+          },
           "clipping": {
             "type": "string",
             "enum": [
@@ -9013,6 +9663,10 @@
               "OnDemand"
             ],
             "description": "Widget clipping mode."
+          },
+          "collectorClass": {
+            "type": "string",
+            "description": "Instead of heal: the class that collects it (a Blueprint path such as /Game/Blueprints/BP_Player), whose variableName goes up by amount."
           },
           "colorAndOpacity": {
             "type": "object",
@@ -9057,6 +9711,10 @@
             "x-unreal-reflection-boundary": true,
             "description": "Tint (0-1 values) a border applies to its content."
           },
+          "cooldown": {
+            "type": "number",
+            "description": "Seconds before it works again: before a Character can dash again, or before a teleporter takes a pawn after one arrived on it (default 1)."
+          },
           "copyStyleFrom": {
             "type": "string",
             "description": "Name of another TextBlock in the same Widget Blueprint whose font, colour and shadow this one takes; the other fields in the call then apply on top."
@@ -9083,8 +9741,20 @@
             "type": "string",
             "description": "Custom event name to create."
           },
+          "damage": {
+            "type": "number",
+            "description": "Damage on each touch (default 10; negative heals)."
+          },
+          "dashSpeed": {
+            "type": "number",
+            "description": "Launch speed along the facing, units per second (default 1500)."
+          },
           "defaultValue": {
             "description": "Default value for the variable or property."
+          },
+          "delay": {
+            "type": "number",
+            "description": "Seconds between reaching the goal and opening nextLevel (default 2)."
           },
           "deleteScope": {
             "type": "string",
@@ -9098,6 +9768,10 @@
           "delta": {
             "type": "number",
             "description": "Spinbox increment."
+          },
+          "destroyOnDeath": {
+            "type": "boolean",
+            "description": "Destroy the actor when its health reaches 0 (default false; OnDied fires either way)."
           },
           "duration": {
             "type": "number",
@@ -9188,9 +9862,17 @@
             "type": "boolean",
             "description": "Use explicit wrap width."
           },
+          "exposeOnSpawn": {
+            "type": "boolean",
+            "description": "Expose on Spawn: the variable becomes an input pin on SpawnActor and Create Widget nodes for this class, set as the actor is made (before its BeginPlay). Makes it instance-editable too, as the editor does."
+          },
           "fadeTime": {
             "type": "number",
             "description": "Seconds of the fade: the damage flash (default 0.6) or the loading screen FadeIn animation (0 makes none)."
+          },
+          "fallHeight": {
+            "type": "number",
+            "description": "How far below its respawn point the pawn may fall before it respawns, in units (default 2000)."
           },
           "fillColorAndOpacity": {
             "type": "object",
@@ -9205,7 +9887,11 @@
           },
           "filter": {
             "type": "string",
-            "description": "Only nodes whose title or name, or whose pin default value or default object path, contains this text (case-insensitive, spaces ignored), e.g. \"IA_Move\", \"Set bLocked\", or \"WBP_MainMenu\" for the Create Widget node whose Class pin holds /Game/UI/WBP_MainMenu.WBP_MainMenu_C."
+            "description": "Only nodes whose title or name, or whose pin default value or default object path, contains this text (case-insensitive, spaces ignored), e.g. \"IA_Move\", \"Set bLocked\", or \"WBP_MainMenu\" for the Create Widget node whose Class pin holds /Game/UI/WBP_MainMenu.WBP_MainMenu_C; or whose input is wired from a variable or component of that name, so \"Arm\" lists every node that reads or moves the Arm component (find each writer before driving it from Tick)."
+          },
+          "fireRate": {
+            "type": "number",
+            "description": "Most shots a minute (default 300)."
           },
           "folder": {
             "type": "string",
@@ -9245,6 +9931,10 @@
             "type": "string",
             "description": "Event graph page to add the event to; omitted, the main EventGraph."
           },
+          "heal": {
+            "type": "number",
+            "description": "Health given to the pawn that collects it; it reaches an actor with health (add_health) as negative damage."
+          },
           "heightOverride": {
             "type": "number",
             "description": "Height override for size box."
@@ -9256,6 +9946,10 @@
           "hoverSoundPath": {
             "type": "string",
             "description": "Sound a Button plays when the pointer moves onto it (SoundCue, SoundWave or MetaSound path); an empty string clears it."
+          },
+          "ignoreTimeDilation": {
+            "type": "boolean",
+            "description": "Play at real speed while the game is slowed down or sped up."
           },
           "includePins": {
             "type": "boolean",
@@ -9306,7 +10000,7 @@
           },
           "inputActionPath": {
             "type": "string",
-            "description": "Enhanced Input action asset path for an EnhancedInputAction node."
+            "description": "An Input Action to use instead of the one the behaviour makes next to the Blueprint (IA_Sprint, IA_Shoot, IA_Dash)."
           },
           "inputAxisName": {
             "type": "string",
@@ -9322,13 +10016,17 @@
           },
           "inputs": {
             "type": "array",
-            "description": "Function input parameter descriptors.",
+            "description": "Function inputs, each {name, type}, with the types add_event parameters take (Float, Vector, Actor, Array<Int> ...). A nameless entry or a type no pin takes is refused (TYPE_RESOLUTION_FAILED) before anything changes.",
             "items": {
               "type": "object",
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true
             },
             "x-unreal-reflection-boundary": true
+          },
+          "interfacePath": {
+            "type": "string",
+            "description": "The interface: a Blueprint Interface asset path (/Game/Interfaces/BPI_Interactable) or a native interface class path or name."
           },
           "interpolation": {
             "type": "string",
@@ -9338,6 +10036,10 @@
               "constant"
             ],
             "description": "Keyframe interpolation."
+          },
+          "interval": {
+            "type": "number",
+            "description": "Seconds between spawns (default 3)."
           },
           "isChecked": {
             "type": "boolean",
@@ -9371,6 +10073,10 @@
             },
             "description": "Rows the objective or quest tracker lists, top to bottom."
           },
+          "jumpKey": {
+            "type": "string",
+            "description": "Key that jumps (default SpaceBar)."
+          },
           "justification": {
             "type": "string",
             "description": "Text justification of a TextBlock or RichTextBlock: left, center or right. To centre the widget itself in its slot use set_alignment."
@@ -9403,6 +10109,19 @@
             ],
             "description": "Which add function variant to run; omit for 'function'."
           },
+          "label": {
+            "type": "string",
+            "description": "Text before the number (default the variable name; empty for the number alone)."
+          },
+          "launchVelocity": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3,
+            "description": "Launch velocity [x, y, z] in units per second, world axes (default [0, 0, 1200], straight up)."
+          },
           "layoutProperty": {
             "type": "string",
             "enum": [
@@ -9423,6 +10142,10 @@
             "type": "number",
             "description": "Left margin in slate units."
           },
+          "length": {
+            "type": "number",
+            "description": "How long it plays, in seconds (a new timeline: 5)."
+          },
           "letterSpacing": {
             "type": "number",
             "description": "Extra space between the letters of a TextBlock, in thousandths of an em (0 normal, 100 airy, negative tighter)."
@@ -9437,13 +10160,29 @@
             "additionalProperties": true,
             "x-unreal-reflection-boundary": true
           },
+          "look": {
+            "type": "boolean",
+            "description": "Also turn the view with the mouse and the right stick (default true); false for a fixed camera."
+          },
+          "loop": {
+            "type": "boolean",
+            "description": "Start over at the end, again and again."
+          },
           "mapSize": {
             "type": "number",
             "description": "Minimap width and height in pixels (default 220)."
           },
+          "mappingContextPath": {
+            "type": "string",
+            "description": "The Input Mapping Context its keys go in (the project's own); default the one the pawn already registers, else /Game/Input/IMC_MCP."
+          },
           "materialPath": {
             "type": "string",
             "description": "Material asset path for a component."
+          },
+          "maxAlive": {
+            "type": "number",
+            "description": "Most of its spawned actors alive at once (default 5); a destroyed one frees its place."
           },
           "maxDesiredHeight": {
             "type": "number",
@@ -9452,6 +10191,10 @@
           "maxDesiredWidth": {
             "type": "number",
             "description": "Maximum desired width of a size box."
+          },
+          "maxHealth": {
+            "type": "number",
+            "description": "Starting and largest health (default 100)."
           },
           "maxValue": {
             "type": "number",
@@ -9472,6 +10215,10 @@
           "meshPath": {
             "type": "string",
             "description": "Static/Skeletal mesh asset path for a mesh component."
+          },
+          "message": {
+            "type": "string",
+            "description": "The text shown (default GAME OVER)."
           },
           "metadata": {
             "type": "object",
@@ -9515,6 +10262,10 @@
             "type": "string",
             "description": "New parent SCS node name."
           },
+          "nextLevel": {
+            "type": "string",
+            "description": "Level opened once the goal is reached, by name or /Game path (a path must exist). Omitted: the game stays in this level, and OnGoalReached is left for other logic."
+          },
           "nodeGuid": {
             "type": "string",
             "description": "Node GUID accepted in place of nodeId."
@@ -9552,7 +10303,7 @@
           },
           "nodeType": {
             "type": "string",
-            "description": "The node to create: CallFunction (memberName, plus memberClass for a function of another class), Event (eventName: BeginPlay, Tick), CustomEvent (customEventName), VariableGet or VariableSet (memberName), Cast (targetClass), InputAxisEvent (inputAxisName), Branch, Sequence, Select, Switch, SwitchOnInt, SwitchOnEnum, SwitchOnString, DoOnce, DoN, FlipFlop, Gate, MultiGate, ForLoop, ForEachLoop, WhileLoop (each also WithBreak), MakeArray, MakeStruct and BreakStruct (structPath), SpawnActorFromClass, GetAllActorsOfClass, Self, Timeline, Reroute, Comment; a common function by name (PrintString, Delay, SetActorLocation, GetPlayerPawn, GetActorOfClass, IsValid, PlaySound2D); or a K2Node class name that inspect_graph info=node_types lists. For create_struct_make_break_nodes: make or break."
+            "description": "The node to create: CallFunction (memberName, plus memberClass for a function of another class), Event (eventName: BeginPlay, Tick), CustomEvent (customEventName), VariableGet or VariableSet (memberName), Cast (targetClass), InputAxisEvent (inputAxisName), Branch, Sequence, Select, Switch, SwitchOnInt, SwitchOnEnum, SwitchOnString, DoOnce, DoN, FlipFlop, Gate, MultiGate, ForLoop, ForEachLoop, WhileLoop (each also WithBreak), MakeArray, MakeStruct and BreakStruct (structPath), SpawnActorFromClass, GetAllActorsOfClass, Self, CallDelegate (memberName: an event dispatcher, memberClass: another class's), BindEvent (the same, plus eventName: a Bind Event node and a custom event with the dispatcher's inputs wired to it, eventNodeGuid in the reply),Timeline (timelineName; edit_timeline keys its tracks), Reroute, Comment, MathExpression (its formula goes in set_node_property Expression) (a Switch on Int is made with only Default: wire a case by its number, from \"$id.0\", \"$id.1\"..., and the case pin is added; a Sequence or a commutative math node grows its inputs the same way); a common function by name (PrintString, Delay, SetActorLocation, GetPlayerPawn, GetActorOfClass, IsValid, PlaySound2D); or a K2Node class name that inspect_graph info=node_types lists. In an Animation Blueprint's AnimGraph or a state's graph (graphName), any animation node by class: AnimGraphNode_TwoBoneIK, TwoBoneIK or Two Bone IK (info=node_types with filter IK lists them; animation_physics configure_anim_graph_node set_value sets its settings); a node the graph cannot hold is refused (NODE_NOT_ALLOWED_IN_GRAPH). For create_struct_make_break_nodes: make or break."
           },
           "offset": {
             "type": "number",
@@ -9578,7 +10329,7 @@
             "oneOf": [
               {
                 "type": "array",
-                "description": "SCS operations applied in order. Each entry is an object with `type` plus that operation's own fields; `type: \"add_component\"` also takes componentName, componentClass (or componentType), attachTo, transform, meshPath, materialPath and a nested properties bag; `type: \"modify_component\"` takes the same transform, meshPath, materialPath and properties for a component that already exists; transform is {location:{x,y,z}, rotation:{pitch,yaw,roll}, scale:{x,y,z}} (or those three directly on the operation), and a part left out keeps its current value, while a transform that cannot be applied (a part that is not an {x,y,z} or {pitch,yaw,roll} object or a three-number array, or a component with no transform) is named in warnings, not skipped, as is a meshPath or materialPath that does not load or that its component cannot take; `type: \"attach_component\"` (or \"reparent\") moves componentName under parentComponent (or attachTo/newParent). A failed operation is named in warnings, and the call fails when none applied. Each result carries instancesUpdated (placed copies that took the change, 0 included) with up to three of their paths, and a hint, repeated in warnings, when a mesh or material lands on a hidden component.",
+                "description": "SCS operations applied in order. Each entry is an object with `type` plus that operation's own fields; `type: \"add_component\"` also takes componentName, componentClass (or componentType), attachTo, transform, meshPath, materialPath and a nested properties bag; `type: \"modify_component\"` takes the same transform, meshPath, materialPath and properties for a component that already exists (its own, or a parent Blueprint's part, edited through this Blueprint's override of it); transform is {location:{x,y,z}, rotation:{pitch,yaw,roll}, scale:{x,y,z}} (or those three directly on the operation), and a part left out keeps its current value, while a transform that cannot be applied (a part that is not an {x,y,z} or {pitch,yaw,roll} object or a three-number array, or a component with no transform) is named in warnings, not skipped, as is a meshPath or materialPath that does not load or that its component cannot take; `type: \"attach_component\"` (or \"reparent\") moves componentName under parentComponent (or attachTo/newParent). A failed operation is named in warnings, and the call fails when none applied. Each result carries instancesUpdated (placed copies that took the change, 0 included) with up to three of their paths, and a hint, repeated in warnings, when a mesh or material lands on a hidden component.",
                 "items": {
                   "type": "object",
                   "additionalProperties": true,
@@ -9594,10 +10345,10 @@
                   "x-unreal-reflection-boundary": true
                 },
                 "x-unreal-reflection-boundary": true,
-                "description": "Steps run in order, 1-200. Each is {edit, ...that edit's own params}. Member steps come before the nodes that use them: add_variable (variableName, variableType as add_variable takes it: basic, class, struct, enum and container types, defaultValue, isPublic, category), add_function (functionName, inputs, outputs, pure, isPublic; its body steps set graphName to the function name; with an id, \"$id\" is its entry node and \"$id_return\" its return node, which exists when outputs are declared), add_event (customEventName and parameters, or componentName plus eventName for a component or Widget Blueprint widget delegate, e.g. PlayButton with OnClicked) and add_event_dispatcher (dispatcherName, parameters [{name, type}]). Node steps: create_node, connect_pins, set_pin_default_value, set_node_property, create_reroute_node. create_node also takes nodeType CallDelegate (memberName: a dispatcher), Message (memberClass: an interface, memberName: its function), AsyncTask (memberClass: the task or async-action class, memberName: its static factory; event graphs only) and FunctionResult (one more return node in a function graph). Optional per step: id (names the created node; later steps use \"$id\" in fromNodeId, toNodeId and nodeId), from and to (\"$id.PinName\" shorthand for connect_pins), pinDefaults (create_node only: {PinName: value} applied to the new node; a read-only pin such as Set Text's Value gets a MakeLiteral node wired into it). \"$entry\" is the graph's own entry node (a Construction Script or function graph starts there: from \"$entry.then\"). A create step without posX and posY is auto-placed, and once every step ran it moves beside a node it is wired to (right of what runs it, below-left of what reads it); one whose posX and posY overlap an existing node is placed at the nearest free position instead, and its result says where in placementWarning, so a crowded row never stops the batch (a single create_node call still refuses an overlap). Every function, variable, dispatcher and async factory a step names is checked before any step runs, so a misspelled one fails the batch with nothing applied; any other failure stops the batch at that step, and that step leaves nothing behind (a member step included), in whichever graph it ran."
+                "description": "Steps run in order, 1-200. Each is {edit, ...that edit's own params}. Member steps come before the nodes that use them: add_variable (variableName, variableType as add_variable takes it: basic, class, struct, enum and container types, defaultValue, isPublic, exposeOnSpawn, category), add_function (functionName, inputs, outputs, pure, isPublic; its body steps set graphName to the function name; with an id, \"$id\" is its entry node and \"$id_return\" its return node, which exists when outputs are declared), add_event (customEventName and parameters, or componentName plus eventName for a component or Widget Blueprint widget delegate, e.g. PlayButton with OnClicked) and add_event_dispatcher (dispatcherName, parameters [{name, type}]). Node steps: create_node, connect_pins, set_pin_default_value, set_node_property, create_reroute_node. create_node also takes nodeType CallDelegate (memberName: a dispatcher, memberClass: another class's), BindEvent (the same: a Bind Event node and a custom event, eventName, wired to it; with an id, \"$id_event\" is that event, whose then pin runs when the dispatcher fires, and the object bound goes to \"$id.self\"), Message (memberClass: an interface, memberName: its function), AsyncTask (memberClass: the task or async-action class, memberName: its static factory; event graphs only), FunctionResult (one more return node in a function graph) and MathExpression with expression (the formula, checked and set as set_node_property Expression sets it, before pinDefaults, which can then name its inputs). Optional per step: id (names the created node; later steps use \"$id\" in fromNodeId, toNodeId and nodeId), from and to (\"$id.PinName\" shorthand for connect_pins), pinDefaults (create_node only: {PinName: value} applied to the new node; a read-only pin such as Set Text's Value gets a MakeLiteral node wired into it). \"$entry\" is the graph's own entry node (a Construction Script or function graph starts there: from \"$entry.then\"). A create step without posX and posY is auto-placed, and once every step ran it moves beside a node it is wired to (right of what runs it, below-left of what reads it); one whose posX and posY overlap an existing node is placed at the nearest free position instead, and its result says where in placementWarning, so a crowded row never stops the batch (a single create_node call still refuses an overlap). Every function, variable, dispatcher and async factory a step names is checked before any step runs, so a misspelled one fails the batch with nothing applied; any other failure stops the batch at that step and undoes the steps before it (members, nodes, links and pin defaults, in every graph), so a failed batch leaves the Blueprint as it was: fix that step and send the whole batch again. Only a set_node_property on a node that was already there stays, and the error names it."
               }
             ],
-            "description": "SCS operations applied in order. Each entry is an object with `type` plus that operation's own fields; `type: \"add_component\"` also takes componentName, componentClass (or componentType), attachTo, transform, meshPath, materialPath and a nested properties bag; `type: \"modify_component\"` takes the same transform, meshPath, materialPath and properties for a component that already exists; transform is {location:{x,y,z}, rotation:{pitch,yaw,roll}, scale:{x,y,z}} (or those three directly on the operation), and a part left out keeps its current value, while a transform that cannot be applied (a part that is not an {x,y,z} or {pitch,yaw,roll} object or a three-number array, or a component with no transform) is named in warnings, not skipped, as is a meshPath or materialPath that does not load or that its component cannot take; `type: \"attach_component\"` (or \"reparent\") moves componentName under parentComponent (or attachTo/newParent). A failed operation is named in warnings, and the call fails when none applied. Each result carries instancesUpdated (placed copies that took the change, 0 included) with up to three of their paths, and a hint, repeated in warnings, when a mesh or material lands on a hidden component."
+            "description": "SCS operations applied in order. Each entry is an object with `type` plus that operation's own fields; `type: \"add_component\"` also takes componentName, componentClass (or componentType), attachTo, transform, meshPath, materialPath and a nested properties bag; `type: \"modify_component\"` takes the same transform, meshPath, materialPath and properties for a component that already exists (its own, or a parent Blueprint's part, edited through this Blueprint's override of it); transform is {location:{x,y,z}, rotation:{pitch,yaw,roll}, scale:{x,y,z}} (or those three directly on the operation), and a part left out keeps its current value, while a transform that cannot be applied (a part that is not an {x,y,z} or {pitch,yaw,roll} object or a three-number array, or a component with no transform) is named in warnings, not skipped, as is a meshPath or materialPath that does not load or that its component cannot take; `type: \"attach_component\"` (or \"reparent\") moves componentName under parentComponent (or attachTo/newParent). A failed operation is named in warnings, and the call fails when none applied. Each result carries instancesUpdated (placed copies that took the change, 0 included) with up to three of their paths, and a hint, repeated in warnings, when a mesh or material lands on a hidden component."
           },
           "options": {
             "type": "array",
@@ -9627,13 +10378,17 @@
           },
           "outputs": {
             "type": "array",
-            "description": "Function output parameter descriptors.",
+            "description": "Function outputs (its return values), each {name, type}, with the types inputs take.",
             "items": {
               "type": "object",
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true
             },
             "x-unreal-reflection-boundary": true
+          },
+          "overrideXY": {
+            "type": "boolean",
+            "description": "Replace the horizontal speed of the Character instead of adding to it (default false)."
           },
           "padding": {
             "type": "object",
@@ -9645,7 +10400,7 @@
             "oneOf": [
               {
                 "type": "array",
-                "description": "CustomEvent inputs, each {name, type}: float, double, int, int64, bool, byte, string, name, text, object, class, or a struct (Vector, /Script/CoreUObject.Vector).",
+                "description": "CustomEvent inputs, each {name, type}: float, double, int, int64, bool, byte, string, name, text, object, class, softobject, an enum or struct name (Vector, Rotator, Transform, /Script/CoreUObject.Vector) or a class name (Actor) for an object of that class. An array, set or map parameter needs add_event. A nameless entry or another type is refused (TYPE_RESOLUTION_FAILED) before anything changes.",
                 "items": {
                   "type": "object",
                   "additionalProperties": true,
@@ -9655,7 +10410,7 @@
               },
               {
                 "type": "array",
-                "description": "Function/event parameter descriptors.",
+                "description": "Event parameters, each {name, type}. Types: bool, byte, int, int64, float, double, string, name, text, vector, vector2d, rotator, transform, color, linearcolor, object, class, a class, struct or enum name (Actor, HitResult), Object:/Script/Engine.Actor, Struct:<path>, Enum:<path>, and Array<T>, Set<T> or Map<Key,Value>. A nameless entry or a type no pin takes is refused (TYPE_RESOLUTION_FAILED) before anything changes.",
                 "items": {
                   "type": "object",
                   "additionalProperties": true,
@@ -9664,7 +10419,7 @@
                 "x-unreal-reflection-boundary": true
               }
             ],
-            "description": "CustomEvent inputs, each {name, type}: float, double, int, int64, bool, byte, string, name, text, object, class, or a struct (Vector, /Script/CoreUObject.Vector)."
+            "description": "CustomEvent inputs, each {name, type}: float, double, int, int64, bool, byte, string, name, text, object, class, softobject, an enum or struct name (Vector, Rotator, Transform, /Script/CoreUObject.Vector) or a class name (Actor) for an object of that class. An array, set or map parameter needs add_event. A nameless entry or another type is refused (TYPE_RESOLUTION_FAILED) before anything changes."
           },
           "parentClass": {
             "type": "string",
@@ -9672,7 +10427,7 @@
           },
           "parentComponent": {
             "type": "string",
-            "description": "Parent SCS node name for reparenting."
+            "description": "Parent component to put the component under: one of this Blueprint's own, a parent Blueprint's scene component, or a native one (Mesh, CapsuleComponent)."
           },
           "parentSlot": {
             "type": "string",
@@ -9689,6 +10444,18 @@
           "pinName": {
             "type": "string",
             "description": "Pin name on a graph node."
+          },
+          "points": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 3,
+              "maxItems": 3
+            },
+            "description": "The route: [x, y, z] offsets from where the pawn starts, in world axes, walked in turn and looped (default [[500, 0, 0], [0, 0, 0]], back and forth). Each placed pawn walks its own copy (PatrolPoints is instance editable)."
           },
           "posX": {
             "type": "number",
@@ -9720,6 +10487,14 @@
             "type": "string",
             "description": "Sound a Button plays when it is pressed (SoundCue, SoundWave or MetaSound path); an empty string clears it."
           },
+          "projectileClass": {
+            "type": "string",
+            "description": "The projectile it shoots: a Blueprint path (/Game/Weapons/BP_Fireball) or class path."
+          },
+          "projectileSpeed": {
+            "type": "number",
+            "description": "Launch speed, units per second (default 3000)."
+          },
           "properties": {
             "type": "object",
             "description": "Property bag applied to the CDO, component template, or node: name to value. A dotted name reaches a member of a component or struct (CapsuleComponent.CapsuleRadius, BodyInstance.CollisionEnabled); on a Blueprint's class defaults a native component also answers to its object name (CollisionCylinder.CapsuleRadius, CharMoveComp.MaxWalkSpeed). An object or class reference takes a path (a Blueprint class path ends in _C); null or \"None\" clears it.",
@@ -9739,7 +10514,7 @@
                 "description": "Value to assign to the property. An object or class reference takes a path (a Blueprint class path ends in _C); null or \"None\" clears it."
               },
               {
-                "description": "set_node_property: text for NodeComment, a number for NodePosX or NodePosY, true or false for bCommentBubbleVisible or bDisabled, Enabled, Disabled or DevelopmentOnly for EnabledState, an asset path for a reflected field. set_pin_default_value: the pin's new default as text: a number, true or false, an enum value name, a vector as X,Y,Z (0,150,110), a rotator as P,Y,R, or an asset path."
+                "description": "set_node_property: text for NodeComment, a number for NodePosX or NodePosY, true or false for bCommentBubbleVisible or bDisabled, Enabled, Disabled or DevelopmentOnly for EnabledState, the text of a Math Expression node's Expression (each other name becomes a number input pin, except one the Blueprint has a variable of, which reads that variable; a number input is never a vector, so add to a location as VECT(x, y, z + 20) from its parts; a comparison used as a number is refused: write SelectFloat(1, 0, A > B); an input pin is never true/false, so join true/false values from other nodes with BooleanAND, BooleanOR or BooleanXOR nodes), an asset path for a reflected field. set_pin_default_value: the pin's new default as text: a number, true or false, an enum value name, a vector as X,Y,Z (0,150,110), a rotator as P,Y,R, or an asset path."
               }
             ],
             "description": "The key value, by trackType: opacity a number 0-1; color {r,g,b,a} or [r,g,b,a]; translation, scale or shear {x,y} or [x,y]; angle a number in degrees; transform any of {translation:{x,y}, scale:{x,y}, angle, shear:{x,y}}. A value of the wrong shape is refused before anything is added."
@@ -9747,6 +10522,14 @@
           "pure": {
             "type": "boolean",
             "description": "Build a Cast node pure (no exec pins, as in the editor's Convert to pure cast); default false."
+          },
+          "radius": {
+            "type": "number",
+            "description": "How far across from the spawner an actor may appear, in units (default 0: on the spawner)."
+          },
+          "remove": {
+            "type": "boolean",
+            "description": "Drop the interface instead (its function graphs go with it)."
           },
           "renderOpacity": {
             "type": "number",
@@ -9759,6 +10542,10 @@
           "responseCount": {
             "type": "number",
             "description": "Response buttons under the dialog line (0-6, default 3)."
+          },
+          "restartDelay": {
+            "type": "number",
+            "description": "Seconds before the level opens again (default 3); 0 never restarts it."
           },
           "right": {
             "type": "number",
@@ -9877,6 +10664,10 @@
             "x-unreal-reflection-boundary": true,
             "description": "Padding between uniform grid slots."
           },
+          "soundPath": {
+            "type": "string",
+            "description": "Sound asset played at the actor: where a pickup was collected, a goal when the player reaches it, a pad on each launch, or where a teleported pawn arrives."
+          },
           "sourceNode": {
             "type": "string",
             "description": "Source node id accepted in place of fromNodeId."
@@ -9885,9 +10676,21 @@
             "type": "string",
             "description": "Source pin name on the originating node."
           },
+          "spawnClass": {
+            "type": "string",
+            "description": "The actor it spawns: a Blueprint path (/Game/Enemies/BP_Slime) or class path; not the spawner itself."
+          },
+          "sprintSpeed": {
+            "type": "number",
+            "description": "MaxWalkSpeed while sprinting, cm/s (default 1000)."
+          },
           "stepSize": {
             "type": "number",
             "description": "Value step size for slider."
+          },
+          "stopDistance": {
+            "type": "number",
+            "description": "How close it gets to the player before it stops, in units (default 100)."
           },
           "stretch": {
             "type": "string",
@@ -9925,7 +10728,7 @@
           },
           "targetClass": {
             "type": "string",
-            "description": "Target class for a node that carries one: a Cast target, a CreateWidget or SpawnActor class, or the subsystem a Get Subsystem node returns. Required for cast and subsystem nodes, whose type is stored on the node itself and cannot be set afterwards."
+            "description": "Target class for a node that carries one: a Cast target, a CreateWidget or SpawnActor class, the subsystem a Get Subsystem node returns, or the class GetAllActorsOfClass and GetActorOfClass look for (their result is then typed to it, so a ForEach element wires to its functions). Required for cast and subsystem nodes, whose type is stored on the node itself and cannot be set afterwards."
           },
           "targetNode": {
             "type": "string",
@@ -9938,6 +10741,10 @@
           "text": {
             "type": "string",
             "description": "Text content for a text block or button."
+          },
+          "textName": {
+            "type": "string",
+            "description": "The TextBlock in the widget that the behaviour writes: the count of counter_hud (default <variable>Counter) or the message of game_over (default GameOver_Text). A text named here must already be in the widget."
           },
           "textStyle": {
             "type": "string",
@@ -9955,6 +10762,10 @@
           "time": {
             "type": "number",
             "description": "Keyframe time."
+          },
+          "timelineName": {
+            "type": "string",
+            "description": "For nodeType Timeline: the timeline it plays, which edit_timeline keys; a name the Blueprint lacks makes one (omitted, a new Timeline_N). One node plays a timeline, in the event graph of an Actor Blueprint."
           },
           "title": {
             "type": "string",
@@ -9986,6 +10797,18 @@
             ],
             "description": "Animation track type: opacity/renderOpacity (RenderOpacity), color (ColorAndOpacity), translation/scale/angle/shear or transform (RenderTransform)."
           },
+          "tracks": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 50,
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true
+            },
+            "x-unreal-reflection-boundary": true,
+            "description": "Tracks to add, or whose keys to replace (a track keeps its type): each {name, type, keys, interpolation}. name is the node pin its value comes out of; type float (default), vector, color or event (an exec pin that fires at each key time); keys [{time in seconds, value}], value a number, {x, y, z} or {r, g, b, a} by type and none for an event; interpolation auto (smooth, default), linear or constant. Every track is checked before anything changes; a bad one is named by its index (tracks[1].keys[0])."
+          },
           "translation": {
             "type": "object",
             "additionalProperties": true,
@@ -10001,6 +10824,18 @@
           "typeface": {
             "type": "string",
             "description": "Face of the TextBlock font: Regular, Bold, Italic, Light... A face the font lacks is refused with the list it has."
+          },
+          "unusedOnly": {
+            "type": "boolean",
+            "description": "Only nodes that do nothing: a call no exec wire reaches, or a getter, math or other pure node whose result nothing reads (what is left behind when the node that read it was deleted; the compiler says nothing). Events, input actions and function entries never count. Combines with filter."
+          },
+          "useLastKeyframe": {
+            "type": "boolean",
+            "description": "End at the last key instead of at length."
+          },
+          "usePathfinding": {
+            "type": "boolean",
+            "description": "Follow the navigation mesh (default true; the level needs a Nav Mesh Bounds Volume); false heads straight for the player or the next point."
           },
           "userSpecifiedScale": {
             "type": "number",
@@ -10027,10 +10862,22 @@
             "description": "Variable name to add, remove, rename, or modify."
           },
           "variableNames": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
+            "oneOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Several variables to give the same metadata in one call (one compile and save), in place of or besides variableName."
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Several variables to remove in one call, in place of or besides variableName. Every name must exist (any letter case), or nothing is removed and the reply lists the Blueprint's variables."
+              }
+            ],
             "description": "Several variables to give the same metadata in one call (one compile and save), in place of or besides variableName."
           },
           "variableType": {
@@ -10051,6 +10898,10 @@
           "waitForShaders": {
             "type": "boolean",
             "description": "true: when the drawing left shaders compiling (the editor compiles a material's UI shaders the first time it is drawn: right after the editor starts, or after a material edit), wait for them, at most 25 seconds, and draw again; shaderWait in the reply says how long it waited. Default false: draw once and report shadersCompiling."
+          },
+          "waitTime": {
+            "type": "number",
+            "description": "Seconds it waits at each point (default 1)."
           },
           "widgetKind": {
             "type": "string",
@@ -10097,7 +10948,7 @@
           },
           "widgetPath": {
             "type": "string",
-            "description": "Canonical /Game Widget Blueprint asset path."
+            "description": "A Widget Blueprint to show instead of the one made next to the Blueprint under UI/ (WBP_HealthBar, WBP_<variable>Counter, WBP_GameOver). One without the bar or the text gets it: the health bar HUD piece (add_game_widget), a text at the top right, or a full-screen shade with the message."
           },
           "widthOverride": {
             "type": "number",
@@ -10123,10 +10974,13 @@
               "edit_variable",
               "remove_variable",
               "edit_graph",
+              "edit_timeline",
               "delete_node",
               "inspect_graph",
               "add_function",
               "remove_function",
+              "implement_interface",
+              "add_behaviour",
               "probe_handle",
               "edit_widget_blueprint",
               "preview_widget",
@@ -10139,6 +10993,7 @@
               "bind_widget",
               "edit_widget_animation",
               "delete_animation",
+              "get_widget_animation",
               "get_widget_info",
               "add_game_widget",
               "create_widget_template"
@@ -10568,16 +11423,21 @@
         "configure_weapon",
         "configure_projectile",
         "configure_damage",
-        "get_combat_info"
+        "get_combat_info",
+        "apply_damage"
       ],
       "parameterNames": [
+        "actorName",
         "attachmentSlots",
         "baseDamage",
         "blueprintPath",
         "bounceEnabled",
         "bounceVelocityRatio",
+        "causerName",
         "collisionRadius",
+        "damage",
         "damageMultiplier",
+        "damageType",
         "fireRate",
         "hitboxBoneName",
         "hitboxSize",
@@ -10602,6 +11462,10 @@
       "inputSchema": {
         "type": "object",
         "properties": {
+          "actorName": {
+            "type": "string",
+            "description": "The actor to hit, by name in the running game; PlayerPawn names the pawn the player controls."
+          },
           "attachmentSlots": {
             "type": "array",
             "description": "Attachment slot definitions created on the weapon.",
@@ -10643,13 +11507,25 @@
             "type": "number",
             "description": "Fraction of velocity retained on bounce (0-1)."
           },
+          "causerName": {
+            "type": "string",
+            "description": "The actor that deals it (DamageCauser), by name; its controller, or the controller of the pawn it is, instigates. Omitted: no causer."
+          },
           "collisionRadius": {
             "type": "number",
             "description": "Projectile collision sphere radius."
           },
+          "damage": {
+            "type": "number",
+            "description": "Damage dealt to the actor it hits (default 20); kept in its Damage variable, which a placed copy can change."
+          },
           "damageMultiplier": {
             "type": "number",
             "description": "Damage multiplier applied for this hitbox."
+          },
+          "damageType": {
+            "type": "string",
+            "description": "Damage type class, a path or a name (default DamageType)."
           },
           "fireRate": {
             "type": "number",
@@ -10743,7 +11619,7 @@
           },
           "projectileClass": {
             "type": "string",
-            "description": "Class path of the projectile the weapon spawns."
+            "description": "The projectile the weapon shoots: its Blueprint path (/Game/Weapons/BP_Bullet) or class path."
           },
           "projectileGravityScale": {
             "type": "number",
@@ -10794,7 +11670,8 @@
               "configure_weapon",
               "configure_projectile",
               "configure_damage",
-              "get_combat_info"
+              "get_combat_info",
+              "apply_damage"
             ],
             "description": "Action to invoke on manage_combat."
           }
@@ -10835,6 +11712,7 @@
         "boxSize",
         "cleanupTarget",
         "color",
+        "componentName",
         "control",
         "deltaTime",
         "density",
@@ -10871,6 +11749,7 @@
         "meshPath",
         "moduleKind",
         "moduleName",
+        "moduleNames",
         "modulePath",
         "name",
         "nodeId",
@@ -10892,6 +11771,8 @@
         "shape",
         "shapeType",
         "sourceBinding",
+        "sourceEmitterName",
+        "sourceSystemPath",
         "spawnOnEvent",
         "stageIterationSource",
         "stageName",
@@ -10963,6 +11844,10 @@
             ],
             "description": "Color as an {r, g, b, a} object or an [r, g, b, a] array: 0 to 255 channels for debug_shape, 0 to 1 for a light."
           },
+          "componentName": {
+            "type": "string",
+            "description": "Actor form: which Niagara component of the actor takes the values, when it has several (a Blueprint with a fire and a smoke); default its first. A name it lacks is refused with the names it has."
+          },
           "control": {
             "type": "string",
             "enum": [
@@ -10976,7 +11861,7 @@
           },
           "deltaTime": {
             "type": "number",
-            "description": "Simulation delta time per step, in seconds."
+            "description": "Seconds per step (default 0.1); steps of about a frame (0.02) simulate the way the game does."
           },
           "density": {
             "type": "number",
@@ -11189,6 +12074,13 @@
             "type": "string",
             "description": "Module (function call) name that owns inputName; alternative to targetNodeId."
           },
+          "moduleNames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Only these modules' moduleInputs and staticSwitches (Collision, SpawnRate), any case; a whole system's inputs run to 15 KB."
+          },
           "modulePath": {
             "type": "string",
             "description": "Canonical /Niagara module script path to insert."
@@ -11207,7 +12099,7 @@
           },
           "parameterType": {
             "type": "string",
-            "description": "Niagara parameter type (Float, Vector, Color, ...)."
+            "description": "Niagara parameter type (Float, Vector, Color or LinearColor, ...)."
           },
           "parameterValue": {
             "description": "Niagara parameter value (any type)."
@@ -11233,7 +12125,7 @@
               ],
               "additionalProperties": false
             },
-            "description": "Several values written together and saved once, in place of parameterName and parameterValue: each {parameterName, parameterValue} names a user parameter, a module input or a module's static switch as get_niagara_info lists it (InitializeParticle.Lifetime, InitializeParticle.Ribbon Width Mode), and emitterName and save apply to every entry. The reply lists every entry (parameterName, applied, error); the call fails PARAMETER_BATCH_INCOMPLETE naming any that did not apply, and the others stay written."
+            "description": "Several values written together and saved once, in place of parameterName and parameterValue: each {parameterName, parameterValue} names a user parameter, a module input or a module's static switch as get_niagara_info lists it (InitializeParticle.Lifetime, InitializeParticle.Ribbon Width Mode), and emitterName and save apply to every entry. With actorName (edit=set_parameter) each entry is a user parameter of that placed effect, in place of parameterName and value. The reply lists every entry (parameterName, applied, error); the call fails PARAMETER_BATCH_INCOMPLETE naming any that did not apply, and the others stay written."
           },
           "path": {
             "type": "string",
@@ -11253,7 +12145,7 @@
           },
           "reset": {
             "type": "boolean",
-            "description": "Whether the effect restarts from its initial state."
+            "description": "Restart the system from age 0 before stepping, so it ends at exactly steps x deltaTime seconds; also plays a finished system again. Without it the steps add to the age it has."
           },
           "rotation": {
             "type": "array",
@@ -11295,6 +12187,14 @@
             "type": "string",
             "description": "The parameter to read: a user parameter of the same type (User.Tint) or an engine, system or emitter one (Emitter.Age)."
           },
+          "sourceEmitterName": {
+            "type": "string",
+            "description": "The emitter of sourceSystemPath to copy, by the name get_niagara_info lists."
+          },
+          "sourceSystemPath": {
+            "type": "string",
+            "description": "Niagara system to copy sourceEmitterName from, in place of emitterPath. The user parameters the emitter reads come along with their values when this system lacks them. An emitter that inherits from an emitter asset is refused (EMITTER_INHERITS): add that asset with emitterPath."
+          },
           "spawnOnEvent": {
             "type": "boolean",
             "description": "Whether the receiver spawns particles on each event."
@@ -11309,7 +12209,7 @@
           },
           "steps": {
             "type": "number",
-            "description": "Number of simulation steps to advance."
+            "description": "Steps to run (default 1): the system ages steps x deltaTime seconds."
           },
           "system": {
             "type": "string",
@@ -11764,6 +12664,7 @@
         "configure_mesh_lods",
         "convert_to_nanite",
         "convert_to_static_mesh",
+        "split_mesh",
         "get_mesh_info",
         "edit_dynamic_mesh",
         "get_vertex_position"
@@ -11781,6 +12682,7 @@
         "baseRadius",
         "blurIterations",
         "booleanOp",
+        "by",
         "cap",
         "center",
         "collision",
@@ -11794,6 +12696,8 @@
         "depthSegments",
         "dimensions",
         "distance",
+        "dropRepeats",
+        "dryRun",
         "edges",
         "edit",
         "enableCollision",
@@ -11803,6 +12707,7 @@
         "floating",
         "frequency",
         "g",
+        "gap",
         "groupID",
         "hardEdgeAngle",
         "height",
@@ -11822,9 +12727,13 @@
         "materialId",
         "materials",
         "maxHullCount",
+        "maxParts",
+        "meshPath",
         "midpoint",
+        "minTriangles",
         "modeling",
         "name",
+        "namePrefix",
         "numCuts",
         "numRings",
         "numSides",
@@ -11835,6 +12744,7 @@
         "optimization",
         "outerRadius",
         "outputPath",
+        "pivot",
         "position",
         "primitive",
         "profile",
@@ -11909,7 +12819,7 @@
           },
           "angle": {
             "type": "number",
-            "description": "Angle in degrees."
+            "description": "Degrees to turn the profile about local Z, 1 to 360 (default 360), starting on local +X and turning toward +Y; less leaves an open wedge whose two cut faces are not closed."
           },
           "aoDistance": {
             "type": "number",
@@ -11954,28 +12864,60 @@
             ],
             "description": "Which boolean mesh variant to run."
           },
+          "by": {
+            "type": "string",
+            "enum": [
+              "parts",
+              "material"
+            ],
+            "description": "parts (default): one mesh per separate object, where connected pieces whose bounds touch or come within gap cm are one object (a crate's planks stay one crate); material: one per material slot."
+          },
           "cap": {
             "type": "boolean",
             "description": "Close open ends: the tube ends of a loft, sweep or extrude along a spline, or for a revolve flat discs from the first and last profile points to the axis (revolve default true)."
           },
           "center": {
-            "type": "object",
-            "description": "Center of operation.",
-            "properties": {
-              "x": {
-                "type": "number",
-                "description": "X"
+            "oneOf": [
+              {
+                "type": "object",
+                "description": "A point on the mirror plane in the mesh's local space, cm (default 0,0,0).",
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "description": "X"
+                  },
+                  "y": {
+                    "type": "number",
+                    "description": "Y"
+                  },
+                  "z": {
+                    "type": "number",
+                    "description": "Z"
+                  }
+                },
+                "additionalProperties": false
               },
-              "y": {
-                "type": "number",
-                "description": "Y"
-              },
-              "z": {
-                "type": "number",
-                "description": "Z"
+              {
+                "type": "object",
+                "description": "Ring: a point on the turning axis in the mesh's local space, cm (default 0,0,0); the copies turn about the mesh's local Z through it.",
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "description": "X"
+                  },
+                  "y": {
+                    "type": "number",
+                    "description": "Y"
+                  },
+                  "z": {
+                    "type": "number",
+                    "description": "Z"
+                  }
+                },
+                "additionalProperties": false
               }
-            },
-            "additionalProperties": false
+            ],
+            "description": "A point on the mirror plane in the mesh's local space, cm (default 0,0,0)."
           },
           "collision": {
             "type": "string",
@@ -12012,7 +12954,7 @@
           },
           "count": {
             "type": "integer",
-            "description": "Count of repeated elements."
+            "description": "Copies in all, the original included (1 to 100): count 3 is the original and two copies."
           },
           "curvatureScale": {
             "type": "number",
@@ -12037,7 +12979,7 @@
           },
           "depth": {
             "type": "number",
-            "description": "Primitive depth along Z."
+            "description": "Primitive depth: a box's size along Z; a plane's size along Y (a plane lies flat in XY, centred, facing +Z)."
           },
           "depthSegments": {
             "type": "integer",
@@ -12065,6 +13007,14 @@
           "distance": {
             "type": "number",
             "description": "Distance for offset-style operations."
+          },
+          "dropRepeats": {
+            "type": "boolean",
+            "description": "Leave out an object that only repeats a larger one where it stands, such as an LOD copy an importer merged into the mesh (default true)."
+          },
+          "dryRun": {
+            "type": "boolean",
+            "description": "Answer the meshes the split would make (size, triangles, offset, and exists when the name is taken) and create nothing, to tune gap and minTriangles first. A large pack can take longer than one call waits."
           },
           "edges": {
             "type": "array",
@@ -12127,7 +13077,7 @@
             },
             "minItems": 1,
             "maxItems": 20000,
-            "description": "Faces, each a list of three or more vertex indices into vertices (at most 20000 faces). List a face's corners so that (v1 - v0) x (v2 - v0) points outward, and let two faces that share an edge run along it in opposite directions; the call refuses a face wound the other way, or an edge shared by more than two faces, and names the face. A face with more than three corners is triangulated (it may be concave) and all its triangles keep the face's polygroup."
+            "description": "Faces, each a list of three or more vertex indices into vertices (at most 20000 faces). List a face's corners so that (v1 - v0) x (v2 - v0) points outward, and let two faces that share an edge run along it in opposite directions; the call refuses a face wound the other way, or an edge shared by more than two faces, and names the face. A face with more than three corners is triangulated (it may be concave) and all its triangles keep the face's polygroup. The new faces get smooth normals, shared where they meet; split_normals creases the hard edges."
           },
           "floating": {
             "type": "boolean",
@@ -12140,6 +13090,10 @@
           "g": {
             "type": "number",
             "description": "Green channel, 0-1."
+          },
+          "gap": {
+            "type": "number",
+            "description": "With by parts: pieces whose bounds come within this many cm of each other are one object (default 2)."
           },
           "groupID": {
             "type": "integer",
@@ -12159,7 +13113,7 @@
           },
           "heightSegments": {
             "type": "integer",
-            "description": "Tessellation segments along height."
+            "description": "Tessellation segments along height (on a plane, along its depth, Y)."
           },
           "hullCount": {
             "type": "integer",
@@ -12167,7 +13121,7 @@
           },
           "innerRadius": {
             "type": "number",
-            "description": "Radius of a centred hole (default 0, a solid disc)."
+            "description": "In cm, per variant. Disc and ring: the centred hole (disc default 0, solid; ring 25). Pipe: the inner wall (default 40). Torus and arch: the TUBE radius, its round cross-section, not a hole (default 20 torus, 25 arch); the opening under an arch is radius - innerRadius. Spiral stairs: the radius of the central well."
           },
           "iterations": {
             "type": "integer",
@@ -12242,9 +13196,21 @@
             "type": "integer",
             "description": "Hull budget (1 to 64, default 8) when collisionType is convex_decomposition."
           },
+          "maxParts": {
+            "type": "number",
+            "description": "More parts than this (default 64) refuses the split with nothing made."
+          },
+          "meshPath": {
+            "type": "string",
+            "description": "Static mesh asset to start from: its geometry is copied in, each section as the material id of its slot, in the mesh's own local space. Omitted, the mesh starts empty."
+          },
           "midpoint": {
             "type": "number",
             "description": "Texture luminance midpoint for displacement."
+          },
+          "minTriangles": {
+            "type": "number",
+            "description": "Objects with fewer triangles are left out (default 12): loose bits, decal cards."
           },
           "modeling": {
             "type": "string",
@@ -12273,6 +13239,10 @@
             "type": "string",
             "description": "Name for the new asset or node."
           },
+          "namePrefix": {
+            "type": "string",
+            "description": "Names are <namePrefix>01, <namePrefix>02 ..., largest part first (default <source name>_Part); a name already taken refuses the split before anything is made."
+          },
           "numCuts": {
             "type": "integer",
             "description": "Number of evenly spaced cuts."
@@ -12294,23 +13264,47 @@
             "description": "Number of turns for spiral stairs (converted to a curve angle)."
           },
           "offset": {
-            "type": "object",
-            "description": "Offset vector.",
-            "properties": {
-              "x": {
-                "type": "number",
-                "description": "X"
+            "oneOf": [
+              {
+                "type": "object",
+                "description": "Offset vector.",
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "description": "X"
+                  },
+                  "y": {
+                    "type": "number",
+                    "description": "Y"
+                  },
+                  "z": {
+                    "type": "number",
+                    "description": "Z"
+                  }
+                },
+                "additionalProperties": false
               },
-              "y": {
-                "type": "number",
-                "description": "Y"
-              },
-              "z": {
-                "type": "number",
-                "description": "Z"
+              {
+                "type": "object",
+                "description": "Row: the step from one copy to the next in the mesh's local space, cm (default 100 along x); copy k sits k steps from the original.",
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "description": "X"
+                  },
+                  "y": {
+                    "type": "number",
+                    "description": "Y"
+                  },
+                  "z": {
+                    "type": "number",
+                    "description": "Z"
+                  }
+                },
+                "additionalProperties": false
               }
-            },
-            "additionalProperties": false
+            ],
+            "description": "Offset vector."
           },
           "operation": {
             "type": "string",
@@ -12347,6 +13341,15 @@
           "outputPath": {
             "type": "string",
             "description": "Canonical /Game output asset path."
+          },
+          "pivot": {
+            "type": "string",
+            "enum": [
+              "bottom",
+              "center",
+              "source"
+            ],
+            "description": "Each new mesh's pivot: bottom (default), the bottom centre of its bounds, so it stands on what it is placed on; center; or source, the source's own origin."
           },
           "position": {
             "type": "object",
@@ -12408,7 +13411,7 @@
               ],
               "additionalProperties": false
             },
-            "description": "Points from bottom to top, at least 2. For a hollow shape with walls, go up the outside and back down the inside. Omit for a small built-in vase."
+            "description": "Points from bottom to top, at least 2. For a hollow shape with walls, go up the outside and back down the inside. A closed loop (end on the first point) with cap false turns a solid ring section, such as a moulding or a tyre. Omit for a small built-in vase."
           },
           "r": {
             "type": "number",
@@ -12420,7 +13423,7 @@
           },
           "radius": {
             "type": "number",
-            "description": "Primitive radius."
+            "description": "Radius in cm (default 50). Torus and arch: from the centre to the middle of the tube (arch default 100). Pipe: the outer wall, as outerRadius. Spiral stairs: the inner radius when innerRadius is not given (default 150)."
           },
           "recomputeNormals": {
             "type": "boolean",
@@ -12637,7 +13640,7 @@
                     "torus",
                     "cone"
                   ],
-                  "description": "sphere (radius), ellipsoid (radii), box (extent = half size, rounding), capsule (radius, length of the straight part, along local Z), cylinder (radius, length, rounding, along local Z), torus (radius to the tube centre, thickness = tube radius, in local XY), cone (radius at the bottom, topRadius, length, along local Z, rounded ends)."
+                  "description": "sphere (radius), ellipsoid (radii), box (extent = half size, rounding), capsule (radius, length of the straight part, along local Z), cylinder (radius, length, rounding, along local Z), torus (radius to the tube centre, thickness = tube radius, in local XY), cone (radius at the bottom, topRadius, length, along local Z, rounded ends). radius also sets an ellipsoid's radii and a box's extent when those are left out; any other size a type does not read is refused."
                 },
                 "operation": {
                   "type": "string",
@@ -12650,7 +13653,7 @@
                 },
                 "center": {
                   "type": "object",
-                  "description": "Shape centre in the mesh's local space, cm (default 0,0,0).",
+                  "description": "Shape centre in the mesh's local space, cm (default 0,0,0); with relativeTo, in that shape's frame.",
                   "properties": {
                     "x": {
                       "type": "number",
@@ -12666,6 +13669,12 @@
                     }
                   },
                   "additionalProperties": false
+                },
+                "relativeTo": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 63,
+                  "description": "Index of an earlier shapes[] entry to place this one on: center, rotation, repeat and mirror are then measured from that shape's centre along its own turned axes (not scaled by its size), so the eyes, mouth or buttons of a leaning or turned part stay on it without working out the rotation. mirror then reflects across that shape's own planes."
                 },
                 "rotation": {
                   "type": "object",
@@ -12991,7 +14000,7 @@
           },
           "v0": {
             "type": "object",
-            "description": "First corner {x, y, z} of the appended triangle.",
+            "description": "First corner {x, y, z} of the appended triangle. The triangle faces the side (v1 - v0) x (v2 - v0) points to, as append_polygons faces do; the other side is culled.",
             "properties": {
               "x": {
                 "type": "number",
@@ -13114,6 +14123,7 @@
               "configure_mesh_lods",
               "convert_to_nanite",
               "convert_to_static_mesh",
+              "split_mesh",
               "get_mesh_info",
               "edit_dynamic_mesh",
               "get_vertex_position"
@@ -13173,11 +14183,11 @@
           },
           "autoClose": {
             "type": "boolean",
-            "description": "Whether the door closes automatically."
+            "description": "Whether it closes by itself after the last pawn leaves (default false: it stays open)."
           },
           "autoCloseDelay": {
             "type": "number",
-            "description": "Delay in seconds before the door auto-closes."
+            "description": "Seconds after the last pawn leaves before an autoClose door or lid shuts (default 3)."
           },
           "blueprintPath": {
             "type": "string",
@@ -13230,11 +14240,11 @@
           },
           "openAngle": {
             "type": "number",
-            "description": "Open angle in degrees."
+            "description": "Open angle in degrees (a new door gets 90, a new chest lid 100)."
           },
           "openTime": {
             "type": "number",
-            "description": "Open animation duration in seconds."
+            "description": "Seconds the door or lid takes to swing fully open or shut (a new door gets 0.5, a new chest 0.6)."
           },
           "requiresKey": {
             "type": "boolean",
@@ -13553,7 +14563,6 @@
         "add_sublevel"
       ],
       "parameterNames": [
-        "assetPath",
         "color",
         "destinationPath",
         "discardUnsaved",
@@ -13567,7 +14576,6 @@
         "levelName",
         "levelOp",
         "levelPath",
-        "levelPaths",
         "lightClass",
         "lightType",
         "location",
@@ -13577,7 +14585,6 @@
         "overwrite",
         "packagePath",
         "parentLevel",
-        "path",
         "properties",
         "quality",
         "rotation",
@@ -13598,10 +14605,6 @@
       "inputSchema": {
         "type": "object",
         "properties": {
-          "assetPath": {
-            "type": "string",
-            "description": "Alias of levelPath resolved by the manage_level argument normalizer."
-          },
           "color": {
             "type": "array",
             "items": {
@@ -13667,13 +14670,6 @@
             "type": "string",
             "description": "Folder the new level goes in (e.g. /Game/Maps, combined with levelName), or its full path; omitted, the level lands in /Game/Maps."
           },
-          "levelPaths": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "Array of level asset paths."
-          },
           "lightClass": {
             "type": "string",
             "description": "Light class name or path, for a class lightType does not name, including a Blueprint light (/Game/Lights/BP_Lamp.BP_Lamp_C); build_environment list_light_types lists the loaded ones. Wins over lightType."
@@ -13713,10 +14709,6 @@
           "parentLevel": {
             "type": "string",
             "description": "Level the sub-level belongs to; it must be the level open in the editor, or the call is refused (load it first)."
-          },
-          "path": {
-            "type": "string",
-            "description": "Alias of levelPath resolved by the manage_level argument normalizer."
           },
           "properties": {
             "type": "object",
@@ -13786,7 +14778,7 @@
           },
           "targetPath": {
             "type": "string",
-            "description": "Alias of destinationPath resolved by the manage_level argument normalizer."
+            "description": "Alias of destinationPath."
           },
           "timeDilation": {
             "type": "number",
@@ -14201,23 +15193,47 @@
             "description": "Loading range for grid cells."
           },
           "location": {
-            "type": "object",
-            "description": "World location {x, y, z}.",
-            "properties": {
-              "x": {
-                "type": "number",
-                "description": "X"
+            "oneOf": [
+              {
+                "type": "object",
+                "description": "World location {x, y, z}.",
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "description": "X"
+                  },
+                  "y": {
+                    "type": "number",
+                    "description": "Y"
+                  },
+                  "z": {
+                    "type": "number",
+                    "description": "Z"
+                  }
+                },
+                "additionalProperties": false
               },
-              "y": {
-                "type": "number",
-                "description": "Y"
-              },
-              "z": {
-                "type": "number",
-                "description": "Z"
+              {
+                "type": "object",
+                "description": "World location {x, y, z}; the world origin when omitted.",
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "description": "X"
+                  },
+                  "y": {
+                    "type": "number",
+                    "description": "Y"
+                  },
+                  "z": {
+                    "type": "number",
+                    "description": "Z"
+                  }
+                },
+                "additionalProperties": false
               }
-            },
-            "additionalProperties": false
+            ],
+            "description": "World location {x, y, z}."
           },
           "nodeClass": {
             "type": "string",
@@ -14569,6 +15585,7 @@
         "propertyName",
         "reliable",
         "repNotifyFunc",
+        "replaceKey",
         "replicateMovement",
         "replicated",
         "respawnDelay",
@@ -14878,6 +15895,10 @@
             "type": "string",
             "description": "Rep notify func."
           },
+          "replaceKey": {
+            "type": "string",
+            "description": "A key the action is already mapped to: its mapping moves to key (the remap of a control), keeping its triggers and modifiers unless triggerType or modifierType is sent, and that key stops firing the action. A key the action is not mapped to fails NOT_FOUND and lists the keys it is."
+          },
           "replicateMovement": {
             "type": "boolean",
             "description": "Replicate movement."
@@ -15021,7 +16042,7 @@
             "description": "Trigger type."
           },
           "useOwnerNetRelevancy": {
-            "type": "string",
+            "type": "boolean",
             "description": "Use owner net relevancy."
           },
           "usePushModel": {
@@ -16701,10 +17722,12 @@
         "enable_category",
         "disable_category",
         "get_status",
+        "get_task_result",
         "reset"
       ],
       "parameterNames": [
         "category",
+        "taskId",
         "tools"
       ],
       "inputSchema": {
@@ -16720,6 +17743,10 @@
               "all"
             ],
             "description": "Category name to enable/disable."
+          },
+          "taskId": {
+            "type": "string",
+            "description": "The task.taskId the still-running answer gave. Only the last 32 such calls of this server or editor session are kept."
           },
           "tools": {
             "type": "array",
@@ -16738,6 +17765,7 @@
               "enable_category",
               "disable_category",
               "get_status",
+              "get_task_result",
               "reset"
             ],
             "description": "Action to invoke on manage_tools."
@@ -16760,6 +17788,7 @@
         "profile_performance",
         "configure_performance",
         "merge_actors",
+        "create_cpp_class",
         "run_build",
         "package_project",
         "package_status",
@@ -16773,6 +17802,7 @@
         "execute_python",
         "set_project_setting",
         "get_project_settings",
+        "configure_rendering",
         "validate_assets",
         "lumen_update_scene",
         "list_plugins",
@@ -16785,9 +17815,12 @@
       ],
       "parameterNames": [
         "actors",
+        "antiAliasing",
         "archiveDirectory",
         "arguments",
         "assetPath",
+        "autoExposure",
+        "bloom",
         "boostPlayerLocation",
         "build",
         "category",
@@ -16795,12 +17828,15 @@
         "cellSize",
         "channels",
         "childClass",
+        "classLocation",
+        "className",
         "code",
         "command",
         "configuration",
         "connectionType",
         "control",
         "cvar",
+        "dataValidation",
         "deleteSlot",
         "detailed",
         "duration",
@@ -16814,6 +17850,8 @@
         "filter",
         "forceLOD",
         "forceRecompile",
+        "globalIllumination",
+        "hardwareRayTracing",
         "height",
         "host",
         "includeMetadata",
@@ -16828,18 +17866,25 @@
         "lines",
         "lodBias",
         "maps",
+        "materialUsage",
         "maxFPS",
+        "maxTests",
+        "megaLights",
+        "meshDistanceFields",
         "message",
         "metadata",
         "minScreenRadius",
         "minVerbosity",
         "mode",
+        "moduleName",
+        "motionBlur",
         "name",
         "offset",
         "outputPath",
         "overwrite",
         "packageName",
         "pak",
+        "parentClass",
         "parentName",
         "path",
         "paths",
@@ -16853,6 +17898,7 @@
         "profileType",
         "properties",
         "recursive",
+        "reflections",
         "replaceSourceActors",
         "resolution",
         "returnBase64",
@@ -16864,6 +17910,7 @@
         "seconds",
         "section",
         "setting",
+        "shadows",
         "slop",
         "slotName",
         "snapshotPath",
@@ -16871,8 +17918,10 @@
         "source",
         "startTime",
         "streamingDistance",
+        "subfolder",
         "target",
         "text",
+        "timeoutSeconds",
         "traceFile",
         "type",
         "userIndex",
@@ -16896,6 +17945,17 @@
             },
             "description": "Actor names to merge (>=2 required)."
           },
+          "antiAliasing": {
+            "type": "string",
+            "enum": [
+              "tsr",
+              "taa",
+              "fxaa",
+              "msaa",
+              "none"
+            ],
+            "description": "Default anti-aliasing method."
+          },
           "archiveDirectory": {
             "type": "string",
             "description": "Archive directory package_project wrote (default <Project>/Packaged). Must be inside the project."
@@ -16907,6 +17967,14 @@
           "assetPath": {
             "type": "string",
             "description": "Single asset path to validate."
+          },
+          "autoExposure": {
+            "type": "boolean",
+            "description": "Auto exposure on by default."
+          },
+          "bloom": {
+            "type": "boolean",
+            "description": "Bloom on by default."
           },
           "boostPlayerLocation": {
             "type": "boolean",
@@ -16935,6 +18003,18 @@
           "childClass": {
             "type": "string",
             "description": "Child component class (required)."
+          },
+          "classLocation": {
+            "type": "string",
+            "enum": [
+              "public",
+              "private"
+            ],
+            "description": "public (default): header in Public, .cpp in Private; private: both in Private. A module without those folders takes both files in its own folder."
+          },
+          "className": {
+            "type": "string",
+            "description": "The class name without its prefix: MyActor makes AMyActor (an Actor parent), MyThing makes UMyThing (an Object parent). Letters, digits and _."
           },
           "code": {
             "type": "string",
@@ -16980,6 +18060,10 @@
           "cvar": {
             "type": "string",
             "description": "Alternate CVar name field."
+          },
+          "dataValidation": {
+            "type": "boolean",
+            "description": "Also run Data Validation on every asset that loads (default false): an asset row gains dataValidation (valid, invalid or notValidated, the last when no validator checks that kind of asset) with its errors and warnings, a folder row the count of each verdict and issues (up to 20 assets with errors or warnings). An invalid asset makes its row invalid."
           },
           "deleteSlot": {
             "type": "boolean",
@@ -17033,6 +18117,19 @@
           "forceRecompile": {
             "type": "boolean",
             "description": "Force a shader recompile."
+          },
+          "globalIllumination": {
+            "type": "string",
+            "enum": [
+              "lumen",
+              "screen_space",
+              "none"
+            ],
+            "description": "Dynamic global illumination method."
+          },
+          "hardwareRayTracing": {
+            "type": "boolean",
+            "description": "Support hardware ray tracing (applies after an editor restart)."
           },
           "height": {
             "type": "number",
@@ -17105,9 +18202,25 @@
             },
             "description": "Maps to cook. Pass these when a map is reached by NAME at runtime (OpenLevel) rather than by reference, or the cooker will not find it."
           },
+          "materialUsage": {
+            "type": "boolean",
+            "description": "Also list the material usage flags the assets' meshes need and their materials lack (default false): a Nanite static mesh's slots, a skeletal mesh's, and a Blueprint's mesh components (Nanite, instanced, spline or skeletal), as materialUsage [{material, usage, property, unsaved, component, asset}] (a folder: at most 40, with materialUsageCount). The editor sets such a flag only while it draws the mesh outside play, so a mesh that only appears in play draws the default material there and in a cooked game; set property true on the material (inspect set_property) to fix one. unsaved true: the editor set the flag (drawing a preview or loading a mesh sets it) but it is not on disk yet; save that material (control_editor save_all with assetPaths). On UE 5.8 a material instance holds its own flags, so material can name the instance. A missing flag makes its row invalid."
+          },
           "maxFPS": {
             "type": "number",
             "description": "Maximum frames per second."
+          },
+          "maxTests": {
+            "type": "number",
+            "description": "Run at most this many of the matching tests, in the order the editor lists them (default 50, at most 200); matched says how many there were."
+          },
+          "megaLights": {
+            "type": "boolean",
+            "description": "Use MegaLights by default (UE 5.5 and later; listed under unavailable on older engines)."
+          },
+          "meshDistanceFields": {
+            "type": "boolean",
+            "description": "Generate mesh distance fields, which software Lumen traces (applies after an editor restart)."
           },
           "message": {
             "type": "string",
@@ -17138,6 +18251,14 @@
             "type": "string",
             "description": "Optimization mode."
           },
+          "moduleName": {
+            "type": "string",
+            "description": "The project module that gets the files; default the module named after the project, else its first runtime module. A wrong name lists the modules."
+          },
+          "motionBlur": {
+            "type": "boolean",
+            "description": "Motion blur on by default."
+          },
           "name": {
             "type": "string",
             "description": "CVar name (alternatively cvar, key, or command)."
@@ -17162,6 +18283,10 @@
           "pak": {
             "type": "boolean",
             "description": "Pak the staged content (default true)."
+          },
+          "parentClass": {
+            "type": "string",
+            "description": "The C++ class to derive from, by name or path (Actor, Character, Pawn, ActorComponent, SceneComponent, Object, BlueprintFunctionLibrary, /Script/Engine.GameModeBase), or None for a plain C++ class. A Blueprint class is refused: derive from its C++ parent."
           },
           "parentName": {
             "type": "string",
@@ -17246,6 +18371,15 @@
             "type": "boolean",
             "description": "For a folder path, include its subfolders (default true)."
           },
+          "reflections": {
+            "type": "string",
+            "enum": [
+              "lumen",
+              "screen_space",
+              "none"
+            ],
+            "description": "Reflection method."
+          },
           "replaceSourceActors": {
             "type": "boolean",
             "description": "Replace source actors in the level."
@@ -17290,7 +18424,7 @@
           },
           "section": {
             "type": "string",
-            "description": "Settings section."
+            "description": "Settings section: a class path such as /Script/EngineSettings.GameMapsSettings, or its class name (GameMapsSettings)."
           },
           "setting": {
             "type": "string",
@@ -17316,6 +18450,14 @@
               "baseline"
             ],
             "description": "Which configure display variant to run."
+          },
+          "shadows": {
+            "type": "string",
+            "enum": [
+              "virtual",
+              "maps"
+            ],
+            "description": "Shadow map method: virtual shadow maps or classic shadow maps."
           },
           "slop": {
             "type": "number",
@@ -17351,6 +18493,10 @@
             "type": "number",
             "description": "Loading/streaming range."
           },
+          "subfolder": {
+            "type": "string",
+            "description": "Folder under the module's Public (or Private) folder, such as Gameplay/Pickups; default none. A module without Public and Private folders refuses one: its own folder is no include path, so the class would not compile there."
+          },
           "target": {
             "type": "string",
             "description": "UBT target name (required)."
@@ -17358,6 +18504,10 @@
           "text": {
             "type": "string",
             "description": "Optional text for text-bearing components."
+          },
+          "timeoutSeconds": {
+            "type": "number",
+            "description": "Stop a test still running after this many seconds and count it failed (default 60, at most 600)."
           },
           "traceFile": {
             "type": "string",
@@ -17425,6 +18575,7 @@
               "profile_performance",
               "configure_performance",
               "merge_actors",
+              "create_cpp_class",
               "run_build",
               "package_project",
               "package_status",
@@ -17438,6 +18589,7 @@
               "execute_python",
               "set_project_setting",
               "get_project_settings",
+              "configure_rendering",
               "validate_assets",
               "lumen_update_scene",
               "list_plugins",

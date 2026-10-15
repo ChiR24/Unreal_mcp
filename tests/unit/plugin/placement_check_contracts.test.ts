@@ -7,7 +7,7 @@ const placementCheck = (): string =>
   readFileSync(
     resolve(
       process.cwd(),
-      'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Domains/ControlActor/McpAutomationBridge_ControlActorPlacementCheck.cpp',
+      'plugins/EngineWire/Source/EngineWire/Private/Domains/ControlActor/McpActorPlacementCheck.cpp',
     ),
     'utf8',
   );
@@ -30,17 +30,54 @@ describe('audit_placement finds the floor under an actor, not what it holds up',
 });
 
 // Stage 9's blimps "intersected" the mountain peak by 270 and 340 units: the cone's box is mostly
-// air. The engine's shape overlap skips trimesh pieces, so a complex-as-simple mesh must keep the
-// box verdict instead of always reading "apart".
+// air. The engine queries with convex shapes only, but it can strike a complex-as-simple mesh's
+// triangles; asking for convex shapes on both sides left a lamp post between parked cars
+// "intersecting" four of them and a barrier under an entrance canopy "intersecting" the building.
 describe('audit_placement confirms a box overlap on the real shapes', () => {
+  const shapes = (): string =>
+    readFileSync(
+      resolve(
+        process.cwd(),
+        'plugins/EngineWire/Source/EngineWire/Private/Domains/ControlActor/Placement/McpPlacementShapes.cpp',
+      ),
+      'utf8',
+    );
+
   it('drops a pair whose collision shapes do not touch', () => {
     const source = placementCheck();
+    expect(source).toContain('#include "Domains/ControlActor/Placement/McpPlacementShapes.h"');
     expect(source).toContain('if (McpShapesApart(Actor, Other)) {');
-    expect(source).toContain('B->ComponentOverlapComponent(A, A->GetComponentLocation(), A->GetComponentQuat(), Params)');
+    expect(shapes()).toContain('return !B->ComponentOverlapComponent(A, A->GetComponentLocation(), A->GetComponentQuat(), Params);');
   });
 
-  it('only trusts shapes the engine test can move', () => {
-    expect(placementCheck()).toContain('Setup->GetCollisionTraceFlag() != CTF_UseComplexAsSimple');
+  it('queries with convex shapes and strikes convex shapes or complex-as-simple triangles, either way round', () => {
+    const source = shapes();
+    expect(source).toContain('return Setup && Setup->GetCollisionTraceFlag() != CTF_UseComplexAsSimple && Setup->AggGeom.GetElementCount() > 0;');
+    expect(source).toContain('return Setup && (Setup->GetCollisionTraceFlag() == CTF_UseComplexAsSimple || Setup->AggGeom.GetElementCount() > 0);');
+    expect(source).toContain('return !A->ComponentOverlapComponent(B, B->GetComponentLocation(), B->GetComponentQuat(), Params);');
+  });
+
+  it('tests two triangle meshes by one mesh\'s turned box against the other', () => {
+    const source = shapes();
+    expect(source).toContain('return McpBoxApartFrom(A, B) || McpBoxApartFrom(B, A);');
+    expect(source).toContain('return !Struck->GetBodyInstance()->OverlapTest(Xf.TransformPosition(Local.Origin), Xf.GetRotation(), Box);');
+  });
+});
+
+// Seven buoys floating in an ocean each read "intersects the ocean by 47; sunk 47 units below the surface; z=-3 would
+// rest it": following the suggestion would sit a floating body on top of the water like a deck.
+describe('the placement check treats a water body as a surface, not a solid', () => {
+  it('never reports an overlap with a water body, nor checks one as the subject', () => {
+    const source = placementCheck();
+    expect(source).toContain('if (Class->GetFName() == TEXT("WaterBody")) {');
+    expect(source).toContain('IsBoundsOnlyActor(Other) || McpPlacementAccepted(Other) || McpIsWaterBody(Other)) {');
+    expect(source).toContain('McpIsOverlapOnly(Actor) || McpIsWaterBody(Actor)) {');
+  });
+
+  it('an actor below a water surface is not sunk and gets no suggested location', () => {
+    const source = placementCheck();
+    expect(source).toContain('bOnWater = McpIsWaterBody(HitActor);');
+    expect(source).toContain('if (Clearance < -SunkFloor && !bOnWater) {');
   });
 });
 
@@ -50,7 +87,7 @@ describe('audit_placement rows list every actor a finding intersects', () => {
     const audit = readFileSync(
       resolve(
         process.cwd(),
-        'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Domains/ControlActor/McpAutomationBridge_ControlActorPlacementAudit.cpp',
+        'plugins/EngineWire/Source/EngineWire/Private/Domains/ControlActor/McpActorPlacementAudit.cpp',
       ),
       'utf8',
     );
@@ -62,7 +99,7 @@ describe('audit_placement rows list every actor a finding intersects', () => {
     const audit = readFileSync(
       resolve(
         process.cwd(),
-        'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Domains/ControlActor/McpAutomationBridge_ControlActorPlacementAudit.cpp',
+        'plugins/EngineWire/Source/EngineWire/Private/Domains/ControlActor/McpActorPlacementAudit.cpp',
       ),
       'utf8',
     );
@@ -74,22 +111,25 @@ describe('audit_placement rows list every actor a finding intersects', () => {
 // 20 window bands flush on a hall (1 unit into its face) and 96 awnings on a facade, "floating 139 / 521 units". The reply
 // came from set_transform, and spawn and audit_placement share the check.
 describe('the placement check does not call a wall-mounted actor floating', () => {
-  const root = 'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Domains/ControlActor';
+  const root = 'plugins/EngineWire/Source/EngineWire/Private/Domains/ControlActor';
   const read = (...segments: string[]): string => readFileSync(resolve(process.cwd(), root, ...segments), 'utf8');
   const flat = (source: string): string => source.split(/\s+/u).join(' ');
 
   it('an actor held from the side says what it is mounted on, and is neither floating nor without a surface below', () => {
     const source = flat(placementCheck());
 
-    expect(source).toContain('#include "Domains/ControlActor/Placement/McpAutomationBridge_PlacementMount.h"');
+    expect(source).toContain('#include "Domains/ControlActor/Placement/McpPlacementMount.h"');
     expect(source).toContain('} else if (Clearance > 50.0) {');
     expect(source).toContain('if (AActor *Mount = FindMount(World, Actor, SelfBox, IgnoreBelow)) { Data->SetStringField(TEXT("mountedOn"), McpActorRef(Mount)); } else { Notes.Add(FString::Printf( TEXT("floating %.0f units above the surface under it"), Clearance)); }');
-    expect(source).toContain('} else if (AActor *Mount = FindMount(World, Actor, SelfBox, IgnoreBelow)) { Data->SetStringField(TEXT("mountedOn"), McpActorRef(Mount)); } else { Notes.Add(TEXT("nothing below it - it may be outside the playable area")); }');
+    // A floor or a platform over a pit (slab-shaped) is ground itself: the first floor of every new level read
+    // "nothing below it - it may be outside the playable area".
+    expect(source).toContain('} else if (AActor *Mount = FindMount(World, Actor, SelfBox, IgnoreBelow)) { Data->SetStringField(TEXT("mountedOn"), McpActorRef(Mount)); } else if (!McpIsGroundLike(Actor)) {');
+    expect(source).toContain('Notes.Add(TEXT("nothing below it - it may be outside the playable area")); }');
     expect(source, 'the volume-only predicate moved beside the mount search').not.toContain('McpIsBoundsOnlyActor');
   });
 
   it('touching or overlapping a vertical face within the graze distance is mounted; a floor, a roof edge or the inside of a big box is not', () => {
-    const source = flat(read('Placement', 'McpAutomationBridge_PlacementMount.cpp'));
+    const source = flat(read('Placement', 'McpPlacementMount.cpp'));
 
     expect(source).toContain('if (!Other || Other == Actor || Other->IsHidden() || IsBoundsOnlyActor(Other)) { continue; }');
     expect(source).toContain('const FBox Reach = ActorBox.ExpandBy(Touch);');
@@ -131,6 +171,6 @@ describe('the placement check does not call a wall-mounted actor floating', () =
   });
 
   it('audit_placement does not count the floor under a mounted actor as its error', () => {
-    expect(read('McpAutomationBridge_ControlActorPlacementAudit.cpp')).toContain('if (!Entry->HasField(TEXT("mountedOn")) && Entry->TryGetNumberField(TEXT("groundClearance"), Clearance)) {');
+    expect(read('McpActorPlacementAudit.cpp')).toContain('if (!Entry->HasField(TEXT("mountedOn")) && Entry->TryGetNumberField(TEXT("groundClearance"), Clearance)) {');
   });
 });

@@ -32,14 +32,13 @@ const categoryPath = '${captured:categoryPath}';
 const lootTablePath = '${captured:lootTablePath}';
 const lootTable2Path = '${captured:lootTable2Path}';
 const recipePath = '${captured:recipePath}';
-const stationPath = '${captured:stationPath}';
 
 const testCases = [
   // === SETUP ===
   {
     scenario: 'Setup: create inventory actor blueprint',
     toolName: 'manage_blueprint',
-    arguments: { action: 'create', name: BLUEPRINT_NAME, path: TEST_FOLDER, parentClass: 'Actor' },
+    arguments: { action: 'create', name: BLUEPRINT_NAME, savePath: TEST_FOLDER, parentClass: 'Actor' },
     expected: 'success',
     captureResult: { key: 'blueprintPath', fromField: 'result.assetPath' },
     assertions: [{ path: 'structuredContent.result.existsAfter', equals: true, label: 'inventory actor blueprint exists after creation' }]

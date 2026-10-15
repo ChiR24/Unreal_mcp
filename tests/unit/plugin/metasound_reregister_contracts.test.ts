@@ -9,13 +9,60 @@ import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-const AUDIO = join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private', 'Domains', 'AudioAuthoring');
-const DISPATCHER = join(AUDIO, 'McpAutomationBridge_AudioAuthoringHandlers.cpp');
-const PRIVATE_HEADER = join(AUDIO, 'McpAutomationBridge_AudioAuthoringHandlersPrivate.h');
+const AUDIO = join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'Domains', 'AudioAuthoring');
+const DISPATCHER = join(AUDIO, 'McpAudioAuthoringHandlers.cpp');
+const PRIVATE_HEADER = join(AUDIO, 'McpAudioAuthoringPrivate.h');
 
 /** Block and line comments removed, so no assertion can be satisfied by prose. */
 const source = (): string =>
   readFileSync(DISPATCHER, 'utf8').replace(/\/\*[\s\S]*?\*\//gu, ' ').replace(/\/\/[^\n]*/gu, ' ');
+
+// A wrong output name ("Band Pass Filter" for "Band Pass") stopped a build_metasound after its nodes were added.
+describe('build_metasound checks the pins it names on its own nodes before running', () => {
+  const strip = (file: string): string =>
+    readFileSync(join(AUDIO, file), 'utf8').replace(/\/\*[\s\S]*?\*\//gu, ' ').replace(/\/\/[^\n]*/gu, ' ');
+
+  it('reads the registry class pins once the add_node class resolves', () => {
+    expect(strip('McpAudioMetaSoundNodes.cpp')).toContain('FindMetaSoundClassPins(Resolved, Request.Inputs, Request.Outputs);');
+    const search = strip(join('MetaSound', 'McpAudioMetaSoundNodeSearch.cpp'));
+    expect(search).toMatch(/#if ENGINE_MAJOR_VERSION > 5 \|\| ENGINE_MINOR_VERSION >= 6\s*const FMetasoundFrontendClassInterface& Interface = Class\.GetDefaultInterface\(\);\s*#else\s*const FMetasoundFrontendClassInterface& Interface = Class\.Interface;/u);
+  });
+
+  it('refuses a connect or set_default pin missing on a node the batch adds, with nothing applied', () => {
+    const batch = strip(join('MetaSound', 'McpAudioMetaSoundBatch.cpp'));
+    const precheck = batch.slice(batch.indexOf('TMap<FString, FMcpMetaSoundNodeClassRequest> Added;'), batch.indexOf('TMap<FString, FString> Aliases;'));
+    expect(precheck).toContain('MissingMetaSoundPin(Added, Step, TEXT("targetNodeId"), TEXT("targetInputName"), false, Pins);');
+    expect(precheck).toContain('bDefault ? TEXT("inputName") : TEXT("sourceOutputName"), !bDefault, Pins);');
+    expect(precheck).toContain('return McpHandlerUtils::BuildErrorResponse(TEXT("PIN_NOT_FOUND")');
+    expect(precheck).toContain('if ((*StepObj)->TryGetStringField(TEXT("id"), AddedId)) { Added.Add(AddedId, Request); }');
+    expect(batch).toContain('Known.StartsWith(Pin + TEXT(" ("), ESearchCase::IgnoreCase)');
+  });
+
+  // Every step ran the single-edit handler with the batch's save, so a 63-step voice wrote its package 65 times.
+  it('saves the MetaSound once, after the steps, not after each one', () => {
+    const batch = strip(join('MetaSound', 'McpAudioMetaSoundBatch.cpp'));
+    const steps = batch.indexOf('Step->SetBoolField(TEXT("save"), false);');
+    expect(steps).toBeGreaterThan(-1);
+    expect(steps).toBeLessThan(batch.indexOf('HandleMetaSoundNodeActions(StepSubAction'));
+    expect(batch).toContain('Details->SetBoolField(TEXT("saved"), Index > 0 && SaveOnce());');
+    expect(batch).toContain('Response->SetBoolField(TEXT("saved"), SaveOnce());');
+    expect(batch).not.toContain('McpSafeAssetSave');
+  });
+});
+
+// The engine never virtualizes a one-shot MetaSound: a hum on an AudioComponent that started out of earshot stayed
+// silent for good, IsPlaying false even after Play.
+describe('create_metasound can make a continuous source', () => {
+  it('removes the One-Shot interface when oneShot is false, inside the builder gate, and says which it made', () => {
+    const create = readFileSync(join(AUDIO, 'McpAudioMetaSoundAssets.cpp'), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//gu, ' ').replace(/\/\/[^\n]*/gu, ' ');
+    const gated = create.slice(create.indexOf('TScriptInterface<IMetaSoundDocumentInterface> DocInterface(MetaSound);'), create.indexOf('MetaSound->MarkPackageDirty();'));
+    expect(create.lastIndexOf('#if MCP_HAS_METASOUND_FRONTEND', create.indexOf('TScriptInterface<IMetaSoundDocumentInterface>'))).toBeGreaterThan(-1);
+    expect(gated).toContain('if (!GetJsonBoolField(Params, TEXT("oneShot"), true))');
+    expect(gated).toContain('bOneShot = !Builder.RemoveInterface(Metasound::Frontend::SourceOneShotInterface::GetVersion().Name);');
+    expect(create).toContain('Response->SetBoolField(TEXT("oneShot"), bOneShot);');
+  });
+});
 
 describe('a MetaSound graph edit reaches playback without an editor restart', () => {
   it('re-registers through the MetaSound editor, only where the builder and the editor subsystem exist', () => {

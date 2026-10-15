@@ -7,7 +7,7 @@ import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-const MODULE = join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge');
+const MODULE = join('plugins', 'EngineWire', 'Source', 'EngineWire');
 const GEOMETRY = join(MODULE, 'Private', 'Domains', 'Geometry');
 
 /** Block and line comments removed, so no assertion can be satisfied by prose. */
@@ -15,7 +15,7 @@ const strip = (source: string): string => source.replace(/\/\*[\s\S]*?\*\//gu, '
 const read = (...segments: readonly string[]): string => strip(readFileSync(join(GEOMETRY, ...segments), 'utf8'));
 
 describe('morphology and remesh_voxel are real grid operations that put the mesh back when they fail', () => {
-  const voxel = (): string => read('Mesh', 'McpAutomationBridge_GeometryVoxelOperations.cpp');
+  const voxel = (): string => read('Mesh', 'McpGeometryVoxelOperations.cpp');
 
   it('morphology runs ApplyMeshMorphology on a grid of voxelCount cells along the longest side', () => {
     const source = voxel();
@@ -34,7 +34,7 @@ describe('morphology and remesh_voxel are real grid operations that put the mesh
     const source = voxel();
     expect(source).toContain('UGeometryScriptLibrary_MeshVoxelFunctions::ApplyMeshSolidify(Target->Mesh, Options, nullptr);');
     expect(source).toContain('Options.GridParameters.GridCellSize = static_cast<float>(CellSize);');
-    const reduction = read('Mesh', 'McpAutomationBridge_GeometryMeshReduction.cpp');
+    const reduction = read('Mesh', 'McpGeometryMeshReduction.cpp');
     expect(reduction).not.toContain('FillAllMeshHoles');
     expect(reduction).not.toContain('bVoxel');
   });
@@ -64,10 +64,10 @@ describe('morphology and remesh_voxel are real grid operations that put the mesh
   });
 
   it('the dispatcher routes morphology to HandleMorphology', () => {
-    expect(read('McpAutomationBridge_GeometryHandlers.cpp')).toContain('if (SubAction == TEXT("morphology")) return HandleMorphology(this, RequestId, Payload, RequestingSocket);');
+    expect(read('McpGeometryHandlers.cpp')).toContain('if (SubAction == TEXT("morphology")) return HandleMorphology(this, RequestId, Payload, RequestingSocket);');
   });
 
   it('the dispatcher routes remesh_voxel to HandleRemeshVoxel', () => {
-    expect(read('McpAutomationBridge_GeometryHandlers.cpp')).toContain('if (SubAction == TEXT("remesh_voxel")) return HandleRemeshVoxel(this, RequestId, Payload, RequestingSocket);');
+    expect(read('McpGeometryHandlers.cpp')).toContain('if (SubAction == TEXT("remesh_voxel")) return HandleRemeshVoxel(this, RequestId, Payload, RequestingSocket);');
   });
 });
