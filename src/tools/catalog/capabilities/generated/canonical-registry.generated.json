@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "16f60cf04e47786f",
+  "catalogRevision": "4f56691a73a2c896",
   "recordCount": 416,
   "records": [
     {
@@ -12797,6 +12797,7 @@
         "blueprint.add_goal",
         "blueprint.add_launch_pad",
         "blueprint.add_teleporter",
+        "blueprint.add_countdown",
         "blueprint.add_spawner",
         "blueprint.add_dash",
         "blueprint.add_health_hud",
@@ -12894,6 +12895,13 @@
         },
         {
           "tool": "manage_blueprint",
+          "action": "add_countdown",
+          "folded": {
+            "behaviour": "countdown"
+          }
+        },
+        {
+          "tool": "manage_blueprint",
           "action": "add_spawner",
           "folded": {
             "behaviour": "spawner"
@@ -12945,6 +12953,8 @@
           "hazard",
           "spikes",
           "spike trap",
+          "knockback",
+          "knock the player back",
           "pickup",
           "health pickup",
           "collectible",
@@ -13010,6 +13020,12 @@
           "teleport the player",
           "portal",
           "warp pad",
+          "countdown",
+          "countdown timer",
+          "time limit",
+          "level timer",
+          "timer runs out",
+          "race against the clock",
           "spawner",
           "enemy spawner",
           "spawn enemies every few seconds",
@@ -13045,7 +13061,7 @@
           "player death screen",
           "you died"
         ],
-        "summary": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player or patrols a route, walk, look and jump controls for a Character, a pawn that respawns when it falls or dies (with checkpoints), a goal that ends the level when the player reaches it, a pad that launches a Character, a teleporter, a spawner that keeps spawning an actor class, a dash key for a Character, the health of the player or a count such as coins or score on screen, or a game over screen that restarts the level when the player dies.",
+        "summary": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player or patrols a route, walk, look and jump controls for a Character, a pawn that respawns when it falls or dies (with checkpoints), a goal that ends the level when the player reaches it, a pad that launches a Character, a teleporter, a time limit, a spawner that keeps spawning an actor class, a dash key for a Character, the health of the player or a count such as coins or score on screen, or a game over screen that restarts the level when the player dies.",
         "whenToUse": [
           "behaviour=health: A player, enemy or breakable object must take damage and die; behaviour health_hud shows it on screen.",
           "behaviour=damage_on_touch: Spikes, lava, an enemy body or a fire must hurt what touches it.",
@@ -13060,6 +13076,7 @@
           "behaviour=goal: A level needs an end: a finish line, an exit door, a flag the player reaches.",
           "behaviour=launch_pad: A jump pad, bounce pad, trampoline or boost pad for the player or any Character.",
           "behaviour=teleporter: Portals, warp pads, or a pair of teleporters between two places.",
+          "behaviour=countdown: A level or a run must be finished within a time limit.",
           "behaviour=spawner: Enemies, pickups or obstacles must keep appearing while the game runs.",
           "behaviour=dash: A player Character needs a quick burst of movement on a key: a dash, a dodge, an air dash.",
           "behaviour=health_hud: The player must see their own health: a health bar on the HUD.",
@@ -13080,6 +13097,7 @@
           "behaviour=goal: Something must happen on every touch, by any actor (use a trigger actor from manage_interaction create_interactable).",
           "behaviour=launch_pad: A Character must jump higher by itself (manage_character set_movement_property JumpZVelocity).",
           "behaviour=teleporter: Moving an actor from the editor or a test (control_actor set_transform).",
+          "behaviour=countdown: Something must happen once after a delay (edit_graph with a Delay or a timer node).",
           "behaviour=spawner: Actors must be placed once, before play (use control_actor spawn).",
           "behaviour=dash: It must run faster while a key is held (use behaviour sprint).",
           "behaviour=health_hud: A bar floating over an actor in the world, such as over an enemy.",
@@ -13111,6 +13129,10 @@
             "damage": {
               "type": "number",
               "description": "Damage on each touch (default 10; negative heals)."
+            },
+            "knockback": {
+              "type": "number",
+              "description": "Speed a touching Character is launched away from the actor at, in units per second (default 0, none)."
             },
             "heal": {
               "type": "number",
@@ -13229,6 +13251,14 @@
               "type": "number",
               "description": "Seconds before it works again: before a Character can dash again, or before a teleporter takes a pawn after one arrived on it (default 1)."
             },
+            "seconds": {
+              "type": "number",
+              "description": "The time limit in whole seconds (default 60)."
+            },
+            "killAtZero": {
+              "type": "boolean",
+              "description": "Kill the actor when the time is up (default true; it needs the health behaviour to die). False only fires OnTimeUp."
+            },
             "spawnClass": {
               "type": "string",
               "description": "The actor it spawns: a Blueprint path (/Game/Enemies/BP_Slime) or class path; not the spawner itself."
@@ -13288,6 +13318,7 @@
                 "goal",
                 "launch_pad",
                 "teleporter",
+                "countdown",
                 "spawner",
                 "dash",
                 "health_hud",
@@ -13383,7 +13414,7 @@
       },
       "examples": [
         {
-          "title": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player or patrols a route, walk, look and jump controls for a Character, a pawn that respawns when it falls or dies (with checkpoints), a goal that ends the level when the player reaches it, a pad that launches a Character, a teleporter, a spawner that keeps spawning an actor class, a dash key for a Character, the health of the player or a count such as coins or score on screen, or a game over screen that restarts the level when the player dies.",
+          "title": "Write gameplay logic into an Actor Blueprint in one call: health that takes damage and dies, damage on touch, a pickup that heals or counts (coins, keys), a sprint key for a Character, a key that shoots projectiles for a pawn, a pawn that chases the player or patrols a route, walk, look and jump controls for a Character, a pawn that respawns when it falls or dies (with checkpoints), a goal that ends the level when the player reaches it, a pad that launches a Character, a teleporter, a time limit, a spawner that keeps spawning an actor class, a dash key for a Character, the health of the player or a count such as coins or score on screen, or a game over screen that restarts the level when the player dies.",
           "input": {
             "action": "add_behaviour",
             "blueprintPath": "/Game/Blueprints/BP_Enemy",
@@ -13437,6 +13468,7 @@
             "goal": "add_goal",
             "launch_pad": "add_launch_pad",
             "teleporter": "add_teleporter",
+            "countdown": "add_countdown",
             "spawner": "add_spawner",
             "dash": "add_dash",
             "health_hud": "add_health_hud",
@@ -13451,6 +13483,9 @@
               "health"
             ],
             "damage": [
+              "damage_on_touch"
+            ],
+            "knockback": [
               "damage_on_touch"
             ],
             "heal": [
@@ -13546,6 +13581,12 @@
               "teleporter",
               "dash"
             ],
+            "seconds": [
+              "countdown"
+            ],
+            "killAtZero": [
+              "countdown"
+            ],
             "spawnClass": [
               "spawner"
             ],
@@ -13587,8 +13628,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "9d51d9aced410fac1d6983ef43fb7320fb8ec83a52c79b2fa1629533e77b4397",
-        "content": "1b78577ed98a5cccb37154647590cf6ff73da45f58daadd2e2c0ea19598b3a54"
+        "schema": "b3776226146c316f82ddbb9b76add676ec147afd65b279a6515ec1ad6ca95d24",
+        "content": "fe3fd6d098004e029352ead860770ee04ec4c8aaf708667cde47c23fc17a063e"
       }
     },
     {

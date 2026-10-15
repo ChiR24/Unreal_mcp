@@ -12848,6 +12848,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "goal",
             "launch_pad",
             "teleporter",
+            "countdown",
             "spawner",
             "dash",
             "health_hud",
@@ -13368,6 +13369,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true,
           "description": "Many keyframes in one call, in place of time: each {time, propertyValue or value, and any of slotName, trackType, interpolation that differ from the call's own}. Every key is checked before any is written: a refused one is named by its index (keys[3]) and nothing is added. The Widget Blueprint is saved once."
         },
+        "killAtZero": {
+          "type": "boolean",
+          "description": "Kill the actor when the time is up (default true; it needs the health behaviour to die). False only fires OnTimeUp."
+        },
         "kind": {
           "type": "string",
           "enum": [
@@ -13375,6 +13380,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "event"
           ],
           "description": "Which add function variant to run; omit for 'function'."
+        },
+        "knockback": {
+          "type": "number",
+          "description": "Speed a touching Character is launched away from the actor at, in units per second (default 0, none)."
         },
         "label": {
           "type": "string",
@@ -13874,6 +13883,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "Auto"
           ],
           "description": "Scroll bar visibility."
+        },
+        "seconds": {
+          "type": "number",
+          "description": "The time limit in whole seconds (default 60)."
         },
         "segmentCount": {
           "type": "number",

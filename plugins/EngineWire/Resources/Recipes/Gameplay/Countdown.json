@@ -1,0 +1,64 @@
+{
+  "description": "A time limit: at BeginPlay TimeLeft starts at TimeLimit and drops by one every second; at zero OnTimeUp fires and, with KillAtZero, the actor takes damage enough to die (an actor with the Health behaviour dies, so a game over or a respawn follows). Show TimeLeft with the counter_hud behaviour.",
+  "tag": "Countdown",
+  "placeholders": {
+    "Seconds": "The time limit in whole seconds.",
+    "Kill": "true makes the actor take damage enough to die when the time is up."
+  },
+  "variables": [
+    { "variableName": "TimeLimit", "variableType": "Int", "defaultValue": "{{Seconds}}", "category": "Countdown", "instanceEditable": true },
+    { "variableName": "TimeLeft", "variableType": "Int", "defaultValue": "{{Seconds}}", "category": "Countdown" },
+    { "variableName": "KillAtZero", "variableType": "Bool", "defaultValue": "{{Kill}}", "category": "Countdown", "instanceEditable": true }
+  ],
+  "dispatchers": [
+    { "name": "OnTimeUp", "parameters": [] }
+  ],
+  "functions": [
+    {
+      "id": "ctd",
+      "functionName": "CountdownTick",
+      "operations": [
+        { "edit": "create_node", "id": "ctdLeft", "nodeType": "VariableGet", "memberName": "TimeLeft" },
+        { "edit": "create_node", "id": "ctdRunning", "nodeType": "CallFunction", "memberName": "Greater_IntInt", "memberClass": "/Script/Engine.KismetMathLibrary", "pinDefaults": { "B": 0 } },
+        { "edit": "create_node", "id": "ctdBranch", "nodeType": "Branch" },
+        { "edit": "create_node", "id": "ctdLess", "nodeType": "CallFunction", "memberName": "Subtract_IntInt", "memberClass": "/Script/Engine.KismetMathLibrary", "pinDefaults": { "B": 1 } },
+        { "edit": "create_node", "id": "ctdSet", "nodeType": "VariableSet", "memberName": "TimeLeft" },
+        { "edit": "create_node", "id": "ctdDone", "nodeType": "CallFunction", "memberName": "LessEqual_IntInt", "memberClass": "/Script/Engine.KismetMathLibrary", "pinDefaults": { "B": 0 } },
+        { "edit": "create_node", "id": "ctdDoneBranch", "nodeType": "Branch" },
+        { "edit": "create_node", "id": "ctdUp", "nodeType": "CallDelegate", "memberName": "OnTimeUp" },
+        { "edit": "create_node", "id": "ctdKill", "nodeType": "VariableGet", "memberName": "KillAtZero" },
+        { "edit": "create_node", "id": "ctdKillBranch", "nodeType": "Branch" },
+        { "edit": "create_node", "id": "ctdSelf", "nodeType": "Self" },
+        { "edit": "create_node", "id": "ctdDamage", "nodeType": "CallFunction", "memberName": "ApplyDamage", "memberClass": "/Script/Engine.GameplayStatics", "pinDefaults": { "BaseDamage": 1000000 } },
+        { "edit": "connect_pins", "from": "$ctdLeft.TimeLeft", "to": "$ctdRunning.A" },
+        { "edit": "connect_pins", "from": "$ctdRunning.ReturnValue", "to": "$ctdBranch.Condition" },
+        { "edit": "connect_pins", "from": "$ctdLeft.TimeLeft", "to": "$ctdLess.A" },
+        { "edit": "connect_pins", "from": "$ctdLess.ReturnValue", "to": "$ctdSet.TimeLeft" },
+        { "edit": "connect_pins", "from": "$ctdSet.Output_Get", "to": "$ctdDone.A" },
+        { "edit": "connect_pins", "from": "$ctdDone.ReturnValue", "to": "$ctdDoneBranch.Condition" },
+        { "edit": "connect_pins", "from": "$ctdKill.KillAtZero", "to": "$ctdKillBranch.Condition" },
+        { "edit": "connect_pins", "from": "$ctdSelf.self", "to": "$ctdDamage.DamagedActor" },
+        { "edit": "connect_pins", "from": "$ctdSelf.self", "to": "$ctdDamage.DamageCauser" },
+        { "edit": "connect_pins", "from": "$ctd.then", "to": "$ctdBranch.execute" },
+        { "edit": "connect_pins", "from": "$ctdBranch.then", "to": "$ctdSet.execute" },
+        { "edit": "connect_pins", "from": "$ctdSet.then", "to": "$ctdDoneBranch.execute" },
+        { "edit": "connect_pins", "from": "$ctdDoneBranch.then", "to": "$ctdUp.execute" },
+        { "edit": "connect_pins", "from": "$ctdUp.then", "to": "$ctdKillBranch.execute" },
+        { "edit": "connect_pins", "from": "$ctdKillBranch.then", "to": "$ctdDamage.execute" }
+      ]
+    }
+  ],
+  "hooks": [
+    { "id": "ctdBegin", "event": "BeginPlay" }
+  ],
+  "eventGraph": [
+    { "edit": "create_node", "id": "ctdLimit", "nodeType": "VariableGet", "memberName": "TimeLimit" },
+    { "edit": "create_node", "id": "ctdReset", "nodeType": "VariableSet", "memberName": "TimeLeft" },
+    { "edit": "create_node", "id": "ctdTimerSelf", "nodeType": "Self" },
+    { "edit": "create_node", "id": "ctdTimer", "nodeType": "CallFunction", "memberName": "K2_SetTimer", "memberClass": "/Script/Engine.KismetSystemLibrary", "pinDefaults": { "FunctionName": "CountdownTick", "Time": 1, "bLooping": true } },
+    { "edit": "connect_pins", "from": "$ctdLimit.TimeLimit", "to": "$ctdReset.TimeLeft" },
+    { "edit": "connect_pins", "from": "$ctdTimerSelf.self", "to": "$ctdTimer.Object" },
+    { "edit": "connect_pins", "from": "$ctdBegin.then", "to": "$ctdReset.execute" },
+    { "edit": "connect_pins", "from": "$ctdReset.then", "to": "$ctdTimer.execute" }
+  ]
+}

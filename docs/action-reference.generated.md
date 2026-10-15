@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `16f60cf04e47786f`
+Catalog revision: `4f56691a73a2c896`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -186,7 +186,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `asset.rename` | `manage_asset` | `rename` | write | write | explicit | `manage_asset.rename` `manage_asset.rename_asset` |
 | `asset.set_metadata` | `manage_asset` | `set_metadata` | write | write | explicit | `manage_asset.set_metadata` `manage_asset.set_tags` |
 | `asset.source_control` | `manage_asset` | `source_control_checkout` | write | write | explicit | `manage_asset.source_control` `manage_asset.source_control_checkout` `manage_asset.source_control_submit` `manage_asset.source_control_enable` `manage_asset.source_control_init` `manage_asset.source_control_commit_all` |
-| `blueprint.add_behaviour` | `manage_blueprint` | `add_health` | write | write | none | `manage_blueprint.add_behaviour` `manage_blueprint.add_health` `manage_blueprint.add_damage_on_touch` `manage_blueprint.add_pickup` `manage_blueprint.add_sprint` `manage_blueprint.add_shoot` `manage_blueprint.add_chase` `manage_blueprint.add_patrol` `manage_blueprint.add_controls` `manage_blueprint.add_respawn` `manage_blueprint.add_goal` `manage_blueprint.add_launch_pad` `manage_blueprint.add_teleporter` `manage_blueprint.add_spawner` `manage_blueprint.add_dash` `manage_blueprint.add_health_hud` `manage_blueprint.add_counter_hud` `manage_blueprint.add_game_over` |
+| `blueprint.add_behaviour` | `manage_blueprint` | `add_health` | write | write | none | `manage_blueprint.add_behaviour` `manage_blueprint.add_health` `manage_blueprint.add_damage_on_touch` `manage_blueprint.add_pickup` `manage_blueprint.add_sprint` `manage_blueprint.add_shoot` `manage_blueprint.add_chase` `manage_blueprint.add_patrol` `manage_blueprint.add_controls` `manage_blueprint.add_respawn` `manage_blueprint.add_goal` `manage_blueprint.add_launch_pad` `manage_blueprint.add_teleporter` `manage_blueprint.add_countdown` `manage_blueprint.add_spawner` `manage_blueprint.add_dash` `manage_blueprint.add_health_hud` `manage_blueprint.add_counter_hud` `manage_blueprint.add_game_over` |
 | `blueprint.add_content_widget` | `manage_blueprint` | `add_text_block` | write | write | none | `manage_blueprint.add_content_widget` `manage_blueprint.add_text_block` `manage_blueprint.add_rich_text_block` `manage_blueprint.add_image` `manage_blueprint.add_button` `manage_blueprint.add_check_box` `manage_blueprint.add_combo_box` `manage_blueprint.add_slider` `manage_blueprint.add_spin_box` `manage_blueprint.add_progress_bar` `manage_blueprint.add_text_input` `manage_blueprint.add_list_view` `manage_blueprint.add_tree_view` `manage_blueprint.add_widget_component` |
 | `blueprint.add_function` | `manage_blueprint` | `add_function` | write | write | none | `manage_blueprint.add_function` `manage_blueprint.add_event` |
 | `blueprint.add_game_widget` | `manage_blueprint` | `add_health_bar` | write | write | none | `manage_blueprint.add_game_widget` `manage_blueprint.add_health_bar` `manage_blueprint.add_ammo_counter` `manage_blueprint.add_crosshair` `manage_blueprint.add_minimap` `manage_blueprint.add_compass` `manage_blueprint.add_damage_indicator` `manage_blueprint.add_interaction_prompt` `manage_blueprint.add_objective_tracker` `manage_blueprint.add_quest_tracker` |

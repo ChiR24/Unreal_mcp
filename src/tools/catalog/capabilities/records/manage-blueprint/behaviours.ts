@@ -1,6 +1,6 @@
 /**
  * Gameplay behaviours written into an Actor Blueprint from the plugin's recipe files
- * (McpBlueprintBehaviour::Author): health, damage on touch, pickups, sprint, shooting, chasing, patrolling, player controls, respawning, a goal, a launch pad, a teleporter, a spawner, a dash, a health bar and counters on screen, and a game over. Folded
+ * (McpBlueprintBehaviour::Author): health, damage on touch, pickups, sprint, shooting, chasing, patrolling, player controls, respawning, a goal, a launch pad, a teleporter, a time limit, a spawner, a dash, a health bar and counters on screen, and a game over. Folded
  * into blueprint.add_behaviour (selector behaviour). Every one is all or nothing,
  * re-runnable (a second run replaces the first), compiled and saved.
  */
@@ -72,13 +72,14 @@ export const BEHAVIOURS_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'add_damage_on_touch',
     family: FAMILY,
     domain: DOMAIN,
-    topics: ['damage on touch', 'hazard', 'spikes', 'spike trap'],
-    summary: `Make an actor damage whatever touches it: ApplyDamage with TouchDamage on each overlap, which an actor with health loses (a negative amount heals). ${OVERLAP_NOTE}`,
+    topics: ['damage on touch', 'hazard', 'spikes', 'spike trap', 'knockback', 'knock the player back'],
+    summary: `Make an actor damage whatever touches it: ApplyDamage with TouchDamage on each overlap, which an actor with health loses (a negative amount heals); with knockback a touching Character is also launched away from it. ${OVERLAP_NOTE}`,
     whenToUse: ['Spikes, lava, an enemy body or a fire must hurt what touches it.'],
     whenNotToUse: ['A whole area must hurt or kill (use manage_level_structure create_volume with a pain causing or kill Z volume).'],
     inputProps: {
       blueprintPath: P.blueprintPath,
       damage: { type: 'number', description: 'Damage on each touch (default 10; negative heals).' },
+      knockback: { type: 'number', description: 'Speed a touching Character is launched away from the actor at, in units per second (default 0, none).' },
     },
     required: ['blueprintPath'],
     outputProps: BEHAVIOUR_OUTPUT,
@@ -334,6 +335,29 @@ export const BEHAVIOURS_RECORDS: readonly CapabilityRecordSource[] = [
     resources: 'medium',
     plugins: BP_PLUGINS,
     exampleInput: { action: 'add_teleporter', blueprintPath: '/Game/Blueprints/BP_Teleporter', cooldown: 1 },
+  }),
+  buildRecord({
+    id: 'blueprint.add_countdown',
+    action: 'add_countdown',
+    family: FAMILY,
+    domain: DOMAIN,
+    topics: ['countdown', 'countdown timer', 'time limit', 'level timer', 'timer runs out', 'race against the clock'],
+    summary: 'Give an actor a time limit: at BeginPlay TimeLeft starts at seconds and drops by one every second; at zero OnTimeUp fires and, with killAtZero, the actor takes damage enough to die, so a pawn with the health behaviour dies and its game over or respawn follows. Show the time with behaviour counter_hud variableName TimeLeft.',
+    whenToUse: ['A level or a run must be finished within a time limit.'],
+    whenNotToUse: ['Something must happen once after a delay (edit_graph with a Delay or a timer node).'],
+    inputProps: {
+      blueprintPath: P.blueprintPath,
+      seconds: { type: 'number', description: 'The time limit in whole seconds (default 60).' },
+      killAtZero: { type: 'boolean', description: 'Kill the actor when the time is up (default true; it needs the health behaviour to die). False only fires OnTimeUp.' },
+    },
+    required: ['blueprintPath'],
+    outputProps: BEHAVIOUR_OUTPUT,
+    effect: 'write',
+    behavior: { idempotency: 'idempotent' },
+    latency: 'interactive',
+    resources: 'medium',
+    plugins: BP_PLUGINS,
+    exampleInput: { action: 'add_countdown', blueprintPath: '/Game/Blueprints/BP_Player', seconds: 90 },
   }),
   buildRecord({
     id: 'blueprint.add_spawner',

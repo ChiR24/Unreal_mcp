@@ -559,4 +559,8 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'show game over when the player dies', accepted: ['blueprint.add_behaviour'] },
   { query: 'game over', accepted: ['blueprint.add_behaviour'] },
   { query: 'restart the level when the player dies', accepted: ['blueprint.add_behaviour'] },
+  { query: 'countdown timer', accepted: ['blueprint.add_behaviour'] },
+  { query: 'time limit', accepted: ['blueprint.add_behaviour'] },
+  { query: 'knockback', accepted: ['blueprint.add_behaviour'] },
+  { query: 'knock the player back', accepted: ['blueprint.add_behaviour'] },
 ];
