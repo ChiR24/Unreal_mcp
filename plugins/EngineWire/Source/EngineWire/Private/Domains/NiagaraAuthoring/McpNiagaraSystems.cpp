@@ -1,4 +1,5 @@
 #include "Domains/NiagaraAuthoring/McpNiagaraContext.h"
+#include "Domains/NiagaraAuthoring/McpNiagaraEmitterName.h"
 
 namespace McpNiagaraAuthoringHandlers
 {
@@ -78,7 +79,7 @@ static bool CreateNiagaraEmitter(FActionContext& Context)
 #if MCP_HAS_NIAGARA_EMITTER_FACTORY_NEW
     FModuleManager::Get().LoadModule(TEXT("NiagaraEditor"));
     UNiagaraEmitterFactoryNew::InitializeEmitter(NewEmitter, true);
-    NewEmitter->SetUniqueEmitterName(Context.Name);
+    McpNameNewEmitterAsset(*NewEmitter);
 #endif
     FAssetRegistryModule::AssetCreated(NewEmitter);
     if (Context.bSave)
