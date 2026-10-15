@@ -1,5 +1,7 @@
 #include "Domains/BlueprintGraph/McpBPGraphBatchSteps.h"
 
+#include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
+
 #include "EdGraphSchema_K2.h"
 
 namespace McpBlueprintGraphHandlers::GraphBatch
@@ -98,11 +100,29 @@ FAnchor AnchorBeside(const UEdGraphNode& Node, const TSet<const UEdGraphNode*>& 
     Best.bBetterPending = PendingRank < Best.Rank;
     return Best;
 }
+// A step that names no graph runs where the node it names is, else in the batch's graph: the links of a function's
+// body were looked for in the batch's EventGraph, and the batch failed although every node was there.
+void FollowStepGraph(const FActionContext& Parent, const TSharedPtr<FJsonObject>& Payload)
+{
+    if (Payload->HasField(TEXT("graphName")))
+    {
+        return;
+    }
+    const UEdGraphNode* Node = FindBatchNode(Parent.Blueprint, McpGetFirstStringField(Payload,
+        {TEXT("fromNodeId"), TEXT("nodeId"), TEXT("nodeGuid"), TEXT("sourceNode")}));
+    const FString Graph = Node && Node->GetGraph() ? Node->GetGraph()->GetName()
+                                                   : GetJsonStringField(Parent.Payload, TEXT("graphName"));
+    if (!Graph.IsEmpty())
+    {
+        Payload->SetStringField(TEXT("graphName"), Graph);
+    }
+}
 } // namespace
 
 FMcpCapturedResponse RunStep(const FActionContext& Parent, const TSharedPtr<FJsonObject>& Payload,
                              const FString& Edit, const FString& StepId, FString& OutPins)
 {
+    FollowStepGraph(Parent, Payload);
     FMcpResponseCaptureRegistry::Get().Begin(StepId);
     FActionContext Step{Parent.Subsystem, StepId, Payload, Parent.RequestingSocket, Edit};
     Step.bDeferCompile = true;

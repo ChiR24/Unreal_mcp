@@ -391,6 +391,13 @@ const testCases = [
     { edit: 'connect_pins', from: '$delay.then', to: '$print.execute' },
   ] }, expected: 'success', assertions: [{ path: 'structuredContent.result.succeeded', equals: 3, label: 'build_graph ran all three steps' }, { path: 'structuredContent.receipt.handles.0.kind', equals: 'asset', label: 'the receipt names the Blueprint the batch edited' }, { path: 'structuredContent.receipt.changes', length: 1, label: 'and lists it once as changed' }] },
 
+  // === BATCH: a link between nodes of a function made in the same batch needs no graphName ===
+  { scenario: 'BATCH: build_graph links a new function body without naming its graph', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: BP_PATH, graphName: 'EventGraph', operations: [
+    { edit: 'add_function', id: 'fn', functionName: 'SayReady' },
+    { edit: 'create_node', id: 'say', graphName: 'SayReady', nodeType: 'CallFunction', memberName: 'PrintString', pinDefaults: { InString: 'ready' } },
+    { edit: 'connect_pins', from: '$fn.then', to: '$say.execute' },
+  ] }, expected: 'success', assertions: [{ path: 'structuredContent.result.succeeded', equals: 3, label: 'the link was made in the function graph' }] },
+
   // === BATCH: graphs the compiler accepts that misbehave are named with the fix, each on its own Blueprint ===
   { scenario: 'ADD: create a Blueprint for the stale value check', toolName: 'manage_blueprint', arguments: { action: 'create', name: `BP_StaleCheck_${ts}`, savePath: TEST_FOLDER, parentClass: '/Script/Engine.Actor' }, expected: 'success' },
   { scenario: 'BATCH: build_graph warns about a value worked on twice', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: `${TEST_FOLDER}/BP_StaleCheck_${ts}`, graphName: 'EventGraph', operations: [

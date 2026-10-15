@@ -21,14 +21,14 @@ void ExpandEndpoint(const TSharedPtr<FJsonObject>& Payload, const TCHAR* Key,
     }
 }
 
-// The step's own fields over the batch's shared ones (blueprintPath, graphName).
+// The step's own fields over the batch's shared ones (blueprintPath; RunStep settles a graphName the step leaves out).
 TSharedPtr<FJsonObject> BuildStepPayload(const TSharedPtr<FJsonObject>& Batch,
                                          const TSharedPtr<FJsonObject>& Step, const FString& Edit)
 {
     TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
     for (const TPair<FString, TSharedPtr<FJsonValue>>& Pair : Batch->Values)
     {
-        if (Pair.Key != TEXT("operations"))
+        if (Pair.Key != TEXT("operations") && Pair.Key != TEXT("graphName"))
         {
             Out->SetField(Pair.Key, Pair.Value);
         }
