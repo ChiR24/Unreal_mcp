@@ -14166,7 +14166,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "usePathfinding": {
           "type": "boolean",
-          "description": "Follow the navigation mesh (default true; the level needs a Nav Mesh Bounds Volume); false heads straight for the player or the next point."
+          "description": "Follow the navigation mesh (default true; the level needs a NavMeshBoundsVolume, from manage_level_structure create_volume); false heads straight for the player or the next point."
         },
         "userSpecifiedScale": {
           "type": "number",

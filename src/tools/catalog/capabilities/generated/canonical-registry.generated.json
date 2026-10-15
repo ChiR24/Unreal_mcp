@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "6bc12b26066fd065",
+  "catalogRevision": "ebc7aa6d6959efa0",
   "recordCount": 416,
   "records": [
     {
@@ -13157,7 +13157,7 @@
           "behaviour=pickup: A health pack, coin, key or ammo box must be collected by walking into it.",
           "behaviour=sprint: The player must run faster while holding a key.",
           "behaviour=shoot: The player (or any possessed pawn) must shoot projectiles with a key; a projectile from manage_combat create_combat_asset damages what it hits and never hits its shooter.",
-          "behaviour=chase: An enemy or creature must run after the player; with usePathfinding (default) the level needs a Nav Mesh Bounds Volume (manage_ai configure_navigation), without it the pawn heads straight for the player.",
+          "behaviour=chase: An enemy or creature must run after the player; with usePathfinding (default) the level needs a NavMeshBoundsVolume (manage_level_structure create_volume), without it the pawn heads straight for the player.",
           "behaviour=patrol: An enemy or guard must walk a route, and may chase the player who comes close.",
           "behaviour=turret: A tower, cannon or enemy must shoot at the player who comes close; a projectile from manage_combat create_combat_asset damages what it hits. With behaviour chase too, a pawn runs at the player and shoots.",
           "behaviour=stomp: A platformer enemy must die when the player jumps on it, and hurt the player who walks into it. A damage_on_touch the actor has is taken over (it would hurt the stomping player too); its damage becomes sideDamage when none is given.",
@@ -13298,7 +13298,7 @@
             },
             "usePathfinding": {
               "type": "boolean",
-              "description": "Follow the navigation mesh (default true; the level needs a Nav Mesh Bounds Volume); false heads straight for the player or the next point."
+              "description": "Follow the navigation mesh (default true; the level needs a NavMeshBoundsVolume, from manage_level_structure create_volume); false heads straight for the player or the next point."
             },
             "points": {
               "type": "array",
@@ -13828,8 +13828,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "3b20d59b553a1190173705b32a59fb4e8416da983be7d9c203d68d154ab233e4",
-        "content": "aea86985c95f812e1663cd07b40dab3adabf1189d3d2db201002d4ddfffdb7d3"
+        "schema": "4c1fffc4f741399dddf81ff6f7ead0e40f7dd9f31dfd23eed034f5e4287b6737",
+        "content": "eb17970c6d2b9976bb6cd1c74bdaef6f32afff08d8fadb29cae3d5358be20e61"
       }
     },
     {
@@ -48629,7 +48629,7 @@
           "navmesh",
           "add navmesh"
         ],
-        "summary": "Configure navigation: nav mesh settings, agent properties, area cost or class, nav links, smart links, or rebuild the nav mesh.",
+        "summary": "Configure navigation: nav mesh settings, agent properties, area cost or class, nav links, smart links, or rebuild the nav mesh. A level with no nav mesh yet gets one from a NavMeshBoundsVolume (manage_level_structure create_volume).",
         "whenToUse": [
           "setting=mesh_settings: The loaded level RecastNavMesh needs generation tuning.",
           "setting=agent_properties: The navigation agent dimensions must change.",
@@ -48872,7 +48872,7 @@
       },
       "examples": [
         {
-          "title": "Configure navigation: nav mesh settings, agent properties, area cost or class, nav links, smart links, or rebuild the nav mesh.",
+          "title": "Configure navigation: nav mesh settings, agent properties, area cost or class, nav links, smart links, or rebuild the nav mesh. A level with no nav mesh yet gets one from a NavMeshBoundsVolume (manage_level_structure create_volume).",
           "input": {
             "action": "configure_navigation",
             "cellSize": 19,
@@ -49021,7 +49021,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "efde91a9cabfb8569fb2d5a302d91bde215ffd6478ec2ac16aa9725ff3bc3521",
-        "content": "a1b857fdb9c5d9c5495ea10ceebf87431247eb55e09f9f3747fb5938dcf4a8c6"
+        "content": "a74f353a21338b37fd683ec15cd0866e0ed510ee3c2f82717bb396e818ed4ffc"
       }
     },
     {

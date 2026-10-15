@@ -47,7 +47,7 @@ export const MANAGE_AI_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'configure_navigation', selector: 'setting',
-    summary: 'Configure navigation: nav mesh settings, agent properties, area cost or class, nav links, smart links, or rebuild the nav mesh.',
+    summary: 'Configure navigation: nav mesh settings, agent properties, area cost or class, nav links, smart links, or rebuild the nav mesh. A level with no nav mesh yet gets one from a NavMeshBoundsVolume (manage_level_structure create_volume).',
     topics: ['nav mesh', 'navigation', 'nav agent', 'nav area', 'nav link', 'smart link', 'rebuild navigation', 'navmesh', 'add navmesh'],
     members: {
       mesh_settings: 'configure_nav_mesh_settings', agent_properties: 'set_nav_agent_properties', area_cost: 'configure_nav_area_cost', area_class: 'set_nav_area_class',

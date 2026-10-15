@@ -49,7 +49,7 @@ const STOP_DISTANCE = { type: 'number', description: 'How close it gets to the p
 const ROUTE_POINTS = { type: 'array', items: { type: 'array', items: { type: 'number' }, minItems: 3, maxItems: 3 }, description: 'The route: [x, y, z] offsets from where the actor starts, in world axes, visited in turn and looped (default [[500, 0, 0], [0, 0, 0]], back and forth). Each placed copy keeps its own route (PatrolPoints or PlatformPoints is instance editable).' } as const;
 const WAIT_TIME = { type: 'number', description: 'Seconds it waits at each point (default 1).' } as const;
 const REPLACED = { type: 'array', items: { type: 'string' }, description: 'Behaviours this one took over and removed first: a patrol takes over a chase (Chase), a stomp a damage on touch (DamageOnTouch).' } as const;
-const USE_PATHFINDING = { type: 'boolean', description: 'Follow the navigation mesh (default true; the level needs a Nav Mesh Bounds Volume); false heads straight for the player or the next point.' } as const;
+const USE_PATHFINDING = { type: 'boolean', description: 'Follow the navigation mesh (default true; the level needs a NavMeshBoundsVolume, from manage_level_structure create_volume); false heads straight for the player or the next point.' } as const;
 
 const OVERLAP_NOTE = 'It fires on overlap, so the actor needs a component that overlaps pawns (a sphere or box with the Trigger or OverlapAllDynamic profile).';
 
@@ -186,7 +186,7 @@ export const BEHAVIOURS_RECORDS: readonly CapabilityRecordSource[] = [
     domain: DOMAIN,
     topics: ['chase the player', 'enemy chases the player', 'enemy follows the player', 'follow the player'],
     summary: 'Make a pawn chase the player: every quarter second, while the player is within chaseRange, its AI controller moves it toward the player and stops stopDistance away; out of range it stops. The pawn is set to be possessed by an AI controller when placed or spawned.',
-    whenToUse: ['An enemy or creature must run after the player; with usePathfinding (default) the level needs a Nav Mesh Bounds Volume (manage_ai configure_navigation), without it the pawn heads straight for the player.'],
+    whenToUse: ['An enemy or creature must run after the player; with usePathfinding (default) the level needs a NavMeshBoundsVolume (manage_level_structure create_volume), without it the pawn heads straight for the player.'],
     whenNotToUse: ['The pawn walks a route too (behaviour patrol, which chases with chaseRange; chase refuses a pawn that patrols).', 'Senses, cover or decisions beyond chasing (use manage_ai with a Behavior Tree or State Tree).'],
     inputProps: {
       blueprintPath: P.blueprintPath,
