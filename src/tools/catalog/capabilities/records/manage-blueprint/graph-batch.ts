@@ -48,7 +48,7 @@ export const GRAPH_BATCH_RECORDS: readonly CapabilityRecordSource[] = [
           + 'Message (memberClass: an interface, memberName: its function), AsyncTask (memberClass: the task or async-action '
           + 'class, memberName: its static factory; event graphs only), FunctionResult (one more return node in a function '
           + 'graph) and MathExpression with expression (the formula, checked and set as set_node_property Expression sets '
-          + 'it, before pinDefaults, which can then name its inputs). Optional per step: id (names the created node; later steps use "$id" in fromNodeId, toNodeId and nodeId), '
+          + 'it, before pinDefaults, which can then name its inputs; a name in the formula that is one of the Blueprint\'s variables reads that variable and gets no input pin, any other name becomes an input pin). Optional per step: id (names the created node; later steps use "$id" in fromNodeId, toNodeId and nodeId), '
           + 'from and to ("$id.PinName" shorthand for connect_pins), pinDefaults (create_node only: {PinName: value} applied '
           + 'to the new node; a read-only pin such as Set Text\'s Value gets a MakeLiteral node wired into it). "$entry" is '
           + 'the graph\'s own entry node (a Construction Script or function graph starts there: from "$entry.then"). A pure '

@@ -611,4 +611,8 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'code a mechanic in blueprint', accepted: ['blueprint.edit_graph'] },
   { query: 'add code to blueprint', accepted: ['blueprint.edit_graph'] },
   { query: 'c++ code for an actor', accepted: ['system_control.create_cpp_class'] },
+  { query: 'actors in an area', accepted: ['control_actor.list'] },
+  { query: 'nearby actors', accepted: ['control_actor.list'] },
+  { query: 'actors within radius', accepted: ['control_actor.list'] },
+  { query: 'actors around a location', accepted: ['control_actor.list'] },
 ];

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "d9d926eb0bad4d46",
+  "catalogRevision": "eb97e0c5660600c5",
   "recordCount": 416,
   "records": [
     {
@@ -17738,7 +17738,7 @@
                 "x-unreal-reflection-boundary": true
               },
               "x-unreal-reflection-boundary": true,
-              "description": "Steps run in order, 1-200. Each is {edit, ...that edit's own params}. Member steps come before the nodes that use them: add_variable (variableName, variableType as add_variable takes it: basic, class, struct, enum and container types, defaultValue, isPublic, exposeOnSpawn, category), add_function (functionName, inputs, outputs, pure, isPublic; the create steps of its body set graphName to the function name, and a connect or pin step that leaves graphName out runs in the graph of the node it names; with an id, \"$id\" is its entry node and \"$id_return\" its return node, which exists when outputs are declared), add_event (customEventName and parameters, or componentName plus eventName for a component or Widget Blueprint widget delegate, e.g. PlayButton with OnClicked) and add_event_dispatcher (dispatcherName, parameters [{name, type}]). Node steps: create_node, connect_pins, set_pin_default_value, set_node_property, create_reroute_node. create_node also takes nodeType CallDelegate (memberName: a dispatcher, memberClass: another class's), BindEvent (the same: a Bind Event node and a custom event, eventName, wired to it; with an id, \"$id_event\" is that event, whose then pin runs when the dispatcher fires, and the object bound goes to \"$id.self\"), Message (memberClass: an interface, memberName: its function), AsyncTask (memberClass: the task or async-action class, memberName: its static factory; event graphs only), FunctionResult (one more return node in a function graph) and MathExpression with expression (the formula, checked and set as set_node_property Expression sets it, before pinDefaults, which can then name its inputs). Optional per step: id (names the created node; later steps use \"$id\" in fromNodeId, toNodeId and nodeId), from and to (\"$id.PinName\" shorthand for connect_pins), pinDefaults (create_node only: {PinName: value} applied to the new node; a read-only pin such as Set Text's Value gets a MakeLiteral node wired into it). \"$entry\" is the graph's own entry node (a Construction Script or function graph starts there: from \"$entry.then\"). A pure node (math, a getter) runs again for each node that reads it, so after a Set node read the new value from the Set node's Output_Get pin, not from the math that computed it. A create step without posX and posY is auto-placed, and once every step ran it moves beside a node it is wired to (right of what runs it, below-left of what reads it); one whose posX and posY overlap an existing node is placed at the nearest free position instead, and its result says where in placementWarning, so a crowded row never stops the batch (a single create_node call still refuses an overlap). Every function, variable, dispatcher and async factory a step names is checked before any step runs, so a misspelled one fails the batch with nothing applied; any other failure stops the batch at that step and undoes the steps before it (members, nodes, links and pin defaults, in every graph), so a failed batch leaves the Blueprint as it was: fix that step and send the whole batch again. Only a set_node_property on a node that was already there stays, and the error names it."
+              "description": "Steps run in order, 1-200. Each is {edit, ...that edit's own params}. Member steps come before the nodes that use them: add_variable (variableName, variableType as add_variable takes it: basic, class, struct, enum and container types, defaultValue, isPublic, exposeOnSpawn, category), add_function (functionName, inputs, outputs, pure, isPublic; the create steps of its body set graphName to the function name, and a connect or pin step that leaves graphName out runs in the graph of the node it names; with an id, \"$id\" is its entry node and \"$id_return\" its return node, which exists when outputs are declared), add_event (customEventName and parameters, or componentName plus eventName for a component or Widget Blueprint widget delegate, e.g. PlayButton with OnClicked) and add_event_dispatcher (dispatcherName, parameters [{name, type}]). Node steps: create_node, connect_pins, set_pin_default_value, set_node_property, create_reroute_node. create_node also takes nodeType CallDelegate (memberName: a dispatcher, memberClass: another class's), BindEvent (the same: a Bind Event node and a custom event, eventName, wired to it; with an id, \"$id_event\" is that event, whose then pin runs when the dispatcher fires, and the object bound goes to \"$id.self\"), Message (memberClass: an interface, memberName: its function), AsyncTask (memberClass: the task or async-action class, memberName: its static factory; event graphs only), FunctionResult (one more return node in a function graph) and MathExpression with expression (the formula, checked and set as set_node_property Expression sets it, before pinDefaults, which can then name its inputs; a name in the formula that is one of the Blueprint's variables reads that variable and gets no input pin, any other name becomes an input pin). Optional per step: id (names the created node; later steps use \"$id\" in fromNodeId, toNodeId and nodeId), from and to (\"$id.PinName\" shorthand for connect_pins), pinDefaults (create_node only: {PinName: value} applied to the new node; a read-only pin such as Set Text's Value gets a MakeLiteral node wired into it). \"$entry\" is the graph's own entry node (a Construction Script or function graph starts there: from \"$entry.then\"). A pure node (math, a getter) runs again for each node that reads it, so after a Set node read the new value from the Set node's Output_Get pin, not from the math that computed it. A create step without posX and posY is auto-placed, and once every step ran it moves beside a node it is wired to (right of what runs it, below-left of what reads it); one whose posX and posY overlap an existing node is placed at the nearest free position instead, and its result says where in placementWarning, so a crowded row never stops the batch (a single create_node call still refuses an overlap). Every function, variable, dispatcher and async factory a step names is checked before any step runs, so a misspelled one fails the batch with nothing applied; any other failure stops the batch at that step and undoes the steps before it (members, nodes, links and pin defaults, in every graph), so a failed batch leaves the Blueprint as it was: fix that step and send the whole batch again. Only a set_node_property on a node that was already there stays, and the error names it."
             },
             "edit": {
               "type": "string",
@@ -18296,8 +18296,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "82582721bd8a08708ad34f7746bb9711603e18f0bcd2f0f1b6e79e8896513710",
-        "content": "d59d31acf53054a02e3a464889db6c83a58a99a546cf4e8a3efeea6794770601"
+        "schema": "079efc101d66b1530120a6d5d519814743f44c66ce087d78d61aa3fced29ed67",
+        "content": "77f31c0f5ea33e7c95041bc75a3da415da16a06f0ac7539a1f2ece87eeb96e66"
       }
     },
     {
@@ -36246,6 +36246,10 @@
           "count actors",
           "actors in the level",
           "actors near point",
+          "actors in an area",
+          "nearby actors",
+          "actors within radius",
+          "actors around a location",
           "count enemies"
         ],
         "summary": "List actors in the current level with their label, class, location, rotation and scale, plus any propertyNames values, narrowed by name filter, tag, class or outliner folder; page on with offset. near (a world point) with radius is how to find what is near a point, nearest first, each with its distance. summary counts the level by class, tag and folder instead.",
@@ -36543,7 +36547,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "6e9d75f86e682ff04987647a57d7b51ace81a30d9800c2b9fe643eb66de6e19a",
-        "content": "6fdc2e137b24a34d27838808614d289aec8a8b51f2a00d70f524a314d7b45ba3"
+        "content": "e1a528092712550f4d224f3dd9195d09c45e76e9df4422c22791ed3b344fc914"
       }
     },
     {
