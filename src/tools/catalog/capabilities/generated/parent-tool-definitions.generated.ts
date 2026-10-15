@@ -12844,6 +12844,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "chase",
             "patrol",
             "turret",
+            "moving_platform",
             "controls",
             "respawn",
             "goal",
@@ -13737,7 +13738,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "minItems": 3,
             "maxItems": 3
           },
-          "description": "The route: [x, y, z] offsets from where the pawn starts, in world axes, walked in turn and looped (default [[500, 0, 0], [0, 0, 0]], back and forth). Each placed pawn walks its own copy (PatrolPoints is instance editable)."
+          "description": "The route: [x, y, z] offsets from where the actor starts, in world axes, visited in turn and looped (default [[500, 0, 0], [0, 0, 0]], back and forth). Each placed copy keeps its own route (PatrolPoints or PlatformPoints is instance editable)."
         },
         "posX": {
           "type": "number",
@@ -13973,6 +13974,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "spawnClass": {
           "type": "string",
           "description": "The actor it spawns: a Blueprint path (/Game/Enemies/BP_Slime) or class path; not the spawner itself."
+        },
+        "speed": {
+          "type": "number",
+          "description": "Units per second it travels between points (default 200)."
         },
         "sprintSpeed": {
           "type": "number",

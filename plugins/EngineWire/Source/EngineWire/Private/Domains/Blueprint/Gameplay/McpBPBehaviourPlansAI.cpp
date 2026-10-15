@@ -1,7 +1,8 @@
-// The plans of the behaviours that act on the player: chase (recipe Gameplay/Chase), patrol (Gameplay/Patrol) and
-// turret (Gameplay/Turret). Chase and patrol run a timer that moves the pawn through its AI controller, so they would
-// fight over one pawn: patrol chases too (chaseRange) and takes over a chase the pawn has, and chase refuses a pawn
-// that patrols. McpBPAddBehaviour.cpp runs the plans.
+// The plans of the behaviours that act on the player or travel a route: chase (recipe Gameplay/Chase), patrol
+// (Gameplay/Patrol), turret (Gameplay/Turret) and moving platform (Gameplay/MovingPlatform). Chase and patrol run a
+// timer that moves the pawn through its AI controller, so they would fight over one pawn: patrol chases too
+// (chaseRange) and takes over a chase the pawn has, and chase refuses a pawn that patrols. McpBPAddBehaviour.cpp runs
+// the plans.
 #include "Domains/Blueprint/Gameplay/McpBPBehaviourPlans.h"
 
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
@@ -28,6 +29,7 @@ bool IsPawnBlueprint(const UBlueprint *Blueprint) {
 }
 
 // points ([[x, y, z], ...]) as the vector export texts an Array:Vector default takes; false with OutError on a bad one.
+// Patrol and moving platform share it.
 bool ReadRoute(const TSharedPtr<FJsonObject> &Payload, TArray<TSharedPtr<FJsonValue>> &OutPoints, FString &OutError) {
   const TArray<TSharedPtr<FJsonValue>> *Points = nullptr;
   const TArray<TSharedPtr<FJsonValue>> Back = {
@@ -44,7 +46,7 @@ bool ReadRoute(const TSharedPtr<FJsonObject> &Payload, TArray<TSharedPtr<FJsonVa
     static const TCHAR *const Keys[3] = {TEXT("x"), TEXT("y"), TEXT("z")};
     double Xyz[3] = {0.0, 0.0, 0.0};
     if (!ReadJsonTriple(Point, Keys, Xyz)) {
-      OutError = TEXT("points must be [x, y, z] offsets from where the pawn starts, such as [[500, 0, 0], [0, 0, 0]]");
+      OutError = TEXT("points must be [x, y, z] offsets from where the actor starts, such as [[500, 0, 0], [0, 0, 0]]");
       return false;
     }
     OutPoints.Add(MakeShared<FJsonValueString>(FString::Printf(TEXT("(X=%f,Y=%f,Z=%f)"), Xyz[0], Xyz[1], Xyz[2])));
@@ -98,6 +100,23 @@ bool PlanPatrol(const TSharedPtr<FJsonObject> &Payload, const UBlueprint *Bluepr
   if (HasBehaviourFunction(Blueprint, TEXT("ChaseUpdate"))) {
     Plan.Replaces.Add(TEXT("Chase"));
   }
+  return true;
+}
+
+bool PlanMovingPlatform(const TSharedPtr<FJsonObject> &Payload, FBehaviourPlan &Plan, FString &OutError) {
+  TArray<TSharedPtr<FJsonValue>> Points;
+  const double Speed = GetJsonNumberField(Payload, TEXT("speed"), 200.0);
+  const double Wait = GetJsonNumberField(Payload, TEXT("waitTime"), 1.0);
+  if (ReadRoute(Payload, Points, OutError) && (Speed <= 0.0 || Wait < 0.0)) {
+    OutError = TEXT("speed must be above 0 and waitTime 0 or more");
+  }
+  if (!OutError.IsEmpty()) {
+    return false;
+  }
+  Plan.Recipe = TEXT("MovingPlatform");
+  Plan.Values.Add(TEXT("Points"), MakeShared<FJsonValueArray>(Points));
+  Plan.Values.Add(TEXT("Speed"), MakeShared<FJsonValueNumber>(Speed));
+  Plan.Values.Add(TEXT("Wait"), MakeShared<FJsonValueNumber>(Wait));
   return true;
 }
 

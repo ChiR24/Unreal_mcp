@@ -430,7 +430,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'turn off the sound', accepted: ['manage_audio.stop_sound'] },
   { query: 'hide the light', accepted: ['control_actor.set_visibility'] },
   { query: 'rotating platform', accepted: ['control_actor.edit_component'] },
-  { query: 'moving platform', accepted: ['control_actor.edit_component'] },
+  { query: 'moving platform', accepted: ['control_actor.edit_component', 'blueprint.add_behaviour'] },
   { query: 'looping music', accepted: ['manage_audio.play_sound'] },
   { query: 'music that loops', accepted: ['manage_audio.play_sound'] },
   { query: 'set master volume', accepted: ['manage_audio.configure_sound_class'] },
@@ -570,4 +570,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'falling platform', accepted: ['blueprint.add_behaviour'] },
   { query: 'crumbling platform', accepted: ['blueprint.add_behaviour'] },
   { query: 'platform falls when the player stands on it', accepted: ['blueprint.add_behaviour'] },
+  { query: 'elevator', accepted: ['blueprint.add_behaviour'] },
+  { query: 'make a lift', accepted: ['blueprint.add_behaviour'] },
+  { query: 'platform that moves back and forth', accepted: ['blueprint.add_behaviour'] },
 ];

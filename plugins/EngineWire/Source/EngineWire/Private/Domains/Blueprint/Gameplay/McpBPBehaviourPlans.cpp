@@ -219,6 +219,8 @@ bool PlanBehaviour(const FString &Action, const TSharedPtr<FJsonObject> &Payload
     return PlanChase(Payload, Blueprint, Plan, OutError);
   } else if (Action == TEXT("add_patrol")) {
     return PlanPatrol(Payload, Blueprint, Plan, OutError);
+  } else if (Action == TEXT("add_moving_platform")) {
+    return PlanMovingPlatform(Payload, Plan, OutError);
   } else if (Action == TEXT("add_turret")) {
     return PlanTurret(Payload, Blueprint, Plan, OutError);
   } else if (Action == TEXT("add_launch_pad")) {

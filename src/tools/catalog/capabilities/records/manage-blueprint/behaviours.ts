@@ -1,6 +1,6 @@
 /**
  * Gameplay behaviours written into an Actor Blueprint from the plugin's recipe files
- * (McpBlueprintBehaviour::Author): health, damage on touch, pickups, sprint, shooting, chasing, patrolling, a turret, player controls, respawning, a goal, a launch pad, a teleporter, a falling platform, a time limit, a spawner, a dash, a health bar and counters on screen, and a game over. Folded
+ * (McpBlueprintBehaviour::Author): health, damage on touch, pickups, sprint, shooting, chasing, patrolling, a turret, a moving platform, player controls, respawning, a goal, a launch pad, a teleporter, a falling platform, a time limit, a spawner, a dash, a health bar and counters on screen, and a game over. Folded
  * into blueprint.add_behaviour (selector behaviour). Every one is all or nothing,
  * re-runnable (a second run replaces the first), compiled and saved.
  */
@@ -44,6 +44,9 @@ const FIRE_RATE = { type: 'number', description: 'Most shots a minute (default 3
 // Chase and patrol share these: a pawn patrols and chases with one behaviour, and both read the same variables.
 const CHASE_RANGE = { type: 'number', description: 'Distance within which the pawn chases the player, in units: chase defaults to 2000, and a patrol chases only when given one (default 0, or the range of a chase it takes over).' } as const;
 const STOP_DISTANCE = { type: 'number', description: 'How close it gets to the player before it stops, in units (default 100).' } as const;
+// Patrol and moving platform share these: a folded family keeps one description per shared parameter.
+const ROUTE_POINTS = { type: 'array', items: { type: 'array', items: { type: 'number' }, minItems: 3, maxItems: 3 }, description: 'The route: [x, y, z] offsets from where the actor starts, in world axes, visited in turn and looped (default [[500, 0, 0], [0, 0, 0]], back and forth). Each placed copy keeps its own route (PatrolPoints or PlatformPoints is instance editable).' } as const;
+const WAIT_TIME = { type: 'number', description: 'Seconds it waits at each point (default 1).' } as const;
 const USE_PATHFINDING = { type: 'boolean', description: 'Follow the navigation mesh (default true; the level needs a Nav Mesh Bounds Volume); false heads straight for the player or the next point.' } as const;
 
 const OVERLAP_NOTE = 'It fires on overlap, so the actor needs a component that overlaps pawns (a sphere or box with the Trigger or OverlapAllDynamic profile).';
@@ -208,8 +211,8 @@ export const BEHAVIOURS_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['Senses, cover or decisions beyond walking a route and chasing (use manage_ai with a Behavior Tree or State Tree).'],
     inputProps: {
       blueprintPath: P.blueprintPath,
-      points: { type: 'array', items: { type: 'array', items: { type: 'number' }, minItems: 3, maxItems: 3 }, description: 'The route: [x, y, z] offsets from where the pawn starts, in world axes, walked in turn and looped (default [[500, 0, 0], [0, 0, 0]], back and forth). Each placed pawn walks its own copy (PatrolPoints is instance editable).' },
-      waitTime: { type: 'number', description: 'Seconds it waits at each point (default 1).' },
+      points: ROUTE_POINTS,
+      waitTime: WAIT_TIME,
       chaseRange: CHASE_RANGE,
       stopDistance: STOP_DISTANCE,
       usePathfinding: USE_PATHFINDING,
@@ -222,6 +225,30 @@ export const BEHAVIOURS_RECORDS: readonly CapabilityRecordSource[] = [
     resources: 'medium',
     plugins: BP_PLUGINS,
     exampleInput: { action: 'add_patrol', blueprintPath: '/Game/Blueprints/BP_Guard', points: [[600, 0, 0], [600, 400, 0], [0, 0, 0]], chaseRange: 1200 },
+  }),
+  buildRecord({
+    id: 'blueprint.add_moving_platform',
+    action: 'add_moving_platform',
+    family: FAMILY,
+    domain: DOMAIN,
+    topics: ['moving platform', 'elevator', 'lift', 'platform that moves back and forth', 'platform that moves up and down'],
+    summary: 'Make an actor a moving platform or an elevator: it travels to each of points in turn (offsets from where it starts) at speed, waits waitTime at each, and loops; a Character standing on it rides along. Its root must be movable (a Blueprint made with manage_blueprint create is).',
+    whenToUse: ['A platform, lift or elevator must travel a route by itself, every placed copy of a Blueprint alike (each copy keeps its own PlatformPoints).'],
+    whenNotToUse: ['One placed actor must spin or travel (control_actor edit_component with a RotatingMovement or InterpToMovement component).', 'A pawn must walk a route (behaviour patrol).'],
+    inputProps: {
+      blueprintPath: P.blueprintPath,
+      points: ROUTE_POINTS,
+      speed: { type: 'number', description: 'Units per second it travels between points (default 200).' },
+      waitTime: WAIT_TIME,
+    },
+    required: ['blueprintPath'],
+    outputProps: BEHAVIOUR_OUTPUT,
+    effect: 'write',
+    behavior: { idempotency: 'idempotent' },
+    latency: 'interactive',
+    resources: 'medium',
+    plugins: BP_PLUGINS,
+    exampleInput: { action: 'add_moving_platform', blueprintPath: '/Game/Blueprints/BP_Lift', points: [[0, 0, 400], [0, 0, 0]], speed: 250, waitTime: 2 },
   }),
   buildRecord({
     id: 'blueprint.add_turret',

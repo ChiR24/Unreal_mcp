@@ -21,11 +21,12 @@ struct FBehaviourPlan {
 bool PlanBehaviour(const FString &Action, const TSharedPtr<FJsonObject> &Payload, const UBlueprint *Blueprint,
                    FBehaviourPlan &Plan, FString &OutError);
 
-// The AI behaviours (McpBPBehaviourPlansAI.cpp): a pawn that chases the player (recipe Gameplay/Chase), one that
-// patrols a route and may chase as well (Gameplay/Patrol), which takes over a chase the pawn already has, and an actor
-// that turns to the player and fires at them (Gameplay/Turret).
+// The AI and route behaviours (McpBPBehaviourPlansAI.cpp): a pawn that chases the player (recipe Gameplay/Chase), one
+// that patrols a route and may chase as well (Gameplay/Patrol), which takes over a chase the pawn already has, an actor
+// that turns to the player and fires at them (Gameplay/Turret), and a platform that travels a route (MovingPlatform).
 bool PlanChase(const TSharedPtr<FJsonObject> &Payload, const UBlueprint *Blueprint, FBehaviourPlan &Plan, FString &OutError);
 bool PlanPatrol(const TSharedPtr<FJsonObject> &Payload, const UBlueprint *Blueprint, FBehaviourPlan &Plan, FString &OutError);
+bool PlanMovingPlatform(const TSharedPtr<FJsonObject> &Payload, FBehaviourPlan &Plan, FString &OutError);
 bool PlanTurret(const TSharedPtr<FJsonObject> &Payload, const UBlueprint *Blueprint, FBehaviourPlan &Plan, FString &OutError);
 
 // projectileClass, projectileSpeed and fireRate (default DefaultRate shots a minute) as the values ProjectileType,
