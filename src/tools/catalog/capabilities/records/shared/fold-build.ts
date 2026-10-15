@@ -181,8 +181,11 @@ export function buildFolded(
     ? first.behavior.idempotency
     : 'non-idempotent';
 
-  const example = base.examples[0];
-  const exampleValue = primaryValue ?? selected[0]?.value;
+  // A family's most capable variant teaches the most: edit_graph showed one add_node, never a batch.
+  const exampleIndex = spec.exampleFrom === undefined ? -1 : entries.findIndex((entry) => entry.action === spec.exampleFrom);
+  if (spec.exampleFrom !== undefined && exampleIndex < 0) throw new Error(`${context}: exampleFrom '${spec.exampleFrom}' is not a member`);
+  const example = (members[exampleIndex] ?? base).examples[0];
+  const exampleValue = exampleIndex >= 0 ? entries[exampleIndex]?.value : primaryValue ?? selected[0]?.value;
   const exampleInput: JsonObject = {
     ...(example?.input ?? {}),
     action: spec.primary,

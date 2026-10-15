@@ -221,6 +221,7 @@ struct FActionContext
 bool ValidateProvidedPaths(const FActionContext& Context);
 bool PrepareBlueprintAndGraph(FActionContext& Context);
 bool HandleListNodeTypes(FActionContext& Context);
+bool HandleFindFunctions(FActionContext& Context);
 bool HandleNodeCreationAction(FActionContext& Context);
 bool HandlePinMutationAction(FActionContext& Context);
 bool SetPinDefaultValue(FActionContext& Context);

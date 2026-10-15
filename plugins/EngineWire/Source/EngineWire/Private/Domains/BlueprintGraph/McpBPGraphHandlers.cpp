@@ -141,7 +141,8 @@ FString DescribeMissingFunction(UBlueprint* Blueprint, const FString& MemberName
     {
         Hint = SuggestMemberFix(Libraries[Index], MemberName);
     }
-    return FString::Printf(TEXT("Function '%s' not found.%s"), *MemberName, *Hint);
+    return FString::Printf(TEXT("Function '%s' not found.%s To find a function by what it does: inspect_graph info "
+                                "functions, words saying what the node should do."), *MemberName, *Hint);
 }
 
 // The name may be exactly right and live on another class: a function library
@@ -216,7 +217,8 @@ bool UEngineWireSubsystem::HandleBlueprintGraphAction(
         return true;
     }
 
-    if (McpBlueprintGraphHandlers::HandleListNodeTypes(Context))
+    if (McpBlueprintGraphHandlers::HandleListNodeTypes(Context) ||
+        McpBlueprintGraphHandlers::HandleFindFunctions(Context))
     {
         return true;
     }

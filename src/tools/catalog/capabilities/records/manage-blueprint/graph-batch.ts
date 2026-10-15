@@ -50,7 +50,9 @@ export const GRAPH_BATCH_RECORDS: readonly CapabilityRecordSource[] = [
           + 'it, before pinDefaults, which can then name its inputs). Optional per step: id (names the created node; later steps use "$id" in fromNodeId, toNodeId and nodeId), '
           + 'from and to ("$id.PinName" shorthand for connect_pins), pinDefaults (create_node only: {PinName: value} applied '
           + 'to the new node; a read-only pin such as Set Text\'s Value gets a MakeLiteral node wired into it). "$entry" is '
-          + 'the graph\'s own entry node (a Construction Script or function graph starts there: from "$entry.then"). A create '
+          + 'the graph\'s own entry node (a Construction Script or function graph starts there: from "$entry.then"). A pure '
+          + 'node (math, a getter) runs again for each node that reads it, so after a Set node read the new value from the '
+          + 'Set node\'s Output_Get pin, not from the math that computed it. A create '
           + 'step without posX and posY is auto-placed, and once every step ran it moves beside a node it is wired to (right of what runs it, below-left of what reads it); one whose posX and posY overlap an existing node is placed at the nearest '
           + 'free position instead, and its result says where in placementWarning, so a crowded row never stops the batch (a '
           + 'single create_node call still refuses an overlap). Every function, variable, dispatcher and async factory a step names is '
@@ -79,19 +81,31 @@ export const GRAPH_BATCH_RECORDS: readonly CapabilityRecordSource[] = [
     plugins: BP_PLUGINS,
     exampleInput: {
       action: 'build_graph',
-      blueprintPath: '/Game/Blueprints/BP_Test',
+      blueprintPath: '/Game/Blueprints/BP_Gate',
       graphName: 'EventGraph',
       operations: [
-        { edit: 'create_node', id: 'begin', nodeType: 'Event', eventName: 'BeginPlay' },
-        { edit: 'create_node', id: 'print', nodeType: 'CallFunction', memberName: 'PrintString', pinDefaults: { InString: 'Hello' } },
-        { edit: 'connect_pins', from: '$begin.then', to: '$print.execute' },
+        { edit: 'add_variable', variableName: 'Count', variableType: 'int' },
+        { edit: 'create_node', id: 'hit', nodeType: 'Event', eventName: 'ActorBeginOverlap' },
+        { edit: 'create_node', id: 'get', nodeType: 'VariableGet', memberName: 'Count' },
+        { edit: 'create_node', id: 'add', nodeType: 'CallFunction', memberName: 'Add_IntInt', memberClass: 'KismetMathLibrary', pinDefaults: { B: 1 } },
+        { edit: 'create_node', id: 'set', nodeType: 'VariableSet', memberName: 'Count' },
+        { edit: 'create_node', id: 'enough', nodeType: 'CallFunction', memberName: 'GreaterEqual_IntInt', memberClass: 'KismetMathLibrary', pinDefaults: { B: 3 } },
+        { edit: 'create_node', id: 'if', nodeType: 'Branch' },
+        { edit: 'create_node', id: 'print', nodeType: 'CallFunction', memberName: 'PrintString', pinDefaults: { InString: 'Third time' } },
+        { edit: 'connect_pins', from: '$get.Count', to: '$add.A' },
+        { edit: 'connect_pins', from: '$add.ReturnValue', to: '$set.Count' },
+        { edit: 'connect_pins', from: '$hit.then', to: '$set.execute' },
+        { edit: 'connect_pins', from: '$set.Output_Get', to: '$enough.A' },
+        { edit: 'connect_pins', from: '$set.then', to: '$if.execute' },
+        { edit: 'connect_pins', from: '$enough.ReturnValue', to: '$if.Condition' },
+        { edit: 'connect_pins', from: '$if.then', to: '$print.execute' },
       ],
     },
     exampleOutput: {
       success: true,
-      message: 'Ran 3 graph operations; the blueprint compiles.',
-      nodeIds: { begin: '8C1D0E6A4F2B4C1D9E0F1A2B3C4D5E6F', print: '1A2B3C4D5E6F40718293A4B5C6D7E8F9' },
-      succeeded: 3,
+      message: 'Ran 15 graph operations; the blueprint compiles.',
+      nodeIds: { hit: '8C1D0E6A4F2B4C1D9E0F1A2B3C4D5E6F', set: '1A2B3C4D5E6F40718293A4B5C6D7E8F9' },
+      succeeded: 15,
       compiled: true,
       saved: true,
     },

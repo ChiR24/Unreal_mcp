@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPSoundCheck.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpBPStaleReadCheck.h"
 
 #include "Engine/Blueprint.h"
 #include "Engine/BlueprintGeneratedClass.h"
@@ -128,9 +129,24 @@ inline bool McpCompileBlueprintWithDiagnostics(
                         McpBlueprintStatusName(Blueprint->Status));
     Out->SetNumberField(TEXT("errorCount"), Results.NumErrors);
     Out->SetNumberField(TEXT("warningCount"), Results.NumWarnings);
+    const int32 FirstCheck = Diagnostics.Num();
     McpAddSoundNodeWarnings(Blueprint, Diagnostics, MaxDiagnostics);
+    McpAddStaleReadWarnings(Blueprint, Diagnostics, MaxDiagnostics);
     if (Diagnostics.Num() > 0) {
       Out->SetArrayField(TEXT("diagnostics"), Diagnostics);
+    }
+    // These checks find what the compiler accepts, so a reply that only says it compiled reads as all is well: the
+    // receipt carries the result's warnings.
+    TArray<TSharedPtr<FJsonValue>> Warnings;
+    const TArray<TSharedPtr<FJsonValue>> *Existing = nullptr;
+    if (Out->TryGetArrayField(TEXT("warnings"), Existing) && Existing) {
+      Warnings = *Existing;
+    }
+    for (int32 Index = FirstCheck; Index < Diagnostics.Num(); ++Index) {
+      Warnings.Add(MakeShared<FJsonValueString>(Diagnostics[Index]->AsObject()->GetStringField(TEXT("message"))));
+    }
+    if (Diagnostics.Num() > FirstCheck) {
+      Out->SetArrayField(TEXT("warnings"), Warnings);
     }
   }
   return bCompiled;

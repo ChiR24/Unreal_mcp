@@ -126,6 +126,18 @@ function pieWorldWarnings(record: CapabilityRecord, result: unknown): readonly s
   ];
 }
 
+// A handler's own warnings (a graph check's finding, a step that succeeded with a caveat) sat in
+// data.details.warnings, where no receipt check looks; the HTTP door lifts them (McpCollectResultWarnings).
+function resultWarnings(result: unknown): readonly string[] {
+  const found = new Set<string>();
+  for (let level: unknown = result; isRecord(level); level = level.details) {
+    const warnings = level.warnings;
+    if (!Array.isArray(warnings)) continue;
+    for (const warning of warnings) if (typeof warning === 'string' && warning.length > 0) found.add(warning);
+  }
+  return [...found];
+}
+
 const HANDLER_CODE = /^[A-Z][A-Z0-9_]{0,63}$/;
 
 function readHandlerCode(result: unknown): string | undefined {
@@ -317,6 +329,6 @@ export async function dispatchAndValidate(
     resolvedFromAlias: target.resolvedFromAlias,
     migratedFrom: target.migratedFrom,
     options,
-    warnings: [...pieWorldWarnings(record, result), ...unread]
+    warnings: [...new Set([...pieWorldWarnings(record, result), ...unread, ...resultWarnings(result)])]
   }, receiptContext);
 }

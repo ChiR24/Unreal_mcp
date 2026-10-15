@@ -366,6 +366,9 @@ const testCases = [
   // === INFO: list_node_types (no blueprint needed) ===
   { scenario: 'INFO: list_node_types', toolName: 'manage_blueprint', arguments: { action: 'list_node_types' }, expected: 'success' },
   { scenario: 'INFO: list_node_types filter finds an animation node class', toolName: 'manage_blueprint', arguments: { action: 'list_node_types', filter: 'TwoBoneIK' }, expected: 'success', assertions: [{ path: 'structuredContent.result.count', gte: 1, label: 'AnimGraphNode_TwoBoneIK is listed' }] },
+  { scenario: 'INFO: find_functions finds a function by what it does', toolName: 'manage_blueprint', arguments: { action: 'find_functions', words: 'game time' }, expected: 'success', assertions: [{ path: 'structuredContent.result.functions.0.memberName', equals: 'GetGameTimeInSeconds', label: 'the game clock comes first' }, { path: 'structuredContent.result.functions.0.memberClass', equals: '/Script/Engine.KismetSystemLibrary', label: 'with the class create_node takes' }] },
+  { scenario: 'INFO: find_functions lists what a class can call on itself', toolName: 'manage_blueprint', arguments: { action: 'find_functions', words: 'jump', memberClass: 'Character' }, expected: 'success', assertions: [{ path: 'structuredContent.result.functions.0.target', equals: 'Character', label: 'a Character function' }] },
+  { scenario: 'ERROR: find_functions needs words', toolName: 'manage_blueprint', arguments: { action: 'find_functions', words: 'the a' }, expected: 'error|words' },
 
   // === CONFIG: set_pin_default_value (blueprintPath + nodeGuid + pinName + value) ===
   // Uses the real nodeId captured from the first Sequence node.
@@ -387,6 +390,23 @@ const testCases = [
     { edit: 'create_node', id: 'print', nodeType: 'CallFunction', memberName: 'PrintString', pinDefaults: { InString: 'batched' } },
     { edit: 'connect_pins', from: '$delay.then', to: '$print.execute' },
   ] }, expected: 'success', assertions: [{ path: 'structuredContent.result.succeeded', equals: 3, label: 'build_graph ran all three steps' }, { path: 'structuredContent.receipt.handles.0.kind', equals: 'asset', label: 'the receipt names the Blueprint the batch edited' }, { path: 'structuredContent.receipt.changes', length: 1, label: 'and lists it once as changed' }] },
+
+  // === BATCH: math that reads a variable, wired into its Set and into a node after the Set, is named with the fix ===
+  { scenario: 'BATCH: build_graph warns about a value worked on twice', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: BP_PATH, graphName: 'EventGraph', operations: [
+    { edit: 'add_variable', variableName: 'StaleCount', variableType: 'int' },
+    { edit: 'create_node', id: 'go', nodeType: 'CustomEvent', customEventName: 'CountUp' },
+    { edit: 'create_node', id: 'get', nodeType: 'VariableGet', memberName: 'StaleCount' },
+    { edit: 'create_node', id: 'add', nodeType: 'CallFunction', memberName: 'Add_IntInt', memberClass: 'KismetMathLibrary', pinDefaults: { B: 1 } },
+    { edit: 'create_node', id: 'set', nodeType: 'VariableSet', memberName: 'StaleCount' },
+    { edit: 'create_node', id: 'show', nodeType: 'CallFunction', memberName: 'Conv_IntToString', memberClass: 'KismetStringLibrary' },
+    { edit: 'create_node', id: 'print', nodeType: 'CallFunction', memberName: 'PrintString' },
+    { edit: 'connect_pins', from: '$get.StaleCount', to: '$add.A' },
+    { edit: 'connect_pins', from: '$add.ReturnValue', to: '$set.StaleCount' },
+    { edit: 'connect_pins', from: '$go.then', to: '$set.execute' },
+    { edit: 'connect_pins', from: '$add.ReturnValue', to: '$show.InInt' },
+    { edit: 'connect_pins', from: '$show.ReturnValue', to: '$print.InString' },
+    { edit: 'connect_pins', from: '$set.then', to: '$print.execute' },
+  ] }, expected: 'success', assertions: [{ path: 'structuredContent.receipt.warnings.0', includes: 'Output_Get', label: 'the receipt names the Set node pin to read instead' }] },
 
   // === BATCH: "$entry" addresses the Construction Script's entry node without a lookup ===
   { scenario: 'BATCH: build_graph from the construction script entry', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: BP_PATH, graphName: 'UserConstructionScript', operations: [

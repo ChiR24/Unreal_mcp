@@ -601,4 +601,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'make a new mechanic', accepted: ['blueprint.edit_graph'] },
   { query: 'logic in a blueprint', accepted: ['blueprint.edit_graph'] },
   { query: 'script my own mechanic', accepted: ['blueprint.edit_graph'] },
+  { query: 'find a blueprint function', accepted: ['blueprint.inspect_graph'] },
+  { query: 'which function to call', accepted: ['blueprint.inspect_graph'] },
+  { query: 'find function by what it does', accepted: ['blueprint.inspect_graph'] },
 ];

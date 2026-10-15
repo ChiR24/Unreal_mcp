@@ -13281,6 +13281,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "node",
             "pins",
             "node_types",
+            "functions",
             "widget",
             "slot"
           ],
@@ -13516,11 +13517,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "memberClass": {
           "type": "string",
-          "description": "Member class (function, variable, event, etc.)."
+          "description": "Only functions an object of this class calls on itself (Character, or a Blueprint path), no library functions."
         },
         "memberName": {
           "type": "string",
-          "description": "Member (function/variable/event) name the node represents."
+          "description": "The function, variable or event the node uses (PrintString, GetGameTimeInSeconds). A function whose name is not known: inspect_graph info functions finds it by what it does."
         },
         "meshPath": {
           "type": "string",
@@ -13655,7 +13656,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "x-unreal-reflection-boundary": true
               },
               "x-unreal-reflection-boundary": true,
-              "description": "Steps run in order, 1-200. Each is {edit, ...that edit's own params}. Member steps come before the nodes that use them: add_variable (variableName, variableType as add_variable takes it: basic, class, struct, enum and container types, defaultValue, isPublic, exposeOnSpawn, category), add_function (functionName, inputs, outputs, pure, isPublic; its body steps set graphName to the function name; with an id, \"$id\" is its entry node and \"$id_return\" its return node, which exists when outputs are declared), add_event (customEventName and parameters, or componentName plus eventName for a component or Widget Blueprint widget delegate, e.g. PlayButton with OnClicked) and add_event_dispatcher (dispatcherName, parameters [{name, type}]). Node steps: create_node, connect_pins, set_pin_default_value, set_node_property, create_reroute_node. create_node also takes nodeType CallDelegate (memberName: a dispatcher, memberClass: another class's), BindEvent (the same: a Bind Event node and a custom event, eventName, wired to it; with an id, \"$id_event\" is that event, whose then pin runs when the dispatcher fires, and the object bound goes to \"$id.self\"), Message (memberClass: an interface, memberName: its function), AsyncTask (memberClass: the task or async-action class, memberName: its static factory; event graphs only), FunctionResult (one more return node in a function graph) and MathExpression with expression (the formula, checked and set as set_node_property Expression sets it, before pinDefaults, which can then name its inputs). Optional per step: id (names the created node; later steps use \"$id\" in fromNodeId, toNodeId and nodeId), from and to (\"$id.PinName\" shorthand for connect_pins), pinDefaults (create_node only: {PinName: value} applied to the new node; a read-only pin such as Set Text's Value gets a MakeLiteral node wired into it). \"$entry\" is the graph's own entry node (a Construction Script or function graph starts there: from \"$entry.then\"). A create step without posX and posY is auto-placed, and once every step ran it moves beside a node it is wired to (right of what runs it, below-left of what reads it); one whose posX and posY overlap an existing node is placed at the nearest free position instead, and its result says where in placementWarning, so a crowded row never stops the batch (a single create_node call still refuses an overlap). Every function, variable, dispatcher and async factory a step names is checked before any step runs, so a misspelled one fails the batch with nothing applied; any other failure stops the batch at that step and undoes the steps before it (members, nodes, links and pin defaults, in every graph), so a failed batch leaves the Blueprint as it was: fix that step and send the whole batch again. Only a set_node_property on a node that was already there stays, and the error names it."
+              "description": "Steps run in order, 1-200. Each is {edit, ...that edit's own params}. Member steps come before the nodes that use them: add_variable (variableName, variableType as add_variable takes it: basic, class, struct, enum and container types, defaultValue, isPublic, exposeOnSpawn, category), add_function (functionName, inputs, outputs, pure, isPublic; its body steps set graphName to the function name; with an id, \"$id\" is its entry node and \"$id_return\" its return node, which exists when outputs are declared), add_event (customEventName and parameters, or componentName plus eventName for a component or Widget Blueprint widget delegate, e.g. PlayButton with OnClicked) and add_event_dispatcher (dispatcherName, parameters [{name, type}]). Node steps: create_node, connect_pins, set_pin_default_value, set_node_property, create_reroute_node. create_node also takes nodeType CallDelegate (memberName: a dispatcher, memberClass: another class's), BindEvent (the same: a Bind Event node and a custom event, eventName, wired to it; with an id, \"$id_event\" is that event, whose then pin runs when the dispatcher fires, and the object bound goes to \"$id.self\"), Message (memberClass: an interface, memberName: its function), AsyncTask (memberClass: the task or async-action class, memberName: its static factory; event graphs only), FunctionResult (one more return node in a function graph) and MathExpression with expression (the formula, checked and set as set_node_property Expression sets it, before pinDefaults, which can then name its inputs). Optional per step: id (names the created node; later steps use \"$id\" in fromNodeId, toNodeId and nodeId), from and to (\"$id.PinName\" shorthand for connect_pins), pinDefaults (create_node only: {PinName: value} applied to the new node; a read-only pin such as Set Text's Value gets a MakeLiteral node wired into it). \"$entry\" is the graph's own entry node (a Construction Script or function graph starts there: from \"$entry.then\"). A pure node (math, a getter) runs again for each node that reads it, so after a Set node read the new value from the Set node's Output_Get pin, not from the math that computed it. A create step without posX and posY is auto-placed, and once every step ran it moves beside a node it is wired to (right of what runs it, below-left of what reads it); one whose posX and posY overlap an existing node is placed at the nearest free position instead, and its result says where in placementWarning, so a crowded row never stops the batch (a single create_node call still refuses an overlap). Every function, variable, dispatcher and async factory a step names is checked before any step runs, so a misspelled one fails the batch with nothing applied; any other failure stops the batch at that step and undoes the steps before it (members, nodes, links and pin defaults, in every graph), so a failed batch leaves the Blueprint as it was: fix that step and send the whole batch again. Only a set_node_property on a node that was already there stays, and the error names it."
             }
           ],
           "description": "SCS operations applied in order. Each entry is an object with `type` plus that operation's own fields; `type: \"add_component\"` also takes componentName, componentClass (or componentType), attachTo, transform, meshPath, materialPath and a nested properties bag; `type: \"modify_component\"` takes the same transform, meshPath, materialPath and properties for a component that already exists (its own, or a parent Blueprint's part, edited through this Blueprint's override of it); transform is {location:{x,y,z}, rotation:{pitch,yaw,roll}, scale:{x,y,z}} (or those three directly on the operation), and a part left out keeps its current value, while a transform that cannot be applied (a part that is not an {x,y,z} or {pitch,yaw,roll} object or a three-number array, or a component with no transform) is named in warnings, not skipped, as is a meshPath or materialPath that does not load or that its component cannot take; `type: \"attach_component\"` (or \"reparent\") moves componentName under parentComponent (or attachTo/newParent). A failed operation is named in warnings, and the call fails when none applied. Each result carries instancesUpdated (placed copies that took the change, 0 included) with up to three of their paths, and a hint, repeated in warnings, when a mesh or material lands on a hidden component."
@@ -14284,6 +14285,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Width override for size box."
         },
+        "words": {
+          "type": "string",
+          "description": "A few plain words for what the node does (game time, random number in range, distance between actors); a function matches on its name, keywords, category and description, best first, at most 10."
+        },
         "wrapWidth": {
           "type": "number",
           "description": "Wrap width for wrap box."
@@ -14785,6 +14790,126 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             {
               "type": "array",
               "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "memberName": {
+                    "type": "string",
+                    "description": "The function name create_node takes as memberName."
+                  },
+                  "memberClass": {
+                    "type": "string",
+                    "description": "The class create_node takes as memberClass (/Script/Engine.KismetSystemLibrary)."
+                  },
+                  "displayName": {
+                    "type": "string",
+                    "description": "The node title the editor shows."
+                  },
+                  "category": {
+                    "type": "string",
+                    "description": "Its palette category (Math|Random), empty when it has none."
+                  },
+                  "pure": {
+                    "type": "boolean",
+                    "description": "A pure node: no exec pins, its outputs are read where they are wired."
+                  },
+                  "latent": {
+                    "type": "boolean",
+                    "description": "True for a latent node, one that finishes later as Delay does: it works in an event graph, never inside a function."
+                  },
+                  "target": {
+                    "type": "string",
+                    "description": "The class of object it acts on, wired to its Target (self) pin; on a Blueprint of that class an unwired Target is the Blueprint itself. Absent for a library function."
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "The first line of its tooltip."
+                  },
+                  "inputs": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "pinName": {
+                          "type": "string",
+                          "description": "The pin name connect_pins takes."
+                        },
+                        "pinType": {
+                          "type": "string",
+                          "description": "The pin category: bool, int, real, string, text, name, byte, struct, object, class or wildcard."
+                        },
+                        "pinSubType": {
+                          "type": "string",
+                          "description": "The class, struct or enum it carries."
+                        },
+                        "container": {
+                          "type": "string",
+                          "description": "array, set or map when it holds many."
+                        },
+                        "valueType": {
+                          "type": "string",
+                          "description": "The value type of a map."
+                        }
+                      },
+                      "required": [
+                        "pinName",
+                        "pinType"
+                      ]
+                    },
+                    "description": "Its input pins besides exec and Target."
+                  },
+                  "outputs": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "pinName": {
+                          "type": "string",
+                          "description": "The pin name connect_pins takes."
+                        },
+                        "pinType": {
+                          "type": "string",
+                          "description": "The pin category: bool, int, real, string, text, name, byte, struct, object, class or wildcard."
+                        },
+                        "pinSubType": {
+                          "type": "string",
+                          "description": "The class, struct or enum it carries."
+                        },
+                        "container": {
+                          "type": "string",
+                          "description": "array, set or map when it holds many."
+                        },
+                        "valueType": {
+                          "type": "string",
+                          "description": "The value type of a map."
+                        }
+                      },
+                      "required": [
+                        "pinName",
+                        "pinType"
+                      ]
+                    },
+                    "description": "Its output pins besides exec; ReturnValue is the result."
+                  }
+                },
+                "required": [
+                  "memberName",
+                  "memberClass",
+                  "displayName",
+                  "category",
+                  "pure",
+                  "description",
+                  "inputs",
+                  "outputs"
+                ]
+              },
+              "description": "The functions, best match first."
+            },
+            {
+              "type": "array",
+              "items": {
                 "type": "string"
               },
               "description": "Functions it added, which other logic can call."
@@ -14806,7 +14931,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "hasMore": {
           "type": "boolean",
-          "description": "More matching nodes lie past this page."
+          "description": "More matches lie past the ones returned."
         },
         "height": {
           "type": "number",

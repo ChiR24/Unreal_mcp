@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `7d7d3ecfef867290`
+Catalog revision: `6ccd43edc6313af1`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -209,7 +209,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `blueprint.get_widget_animation` | `manage_blueprint` | `get_widget_animation` | read | read | none | `manage_blueprint.get_widget_animation` |
 | `blueprint.get_widget_info` | `manage_blueprint` | `get_widget_info` | read | read | none | `manage_blueprint.get_widget_info` `manage_blueprint.get_widget_slot_info` |
 | `blueprint.implement_interface` | `manage_blueprint` | `implement_interface` | write | write | none | `manage_blueprint.implement_interface` |
-| `blueprint.inspect_graph` | `manage_blueprint` | `get_graph_details` | read | read | none | `manage_blueprint.inspect_graph` `manage_blueprint.get_graph_details` `manage_blueprint.get_node_details` `manage_blueprint.get_pin_details` `manage_blueprint.list_node_types` |
+| `blueprint.inspect_graph` | `manage_blueprint` | `get_graph_details` | read | read | none | `manage_blueprint.inspect_graph` `manage_blueprint.get_graph_details` `manage_blueprint.get_node_details` `manage_blueprint.get_pin_details` `manage_blueprint.list_node_types` `manage_blueprint.find_functions` |
 | `blueprint.preview_widget` | `manage_blueprint` | `preview_widget` | read | read | none | `manage_blueprint.preview_widget` |
 | `blueprint.probe_handle` | `manage_blueprint` | `probe_handle` | read | read | none | `manage_blueprint.probe_handle` |
 | `blueprint.remove_function` | `manage_blueprint` | `remove_function` | destructive | destructive | explicit | `manage_blueprint.remove_function` `manage_blueprint.remove_event` |

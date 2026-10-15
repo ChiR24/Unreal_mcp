@@ -12,6 +12,20 @@ import { P } from './properties.js';
 const FAMILY = 'graph';
 const DOMAIN = 'blueprint';
 
+// A pin of a function find_functions returns, as create_node gives it.
+const FOUND_PIN = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    pinName: { type: 'string', description: 'The pin name connect_pins takes.' },
+    pinType: { type: 'string', description: 'The pin category: bool, int, real, string, text, name, byte, struct, object, class or wildcard.' },
+    pinSubType: { type: 'string', description: 'The class, struct or enum it carries.' },
+    container: { type: 'string', description: 'array, set or map when it holds many.' },
+    valueType: { type: 'string', description: 'The value type of a map.' },
+  },
+  required: ['pinName', 'pinType'],
+};
+
 export const GRAPH_NODES_RECORDS: readonly CapabilityRecordSource[] = [
   buildRecord({
     id: 'blueprint.create_node',
@@ -225,7 +239,7 @@ export const GRAPH_NODES_RECORDS: readonly CapabilityRecordSource[] = [
     outputProps: {
       nodes: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Node descriptors (nodeId, nodeName, nodeTitle, and position x and y; pins if includePins=true).', 'x-unreal-reflection-boundary': true },
       totalCount: { type: 'number', description: 'Nodes matching filter, before offset/limit.' },
-      hasMore: { type: 'boolean', description: 'More matching nodes lie past this page.' },
+      hasMore: { type: 'boolean', description: 'More matches lie past the ones returned.' },
     },
     outputRequired: ['nodes'],
     effect: 'read',
@@ -293,6 +307,51 @@ export const GRAPH_NODES_RECORDS: readonly CapabilityRecordSource[] = [
     plugins: BP_PLUGINS,
     exampleInput: { action: 'list_node_types', filter: 'TwoBoneIK' },
     exampleOutput: { success: true, nodeTypes: [{ className: 'AnimGraphNode_TwoBoneIK', displayName: 'Anim Graph Node Two Bone IK' }], count: 1 },
+  }),
+  buildRecord({
+    id: 'blueprint.find_functions',
+    action: 'find_functions',
+    family: FAMILY,
+    domain: DOMAIN,
+    summary: 'Find the functions a Blueprint node can call by what they do, in plain words (game time, random number in range, distance between actors): each with the memberName and memberClass create_node takes, its input and output pins, and the class it acts on.',
+    whenToUse: ['A graph needs a node whose function name or class is not known: get memberName, memberClass and the pin names before create_node or a batch.', 'A create_node or batch step failed with FUNCTION_NOT_FOUND: find the function by what it does.', 'What an object of a class can do must be listed (memberClass Character, words jump).'],
+    whenNotToUse: ['The function name and class are already known (create_node directly).', 'The node is not a function call (Branch, Cast, a loop, a timeline): node_types lists those.'],
+    inputProps: {
+      words: { type: 'string', description: 'A few plain words for what the node does (game time, random number in range, distance between actors); a function matches on its name, keywords, category and description, best first, at most 10.' },
+      memberClass: { type: 'string', description: 'Only functions an object of this class calls on itself (Character, or a Blueprint path), no library functions.' },
+    },
+    required: ['words'],
+    outputProps: {
+      functions: {
+        type: 'array',
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            memberName: { type: 'string', description: 'The function name create_node takes as memberName.' },
+            memberClass: { type: 'string', description: 'The class create_node takes as memberClass (/Script/Engine.KismetSystemLibrary).' },
+            displayName: { type: 'string', description: 'The node title the editor shows.' },
+            category: { type: 'string', description: 'Its palette category (Math|Random), empty when it has none.' },
+            pure: { type: 'boolean', description: 'A pure node: no exec pins, its outputs are read where they are wired.' },
+            latent: { type: 'boolean', description: 'True for a latent node, one that finishes later as Delay does: it works in an event graph, never inside a function.' },
+            target: { type: 'string', description: 'The class of object it acts on, wired to its Target (self) pin; on a Blueprint of that class an unwired Target is the Blueprint itself. Absent for a library function.' },
+            description: { type: 'string', description: 'The first line of its tooltip.' },
+            inputs: { type: 'array', items: FOUND_PIN, description: 'Its input pins besides exec and Target.' },
+            outputs: { type: 'array', items: FOUND_PIN, description: 'Its output pins besides exec; ReturnValue is the result.' },
+          },
+          required: ['memberName', 'memberClass', 'displayName', 'category', 'pure', 'description', 'inputs', 'outputs'],
+        },
+        description: 'The functions, best match first.',
+      },
+      hasMore: { type: 'boolean', description: 'More matches lie past the ones returned.' },
+    },
+    outputRequired: ['functions', 'hasMore'],
+    effect: 'read',
+    latency: 'interactive',
+    resources: 'low',
+    plugins: BP_PLUGINS,
+    exampleInput: { action: 'find_functions', words: 'game time' },
+    exampleOutput: { success: true, functions: [{ memberName: 'GetGameTimeInSeconds', memberClass: '/Script/Engine.KismetSystemLibrary', displayName: 'Get Game Time in Seconds', category: 'Utilities|Time', pure: true, description: 'Get the current game time, in seconds.', inputs: [], outputs: [{ pinName: 'ReturnValue', pinType: 'real' }] }], hasMore: true },
   }),
   buildRecord({
     id: 'blueprint.create_struct_make_break_nodes',
