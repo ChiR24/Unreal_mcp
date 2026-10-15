@@ -615,4 +615,6 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'nearby actors', accepted: ['control_actor.list'] },
   { query: 'actors within radius', accepted: ['control_actor.list'] },
   { query: 'actors around a location', accepted: ['control_actor.list'] },
+  { query: 'write c++ code', accepted: ['system_control.create_cpp_class'] },
+  { query: 'write code in c++', accepted: ['system_control.create_cpp_class'] },
 ];

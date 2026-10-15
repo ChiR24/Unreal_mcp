@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "51eddb8896dae900",
+  "catalogRevision": "7c89832883bd73bc",
   "recordCount": 416,
   "records": [
     {
@@ -94890,7 +94890,8 @@
           "native class",
           "c++ actor class",
           "c++ component",
-          "c++ code"
+          "c++ code",
+          "write c++ code"
         ],
         "summary": "Create a new C++ class in a project module, as the editor's New C++ Class does: a header and a .cpp from a parent class (Actor, Character, ActorComponent, Object ..., or None for a plain class), then the editor's own compile.",
         "whenToUse": [
@@ -95043,7 +95044,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "600314501a4aeca82e644a36a6505a13ce12de4ddf1473f9377d56b252b7e521",
-        "content": "b1edb27d9e676c7851ee52b9f94403e2c1bd6fcd326821d7211ad9dde1b07190"
+        "content": "e0ef7e0526707e2f4be50bf96a54d310289961d030474fc885ae322f6b30a235"
       }
     },
     {
