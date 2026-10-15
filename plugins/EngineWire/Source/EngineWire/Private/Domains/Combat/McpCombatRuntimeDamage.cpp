@@ -79,6 +79,8 @@ bool FCombatActionContext::HandleRuntimeDamage() const
     }
     const FString Label = McpActorRef(Target);
     const double Damage = GetJsonNumberField(Payload, TEXT("damage"), 0.0);
+    double Before = 0.0;
+    const bool bHadHealth = ReadHealth(Target, Before);
     const float Applied = UGameplayStatics::ApplyDamage(Target, static_cast<float>(Damage), Instigator, Causer, DamageType);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
@@ -92,9 +94,13 @@ bool FCombatActionContext::HandleRuntimeDamage() const
     {
         Result->SetNumberField(TEXT("health"), Health);
     }
+    // ApplyDamage returns the amount even when the actor's own handling ignores it (invulnerable for a moment after a
+    // hit, already dead, a heal at full health), so an unchanged Health decides the sentence.
+    const bool bIgnored = bHealth && bHadHealth && Health == Before && Damage != 0.0;
     const FString Message = Applied == 0.0f && Damage != 0.0
         ? FString::Printf(TEXT("%s took no damage: it cannot be damaged (Can be Damaged is off)."), *Label)
         : bDestroyed ? FString::Printf(TEXT("%s took %g damage and was destroyed."), *Label, Applied)
+        : bIgnored ? FString::Printf(TEXT("%s ignored it: its Health stays %g (invulnerable for a moment after a hit, already dead, or a heal at full health)."), *Label, Health)
         : bHealth ? FString::Printf(TEXT("%s took %g damage; its Health is now %g."), *Label, Applied, Health)
                   : FString::Printf(TEXT("%s took %g damage."), *Label, Applied);
     SendAutomationResponse(RequestingSocket, RequestId, true, Message, Result);

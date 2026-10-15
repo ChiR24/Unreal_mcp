@@ -13339,6 +13339,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Seconds between spawns (default 3)."
         },
+        "invulnerableTime": {
+          "type": "number",
+          "description": "Seconds after a hit during which further damage is ignored, so one touch costs one hit (default 0, none); heals still count."
+        },
         "isChecked": {
           "type": "boolean",
           "description": "Checkbox checked state."

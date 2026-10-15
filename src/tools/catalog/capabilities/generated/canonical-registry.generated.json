@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "6fe5f57f17925b76",
+  "catalogRevision": "caabd9a965cfef1c",
   "recordCount": 416,
   "records": [
     {
@@ -12999,6 +12999,7 @@
           "player health",
           "enemy health",
           "die when health is zero",
+          "invincible after getting hit",
           "damage on touch",
           "hazard",
           "spikes",
@@ -13071,7 +13072,7 @@
           "make the character jump",
           "third person controls",
           "first person controls",
-          "make the character playable",
+          "make my character playable",
           "respawn",
           "respawn the player",
           "checkpoint",
@@ -13226,6 +13227,10 @@
             "destroyOnDeath": {
               "type": "boolean",
               "description": "Destroy the actor when its health reaches 0 (default false; OnDied fires either way)."
+            },
+            "invulnerableTime": {
+              "type": "number",
+              "description": "Seconds after a hit during which further damage is ignored, so one touch costs one hit (default 0, none); heals still count."
             },
             "damage": {
               "type": "number",
@@ -13635,6 +13640,9 @@
             "destroyOnDeath": [
               "health"
             ],
+            "invulnerableTime": [
+              "health"
+            ],
             "damage": [
               "damage_on_touch"
             ],
@@ -13820,8 +13828,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "149d395637a800c801aff667b50c790fa8046c9912e1e5b6d304db0a471b3bb0",
-        "content": "0aa366be1d11edb1d975824bfe7846478f196ea380a1b37c24b804b79a56ee42"
+        "schema": "3b20d59b553a1190173705b32a59fb4e8416da983be7d9c203d68d154ab233e4",
+        "content": "e619c2ec44c9339a97f195ad04c514aa547347abc673bbd8a2c2f7803418b3e8"
       }
     },
     {

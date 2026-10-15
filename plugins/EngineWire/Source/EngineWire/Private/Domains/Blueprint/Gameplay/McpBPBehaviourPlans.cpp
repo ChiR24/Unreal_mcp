@@ -179,10 +179,13 @@ bool PlanBehaviour(const FString &Action, const TSharedPtr<FJsonObject> &Payload
                    FBehaviourPlan &Plan, FString &OutError) {
   if (Action == TEXT("add_health")) {
     const double MaxHealth = GetJsonNumberField(Payload, TEXT("maxHealth"), 100.0);
+    const double Invulnerable = GetJsonNumberField(Payload, TEXT("invulnerableTime"), 0.0);
     Plan.Recipe = TEXT("Health");
     SetNumber(Plan, TEXT("MaxHealth"), MaxHealth);
+    SetNumber(Plan, TEXT("Invulnerable"), Invulnerable);
     Plan.Values.Add(TEXT("DestroyOnDeath"), MakeShared<FJsonValueBoolean>(GetJsonBoolField(Payload, TEXT("destroyOnDeath"))));
-    OutError = MaxHealth > 0.0 ? FString() : FString(TEXT("maxHealth must be above 0"));
+    OutError = MaxHealth > 0.0 && Invulnerable >= 0.0 ? FString()
+                                                      : FString(TEXT("maxHealth must be above 0 and invulnerableTime 0 or more"));
   } else if (Action == TEXT("add_damage_on_touch")) {
     const double Damage = GetJsonNumberField(Payload, TEXT("damage"), 10.0);
     const double Knockback = GetJsonNumberField(Payload, TEXT("knockback"), 0.0);
