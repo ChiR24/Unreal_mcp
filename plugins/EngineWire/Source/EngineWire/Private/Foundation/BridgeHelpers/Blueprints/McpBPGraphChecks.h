@@ -4,9 +4,16 @@
 #include "Dom/JsonValue.h"
 
 class UBlueprint;
+class UEdGraphNode;
 
 // Graphs the compiler accepts that do not do what they say. Each check adds one warning diagnostic per finding while
 // Diagnostics holds fewer than MaxDiagnostics.
+
+// One warning diagnostic, {severity, message}, for a finding.
+void McpAddCheckWarning(TArray<TSharedPtr<FJsonValue>>& Diagnostics, const FString& Message);
+
+// A node as a finding names it: 'Title' (NodeName).
+FString McpNodeLabel(const UEdGraphNode* Node);
 
 // A pure node runs again for each node that reads it. One that reads a variable and feeds that variable's Set node
 // also gives each node that runs after the Set the new value worked on again: Laps + 1 wired into Set Laps and into a
@@ -22,3 +29,8 @@ void McpAddRandomReadWarnings(const UBlueprint* Blueprint, TArray<TSharedPtr<FJs
 // A timer by function name (Set Timer by Function Name, Clear Timer ...) on the Blueprint itself names its function or
 // event as text: a name the Blueprint has no function or event for compiles, and the timer never runs.
 void McpAddTimerNameWarnings(const UBlueprint* Blueprint, TArray<TSharedPtr<FJsonValue>>& Diagnostics, int32 MaxDiagnostics);
+
+// A loop runs all its passes at once. A latent node (Delay, Move Component To) in its body holds one wait per
+// Blueprint, so the later passes start no wait of their own and what follows the node runs once, after the loop: a
+// wave of enemies spawned one second apart spawned one enemy, a second after the loop.
+void McpAddLoopLatentWarnings(const UBlueprint* Blueprint, TArray<TSharedPtr<FJsonValue>>& Diagnostics, int32 MaxDiagnostics);

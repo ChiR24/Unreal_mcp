@@ -9,14 +9,6 @@
 #include "K2Node_VariableSet.h"
 #include "Kismet/KismetSystemLibrary.h"
 
-namespace
-{
-bool McpIsPureNode(const UEdGraphNode* Node)
-{
-  const UK2Node* K2 = Cast<UK2Node>(Node);
-  return K2 && K2->IsNodePure();
-}
-
 void McpAddCheckWarning(TArray<TSharedPtr<FJsonValue>>& Diagnostics, const FString& Message)
 {
   TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
@@ -28,6 +20,14 @@ void McpAddCheckWarning(TArray<TSharedPtr<FJsonValue>>& Diagnostics, const FStri
 FString McpNodeLabel(const UEdGraphNode* Node)
 {
   return FString::Printf(TEXT("'%s' (%s)"), *Node->GetNodeTitle(ENodeTitleType::ListView).ToString(), *Node->GetName());
+}
+
+namespace
+{
+bool McpIsPureNode(const UEdGraphNode* Node)
+{
+  const UK2Node* K2 = Cast<UK2Node>(Node);
+  return K2 && K2->IsNodePure();
 }
 
 // The nodes that do something with Node's value: its impure readers, directly or through pure nodes.
@@ -125,6 +125,32 @@ const UEdGraphNode* McpFindLateReader(const UEdGraphNode* Source, const UEdGraph
   }
   return nullptr;
 }
+
+// The Blueprint's own variable a node changes: its Set node's, or the one a call takes by reference and changes in
+// place (Map Add, Array Add, Remove Index). OutWritePin is that reference pin; NAME_None when the node writes none.
+FName McpWrittenVariable(const UEdGraphNode* Node, const UEdGraphPin*& OutWritePin)
+{
+  OutWritePin = nullptr;
+  if (const UK2Node_VariableSet* Set = Cast<UK2Node_VariableSet>(Node))
+  {
+    return Set->VariableReference.IsSelfContext() ? Set->GetVarName() : NAME_None;
+  }
+  if (McpIsPureNode(Node))
+  {
+    return NAME_None;
+  }
+  for (const UEdGraphPin* Pin : Node->Pins)
+  {
+    const UK2Node_VariableGet* Get = Pin && Pin->Direction == EGPD_Input && Pin->PinType.bIsReference && Pin->LinkedTo.Num() == 1
+                                         ? Cast<UK2Node_VariableGet>(Pin->LinkedTo[0]->GetOwningNode()) : nullptr;
+    if (Get && Get->VariableReference.IsSelfContext())
+    {
+      OutWritePin = Pin;
+      return Get->GetVarName();
+    }
+  }
+  return NAME_None;
+}
 }
 
 void McpAddStaleReadWarnings(const UBlueprint* Blueprint, TArray<TSharedPtr<FJsonValue>>& Diagnostics, int32 MaxDiagnostics)
@@ -135,27 +161,34 @@ void McpAddStaleReadWarnings(const UBlueprint* Blueprint, TArray<TSharedPtr<FJso
   for (const UEdGraph* Graph : Graphs)
   {
     if (!Graph) continue;
-    for (const UEdGraphNode* Node : Graph->Nodes)
+    for (const UEdGraphNode* Writer : Graph->Nodes)
     {
-      const UK2Node_VariableSet* Set = Cast<UK2Node_VariableSet>(Node);
-      const FName Variable = Set ? Set->GetVarName() : NAME_None;
-      const UEdGraphPin* Value = Set && Set->VariableReference.IsSelfContext() ? Set->FindPin(Variable, EGPD_Input) : nullptr;
-      if (!Value) continue;
-      TSet<const UEdGraphNode*> Reach;
-      for (const UEdGraphPin* Link : Value->LinkedTo)
+      const UEdGraphPin* WritePin = nullptr;
+      const FName Variable = Writer ? McpWrittenVariable(Writer, WritePin) : NAME_None;
+      if (Variable.IsNone()) continue;
+      TSet<const UEdGraphNode*> Reach, Reported;
+      for (const UEdGraphPin* Input : Writer->Pins)
       {
-        const UEdGraphNode* Source = Link ? Link->GetOwningNode() : nullptr;
-        if (!McpIsPureNode(Source) || !McpPureReadsVariable(Source, Variable, 0)) continue;
-        if (Reach.Num() == 0) McpCollectExecReach(Set, Reach);
-        const UEdGraphNode* Late = McpFindLateReader(Source, Set, Reach);
-        if (!Late || Diagnostics.Num() >= MaxDiagnostics) continue;
-        const FString Name = Variable.ToString();
-        const FString LateTitle = Late->GetNodeTitle(ENodeTitleType::ListView).ToString();
-        McpAddCheckWarning(Diagnostics, FString::Printf(
-            TEXT("%s in %s reads %s and is wired into Set %s and into %s, which runs after that Set: a pure node runs again "
-                 "for each node that reads it, so '%s' gets the new %s worked on once more. To use the value just set, wire "
-                 "it from the Set node's output pin, Output_Get."),
-            *McpNodeLabel(Source), *Graph->GetName(), *Name, *Name, *McpNodeLabel(Late), *LateTitle, *Name));
+        if (!Input || Input->Direction != EGPD_Input || Input == WritePin) continue;
+        for (const UEdGraphPin* Link : Input->LinkedTo)
+        {
+          const UEdGraphNode* Source = Link ? Link->GetOwningNode() : nullptr;
+          if (!McpIsPureNode(Source) || Reported.Contains(Source) || !McpPureReadsVariable(Source, Variable, 0)) continue;
+          if (Reach.Num() == 0) McpCollectExecReach(Writer, Reach);
+          const UEdGraphNode* Late = McpFindLateReader(Source, Writer, Reach);
+          if (!Late || Diagnostics.Num() >= MaxDiagnostics) continue;
+          Reported.Add(Source);
+          const FString Name = Variable.ToString();
+          const FString Into = WritePin ? FString::Printf(TEXT("%s, which changes %s in place,"), *McpNodeLabel(Writer), *Name)
+                                        : FString::Printf(TEXT("Set %s"), *Name);
+          McpAddCheckWarning(Diagnostics, FString::Printf(
+              TEXT("%s in %s reads %s and is wired into %s and into %s, which runs after it: a pure node runs again for each "
+                   "node that reads it, so '%s' gets the new %s worked on once more. %s"),
+              *McpNodeLabel(Source), *Graph->GetName(), *Name, *Into, *McpNodeLabel(Late),
+              *Late->GetNodeTitle(ENodeTitleType::ListView).ToString(), *Name,
+              WritePin ? TEXT("To use the value written, store it with a Set node first and read that variable.")
+                       : TEXT("To use the value just set, wire it from the Set node's output pin, Output_Get.")));
+        }
       }
     }
   }
