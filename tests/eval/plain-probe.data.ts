@@ -573,4 +573,9 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'elevator', accepted: ['blueprint.add_behaviour'] },
   { query: 'make a lift', accepted: ['blueprint.add_behaviour'] },
   { query: 'platform that moves back and forth', accepted: ['blueprint.add_behaviour'] },
+  { query: 'turn on a light', accepted: ['control_actor.edit_component'] },
+  { query: 'make the light brighter', accepted: ['control_actor.edit_component'] },
+  { query: 'lava kills the player', accepted: ['manage_level_structure.create_volume'] },
+  { query: 'death zone', accepted: ['manage_level_structure.create_volume'] },
+  { query: 'spikes kill the player', accepted: ['blueprint.add_behaviour', 'manage_level_structure.create_volume'] },
 ];

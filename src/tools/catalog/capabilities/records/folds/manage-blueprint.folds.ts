@@ -17,7 +17,7 @@ export const MANAGE_BLUEPRINT_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'edit_scs', selector: 'edit',
     summary: 'Edit the Simple Construction Script: add a component template (or a non-SCS instance), reparent, set a property or transform, or apply batched operations.',
-    topics: ['add component', 'add component to blueprint', 'static mesh component', 'scs component', 'component transform', 'component property', 'light component', 'collision box component', 'spring arm component', 'make component child'],
+    topics: ['add component', 'add component to blueprint', 'static mesh component', 'scs component', 'component transform', 'component property', 'light component', 'collision box component', 'spring arm component', 'make a component a child of another'],
     members: {
       add_scs_component: 'add_scs_component', add_component: 'add_component', modify: 'modify_scs', reparent: 'reparent_scs_component',
       set_property: 'set_scs_property', set_transform: 'set_scs_transform',

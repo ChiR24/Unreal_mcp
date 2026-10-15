@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "832b4055b3c3713d",
+  "catalogRevision": "95ffe65a4a7465ff",
   "recordCount": 416,
   "records": [
     {
@@ -12977,6 +12977,7 @@
           "hazard",
           "spikes",
           "spike trap",
+          "spikes kill the player",
           "knockback",
           "knock the player back",
           "pickup",
@@ -13715,7 +13716,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "9a103d66f657d70456dd1bb467f87840f61d3a44490c6cabe6096e6fcd03011e",
-        "content": "a7376f91e60a50a94b131f7dcf3f6fb445f5598222c1306a1987b4980e4b1eb6"
+        "content": "309dd09798fbdcd913383d609e86b06dd6253d64938fec0ca8d7ac14c64dcad2"
       }
     },
     {
@@ -18145,7 +18146,7 @@
           "light component",
           "collision box component",
           "spring arm component",
-          "make component child",
+          "make a component a child of another",
           "attach component",
           "mesh component",
           "component template",
@@ -18495,7 +18496,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "3baadd9f06f47e55c0736ac9dda7779a9bde8268bfbca02aea60fc20f60c2291",
-        "content": "c27ee3e4a63cf4873b93efc6b9f7a44a15b62a9ca98208512cc46d14f100e188"
+        "content": "844beee9803b91c71131e549f3e943ddcb875b997d5ff589f81c803cf1b66ca7"
       }
     },
     {
@@ -34173,6 +34174,8 @@
           "change sign text",
           "set light intensity",
           "turn off a light",
+          "turn on a light",
+          "make a light brighter",
           "dim the light",
           "rotating platform",
           "moving platform",
@@ -34188,7 +34191,7 @@
           "add component to actor",
           "attach component to actor"
         ],
-        "summary": "Add or remove an actor component, or set one or more of its properties (a placed mesh's StaticMesh or OverrideMaterials, a light's Intensity or LightColor, a TextRender's Text).",
+        "summary": "Add or remove an actor component, or set one or more of its properties (a placed mesh's StaticMesh or OverrideMaterials, a light's Intensity or LightColor to turn on a light, dim it or make it brighter, a TextRender's Text).",
         "whenToUse": [
           "edit=add: A component must be attached to an existing actor.",
           "edit=add: A placed actor must spin or travel by itself, like a platform: add a RotatingMovementComponent (properties RotationRate {pitch, yaw, roll} in degrees per second) or an InterpToMovementComponent (ControlPoints: two or more {PositionControlPoint {x, y, z}, bPositionIsRelative}, Duration in seconds, and BehaviourType PingPong or Loop: the default OneShot stops at the last point).",
@@ -34289,7 +34292,7 @@
       },
       "examples": [
         {
-          "title": "Add or remove an actor component, or set one or more of its properties (a placed mesh's StaticMesh or OverrideMaterials, a light's Intensity or LightColor, a TextRender's Text).",
+          "title": "Add or remove an actor component, or set one or more of its properties (a placed mesh's StaticMesh or OverrideMaterials, a light's Intensity or LightColor to turn on a light, dim it or make it brighter, a TextRender's Text).",
           "input": {
             "action": "edit_component",
             "actorName": "Cube1",
@@ -34364,7 +34367,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "a7b8c3d8565d3f8b5e493d6d58d8a13d9719b3c6056efdbf3e8aa31f987fb8fd",
-        "content": "b3737f2419854c7e5e124054f6d93b7f0087dbf5f9083860ee2be4a16b557ac8"
+        "content": "e181f3de9243c04d89fabb2d70934d90bd3514cd18f250f142a1cb28bd9f9acc"
       }
     },
     {
@@ -75193,7 +75196,9 @@
           "kill z volume",
           "post process volume",
           "kill zone",
-          "damage zone"
+          "damage zone",
+          "death zone",
+          "lava kills the player"
         ],
         "summary": "Create a volume actor of the chosen class in the level, or attach it to an actor when actorPath is given.",
         "whenToUse": [
@@ -75533,7 +75538,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "a32f86d0821ce12e07016e5d6ab88999f6828db65c2e31d817ad68db1eec7271",
-        "content": "8a031acbd73ab50a9b533f59ada2e23e258c5dcf8130012e97bd86ae0804e9df"
+        "content": "ad35583abc8d23077663ddf2fab148508adf5257fd016a7d8a1190b3add1e0bd"
       }
     },
     {

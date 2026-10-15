@@ -101,7 +101,7 @@ export const LEVEL_VOLUME_RECORDS: readonly CapabilityRecordSource[] = [
     folded: FOLDED,
     dispatchBy: { param: 'volumeClass', actions: VOLUME_CLASS_ACTIONS },
     aliases: ADVERTISED_ALIASES,
-    topics: ['create volume', 'trigger volume', 'trigger box', 'trigger sphere', 'trigger capsule', 'blocking volume', 'kill z volume', 'post process volume', 'kill zone', 'damage zone'],
+    topics: ['create volume', 'trigger volume', 'trigger box', 'trigger sphere', 'trigger capsule', 'blocking volume', 'kill z volume', 'post process volume', 'kill zone', 'damage zone', 'death zone', 'lava kills the player'],
     family: F,
     summary: 'Create a volume actor of the chosen class in the level, or attach it to an actor when actorPath is given.',
     whenToUse: [

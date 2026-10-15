@@ -106,7 +106,7 @@ export const RETRIEVAL_SCORE_CONSTANTS = Object.freeze({
   readIntentBonus: 80,
   deleteIntentBonus: 14,
   fullCoverageBonus: 100,
-  phraseTopicBonus: 50,
+  phraseTopicBonus: 65,
   minimumRelevanceScore: 0.01,
   confidenceSaturation: 40,
   confidenceSaturationWeight: 0.85,
