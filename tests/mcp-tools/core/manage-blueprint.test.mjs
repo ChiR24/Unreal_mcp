@@ -521,6 +521,8 @@ const testCases = [
     { edit: 'connect_pins', from: '$wait.then', to: '$kill.execute' },
     { edit: 'connect_pins', from: '$target.Target', to: '$kill.self' },
   ] }, expected: 'success', assertions: [{ path: 'structuredContent.receipt.warnings', exists: false, label: 'only the run that starts the wait writes Target, so nothing is raised' }] },
+  // An audit: every Blueprint under the folder compiled in one call, the flagged ones listed with their diagnostics.
+  { scenario: 'ACTION: compile a folder lists the Blueprints the checks flag', toolName: 'manage_blueprint', arguments: { action: 'compile', folder: TEST_FOLDER }, expected: 'success', assertions: [{ path: 'structuredContent.result.flaggedCount', gte: 3, label: 'the loop, timer and wait checks flag their Blueprints' }, { path: 'structuredContent.result.compiledCount', gte: 5, label: 'every Blueprint under the folder is compiled' }] },
 
   // === BATCH: "$entry" addresses the Construction Script's entry node without a lookup ===
   { scenario: 'BATCH: build_graph from the construction script entry', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: BP_PATH, graphName: 'UserConstructionScript', operations: [

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "56dd1527fde05308",
+  "catalogRevision": "6aa5e2a3c1af27cc",
   "recordCount": 416,
   "records": [
     {
@@ -16105,11 +16105,14 @@
           "compile errors",
           "compile blueprint",
           "compile widget blueprint",
-          "compile widget"
+          "compile widget",
+          "compile all blueprints",
+          "blueprint warnings in a folder"
         ],
-        "summary": "Compile a Blueprint asset, optionally saving after compile.",
+        "summary": "Compile a Blueprint asset, optionally saving after compile, or every Blueprint under a folder at once, answered with the ones the compiler or the graph checks flag.",
         "whenToUse": [
-          "Blueprint changes must be compiled to take effect."
+          "Blueprint changes must be compiled to take effect.",
+          "A project or a folder must be audited for compile errors and graph-check warnings (after an engine upgrade, before a release): folder compiles every Blueprint under it in one call."
         ],
         "whenNotToUse": [
           "The Blueprint has no pending changes."
@@ -16128,16 +16131,23 @@
               "type": "string",
               "description": "Canonical /Game Blueprint asset path."
             },
+            "folder": {
+              "type": "string",
+              "description": "In place of blueprintPath: compile every Blueprint under this /Game folder (sub-folders too, widget and animation Blueprints included, at most 500) and answer with counts and the ones that failed or carry warnings, each with its diagnostics. An audit leaves each package as saved or unsaved as it was; saveAfterCompile does not apply."
+            },
             "saveAfterCompile": {
               "type": "boolean",
               "description": "Whether to save the asset after compiling."
             }
           },
           "required": [
-            "action",
-            "blueprintPath"
+            "action"
           ],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "requiredOneOf": [
+            "blueprintPath",
+            "folder"
+          ]
         },
         "output": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -16155,6 +16165,52 @@
               "type": "object",
               "x-unreal-reflection-boundary": true,
               "description": "Additional handler result fields not named by the contract."
+            },
+            "compiled": {
+              "type": "boolean",
+              "description": "blueprintPath: whether the Blueprint compiled without errors."
+            },
+            "compilerStatus": {
+              "type": "string",
+              "description": "blueprintPath: the Blueprint status after the compile (UpToDate, UpToDateWithWarnings, Error)."
+            },
+            "diagnostics": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "blueprintPath: every compiler message and graph-check finding, each {severity, message}."
+            },
+            "folder": {
+              "type": "string",
+              "description": "folder: the folder audited, as resolved."
+            },
+            "compiledCount": {
+              "type": "number",
+              "description": "folder: how many Blueprints were compiled."
+            },
+            "failedCount": {
+              "type": "number",
+              "description": "folder: how many failed to compile."
+            },
+            "flaggedCount": {
+              "type": "number",
+              "description": "folder: how many failed or carry warnings, the length of blueprints."
+            },
+            "blueprints": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "folder: each Blueprint that failed or carries warnings: blueprintPath, compiled, compilerStatus, errorCount, warningCount and diagnostics. One that compiled clean is only counted."
+            },
+            "truncated": {
+              "type": "boolean",
+              "description": "folder: true when the folder holds more than 500 Blueprints and only the first 500 were compiled."
             }
           },
           "required": [
@@ -16165,7 +16221,7 @@
       },
       "examples": [
         {
-          "title": "Compile a Blueprint asset, optionally saving after compile.",
+          "title": "Compile a Blueprint asset, optionally saving after compile, or every Blueprint under a folder at once, answered with the ones the compiler or the graph checks flag.",
           "input": {
             "action": "compile",
             "blueprintPath": "/Game/Blueprints/BP_TestActor",
@@ -16205,8 +16261,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "d846e6fc91a664cc176984d8fba81751925910b43ad80d4ed7a7ca99d34f40fe",
-        "content": "ee9d875caca7d3fa8169a0e321fc05236aca590da9dafd5300080aaa59f39eaa"
+        "schema": "3eca9fb5e47b4535f20dfe869ce579a887c147e9c91628e5d761fd904afcf6c1",
+        "content": "017a6a796728ff8dd86cf4a2497189f18458e5bfacb6b0a12bc88b37d232b63b"
       }
     },
     {

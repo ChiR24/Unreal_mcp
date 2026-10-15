@@ -12,6 +12,11 @@ bool HandleBlueprintCompile(const FBlueprintActionContext &Context) {
   MCP_BLUEPRINT_ACTION_LOCALS(Context);
   if (ActionMatchesPattern(TEXT("compile"))) {
     FString Path = ResolveBlueprintRequestedPath();
+    FString Folder;
+    if (Path.IsEmpty() && LocalPayload->TryGetStringField(TEXT("folder"), Folder)) {
+      McpCompileBlueprintFolder(Context, Folder);
+      return true;
+    }
     if (Path.IsEmpty()) {
       Bridge.SendAutomationResponse(
           RequestingSocket, RequestId, false,

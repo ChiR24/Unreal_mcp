@@ -14455,14 +14455,28 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Blueprint type (Normal, Interface, MacroLibrary, FunctionLibrary, ...)."
         },
         "blueprints": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "additionalProperties": true,
-            "x-unreal-reflection-boundary": true
-          },
-          "description": "With path: each matching Blueprint as blueprintPath and components (componentName, componentType; inherited and ownerClass on one it inherits), in path order.",
-          "x-unreal-reflection-boundary": true
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "With path: each matching Blueprint as blueprintPath and components (componentName, componentType; inherited and ownerClass on one it inherits), in path order.",
+              "x-unreal-reflection-boundary": true
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "folder: each Blueprint that failed or carries warnings: blueprintPath, compiled, compilerStatus, errorCount, warningCount and diagnostics. One that compiled clean is only counted."
+            }
+          ],
+          "description": "With path: each matching Blueprint as blueprintPath and components (componentName, componentType; inherited and ownerClass on one it inherits), in path order."
         },
         "bottom": {
           "type": "number",
@@ -14571,6 +14585,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "The Blueprint compiled with the behaviour."
         },
+        "compiledCount": {
+          "type": "number",
+          "description": "folder: how many Blueprints were compiled."
+        },
         "compilerStatus": {
           "type": "string",
           "description": "Blueprint status after compile (UpToDate, UpToDateWithWarnings, Error, Dirty, BeingCreated)."
@@ -14662,14 +14680,28 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Additional handler result fields not named by the contract."
         },
         "diagnostics": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "additionalProperties": true,
-            "x-unreal-reflection-boundary": true
-          },
-          "description": "Compile messages: { severity, message }.",
-          "x-unreal-reflection-boundary": true
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Compile messages: { severity, message }.",
+              "x-unreal-reflection-boundary": true
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "blueprintPath: every compiler message and graph-check finding, each {severity, message}."
+            }
+          ],
+          "description": "Compile messages: { severity, message }."
         },
         "dispatchers": {
           "type": "array",
@@ -14740,6 +14772,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether the Widget Blueprint exists after inspection (verification)."
         },
+        "failedCount": {
+          "type": "number",
+          "description": "folder: how many failed to compile."
+        },
         "failedIndex": {
           "type": "number",
           "description": "Index of the step that stopped the batch (failures only)."
@@ -14750,6 +14786,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "string"
           },
           "description": "Each properties name that was not set, as \"Name: reason\"; the Blueprint is created anyway."
+        },
+        "flaggedCount": {
+          "type": "number",
+          "description": "folder: how many failed or carry warnings, the length of blueprints."
+        },
+        "folder": {
+          "type": "string",
+          "description": "folder: the folder audited, as resolved."
         },
         "fontSize": {
           "type": "number",
