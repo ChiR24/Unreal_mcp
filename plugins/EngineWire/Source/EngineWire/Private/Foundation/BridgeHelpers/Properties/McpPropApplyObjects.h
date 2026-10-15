@@ -26,6 +26,31 @@ static inline UStaticMeshComponent *McpStaticMeshOwner(const FProperty *Property
 }
 
 /**
+ * Fill a scratch value of Property and copy it over ValuePtr only when Fill returns true, so a refused write leaves
+ * the property as it was. The scratch honours the property's REQUIRED alignment: TArray<uint8> only guarantees the
+ * default allocator alignment, and FProperty::GetMinAlignment() exists because that is not always enough.
+ * FTransform/FQuat/FVector4/FMatrix are alignas(16), and InitializeValue/ImportText on an under-aligned buffer for an
+ * SSE type is undefined behaviour that UE's binned allocator would only surface as a rare crash.
+ */
+template <typename FillFn>
+static inline bool McpWriteThroughScratch(void *ValuePtr, FProperty *Property, FillFn &&Fill) {
+  void *Scratch = FMemory::Malloc(Property->GetSize(), Property->GetMinAlignment());
+  if (!Scratch) {
+    return false;
+  }
+  Property->InitializeValue(Scratch);
+  ON_SCOPE_EXIT {
+    Property->DestroyValue(Scratch);
+    FMemory::Free(Scratch);
+  };
+  if (!Fill(Scratch)) {
+    return false;
+  }
+  Property->CopyCompleteValue(ValuePtr, Scratch);
+  return true;
+}
+
+/**
  * Import a UE export-text value into an already-resolved property value slot.
  *
  * Export text is the `(Key=Value,...)` form that ExportTextItem produces --
@@ -47,36 +72,15 @@ static inline bool ImportExportTextIntoValue(void *ValuePtr, FProperty *Property
   // Parse into SCRATCH, not into the live property. ImportText writes struct members as it parses, so on
   // malformed input it returns nullptr having ALREADY written whatever it managed to read:
   // "(Offsets=(Left=10,Top=NOTANUMBER))" would leave Left=10 on the real object while the caller is told the
-  // conversion failed. That is the same "the report disagrees with the object" class this batch exists to
-  // remove, just inverted — and 0067 now turns it into a hard success:false, which would make the lie louder.
-  // Honour the property's REQUIRED alignment: TArray<uint8> only guarantees the default allocator alignment,
-  // and FProperty::GetMinAlignment() exists because that is not always enough. FTransform/FQuat/FVector4/
-  // FMatrix are alignas(16), and InitializeValue/ImportText on an under-aligned buffer for an SSE type is
-  // undefined behaviour. UE's binned allocator happens to return 16-aligned blocks for sizes >= 16, which is
-  // exactly why getting this wrong would surface as a rare crash rather than a failing test.
-  const int32 ScratchSize = Property->GetSize();
-  const int32 ScratchAlign = Property->GetMinAlignment();
-  void *Scratch = FMemory::Malloc(ScratchSize, ScratchAlign);
-  if (!Scratch) {
-    return false;
-  }
-  Property->InitializeValue(Scratch);
-  ON_SCOPE_EXIT {
-    Property->DestroyValue(Scratch);
-    FMemory::Free(Scratch);
-  };
-
-  const TCHAR *Result = nullptr;
+  // conversion failed.
+  return McpWriteThroughScratch(ValuePtr, Property, [Property, &Text](void *Scratch) {
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-  Result = Property->ImportText_Direct(*Text, Scratch, nullptr, PPF_None, nullptr);
+    // The error device stays GWarn: a null one crashed the editor on text an enum or struct import refused.
+    return Property->ImportText_Direct(*Text, Scratch, nullptr, PPF_None) != nullptr;
 #else
-  Result = Property->ImportText(*Text, Scratch, PPF_None, nullptr);
+    return Property->ImportText(*Text, Scratch, PPF_None, nullptr) != nullptr;
 #endif
-  if (!Result) {
-    return false;
-  }
-  Property->CopyCompleteValue(ValuePtr, Scratch);
-  return true;
+  });
 }
 
 static inline bool ApplyJsonObjectValueToProperty(void *TargetContainer, FProperty *Property,

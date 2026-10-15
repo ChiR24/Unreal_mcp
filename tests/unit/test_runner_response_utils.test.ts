@@ -135,6 +135,16 @@ describe('test runner response helpers', () => {
     ]);
   });
 
+  it('checks whether a path holds a value', () => {
+    const response = { structuredContent: { result: { value: { Plum: 7 } } } };
+    const check = (path: string, exists: boolean) => evaluateAssertions({ assertions: [{ path, exists }] }, response).passed;
+
+    expect(check('structuredContent.result.value.Plum', true)).toBe(true);
+    expect(check('structuredContent.result.value.Apple', false)).toBe(true);
+    expect(check('structuredContent.result.value.Apple', true)).toBe(false);
+    expect(check('structuredContent.result.value.Plum', false)).toBe(false);
+  });
+
   it('checks string fragments before dependent test actions run', () => {
     const result = evaluateAssertions(
       {

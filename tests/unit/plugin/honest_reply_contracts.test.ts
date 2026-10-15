@@ -826,6 +826,29 @@ describe('object and class references in a property bag', () => {
   it('an object of the wrong class is refused, not stored; a class must derive from the property\'s meta class', () => {
     expect(objects).toContain('CP ? !(AsClass && AsClass->IsChildOf(Wanted)) : !Res->IsA(Wanted)');
   });
+
+  // A null error device crashed the editor: the enum import logs a name it refuses through it.
+  it('export text is imported with an error device', () => {
+    expect(objects).toContain('Property->ImportText_Direct(*Text, Scratch, nullptr, PPF_None) != nullptr');
+    expect(objects).not.toMatch(/ImportText_Direct\([^;]*PPF_None, nullptr\)/u);
+  });
+});
+
+describe('container values', () => {
+  const arrays = readFileSync(
+    join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'Foundation', 'BridgeHelpers', 'Properties', 'McpPropApplyArrays.h'),
+    'utf8',
+  ).replace(/\/\*[\s\S]*?\*\//gu, ' ').replace(/\/\/[^\n]*/gu, ' ');
+
+  // Per-type casts stored an enum name as 0, cut fractions and wrapped bytes, all reported as written.
+  it('every array element goes through the shared importer', () => {
+    expect(arrays).toContain('ApplyJsonValueToProperty(ElemPtr, AP->Inner, Src[i], Error)');
+    expect(arrays).not.toContain('FCString::Ato');
+  });
+
+  it('an array, map or set is filled in scratch, so a refused entry leaves the property as it was', () => {
+    expect(arrays.match(/McpWriteThroughScratch\(/gu)).toHaveLength(2);
+  });
 });
 
 describe('Nanite bakes and rebuilds', () => {

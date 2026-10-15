@@ -2,6 +2,7 @@
 
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"
+#include "Foundation/BridgeHelpers/Properties/McpPropApply.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/Reflection/McpPropertyReflection.h"
 #include "GameFramework/SaveGame.h"
@@ -134,7 +135,7 @@ bool ApplySavedProperties(UEngineWireSubsystem* Self, const FString& RequestId, 
       return false;
     }
     FString Error;
-    if (!McpPropertyReflection::ApplyJsonValueToProperty(Save, Property, Pair.Value, Error)) {
+    if (!::ApplyJsonValueToProperty(Save, Property, Pair.Value, Error)) {
       Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("`%s`: %s"), *Key, *Error),
                                 TEXT("INVALID_PROPERTY_VALUE"));
       return false;

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "3b75845fc259761a",
+  "catalogRevision": "d9d926eb0bad4d46",
   "recordCount": 416,
   "records": [
     {
@@ -19049,7 +19049,7 @@
               "description": "Variable type, any case. Basic: Boolean, Byte, Integer, Int64, Float, Double, String, Name, Text, Vector, Vector2D, Vector4, Rotator, Transform, Color, LinearColor. References: Object or Class (any UObject), or Object:<class>, Class:<class>, SoftObject:<class>, SoftClass:<class> with a class name or path (Actor, /Script/UMG.Widget, /Game/Blueprints/BP_Door); a bare class name or path is an object reference to that class. Structs: struct:<path> (struct:/Game/Data/F_Item), a /Script path (/Script/Engine.HitResult) or a struct name (HitResult). Enums: enum:<object path> (enum:/Script/Engine.ECollisionChannel, enum:/Game/Enums/E_State.E_State). Containers: Array<T>, Set<T> or Map<Key,Value> (also Array:T, Set:T, Map:Key,Value); a map key is Byte, Integer, Int64, Name, String or an enum. Example: Array<Object:/Script/UMG.Widget>. An unknown spelling is refused with TYPE_RESOLUTION_FAILED and the reason."
             },
             "defaultValue": {
-              "description": "Default value for the variable or property."
+              "description": "Default value for the variable, in the form get_property reads back: a number, string or bool, {\"x\": 0, \"y\": 0, \"z\": 100} for a Vector, an array for an Array or Set, and a JSON object of key: value for a Map ({\"Apple\": 3}). A value its type cannot take is refused with DEFAULT_NOT_APPLIED and the variable is not added."
             },
             "category": {
               "type": "string",
@@ -19259,8 +19259,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "882b07cf20a79c1eaf88c8d41cfc2972827a6261e6fcf1c8f9feda5f64e77d7f",
-        "content": "8ba136cf5078e0c39b80fc0496d02277c4c6c6f6dcaacb0142a53fb5f86c067f"
+        "schema": "ce9af8dcadc103377b4d7a72c7497d5faa031646790ba167ba42e2790cc67f72",
+        "content": "de19578a32c8af6bc51418111417ff61f44ae7248376366e19d67bd2e71801eb"
       }
     },
     {
@@ -48206,7 +48206,7 @@
               "description": "Same as propertyName (a name or dotted path); used when propertyName is absent. Give this or propertyName."
             },
             "value": {
-              "description": "Property value to set (type depends on the target property)."
+              "description": "Property value to set, in the form get_property reads back: a number, string or bool, {\"X\": 0, \"Y\": 0, \"Z\": 100} for a vector, an object or asset path, an array for an Array or Set, and a JSON object of key: value for a Map ({\"Apple\": 3}), which replaces the whole map."
             },
             "properties": {
               "type": "object",
@@ -48292,8 +48292,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "441e436e167f24a83d698f43a9473a9ca24c396f7bcbdc8ededcdae5fab0b71d",
-        "content": "d1c5c3be7bce7c6d26b2924b1f9f044c9cb5a52080fa68a5ec785071f8d07baf"
+        "schema": "fb66ab0586f62d2a80696f2a98065f4e18197e7c54a00eff103298368af3a65b",
+        "content": "f87aa41579c19627ded9c95f2fe8432fffec31c70b5045678823349fd9ccc395"
       }
     },
     {
@@ -48365,7 +48365,7 @@
               "description": "Same as propertyName (a name or dotted path); used when propertyName is absent. Give this or propertyName."
             },
             "value": {
-              "description": "Property value to set (type depends on the target property)."
+              "description": "Property value to set, in the form get_property reads back: a number, string or bool, {\"X\": 0, \"Y\": 0, \"Z\": 100} for a vector, an object or asset path, an array for an Array or Set, and a JSON object of key: value for a Map ({\"Apple\": 3}), which replaces the whole map."
             },
             "markDirty": {
               "type": "boolean",
@@ -48537,8 +48537,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "97c5abeb81ae77e6f6454153463e8d3620b4fdd6c211920fdd097cba036928ef",
-        "content": "261e2523acdc0a820bca441a8fa7dad988e189f04f3f88a4fe9216c7180f574e"
+        "schema": "7e5e2b8103d78ef1097817ff41fd75cd74aec1e5d1d4fdcf7efc17b9ddb94db0",
+        "content": "286c3ea711bf9c50734b78037296713eee40666a4e272747ebcc96a57f60133c"
       }
     },
     {

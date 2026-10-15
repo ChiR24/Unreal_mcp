@@ -40,7 +40,7 @@ export const P = {
   // Variables
   variableName: S('Variable name to add, remove, rename, or modify.'),
   variableType: S('Variable type, any case. Basic: Boolean, Byte, Integer, Int64, Float, Double, String, Name, Text, Vector, Vector2D, Vector4, Rotator, Transform, Color, LinearColor. References: Object or Class (any UObject), or Object:<class>, Class:<class>, SoftObject:<class>, SoftClass:<class> with a class name or path (Actor, /Script/UMG.Widget, /Game/Blueprints/BP_Door); a bare class name or path is an object reference to that class. Structs: struct:<path> (struct:/Game/Data/F_Item), a /Script path (/Script/Engine.HitResult) or a struct name (HitResult). Enums: enum:<object path> (enum:/Script/Engine.ECollisionChannel, enum:/Game/Enums/E_State.E_State). Containers: Array<T>, Set<T> or Map<Key,Value> (also Array:T, Set:T, Map:Key,Value); a map key is Byte, Integer, Int64, Name, String or an enum. Example: Array<Object:/Script/UMG.Widget>. An unknown spelling is refused with TYPE_RESOLUTION_FAILED and the reason.'),
-  defaultValue: { description: 'Default value for the variable or property.' },
+  defaultValue: { description: 'Default value for the variable, in the form get_property reads back: a number, string or bool, {"x": 0, "y": 0, "z": 100} for a Vector, an array for an Array or Set, and a JSON object of key: value for a Map ({"Apple": 3}). A value its type cannot take is refused with DEFAULT_NOT_APPLIED and the variable is not added.' },
   oldName: S('Current variable name before renaming.'),
   category: S('Category folder for the variable.'),
   isReplicated: B('Whether the variable is replicated.'),

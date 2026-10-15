@@ -106,6 +106,30 @@ const testCases = [
     { path: 'structuredContent.result.targets.1.objectPath', equals: BP_PATH, label: 'in the order given' },
     { path: 'structuredContent.result.targets.2.error', exists: true, label: 'an object that cannot be read says why, the others still answer' },
   ] },
+  // A map default is a JSON object of key: value and reads back with each value; a set default is a JSON array.
+  { scenario: 'Setup: add a map variable with a default', toolName: 'manage_blueprint', arguments: { action: 'add_variable', blueprintPath: BP_PATH, variableName: 'CdoStock', variableType: 'Map<Name,Integer>', defaultValue: { Apple: 3, Pear: 5 } }, expected: 'success' },
+  { scenario: 'VERIFY: the map default reads back with its values', toolName: 'inspect', arguments: { action: 'get_property', blueprintPath: BP_PATH, propertyName: 'CdoStock' }, expected: 'success', assertions: [{ path: 'structuredContent.result.value.Pear', equals: 5, label: 'each value is read, not 0' }] },
+  { scenario: 'ERROR: set_property refuses a map entry whose value does not fit', toolName: 'inspect', arguments: { action: 'set_property', blueprintPath: BP_PATH, propertyName: 'CdoStock', value: { Plum: 7, Fig: 'many' } }, expected: "error|'fig'" },
+  { scenario: 'VERIFY: the refused map write left the map as it was', toolName: 'inspect', arguments: { action: 'get_property', blueprintPath: BP_PATH, propertyName: 'CdoStock' }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.value.Apple', equals: 3, label: 'the old entries are still there' },
+    { path: 'structuredContent.result.value.Plum', exists: false, label: 'no entry of the refused write landed' },
+  ] },
+  { scenario: 'CONFIG: set_property writes a map', toolName: 'inspect', arguments: { action: 'set_property', blueprintPath: BP_PATH, propertyName: 'CdoStock', value: { Plum: 7 } }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.value.Plum', equals: 7, label: 'the written entry is read back' },
+    { path: 'structuredContent.result.value.Apple', exists: false, label: 'the write replaces the map, not merges into it' },
+  ] },
+  { scenario: 'Setup: add a set variable with a default', toolName: 'manage_blueprint', arguments: { action: 'add_variable', blueprintPath: BP_PATH, variableName: 'CdoTags', variableType: 'Set<Name>', defaultValue: ['Red', 'Blue'] }, expected: 'success' },
+  { scenario: 'VERIFY: the set default reads back', toolName: 'inspect', arguments: { action: 'get_property', blueprintPath: BP_PATH, propertyName: 'CdoTags' }, expected: 'success', assertions: [{ path: 'structuredContent.result.value', length: 2, label: 'both elements are in the set' }] },
+  { scenario: 'ERROR: set_property refuses a set value that repeats an element', toolName: 'inspect', arguments: { action: 'set_property', blueprintPath: BP_PATH, propertyName: 'CdoTags', value: ['Red', 'Red'] }, expected: 'error|same value' },
+  // An array element goes through the importer every property uses, and a refused element leaves the array as it was.
+  { scenario: 'Setup: add an enum array variable with a default', toolName: 'manage_blueprint', arguments: { action: 'add_variable', blueprintPath: BP_PATH, variableName: 'CdoModes', variableType: 'Array<Enum:/Script/Engine.EMovementMode>', defaultValue: ['MOVE_Walking', 'MOVE_Flying'] }, expected: 'success' },
+  { scenario: 'VERIFY: the enum array default reads back by name', toolName: 'inspect', arguments: { action: 'get_property', blueprintPath: BP_PATH, propertyName: 'CdoModes' }, expected: 'success', assertions: [{ path: 'structuredContent.result.value.1', includes: 'Flying', label: 'an enum element is set by its name, not read as 0' }] },
+  { scenario: 'ERROR: set_property refuses an array element that does not fit', toolName: 'inspect', arguments: { action: 'set_property', blueprintPath: BP_PATH, propertyName: 'CdoModes', value: ['MOVE_Walking', 'NotAMode'] }, expected: 'error|element 1' },
+  { scenario: 'VERIFY: the refused array write left the array as it was', toolName: 'inspect', arguments: { action: 'get_property', blueprintPath: BP_PATH, propertyName: 'CdoModes' }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.value', length: 2, label: 'still the two elements of the default' },
+    { path: 'structuredContent.result.value.1', includes: 'Flying', label: 'the second element kept its value' },
+  ] },
+  { scenario: 'ERROR: set_property refuses text that is not a number for a float', toolName: 'inspect', arguments: { action: 'set_property', blueprintPath: BP_PATH, propertyName: 'InitialLifeSpan', value: 'soon' }, expected: 'error|requires a number' },
   { scenario: 'INFO: list_objects', toolName: 'inspect', arguments: { action: 'list_objects' }, expected: 'success' },
   { scenario: 'INFO: list_objects second page', toolName: 'inspect', arguments: { action: 'list_objects', limit: 5, offset: 5 }, expected: 'success', assertions: [{ path: 'structuredContent.result.offset', equals: 5, label: 'offset is honoured' }] },
   { scenario: 'INFO: get_metadata', toolName: 'inspect', arguments: inspectActor('get_metadata'), expected: 'success' },

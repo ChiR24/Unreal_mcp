@@ -20,12 +20,14 @@ TSharedPtr<FJsonValue> ExportMapToJsonValue(void* TargetContainer, FMapProperty*
     TSharedPtr<FJsonObject> MapObj = MakeShared<FJsonObject>();
     FScriptMapHelper Helper(MapProp, MapProp->ContainerPtrToValuePtr<void>(TargetContainer));
 
+    // The value property sits at the pair's value offset, which reading it as its own container adds again: from the
+    // value's own address every Map<Name, int> value read past it, as 0. The pair is the value's container.
     for (int32 i = 0; i < Helper.GetMaxIndex(); ++i)
     {
         if (!Helper.IsValidIndex(i)) continue;
         MapObj->SetField(
             MapKeyToString(MapProp->KeyProp, Helper.GetKeyPtr(i), i),
-            ExportElementToJsonValue(MapProp->ValueProp, Helper.GetValuePtr(i)));
+            ExportElementToJsonValue(MapProp->ValueProp, Helper.GetPairPtr(i)));
     }
 
     return MakeShared<FJsonValueObject>(MapObj);

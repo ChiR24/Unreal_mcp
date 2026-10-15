@@ -6736,7 +6736,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Trace the render triangles of meshes that allow it instead of their simple collision (default false: the shapes the game's movement collides with)."
         },
         "value": {
-          "description": "Property value to set (type depends on the target property)."
+          "description": "Property value to set, in the form get_property reads back: a number, string or bool, {\"X\": 0, \"Y\": 0, \"Z\": 100} for a vector, an object or asset path, an array for an Array or Set, and a JSON object of key: value for a Map ({\"Apple\": 3}), which replaces the whole map."
         },
         "watch": {
           "type": "object",
@@ -13028,7 +13028,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Launch speed along the facing, units per second (default 1500)."
         },
         "defaultValue": {
-          "description": "Default value for the variable or property."
+          "description": "Default value for the variable, in the form get_property reads back: a number, string or bool, {\"x\": 0, \"y\": 0, \"z\": 100} for a Vector, an array for an Array or Set, and a JSON object of key: value for a Map ({\"Apple\": 3}). A value its type cannot take is refused with DEFAULT_NOT_APPLIED and the variable is not added."
         },
         "delay": {
           "type": "number",
