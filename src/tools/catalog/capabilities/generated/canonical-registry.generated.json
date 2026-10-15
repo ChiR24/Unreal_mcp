@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "c557ebeff9382da8",
+  "catalogRevision": "6bc12b26066fd065",
   "recordCount": 416,
   "records": [
     {
@@ -16594,7 +16594,7 @@
                 "type": "string",
                 "description": "Button label."
               },
-              "description": "Menu button labels, top to bottom; each becomes <Label>Button."
+              "description": "Button labels, top to bottom: a menu's buttons, or a dialog's responses (at most 6, in place of responseCount); each becomes <Label>Button."
             },
             "settingsType": {
               "type": "string",
@@ -16638,7 +16638,11 @@
             },
             "responseCount": {
               "type": "number",
-              "description": "Response buttons under the dialog line (0-6, default 3)."
+              "description": "Placeholder response buttons under the dialog line when buttons names none (0-6, default 3)."
+            },
+            "text": {
+              "type": "string",
+              "description": "The dialog line (default a placeholder)."
             },
             "columns": {
               "type": "number",
@@ -16826,7 +16830,8 @@
             ],
             "buttons": [
               "main_menu",
-              "pause_menu"
+              "pause_menu",
+              "dialog"
             ],
             "settingsType": [
               "settings_menu"
@@ -16844,6 +16849,9 @@
               "dialog"
             ],
             "responseCount": [
+              "dialog"
+            ],
+            "text": [
               "dialog"
             ],
             "columns": [
@@ -16867,8 +16875,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "be3004b8e6e5b1eed58270b5f427da76875741c9118bc61cc6f89ffe26fa033c",
-        "content": "6e9e08acd91853427301c6bd1794d3c53412e61c809535386b241312aa75eb61"
+        "schema": "4c2be6bc9d03fbf85336f02ad17b437ffa74a3455cf7d27502e0453df4581a77",
+        "content": "b70f9b7f92e787f659080d5805156116150da8489f9d26bdfa763af78d58fa06"
       }
     },
     {

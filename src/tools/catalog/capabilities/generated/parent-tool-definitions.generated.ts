@@ -12917,7 +12917,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "string",
             "description": "Button label."
           },
-          "description": "Menu button labels, top to bottom; each becomes <Label>Button."
+          "description": "Button labels, top to bottom: a menu's buttons, or a dialog's responses (at most 6, in place of responseCount); each becomes <Label>Button."
         },
         "category": {
           "type": "string",
@@ -13860,7 +13860,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "responseCount": {
           "type": "number",
-          "description": "Response buttons under the dialog line (0-6, default 3)."
+          "description": "Placeholder response buttons under the dialog line when buttons names none (0-6, default 3)."
         },
         "restartDelay": {
           "type": "number",

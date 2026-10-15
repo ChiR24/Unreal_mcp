@@ -44,10 +44,18 @@ TSharedPtr<FJsonObject> CenterPanel(const TSharedPtr<FJsonObject>& Root, const F
     return Panel;
 }
 
+// buttons are the responses' labels, each a <Label>Button as a menu's are, and text is the line: a dialog's own choices
+// took one more call per button, which a caller asking for Yes and No did not know to make.
 TSharedPtr<FJsonObject> BuildDialog(const TSharedPtr<FJsonObject>& Payload, FString& OutError)
 {
-    int32 Responses = 0;
-    if (!ReadCount(Payload, TEXT("responseCount"), 3, 0, 6, Responses, OutError))
+    const TArray<FString> Labels = McpGetStringListField(Payload, TEXT("buttons"), TEXT("buttons"));
+    int32 Responses = Labels.Num();
+    if (Labels.Num() > 6)
+    {
+        OutError = TEXT("buttons holds at most 6 responses");
+        return nullptr;
+    }
+    if (Labels.Num() == 0 && !ReadCount(Payload, TEXT("responseCount"), 3, 0, 6, Responses, OutError))
     {
         return nullptr;
     }
@@ -62,12 +70,15 @@ TSharedPtr<FJsonObject> BuildDialog(const TSharedPtr<FJsonObject>& Payload, FStr
     {
         Speaker->SetStringField(TEXT("visibility"), TEXT("Collapsed"));
     }
-    TSharedPtr<FJsonObject> Line = SetSlot(AddText(Box, TEXT("DialogText"), TEXT("Dialog line goes here."), 20), TEXT(R"({"fill":1})"));
+    const FString LineText = GetJsonStringField(Payload, TEXT("text"), TEXT("Dialog line goes here."));
+    TSharedPtr<FJsonObject> Line = SetSlot(AddText(Box, TEXT("DialogText"), LineText, 20), TEXT(R"({"fill":1})"));
     Line->SetBoolField(TEXT("autoWrap"), true);
     TSharedPtr<FJsonObject> List = SetSlot(Append(Box, Node(TEXT("VerticalBox"), TEXT("ResponseList"))), TEXT(R"({"padding":[0,8,0,0]})"));
     for (int32 Index = 1; Index <= Responses; ++Index)
     {
-        Append(List, Button(FString::Printf(TEXT("Response%d"), Index), FString::Printf(TEXT("Response option %d"), Index), 18));
+        Append(List, Labels.IsValidIndex(Index - 1)
+            ? Button(NameStem(Labels[Index - 1]) + TEXT("Button"), Labels[Index - 1], 18)
+            : Button(FString::Printf(TEXT("Response%d"), Index), FString::Printf(TEXT("Response option %d"), Index), 18));
     }
     TSharedPtr<FJsonObject> Hint = SetSlot(AddText(Box, TEXT("ContinueHint"), TEXT("Press Space to continue"), 14), TEXT(R"({"hAlign":"right"})"));
     Numbers(Hint, TEXT("color"), { 0.7, 0.7, 0.7, 1.0 });

@@ -249,7 +249,7 @@ export const P = {
   maxVisibleObjectives: N('Rows the objective tracker shows (1-12, default 3); longer items lists are cut to this.'),
   mapSize: N('Minimap width and height in pixels (default 220).'),
   fadeTime: N('Seconds of the fade: the damage flash (default 0.6) or the loading screen FadeIn animation (0 makes none).'),
-  buttons: { type: 'array', items: S('Button label.'), description: 'Menu button labels, top to bottom; each becomes <Label>Button.' },
+  buttons: { type: 'array', items: S('Button label.'), description: 'Button labels, top to bottom: a menu\'s buttons, or a dialog\'s responses (at most 6, in place of responseCount); each becomes <Label>Button.' },
   settingsType: { type: 'string', enum: ['all', 'graphics', 'audio', 'controls'], description: 'Which settings sections the menu holds (default all).' },
   includeProgressBar: B('Whether the loading screen has a progress bar (default true).'),
   elements: {
@@ -258,7 +258,7 @@ export const P = {
     description: 'HUD pieces the new HUD starts with (default health_bar, crosshair, ammo_counter; [] for an empty canvas).',
   },
   showSpeakerName: B('Whether the dialog shows the speaker name line (default true).'),
-  responseCount: N('Response buttons under the dialog line (0-6, default 3).'),
+  responseCount: N('Placeholder response buttons under the dialog line when buttons names none (0-6, default 3).'),
   columns: N('Grid columns: inventory 1-12 (default 6), shop 1-8 (default 4).'),
   rows: N('Inventory grid rows (1-12, default 4).'),
   segmentCount: N('Radial menu segments (2-12, default 8).'),

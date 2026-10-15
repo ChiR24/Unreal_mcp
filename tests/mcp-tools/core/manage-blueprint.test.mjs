@@ -716,6 +716,7 @@ const testCases = [
     arguments: { action, name: `WBP_Tpl${stem}_${ts}`, path: TEST_FOLDER, ...extra },
     expected: 'success',
   }));
+  screenCases.push({ scenario: 'SCREEN: create_dialog_widget with its own line and choices', toolName: 'manage_blueprint', arguments: { action: 'create_dialog_widget', name: `WBP_TplChoice_${ts}`, path: TEST_FOLDER, text: 'Open the gate?', buttons: ['Yes', 'No'] }, expected: 'success', assertions: [{ path: 'structuredContent.result.buttons.0', equals: 'YesButton', label: 'each response is named after its label' }, { path: 'structuredContent.result.buttons', length: 2, label: 'one button per label' }] });
 
   testCases.push(
     // === SETUP ===
