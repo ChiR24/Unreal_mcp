@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "e3b5ed3e1bc22e73",
+  "catalogRevision": "90b401bfddba4cdb",
   "recordCount": 416,
   "records": [
     {
@@ -59101,7 +59101,7 @@
         "summary": "Create a combat asset: weapon Blueprint, projectile Blueprint (it damages what it hits), or damage type.",
         "whenToUse": [
           "kind=weapon_blueprint: A new weapon actor must be authored.",
-          "kind=projectile_blueprint: A projectile actor must be authored: it stops on what it meets, applies damage to it (ApplyDamage, so health logic on that actor takes it) and never hits the actor that fired it.",
+          "kind=projectile_blueprint: A projectile actor must be authored: it stops on what it meets, applies damage to it (ApplyDamage, so health logic on that actor takes it) and never hits the actor that fired it; one that meets nothing is gone 5 seconds after it is fired (configure_projectile setting movement, projectileLifespan, changes that).",
           "kind=damage_type: A custom damage classification is needed.",
           "kind=damage_type_setup: A damage class is needed by name and folder."
         ],
@@ -59316,7 +59316,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "6d31765e70ebd02b35e50ab9fcbc565adab795274dd71c275626195b271d3153",
-        "content": "ed76ef0df549301529f1036196f5999a2c46e651791ec8f9d9720caacf094a45"
+        "content": "311a29851db4f37ec6b2bf30b15ebd6fba2d65d31336d5567ec532cb5ae4fb0f"
       }
     },
     {

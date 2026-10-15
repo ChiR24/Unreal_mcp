@@ -66,6 +66,12 @@ bool FCombatActionContext::HandleProjectileActions() const
         }
 
         McpSafeCompileBlueprint(Blueprint);
+        // A shot that meets nothing is gone after 5 s, configure_projectile_movement's default lifespan; it flew on
+        // forever before, so a turret or a held fire key piled up every miss.
+        if (AActor* ProjectileCdo = Cast<AActor>(Blueprint->GeneratedClass ? Blueprint->GeneratedClass->GetDefaultObject() : nullptr))
+        {
+            ProjectileCdo->InitialLifeSpan = 5.0f;
+        }
         if (!McpSafeAssetSave(Blueprint))
         {
             SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("%s was changed in the editor but could not be saved to disk."), *Blueprint->GetPathName()), TEXT("SAVE_FAILED"));
