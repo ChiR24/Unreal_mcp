@@ -206,7 +206,7 @@ export const BEHAVIOURS_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'add_patrol',
     family: FAMILY,
     domain: DOMAIN,
-    topics: ['patrol', 'enemy patrol', 'patrol between points', 'guard patrol', 'patrol route', 'walk back and forth', 'patrol and chase the player', 'waypoints', 'walk between waypoints'],
+    topics: ['patrol', 'enemy patrol', 'patrol between points', 'guard patrol', 'patrol route', 'walk back and forth', 'patrol and chase the player', 'waypoints', 'walk between waypoints', 'enemy follows a path', 'guard an area', 'npc walks around'],
     summary: 'Make a pawn patrol: its AI controller walks it to each of points in turn (offsets from where it starts), it waits waitTime at each and the route loops; with chaseRange it chases the player who comes that close and goes back to its route after. A chase the pawn already has is taken over. The pawn is set to be possessed by an AI controller when placed or spawned.',
     whenToUse: ['An enemy or guard must walk a route, and may chase the player who comes close.'],
     whenNotToUse: ['Senses, cover or decisions beyond walking a route and chasing (use manage_ai with a Behavior Tree or State Tree).'],

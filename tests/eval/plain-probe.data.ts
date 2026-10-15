@@ -582,4 +582,10 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'stomp on enemies', accepted: ['blueprint.add_behaviour'] },
   { query: 'enemy dies when the player jumps on it', accepted: ['blueprint.add_behaviour'] },
   { query: 'hurt the player on contact', accepted: ['blueprint.add_behaviour'] },
+  { query: 'background music', accepted: ['manage_audio.play_sound'] },
+  { query: 'enemy follows a path', accepted: ['blueprint.add_behaviour'] },
+  { query: 'enemy guards an area', accepted: ['blueprint.add_behaviour'] },
+  { query: 'push a box', accepted: ['animation_physics.setup_physics_simulation', 'control_actor.edit_component'] },
+  { query: 'restart button', accepted: ['blueprint.add_content_widget', 'blueprint.create_widget_template'] },
+  { query: 'quit button', accepted: ['blueprint.add_content_widget', 'blueprint.create_widget_template'] },
 ];

@@ -84,7 +84,7 @@ export const MANAGE_BLUEPRINT_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'add_content_widget', selector: 'widgetKind',
     summary: 'Add a content widget to a Widget Blueprint: text, rich text, image, button, check box, combo box, slider, spin box, progress bar, text input, list/tree view, or any widget class.',
-    topics: ['text block', 'button', 'image', 'progress bar', 'slider', 'check box', 'combo box', 'umg widget', 'checkbox', 'dropdown', 'icon'],
+    topics: ['text block', 'button', 'restart button', 'quit button', 'image', 'progress bar', 'slider', 'check box', 'combo box', 'umg widget', 'checkbox', 'dropdown', 'icon'],
     members: {
       ...byTarget('add_', ['add_text_block', 'add_rich_text_block', 'add_image', 'add_button', 'add_check_box', 'add_combo_box', 'add_slider',
         'add_spin_box', 'add_progress_bar', 'add_text_input', 'add_list_view', 'add_tree_view']),
