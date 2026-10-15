@@ -241,7 +241,7 @@ bool HandleRendererAction(FActionContext& Context, const FString& SubAction);
 bool HandleParameterAction(FActionContext& Context, const FString& SubAction);
 // set_parameter_value: one parameter, or every entry of a parameters list. In ...HandlersParameterValues.cpp.
 bool SetParameterValue(FActionContext& Context);
-// In ...HandlersInputOwner.cpp. The emitter a module input or static switch ParamName is written in when the caller
+// In McpNiagaraInputOwner.cpp. The emitter a module input or static switch ParamName is written in when the caller
 // names none: the one emitter it matches in (a full "Constants.<Emitter>.<Module>.<Input>" names its own), or empty
 // for the system stage or no match at all. Only a name that matches in more than one place needs emitterName: then
 // false, with OutError a short "needs emitterName: one of [...]" (one parameters-list entry's reason).

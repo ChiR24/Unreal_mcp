@@ -1,4 +1,4 @@
-#include "Domains/NiagaraAuthoring/McpAutomationBridge_NiagaraAuthoringHandlersContext.h"
+#include "Domains/NiagaraAuthoring/McpNiagaraContext.h"
 
 namespace McpNiagaraAuthoringHandlers
 {

@@ -13,12 +13,12 @@ import { describe, expect, it } from 'vitest';
 
 import { sliceBetween } from './plugin-contract-fixtures.js';
 
-const DIR = join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private', 'Domains', 'NiagaraAuthoring');
+const DIR = join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'Domains', 'NiagaraAuthoring');
 const code = (file: string): string =>
   readFileSync(join(DIR, file), 'utf8').replace(/\/\*[\s\S]*?\*\//gu, ' ').replace(/\/\/[^\n]*/gu, ' ');
-const context = (): string => code('McpAutomationBridge_NiagaraAuthoringHandlersContext.cpp');
-const values = (): string => code('McpAutomationBridge_NiagaraAuthoringHandlersParameterValues.cpp');
-const owner = (): string => code('McpAutomationBridge_NiagaraAuthoringHandlersInputOwner.cpp');
+const context = (): string => code('McpNiagaraContext.cpp');
+const values = (): string => code('McpNiagaraParamValues.cpp');
+const owner = (): string => code('McpNiagaraInputOwner.cpp');
 const resolver = (): string => sliceBetween(context(), 'FNiagaraEmitterHandle* FindTargetEmitter(', 'FNiagaraEmitterHandle* ResolveEmitterHandle(');
 
 describe('Niagara emitter resolution', () => {
