@@ -101,10 +101,10 @@ bool PlanPatrol(const TSharedPtr<FJsonObject> &Payload, const UBlueprint *Bluepr
   return true;
 }
 
-bool PlanTurret(const TSharedPtr<FJsonObject> &Payload, FBehaviourPlan &Plan, FString &OutError) {
+bool PlanTurret(const TSharedPtr<FJsonObject> &Payload, const UBlueprint *Blueprint, FBehaviourPlan &Plan, FString &OutError) {
   const double Range = GetJsonNumberField(Payload, TEXT("range"), 2000.0);
   OutError = Range > 0.0 ? FString() : FString(TEXT("range must be above 0"));
-  if (!OutError.IsEmpty() || !ReadProjectile(Payload, 60.0, Plan, OutError)) {
+  if (!OutError.IsEmpty() || !ReadProjectile(Payload, Blueprint, 60.0, Plan, OutError)) {
     return false;
   }
   Plan.Recipe = TEXT("Turret");

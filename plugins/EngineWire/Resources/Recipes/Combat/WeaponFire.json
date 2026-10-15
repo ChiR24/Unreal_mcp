@@ -2,7 +2,7 @@
   "description": "Gives a weapon Fire(): it spawns ProjectileClass at the WeaponMesh's Muzzle socket (the mesh's own position when it has none), facing the same way, owned by the weapon and instigated by the pawn holding it, and launches it forward at ProjectileSpeed; calls closer together than 60 / FireRate seconds do nothing. Call Fire from the holder's input or AI.",
   "tag": "WeaponFire",
   "placeholders": {
-    "ProjectileType": "Class:<projectile class path>, the type of ProjectileClass.",
+    "ProjectileType": "The ProjectileClass variable's type, Class: followed by a class path (any actor, or the narrower class the variable already holds).",
     "ProjectileClass": "The projectile Blueprint's generated class path.",
     "ProjectileSpeed": "Launch speed in units per second."
   },

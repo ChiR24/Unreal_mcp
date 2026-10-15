@@ -1,10 +1,24 @@
-// A recipe's dispatcher that already exists on the Blueprint: its signature against the declaration.
+// A recipe's members that already exist on the Blueprint: a dispatcher's signature against the declaration, and the
+// class a class variable keeps.
 #include "Domains/BlueprintGraph/Behaviour/McpBPBehaviour.h"
 
 #include "EdGraphSchema_K2.h"
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsBlueprintGraph.h"
 #include "K2Node_FunctionEntry.h"
+#include "Kismet2/BlueprintEditorUtils.h"
+
+namespace McpBlueprintBehaviour
+{
+FString ClassVariableType(const UBlueprint* Blueprint, const TCHAR* Name, const UClass* Value, const UClass* Base)
+{
+    const int32 Index = FBlueprintEditorUtils::FindNewVariableIndex(Blueprint, FName(Name));
+    const FEdGraphPinType* Type = Index != INDEX_NONE ? &Blueprint->NewVariables[Index].VarType : nullptr;
+    const UClass* Held = Type && Type->PinCategory == UEdGraphSchema_K2::PC_Class
+                             ? Cast<UClass>(Type->PinSubCategoryObject.Get()) : nullptr;
+    return TEXT("Class:") + (Held && Value->IsChildOf(Held) ? Held : Base)->GetPathName();
+}
+}
 
 namespace McpBlueprintBehaviour::Detail
 {

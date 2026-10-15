@@ -2,7 +2,7 @@
   "description": "A turret: every frame, while the player's pawn is within TurretRange, the actor turns about its vertical axis to face the player (its placed pitch and roll stay), and at most FireRate times a minute it spawns ProjectileClass MuzzleOffset units out from the centre of its colliding parts (its pivot when it has none, since a pivot at the base would fire into the ground) along the line to the player, owned by the actor (a projectile made by create_combat_asset never hits its owner), and launches it at the player at ProjectileSpeed. Nothing checks line of sight: a wall between them stops the shots.",
   "tag": "Turret",
   "placeholders": {
-    "ProjectileType": "Class:<projectile class path>, the type of ProjectileClass.",
+    "ProjectileType": "The ProjectileClass variable's type, Class: followed by a class path (any actor, or the narrower class the variable already holds).",
     "ProjectileClass": "The projectile Blueprint's generated class path.",
     "ProjectileSpeed": "Launch speed in units per second.",
     "FireRate": "Most shots a minute.",

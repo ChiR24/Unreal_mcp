@@ -47,7 +47,8 @@ bool FCombatActionContext::HandleWeaponFiring() const
         // Fire(): spawns the projectile at the WeaponMesh's Muzzle socket and launches it (recipe Combat/WeaponFire).
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         TMap<FString, TSharedPtr<FJsonValue>> Values;
-        Values.Add(TEXT("ProjectileType"), MakeShared<FJsonValueString>(TEXT("Class:") + Fired->GetPathName()));
+        Values.Add(TEXT("ProjectileType"), MakeShared<FJsonValueString>(McpBlueprintBehaviour::ClassVariableType(
+                                               Blueprint, TEXT("ProjectileClass"), Fired, AActor::StaticClass())));
         Values.Add(TEXT("ProjectileClass"), MakeShared<FJsonValueString>(Fired->GetPathName()));
         Values.Add(TEXT("ProjectileSpeed"), MakeShared<FJsonValueNumber>(ProjectileSpeed));
         if (!McpBlueprintBehaviour::AuthorRecipeFile(Bridge, RequestId, RequestingSocket, Blueprint, TEXT("Combat"),

@@ -2,6 +2,7 @@
 
 // The add_behaviour plans: which recipe each behaviour writes, its placeholder values, and the checks a call must pass
 // before anything is authored (McpBPAddBehaviour.cpp runs the plan).
+#include "Domains/BlueprintGraph/Behaviour/McpBPBehaviour.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
 #include "Foundation/BridgeHelpers/Reflection/McpClassResolve.h"
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
@@ -63,7 +64,7 @@ bool PlanShoot(const TSharedPtr<FJsonObject> &Payload, const UBlueprint *Bluepri
   const UClass *Parent = Blueprint->GeneratedClass ? Blueprint->GeneratedClass.Get() : Blueprint->ParentClass.Get();
   OutError = !Parent || !Parent->IsChildOf(APawn::StaticClass()) ? FString(TEXT("Shooting needs a Pawn or Character Blueprint"))
                                                                  : FString();
-  if (!OutError.IsEmpty() || !ReadProjectile(Payload, 300.0, Plan, OutError)) {
+  if (!OutError.IsEmpty() || !ReadProjectile(Payload, Blueprint, 300.0, Plan, OutError)) {
     return false;
   }
   Plan.Domain = TEXT("Character");
@@ -141,7 +142,8 @@ bool PlanSpawner(const TSharedPtr<FJsonObject> &Payload, const UBlueprint *Bluep
     return false;
   }
   Plan.Recipe = TEXT("Spawner");
-  SetString(Plan, TEXT("SpawnType"), TEXT("Class:") + Spawned->GetPathName());
+  SetString(Plan, TEXT("SpawnType"),
+            McpBlueprintBehaviour::ClassVariableType(Blueprint, TEXT("SpawnClass"), Spawned, AActor::StaticClass()));
   SetString(Plan, TEXT("SpawnClass"), Spawned->GetPathName());
   SetNumber(Plan, TEXT("Interval"), Interval);
   SetNumber(Plan, TEXT("MaxAlive"), FMath::FloorToDouble(MaxAlive));
@@ -211,7 +213,7 @@ bool PlanBehaviour(const FString &Action, const TSharedPtr<FJsonObject> &Payload
   } else if (Action == TEXT("add_patrol")) {
     return PlanPatrol(Payload, Blueprint, Plan, OutError);
   } else if (Action == TEXT("add_turret")) {
-    return PlanTurret(Payload, Plan, OutError);
+    return PlanTurret(Payload, Blueprint, Plan, OutError);
   } else if (Action == TEXT("add_launch_pad")) {
     return PlanLaunchPad(Payload, Plan, OutError);
   } else if (Action == TEXT("add_teleporter")) {
@@ -238,7 +240,8 @@ bool PlanBehaviour(const FString &Action, const TSharedPtr<FJsonObject> &Payload
   return OutError.IsEmpty();
 }
 
-bool ReadProjectile(const TSharedPtr<FJsonObject> &Payload, double DefaultRate, FBehaviourPlan &Plan, FString &OutError) {
+bool ReadProjectile(const TSharedPtr<FJsonObject> &Payload, const UBlueprint *Blueprint, double DefaultRate,
+                    FBehaviourPlan &Plan, FString &OutError) {
   const FString ClassText = GetJsonStringField(Payload, TEXT("projectileClass")).TrimStartAndEnd();
   UClass *Fired = ResolveClassByName(ClassText);
   const double Speed = GetJsonNumberField(Payload, TEXT("projectileSpeed"), 3000.0);
@@ -250,7 +253,8 @@ bool ReadProjectile(const TSharedPtr<FJsonObject> &Payload, double DefaultRate, 
   if (!OutError.IsEmpty()) {
     return false;
   }
-  SetString(Plan, TEXT("ProjectileType"), TEXT("Class:") + Fired->GetPathName());
+  SetString(Plan, TEXT("ProjectileType"),
+            McpBlueprintBehaviour::ClassVariableType(Blueprint, TEXT("ProjectileClass"), Fired, AActor::StaticClass()));
   SetString(Plan, TEXT("ProjectileClass"), Fired->GetPathName());
   SetNumber(Plan, TEXT("ProjectileSpeed"), Speed);
   SetNumber(Plan, TEXT("FireRate"), Rate);
