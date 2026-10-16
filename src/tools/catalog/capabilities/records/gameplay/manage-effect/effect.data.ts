@@ -253,7 +253,7 @@ export const EFFECT_RECORDS: readonly CapabilityRecordSource[] = [
     whenToUse: ['A user parameter or a module input value must change.', 'Several values of one system or emitter must change together (parameters): one call, one save.',
       'A module input changes nothing because a static switch gates it (a Ribbon Width written while InitializeParticle.Ribbon Width Mode is Unset): set the switch; get_niagara_info lists every staticSwitches value.'],
     whenNotToUse: ['The user parameter does not exist yet (use add_user_parameter).'],
-    inputProps: { systemPath: E.systemPath, assetPath: P.assetPath, emitterName: { type: 'string', description: 'Limit a module-input or static-switch match to this emitter (user parameters are system-wide).' }, parameterName: E.parameterName, parameterValue: E.parameterValue, parameters: PARAMETER_LIST, save: SAVE }, required: [], requiredOneOf: ['parameterName', 'parameters'],
+    inputProps: { systemPath: E.systemPath, assetPath: P.assetPath, emitterName: { type: 'string', description: 'The emitter whose module input or static switch is set. Needed only when the name matches in more than one emitter (the refusal lists them); an input or switch that only one emitter has, a system-stage one, or a full Constants.<Emitter>.<Module>.<Input> name needs none. A name given must be one of the emitters of the system. User parameters are system-wide.' }, parameterName: E.parameterName, parameterValue: E.parameterValue, parameters: PARAMETER_LIST, save: SAVE }, required: [], requiredOneOf: ['parameterName', 'parameters'],
     effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'interactive', resources: 'low', plugins: NIAGARA,
     outputProps: {
       parameterName: E.parameterName,

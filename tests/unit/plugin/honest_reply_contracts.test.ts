@@ -476,7 +476,7 @@ describe('handlers answer what they did', () => {
     const single = between('bool SetParameterValue(FActionContext& Context)');
 
     expect(writer, 'one value written: no reply, no compile request, no save').not.toMatch(/SendError|SendSuccess|MarkDirtyAndVerify|RequestCompile/u);
-    expect(list).toContain('Write = WriteParameter(Context, System, Name, Entry);');
+    expect(list).toContain('Write = WriteParameter(System, Emitter, Name, Entry);');
     expect(list.split('MarkDirtyAndVerify(Context, System);'), 'one save for the whole list').toHaveLength(2);
     expect(list.split('System->RequestCompile(false);'), 'and one compile request').toHaveLength(2);
     expect(list).toMatch(/if \(Applied > 0\)\s*\{\s*MarkDirtyAndVerify\(Context, System\);\s*\}/u);
@@ -511,7 +511,7 @@ describe('handlers answer what they did', () => {
     const values = code('NiagaraAuthoring', 'McpNiagaraParamValues.cpp');
     const graph = code('NiagaraAuthoring', 'McpNiagaraStackGraph.cpp');
 
-    expect(values).toContain('SetModuleStaticSwitch(System, Context.EmitterName, ParamName, Entry->TryGetField(TEXT("parameterValue")), SwitchError)');
+    expect(values).toContain('SetModuleStaticSwitch(System, EmitterName, ParamName, Entry->TryGetField(TEXT("parameterValue")), SwitchError)');
     expect(code('NiagaraAuthoring', 'McpNiagaraContext.h')).toContain('Pin->Direction == EGPD_Input && Pin->bNotConnectable && !Pin->bOrphanedPin');
     expect(graph).toMatch(/Pin->DefaultValue = Default;\s*Node->MarkNodeRequiresSynchronization\([^;]*, true\);/u);
     expect(graph, 'an enum pin holds the entry name the type editor writes').toContain('Enum->GetNameStringByValue(EntryValue)');
