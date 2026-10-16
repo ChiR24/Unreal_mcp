@@ -40,7 +40,8 @@ export const SYSTEM_CONTROL_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'enable_plugin', selector: 'pluginState',
-    summary: 'Enable or disable a plugin.',
+    summary: 'Enable or disable a plugin, or limit it to some build targets: targets ["Editor"] keeps an editor-only plugin out of the packaged game.',
+    topics: ['editor only plugin', 'plugin out of packaged game', 'plugin build targets'],
     members: { enable: 'enable_plugin', disable: 'disable_plugin' },
   },
   {

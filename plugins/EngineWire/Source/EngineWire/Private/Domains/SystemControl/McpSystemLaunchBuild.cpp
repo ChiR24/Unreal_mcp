@@ -77,6 +77,25 @@ bool HandleLaunchBuild(UEngineWireSubsystem* Self, const FString& RequestId,
                        const TSharedPtr<FJsonObject>& Payload, FSystemControlSocket RequestingSocket)
 {
 #if PLATFORM_WINDOWS
+	// map: the level to open in place of the game's default map, so each level can have its own smoke run. Letters,
+	// digits, '_' and '/' only: the value goes on the game's command line.
+	FString Map;
+	Payload->TryGetStringField(TEXT("map"), Map);
+	Map.TrimStartAndEndInline();
+	bool bMapIsName = !Map.Contains(TEXT("//")) && !Map.EndsWith(TEXT("/"));
+	for (const TCHAR C : Map)
+	{
+		bMapIsName &= (C >= TCHAR('a') && C <= TCHAR('z')) || (C >= TCHAR('A') && C <= TCHAR('Z'))
+			|| (C >= TCHAR('0') && C <= TCHAR('9')) || C == TCHAR('_') || C == TCHAR('/');
+	}
+	if (!Map.IsEmpty() && !bMapIsName)
+	{
+		Self->SendAutomationError(RequestingSocket, RequestId, FString::Printf(
+			TEXT("map '%s' is not a level path or name (/Game/Maps/L_Main or L_Main). Nothing was started."), *Map),
+			TEXT("INVALID_ARGUMENT"));
+		return true;
+	}
+
 	FString ArchiveDir;
 	Payload->TryGetStringField(TEXT("archiveDirectory"), ArchiveDir);
 	ArchiveDir.TrimStartAndEndInline();
@@ -114,7 +133,9 @@ bool HandleLaunchBuild(UEngineWireSubsystem* Self, const FString& RequestId,
 	// Offscreen by default: no window appears and nobody's focus is taken.
 	// No -FORCELOGFLUSH: a flush per line slowed startup several-fold, and an idle
 	// title screen simply logs nothing more, which is not a truncated log.
-	const FString Args = FString::Printf(TEXT("%s -unattended -nosplash -abslog=\"%s\""),
+	// A level on a game's command line comes first, before any switch.
+	const FString MapArg = Map.IsEmpty() ? FString() : Map + TEXT(" ");
+	const FString Args = FString::Printf(TEXT("%s%s -unattended -nosplash -abslog=\"%s\""), *MapArg,
 		bWindowed ? TEXT("-windowed -ResX=1280 -ResY=720") : TEXT("-RenderOffscreen"), *GameLog);
 
 	McpPackageJobs::FJob Job;
@@ -125,6 +146,7 @@ bool HandleLaunchBuild(UEngineWireSubsystem* Self, const FString& RequestId,
 	// <Name>-Win64-<Configuration>.exe for DebugGame, Test and Shipping; a Development build carries no suffix.
 	Job.Configuration = TEXT("Development");
 	FPaths::GetBaseFilename(Exe).Split(TEXT("-Win64-"), nullptr, &Job.Configuration);
+	Job.Map = Map;
 	Job.GameLogPath = GameLog;
 	Job.RunSeconds = Seconds;
 	Job.StartedAtSeconds = FPlatformTime::Seconds();
@@ -146,6 +168,7 @@ bool HandleLaunchBuild(UEngineWireSubsystem* Self, const FString& RequestId,
 	Result->SetStringField(TEXT("status"), TEXT("running"));
 	Result->SetStringField(TEXT("executable"), Exe);
 	Result->SetStringField(TEXT("gameLogPath"), GameLog);
+	if (!Map.IsEmpty()) { Result->SetStringField(TEXT("map"), Map); }
 	Result->SetNumberField(TEXT("seconds"), Seconds);
 	Self->SendAutomationResponse(RequestingSocket, RequestId, true,
 		FString::Printf(TEXT("Packaged game started for a %.0f s smoke run; poll package_status with this jobId."), Seconds),
@@ -161,6 +184,7 @@ bool HandleLaunchBuild(UEngineWireSubsystem* Self, const FString& RequestId,
 void AppendLaunchStatus(const McpPackageJobs::FJob& Job, const TSharedPtr<FJsonObject>& Result)
 {
 	Result->SetStringField(TEXT("gameLogPath"), Job.GameLogPath);
+	if (!Job.Map.IsEmpty()) { Result->SetStringField(TEXT("map"), Job.Map); }
 	if (Job.Result == TEXT("ExitedEarly")) { Result->SetNumberField(TEXT("exitCode"), Job.ExitCode); }
 	// The game may still hold its log open for writing.
 	FString Text;
@@ -195,6 +219,18 @@ void AppendLaunchStatus(const McpPackageJobs::FJob& Job, const TSharedPtr<FJsonO
 		}
 	}
 	Result->SetArrayField(TEXT("mapsLoaded"), Maps);
+	// A level that is not in the game (or not cooked) leaves the game on its default map, still running: the run
+	// "succeeds" without ever having opened what it was asked to.
+	if (!Job.Map.IsEmpty() && !Job.Result.IsEmpty() && !Maps.ContainsByPredicate([&Job](const TSharedPtr<FJsonValue>& Loaded)
+		{
+			const FString Path = Loaded->AsString();
+			return Path.Equals(Job.Map, ESearchCase::IgnoreCase) || Path.EndsWith(TEXT("/") + Job.Map, ESearchCase::IgnoreCase);
+		}))
+	{
+		Result->SetArrayField(TEXT("warnings"), TArray<TSharedPtr<FJsonValue>>{MakeShared<FJsonValueString>(FString::Printf(
+			TEXT("The game never logged loading %s, so this run did not test it: check the name, and that the level "
+			     "is in the packaged maps (package_project maps)."), *Job.Map))});
+	}
 	TArray<TSharedPtr<FJsonValue>> Tail;
 	for (int32 Index = FMath::Max(0, Lines.Num() - 30); Index < Lines.Num(); ++Index)
 	{

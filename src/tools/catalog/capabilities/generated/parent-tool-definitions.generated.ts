@@ -24084,6 +24084,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Additional LOD bias."
         },
+        "map": {
+          "type": "string",
+          "description": "Level to open in place of the game's default map: a path (/Game/Maps/L_Main) or a name (L_Main). It must be one of the packaged maps; package_status warns when the game never loaded it."
+        },
         "maps": {
           "type": "array",
           "items": {
@@ -24390,6 +24394,20 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "target": {
           "type": "string",
           "description": "UBT target name (required)."
+        },
+        "targets": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "Editor",
+              "Game",
+              "Client",
+              "Server",
+              "Program"
+            ]
+          },
+          "description": "Build targets the plugin is enabled for, every other build leaving it out: [\"Editor\"] keeps it in the editor and out of a packaged game. An empty list lifts the limit."
         },
         "text": {
           "type": "string",
@@ -24721,6 +24739,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "launch_build only: the last 30 lines of the game log, when it wrote one."
         },
+        "map": {
+          "type": "string",
+          "description": "The level the game was asked to open, when map was given."
+        },
         "mapsLoaded": {
           "type": "array",
           "items": {
@@ -24872,7 +24894,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             },
             {
               "type": "boolean",
-              "description": "True whenever the project file changed; modules and content mount only at startup."
+              "description": "True when this editor loads or drops the plugin only at its next start; a packaged game takes the project file as it is when it builds."
             }
           ],
           "description": "Changed settings that take effect only after the editor restarts (control_editor restart_editor)."
@@ -24980,6 +25002,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "targetFile": {
           "type": "string",
           "description": "With executableName: the target file of that name."
+        },
+        "targets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The build targets the plugin is now limited to; absent when it is enabled for every target."
         },
         "tests": {
           "type": "array",

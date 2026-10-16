@@ -102,6 +102,8 @@ const testCases = [
   { scenario: 'ERROR: package_project refuses an executableName that is not a name', toolName: 'system_control', arguments: { action: 'package_project', platform: 'Win64', configuration: 'Shipping', executableName: 'my game!' }, expected: 'error|INVALID_ARGUMENT' },
   { scenario: 'READ: package_status', toolName: 'system_control', arguments: { action: 'package_status', jobId: '00000000-0000-0000-0000-000000000000' }, expected: 'error|JOB_NOT_FOUND' },
   { scenario: 'ACTION: launch_build refuses a build outside the project', toolName: 'system_control', arguments: { action: 'launch_build', archiveDirectory: 'C:/Windows', seconds: 5, windowed: false }, expected: 'error|INVALID_ARGUMENT' },
+  // map goes on the game's command line, so anything but a level path or name is refused before a build is looked up.
+  { scenario: 'ERROR: launch_build refuses a map that is not a level name', toolName: 'system_control', arguments: { action: 'launch_build', map: 'L_Main -ExecCmds=quit' }, expected: 'error|INVALID_ARGUMENT' },
   { scenario: 'ACTION: subscribe', toolName: 'system_control', arguments: { action: 'subscribe' }, expected: 'success' },
   { scenario: 'ACTION: unsubscribe', toolName: 'system_control', arguments: { action: 'unsubscribe' }, expected: 'success' },
   { scenario: 'READ: read_log newest lines', toolName: 'system_control', arguments: { action: 'read_log', lines: 20 }, expected: 'success' },

@@ -17996,6 +17996,7 @@
         "limit",
         "lines",
         "lodBias",
+        "map",
         "maps",
         "materialUsage",
         "maxFPS",
@@ -18051,6 +18052,7 @@
         "streamingDistance",
         "subfolder",
         "target",
+        "targets",
         "text",
         "timeoutSeconds",
         "traceFile",
@@ -18328,6 +18330,10 @@
           "lodBias": {
             "type": "number",
             "description": "Additional LOD bias."
+          },
+          "map": {
+            "type": "string",
+            "description": "Level to open in place of the game's default map: a path (/Game/Maps/L_Main) or a name (L_Main). It must be one of the packaged maps; package_status warns when the game never loaded it."
           },
           "maps": {
             "type": "array",
@@ -18635,6 +18641,20 @@
           "target": {
             "type": "string",
             "description": "UBT target name (required)."
+          },
+          "targets": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "Editor",
+                "Game",
+                "Client",
+                "Server",
+                "Program"
+              ]
+            },
+            "description": "Build targets the plugin is enabled for, every other build leaving it out: [\"Editor\"] keeps it in the editor and out of a packaged game. An empty list lifts the limit."
           },
           "text": {
             "type": "string",

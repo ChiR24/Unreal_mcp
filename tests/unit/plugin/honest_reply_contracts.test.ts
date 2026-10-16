@@ -3162,3 +3162,28 @@ describe('an asset delete says nothing of its own routine', () => {
     expect(safety).toMatch(/UE_LOG\(LogMcpSafeOperations, Warning,\s*TEXT\("McpRemoveLeftoverPackageFile: '%s' is still loaded/u);
   });
 });
+
+describe('a plugin can be kept to the editor, and a smoke run can open a given level', () => {
+  // enable_plugin could only switch a plugin on or off, so an editor tool and every plugin it brought in went into the
+  // packaged game; the engine's SetPluginEnabled also drops a reference that matches the plugin's default state,
+  // whatever targets it lists, so the reference is written here.
+  it('writes the reference with its targets, reads it back, then reloads the project', () => {
+    const plugins = code('SystemControl', 'McpSystemPlugins.cpp');
+    expect(plugins).toContain('Ref->TargetAllowList = Targets;');
+    expect(plugins, 'a file that does not load back never reaches LoadProjectFile').toContain('!Written.Load(ProjectFile, FailReason)');
+    expect(plugins).toContain('IProjectManager::Get().LoadProjectFile(ProjectFile);');
+    expect(plugins, 'a plugin on only through another plugin gets its own reference')
+      .toContain('!Plugin->IsEnabledByDefault(true) && !McpProjectEnablesPlugin(PluginName)');
+    expect(plugins, 'a plugin left out of the game whose folder is always cooked fails the next package: say so')
+      .toContain('!Targets.Contains(EBuildTargetType::Game) && McpAlwaysCooksContentOf(Plugin)');
+  });
+
+  it('checks the level before any build is looked up and warns when the game never loaded it', () => {
+    const launch = code('SystemControl', 'McpSystemLaunchBuild.cpp');
+    const check = launch.indexOf('if (!Map.IsEmpty() && !bMapIsName)');
+    expect(check).toBeGreaterThan(-1);
+    expect(check, 'before any build is looked up').toBeLessThan(launch.indexOf('FindGameExecutable(ArchiveDir)'));
+    expect(launch).toContain('const FString MapArg = Map.IsEmpty() ? FString() : Map + TEXT(" ");');
+    expect(launch).toContain('The game never logged loading %s');
+  });
+});

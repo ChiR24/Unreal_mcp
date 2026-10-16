@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "bca71049e32d86d1",
+  "catalogRevision": "5b214207f2d5b4d5",
   "recordCount": 416,
   "records": [
     {
@@ -95792,11 +95792,15 @@
         "domain": "project",
         "family": "plugin",
         "topics": [
-          "enable_plugin"
+          "enable_plugin",
+          "editor only plugin",
+          "plugin out of packaged game",
+          "plugin build targets"
         ],
-        "summary": "Enable or disable a plugin.",
+        "summary": "Enable or disable a plugin, or limit it to some build targets: targets [\"Editor\"] keeps an editor-only plugin out of the packaged game.",
         "whenToUse": [
           "pluginState=enable: Migrated content depends on a plugin that is installed but disabled (for example ChaosVehicles for the advanced vehicle template).",
+          "pluginState=enable: A plugin used only in the editor should stay out of the packaged game (targets [\"Editor\"]), or one the game uses must stay on when the plugin that brought it in is limited to the editor.",
           "pluginState=disable: A plugin enabled for a since-removed experiment should no longer load."
         ],
         "whenNotToUse": [
@@ -95817,6 +95821,20 @@
             "pluginName": {
               "type": "string",
               "description": "Plugin name exactly as reported by list_plugins (the .uplugin name, not the friendly name)."
+            },
+            "targets": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "Editor",
+                  "Game",
+                  "Client",
+                  "Server",
+                  "Program"
+                ]
+              },
+              "description": "Build targets the plugin is enabled for, every other build leaving it out: [\"Editor\"] keeps it in the editor and out of a packaged game. An empty list lifts the limit."
             },
             "pluginState": {
               "type": "string",
@@ -95859,13 +95877,20 @@
               "type": "boolean",
               "description": "Enabled state now recorded in the .uproject."
             },
+            "targets": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "The build targets the plugin is now limited to; absent when it is enabled for every target."
+            },
             "changed": {
               "type": "boolean",
               "description": "False when the plugin was already in the requested state and nothing was written."
             },
             "restartRequired": {
               "type": "boolean",
-              "description": "True whenever the project file changed; modules and content mount only at startup."
+              "description": "True when this editor loads or drops the plugin only at its next start; a packaged game takes the project file as it is when it builds."
             }
           },
           "required": [
@@ -95876,7 +95901,7 @@
       },
       "examples": [
         {
-          "title": "Enable or disable a plugin.",
+          "title": "Enable or disable a plugin, or limit it to some build targets: targets [\"Editor\"] keeps an editor-only plugin out of the packaged game.",
           "input": {
             "action": "enable_plugin",
             "pluginName": "ChaosVehiclesPlugin",
@@ -95918,13 +95943,18 @@
           "actions": {
             "enable": "enable_plugin",
             "disable": "disable_plugin"
+          },
+          "declaredBy": {
+            "targets": [
+              "enable"
+            ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "a32ebf7ac3e0de85764e1cd56816166835e0dc2f284c5f2bcb2a633e10c34459",
-        "content": "270b8f7e320ae940dd766b89ea0bc39282d928dff113513a326db992c72ead80"
+        "schema": "d18f761787ae6ffcd8ab7cc37e0391cdbe0c1fed7cfcadcdb535ff7ebf2ca603",
+        "content": "b0122859b8c40f0c34e8a4f9b767587ee5fc09beecc91e8fddef1c11ec167c93"
       }
     },
     {
@@ -96417,11 +96447,13 @@
           "launch build",
           "smoke test build",
           "test packaged build",
-          "does the build run"
+          "does the build run",
+          "test each level packaged"
         ],
-        "summary": "Start the packaged Win64 game of this project for a short smoke run (offscreen by default), close it after the run, and return a jobId to poll with package_status.",
+        "summary": "Start the packaged Win64 game of this project for a short smoke run (offscreen by default), on its default map or a given level, close it after the run, and return a jobId to poll with package_status.",
         "whenToUse": [
-          "A packaged build must be shown to start and keep running, not just to have packaged."
+          "A packaged build must be shown to start and keep running, not just to have packaged.",
+          "Each level of a packaged build must be shown to load (map, one run per level)."
         ],
         "whenNotToUse": [
           "No build has been packaged yet (use package_project first).",
@@ -96440,6 +96472,10 @@
             "archiveDirectory": {
               "type": "string",
               "description": "Archive directory package_project wrote (default <Project>/Packaged). Must be inside the project."
+            },
+            "map": {
+              "type": "string",
+              "description": "Level to open in place of the game's default map: a path (/Game/Maps/L_Main) or a name (L_Main). It must be one of the packaged maps; package_status warns when the game never loaded it."
             },
             "seconds": {
               "type": "number",
@@ -96488,6 +96524,10 @@
               "type": "string",
               "description": "Where the game writes its log. A Shipping build writes none, so its run shows only that it started and stayed up."
             },
+            "map": {
+              "type": "string",
+              "description": "The level the game was asked to open, when map was given."
+            },
             "seconds": {
               "type": "number",
               "description": "Length of the run in seconds."
@@ -96501,7 +96541,7 @@
       },
       "examples": [
         {
-          "title": "Start the packaged Win64 game of this project for a short smoke run (offscreen by default), close it after the run, and return a jobId to poll with package_status.",
+          "title": "Start the packaged Win64 game of this project for a short smoke run (offscreen by default), on its default map or a given level, close it after the run, and return a jobId to poll with package_status.",
           "input": {
             "action": "launch_build",
             "seconds": 20
@@ -96543,8 +96583,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "da5fabc959b1e6ff57b191ed40e3eda1bcdc1c405c1116567df32fd33c6a697d",
-        "content": "c993c1050bfa8291b50a9942db9ba3f446f49017e29f642da7a0fe247b5a192c"
+        "schema": "5d69139058a5b20d39e5806257b81f0ec910c2f649c6a3707839b5a5d6ccd82b",
+        "content": "2a41ccb0afd4fb544b3470b8c2db74df5579788e7a7e67aa8a348b3e4552c87b"
       }
     },
     {
@@ -97584,6 +97624,10 @@
               "type": "string",
               "description": "launch_build only: where the packaged game wrote its log."
             },
+            "map": {
+              "type": "string",
+              "description": "launch_build only: the level the run was asked to open; a warning says so when the game never loaded it."
+            },
             "exitCode": {
               "type": "number",
               "description": "launch_build only: the exit code of a game that quit before its run ended."
@@ -97661,8 +97705,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "c2e81321e5f774ea5f3a37e59380fea0f9af5dd97af17418a8acb230f829c18d",
-        "content": "9c2cbc24a633a136872933fb908cdac8d8d5126463d52464a822568819f6fb20"
+        "schema": "71d7c00a75c7b9fe7f03bcd11547675defbb1c93558b625f2c1c89d34173553c",
+        "content": "af06b216804e36299fab6d59a35cbee2b7feb4ffe65d85eddba0cce608e4ec6c"
       }
     },
     {
