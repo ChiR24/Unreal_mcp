@@ -23979,6 +23979,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Return only plugins currently enabled for this project."
         },
+        "executableName": {
+          "type": "string",
+          "description": "Name the packaged game takes instead of the project name (no .exe): the Win64 launcher becomes <name>.exe, and the game binaries and an Android package are named after it too. It is the game target built; a project with C++ code gets one of that name (Source/<name>.Target.cs, a copy of its own game target) when it has none. Letters, digits and underscores, starting with a letter."
+        },
         "extension": {
           "type": "string",
           "description": "Only files with this extension, e.g. png or json (a leading dot is ignored, case-insensitive)."
@@ -24622,6 +24626,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "The packaged game executable that was started."
         },
+        "executableName": {
+          "type": "string",
+          "description": "With executableName: the game target that is built and names the package."
+        },
         "executionId": {
           "type": "string",
           "description": "Correlates the run with the temp wrapper under Saved/Temp/MCP_Python."
@@ -24964,6 +24972,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "success": {
           "type": "boolean",
           "description": "Whether the action succeeded."
+        },
+        "targetCreated": {
+          "type": "boolean",
+          "description": "With executableName: true when this call wrote that target file (it stays in the project)."
+        },
+        "targetFile": {
+          "type": "string",
+          "description": "With executableName: the target file of that name."
         },
         "tests": {
           "type": "array",

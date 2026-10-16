@@ -3097,3 +3097,19 @@ describe('a game started in a minimized editor says what that does to physics', 
     expect(play).toContain('before testing physics or timing');
   });
 });
+
+describe('a packaged game can take its own executable name', () => {
+  // A packaged game was always the project's name (its launcher <Project>.exe): the launcher, the binaries and an Android
+  // package are named after the game target built, and nothing in the tool could name or choose that target.
+  it('copies the project game target under the new name and builds that target', () => {
+    const target = code('SystemControl', 'McpSystemGameTarget.cpp');
+    expect(target).toContain('Text.ReplaceInline(*OldClass, *(Name + TEXT("Target")), ESearchCase::CaseSensitive);');
+    expect(target, 'only a game target is copied or reused').toContain('Text.Contains(TEXT("TargetType.Game"))');
+    expect(target, 'a name that is not an identifier writes nothing').toContain('OutCode = TEXT("INVALID_ARGUMENT");');
+    const pack = code('SystemControl', 'McpSystemPackage.cpp');
+    expect(pack).toContain('Line += FString::Printf(TEXT(" -target=%s"), *Target);');
+    expect(pack).toContain('Result->SetBoolField(TEXT("targetCreated"), bTargetCreated);');
+    const launch = code('SystemControl', 'McpSystemLaunchBuild.cpp');
+    expect(launch, 'launch_build finds a game packaged under another name').toContain('FPaths::Combine(BinDir, TEXT("*.exe"))');
+  });
+});

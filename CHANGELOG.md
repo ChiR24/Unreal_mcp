@@ -31,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details>
 <summary><b>✨ Added</b></summary>
 
+- **A packaged game takes its own name**: `package_project` `executableName` builds the game target of that name, so the Win64 launcher is `<name>.exe` (not the project's name) and the binaries and an Android package are named after it; a project with C++ code that has no such target gets one, a copy of its own game target. A name that is not an identifier is refused before anything is written. `launch_build` finds a game packaged under another name.
 - **Bind Event to a dispatcher**: `create_node` and `build_graph` take `nodeType` `BindEvent` (`memberName`, `memberClass` for another class's dispatcher, `eventName`): a Bind Event node and a custom event with the dispatcher's inputs wired to it, the event "$id_event" in a batch. Nothing over MCP could make one actor react to another's dispatcher.
 - **Animation graph nodes by class**: `create_node` and `add_node` take an animation node's short class name (`TwoBoneIK`, `Two Bone IK`) in an AnimGraph or a state's graph, and `inspect_graph` `info: node_types` takes `filter` (`IK` lists the IK nodes).
 - **`animation_physics` `analyze_animation`**: an Animation Sequence's motion read from its own frames: how far and fast the root travels and turns, each foot's planted intervals and planted speed, the loop seam, and the sharpest rotation spikes.

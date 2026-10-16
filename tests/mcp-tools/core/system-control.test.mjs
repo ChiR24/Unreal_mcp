@@ -98,6 +98,8 @@ const testCases = [
   { scenario: 'ACTION: console_command', toolName: 'system_control', arguments: { action: 'console_command', command: 'stat fps' }, expected: 'success' },
   { scenario: 'ACTION: run_ubt', toolName: 'system_control', arguments: { action: 'run_ubt', target: 'MCPtestEditor', platform: 'Linux', configuration: 'Development', arguments: '-NoHotReload' }, expected: 'success' },
   { scenario: 'ACTION: package_project', toolName: 'system_control', arguments: { action: 'package_project', platform: 'Win64', configuration: 'Development', archiveDirectory: 'D:/Tmp/Packaged', maps: ['/Game/Maps/L_Hub'], pak: true, build: false }, expected: 'success' },
+  // executableName names the game target; a name that is not an identifier is refused before anything is written or built.
+  { scenario: 'ERROR: package_project refuses an executableName that is not a name', toolName: 'system_control', arguments: { action: 'package_project', platform: 'Win64', configuration: 'Shipping', executableName: 'my game!' }, expected: 'error|INVALID_ARGUMENT' },
   { scenario: 'READ: package_status', toolName: 'system_control', arguments: { action: 'package_status', jobId: '00000000-0000-0000-0000-000000000000' }, expected: 'error|JOB_NOT_FOUND' },
   { scenario: 'ACTION: launch_build refuses a build outside the project', toolName: 'system_control', arguments: { action: 'launch_build', archiveDirectory: 'C:/Windows', seconds: 5, windowed: false }, expected: 'error|INVALID_ARGUMENT' },
   { scenario: 'ACTION: subscribe', toolName: 'system_control', arguments: { action: 'subscribe' }, expected: 'success' },

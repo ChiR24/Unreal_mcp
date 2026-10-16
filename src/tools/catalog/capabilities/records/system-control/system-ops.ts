@@ -84,8 +84,8 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
     // "maps to cook packaging settings" found nothing here: "packaging" folds to "packag", which
     // never matches "package", and cooking had no name of its own.
     aliases: ['system_control.cook_maps'],
-    topics: ['package project', 'packaging the game', 'build game', 'maps to cook', 'shipping build', 'package for windows', 'cook content'],
-    summary: 'Start a project package (cook, stage, pak, archive) and return a jobId to poll; the build runs asynchronously in the editor.',
+    topics: ['package project', 'packaging the game', 'build game', 'maps to cook', 'shipping build', 'package for windows', 'cook content', 'name the game executable', 'exe name'],
+    summary: 'Start a project package (cook, stage, pak, archive), optionally under its own executable name, and return a jobId to poll; the build runs asynchronously in the editor.',
     whenToUse: ['A cooked, staged, archived build of the project is needed.'],
     whenNotToUse: ['Only a code target must be compiled (use run_ubt).', 'The result of an already-started package is wanted (use package_status).'],
     inputProps: {
@@ -95,6 +95,7 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
       maps: { type: 'array', items: { type: 'string', description: 'A /Game map package path.' }, description: 'Maps to cook. Pass these when a map is reached by NAME at runtime (OpenLevel) rather than by reference, or the cooker will not find it.' },
       pak: { type: 'boolean', description: 'Pak the staged content (default true).' },
       build: { type: 'boolean', description: 'Compile the game target first (default true).' },
+      executableName: { type: 'string', description: 'Name the packaged game takes instead of the project name (no .exe): the Win64 launcher becomes <name>.exe, and the game binaries and an Android package are named after it too. It is the game target built; a project with C++ code gets one of that name (Source/<name>.Target.cs, a copy of its own game target) when it has none. Letters, digits and underscores, starting with a letter.' },
     },
     outputProps: {
       jobId: { type: 'string', description: 'Pass to package_status. Jobs live in the editor session and do not survive a restart.' },
@@ -103,6 +104,9 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
       commandLine: { type: 'string', description: 'The exact UAT command line that was launched.' },
       platform: { type: 'string', description: 'Resolved target platform.' },
       configuration: { type: 'string', description: 'Resolved client configuration.' },
+      executableName: { type: 'string', description: 'With executableName: the game target that is built and names the package.' },
+      targetFile: { type: 'string', description: 'With executableName: the target file of that name.' },
+      targetCreated: { type: 'boolean', description: 'With executableName: true when this call wrote that target file (it stays in the project).' },
     },
     required: [],
     effect: 'write',

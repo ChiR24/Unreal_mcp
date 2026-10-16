@@ -33,7 +33,20 @@ FString FindGameExecutable(const FString& ArchiveDir)
 	// DebugGame and Shipping builds name it <Project>-Win64-<Configuration>.exe.
 	TArray<FString> Found;
 	IFileManager::Get().FindFiles(Found, *FPaths::Combine(BinDir, Project + TEXT("-Win64-*.exe")), true, false);
-	return Found.Num() > 0 ? FPaths::Combine(BinDir, Found[0]) : FString();
+	if (Found.Num() > 0) { return FPaths::Combine(BinDir, Found[0]); }
+	// A build packaged under another name (package_project executableName) names its binary after that game target:
+	// the newest executable there is the one just packaged.
+	TArray<FString> Named;
+	IFileManager::Get().FindFiles(Named, *FPaths::Combine(BinDir, TEXT("*.exe")), true, false);
+	FString Newest;
+	FDateTime NewestTime = FDateTime::MinValue();
+	for (const FString& File : Named)
+	{
+		const FString Path = FPaths::Combine(BinDir, File);
+		const FDateTime Time = IFileManager::Get().GetTimeStamp(*Path);
+		if (Time > NewestTime) { NewestTime = Time; Newest = Path; }
+	}
+	return Newest;
 }
 
 // Closes the game at its deadline and records how the run ended. A game that

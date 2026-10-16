@@ -17974,6 +17974,7 @@
         "enableInstancing",
         "enabled",
         "enabledOnly",
+        "executableName",
         "extension",
         "file",
         "filename",
@@ -18222,6 +18223,10 @@
           "enabledOnly": {
             "type": "boolean",
             "description": "Return only plugins currently enabled for this project."
+          },
+          "executableName": {
+            "type": "string",
+            "description": "Name the packaged game takes instead of the project name (no .exe): the Win64 launcher becomes <name>.exe, and the game binaries and an Android package are named after it too. It is the game target built; a project with C++ code gets one of that name (Source/<name>.Target.cs, a copy of its own game target) when it has none. Letters, digits and underscores, starting with a letter."
           },
           "extension": {
             "type": "string",
