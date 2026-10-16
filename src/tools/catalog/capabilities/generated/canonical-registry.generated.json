@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "9049dce163164c7d",
+  "catalogRevision": "543ebed3c4cb72a8",
   "recordCount": 416,
   "records": [
     {
@@ -74068,6 +74068,7 @@
           "set_world_settings",
           "kill z height",
           "world gravity",
+          "change level gravity",
           "override game mode"
         ],
         "summary": "Set the loaded level's WorldSettings: GameMode override, kill Z, gravity, time dilation, and world bounds checks.",
@@ -74229,7 +74230,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "7f853e62ad3ffac34407237366b10543a05526532ab347c5db44036b0277568c",
-        "content": "de846a42765fe9cf2de310fc74b1f03da87a4d6ee575d02d9721d2e05116b814"
+        "content": "5b27bec520f0f63fc40c46efe105a8f796caf7dda32690eec63224c88de90018"
       }
     },
     {

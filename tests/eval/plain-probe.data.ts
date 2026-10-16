@@ -207,6 +207,8 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'move ai to a point', accepted: ['blueprint.edit_graph', 'blueprint.add_behaviour'] },
   { query: "set the level's game mode override", accepted: ['manage_level.set_world_settings'] },
   { query: "read the actor's location", accepted: ['control_actor.get_transform'] },
+  { query: "change the level's gravity", accepted: ['manage_level.set_world_settings'] },
+  { query: 'change gravity', accepted: ['manage_level.set_world_settings', 'manage_character.set_movement_property'] },
   { query: 'set up a vehicle', accepted: ['animation_physics.configure_vehicle'] },
   { query: 'blend upper body only', accepted: ['animation_physics.configure_anim_graph_node'] },
   { query: 'clean up test animations', accepted: ['animation_physics.cleanup'] },
