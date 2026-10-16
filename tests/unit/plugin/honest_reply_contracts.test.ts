@@ -3152,3 +3152,13 @@ describe('a smoke run that wrote no log does not read as a clean run', () => {
     expect(launch, 'the configuration comes from the executable name').toContain('FPaths::GetBaseFilename(Exe).Split(TEXT("-Win64-"), nullptr, &Job.Configuration);');
   });
 });
+
+describe('an asset delete says nothing of its own routine', () => {
+  // Every Blueprint loaded from disk leaves its file behind after the engine delete, and the cleanup that removes it
+  // logged a warning each time, so a 62-asset delete reply carried that line for each asset as if something failed.
+  it('logs the routine leftover-file cleanup at Log and warns only when the package stays loaded', () => {
+    const safety = readFileSync(join(DOMAINS, '..', 'Safety', 'McpSafeOperationsAssetDelete.h'), 'utf8');
+    expect(safety).toMatch(/UE_LOG\(LogMcpSafeOperations, Log,\s*TEXT\("McpRemoveLeftoverPackageFile: '%s' was deleted in memory/u);
+    expect(safety).toMatch(/UE_LOG\(LogMcpSafeOperations, Warning,\s*TEXT\("McpRemoveLeftoverPackageFile: '%s' is still loaded/u);
+  });
+});

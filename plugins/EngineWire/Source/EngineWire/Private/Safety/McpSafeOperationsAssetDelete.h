@@ -28,7 +28,8 @@ inline bool McpRemoveLeftoverPackageFile(const FString& PackageName)
         return true;
     }
 
-    UE_LOG(LogMcpSafeOperations, Warning,
+    // Routine for every Blueprint loaded from disk, so at Log: a warning here rode every delete reply as if it failed.
+    UE_LOG(LogMcpSafeOperations, Log,
         TEXT("McpRemoveLeftoverPackageFile: '%s' was deleted in memory but its file remained; unloading the package and removing the file"),
         *PackageName);
     if (UPackage* Leftover = FindObject<UPackage>(nullptr, *PackageName))
