@@ -1,6 +1,6 @@
 {
   "name": "unreal-engine-mcp-server",
-  "version": "0.6.0-beta-e",
+  "version": "0.6.0-beta-f",
   "mcpName": "io.github.ChiR24/unreal-engine-mcp",
   "description": "EngineWire: an MCP server and Unreal Editor plugin that let AI assistants build in Unreal Engine 5.0-5.8: levels, Blueprints, UI, materials, effects and more.",
   "type": "module",
