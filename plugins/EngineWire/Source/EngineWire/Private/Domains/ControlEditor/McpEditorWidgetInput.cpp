@@ -4,6 +4,7 @@
 #include "Blueprint/WidgetTree.h"
 #include "Components/Button.h"
 #include "Components/CheckBox.h"
+#include "Components/PanelWidget.h"
 #include "Components/Slider.h"
 #include "Components/TextBlock.h"
 #include "UObject/UObjectIterator.h"
@@ -70,15 +71,29 @@ bool ListLiveWidgetsForMcp(const TSharedPtr<FJsonObject> &Resp,
   TArray<TSharedPtr<FJsonValue>> Owners;
   for (UUserWidget *Owner : LiveUserWidgetsForMcp()) {
     TArray<TSharedPtr<FJsonValue>> Children;
-    Owner->WidgetTree->ForEachWidget([&Children](UWidget *Child) {
+    TArray<FString> Texts;
+    Owner->WidgetTree->ForEachWidget([&Children, &Texts](UWidget *Child) {
       if (Child && IsDrivableWidgetForMcp(Child)) {
         Children.Add(MakeShared<FJsonValueObject>(DescribeWidgetForMcp(Child)));
+      } else if (const UTextBlock *Text = Cast<UTextBlock>(Child)) {
+        // What the player reads that is no button's label: a list built at runtime showed as rows with nothing in them.
+        if (Text->IsVisible() && !Cast<UButton>(Text->GetParent()) && !Text->GetText().IsEmpty() && Texts.Num() < 20) {
+          Texts.Add(Text->GetText().ToString());
+        }
       }
     });
     TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
     Entry->SetStringField(TEXT("userWidget"), OwnerLabelForMcp(Owner));
     Entry->SetStringField(TEXT("object"), Owner->GetName());
     Entry->SetBoolField(TEXT("inViewport"), Owner->IsInViewport());
+    // A widget made at runtime and added to another's panel, such as a list row, is shown inside that widget.
+    const UPanelWidget *Panel = Owner->IsInViewport() ? nullptr : Owner->GetParent();
+    if (const UUserWidget *Outer = Panel ? Panel->GetTypedOuter<UUserWidget>() : nullptr) {
+      Entry->SetStringField(TEXT("in"), Outer->GetName() + TEXT(".") + Panel->GetName());
+    }
+    if (Texts.Num() > 0) {
+      Entry->SetArrayField(TEXT("texts"), McpHandlerUtils::ToJsonStringArray(Texts));
+    }
     Entry->SetArrayField(TEXT("children"), Children);
     Owners.Add(MakeShared<FJsonValueObject>(Entry));
   }

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "3c55524dd1cce1d8",
+  "catalogRevision": "9049dce163164c7d",
   "recordCount": 416,
   "records": [
     {
@@ -42345,7 +42345,7 @@
                 "additionalProperties": true,
                 "x-unreal-reflection-boundary": true
               },
-              "description": "widget_list: each live user widget (userWidget, object, inViewport) with its Button/CheckBox/Slider children (name, type, enabled, visible, focused, and text, value or checked)."
+              "description": "widget_list: each live user widget (userWidget, object, inViewport) with its Button/CheckBox/Slider children (name, type, enabled, visible, focused, and text, value or checked), texts (what its other visible text blocks read, at most 20) and, for one made at runtime and added to another widget's panel such as a list row, in (Owner.Panel)."
             },
             "widget": {
               "type": "string",
@@ -42412,8 +42412,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "7f644f4abe3c853e5831f8a1e9b3884e6f756fc49e80ebb98f74bf3bc7006264",
-        "content": "eea4622661428f373937514d7406dd64cd20c4e9db4e7090b440619b5f91c2d8"
+        "schema": "8e474e7c3e154bc45ade532b417e790ca19a9d08ef2578ebd55e125ccd3d925b",
+        "content": "5b2bcbff32eae3133f7fbdb7f541dca5aa742299a2ee488f80a12868e010fab2"
       }
     },
     {

@@ -3060,3 +3060,14 @@ describe('setup_physics_simulation makes the actor or mesh it is given simulate'
     expect(prop).toContain('Transaction.DescribeInto(Context.Resp);');
   });
 });
+
+describe('widget_list says what a widget reads and where a nested one sits', () => {
+  // An inventory filled at runtime listed its three rows with no text and no link to the panel holding them.
+  it('lists the visible texts that are no button label, and the owner and panel of a widget added to another', () => {
+    const input = code('ControlEditor', 'McpEditorWidgetInput.cpp');
+    expect(input).toContain('Text->IsVisible() && !Cast<UButton>(Text->GetParent()) && !Text->GetText().IsEmpty() && Texts.Num() < 20');
+    expect(input).toContain('Entry->SetArrayField(TEXT("texts"), McpHandlerUtils::ToJsonStringArray(Texts));');
+    expect(input).toContain('const UPanelWidget *Panel = Owner->IsInViewport() ? nullptr : Owner->GetParent();');
+    expect(input).toContain('Entry->SetStringField(TEXT("in"), Outer->GetName() + TEXT(".") + Panel->GetName());');
+  });
+});

@@ -6334,7 +6334,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "additionalProperties": true,
             "x-unreal-reflection-boundary": true
           },
-          "description": "widget_list: each live user widget (userWidget, object, inViewport) with its Button/CheckBox/Slider children (name, type, enabled, visible, focused, and text, value or checked)."
+          "description": "widget_list: each live user widget (userWidget, object, inViewport) with its Button/CheckBox/Slider children (name, type, enabled, visible, focused, and text, value or checked), texts (what its other visible text blocks read, at most 20) and, for one made at runtime and added to another widget's panel such as a list row, in (Owner.Panel)."
         },
         "width": {
           "type": "number",

@@ -54,7 +54,7 @@ export const INPUT_RECORDS: readonly CapabilityRecordSource[] = [
       widgets: {
         type: 'array',
         items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
-        description: 'widget_list: each live user widget (userWidget, object, inViewport) with its Button/CheckBox/Slider children (name, type, enabled, visible, focused, and text, value or checked).',
+        description: 'widget_list: each live user widget (userWidget, object, inViewport) with its Button/CheckBox/Slider children (name, type, enabled, visible, focused, and text, value or checked), texts (what its other visible text blocks read, at most 20) and, for one made at runtime and added to another widget\'s panel such as a list row, in (Owner.Panel).',
       },
       widget: { type: 'string', description: 'widget_click: the widget that was driven, as Owner.Name.' },
       widgetType: { type: 'string', description: 'widget_click: the driven widget\'s class (Button, CheckBox, Slider).' },
