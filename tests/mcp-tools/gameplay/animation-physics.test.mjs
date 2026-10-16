@@ -198,6 +198,9 @@ const testCases = [
 
 // === SETUP: Spawn a SkeletalMeshActor for playback/ragdoll tests ===
 { scenario: 'Setup: spawn SkeletalMeshActor', toolName: 'control_actor', arguments: {"action": "spawn", "actorName": "SkelTestActor", "actorClass": "SkeletalMeshActor"}, expected: 'success|already exists' },
+// A crate handed to setup_physics_simulation was refused for having no skeletal mesh; its mesh simulates now.
+{ scenario: 'Setup: spawn a prop', toolName: 'control_actor', arguments: { action: 'spawn', actorName: 'PhysPropTest', classPath: '/Engine/BasicShapes/Cube', location: { x: 0, y: 900, z: 300 } }, expected: 'success|already exists' },
+{ scenario: 'ACTION: setup_physics_simulation makes a placed prop simulate', toolName: 'animation_physics', arguments: { action: 'setup_physics_simulation', actorName: 'PhysPropTest' }, expected: 'success', assertions: [{ path: 'structuredContent.result.componentName', equals: 'StaticMeshComponent0', label: 'its mesh simulates' }] },
 
 // === PLAYBACK (Montage - needs actorName with SkeletalMeshComponent) ===
 { scenario: 'PLAYBACK: play_montage', toolName: 'animation_physics', arguments: {"action": "play_montage", "actorName": "SkelTestActor", "montagePath": `${TEST_FOLDER}/Testmontage`, "playRate": 1.25}, expected: 'success|COMPONENT_NOT_FOUND' },
@@ -262,6 +265,7 @@ const testCases = [
 
 // === CLEANUP ===
 { scenario: 'Cleanup: delete SkelTestActor', toolName: 'control_actor', arguments: { action: 'delete', actorName: 'SkelTestActor' }, expected: 'success|not found' },
+{ scenario: 'Cleanup: delete PhysPropTest', toolName: 'control_actor', arguments: { action: 'delete', actorName: 'PhysPropTest' }, expected: 'success|not found' },
 { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found' },
 ];
 
@@ -322,7 +326,7 @@ const testCases = [
     // === PHYSICS ASSET ===
     { scenario: 'CREATE: create physics asset', toolName: 'animation_physics', arguments: { action: 'create_physics_asset', skeletalMeshPath: SKELETAL_MESH_PATH, outputPath: PHYSICS_ASSET_PATH, save: true }, expected: 'success|already exists' },
     { scenario: 'CREATE: create physics asset with generation options', toolName: 'animation_physics', arguments: { action: 'create_physics_asset', skeletalMeshPath: SKELETAL_MESH_PATH, name: 'PA_McpGenerated', path: '/Game/MCPTest/Physics', geomType: 'Sphyl', minBoneSize: 5, createConstraints: true, bodyForAll: false, assignToMesh: false }, expected: 'success|already exists' },
-    { scenario: 'ACTION: setup physics simulation from skeletal mesh', toolName: 'animation_physics', arguments: { action: 'setup_physics_simulation', skeletalMeshPath: SKELETAL_MESH_PATH, savePath: TEST_FOLDER, physicsAssetName: PHYSICS_SIM_NAME, assignToMesh: false }, expected: 'success|already exists', assertions: [{ path: 'structuredContent.result.existingAsset', equals: false, label: 'new physics simulation asset created from skeletalMeshPath' }] },
+    { scenario: 'ACTION: setup physics simulation from skeletal mesh', toolName: 'animation_physics', arguments: { action: 'setup_physics_simulation', skeletalMeshPath: SKELETAL_MESH_PATH, savePath: TEST_FOLDER, physicsAssetName: PHYSICS_SIM_NAME, assignToMesh: false }, expected: 'success|already exists', assertions: [{ path: 'structuredContent.result.existingAsset', equals: false, label: 'new physics simulation asset created from skeletalMeshPath' }, { path: 'structuredContent.result.bodyCount', gte: 1, label: 'with bodies made for its bones' }] },
     { scenario: 'INFO: list physics bodies', toolName: 'animation_physics', arguments: { action: 'list_physics_bodies', physicsAssetPath: PHYSICS_ASSET_PATH }, expected: 'success' },
     { scenario: 'ADD: add physics body A', toolName: 'animation_physics', arguments: { action: 'add_physics_body', physicsAssetPath: PHYSICS_ASSET_PATH, boneName: MESH_BONE_A, bodyType: 'Sphere', radius: 12, center: [0, 0, 0], save: true }, expected: 'success|already exists' },
     { scenario: 'ADD: add physics body B', toolName: 'animation_physics', arguments: { action: 'add_physics_body', physicsAssetPath: PHYSICS_ASSET_PATH, boneName: MESH_BONE_B, bodyType: 'Sphere', radius: 10, center: [0, 0, 0], save: true }, expected: 'success|already exists' },

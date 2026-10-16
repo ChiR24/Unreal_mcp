@@ -23,7 +23,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "actorName": {
           "type": "string",
-          "description": "Target actor name in the current level."
+          "description": "A placed actor: a prop simulates on its root when that is a physics body, else on its first static mesh; a skeletal mesh actor gets a Physics Asset for its mesh."
         },
         "addMissing": {
           "type": "boolean",
@@ -1369,6 +1369,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "One entry per physics body.",
           "items": {}
         },
+        "bodyCount": {
+          "type": "number",
+          "description": "Physics bodies made for the skeletal mesh."
+        },
         "boneCount": {
           "type": "number",
           "description": "Numeric parameter."
@@ -1476,6 +1480,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "string"
           },
           "description": "List of string values."
+        },
+        "componentName": {
+          "type": "string",
+          "description": "The prop part that now simulates."
         },
         "condition": {
           "type": "string",
@@ -4164,7 +4172,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "minItems": 3,
           "maxItems": 3,
-          "description": "Force vector to apply as [x, y, z]."
+          "description": "The push as [x, y, z], applied once as an impulse in kg cm/s: a 100 kg crate given [30000, 0, 0] starts at 300 cm/s along X. A body that does not simulate is made to, in the running game only."
         },
         "functionName": {
           "type": "string",
@@ -5011,6 +5019,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "World location [x, y, z] read back off the actor after the write."
         },
+        "massKg": {
+          "type": "number",
+          "description": "Mass of the body pushed: the root when it is a physics body, else a part that simulates, else the first mesh."
+        },
         "max": {
           "type": "array",
           "items": {
@@ -5322,6 +5334,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "value": {
           "description": "Property value (any type)."
+        },
+        "velocityChange": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "description": "Speed [x, y, z] in cm/s the push gave it (force / massKg); friction and gravity act on it from the next frame."
         },
         "waitedSeconds": {
           "type": "number",

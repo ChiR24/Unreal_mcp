@@ -26,7 +26,7 @@ export const P = {
   location: vec3('World or relative location as [x, y, z].'),
   rotation: vec3('Rotation as [pitch, yaw, roll] in degrees.'),
   scale: vec3('Scale as [x, y, z].'),
-  force: vec3('Force vector to apply as [x, y, z].'),
+  force: vec3('The push as [x, y, z], applied once as an impulse in kg cm/s: a 100 kg crate given [30000, 0, 0] starts at 300 cm/s along X. A body that does not simulate is made to, in the running game only.'),
   offset: vec3('Spawn/duplicate offset as [x, y, z].'),
   componentType: str('Component class to add.'),
   componentName: str('Target component name on the actor.'),

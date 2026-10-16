@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "057284080f0a3ddc",
+  "catalogRevision": "d7c7749e33fcc522",
   "recordCount": 416,
   "records": [
     {
@@ -7294,15 +7294,21 @@
           "simulate physics",
           "enable skeletal mesh physics",
           "push a box",
-          "pushable object"
+          "pushable object",
+          "push a crate",
+          "pushable crate",
+          "physics crate",
+          "falls and tumbles",
+          "make an object physical"
         ],
-        "summary": "Generate and assign a Physics Asset so a skeletal mesh can simulate. A placed static mesh falls and tumbles without one: set bSimulatePhysics true on its mesh component (control_actor edit_component set_property).",
+        "summary": "Make an actor simulate physics: a placed prop (actorName) falls, tumbles and can be pushed while the game plays, or a skeletal mesh gets a Physics Asset with bodies made for its bones.",
         "whenToUse": [
+          "A placed prop such as a crate or a barrel must fall, tumble or be pushable.",
           "A skeletal mesh must simulate physics."
         ],
         "whenNotToUse": [
           "A vehicle is being set up (use configure_vehicle).",
-          "The object is a static mesh: set bSimulatePhysics on its component instead (control_actor edit_component set_property)."
+          "Every copy of a Blueprint must simulate: set bSimulatePhysics on its mesh component (manage_blueprint edit_scs)."
         ]
       },
       "schemas": {
@@ -7312,7 +7318,7 @@
           "properties": {
             "actorName": {
               "type": "string",
-              "description": "Target actor name in the current level."
+              "description": "A placed actor: a prop simulates on its root when that is a physics body, else on its first static mesh; a skeletal mesh actor gets a Physics Asset for its mesh."
             },
             "skeletonPath": {
               "type": "string",
@@ -7362,6 +7368,14 @@
             "meshPath": {
               "type": "string",
               "description": "Canonical /Game mesh asset path."
+            },
+            "componentName": {
+              "type": "string",
+              "description": "The prop part that now simulates."
+            },
+            "bodyCount": {
+              "type": "number",
+              "description": "Physics bodies made for the skeletal mesh."
             }
           },
           "required": [
@@ -7372,7 +7386,7 @@
       },
       "examples": [
         {
-          "title": "Generate and assign a Physics Asset so a skeletal mesh can simulate. A placed static mesh falls and tumbles without one: set bSimulatePhysics true on its mesh component (control_actor edit_component set_property).",
+          "title": "Make an actor simulate physics: a placed prop (actorName) falls, tumbles and can be pushed while the game plays, or a skeletal mesh gets a Physics Asset with bodies made for its bones.",
           "input": {
             "action": "setup_physics_simulation",
             "skeletalMeshPath": "/Game/SKM_Char",
@@ -7417,8 +7431,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "421bce1e4e31843d1b17d5ecafa6864a986f83a5f387e30989a722cc0da4d7f6",
-        "content": "a14c4b43c5b28873d3b5045e7fcfeeed444623ee582e0c3cb7a621561364b518"
+        "schema": "cae143857f34759e96d587dc7e1684b44a7a945396aa83b0a77325a1e123aa6e",
+        "content": "8a27f38abf86376d238d253cb841a748057290ce5e3218023b80cdec9928424e"
       }
     },
     {
@@ -33415,12 +33429,13 @@
           "apply impulse",
           "add impulse"
         ],
-        "summary": "Apply a physics force vector to an actor, auto-enabling simulation on failure.",
+        "summary": "Push a physics object in the running game with one impulse; the reply gives the mass it moved and the speed the push gave it.",
         "whenToUse": [
-          "A physical impulse must be applied to a simulated actor."
+          "A physics object in the running game must be pushed, knocked or launched, to see that it slides, rolls or flies as meant."
         ],
         "whenNotToUse": [
-          "The actor is not physics-enabled and physics cannot be auto-enabled."
+          "The game is not running: the editor world never steps physics (start it with control_editor play).",
+          "An actor must fall or tumble from the start: set bSimulatePhysics on its mesh component (control_actor edit_component)."
         ]
       },
       "schemas": {
@@ -33434,7 +33449,7 @@
             },
             "actorName": {
               "type": "string",
-              "description": "Target actor name in the current level."
+              "description": "Target actor name in the current level; while PIE runs, PlayerPawn names the player's pawn (PlayerController, GameMode, GameState, PlayerState and HUD work too)."
             },
             "force": {
               "type": "array",
@@ -33443,7 +33458,7 @@
               },
               "minItems": 3,
               "maxItems": 3,
-              "description": "Force vector to apply as [x, y, z]."
+              "description": "The push as [x, y, z], applied once as an impulse in kg cm/s: a 100 kg crate given [30000, 0, 0] starts at 300 cm/s along X. A body that does not simulate is made to, in the running game only."
             }
           },
           "required": [
@@ -33469,6 +33484,17 @@
               "type": "object",
               "x-unreal-reflection-boundary": true,
               "description": "Additional handler result fields not named by the contract."
+            },
+            "massKg": {
+              "type": "number",
+              "description": "Mass of the body pushed: the root when it is a physics body, else a part that simulates, else the first mesh."
+            },
+            "velocityChange": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "description": "Speed [x, y, z] in cm/s the push gave it (force / massKg); friction and gravity act on it from the next frame."
             }
           },
           "required": [
@@ -33479,14 +33505,14 @@
       },
       "examples": [
         {
-          "title": "Apply a physics force vector to an actor, auto-enabling simulation on failure.",
+          "title": "Push a physics object in the running game with one impulse; the reply gives the mass it moved and the speed the push gave it.",
           "input": {
             "action": "apply_force",
-            "actorName": "Cube1",
+            "actorName": "Crate1",
             "force": [
+              30000,
               0,
-              0,
-              500
+              0
             ]
           },
           "output": {
@@ -33497,7 +33523,8 @@
       "availability": {
         "requiredPlugins": [],
         "editorStates": [
-          "edit"
+          "pie",
+          "simulate"
         ]
       },
       "behavior": {
@@ -33521,8 +33548,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "87ebc190189ab47ed725be001ed1701ae9229912e083d2731eee9b482df9d6ef",
-        "content": "54e214e46f464ab869c946bddcd96e331a2f17c6118c9f05abd12dbdea20b34f"
+        "schema": "4e54f1987afee40cec2fbc7806476c74646e5a286769830d5683a77629c23f32",
+        "content": "eb4dd0a0be6abfc0f686ec0c2daffcb5759b5b8a73a636f16e3b10ba20664381"
       }
     },
     {

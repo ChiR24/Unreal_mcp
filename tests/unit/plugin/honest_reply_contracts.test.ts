@@ -3037,3 +3037,26 @@ describe('a frame step says what the game logged during it', () => {
     expect(motion).toContain('Warnings.Append(FMcpLogHistory::Get().WarningsSince(Run->LogSince, 5));');
   });
 });
+
+describe('setup_physics_simulation makes the actor or mesh it is given simulate', () => {
+  // It saved an empty Physics Asset (no bodies, nothing could simulate) and answered "setup completed".
+  it('makes bodies for the skeletal mesh and refuses when none could be made', () => {
+    const setup = code('Animation', 'Physics', 'McpAnimSetupPhysicsSimulation.cpp');
+    expect(setup).toContain('FPhysicsAssetUtils::CreateFromSkeletalMesh(PhysicsAsset, TargetMesh, FPhysAssetCreateParams(),');
+    expect(setup).toContain('PhysicsAsset->SkeletalBodySetups.Num() == 0) {');
+    expect(setup).toContain('TEXT("BODY_GENERATION_FAILED")');
+    expect(setup.indexOf('PhysicsAsset->MarkAsGarbage();'), 'the empty asset is never left behind').toBeGreaterThan(-1);
+  });
+
+  // A crate given by actorName was refused for having no skeletal mesh, though search offers this call for a pushable object.
+  it('makes a placed prop simulate, as one undo step, and says when the part is not the root', () => {
+    const setup = code('Animation', 'Physics', 'McpAnimSetupPhysicsSimulation.cpp');
+    expect(setup).toMatch(/\} else if \(SimulatePlacedProp\(Context, FoundActor\)\) \{\s*return false;/u);
+    const prop = code('Animation', 'Physics', 'McpAnimPhysicsProp.cpp');
+    expect(prop).toContain('EMcpMutationDurability::EditorStateOnly, {Body});');
+    expect(prop).toContain('Body->SetSimulatePhysics(true);');
+    expect(prop).toContain('!Mesh->GetStaticMesh()->GetBodySetup()');
+    expect(prop).toContain('if (Body != Actor->GetRootComponent()) {');
+    expect(prop).toContain('Transaction.DescribeInto(Context.Resp);');
+  });
+});

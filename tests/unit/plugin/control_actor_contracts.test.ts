@@ -981,3 +981,30 @@ describe('a spawn_batch item\'s properties go on the component it spawned', () =
     expect(batch).toContain('!Entry->HasField(TEXT("propertiesError"))');
   });
 });
+
+// A one-frame force of 60000 moved a crate 0 cm while the reply said "Force applied", and in the editor world the
+// call left the placed actor simulating while nothing moved.
+describe('apply_force pushes once, in the running game only', () => {
+  const source = (): string => sliceBetween(read('McpActorPhysics.cpp'), 'HandleControlActorApplyForce(', 'HandleControlActorSetCollision(');
+
+  it('refuses the editor world before it changes anything', () => {
+    const handler = source();
+    const refusal = handler.indexOf('TEXT("NOT_SIMULATING")');
+
+    expect(handler).toContain('World->WorldType != EWorldType::PIE && World->WorldType != EWorldType::Game');
+    expect(refusal).toBeGreaterThan(-1);
+    expect(refusal, 'before simulation is switched on').toBeLessThan(handler.indexOf('SetSimulatePhysics(true)'));
+    expect(capabilityIndex().byId.get('control_actor.apply_force')?.availability.editorStates).toEqual(['pie', 'simulate']);
+  });
+
+  it('pushes the root body, else a simulating part, else a mesh, with one impulse, and says how fast it left', () => {
+    const handler = source();
+
+    expect(handler).toContain('Cast<UPrimitiveComponent>(Found->GetRootComponent())');
+    expect(handler).toContain('Found->FindComponentByClass<UMeshComponent>()');
+    expect(handler).toContain('Prim->AddImpulse(ForceVector);');
+    expect(handler).not.toContain('AddForce(');
+    expect(handler).toContain('TEXT("massKg")');
+    expect(handler).toContain('VectorToJsonArray(ForceVector / Mass)');
+  });
+});

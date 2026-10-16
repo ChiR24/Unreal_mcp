@@ -250,7 +250,7 @@
           },
           "actorName": {
             "type": "string",
-            "description": "Target actor name in the current level."
+            "description": "A placed actor: a prop simulates on its root when that is a physics body, else on its first static mesh; a skeletal mesh actor gets a Physics Asset for its mesh."
           },
           "addMissing": {
             "type": "boolean",
@@ -3887,7 +3887,7 @@
             },
             "minItems": 3,
             "maxItems": 3,
-            "description": "Force vector to apply as [x, y, z]."
+            "description": "The push as [x, y, z], applied once as an impulse in kg cm/s: a 100 kg crate given [30000, 0, 0] starts at 300 cm/s along X. A body that does not simulate is made to, in the running game only."
           },
           "functionName": {
             "type": "string",
