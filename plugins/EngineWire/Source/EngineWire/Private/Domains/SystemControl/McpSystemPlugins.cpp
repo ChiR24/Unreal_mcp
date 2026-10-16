@@ -54,29 +54,36 @@ bool McpWritePluginReference(const FString& PluginName, const TArray<EBuildTarge
 	return true;
 }
 
-// Project Settings > Packaging lists folders every cook takes ("Additional Asset Directories to Cook"). One of a plugin
-// the packaged game leaves out fails that cook: its assets import classes the game does not have.
-bool McpAlwaysCooksContentOf(const IPlugin& Plugin)
+// One of Project Settings > Packaging's folder lists (DirectoriesToAlwaysCook, DirectoriesToNeverCook), each folder
+// ending in '/'. Read by reflection: the settings class lives in a module this plugin does not link.
+TArray<FString> McpPackagingFolders(const TCHAR* ListName)
 {
+	TArray<FString> Folders;
 	const UClass* Settings = McpFindTypeQuiet(TEXT("ProjectPackagingSettings"));
-	const FArrayProperty* List = Settings ? FindFProperty<FArrayProperty>(Settings, TEXT("DirectoriesToAlwaysCook")) : nullptr;
+	const FArrayProperty* List = Settings ? FindFProperty<FArrayProperty>(Settings, ListName) : nullptr;
 	const FStructProperty* Entry = List ? CastField<FStructProperty>(List->Inner) : nullptr;
 	const FStrProperty* PathField = Entry ? FindFProperty<FStrProperty>(Entry->Struct, TEXT("Path")) : nullptr;
-	if (!PathField || !Plugin.CanContainContent())
+	if (PathField)
 	{
-		return false;
-	}
-	const FString Root = Plugin.GetMountedAssetPath();
-	FScriptArrayHelper Paths(List, List->ContainerPtrToValuePtr<void>(Settings->GetDefaultObject()));
-	for (int32 Index = 0; Index < Paths.Num(); ++Index)
-	{
-		const FString Path = *PathField->ContainerPtrToValuePtr<FString>(Paths.GetRawPtr(Index)) + TEXT("/");
-		if (Path.StartsWith(Root, ESearchCase::IgnoreCase))
+		FScriptArrayHelper Paths(List, List->ContainerPtrToValuePtr<void>(Settings->GetDefaultObject()));
+		for (int32 Index = 0; Index < Paths.Num(); ++Index)
 		{
-			return true;
+			Folders.Add(*PathField->ContainerPtrToValuePtr<FString>(Paths.GetRawPtr(Index)) + TEXT("/"));
 		}
 	}
-	return false;
+	return Folders;
+}
+
+// Every cook takes the folders of "Additional Asset Directories to Cook" unless "Directories to Never Cook" covers them.
+// One of a plugin the packaged game leaves out fails that cook: its assets import classes the game does not have.
+bool McpAlwaysCooksContentOf(const IPlugin& Plugin)
+{
+	const FString Root = Plugin.GetMountedAssetPath();
+	return Plugin.CanContainContent()
+		&& McpPackagingFolders(TEXT("DirectoriesToAlwaysCook")).ContainsByPredicate(
+			[&Root](const FString& Folder) { return Folder.StartsWith(Root, ESearchCase::IgnoreCase); })
+		&& !McpPackagingFolders(TEXT("DirectoriesToNeverCook")).ContainsByPredicate(
+			[&Root](const FString& Folder) { return Root.StartsWith(Folder, ESearchCase::IgnoreCase); });
 }
 
 bool McpProjectEnablesPlugin(const FString& PluginName)

@@ -60,9 +60,11 @@ describe('Task 27 / Task 21: the residual native handler divergence stays visibl
 
   // Task 21 sublane 2: set_project_setting is implemented only in the Ui shim.
   // A file that only NAMES it, in a nextCall sending the caller there, owns nothing:
-  // McpBlueprintBehaviour points at it when a project's input classes are not Enhanced Input.
+  // McpBlueprintBehaviour points at it when a project's input classes are not Enhanced Input, and enable_plugin when a
+  // plugin it keeps out of the game is on the always-cook list.
   const namesOnly = new Set([
     'Domains/BlueprintGraph/Behaviour/McpBPBehaviourInputAssets.cpp',
+    'Domains/SystemControl/McpSystemPlugins.cpp',
   ]);
   it('records that set_project_setting is still owned solely by the Ui domain shim', () => {
     const owners = filesMentioning('set_project_setting').filter((file) => !namesOnly.has(file));
