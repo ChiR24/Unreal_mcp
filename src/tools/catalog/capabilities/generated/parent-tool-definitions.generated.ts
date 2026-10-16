@@ -24567,7 +24567,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "configuration": {
           "type": "string",
-          "description": "Client configuration of the job."
+          "description": "Client configuration of the job; for launch_build, read from the game executable name."
         },
         "connected": {
           "type": "boolean",
@@ -24620,7 +24620,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "errorCount": {
           "type": "number",
-          "description": "launch_build only: log lines reporting an Error or a fatal error."
+          "description": "launch_build only: log lines reporting an Error or a fatal error. Absent, with a warning, when the game wrote no log (a Shipping build logs nothing)."
         },
         "executable": {
           "type": "string",
@@ -24661,7 +24661,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "gameLogPath": {
           "type": "string",
-          "description": "Where the game writes its log."
+          "description": "Where the game writes its log. A Shipping build writes none, so its run shows only that it started and stayed up."
         },
         "hasMore": {
           "type": "boolean",
@@ -24719,14 +24719,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "items": {
             "type": "string"
           },
-          "description": "launch_build only: the last 30 lines of the game log."
+          "description": "launch_build only: the last 30 lines of the game log, when it wrote one."
         },
         "mapsLoaded": {
           "type": "array",
           "items": {
             "type": "string"
           },
-          "description": "launch_build only: every map the game logged a LoadMap for, in order; empty means it never reached a level."
+          "description": "launch_build only: every map the game logged a LoadMap for, in order; empty means it never reached a level. Absent when the game wrote no log."
         },
         "matched": {
           "type": "number",

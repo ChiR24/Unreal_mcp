@@ -2,6 +2,7 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/WidgetAuthoring/Support/McpWidgetBPLoading.h"
 #include "Domains/WidgetAuthoring/Support/McpWidgetTreeMutation.h"
+#include "Domains/WidgetAuthoring/Support/McpWidgetValidate.h"
 
 #include "Blueprint/WidgetTree.h"
 #include "Components/CanvasPanelSlot.h"
@@ -121,6 +122,16 @@ bool HandleWidgetAuthoringManipulation(
         if (WidgetBP->WidgetTree->FindWidget(FName(*NewName)) != nullptr)
         {
             Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("A widget named '%s' already exists"), *NewName), TEXT("ALREADY_EXISTS"));
+            return true;
+        }
+        // The add paths refuse a name a member of the class already holds; a rename did not, so a widget renamed to
+        // DisplayLabel (a UWidget property) answered success and the Widget Blueprint stopped compiling.
+        const FString NameConflict = McpWidgetNameConflict(WidgetBP, FName(*NewName), TargetWidget->GetClass());
+        if (!NameConflict.IsEmpty())
+        {
+            Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(
+                TEXT("Nothing was renamed: %s. Pick another newName, e.g. '%s'."), *NameConflict,
+                *McpFreeWidgetName(WidgetBP, FName(*NewName), TargetWidget->GetClass())), TEXT("NAME_CONFLICT"));
             return true;
         }
         const FName OldFName(*OldName);

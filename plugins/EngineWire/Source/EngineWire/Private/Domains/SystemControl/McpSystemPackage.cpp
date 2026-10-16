@@ -230,7 +230,7 @@ bool HandlePackageStatus(UEngineWireSubsystem* Self, const FString& RequestId,
 		FPaths::ConvertRelativePathToFull(FPaths::Combine(FPaths::ProjectDir(), TEXT("Saved/Logs"))));
 	if (Job->bLaunch)
 	{
-		AppendLaunchStatus(Job->GameLogPath, Job->ExitCode, Job->Result == TEXT("ExitedEarly"), Result);
+		AppendLaunchStatus(*Job, Result);
 	}
 	Self->SendAutomationResponse(RequestingSocket, RequestId, true,
 		FString::Printf(TEXT("%s %s %s."), Job->bLaunch ? TEXT("Build run") : TEXT("Packaging job"), *JobId,

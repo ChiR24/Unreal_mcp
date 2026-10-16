@@ -92,6 +92,8 @@ const testCases = [
   // A widget the tree edit just made is a variable, and the generated class has its property at once (the handlers compile),
   // so a graph step can name it without a manual compile in between.
   { scenario: 'GRAPH: a VariableGet names the widget duplicate_widget just copied', toolName: 'manage_blueprint', arguments: { action: 'create_node', blueprintPath: WIDGET_PATH, graphName: 'EventGraph', nodeType: 'VariableGet', memberName: 'MenuColumnCopy' }, expected: 'success' },
+  // DisplayLabel is a UWidget property: a widget renamed to it stopped the Widget Blueprint compiling.
+  { scenario: 'ERROR: rename_widget refuses a name an inherited property holds', toolName: 'manage_blueprint', arguments: widgetArgs('rename_widget', { slotName: 'RenameMe', newName: 'DisplayLabel' }), expected: 'error|NAME_CONFLICT' },
   { scenario: 'ACTION: rename_widget', toolName: 'manage_blueprint', arguments: widgetArgs('rename_widget', { slotName: 'RenameMe', newName: 'RenamedText' }), expected: 'success' },
   { scenario: 'GRAPH: a VariableGet names the widget rename_widget just renamed', toolName: 'manage_blueprint', arguments: { action: 'create_node', blueprintPath: WIDGET_PATH, graphName: 'EventGraph', nodeType: 'VariableGet', memberName: 'RenamedText' }, expected: 'success' },
   { scenario: 'GRAPH: a VariableGet names the widget add_text_block just added', toolName: 'manage_blueprint', arguments: { action: 'create_node', blueprintPath: WIDGET_PATH, graphName: 'EventGraph', nodeType: 'VariableGet', memberName: 'OrderMe' }, expected: 'success' },

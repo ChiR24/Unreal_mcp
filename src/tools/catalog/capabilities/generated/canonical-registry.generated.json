@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "d43b06cb87f27da2",
+  "catalogRevision": "bca71049e32d86d1",
   "recordCount": 416,
   "records": [
     {
@@ -96486,7 +96486,7 @@
             },
             "gameLogPath": {
               "type": "string",
-              "description": "Where the game writes its log."
+              "description": "Where the game writes its log. A Shipping build writes none, so its run shows only that it started and stayed up."
             },
             "seconds": {
               "type": "number",
@@ -96543,8 +96543,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "179d5c384e23472c30f97b2b1a537ba41f7304752fdeeb7028f6bbbfd9e5f6f2",
-        "content": "b2e203ee937c7b015494c646999465b8c4a5a0df3d355e6af7ae47c8aea1ef3c"
+        "schema": "da5fabc959b1e6ff57b191ed40e3eda1bcdc1c405c1116567df32fd33c6a697d",
+        "content": "c993c1050bfa8291b50a9942db9ba3f446f49017e29f642da7a0fe247b5a192c"
       }
     },
     {
@@ -97578,7 +97578,7 @@
             },
             "configuration": {
               "type": "string",
-              "description": "Client configuration of the job."
+              "description": "Client configuration of the job; for launch_build, read from the game executable name."
             },
             "gameLogPath": {
               "type": "string",
@@ -97590,21 +97590,21 @@
             },
             "errorCount": {
               "type": "number",
-              "description": "launch_build only: log lines reporting an Error or a fatal error."
+              "description": "launch_build only: log lines reporting an Error or a fatal error. Absent, with a warning, when the game wrote no log (a Shipping build logs nothing)."
             },
             "logTail": {
               "type": "array",
               "items": {
                 "type": "string"
               },
-              "description": "launch_build only: the last 30 lines of the game log."
+              "description": "launch_build only: the last 30 lines of the game log, when it wrote one."
             },
             "mapsLoaded": {
               "type": "array",
               "items": {
                 "type": "string"
               },
-              "description": "launch_build only: every map the game logged a LoadMap for, in order; empty means it never reached a level."
+              "description": "launch_build only: every map the game logged a LoadMap for, in order; empty means it never reached a level. Absent when the game wrote no log."
             }
           },
           "required": [
@@ -97661,8 +97661,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "312a3bbaac7a978eb03e0485ff73c3a07fae237be63682b4e627451a7329c372",
-        "content": "3e55906c868cc443a78afd7575482ef05b870b00909cc10d24d07dc97a121f48"
+        "schema": "c2e81321e5f774ea5f3a37e59380fea0f9af5dd97af17418a8acb230f829c18d",
+        "content": "9c2cbc24a633a136872933fb908cdac8d8d5126463d52464a822568819f6fb20"
       }
     },
     {

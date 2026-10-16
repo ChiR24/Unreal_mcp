@@ -122,6 +122,9 @@ bool HandleLaunchBuild(UEngineWireSubsystem* Self, const FString& RequestId,
 	Job.CommandLine = FString::Printf(TEXT("\"%s\" %s"), *Exe, *Args);
 	Job.ArchiveDirectory = ArchiveDir;
 	Job.Platform = TEXT("Win64");
+	// <Name>-Win64-<Configuration>.exe for DebugGame, Test and Shipping; a Development build carries no suffix.
+	Job.Configuration = TEXT("Development");
+	FPaths::GetBaseFilename(Exe).Split(TEXT("-Win64-"), nullptr, &Job.Configuration);
 	Job.GameLogPath = GameLog;
 	Job.RunSeconds = Seconds;
 	Job.StartedAtSeconds = FPlatformTime::Seconds();
@@ -155,14 +158,27 @@ bool HandleLaunchBuild(UEngineWireSubsystem* Self, const FString& RequestId,
 #endif
 }
 
-void AppendLaunchStatus(const FString& GameLogPath, int32 ExitCode, bool bExitedEarly,
-                        const TSharedPtr<FJsonObject>& Result)
+void AppendLaunchStatus(const McpPackageJobs::FJob& Job, const TSharedPtr<FJsonObject>& Result)
 {
-	Result->SetStringField(TEXT("gameLogPath"), GameLogPath);
-	if (bExitedEarly) { Result->SetNumberField(TEXT("exitCode"), ExitCode); }
+	Result->SetStringField(TEXT("gameLogPath"), Job.GameLogPath);
+	if (Job.Result == TEXT("ExitedEarly")) { Result->SetNumberField(TEXT("exitCode"), Job.ExitCode); }
 	// The game may still hold its log open for writing.
 	FString Text;
-	FFileHelper::LoadFileToString(Text, *GameLogPath, FFileHelper::EHashOptions::None, FILEREAD_AllowWrite);
+	FFileHelper::LoadFileToString(Text, *Job.GameLogPath, FFileHelper::EHashOptions::None, FILEREAD_AllowWrite);
+	// No log is not a clean log: a Shipping run answered errorCount 0 and no maps loaded, which read as a clean
+	// run although nothing had been seen at all.
+	if (Text.IsEmpty())
+	{
+		if (!Job.Result.IsEmpty())
+		{
+			const bool bShipping = Job.Configuration == TEXT("Shipping");
+			Result->SetArrayField(TEXT("warnings"), TArray<TSharedPtr<FJsonValue>>{MakeShared<FJsonValueString>(FString::Printf(
+				TEXT("The game wrote no log%s, so this run shows only whether it started and stayed up, not which maps it ")
+				TEXT("loaded or what errors it hit.%s"), bShipping ? TEXT(" (a Shipping build logs nothing)") : TEXT(""),
+				bShipping ? TEXT(" Package with configuration Development for a run whose log can be read.") : TEXT("")))});
+		}
+		return;
+	}
 	TArray<FString> Lines;
 	Text.ParseIntoArrayLines(Lines);
 	int32 Errors = 0;

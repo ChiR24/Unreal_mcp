@@ -1047,7 +1047,9 @@ describe('removing a widget subtree', () => {
 
   it('a name the Blueprint refuses for a new widget is named in the refusal', () => {
     const source = code('WidgetAuthoring', 'Support', 'McpWidgetValidate.cpp');
-    expect(source).toMatch(/FString::Printf\(TEXT\("'%s': %s"\), \*Name\.ToString\(\), \*INameValidatorInterface::GetErrorString\(Name\.ToString\(\), Result\)\);/u);
+    expect(source).toContain('FString Why = INameValidatorInterface::GetErrorString(Name.ToString(), Result);');
+    expect(source, 'its full stop goes, since every refusal goes on after it').toContain('Why.RemoveFromEnd(TEXT("."));');
+    expect(source).toMatch(/return FString::Printf\(TEXT\("'%s': %s"\), \*Name\.ToString\(\), \*Why\);/u);
   });
 });
 
@@ -3111,5 +3113,42 @@ describe('a packaged game can take its own executable name', () => {
     expect(pack).toContain('Result->SetBoolField(TEXT("targetCreated"), bTargetCreated);');
     const launch = code('SystemControl', 'McpSystemLaunchBuild.cpp');
     expect(launch, 'launch_build finds a game packaged under another name').toContain('FPaths::Combine(BinDir, TEXT("*.exe"))');
+  });
+});
+
+describe('a widget rename refuses a name the class already holds', () => {
+  // A widget renamed to DisplayLabel (a UWidget property) answered "Renamed widget" and the Widget Blueprint stopped
+  // compiling: the add paths checked McpWidgetNameConflict, the rename did not.
+  it('checks the new name like the add paths do, before anything is renamed', () => {
+    const rename = code('WidgetAuthoring', 'Support', 'McpWidgetManipulation.cpp');
+    const check = rename.indexOf('McpWidgetNameConflict(WidgetBP, FName(*NewName), TargetWidget->GetClass())');
+    expect(check).toBeGreaterThan(-1);
+    expect(check, 'before the widget is renamed').toBeLessThan(rename.indexOf('TargetWidget->Rename(*NewName, nullptr, REN_DontCreateRedirectors);'));
+    expect(rename).toContain('TEXT("NAME_CONFLICT")');
+  });
+});
+
+describe('a clean final compile settles compiler lines logged before it', () => {
+  // A batch whose add_function made an OnKeyDown override compiled part-way, and the reply kept that half-built
+  // graph's "Return Value should not be empty" warning although its final compile was clean (warningCount 0).
+  it('drops captured [Compiler] lines when the reply says compilerStatus UpToDate', () => {
+    const enrich = readFileSync(join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'Core', 'Subsystem', 'EngineWireSubsystemResponseEnrichment.h'), 'utf8');
+    expect(enrich).toContain('Result->TryGetStringField(TEXT("compilerStatus"), CompilerStatus)');
+    expect(enrich).toContain('CompilerStatus == TEXT("UpToDate")');
+    expect(enrich).toContain('WarningMessages.RemoveAll(IsCompilerLine)');
+    expect(enrich).toContain('ErrorMessages.RemoveAll(IsCompilerLine)');
+  });
+});
+
+describe('a smoke run that wrote no log does not read as a clean run', () => {
+  // A Shipping game logs nothing, and package_status answered errorCount 0 and mapsLoaded [] for its launch_build run,
+  // which read as "reached no level, hit no error" although nothing had been seen; configuration came back empty.
+  it('omits the log counts and warns when the game wrote no log', () => {
+    const launch = code('SystemControl', 'McpSystemLaunchBuild.cpp');
+    const empty = launch.indexOf('if (Text.IsEmpty())');
+    expect(empty).toBeGreaterThan(-1);
+    expect(empty, 'before any count is set').toBeLessThan(launch.indexOf('Result->SetNumberField(TEXT("errorCount"), Errors);'));
+    expect(launch).toContain('a Shipping build logs nothing');
+    expect(launch, 'the configuration comes from the executable name').toContain('FPaths::GetBaseFilename(Exe).Split(TEXT("-Win64-"), nullptr, &Job.Configuration);');
   });
 });
