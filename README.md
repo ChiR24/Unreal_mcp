@@ -136,7 +136,7 @@ Build the plugin once on a machine with the engine and a compiler, then hand out
 node scripts/package-plugin.mjs "C:/Program Files/Epic Games/UE_5.7"
 ```
 
-This writes `build/EngineWire-v<version>-UE5.7-<Platform>.zip`, where `<version>` is the `package.json` version (currently `0.6.0-beta-e`). Unzip it into `YourProject/Plugins/`. Binaries only work with the engine minor and platform they were built for: a 5.6 build won't load in 5.5, 5.7 or 5.8.
+This writes `build/EngineWire-v<version>-UE5.7-<Platform>.zip`, where `<version>` is the `package.json` version (currently `0.6.0-beta-f`). Unzip it into `YourProject/Plugins/`. Binaries only work with the engine minor and platform they were built for: a 5.6 build won't load in 5.5, 5.7 or 5.8.
 
 </details>
 

@@ -6,6 +6,12 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 
 ## [Unreleased]
 
+_Nothing yet._
+
+## [0.6.0-beta-f] - 2026-10-16
+
+Plugin-side changes since the `v0.6.0-beta-e` tag, from the code diff. The server-side view is in the root `CHANGELOG.md`.
+
 ### Changed
 - **Renamed EngineWire** (was McpAutomationBridge): plugin, modules, classes and settings page, with short source file names for Fab; settings under the old section still load.
 - **`build_graph` rolls back a failed batch**, and replies are leaner: actors named once, compact runtime and spawn-batch reports, transforms rounded to ten digits.

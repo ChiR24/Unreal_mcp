@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## 🏷️ [Unreleased]
 
+_Nothing yet._
+
+---
+
+## 🏷️ [0.6.0-beta-f] - 2026-10-16
+
+> [!NOTE]
+> **Beta.** Published as a semver prerelease (`0.6.0-beta-f`) under the npm `beta` dist-tag, so `npm install` keeps serving the newest stable release, **`0.5.30`**. This section is everything on `dev` since the `v0.6.0-beta-e` tag, written from the code diff.
+
 <details>
 <summary><b>✨ Added</b></summary>
 
@@ -47,6 +56,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Assets**: deletes count what they removed, imports name the mesh, Fab adds a pack's Unreal build, dead material branches list as orphaned, and material usage flags are saved.
 - **Geometry**: appended faces face outwards, arrays are no longer one copy short, and SDF shapes mesh at the resolution asked for.
 - **Undo, search and guidance**: volume and single-actor component edits are one undo step, more plain requests are found, and every pointer in record text names a real action.
+
+</details>
+
+<details>
+<summary><b>📊 Change Statistics</b></summary>
+
+| Metric | Count |
+|--------|-------|
+| Diff range | `v0.6.0-beta-e..v0.6.0-beta-f` |
+| Commits | 212, the version bump and this release entry included |
+| Files changed | 1,976 (1,950 hand-written, not counting generated files or line-ending-only changes) |
+| Insertions / deletions | 34,715 / 11,597 (hand-written: 26,407 / 10,792) |
+| Capability records | 416 |
+| Callable `{tool, action}` pairs | 1,554 |
+| C++ domain directories | 55 |
 
 </details>
 
