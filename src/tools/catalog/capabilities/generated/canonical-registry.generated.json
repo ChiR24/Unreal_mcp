@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "fbb8a32625950a68",
+  "catalogRevision": "057284080f0a3ddc",
   "recordCount": 416,
   "records": [
     {
@@ -16736,7 +16736,33 @@
             },
             "itemCount": {
               "type": "number",
-              "description": "Shop item cards (1-48, default 8)."
+              "description": "Placeholder shop item cards when items names none (1-48, default 8)."
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Item name shown on its card."
+                  },
+                  "price": {
+                    "type": "number",
+                    "description": "Price shown on its card."
+                  }
+                },
+                "required": [
+                  "name",
+                  "price"
+                ],
+                "additionalProperties": false
+              },
+              "description": "Shop items in order (1-48, in place of itemCount): each card shows its name and price, and its button is Item_<n>_Buy, n counting from 1."
+            },
+            "currency": {
+              "type": "string",
+              "description": "Currency name in the shop header, shown as \"<currency>: 0\" (default Gold)."
             },
             "screen": {
               "type": "string",
@@ -16925,14 +16951,20 @@
             ],
             "itemCount": [
               "shop"
+            ],
+            "items": [
+              "shop"
+            ],
+            "currency": [
+              "shop"
             ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "4c2be6bc9d03fbf85336f02ad17b437ffa74a3455cf7d27502e0453df4581a77",
-        "content": "b70f9b7f92e787f659080d5805156116150da8489f9d26bdfa763af78d58fa06"
+        "schema": "f00a90cde9ecdb364778bf7831500eb51fd3062b2b69d33d8c6fa81cd3c59ab3",
+        "content": "39fa0b95ea338a324c7fac448fa97996c093f58e2bdf605cfd472ff1c7330e25"
       }
     },
     {

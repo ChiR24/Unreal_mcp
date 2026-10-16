@@ -7,6 +7,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 ## [Unreleased]
 
 ### Changed
+- **Shop template** (`BuildShop` in `Templates/McpWidgetScreensMore.cpp`): `items` (1-48 `{name, price}` objects, the price written by `FText::AsNumber`) fill each card's name and price in place of `itemCount`'s placeholders, and `currency` names the header's currency (default Gold).
 - **Dialog template** (`BuildDialog` in `Templates/McpWidgetScreensMore.cpp`): `buttons` (at most 6) are the responses, each `NameStem(Label) + "Button"` as `BuildMenu` names them, in place of `responseCount`'s placeholders; `text` is the DialogText line.
 - **Search ignores "if", "whether" and "own"** (`FunctionWords` in `McpNativeGatewaySearchMatch.cpp`), as the TypeScript door now does. A search that matches nothing (`McpNativeGatewaySearch.cpp`) says game logic is built as a Blueprint graph, as the TypeScript door does.
 - **Bare `runtime_report`** (`McpEnvInspectRuntime.cpp`): no actor descriptions without a selector; the message says how to ask for them. The camera pose only inside `playerCameraManager`.

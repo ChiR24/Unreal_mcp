@@ -13023,6 +13023,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Which create variant to run; omit for 'create'.",
           "default": "create"
         },
+        "currency": {
+          "type": "string",
+          "description": "Currency name in the shop header, shown as \"<currency>: 0\" (default Gold)."
+        },
         "customEventName": {
           "type": "string",
           "description": "Custom event name to create."
@@ -13378,14 +13382,41 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "itemCount": {
           "type": "number",
-          "description": "Shop item cards (1-48, default 8)."
+          "description": "Placeholder shop item cards when items names none (1-48, default 8)."
         },
         "items": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "description": "Row text."
-          },
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Item name shown on its card."
+                  },
+                  "price": {
+                    "type": "number",
+                    "description": "Price shown on its card."
+                  }
+                },
+                "required": [
+                  "name",
+                  "price"
+                ],
+                "additionalProperties": false
+              },
+              "description": "Shop items in order (1-48, in place of itemCount): each card shows its name and price, and its button is Item_<n>_Buy, n counting from 1."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "description": "Row text."
+              },
+              "description": "Rows the objective or quest tracker lists, top to bottom."
+            }
+          ],
           "description": "Rows the objective or quest tracker lists, top to bottom."
         },
         "jumpKey": {

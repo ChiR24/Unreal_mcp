@@ -262,7 +262,13 @@ export const P = {
   columns: N('Grid columns: inventory 1-12 (default 6), shop 1-8 (default 4).'),
   rows: N('Inventory grid rows (1-12, default 4).'),
   segmentCount: N('Radial menu segments (2-12, default 8).'),
-  itemCount: N('Shop item cards (1-48, default 8).'),
+  itemCount: N('Placeholder shop item cards when items names none (1-48, default 8).'),
+  shopItems: {
+    type: 'array',
+    items: { type: 'object', properties: { name: S('Item name shown on its card.'), price: N('Price shown on its card.') }, required: ['name', 'price'], additionalProperties: false },
+    description: 'Shop items in order (1-48, in place of itemCount): each card shows its name and price, and its button is Item_<n>_Buy, n counting from 1.',
+  },
+  currency: S('Currency name in the shop header, shown as "<currency>: 0" (default Gold).'),
   entries: {
     type: 'array',
     items: { type: 'object', properties: { title: S('Role or section, such as Music.'), name: S('Name credited.') }, required: ['title', 'name'], additionalProperties: false },

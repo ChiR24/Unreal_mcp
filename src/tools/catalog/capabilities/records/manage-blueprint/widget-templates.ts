@@ -69,5 +69,6 @@ export const WIDGET_TEMPLATES_RECORDS: readonly CapabilityRecordSource[] = [
   screen('create_credits_screen', 'Create a credits Widget Blueprint: centred scrolling list of role and name pairs with a Back button.',
     { title: P.title, entries: P.entries }, { entries: [{ title: 'Design', name: 'Ada' }, { title: 'Music', name: 'Grace' }] }),
   screen('create_shop_ui', 'Create a shop Widget Blueprint: header with currency, a scrolling grid of item cards each with a Buy button, and Close.',
-    { columns: P.columns, itemCount: P.itemCount }, { columns: 4, itemCount: 8 }),
+    { columns: P.columns, itemCount: P.itemCount, items: P.shopItems, currency: P.currency },
+    { currency: 'Coins', items: [{ name: 'Sword', price: 250 }, { name: 'Shield', price: 180 }] }),
 ];

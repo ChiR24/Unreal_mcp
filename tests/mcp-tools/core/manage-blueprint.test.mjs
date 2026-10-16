@@ -826,6 +826,7 @@ const testCases = [
     arguments: { action, name: `WBP_Tpl${stem}_${ts}`, path: TEST_FOLDER, ...extra },
     expected: 'success',
   }));
+  screenCases.push({ scenario: 'SCREEN: create_shop_ui with its own items, prices and currency', toolName: 'manage_blueprint', arguments: { action: 'create_shop_ui', name: `WBP_TplWares_${ts}`, path: TEST_FOLDER, currency: 'Coins', items: [{ name: 'Sword', price: 250 }, { name: 'Shield', price: 180 }] }, expected: 'success', assertions: [{ path: 'structuredContent.result.buttons', length: 3, label: 'a Buy button per item, and Close' }, { path: 'structuredContent.result.buttons.1', equals: 'Item_2_Buy', label: 'the buttons count the items in order' }] });
   screenCases.push({ scenario: 'SCREEN: create_dialog_widget with its own line and choices', toolName: 'manage_blueprint', arguments: { action: 'create_dialog_widget', name: `WBP_TplChoice_${ts}`, path: TEST_FOLDER, text: 'Open the gate?', buttons: ['Yes', 'No'] }, expected: 'success', assertions: [{ path: 'structuredContent.result.buttons.0', equals: 'YesButton', label: 'each response is named after its label' }, { path: 'structuredContent.result.buttons', length: 2, label: 'one button per label' }] });
 
   testCases.push(

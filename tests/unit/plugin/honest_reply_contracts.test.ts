@@ -2968,6 +2968,17 @@ describe("a Set wired to another object is not this one's write", () => {
   });
 });
 
+describe('a shop takes its own items', () => {
+  // Every card read "Item 1" and "100" under "Gold: 0": two text edits a card before the shop said anything.
+  it('names each card and its price from items, and the header from currency', () => {
+    const screens = code('WidgetAuthoring', 'Templates', 'McpWidgetScreensMore.cpp');
+    expect(screens).toContain('Payload->TryGetArrayField(TEXT("items"), Values)');
+    expect(screens).toContain('Listed.Emplace(Name, FText::AsNumber(Price).ToString());');
+    expect(screens).toContain('GetJsonStringField(Payload, TEXT("currency"), TEXT("Gold"))');
+    expect(screens).toContain('Items = Listed.Num();');
+  });
+});
+
 describe('a Math Expression lists inputPins only when it made pins', () => {
   it('leaves the list out for a formula that reads only member variables', () => {
     const expression = code('BlueprintGraph', 'Expression', 'McpBPGraphMathExpr.cpp');
