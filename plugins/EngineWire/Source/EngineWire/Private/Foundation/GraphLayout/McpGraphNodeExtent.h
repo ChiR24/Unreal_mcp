@@ -291,23 +291,4 @@ inline TSharedPtr<FJsonObject> BuildNodeOverlapDetails(
 	return Details;
 }
 
-// For a node already added at (PosX, PosY): when it overlaps another node,
-// removes it from Graph, fills OutMessage/OutDetails (coordinates and free
-// slots) and returns true, so the caller replies NODE_OVERLAP.
-inline bool RefuseOverlappingNode(UEdGraph* Graph, UEdGraphNode* Node, float PosX, float PosY,
-	FString& OutMessage, TSharedPtr<FJsonObject>& OutDetails)
-{
-	float Width = 0.0f;
-	float Height = 0.0f;
-	EstimateNodeExtent(*Node, Width, Height);
-	TArray<FGraphNodeOccupant> Overlapping;
-	if (!CheckGraphNodeOverlap(Graph, PosX, PosY, Width, Height, Overlapping, NodeOverlapPadding, Node))
-	{
-		return false;
-	}
-	Graph->RemoveNode(Node);
-	OutDetails = BuildNodeOverlapDetails(PosX, PosY, Width, Height, Overlapping, OutMessage, Graph);
-	return true;
-}
-
 }

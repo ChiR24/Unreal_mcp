@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "bf2bc2d54348105d",
+  "catalogRevision": "fbb8a32625950a68",
   "recordCount": 416,
   "records": [
     {
@@ -17651,7 +17651,7 @@
             },
             "nodeType": {
               "type": "string",
-              "description": "The node to create: CallFunction (memberName, plus memberClass for a function of another class), Event (eventName: BeginPlay, Tick), CustomEvent (customEventName), VariableGet or VariableSet (memberName), Cast (targetClass), InputAxisEvent (inputAxisName), Branch, Sequence, Select, Switch, SwitchOnInt, SwitchOnEnum, SwitchOnString, DoOnce, DoN, FlipFlop, Gate, MultiGate, ForLoop, ForEachLoop, WhileLoop (each also WithBreak), MakeArray, GetArrayItem (an array's Get: pins Array, Dimension 1 for the index, Output), MakeStruct and BreakStruct (structPath), SpawnActorFromClass, GetAllActorsOfClass, Self, CallDelegate (memberName: an event dispatcher, memberClass: another class's), BindEvent (the same, plus eventName: a Bind Event node and a custom event with the dispatcher's inputs wired to it, eventNodeGuid in the reply),Timeline (timelineName; edit_timeline keys its tracks), Reroute, Comment, MathExpression (its formula goes in set_node_property Expression) (a Switch on Int is made with only Default: wire a case by its number, from \"$id.0\", \"$id.1\"..., and the case pin is added; a Sequence or a commutative math node grows its inputs the same way); a common function by name (PrintString, Delay, SetActorLocation, GetPlayerPawn, GetActorOfClass, IsValid, PlaySound2D); or a K2Node class name that inspect_graph info=node_types lists. In an Animation Blueprint's AnimGraph or a state's graph (graphName), any animation node by class: AnimGraphNode_TwoBoneIK, TwoBoneIK or Two Bone IK (info=node_types with filter IK lists them; animation_physics configure_anim_graph_node set_value sets its settings); a node the graph cannot hold is refused (NODE_NOT_ALLOWED_IN_GRAPH). For create_struct_make_break_nodes: make or break."
+              "description": "The node to create: CallFunction (memberName, plus memberClass for a function of another class), Event (eventName: BeginPlay, Tick), CustomEvent (customEventName), VariableGet or VariableSet (memberName), Cast (targetClass), InputAxisEvent (inputAxisName), Branch, Sequence, Select, Switch, SwitchOnInt, SwitchOnEnum (enumPath: one exec output per value, named after it), SwitchOnString, DoOnce, DoN, FlipFlop, Gate, MultiGate, ForLoop, ForEachLoop, WhileLoop (each also WithBreak), MakeArray, GetArrayItem (an array's Get: pins Array, Dimension 1 for the index, Output), MakeStruct and BreakStruct (structPath), SpawnActorFromClass, GetAllActorsOfClass, Self, CallDelegate (memberName: an event dispatcher, memberClass: another class's), BindEvent (the same, plus eventName: a Bind Event node and a custom event with the dispatcher's inputs wired to it, eventNodeGuid in the reply),Timeline (timelineName; edit_timeline keys its tracks), Reroute, Comment, MathExpression (its formula goes in set_node_property Expression) (a Switch on Int is made with only Default: wire a case by its number, from \"$id.0\", \"$id.1\"..., and the case pin is added; a Sequence or a commutative math node grows its inputs the same way); a common function by name (PrintString, Delay, SetActorLocation, GetPlayerPawn, GetActorOfClass, IsValid, PlaySound2D); or a K2Node class name that inspect_graph info=node_types lists. In an Animation Blueprint's AnimGraph or a state's graph (graphName), any animation node by class: AnimGraphNode_TwoBoneIK, TwoBoneIK or Two Bone IK (info=node_types with filter IK lists them; animation_physics configure_anim_graph_node set_value sets its settings); a node the graph cannot hold is refused (NODE_NOT_ALLOWED_IN_GRAPH). For create_struct_make_break_nodes: make or break."
             },
             "posX": {
               "type": "number",
@@ -17716,6 +17716,10 @@
             "structPath": {
               "type": "string",
               "description": "For MakeStruct or BreakStruct: the struct, a Blueprint Struct asset (/Game/Data/F_Item) or a native one (/Script/SlateCore.SlateColor, /Script/CoreUObject.Vector); without it the node is refused."
+            },
+            "enumPath": {
+              "type": "string",
+              "description": "For SwitchOnEnum, ForEachElementInEnum, GetNumEnumEntries, EnumLiteral and CastByteToEnum: the enum whose values become the node's pins (a Switch on Enum's outputs are named after them), a Blueprint enum asset (/Game/Data/E_Phase) or a native one (/Script/Engine.ECollisionChannel); without it the node is refused."
             },
             "parameters": {
               "type": "array",
@@ -18297,6 +18301,9 @@
               "create_node",
               "create_struct_make_break_nodes"
             ],
+            "enumPath": [
+              "create_node"
+            ],
             "parameters": [
               "create_node"
             ],
@@ -18353,8 +18360,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "079efc101d66b1530120a6d5d519814743f44c66ce087d78d61aa3fced29ed67",
-        "content": "b1529a02bd45ccf9e0227f96c53ff5877160b115de3f207e590355f5a75c87b8"
+        "schema": "0f1906975583b09b5e42015ad4154b894941f4783b1cd7de929c5a9e2cffed31",
+        "content": "e26b28be88ee76d7b5f52fa2acdf304df0beeb5d9cc833b6035138e9cc2b8bbc"
       }
     },
     {

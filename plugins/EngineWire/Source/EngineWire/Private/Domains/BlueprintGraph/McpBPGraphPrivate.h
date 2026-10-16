@@ -17,7 +17,7 @@
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "UObject/UObjectIterator.h"
-#include "Foundation/GraphLayout/McpGraphNodeExtent.h"
+#include "Foundation/GraphLayout/McpGraphOverlap.h"
 
 class UK2Node_CallFunction;
 
@@ -153,40 +153,13 @@ struct FActionContext
         // Refuse stacked placements: the node is already in the graph at this
         // point (FGraphNodeCreator adds it on CreateNode), so pull it back out
         // on overlap and fail with coordinates instead of silently stacking.
+        FString OverlapMessage;
+        TSharedPtr<FJsonObject> OverlapDetails;
+        if (McpGraphLayout::RefuseOverlappingNode(TargetGraph, NewNode, X, Y, OverlapMessage, OverlapDetails,
+                                                  McpGraphLayout::NamesNoPosition(Payload)))
         {
-            float NewWidth = 0.0f;
-            float NewHeight = 0.0f;
-            McpGraphLayout::EstimateNodeExtent(*NewNode, NewWidth, NewHeight);
-            TArray<McpGraphLayout::FGraphNodeOccupant> Overlapping;
-            bool bOverlaps = McpGraphLayout::CheckGraphNodeOverlap(
-                TargetGraph, X, Y, NewWidth, NewHeight, Overlapping,
-                McpGraphLayout::NodeOverlapPadding, NewNode);
-            // A call that named no position gets the first free slot to the
-            // right instead of an overlap refusal it could only answer by retrying.
-            const bool bAutoPlace = Payload.IsValid() &&
-                !Payload->HasField(TEXT("x")) && !Payload->HasField(TEXT("posX")) &&
-                !Payload->HasField(TEXT("y")) && !Payload->HasField(TEXT("posY"));
-            for (int32 Step = 0; bOverlaps && bAutoPlace && Step < 8; ++Step)
-            {
-                for (const McpGraphLayout::FGraphNodeOccupant& Occupant : Overlapping)
-                {
-                    X = FMath::Max(X, Occupant.X + Occupant.Width + McpGraphLayout::NodeSuggestGap);
-                }
-                NewNode->NodePosX = X;
-                bOverlaps = McpGraphLayout::CheckGraphNodeOverlap(
-                    TargetGraph, X, Y, NewWidth, NewHeight, Overlapping,
-                    McpGraphLayout::NodeOverlapPadding, NewNode);
-            }
-            if (bOverlaps)
-            {
-                TargetGraph->RemoveNode(NewNode);
-                FString OverlapMessage;
-                TSharedPtr<FJsonObject> OverlapDetails =
-                    McpGraphLayout::BuildNodeOverlapDetails(
-                        X, Y, NewWidth, NewHeight, Overlapping, OverlapMessage, TargetGraph);
-                SendErrorWithDetails(OverlapMessage, TEXT("NODE_OVERLAP"), OverlapDetails);
-                return;
-            }
+            SendErrorWithDetails(OverlapMessage, TEXT("NODE_OVERLAP"), OverlapDetails);
+            return;
         }
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
         SaveLoadedAssetThrottled(Blueprint);
@@ -316,6 +289,8 @@ bool TryCreateConstructObjectNode(
     UClass* NodeClass,
     float X,
     float Y);
+// Switch on Enum and the other nodes that build their pins from an Enum property, seeded from enumPath.
+bool TryCreateEnumNode(FActionContext& Context, UClass* NodeClass, float X, float Y);
 bool TryCreateSubsystemNode(
     FActionContext& Context,
     UClass* NodeClass,

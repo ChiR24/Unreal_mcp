@@ -1,6 +1,8 @@
 #include "Domains/BlueprintGraph/McpBPGraphPrivate.h"
 
 #include "K2Node_GetSubsystem.h"
+#include "K2Node_Select.h"
+#include "Misc/PackageName.h"
 #include "Subsystems/Subsystem.h"
 
 namespace McpBlueprintGraphHandlers
@@ -9,14 +11,15 @@ namespace
 {
 // FGraphNodeCreator<T>::CreateNode(bSelect, Class) arrives in 5.3, and the GetSubsystem subclasses are not exported, so
 // they cannot be its T. This does what UEdGraph::CreateNode and FGraphNodeCreator::Finalize do, on every engine.
-struct FSubsystemNodeCreator
+template <typename TNode>
+struct TClassNodeCreator
 {
     UEdGraph& Graph;
-    UK2Node_GetSubsystem* Node = nullptr;
+    TNode* Node = nullptr;
 
-    UK2Node_GetSubsystem* CreateNode(UClass* NodeClass)
+    TNode* CreateNode(UClass* NodeClass)
     {
-        Node = NewObject<UK2Node_GetSubsystem>(&Graph, NodeClass, NAME_None, RF_Transactional);
+        Node = NewObject<TNode>(&Graph, NodeClass, NAME_None, RF_Transactional);
         Graph.AddNode(Node, false, false);
         return Node;
     }
@@ -96,7 +99,7 @@ bool TryCreateSubsystemNode(
         return true;
     }
 
-    FSubsystemNodeCreator Creator{*Context.TargetGraph};
+    TClassNodeCreator<UK2Node_GetSubsystem> Creator{*Context.TargetGraph};
     UK2Node_GetSubsystem* Node = Creator.CreateNode(NodeClass);
     if (!Node)
     {
@@ -109,6 +112,48 @@ bool TryCreateSubsystemNode(
     // and AllocateDefaultPins() reads CustomClass to type the result pin. Setting
     // it afterwards would need a reconstruct and leaves the node briefly invalid.
     Node->Initialize(ResolvedClass);
+    Context.FinalizeNode(Creator, Node, X, Y);
+    return true;
+}
+
+// Switch on Enum, ForEach<Enum>, Get Number of Entries, Literal Enum and Byte to Enum build their pins from an Enum
+// UPROPERTY too. Spawned by class name it stayed null: a Switch on Enum had no case outputs, compiled, and the call
+// answered success. Select also holds one, but takes it from the index wired to it.
+bool TryCreateEnumNode(FActionContext& Context, UClass* NodeClass, float X, float Y)
+{
+    FObjectPropertyBase* EnumProperty = CastField<FObjectPropertyBase>(NodeClass->FindPropertyByName(TEXT("Enum")));
+    if (!EnumProperty || EnumProperty->PropertyClass != UEnum::StaticClass() ||
+        NodeClass->IsChildOf(UK2Node_Select::StaticClass()) || !NodeClass->IsChildOf(UK2Node::StaticClass()))
+    {
+        return false;
+    }
+    FString EnumPath;
+    Context.Payload->TryGetStringField(TEXT("enumPath"), EnumPath);
+    const uint32 Quiet = LOAD_NoWarn | LOAD_Quiet;
+    UEnum* Enum = EnumPath.StartsWith(TEXT("/")) ? LoadObject<UEnum>(nullptr, *EnumPath, nullptr, Quiet) : nullptr;
+    if (!Enum && EnumPath.StartsWith(TEXT("/")) && !EnumPath.Contains(TEXT(".")))
+    {
+        Enum = LoadObject<UEnum>(nullptr, *(EnumPath + TEXT(".") + FPackageName::GetShortName(EnumPath)), nullptr, Quiet);
+    }
+    // A bare name (ECollisionChannel) of an enum already loaded.
+    for (TObjectIterator<UEnum> It; It && !Enum && !EnumPath.IsEmpty(); ++It)
+    {
+        Enum = It->GetName().Equals(EnumPath, ESearchCase::IgnoreCase) ? *It : nullptr;
+    }
+    if (!Enum)
+    {
+        Context.SendError(
+            FString::Printf(TEXT("%s needs enumPath: the enum its pins come from, a Blueprint enum asset "
+                                 "(/Game/Data/E_Phase) or a native one (/Script/Engine.ECollisionChannel)%s."),
+                            *NodeClass->GetName(),
+                            EnumPath.IsEmpty() ? TEXT("") : *FString::Printf(TEXT("; '%s' was not found"), *EnumPath)),
+            TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+    TClassNodeCreator<UK2Node> Creator{*Context.TargetGraph};
+    UK2Node* Node = Creator.CreateNode(NodeClass);
+    // Before FinalizeNode, which allocates the pins from it.
+    EnumProperty->SetObjectPropertyValue_InContainer(Node, Enum);
     Context.FinalizeNode(Creator, Node, X, Y);
     return true;
 }

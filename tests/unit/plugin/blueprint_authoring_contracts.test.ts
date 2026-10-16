@@ -175,7 +175,40 @@ describe('build_graph: an overlapping explicit position moves the node instead o
     const layout = read('Foundation', 'GraphLayout', 'McpGraphNodeExtent.h');
     expect(layout).toContain('inline bool FindNearestFreeSlot(');
     expect(layout).toMatch(/FindNearestFreeSlot\(Graph, NewX, NewY, NewW, NewH, IgnoreNode, FreeX, FreeY\)/u);
-    expect(layout).toContain('BuildNodeOverlapDetails(PosX, PosY, Width, Height, Overlapping, OutMessage, Graph)');
+    const overlap = read('Foundation', 'GraphLayout', 'McpGraphOverlap.h');
+    expect(overlap).toContain('BuildNodeOverlapDetails(PosX, PosY, Width, Height, Overlapping, OutMessage, Graph)');
+  });
+
+  // A lone create_node SwitchOnEnum with no position landed on BeginPlay at (0, 0) and was refused, while the same
+  // call for a function node took the first free slot.
+  it('every create path places a node that named no position instead of refusing it', () => {
+    const overlap = read('Foundation', 'GraphLayout', 'McpGraphOverlap.h');
+    expect(overlap).toContain('for (int32 Step = 0; bOverlaps && bAutoPlace && Step < 8; ++Step)');
+    expect(read('Domains', 'BlueprintGraph', 'McpBPGraphPrivate.h')).toContain('McpGraphLayout::NamesNoPosition(Payload)))');
+    for (const file of ['McpBPGraphNodeCreationDynamic.cpp', 'McpBPGraphSpecialNodes.cpp', 'McpBPGraphConstructObjectNodes.cpp']) {
+      expect(read('Domains', 'BlueprintGraph', file)).toContain('McpGraphLayout::NamesNoPosition(Context.Payload)))');
+    }
+    expect(read('Domains', 'Blueprint', 'Graph', 'McpBPAddNode.cpp')).toContain('McpGraphLayout::NamesNoPosition(LocalPayload)))');
+  });
+});
+
+// create_node SwitchOnEnum made a Switch with no enum and no case outputs, and answered success.
+describe('create_node: an enum node gets its enum or is refused', () => {
+  it('sets the Enum property from enumPath before the pins are allocated', () => {
+    const nodes = read('Domains', 'BlueprintGraph', 'McpBPGraphSubsystemNodes.cpp');
+    expect(nodes).toContain('CastField<FObjectPropertyBase>(NodeClass->FindPropertyByName(TEXT("Enum")))');
+    expect(nodes).toContain('NodeClass->IsChildOf(UK2Node_Select::StaticClass())');
+    expect(nodes).toMatch(/needs enumPath: the enum its pins come from/u);
+    const seeded = nodes.indexOf('EnumProperty->SetObjectPropertyValue_InContainer(Node, Enum);');
+    expect(seeded).toBeGreaterThan(-1);
+    expect(seeded).toBeLessThan(nodes.lastIndexOf('Context.FinalizeNode(Creator, Node, X, Y);'));
+    expect(read('Domains', 'BlueprintGraph', 'McpBPGraphNodeCreationDynamic.cpp'))
+      .toContain('TryCreateSubsystemNode(Context, NodeClass, X, Y) || TryCreateEnumNode(Context, NodeClass, X, Y)');
+  });
+
+  it('the node type list says SwitchOnEnum takes enumPath', () => {
+    expect(paramDescription('blueprint.edit_graph', 'nodeType')).toContain('SwitchOnEnum (enumPath');
+    expect(paramDescription('blueprint.edit_graph', 'enumPath')).toContain('/Script/Engine.ECollisionChannel');
   });
 });
 

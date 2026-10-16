@@ -11,7 +11,7 @@
 #include "Engine/Blueprint.h"
 #include "EdGraph/EdGraph.h"
 #include "EdGraph/EdGraphNode.h"
-#include "Foundation/GraphLayout/McpGraphNodeExtent.h"
+#include "Foundation/GraphLayout/McpGraphOverlap.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 
 namespace McpBlueprintHandlers {
@@ -164,7 +164,8 @@ bool HandleBlueprintAddNode(const FBlueprintActionContext &Context) {
     {
       FString OverlapMessage;
       TSharedPtr<FJsonObject> OverlapDetails;
-      if (McpGraphLayout::RefuseOverlappingNode(TargetGraph, NewNode, PosX, PosY, OverlapMessage, OverlapDetails))
+      if (McpGraphLayout::RefuseOverlappingNode(TargetGraph, NewNode, PosX, PosY, OverlapMessage, OverlapDetails,
+                                                McpGraphLayout::NamesNoPosition(LocalPayload)))
       {
         Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
                                OverlapMessage, OverlapDetails,

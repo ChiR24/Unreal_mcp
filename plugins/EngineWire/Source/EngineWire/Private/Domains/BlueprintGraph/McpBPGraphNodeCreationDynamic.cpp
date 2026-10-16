@@ -172,9 +172,9 @@ void CreateDynamicNode(
         return;
     }
 
-    // Subsystem getters keep their type in a UPROPERTY rather than a pin, so
-    // they must be seeded at construction; see TryCreateSubsystemNode.
-    if (TryCreateSubsystemNode(Context, NodeClass, X, Y))
+    // Subsystem getters and the enum nodes (Switch on Enum ...) keep their type in a UPROPERTY rather than a pin,
+    // so they must be seeded at construction; see TryCreateSubsystemNode and TryCreateEnumNode.
+    if (TryCreateSubsystemNode(Context, NodeClass, X, Y) || TryCreateEnumNode(Context, NodeClass, X, Y))
     {
         return;
     }
@@ -301,7 +301,8 @@ void CreateDynamicNode(
     {
         FString OverlapMessage;
         TSharedPtr<FJsonObject> OverlapDetails;
-        if (McpGraphLayout::RefuseOverlappingNode(Context.TargetGraph, NewNode, X, Y, OverlapMessage, OverlapDetails))
+        if (McpGraphLayout::RefuseOverlappingNode(Context.TargetGraph, NewNode, X, Y, OverlapMessage, OverlapDetails,
+                                                  McpGraphLayout::NamesNoPosition(Context.Payload)))
         {
             Context.SendErrorWithDetails(OverlapMessage, TEXT("NODE_OVERLAP"), OverlapDetails);
             return;
