@@ -249,6 +249,7 @@ void AuditActor(AActor* Actor, const TSet<FString>& Focus, double Tolerance, FPa
     Audit.Examined = Parts.Num();
     FindSunk(Parts, Focus, Audit, Tolerance, Audit.Issues);
     FindBuried(Parts, Focus, Tolerance, Audit.Issues);
+    NoteInheritedScale(Actor, Focus, Audit.Notes);
     Audit.Issues.Sort([](const FPartIssue& L, const FPartIssue& R) { return L.Depth > R.Depth; });
 }
 } // namespace

@@ -183,6 +183,11 @@ bool UEngineWireSubsystem::HandleControlActorGetComponents(
       Entry->SetObjectField(TEXT("relativeRotation"), McpHandlerUtils::RotatorToJson(Rot));
 
       Entry->SetObjectField(TEXT("relativeScale"), McpHandlerUtils::VectorToJson(Scale));
+      // A part under a scaled parent is drawn at that scale times its own: relativeScale alone hid that a trigger
+      // box of extent 70x70x40 was 112x112x4 in the world. A class default's parts have no world transform.
+      if (!Found->HasAnyFlags(RF_ClassDefaultObject) && !SceneComp->GetComponentScale().Equals(Scale, 1e-3)) {
+        Entry->SetObjectField(TEXT("worldScale"), McpHandlerUtils::VectorToJson(SceneComp->GetComponentScale()));
+      }
     }
 
     // Inspection detail (class identity, attach parent, visibility/active,

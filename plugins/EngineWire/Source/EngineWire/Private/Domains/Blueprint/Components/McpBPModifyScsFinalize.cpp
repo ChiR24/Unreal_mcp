@@ -119,6 +119,7 @@ void FinalizeModifyScsResponse(const FBlueprintActionContext &Context,
       PartWarnings.Add(MakeShared<FJsonValueObject>(McpPartPlacement::IssueToJson(Parts.Issues[Index])));
       State.LocalWarnings.Add(Parts.Issues[Index].Issue);
     }
+    State.LocalWarnings.Append(Parts.Notes);
   }
   State.CompletionResult->SetStringField(TEXT("blueprintPath"), State.NormalizedBlueprintPath);
   State.CompletionResult->SetBoolField(TEXT("compiled"), bCompileOk);
