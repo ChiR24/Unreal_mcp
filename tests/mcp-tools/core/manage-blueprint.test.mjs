@@ -521,6 +521,26 @@ const testCases = [
     { edit: 'connect_pins', from: '$wait.then', to: '$kill.execute' },
     { edit: 'connect_pins', from: '$target.Target', to: '$kill.self' },
   ] }, expected: 'success', assertions: [{ path: 'structuredContent.receipt.warnings', exists: false, label: 'only the run that starts the wait writes Target, so nothing is raised' }] },
+  // A Set wired to a spawned copy writes the copy's variable: reading this one's after it is no second step.
+  { scenario: 'ADD: create a Blueprint that copies a value into a spawned copy', toolName: 'manage_blueprint', arguments: { action: 'create', name: `BP_CopyCheck_${ts}`, savePath: TEST_FOLDER, parentClass: '/Script/Engine.Actor' }, expected: 'success' },
+  { scenario: 'BATCH: build_graph does not warn when the Set writes a spawned copy', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: `${TEST_FOLDER}/BP_CopyCheck_${ts}`, graphName: 'EventGraph', operations: [
+    { edit: 'add_variable', variableName: 'HomeX', variableType: 'int' },
+    { edit: 'create_node', id: 'go', nodeType: 'CustomEvent', customEventName: 'Split' },
+    { edit: 'create_node', id: 'where', nodeType: 'CallFunction', memberName: 'GetTransform', memberClass: 'Actor' },
+    { edit: 'create_node', id: 'spawn', nodeType: 'SpawnActorFromClass', targetClass: `${TEST_FOLDER}/BP_CopyCheck_${ts}.BP_CopyCheck_${ts}_C` },
+    { edit: 'create_node', id: 'get', nodeType: 'VariableGet', memberName: 'HomeX' },
+    { edit: 'create_node', id: 'copy', nodeType: 'VariableSet', memberName: 'HomeX' },
+    { edit: 'create_node', id: 'show', nodeType: 'CallFunction', memberName: 'Conv_IntToString', memberClass: 'KismetStringLibrary' },
+    { edit: 'create_node', id: 'print', nodeType: 'CallFunction', memberName: 'PrintString' },
+    { edit: 'connect_pins', from: '$go.then', to: '$spawn.execute' },
+    { edit: 'connect_pins', from: '$where.ReturnValue', to: '$spawn.SpawnTransform' },
+    { edit: 'connect_pins', from: '$spawn.then', to: '$copy.execute' },
+    { edit: 'connect_pins', from: '$spawn.ReturnValue', to: '$copy.self' },
+    { edit: 'connect_pins', from: '$get.HomeX', to: '$copy.HomeX' },
+    { edit: 'connect_pins', from: '$get.HomeX', to: '$show.InInt' },
+    { edit: 'connect_pins', from: '$show.ReturnValue', to: '$print.InString' },
+    { edit: 'connect_pins', from: '$copy.then', to: '$print.execute' },
+  ] }, expected: 'success', assertions: [{ path: 'structuredContent.receipt.warnings', exists: false, label: "the Set writes the copy's HomeX, so the Print reads this one's unchanged" }] },
   // An audit: every Blueprint under the folder compiled in one call, the flagged ones listed with their diagnostics.
   { scenario: 'ACTION: compile a folder lists the Blueprints the checks flag', toolName: 'manage_blueprint', arguments: { action: 'compile', folder: TEST_FOLDER }, expected: 'success', assertions: [{ path: 'structuredContent.result.flaggedCount', gte: 3, label: 'the loop, timer and wait checks flag their Blueprints' }, { path: 'structuredContent.result.compiledCount', gte: 5, label: 'every Blueprint under the folder is compiled' }] },
 

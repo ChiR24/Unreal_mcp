@@ -2941,3 +2941,17 @@ describe('a key a focused game widget takes names that widget', () => {
       widgets.indexOf('const FKeyEvent KeyEvent(Key'));
   });
 });
+
+describe("a Set wired to another object is not this one's write", () => {
+  // Two Set HomeX nodes wired to spawned copies, beside a Get of this one's HomeX, read as this object's HomeX set
+  // twice, and a compile audit flagged a graph that was right.
+  it('reads a variable node as acting on this object only while its target pin is unwired', () => {
+    const checks = code('..', 'Foundation', 'BridgeHelpers', 'Blueprints', 'McpBPGraphChecks.cpp');
+    expect(checks).toContain('(!Target || Target->LinkedTo.Num() == 0)');
+    expect(checks).toContain('return McpVariableOnSelf(Set) ? Set->GetVarName() : NAME_None;');
+    expect(checks).toContain('return Get->GetVarName() == Variable && McpVariableOnSelf(Get);');
+    expect(checks).toContain('if (Get && McpVariableOnSelf(Get))');
+    const wait = code('..', 'Foundation', 'BridgeHelpers', 'Blueprints', 'McpBPWaitRereadCheck.cpp');
+    expect(wait).toContain('Set && McpVariableOnSelf(Set) && Set->GetVarName() == Get->GetVarName()');
+  });
+});

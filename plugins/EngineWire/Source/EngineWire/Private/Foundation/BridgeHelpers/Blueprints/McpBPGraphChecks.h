@@ -15,6 +15,10 @@ void McpAddCheckWarning(TArray<TSharedPtr<FJsonValue>>& Diagnostics, const FStri
 // A node as a finding names it: 'Title' (NodeName).
 FString McpNodeLabel(const UEdGraphNode* Node);
 
+// Whether a variable Get or Set node acts on the Blueprint's own object: one of its variables, its target pin unwired.
+// A Set whose target is a spawned copy writes that copy's variable, not this one's.
+bool McpVariableOnSelf(const UEdGraphNode* Node);
+
 // A pure node runs again for each node that reads it. One that reads a variable and feeds that variable's Set node
 // also gives each node that runs after the Set the new value worked on again: Laps + 1 wired into Set Laps and into a
 // Print after it printed Laps + 2, and a check against the goal passed a lap early. The fix is the Set node's own

@@ -22,6 +22,14 @@ FString McpNodeLabel(const UEdGraphNode* Node)
   return FString::Printf(TEXT("'%s' (%s)"), *Node->GetNodeTitle(ENodeTitleType::ListView).ToString(), *Node->GetName());
 }
 
+// A Set of HomeX wired to a spawned copy, beside a Get of this one's HomeX, read as this object's HomeX set twice.
+bool McpVariableOnSelf(const UEdGraphNode* Node)
+{
+  const UK2Node_Variable* Variable = Cast<UK2Node_Variable>(Node);
+  const UEdGraphPin* Target = Variable ? Variable->FindPin(UEdGraphSchema_K2::PN_Self) : nullptr;
+  return Variable && Variable->VariableReference.IsSelfContext() && (!Target || Target->LinkedTo.Num() == 0);
+}
+
 namespace
 {
 bool McpIsPureNode(const UEdGraphNode* Node)
@@ -57,7 +65,7 @@ bool McpPureReadsVariable(const UEdGraphNode* Node, FName Variable, int32 Depth)
 {
   if (const UK2Node_VariableGet* Get = Cast<UK2Node_VariableGet>(Node))
   {
-    return Get->GetVarName() == Variable && Get->VariableReference.IsSelfContext();
+    return Get->GetVarName() == Variable && McpVariableOnSelf(Get);
   }
   if (!McpIsPureNode(Node) || Depth > 16) return false;
   for (const UEdGraphPin* Pin : Node->Pins)
@@ -133,7 +141,7 @@ FName McpWrittenVariable(const UEdGraphNode* Node, const UEdGraphPin*& OutWriteP
   OutWritePin = nullptr;
   if (const UK2Node_VariableSet* Set = Cast<UK2Node_VariableSet>(Node))
   {
-    return Set->VariableReference.IsSelfContext() ? Set->GetVarName() : NAME_None;
+    return McpVariableOnSelf(Set) ? Set->GetVarName() : NAME_None;
   }
   if (McpIsPureNode(Node))
   {
@@ -143,7 +151,7 @@ FName McpWrittenVariable(const UEdGraphNode* Node, const UEdGraphPin*& OutWriteP
   {
     const UK2Node_VariableGet* Get = Pin && Pin->Direction == EGPD_Input && Pin->PinType.bIsReference && Pin->LinkedTo.Num() == 1
                                          ? Cast<UK2Node_VariableGet>(Pin->LinkedTo[0]->GetOwningNode()) : nullptr;
-    if (Get && Get->VariableReference.IsSelfContext())
+    if (Get && McpVariableOnSelf(Get))
     {
       OutWritePin = Pin;
       return Get->GetVarName();

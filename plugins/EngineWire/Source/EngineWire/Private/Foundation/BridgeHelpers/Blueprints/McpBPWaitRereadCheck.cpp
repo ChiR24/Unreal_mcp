@@ -73,12 +73,13 @@ const UEdGraphNode* McpEveryRunWriter(const UEdGraphPin* Input, const TSet<const
       Seen.Add(Node);
       What = Link->PinName.ToString();
       if (Prefix.Contains(Node)) return Node;
-      if (const UK2Node_VariableGet* Get = Cast<UK2Node_VariableGet>(Node))
+      const UK2Node_VariableGet* Get = Cast<UK2Node_VariableGet>(Node);
+      if (Get && McpVariableOnSelf(Get))
       {
         for (const UEdGraphNode* Writer : Prefix)
         {
           const UK2Node_VariableSet* Set = Cast<UK2Node_VariableSet>(Writer);
-          if (Set && Set->GetVarName() == Get->GetVarName()) return Set;
+          if (Set && McpVariableOnSelf(Set) && Set->GetVarName() == Get->GetVarName()) return Set;
         }
       }
       // An impure node holds what it last computed, and this chain ran it after the prefix: not a prefix value.
