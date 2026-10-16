@@ -228,7 +228,8 @@ describe('sample_motion runs at full rate or says it did not', () => {
     expect(advance.indexOf('McpTrackMotionOverlaps(Run.Overlaps, Actor);'), 'every frame, once the run has started')
       .toBeGreaterThan(advance.indexOf('Run.bWaiting = false;'));
     expect(source).toContain('McpSampleMotionOverlaps(Run.Overlaps, Actor, *Sample);');
-    expect(source).toContain('if (Run.Overlaps.bOn) Data->SetArrayField(TEXT("overlapped"), McpHandlerUtils::ToJsonStringArray(Run.Overlaps.Ever));');
+    expect(source).toContain('McpAddMotionOverlapResult(Run.Overlaps, *Data);');
+    expect(read('Motion', 'McpMotionPassThrough.cpp')).toMatch(/if \(Overlaps\.bOn\) \{\s*Data\.SetArrayField\(TEXT\("overlapped"\), McpHandlerUtils::ToJsonStringArray\(Overlaps\.Ever\)\);/u);
     expect(points.match(/McpActorRef\(/gu), 'a name is looked up only when a touch begins').toHaveLength(1);
     expect(points).toContain('const FString Name = Begun.Add(Other, McpActorRef(Other));');
   });
@@ -1006,5 +1007,27 @@ describe('apply_force pushes once, in the running game only', () => {
     expect(handler).not.toContain('AddForce(');
     expect(handler).toContain('TEXT("massKg")');
     expect(handler).toContain('VectorToJsonArray(ForceVector / Mass)');
+  });
+});
+
+// A grenade at 1100 cm/s fell through a floor made of a Plane, and the motion read showed only that it fell on.
+describe('a motion read names a surface the actor went through', () => {
+  it('traces every frame from the last position as the body collides, skipping teleports and bodies with no collision', () => {
+    const pass = read('Motion', 'McpMotionPassThrough.cpp');
+
+    expect(pass).toContain('Body->GetCollisionEnabled() == ECollisionEnabled::NoCollision');
+    expect(pass).toContain('Step > Actor->GetVelocity().Size() * Dt * 2.0 + 50.0');
+    expect(pass).toContain('World->LineTraceSingleByChannel(Hit, From.GetValue(), Here, Body->GetCollisionObjectType(), Params,');
+    expect(pass).toContain('FCollisionResponseParams(Body->GetCollisionResponseToChannels())');
+    expect(pass).toContain('Passes.Found.Num() >= 3');
+    expect(pass).toContain('TEXT("passedThrough")');
+    expect(read('Motion', 'McpMotionPoints.cpp')).toMatch(/void McpTrackMotionOverlaps\(FMcpMotionOverlaps &Overlaps, AActor \*Actor\) \{\s*McpTrackMotionPasses\(Overlaps\.Passes, Actor\);\s*if \(!Overlaps\.bOn\)/u);
+  });
+
+  it('puts what it found in the result and its warning in the reply', () => {
+    const sample = read('McpActorMotionSample.cpp');
+
+    expect(sample).toContain('McpAddMotionOverlapResult(Run.Overlaps, *Data);');
+    expect(sample).toContain('Run->Overlaps.Passes.Warning}) {');
   });
 });

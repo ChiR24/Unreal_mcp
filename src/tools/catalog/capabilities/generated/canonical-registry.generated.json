@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "1908c455171920d7",
+  "catalogRevision": "cb9952deb7192561",
   "recordCount": 416,
   "records": [
     {
@@ -36171,6 +36171,15 @@
               },
               "description": "With overlaps: every actor that touched the watched one during the run, first touch first; empty when nothing did."
             },
+            "passedThrough": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Surfaces the actor went through between two frames while its collision was on, checked every frame, at most three: t, actorName and componentName of the surface, location and speed (cm/s). A fast physics body crosses a thin surface (a Plane has no thickness) between physics steps; a warning says so."
+            },
             "sampleCount": {
               "type": "number",
               "description": "How many samples were taken."
@@ -36355,8 +36364,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "2ea5382de68785138924a1262a8bd0e3b002f73de5e9bf2271f5bd67e071ddac",
-        "content": "1365c5d432018f6f194124ecf909d50a2dfc031e5c466d9ef27113af0bfb9027"
+        "schema": "7d96ed101d8625f016eff067111a05a73eff8265f1572b8015e07320894c276e",
+        "content": "081fe4bdf82cce3543606fbb512fad1d63d81ab398f294c5753f0394d536f883"
       }
     },
     {

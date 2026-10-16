@@ -5138,6 +5138,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Coplanar face pairs found before fixing."
         },
+        "passedThrough": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Surfaces the actor went through between two frames while its collision was on, checked every frame, at most three: t, actorName and componentName of the surface, location and speed (cm/s). A fast physics body crosses a thin surface (a Plane has no thickness) between physics steps; a warning says so."
+        },
         "passes": {
           "type": "number",
           "description": "Passes made: a move can line an actor up with a neighbour that moved the same way, so the fix repeats (at most four passes; one under dryRun)."

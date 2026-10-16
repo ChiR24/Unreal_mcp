@@ -215,6 +215,7 @@ FMcpMotionOverlaps::~FMcpMotionOverlaps() {
 }
 
 void McpTrackMotionOverlaps(FMcpMotionOverlaps &Overlaps, AActor *Actor) {
+  McpTrackMotionPasses(Overlaps.Passes, Actor);
   if (!Overlaps.bOn) {
     return;
   }

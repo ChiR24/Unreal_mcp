@@ -276,6 +276,10 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
           description: 'One entry per sample: t (game seconds since the start), location [x, y, z], velocity [x, y, z] (cm/s: the movement or physics velocity, or for an actor moved by setting its location, the one its positions show since the sample before), rotation [pitch, yaw, roll] in degrees (on the first sample and on each one where it changed, so a sample without it still has the last one written), properties, with points their world locations (points) and heights over the ground (aboveGround, with groundTrace; a point with nothing below it within 10 m is left out), and with overlaps the actors that began or stopped touching it since the sample before (overlapsBegan, overlapsEnded).',
         },
         overlapped: { type: 'array', items: { type: 'string' }, description: 'With overlaps: every actor that touched the watched one during the run, first touch first; empty when nothing did.' },
+        passedThrough: {
+          type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
+          description: 'Surfaces the actor went through between two frames while its collision was on, checked every frame, at most three: t, actorName and componentName of the surface, location and speed (cm/s). A fast physics body crosses a thin surface (a Plane has no thickness) between physics steps; a warning says so.',
+        },
         sampleCount: { type: 'number', description: 'How many samples were taken.' },
         gameSeconds: { type: 'number', description: 'Game time covered.' },
         realSeconds: { type: 'number', description: 'Wall-clock time the run took.' },

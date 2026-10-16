@@ -101,7 +101,7 @@ TSharedPtr<FJsonObject> McpMotionResult(const FMcpMotionRun &Run, const FString 
     Data->SetArrayField(TEXT("missingProperties"), Run.Missing);
   }
   McpAddMotionPointStats(Run.Points, *Data);
-  if (Run.Overlaps.bOn) Data->SetArrayField(TEXT("overlapped"), McpHandlerUtils::ToJsonStringArray(Run.Overlaps.Ever));
+  McpAddMotionOverlapResult(Run.Overlaps, *Data);
   if (Run.Inputs.Num() > 0) {
     Data->SetArrayField(TEXT("inputsApplied"), McpMotionInputsJson(Run.Inputs));
   }
@@ -284,7 +284,7 @@ bool UEngineWireSubsystem::HandleControlActorSampleMotion(
             : Ended == TEXT("startWhenTimeout") ? McpStartWhenTimeoutWarning(Run->Trigger)
                                                 : McpIgnoredInputsWarning(Run->Actor.Get(), Run->Inputs,
                                                                           Run->Samples.Num(), Run->Extent);
-        for (const FString &Warning : {EndWarning, McpSlowFrameWarning(Run->LastGame - Run->StartGame, Run->Frames)}) {
+        for (const FString &Warning : {EndWarning, McpSlowFrameWarning(Run->LastGame - Run->StartGame, Run->Frames), Run->Overlaps.Passes.Warning}) {
           if (!Warning.IsEmpty()) {
             Message += TEXT(". WARNING: ") + Warning;
             Warnings.Add(Warning);
