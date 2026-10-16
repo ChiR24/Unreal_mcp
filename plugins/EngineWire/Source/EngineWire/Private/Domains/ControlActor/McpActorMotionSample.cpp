@@ -281,7 +281,7 @@ bool UEngineWireSubsystem::HandleControlActorSampleMotion(
         const FString EndWarning =
             Ended == TEXT("gamePaused")         ? McpGamePausedWarning(Run->World.Get())
             : Ended == TEXT("startWhenTimeout") ? McpStartWhenTimeoutWarning(Run->Trigger)
-                                                : McpIgnoredInputsWarning(Run->Actor.Get(), Run->Inputs.Num(),
+                                                : McpIgnoredInputsWarning(Run->Actor.Get(), Run->Inputs,
                                                                           Run->Samples.Num(), Run->Extent);
         for (const FString &Warning : {EndWarning, McpSlowFrameWarning(Run->LastGame - Run->StartGame, Run->Frames)}) {
           if (!Warning.IsEmpty()) {

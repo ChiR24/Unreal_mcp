@@ -191,6 +191,17 @@ bool UEngineWireSubsystem::HandleControlEditorResume(
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("state"), TEXT("resumed"));
   Resp->SetStringField(TEXT("message"), TEXT("PIE session resumed"));
+  // Unpausing does not close the menu that paused the game: its focused button kept taking the jump key.
+  const FString Focused = FocusedPieWidgetForMcp();
+  if (!Focused.IsEmpty()) {
+    TArray<TSharedPtr<FJsonValue>> Warnings;
+    Warnings.Add(MakeShared<FJsonValueString>(FString::Printf(
+        TEXT("%s holds keyboard focus, so keys reach it before the game (a focused button takes Space and Enter as a "
+             "press). If it belongs to a title or pause menu, the menu is still up: press its button with "
+             "simulate_input type \"widget_click\" to go on as a player would."),
+        *Focused)));
+    Resp->SetArrayField(TEXT("warnings"), Warnings);
+  }
 
   SendAutomationResponse(Socket, RequestId, true,
                          TEXT("PIE session resumed"), Resp, FString());

@@ -261,6 +261,8 @@ struct FMcpMotionInput {
   FString Key;
   double At = 0.0, Hold = 0.1, DownAt = -1.0, UpAt = -1.0;
   uint64 DownFrame = 0;
+  // The game widget that held keyboard focus when the key went down (a menu's button takes it first).
+  FString Focused;
 };
 struct FMcpMotionTrigger {
   TWeakObjectPtr<AActor> Actor;
@@ -278,7 +280,8 @@ bool McpInitMotionTrigger(AActor *Gate, const TSharedPtr<FJsonObject> &When, UWo
 bool McpMotionTriggerFired(FMcpMotionTrigger &Trigger);
 FString McpStartWhenTimeoutWarning(const FMcpMotionTrigger &Trigger);
 FString McpGamePausedWarning(const UWorld *World);
-FString McpIgnoredInputsWarning(const AActor *Actor, int32 InputCount, int32 SampleCount, const FBox &Extent);
+FString McpIgnoredInputsWarning(const AActor *Actor, const TArray<FMcpMotionInput> &Inputs, int32 SampleCount,
+                                const FBox &Extent);
 FString McpSlowFrameWarning(double GameSeconds, int32 Frames);
 void McpApplyMotionInputs(TArray<FMcpMotionInput> &Inputs, double Elapsed, bool bRunEnded);
 TArray<TSharedPtr<FJsonValue>> McpMotionInputsJson(const TArray<FMcpMotionInput> &Inputs);

@@ -206,7 +206,8 @@ void WarnWhenPieWindowMinimizedForMcp(const TSharedPtr<FJsonObject> &Resp) {
 // and the arrows move focus between buttons; only what it leaves bubbles up to the viewport and the game. Keys
 // sent straight to the viewport client never reached a focused UMG button. Only while a widget inside the PIE
 // viewport holds focus: otherwise Slate would hand the key to whatever editor panel has focus.
-bool RouteKeyToFocusedPieWidgetForMcp(const FKey &Key, const EInputEvent InputEvent, bool &bOutHandled) {
+bool RouteKeyToFocusedPieWidgetForMcp(const FKey &Key, const EInputEvent InputEvent, bool &bOutHandled,
+                                      FString &OutNote) {
   UWorld *PlayWorld = GEditor ? GEditor->PlayWorld.Get() : nullptr;
   UGameViewportClient *Viewport = PlayWorld ? PlayWorld->GetGameViewport() : nullptr;
   const TSharedPtr<SViewport> ViewportWidget = Viewport ? Viewport->GetGameViewportWidget() : nullptr;
@@ -214,9 +215,37 @@ bool RouteKeyToFocusedPieWidgetForMcp(const FKey &Key, const EInputEvent InputEv
   if (!ViewportWidget.IsValid() || !SlateApp.HasUserFocusedDescendants(ViewportWidget.ToSharedRef(), 0)) {
     return false;
   }
+  // Named before the key lands: a pressed button can close its menu and take the focus with it.
+  const FString Focused = FocusedPieWidgetForMcp();
+  if (!Focused.IsEmpty()) {
+    OutNote = FString::Printf(TEXT(". It went to %s first, the widget holding keyboard focus, as a real key does (a "
+                                   "focused button takes Space and Enter as a press), so the game's own controls may "
+                                   "not have seen it"),
+                              *Focused);
+  }
   const FKeyEvent KeyEvent(Key, FModifierKeysState(), 0, false, 0, 0);
   bOutHandled = InputEvent == IE_Released ? SlateApp.ProcessKeyUpEvent(KeyEvent) : SlateApp.ProcessKeyDownEvent(KeyEvent);
   return true;
+}
+
+// A title screen left up with its Play button focused took every jump key as a press, and the replies only said
+// the pawn never moved.
+FString FocusedPieWidgetForMcp() {
+  for (UUserWidget *Owner : LiveUserWidgetsForMcp()) {
+    if (Owner->HasKeyboardFocus()) {
+      return OwnerLabelForMcp(Owner);
+    }
+    FString Found;
+    Owner->WidgetTree->ForEachWidget([&](UWidget *Child) {
+      if (Found.IsEmpty() && Child && Child->HasKeyboardFocus()) {
+        Found = OwnerLabelForMcp(Owner) + TEXT(".") + Child->GetName();
+      }
+    });
+    if (!Found.IsEmpty()) {
+      return Found;
+    }
+  }
+  return FString();
 }
 
 bool SimulateLiveWidgetInputForMcp(const FString &InputType,

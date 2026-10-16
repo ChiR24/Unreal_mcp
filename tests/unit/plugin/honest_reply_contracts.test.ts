@@ -1054,7 +1054,7 @@ describe('simulated keys and focused PIE widgets', () => {
     expect(widgetInput).toMatch(/if \(!ViewportWidget\.IsValid\(\) \|\| !SlateApp\.HasUserFocusedDescendants\(ViewportWidget\.ToSharedRef\(\), 0\)\) \{\s*return false;\s*\}/u);
     expect(widgetInput).toContain('bOutHandled = InputEvent == IE_Released ? SlateApp.ProcessKeyUpEvent(KeyEvent) : SlateApp.ProcessKeyDownEvent(KeyEvent);');
     const routing = code('ControlEditor', 'McpEditorInputRouting.cpp');
-    expect(routing).toMatch(/bRoutedToPIE = RouteKeyToFocusedPieWidgetForMcp\(InputKey, InputEvent, bHandledBySlate\) \|\|\s*RouteKeyToPIEForMcp\(InputKey, InputEvent, bHandledByPIE\);/u);
+    expect(routing).toMatch(/bRoutedToPIE = RouteKeyToFocusedPieWidgetForMcp\(InputKey, InputEvent, bHandledBySlate, FocusNote\) \|\|\s*RouteKeyToPIEForMcp\(InputKey, InputEvent, bHandledByPIE\);/u);
   });
 });
 
@@ -2915,5 +2915,29 @@ describe('a material dead branch lists as orphaned', () => {
     expect(subgraph).toContain('Reads.Add(Expr, Input.Expression);');
     expect(subgraph).toContain('Reads.MultiFind(Cur, Neighbors);');
     expect(subgraph).toContain('Cast<UMaterialExpressionCustomOutput>(Expr)');
+  });
+});
+
+describe('a key a focused game widget takes names that widget', () => {
+  // A title screen left up with its Play button focused took every jump key as a press, and the replies only
+  // said the pawn never moved.
+  it('names the focused widget in the key reply, the resume warning and the motion warning', () => {
+    const routing = code('ControlEditor', 'McpEditorInputRouting.cpp');
+    expect(routing).toContain('TEXT("%s: %s (delivered to PIE)%s"), Verb, *Key, *FocusNote)');
+    const play = code('ControlEditor', 'McpEditorPlay.cpp');
+    expect(play).toContain('const FString Focused = FocusedPieWidgetForMcp();');
+    expect(play).toContain('Resp->SetArrayField(TEXT("warnings"), Warnings);');
+    // Read as each key goes down: a pressed menu button can close its menu before the run ends.
+    const motion = code('ControlActor', 'McpActorMotionInputs.cpp');
+    expect(motion.indexOf('Input.Focused = FocusedPieWidgetForMcp();')).toBeGreaterThan(0);
+    expect(motion.indexOf('Input.Focused = FocusedPieWidgetForMcp();')).toBeLessThan(
+      motion.indexOf('McpSendMotionKey(Input.Key, true);'));
+    expect(motion).toContain('*Taken->Focused, *Taken->Key');
+    const widgets = code('ControlEditor', 'McpEditorWidgetInput.cpp');
+    expect(widgets).toContain('if (Owner->HasKeyboardFocus())');
+    expect(widgets).toContain('Child->HasKeyboardFocus()');
+    // Named before the key lands: a pressed button can close its menu and take the focus with it.
+    expect(widgets.indexOf('const FString Focused = FocusedPieWidgetForMcp();')).toBeLessThan(
+      widgets.indexOf('const FKeyEvent KeyEvent(Key'));
   });
 });

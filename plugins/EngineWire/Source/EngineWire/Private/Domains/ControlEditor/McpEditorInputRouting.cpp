@@ -144,7 +144,8 @@ void SimulateKeyInputForMcp(const FString &Key, const EInputEvent InputEvent,
   }
 
   // A menu widget the game focused takes the key through Slate first, as a real key reaches it.
-  bRoutedToPIE = RouteKeyToFocusedPieWidgetForMcp(InputKey, InputEvent, bHandledBySlate) ||
+  FString FocusNote;
+  bRoutedToPIE = RouteKeyToFocusedPieWidgetForMcp(InputKey, InputEvent, bHandledBySlate, FocusNote) ||
                  RouteKeyToPIEForMcp(InputKey, InputEvent, bHandledByPIE);
   if (!bRoutedToPIE) {
     FSlateApplication &SlateApp = FSlateApplication::Get();
@@ -155,7 +156,7 @@ void SimulateKeyInputForMcp(const FString &Key, const EInputEvent InputEvent,
   }
   bSuccess = true;
   Message = bRoutedToPIE
-                ? FString::Printf(TEXT("%s: %s (delivered to PIE)"), Verb, *Key)
+                ? FString::Printf(TEXT("%s: %s (delivered to PIE)%s"), Verb, *Key, *FocusNote)
                 : FString::Printf(TEXT("%s: %s"), Verb, *Key);
 }
 }
