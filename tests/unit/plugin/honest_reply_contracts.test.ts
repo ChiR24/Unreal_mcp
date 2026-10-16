@@ -3071,3 +3071,19 @@ describe('widget_list says what a widget reads and where a nested one sits', () 
     expect(input).toContain('Entry->SetStringField(TEXT("in"), Outer->GetName() + TEXT(".") + Panel->GetName());');
   });
 });
+
+describe('a mouse move in a running game moves the game\'s own cursor', () => {
+  // A top-down aim read no mouse at all: the move was a Slate event at desktop coordinates, which never reached the
+  // viewport the game reads its cursor from.
+  it('hands the game viewport its own move in viewport pixels, before the editor path, without the system cursor', () => {
+    const routing = code('ControlEditor', 'McpEditorInputRouting.cpp');
+    const move = routing.indexOf('if (McpSimulateGameMouseMove(X, Y, bSuccess, bRoutedToPIE, bHandledByPIE, Message)) {');
+    expect(move).toBeGreaterThan(-1);
+    expect(move, 'before the Slate event at desktop coordinates').toBeLessThan(routing.indexOf('bHandledBySlate = SlateApp.ProcessMouseMoveEvent(MoveEvent);'));
+    const cursor = code('ControlEditor', 'Input', 'McpEditorGameCursor.cpp');
+    expect(cursor).toContain('Geometry.LocalToAbsolute(FVector2D(X * Local.X / Pixels.X, Y * Local.Y / Pixels.Y))');
+    expect(cursor).toContain('Viewport->OnMouseMove(Geometry, Move);');
+    expect(cursor).toContain('X >= Pixels.X || Y >= Pixels.Y');
+    expect(cursor).not.toContain('SetPosition(');
+  });
+});

@@ -4849,11 +4849,11 @@
           },
           "x": {
             "type": "number",
-            "description": "Mouse X coordinate for simulate_input, or the X value of an Axis2D or Axis3D inputAction."
+            "description": "Mouse X for simulate_input: while a game runs, mouse_move takes pixels of the game viewport and moves the game cursor there (where Get Mouse Position and Get Hit Result Under Cursor read it; a click at it is a key_tap of LeftMouseButton); otherwise desktop coordinates for the editor UI. Or the X value of an Axis2D or Axis3D inputAction."
           },
           "y": {
             "type": "number",
-            "description": "Mouse Y coordinate for simulate_input, or the Y value of an Axis2D or Axis3D inputAction."
+            "description": "Mouse Y for simulate_input, in the same space as x, or the Y value of an Axis2D or Axis3D inputAction."
           },
           "z": {
             "type": "number",
