@@ -2,6 +2,7 @@
 #include "Dom/JsonObject.h"
 #include "EngineWireLog.h"
 #include "Misc/ConfigCacheIni.h"
+#include "Misc/EngineVersionComparison.h"
 #include "UObject/UnrealType.h"
 
 #include "Internationalization/Text.h"

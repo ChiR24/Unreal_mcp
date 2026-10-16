@@ -5,6 +5,7 @@
 #include "EngineWireSubsystem.h"
 #include "Foundation/BridgeHelpers/Reflection/McpClassResolve.h"
 #include "GameProjectUtils.h"
+#include "HAL/FileManager.h"
 #include "Misc/App.h"
 #include "Misc/Paths.h"
 #include "ModuleDescriptor.h"
