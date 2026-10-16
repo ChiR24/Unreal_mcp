@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "cb9952deb7192561",
+  "catalogRevision": "3c55524dd1cce1d8",
   "recordCount": 416,
   "records": [
     {
@@ -35951,6 +35951,7 @@
           "feet slide",
           "foot contact",
           "bone position over time",
+          "read actor location",
           "actor rotation",
           "watch actor move",
           "jump height",
@@ -36365,7 +36366,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "7d96ed101d8625f016eff067111a05a73eff8265f1572b8015e07320894c276e",
-        "content": "081fe4bdf82cce3543606fbb512fad1d63d81ab398f294c5753f0394d536f883"
+        "content": "e2ffef7324ee3c4bf936961b6caee60dd5dd8ba010d18dc23e08543b6a407482"
       }
     },
     {

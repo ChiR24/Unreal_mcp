@@ -187,7 +187,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
     editorStates: ANY_EDITOR_STATE,
     domain: DOMAIN,
     family: FAMILY_TRANSFORM,
-    topics: ['actor location', 'actor position', 'actor rotation', 'where is the actor'],
+    topics: ['actor location', 'read actor location', 'actor position', 'actor rotation', 'where is the actor'],
     summary: 'Read the world transform (location, rotation, scale) of an actor.',
     whenToUse: ['The current transform of an actor must be inspected.'],
     whenNotToUse: ['The transform should be changed (use set_transform).'],

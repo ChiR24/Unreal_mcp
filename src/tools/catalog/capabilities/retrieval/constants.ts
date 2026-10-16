@@ -61,6 +61,9 @@ export const RETRIEVAL_FUNCTION_WORDS: ReadonlySet<string> = Object.freeze(new S
   'can', 'could', 'should', 'would', 'will', 'want', 'need',
   // A yes/no check ('check if actors are floating') carries the same content words as the request without it.
   'if', 'whether',
+  // What an apostrophe leaves behind: "the level's gravity" and "doesn't open" split into level + s and doesn + t,
+  // and a lone s or t that no record names kept every such request from a full match.
+  's', 't',
 ]));
 
 /**
