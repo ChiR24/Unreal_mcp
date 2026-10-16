@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "d7c7749e33fcc522",
+  "catalogRevision": "1908c455171920d7",
   "recordCount": 416,
   "records": [
     {
@@ -17631,6 +17631,8 @@
           "add a math expression",
           "for each loop",
           "set timer",
+          "ai move to location",
+          "move ai to a point",
           "random number",
           "is valid",
           "do once",
@@ -18407,7 +18409,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "0f1906975583b09b5e42015ad4154b894941f4783b1cd7de929c5a9e2cffed31",
-        "content": "e26b28be88ee76d7b5f52fa2acdf304df0beeb5d9cc833b6035138e9cc2b8bbc"
+        "content": "78fe8ad842167caf69a908ae026509de2559c468defec8bab508e3494340e106"
       }
     },
     {
