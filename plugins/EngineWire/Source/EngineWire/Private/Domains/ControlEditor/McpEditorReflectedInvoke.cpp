@@ -125,8 +125,12 @@ bool UEngineWireSubsystem::HandleInvokeReflectedFunction(
   Result->SetStringField(TEXT("className"), ClassName);
   Result->SetStringField(TEXT("functionName"), FunctionName);
   Result->SetStringField(TEXT("resolvedObject"), Instance->GetPathName());
-  Result->SetObjectField(TEXT("outputs"), Outputs);
-  Result->SetArrayField(TEXT("unsetParameters"), Unset);
+  if (Outputs.IsValid() && Outputs->Values.Num() > 0) {
+    Result->SetObjectField(TEXT("outputs"), Outputs);
+  }
+  if (Unset.Num() > 0) {
+    Result->SetArrayField(TEXT("unsetParameters"), Unset);
+  }
   SendAutomationResponse(
       Socket, RequestId, true,
       FString::Printf(TEXT("Invoked %s::%s."), *ClassName, *FunctionName), Result);

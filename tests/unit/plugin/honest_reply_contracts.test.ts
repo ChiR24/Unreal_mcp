@@ -947,7 +947,9 @@ describe('widget input on a minimized editor', () => {
   // widget_list kept listing it with no word on why.
   it('widget_list and widget_click warn while the window showing Play In Editor is minimized', () => {
     const source = code('ControlEditor', 'McpEditorWidgetInput.cpp');
-    expect(source).toMatch(/if \(Viewport\) \{\s*Window = Viewport->GetWindow\(\);\s*\}\s*if \(Window\.IsValid\(\) && Window->IsWindowMinimized\(\)\) \{/u);
+    // Once a play session: every click through a menu repeated the same paragraph.
+    expect(source).toContain('static TWeakObjectPtr<UWorld> WarnedWorld;');
+    expect(source).toMatch(/if \(Viewport\) \{\s*Window = Viewport->GetWindow\(\);\s*\}[\s\S]{0,200}?if \(Window\.IsValid\(\) && Window->IsWindowMinimized\(\) && WarnedWorld\.Get\(\) != PlayWorld\) \{\s*WarnedWorld = PlayWorld;/u);
     expect(source).toContain('Resp->SetArrayField(TEXT("warnings"), Warnings);');
     expect(source).toMatch(/FString &Message\) \{\s*WarnWhenPieWindowMinimizedForMcp\(Resp\);\s*if \(InputType == TEXT\("widget_list"\)\)/u);
   });
@@ -2965,6 +2967,26 @@ describe("a Set wired to another object is not this one's write", () => {
     expect(checks).toContain('if (Get && McpVariableOnSelf(Get))');
     const wait = code('..', 'Foundation', 'BridgeHelpers', 'Blueprints', 'McpBPWaitRereadCheck.cpp');
     expect(wait).toContain('Set && McpVariableOnSelf(Set) && Set->GetVarName() == Get->GetVarName()');
+  });
+});
+
+describe('a Blueprint struct reads as an object under its authored names', () => {
+  // A leaderboard of F_ScoreEntry read back as "(PlayerName_2_0AD1D94C...=\"Di\",Score_4_D0AA...=70)".
+  it('exports each member under GetAuthoredName, before the native export text', () => {
+    const reflection = code('..', 'Foundation', 'Reflection', 'McpPropertyReflection.cpp');
+    expect(reflection).toContain('Cast<UUserDefinedStruct>(StructProp->Struct)');
+    expect(reflection).toContain('Members->SetField(It->GetAuthoredName(), ExportPropertyToJsonValueOrText(StructMemory, *It));');
+    expect(reflection.indexOf('Cast<UUserDefinedStruct>(StructProp->Struct)')).toBeLessThan(
+      reflection.indexOf('StructProp->Struct->ExportText(Exported'));
+  });
+});
+
+describe('a function call lists outputs and unset parameters only when it has some', () => {
+  it('leaves both out of a call with no return value and every argument given', () => {
+    for (const source of [code('ControlActor', 'McpActorAdvanced.cpp'), code('ControlEditor', 'McpEditorReflectedInvoke.cpp')]) {
+      expect(source).toMatch(/if \(Outputs\.IsValid\(\) && Outputs->Values\.Num\(\) > 0\) \{\s*\w+->SetObjectField\(TEXT\("outputs"\), Outputs\);/u);
+      expect(source).toMatch(/if \(Unset\.Num\(\) > 0\) \{\s*\w+->SetArrayField\(TEXT\("unsetParameters"\), Unset\);/u);
+    }
   });
 });
 

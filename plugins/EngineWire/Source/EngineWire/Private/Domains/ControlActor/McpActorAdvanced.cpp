@@ -289,8 +289,13 @@ bool UEngineWireSubsystem::HandleControlActorCallFunction(
   // diagnostics (flags, thunk, ParmsSize, validity ...) rode on every reply while a silent no-op was chased; the
   // script guard above was the cause, and they stayed as noise.
   Data->SetStringField(TEXT("resolvedObject"), Target->GetPathName());
-  Data->SetObjectField(TEXT("outputs"), Outputs);
-  Data->SetArrayField(TEXT("unsetParameters"), Unset);
+  // Each only when it holds something: a call with no return value answered "outputs": {}, "unsetParameters": [].
+  if (Outputs.IsValid() && Outputs->Values.Num() > 0) {
+    Data->SetObjectField(TEXT("outputs"), Outputs);
+  }
+  if (Unset.Num() > 0) {
+    Data->SetArrayField(TEXT("unsetParameters"), Unset);
+  }
 
   // The published output schema declares `value` ("Property value (any type)") and the capability example
   // promises {"success":true,...,"value":true}, but only `outputs` was ever emitted -- so a caller that read

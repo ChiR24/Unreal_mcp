@@ -1,6 +1,8 @@
 #include "Foundation/Reflection/McpPropertyReflection.h"
 
+#include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Foundation/Reflection/McpPropertyReflectionPrivate.h"
+#include MCP_USER_DEFINED_STRUCT_HEADER
 
 namespace McpPropertyReflection
 {
@@ -105,6 +107,19 @@ TSharedPtr<FJsonValue> ExportPropertyToJsonValue(void* TargetContainer, FPropert
             return MakeShared<FJsonValueArray>(McpHandlerUtils::RotatorToJsonArray(*StructProp->ContainerPtrToValuePtr<FRotator>(TargetContainer)));
         }
 
+        // A Blueprint struct names its members <Name>_<n>_<GUID> inside, and its export text spelled that out
+        // ("PlayerName_2_0AD1...=\"Di\""): read it as an object under the names it was authored with, the keys a
+        // write takes.
+        if (const UUserDefinedStruct* UserStruct = Cast<UUserDefinedStruct>(StructProp->Struct))
+        {
+            TSharedPtr<FJsonObject> Members = MakeShared<FJsonObject>();
+            void* StructMemory = StructProp->ContainerPtrToValuePtr<void>(TargetContainer);
+            for (TFieldIterator<FProperty> It(UserStruct); It; ++It)
+            {
+                Members->SetField(It->GetAuthoredName(), ExportPropertyToJsonValueOrText(StructMemory, *It));
+            }
+            return MakeShared<FJsonValueObject>(Members);
+        }
         // The value as its own defaults writes every field: with no defaults the export compares each field
         // to zero and leaves zeros out, so a damping set to 0 (struct default 1) read as never set.
         FString Exported;
