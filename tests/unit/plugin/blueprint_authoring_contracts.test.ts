@@ -185,10 +185,24 @@ describe('build_graph: an overlapping explicit position moves the node instead o
     const overlap = read('Foundation', 'GraphLayout', 'McpGraphOverlap.h');
     expect(overlap).toContain('for (int32 Step = 0; bOverlaps && bAutoPlace && Step < 8; ++Step)');
     expect(read('Domains', 'BlueprintGraph', 'McpBPGraphPrivate.h')).toContain('McpGraphLayout::NamesNoPosition(Payload)))');
-    for (const file of ['McpBPGraphNodeCreationDynamic.cpp', 'McpBPGraphSpecialNodes.cpp', 'McpBPGraphConstructObjectNodes.cpp']) {
-      expect(read('Domains', 'BlueprintGraph', file)).toContain('McpGraphLayout::NamesNoPosition(Context.Payload)))');
+    for (const file of ['McpBPGraphNodeCreationDynamic.cpp', 'McpBPGraphSpecialNodes.cpp', 'McpBPGraphConstructObjectNodes.cpp',
+      'Behaviour/McpBPBehaviourBindNodes.cpp', 'Behaviour/McpBPBehaviourNodes.cpp']) {
+      expect(read('Domains', 'BlueprintGraph', ...file.split('/'))).toContain('McpGraphLayout::NamesNoPosition(Context.Payload)))');
     }
+    // The bound event goes under the bind node where it ended up, not where it was asked for.
+    expect(read('Domains', 'BlueprintGraph', 'Behaviour', 'McpBPBehaviourBindNodes.cpp'))
+      .toContain('PlaceBoundEvent(Context.TargetGraph, *Bind, Bind->NodePosX, Y)');
     expect(read('Domains', 'Blueprint', 'Graph', 'McpBPAddNode.cpp')).toContain('McpGraphLayout::NamesNoPosition(LocalPayload)))');
+  });
+});
+
+// A call node named GetActorTransform, the title the editor shows for GetTransform, failed FUNCTION_NOT_FOUND.
+describe('a call node is found by the title the editor shows', () => {
+  it('falls back to a callable whose DisplayName matches, spaces aside', () => {
+    const handlers = read('Domains', 'BlueprintGraph', 'McpBPGraphHandlers.cpp');
+    expect(handlers).toContain('It->GetMetaData(TEXT("DisplayName")).Replace(TEXT(" "), TEXT("")).Equals(Name, ESearchCase::IgnoreCase)');
+    // Only after the name itself and its K2_ twin missed.
+    expect(handlers.indexOf('if (Twin || Function)')).toBeLessThan(handlers.indexOf('TFieldIterator<UFunction> It(Class)'));
   });
 });
 

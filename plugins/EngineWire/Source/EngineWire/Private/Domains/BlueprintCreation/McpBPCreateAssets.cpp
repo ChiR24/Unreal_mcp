@@ -104,11 +104,12 @@ bool ExecuteBlueprintCreation(UEngineWireSubsystem *Self,
   const TSharedPtr<FJsonObject> ResultPayload =
       BuildBlueprintResult(CreatedBlueprint, NormalizedPath);
   FString Message = TEXT("Blueprint created");
-  if (AppliedProperties.Num() + FailedProperties.Num() > 0) {
+  // Each list only when it names something: every create that set its properties carried "failedProperties": [].
+  if (AppliedProperties.Num() > 0) {
     ResultPayload->SetArrayField(TEXT("appliedProperties"), McpHandlerUtils::ToJsonStringArray(AppliedProperties));
-    ResultPayload->SetArrayField(TEXT("failedProperties"), McpHandlerUtils::ToJsonStringArray(FailedProperties));
   }
   if (FailedProperties.Num() > 0) {
+    ResultPayload->SetArrayField(TEXT("failedProperties"), McpHandlerUtils::ToJsonStringArray(FailedProperties));
     // The asset exists either way, so the create stands; what was not set is named, not hidden.
     Message = FString::Printf(TEXT("Blueprint created; %d of its properties were not set: %s"),
                               FailedProperties.Num(), *FString::Join(FailedProperties, TEXT("; ")));

@@ -205,6 +205,9 @@ describe('handlers answer what they did', () => {
     const reply = code('BlueprintCreation', 'McpBPCreateAssets.cpp');
     expect(reply).toContain('ResultPayload->SetArrayField(TEXT("failedProperties")');
     expect(reply).toContain('of its properties were not set: %s');
+    // Neither list is sent empty: every clean create carried "failedProperties": [].
+    expect(reply).toContain('if (AppliedProperties.Num() > 0) {');
+    expect(reply).not.toContain('AppliedProperties.Num() + FailedProperties.Num() > 0');
   });
 
   it('a loot entry added after a removal takes a new key', () => {

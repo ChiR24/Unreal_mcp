@@ -49,7 +49,20 @@ static UFunction* FindCallableNamed(UClass* Class, const FString& Name)
         return Function;
     }
     UFunction* Twin = Class->FindFunctionByName(*(TEXT("K2_") + Name));
-    return Twin ? Twin : Function;
+    if (Twin || Function)
+    {
+        return Twin ? Twin : Function;
+    }
+    // The title the editor shows, spaces aside: GetActorTransform is GetTransform, and failed FUNCTION_NOT_FOUND.
+    for (TFieldIterator<UFunction> It(Class); It; ++It)
+    {
+        if (It->HasAnyFunctionFlags(FUNC_BlueprintCallable) && It->HasMetaData(TEXT("DisplayName")) &&
+            It->GetMetaData(TEXT("DisplayName")).Replace(TEXT(" "), TEXT("")).Equals(Name, ESearchCase::IgnoreCase))
+        {
+            return *It;
+        }
+    }
+    return nullptr;
 }
 
 UFunction* ResolveGraphCallFunction(UBlueprint* Blueprint, const FString& MemberName,
