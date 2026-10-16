@@ -2967,3 +2967,24 @@ describe("a Set wired to another object is not this one's write", () => {
     expect(wait).toContain('Set && McpVariableOnSelf(Set) && Set->GetVarName() == Get->GetVarName()');
   });
 });
+
+describe('a Math Expression lists inputPins only when it made pins', () => {
+  it('leaves the list out for a formula that reads only member variables', () => {
+    const expression = code('BlueprintGraph', 'Expression', 'McpBPGraphMathExpr.cpp');
+    expect(expression).toMatch(/if \(Inputs\.Num\(\) > 0\)\s*\{\s*Result->SetArrayField\(TEXT\("inputPins"\), Inputs\);/u);
+  });
+});
+
+describe('a frame step says what the game logged during it', () => {
+  // A Blueprint turning a Stationary light stepped on silently: "has to be 'Movable'" went only to the log.
+  it('reads the warnings and errors logged since the step began into the reply', () => {
+    const play = code('ControlEditor', 'McpEditorPlay.cpp');
+    expect(play.indexOf('const double Since = FMcpLogHistory::Now();')).toBeGreaterThan(-1);
+    expect(play.indexOf('const double Since = FMcpLogHistory::Now();')).toBeLessThan(play.indexOf('AdvanceOneFrame(GEditor->PlayWorld);'));
+    expect(play).toContain('FMcpLogHistory::Get().WarningsSince(Since, 5)');
+    expect(play).toContain('Resp->SetArrayField(TEXT("warnings"), McpHandlerUtils::ToJsonStringArray(Logged));');
+    const history = code('Log', 'McpLogHistory.cpp');
+    expect(history).toContain('Line.Verbosity <= ELogVerbosity::Warning && Line.Category != OwnCategory');
+    expect(history).toContain('EngineWireSubsystemResponse::SanitizeEngineErrorForResponse(Raw)');
+  });
+});

@@ -1,6 +1,7 @@
 #include "Domains/Log/McpLogHistory.h"
 
 #include "Algo/Reverse.h"
+#include "Core/Subsystem/EngineWireSubsystemResponseSanitization.h"
 #include "CoreGlobals.h"
 #include "HAL/FileManager.h"
 #include "HAL/PlatformOutputDevices.h"
@@ -37,6 +38,53 @@ void FMcpLogHistory::Unregister()
     bRegistered = false;
 }
 
+double FMcpLogHistory::Now()
+{
+    return FPlatformTime::Seconds() - GStartTime;
+}
+
+TArray<FString> FMcpLogHistory::WarningsSince(double SinceSeconds, int32 MaxDistinct) const
+{
+    static const FName OwnCategory(TEXT("LogEngineWireSubsystem"));
+    TArray<FString> Logged;
+    {
+        FScopeLock Lock(&Mutex);
+        const int32 Count = Lines.Num();
+        // Oldest first: Head is the oldest slot once the ring is full and 0 before.
+        for (int32 Offset = 0; Offset < Count; ++Offset)
+        {
+            const FLine& Line = Lines[(Head + Offset) % Count];
+            if (Line.Seconds >= SinceSeconds && Line.Verbosity != ELogVerbosity::NoLogging &&
+                Line.Verbosity <= ELogVerbosity::Warning && Line.Category != OwnCategory)
+            {
+                Logged.Add(FString::Printf(TEXT("%s: %s"), *Line.Category.ToString(), *Line.Message.TrimStartAndEnd()));
+            }
+        }
+    }
+    // Sanitized outside the lock: the redactor asks the engine for its content mounts.
+    TArray<FString> Messages;
+    TArray<int32> Counts;
+    for (const FString& Raw : Logged)
+    {
+        const FString Text = EngineWireSubsystemResponse::SanitizeEngineErrorForResponse(Raw);
+        const int32 Index = Messages.Find(Text);
+        if (Index != INDEX_NONE)
+        {
+            ++Counts[Index];
+        }
+        else if (Messages.Num() < MaxDistinct)
+        {
+            Messages.Add(Text);
+            Counts.Add(1);
+        }
+    }
+    for (int32 Index = 0; Index < Messages.Num(); ++Index)
+    {
+        Messages[Index] = Counts[Index] > 1 ? FString::Printf(TEXT("%dx %s"), Counts[Index], *Messages[Index]) : Messages[Index];
+    }
+    return Messages;
+}
+
 void FMcpLogHistory::Serialize(const TCHAR* V, ELogVerbosity::Type Verbosity, const FName& Category)
 {
     if (!V)
@@ -44,7 +92,7 @@ void FMcpLogHistory::Serialize(const TCHAR* V, ELogVerbosity::Type Verbosity, co
         return;
     }
     FLine Line;
-    Line.Seconds = FPlatformTime::Seconds() - GStartTime;
+    Line.Seconds = Now();
     Line.Category = Category;
     Line.Verbosity = static_cast<ELogVerbosity::Type>(Verbosity & ELogVerbosity::VerbosityMask);
     Line.Message = FString(V).Left(1024);

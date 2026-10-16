@@ -225,7 +225,11 @@ void DescribeInputs(const UBlueprint* Blueprint, const UEdGraphNode& Node, const
       Inputs.Add(MakeShared<FJsonValueString>(Pin->PinName.ToString()));
     }
   }
-  Result->SetArrayField(TEXT("inputPins"), Inputs);
+  // A formula that reads only member variables made no pins: it said so as "inputPins": [].
+  if (Inputs.Num() > 0)
+  {
+    Result->SetArrayField(TEXT("inputPins"), Inputs);
+  }
   TArray<FString> Calls;
   TArray<FString> Names;
   SplitNames(Expression, Calls, Names);

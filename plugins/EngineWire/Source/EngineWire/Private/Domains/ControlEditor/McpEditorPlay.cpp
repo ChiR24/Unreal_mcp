@@ -1,5 +1,6 @@
 #include "Domains/ControlEditor/McpEditorSupport.h"
 
+#include "Domains/Log/McpLogHistory.h"
 #include "Framework/Docking/TabManager.h"
 #include "GameFramework/PlayerState.h"
 #include "GameFramework/WorldSettings.h"
@@ -245,7 +246,7 @@ bool UEngineWireSubsystem::HandleControlEditorStepFrame(
   // held by the ticker below cannot outlive it.
   auto SendStepped = [](UEngineWireSubsystem *Self,
                         TSharedPtr<FMcpBridgeWebSocket> ReplySocket,
-                        const FString &ReplyRequestId, int32 Stepped) {
+                        const FString &ReplyRequestId, int32 Stepped, double Since) {
     // A step keeps the slow motion that was set, so "Stepped 6 frame(s)" at speed 0.1 advanced
     // 0.02 s, not the 0.2 s the caller assumed: say the speed, and the game time when steps are fixed.
     const UWorld *PlayWorld = GEditor ? GEditor->PlayWorld.Get() : nullptr;
@@ -260,6 +261,12 @@ bool UEngineWireSubsystem::HandleControlEditorStepFrame(
     if (FApp::UseFixedTimeStep()) {
       Resp->SetNumberField(TEXT("gameSeconds"), Stepped * FApp::GetFixedDeltaTime() * Dilation);
     }
+    // What the game logged during the steps (a light that cannot move because it is not Movable, an Accessed
+    // None): a step read only the state afterwards, and why it had not changed stayed in the log.
+    const TArray<FString> Logged = FMcpLogHistory::Get().WarningsSince(Since, 5);
+    if (Logged.Num() > 0) {
+      Resp->SetArrayField(TEXT("warnings"), McpHandlerUtils::ToJsonStringArray(Logged));
+    }
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetNumberField(TEXT("steps"), Stepped);
     Resp->SetStringField(TEXT("message"), Message);
@@ -267,9 +274,10 @@ bool UEngineWireSubsystem::HandleControlEditorStepFrame(
                                  Resp, FString());
   };
 
+  const double Since = FMcpLogHistory::Now();
   AdvanceOneFrame(GEditor->PlayWorld);
   if (TotalSteps == 1) {
-    SendStepped(this, Socket, RequestId, 1);
+    SendStepped(this, Socket, RequestId, 1, Since);
     return true;
   }
 
@@ -278,7 +286,7 @@ bool UEngineWireSubsystem::HandleControlEditorStepFrame(
   FTSTicker::GetCoreTicker().AddTicker(
       FTickerDelegate::CreateLambda([WeakThis, Socket, RequestId, TotalSteps,
                                      Stepped, AdvanceOneFrame,
-                                     SendStepped](float) {
+                                     SendStepped, Since](float) {
         if (!WeakThis.IsValid()) {
           return false;
         }
@@ -292,7 +300,7 @@ bool UEngineWireSubsystem::HandleControlEditorStepFrame(
         }
         // Finished, or PIE ended early -- either way report the frames that
         // actually advanced rather than the count that was asked for.
-        SendStepped(WeakThis.Get(), Socket, RequestId, *Stepped);
+        SendStepped(WeakThis.Get(), Socket, RequestId, *Stepped, Since);
         return false;
       }),
       0.0f);

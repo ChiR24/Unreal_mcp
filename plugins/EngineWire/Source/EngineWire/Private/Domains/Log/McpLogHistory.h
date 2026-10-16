@@ -25,6 +25,12 @@ public:
     TArray<FString> Read(int32 MaxLines, const FString& Contains, const FString& Category,
                          ELogVerbosity::Type MinVerbosity, int32& OutMatched) const;
 
+    // The log clock the lines are stamped with, and the distinct warnings and errors logged since a reading of it
+    // ("3x Category: message"), at most MaxDistinct, this plugin's own lines left out: what a game said while a
+    // call ran it (a light that cannot move, an Accessed None).
+    static double Now();
+    TArray<FString> WarningsSince(double SinceSeconds, int32 MaxDistinct) const;
+
     // The same tail read over a log FILE some other process writes (the Live
     // Coding console's), opened shared because that process still holds it.
     static TArray<FString> ReadFileTail(const FString& Path, int32 MaxLines, const FString& Contains,
