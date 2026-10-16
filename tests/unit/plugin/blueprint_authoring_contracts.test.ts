@@ -196,6 +196,17 @@ describe('build_graph: an overlapping explicit position moves the node instead o
   });
 });
 
+// A refused create_node left the Blueprint marked changed and an empty undo step, which the next undo spent.
+describe('a refused node leaves no undo step and no change mark', () => {
+  it('cancels its transaction and clears the dirty flag it set when no node came or went', () => {
+    const creation = read('Domains', 'BlueprintGraph', 'McpBPGraphNodeCreation.cpp');
+    expect(creation).toContain('const bool bOutermost = !(GEditor && GEditor->IsTransactionActive());');
+    expect(creation.indexOf('const bool bWasDirty = Package->IsDirty();')).toBeLessThan(creation.indexOf('Context.Blueprint->Modify();'));
+    expect(creation).toContain('!NodesBefore.Contains(Node->NodeGuid)');
+    expect(creation).toMatch(/if \(bOutermost && bUnchanged\)\s*\{\s*Transaction\.Cancel\(\);\s*if \(!bWasDirty\)\s*\{\s*Package->SetDirtyFlag\(false\);/u);
+  });
+});
+
 // A call node named GetActorTransform, the title the editor shows for GetTransform, failed FUNCTION_NOT_FOUND.
 describe('a call node is found by the title the editor shows', () => {
   it('falls back to a callable whose DisplayName matches, spaces aside', () => {

@@ -256,7 +256,10 @@ bool UEngineWireSubsystem::HandleControlActorSetCollision(
   // it lists the single form's actorName.
   Data->SetNumberField(TEXT("updatedActors"), Affected.Num());
   Data->SetArrayField(TEXT("affectedActors"), McpHandlerUtils::ToJsonStringArray(Affected));
-  Data->SetArrayField(TEXT("missing"), McpHandlerUtils::ToJsonStringArray(Missing));
+  if (Missing.Num() > 0)
+  {
+    Data->SetArrayField(TEXT("missing"), McpHandlerUtils::ToJsonStringArray(Missing));
+  }
   if (NoComponent.Num() > 0)
   {
     Data->SetArrayField(TEXT("noPrimitiveComponents"), McpHandlerUtils::ToJsonStringArray(NoComponent));

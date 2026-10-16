@@ -278,7 +278,9 @@ bool UEngineWireSubsystem::HandleControlActorSetVisibility(
     Data->SetBoolField(TEXT("visible"), bVisible);
     Data->SetNumberField(TEXT("updatedActors"), Affected.Num());
     Data->SetArrayField(TEXT("affectedActors"), McpHandlerUtils::ToJsonStringArray(Affected));
-    Data->SetArrayField(TEXT("missing"), McpHandlerUtils::ToJsonStringArray(Missing));
+    if (Missing.Num() > 0) {
+      Data->SetArrayField(TEXT("missing"), McpHandlerUtils::ToJsonStringArray(Missing));
+    }
   } else {
     Data->SetBoolField(TEXT("visible"), !Actors[0]->IsHidden());
     Data->SetStringField(TEXT("actorName"), McpActorRef(Actors[0]));

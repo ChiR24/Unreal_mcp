@@ -1,8 +1,10 @@
 #include "Domains/BlueprintGraph/McpBPGraphPrivate.h"
 
 #include "Domains/BlueprintGraph/Behaviour/McpBPBehaviourNodes.h"
+#include "Editor.h"
 #include "K2Node_MacroInstance.h"
 #include "ScopedTransaction.h"
+#include "UObject/Package.h"
 
 namespace McpBlueprintGraphHandlers
 {
@@ -114,8 +116,18 @@ bool HandleNodeCreationAction(FActionContext& Context)
         return false;
     }
 
-    const FScopedTransaction Transaction(
+    // A refused node (an unknown function, an overlap, a missing enum) left the Blueprint marked changed and an empty
+    // undo step, which the next undo spent instead of the edit before it. A batch keeps its own rollback.
+    const bool bOutermost = !(GEditor && GEditor->IsTransactionActive());
+    FScopedTransaction Transaction(
         FText::FromString(TEXT("Create Blueprint Node")));
+    UPackage* Package = Context.Blueprint->GetOutermost();
+    const bool bWasDirty = Package->IsDirty();
+    TSet<FGuid> NodesBefore;
+    for (const UEdGraphNode* Node : Context.TargetGraph->Nodes)
+    {
+        NodesBefore.Add(Node ? Node->NodeGuid : FGuid());
+    }
     Context.Blueprint->Modify();
     Context.TargetGraph->Modify();
 
@@ -134,18 +146,28 @@ bool HandleNodeCreationAction(FActionContext& Context)
         Context.Payload->TryGetNumberField(TEXT("y"), Y);
     }
 
-    if (TryCreateCommonFunctionNode(Context, NodeType, X, Y) ||
-        TryCreateVariableNode(Context, NodeType, X, Y) ||
-        TryCreateFunctionOrEventNode(Context, NodeType, X, Y) ||
-        TryCreateCustomEventNode(Context, NodeType, X, Y) ||
-        TryCreateMacroNode(Context, NodeType, X, Y) ||
-        TryCreateSpecialNode(Context, NodeType, X, Y) ||
-        TryCreateBehaviourNode(Context, NodeType, X, Y))
+    if (!(TryCreateCommonFunctionNode(Context, NodeType, X, Y) ||
+          TryCreateVariableNode(Context, NodeType, X, Y) ||
+          TryCreateFunctionOrEventNode(Context, NodeType, X, Y) ||
+          TryCreateCustomEventNode(Context, NodeType, X, Y) ||
+          TryCreateMacroNode(Context, NodeType, X, Y) ||
+          TryCreateSpecialNode(Context, NodeType, X, Y) ||
+          TryCreateBehaviourNode(Context, NodeType, X, Y)))
     {
-        return true;
+        CreateDynamicNode(Context, NodeType, X, Y);
     }
-
-    CreateDynamicNode(Context, NodeType, X, Y);
+    // A node that replaced another of the same name (a custom event) is new too: compare ids, not the count.
+    const bool bUnchanged = Context.TargetGraph->Nodes.Num() == NodesBefore.Num() &&
+        !Context.TargetGraph->Nodes.ContainsByPredicate(
+            [&NodesBefore](const UEdGraphNode* Node) { return Node && !NodesBefore.Contains(Node->NodeGuid); });
+    if (bOutermost && bUnchanged)
+    {
+        Transaction.Cancel();
+        if (!bWasDirty)
+        {
+            Package->SetDirtyFlag(false);
+        }
+    }
     return true;
 }
 }

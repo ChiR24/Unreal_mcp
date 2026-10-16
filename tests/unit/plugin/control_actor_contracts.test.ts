@@ -294,6 +294,16 @@ describe('set_visibility and set_actor_collision take many actors in one call, a
     }
   });
 
+  // Every add_tag that found all its actors answered "missing": [].
+  it('lists missing only when a name matched no actor', () => {
+    for (const source of [visibility(), collision(), read('McpActorTags.cpp')]) {
+      const writes = source.split('Data->SetArrayField(TEXT("missing")').length - 1;
+      const guarded = source.match(/if \(Missing\.Num\(\) > 0\)\s*\{\s*Data->SetArrayField\(TEXT\("missing"\)/gu) ?? [];
+      expect(writes).toBeGreaterThan(0);
+      expect(guarded.length).toBe(writes);
+    }
+  });
+
   it('set_visibility holds every named actor and its primitive components in ONE transaction, opened before the first write', () => {
     const source = visibility();
     const collect = source.indexOf('McpAddActorUndoSet(Actor, Undoable);');
