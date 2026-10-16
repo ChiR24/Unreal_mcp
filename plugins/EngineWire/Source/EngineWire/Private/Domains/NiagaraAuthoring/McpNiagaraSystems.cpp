@@ -1,4 +1,5 @@
 #include "Domains/NiagaraAuthoring/McpNiagaraContext.h"
+#include "Domains/NiagaraAuthoring/McpNiagaraCreatePackage.h"
 
 namespace McpNiagaraAuthoringHandlers
 {
@@ -9,12 +10,14 @@ static bool CreateNiagaraSystem(FActionContext& Context)
         Context.SendError(TEXT("Missing 'name' parameter."), TEXT("INVALID_ARGUMENT"));
         return true;
     }
-    if (!Context.Path.EndsWith(TEXT("/")))
+    FString PathError;
+    const FString PackageName = McpNiagaraCreatePackageName(Context.Path, Context.Name, PathError);
+    if (PackageName.IsEmpty())
     {
-        Context.Path += TEXT("/");
+        Context.SendError(PathError, TEXT("INVALID_ARGUMENT"));
+        return true;
     }
-    const FString FullPath = Context.Path + Context.Name;
-    UPackage* Package = CreatePackage(*FPackageName::ObjectPathToPackageName(FullPath));
+    UPackage* Package = CreatePackage(*PackageName);
     if (!Package)
     {
         Context.SendError(TEXT("Failed to create package."), TEXT("PACKAGE_ERROR"));
@@ -59,11 +62,14 @@ static bool CreateNiagaraEmitter(FActionContext& Context)
         Context.SendError(TEXT("Missing 'name' parameter."), TEXT("INVALID_ARGUMENT"));
         return true;
     }
-    if (!Context.Path.EndsWith(TEXT("/")))
+    FString PathError;
+    const FString PackageName = McpNiagaraCreatePackageName(Context.Path, Context.Name, PathError);
+    if (PackageName.IsEmpty())
     {
-        Context.Path += TEXT("/");
+        Context.SendError(PathError, TEXT("INVALID_ARGUMENT"));
+        return true;
     }
-    UPackage* Package = CreatePackage(*FPackageName::ObjectPathToPackageName(Context.Path + Context.Name));
+    UPackage* Package = CreatePackage(*PackageName);
     if (!Package)
     {
         Context.SendError(TEXT("Failed to create package."), TEXT("PACKAGE_ERROR"));
