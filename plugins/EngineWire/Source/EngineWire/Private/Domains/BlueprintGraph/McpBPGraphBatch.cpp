@@ -280,8 +280,11 @@ bool RunGraphBatch(FActionContext& Context, int32 MaxSteps, bool bCompile)
     FString FirstError;
     const bool bCompiled = McpCompileBlueprintWithDiagnostics(Context.Blueprint, Result, FirstError, 12);
     Result->SetBoolField(TEXT("saved"), SaveLoadedAssetThrottled(Context.Blueprint));
+    // A compile with warnings said only "the blueprint compiles" over a node the compiler pruned, which never runs.
+    const FString Warned = Result->HasField(TEXT("warnings")) ? FString(TEXT(", with warnings (see the receipt's warnings)"))
+                                                              : FString();
     Context.SendResponse(bCompiled
-        ? FString::Printf(TEXT("Ran %d graph operations; the blueprint compiles."), Results.Num())
+        ? FString::Printf(TEXT("Ran %d graph operations; the blueprint compiles%s."), Results.Num(), *Warned)
         : FString::Printf(TEXT("Ran %d graph operations. WARNING: the blueprint does not compile: %s"),
                           Results.Num(), FirstError.IsEmpty() ? TEXT("no compiler message") : *FirstError),
         Result);

@@ -2970,6 +2970,18 @@ describe("a Set wired to another object is not this one's write", () => {
   });
 });
 
+describe('a compiler warning reaches the receipt', () => {
+  // "DoesSaveGameExist was pruned because its Exec pin is not connected" sat in diagnostics under "the blueprint
+  // compiles": the node never ran and nothing said so.
+  it('carries the compiler warnings with the graph checks and names them in a batch headline', () => {
+    const diag = code('..', 'Foundation', 'BridgeHelpers', 'Blueprints', 'McpBPDiag.h');
+    expect(diag).toContain('if (Index >= FirstCheck || Entry->GetStringField(TEXT("severity")) == TEXT("warning")) {');
+    expect(diag).toContain('if (Warnings.Num() > Before) {');
+    const batch = code('BlueprintGraph', 'McpBPGraphBatch.cpp');
+    expect(batch).toContain('TEXT(", with warnings (see the receipt\'s warnings)")');
+  });
+});
+
 describe('a Blueprint struct reads as an object under its authored names', () => {
   // A leaderboard of F_ScoreEntry read back as "(PlayerName_2_0AD1D94C...=\"Di\",Score_4_D0AA...=70)".
   it('exports each member under GetAuthoredName, before the native export text', () => {
