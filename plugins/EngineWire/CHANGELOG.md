@@ -14,27 +14,35 @@ Plugin-side changes since the `v0.6.0-beta-e` tag, from the code diff. The serve
 
 ### Changed
 - **Renamed EngineWire** (was McpAutomationBridge): plugin, modules, classes and settings page, with short source file names for Fab; settings under the old section still load.
-- **`build_graph` rolls back a failed batch**, and replies are leaner: actors named once, compact runtime and spawn-batch reports, transforms rounded to ten digits.
-- **The native gateway** resolves capability namespaces and ignores filler words in search; dead parameter aliases are gone.
+- **`build_graph` rolls back a failed batch** and runs each step in the graph of the node it names; replies are leaner: actors named once, compact runtime and spawn-batch reports, `get_component_details` values only on request, transforms rounded to ten digits.
+- **The native gateway** resolves capability namespaces and ignores filler words in search.
 
 ### Added
 - **Gameplay**: `add_behaviour` and its recipes, `apply_damage`, `implement_interface`, `edit_timeline`, Bind Event nodes, collision presets and responses, `create_physical_material`.
-- **Blueprint tools**: `find_functions`, graph checks for pure nodes that run twice, `compile` `folder`, graph `filter` by wired variable, `unusedOnly`, `remove_variable` `variableNames`.
+- **Blueprint tools**: `find_functions`, graph checks (values read twice, timers, waits in loops, values changed in place, endless play-and-forget sounds), `compile` `folder`, graph `filter` by wired variable, `unusedOnly`, `remove_variable` `variableNames`.
 - **Packaging** (UE 5.0-5.8 checked): `package_project` `executableName` builds a game target of that name, `launch_build` `map`, and `enable_plugin` `targets` with a warning for folders the cook always takes.
-- **Actors**: spawn batch `repeat` and `properties`, coplanar-face reports, `set_transform` and component edits on many actors, `set_folder`, `describe_view` `actors`.
-- **Motion and animation**: `sample_motion` `spawnOf`, pass-through and overlap tracking, `analyze_animation`, skeletal mesh import options, animation graph nodes by class.
+- **Actors**: spawn batch `repeat` and `properties`, spawn `folder` and `tags`, coplanar-face reports, `set_transform` and component edits on many actors, `set_folder`, `describe_view` `actors`, child Blueprint overrides.
+- **Motion and animation**: `sample_motion` `spawnOf`, pass-through and overlap tracking, game log lines in motion reads and frame steps, `analyze_animation`, skeletal mesh import options, animation graph nodes by class.
 - **Effects and audio**: several parameters on a placed effect, emitter copy between systems, a narrowed `get_niagara_info`, `list_metasound_nodes`, box attenuation `extent`.
-- **Project**: `configure_rendering`, `create_cpp_class`, `validate_assets` `materialUsage`, `mesh_materials` `assetPaths`, `get_widget_animation`, game screenshot FOV, SDF `relativeTo`.
+- **Project**: `configure_rendering`, `create_cpp_class`, `validate_assets` `materialUsage`, `mesh_materials` `assetPaths`, `get_widget_animation`, game screenshot FOV, SDF `relativeTo`, `edit_dynamic_mesh` `meshPath`, `play` `unpauseGame`.
+
+### Removed
+- **Dead level-call aliases** that every call was refused for: `open_level` `path` and `assetPath`, `focus_actor` `name`, `manage_level` `delete` `path` and `levelPaths`, `duplicate_level` `targetPath`, `set_metadata` and `validate_level` `assetPath`.
 
 ### Fixed
-- **Honest replies**: compiler lines dropped after a clean compile, widget rename name checks, log-less Shipping runs named, compiler warnings in receipts, self-destroying spawns, game pause and minimized-editor warnings.
-- **Blueprint graphs**: enum pins and nodes, container pin types, call nodes by shown title (`K2_` names), auto-placed nodes, refused nodes leave no undo step, schema checks, Math Expression parsing and rebinding in duplicates.
-- **Properties**: Map, Set, array, float and struct values; actor references by label; spawn variables set before BeginPlay.
-- **Gameplay**: combat projectiles and weapons, interactables, `apply_force` impulses, physics on placed props, the game cursor in Play In Editor.
+- **Honest replies**: compiler lines dropped after a clean compile, widget rename name checks, log-less Shipping runs named, compiler warnings in receipts, self-destroying spawns and destroyed actors, game pause, paused-world and minimized-editor warnings, the focused game widget, conversion-node links, typed and project paths kept in replies.
+- **Blueprint graphs**: enum pins and nodes, container pin types, pin literals only on unwired inputs, call nodes by shown title (`K2_` names), auto-placed nodes, refused nodes leave no undo step, schema checks, parent components edited from a child, Math Expression parsing and rebinding in duplicates.
+- **Properties**: Map, Set, array, float and struct values; actor references by label; StaticMesh set through its setter; spawn variables set before BeginPlay; project settings resolve class names.
+- **Gameplay**: combat projectiles (damage, lifespan) and weapons, interactables and triggers, `apply_force` impulses, physics on placed props, the game cursor in Play In Editor.
+- **Input and motion**: held keys count game time across stepped frames, `actionMappings` in mapping replies, scripted movers' velocity, `levelChanged`.
 - **Placement**: convex and complex collision tests, the enclosure ground probe, inherited uneven scale, the physics scene flushed in spawn batches.
-- **Niagara**: modules inserted in dependency order, duplicated systems compiled before saving, typed placed-effect parameters, engine input names in bindings.
-- **Assets and geometry**: delete counts and quiet routine logs, import results, Fab format choice, polygon winding, linear arrays, SDF grid bounds, material orphans and usage flags.
-- **Editor**: `stop` waits for play to end, `levelChanged`, video memory reports, threaded log capture, volume and component undo.
+- **Niagara**: edits act only on the emitter the caller named (#658) and create actions write only a valid package (#668), both by @SoloGorilla; modules inserted in dependency order and named as their inputs are; duplicated systems compiled before saving; typed placed-effect parameters; engine input names in bindings.
+- **Assets and geometry**: delete counts and quiet routine logs, name-filtered folder lists, import results, Fab format choice, polygon winding, linear arrays, SDF grid bounds, material orphans and usage flags.
+- **Editor**: level loads answered once settled, `stop` waits for play to end, video memory reports, threaded log capture, volume and component undo, negative zero written as `0` in native replies (#662).
+- **Builds**: the `.uplugin` declares Win64, Mac and Linux so Android builds skip the plugin (#666); missing includes for Fab's UE 5.0-5.4 toolchains.
+
+### Migration
+- Replace `Plugins/McpAutomationBridge` with `Plugins/EngineWire`; settings under `[/Script/McpAutomationBridge.McpAutomationBridgeSettings]` still load while `[/Script/EngineWire.EngineWireSettings]` is empty.
 
 ## [0.6.0-beta-e] - 2026-10-09
 

@@ -21,25 +21,27 @@ _Nothing yet._
 <details>
 <summary><b>✨ Added</b></summary>
 
-- **Gameplay in one call**: `add_behaviour` writes health, damage on touch, pickups, sprint, shooting, chase, patrol, turrets, player controls, respawn, goals, jump pads, explosives, stomps, moving and falling platforms, countdowns, teleporters, spawners, dashes, HUD bars and counters, hints and game over into an Actor Blueprint as plain engine nodes.
-- **Blueprint authoring**: Blueprint Interfaces, timelines (`edit_timeline`), Bind Event, Switch on Enum, animation-graph nodes by class, a Math Expression's `expression` in batches, and `remove_variable` `variableNames`.
-- **Reading graphs**: `inspect_graph` `functions` finds a function by plain words, `get_graph_details` `filter` finds what reads or moves a variable and `unusedOnly` lists dead nodes, graph edits warn about pure nodes that run twice, and `compile` takes a `folder`.
+- **Gameplay in one call**: `add_behaviour`, with a shortcut action for each kind (`add_health`, `add_patrol` and so on), writes health, damage on touch, pickups, sprint, shooting, chase, patrol, turrets, stomps, explosives, moving and falling platforms, player controls, respawn with checkpoints, goals, launch pads, teleporters, a time limit, spawners, dashes, HUD bars and counters, hints and game over into an Actor Blueprint as plain engine nodes.
+- **Blueprint authoring**: Blueprint Interfaces (`implement_interface`), timelines (`edit_timeline`), Bind Event, Switch on Enum, animation-graph nodes by class, a Math Expression's `expression` in batches, and `remove_variable` `variableNames`.
+- **Reading graphs**: `find_functions` finds a function by plain words, `get_graph_details` `filter` finds what reads or moves a variable, `unusedOnly` lists nodes that do nothing, and `compile` takes a `folder`.
+- **Graph checks**: edits and compiles flag pure nodes and random values read twice, timers that name nothing or restart every frame, waits inside loops, values changed in place, event values read after a wait, and sounds that never end on play-and-forget nodes.
 - **Packaging**: `package_project` `executableName` names the game's .exe, `launch_build` `map` smoke-runs one level, and `enable_plugin` `targets` keeps an editor-only plugin out of the packaged game.
 - **Project setup**: `configure_rendering` (Lumen, shadows, anti-aliasing, ray tracing, MegaLights) and `create_cpp_class`.
-- **Many actors at once**: spawn batch `repeat` (rows and grids) and `properties`, `set_transform` and `edit_component` with `actorNames`, `set_folder`, and spawns and moves that name z-fighting faces.
-- **Motion and physics**: motion reads that wait for a spawn (`spawnOf`) and name surfaces passed through and actors overlapped, `analyze_animation`, collision presets and per-channel responses, physical materials and `apply_damage`.
+- **Many actors at once**: spawn batch `repeat` (rows and grids) and `properties`, `set_transform` and `edit_component` with `actorNames`, `set_folder` and spawn `folder` and `tags`, and spawns and moves that name z-fighting faces.
+- **Motion and physics**: motion reads that wait for a spawn (`spawnOf`), name surfaces passed through and actors overlapped, and return what the game logged, as `step_frame` now does; `analyze_animation`, collision presets and per-channel responses, physical materials and `apply_damage`.
 - **Effects and audio**: several parameters on a placed effect at once, `add_emitter` from another system, `get_niagara_info` for one emitter, `list_metasound_nodes` and box-shaped sound zones.
-- **More reads and edits**: `get_property` `objectPaths`, `widget_list` texts and parent panels, `describe_view` `actors`, `get_widget_animation`, screenshot field of view, skeletal mesh import onto a skeleton, `validate_assets` `materialUsage`, `mesh_materials` `assetPaths`, SDF `relativeTo` and input `replaceKey`.
+- **More reads**: `get_property` `objectPaths`, a child Blueprint's own values for its parent's components, `widget_list` texts and parent panels, `describe_view` `actors`, `get_widget_animation`, screenshot field of view, video memory over budget and `validate_assets` `materialUsage`.
+- **More edits**: skeletal mesh import onto a skeleton, a dynamic mesh started from a static mesh (`meshPath`), `mesh_materials` `assetPaths`, SDF `relativeTo`, input `replaceKey` and `play` `unpauseGame`.
 
 </details>
 
 <details>
 <summary><b>🔄 Changed</b></summary>
 
-- **The editor plugin is now EngineWire** (was McpAutomationBridge), with short file names that fit Fab; settings saved under the old name still load.
-- **A Blueprint graph batch is all or nothing**: a failed step undoes the steps before it.
-- **Leaner replies**: each actor is named once, `runtime_report` reports the session unless asked for more, spawn batches past 20 items list only failures, and transforms read as typed.
-- **The HTTP door takes capability IDs** as the stdio door does, and level calls list only the names they take.
+- **The editor plugin is now EngineWire** (was McpAutomationBridge), shipped as `EngineWire-plugin-<version>.zip`, with file names short enough for Fab; settings saved under the old name still load.
+- **A Blueprint graph batch is all or nothing**: a failed step undoes the steps before it, and a step works in the graph of the node it names.
+- **Leaner replies**: each actor is named once, `runtime_report` reports the session unless asked for more, `get_component_details` sends values only for `propertyNames` or `detailed`, spawn batches past 20 items list only failures, and transforms read as typed.
+- **The HTTP door takes capability IDs** as the stdio door does.
 - **Widget templates take their content**: a shop its `items` and `currency`, a dialog its `text` and `buttons`.
 
 </details>
@@ -47,15 +49,51 @@ _Nothing yet._
 <details>
 <summary><b>🔧 Fixed</b></summary>
 
-- **Replies say what really happened**: a widget rename refuses a taken name, a clean compile drops stale warnings, a Shipping smoke run says it wrote no log, compiler warnings reach the receipt, and a self-destroying spawn, a game's own pause, a minimized editor and a non-realtime screenshot are named.
-- **Blueprint graphs**: enums keep their type, array pins say so, call nodes take the names the editor shows, nodes made without a position find a free slot, refused nodes leave nothing, misspelled types are refused, and Math Expressions take a unary minus and `&&`/`||` comparisons.
-- **Property values**: Map, Set, array, float and Blueprint struct values read and write as sent, actor arrays take labels, and unknown variable names are refused.
-- **Gameplay**: projectiles hit and hurt, weapons fire, doors and switches open, `apply_force` pushes, placed props simulate, batch references land before BeginPlay, and a mouse move reaches a running game.
-- **Placement checks**: no false off-map, sunk or floating reports for floors over pits, enclosures, stacked items and complex collision.
-- **Niagara**: modules go where their dependencies hold, a duplicated system plays at once, and placed-effect parameters are typed and fully bindable.
-- **Assets**: deletes count what they removed, imports name the mesh, Fab adds a pack's Unreal build, dead material branches list as orphaned, and material usage flags are saved.
+- **Replies say what really happened**: a widget rename refuses a taken name, a clean compile drops stale warnings, a Shipping smoke run says it wrote no log, compiler warnings reach the receipt, `stop` answers once play has ended, a link through a conversion node reads connected, and a self-destroying spawn, a destroyed actor, a game's own pause, a paused world, a minimized editor, a non-realtime screenshot and a widget holding the keyboard focus are named.
+- **Blueprint graphs**: enums keep their type, array pins say so, pins show a literal only where the graph reads one, call nodes take the names the editor shows, nodes made without a position find a free slot, refused nodes leave nothing, misspelled types are refused, child Blueprints edit their parent's components, and Math Expressions take a unary minus and `&&`/`||` comparisons and still compile in a duplicated Blueprint.
+- **Property values**: Map, Set, array, float and Blueprint struct values read and write as sent, actor arrays take labels, a mesh component's StaticMesh goes through its setter, unknown variable names are refused, and `set_project_setting` resolves a class name and refuses an unknown one.
+- **Gameplay**: projectiles hit, hurt and expire, weapons fire, doors, chests, switches and triggers work, `apply_force` pushes, placed props simulate, batch references land before BeginPlay, and a mouse move reaches a running game.
+- **Input and motion**: a key held across stepped frames counts game time and its reply says it is still down, `remove_mapping` names the action's own `actionMappings`, a scripted mover reads its real velocity, and a reloaded level reads as `levelChanged`.
+- **Placement checks**: no false off-map, sunk or floating reports for floors over pits, enclosures, stacked items, stretched parts and complex collision.
+- **Niagara**: edits act only on the emitter the caller named (#658), create actions refuse a folder that cannot be a package (#668), modules go where their dependencies hold and are named as their inputs are, a duplicated system plays at once, and placed-effect parameters are typed and fully bindable.
+- **Assets**: deletes count what they removed, a filtered list names only matching folders, imports name the mesh, Fab adds a pack's Unreal build, dead material branches list as orphaned, and material usage flags are saved.
 - **Geometry**: appended faces face outwards, arrays are no longer one copy short, and SDF shapes mesh at the resolution asked for.
-- **Undo, search and guidance**: volume and single-actor component edits are one undo step, more plain requests are found, and every pointer in record text names a real action.
+- **Editor**: a level load answers once the level has settled, `console_command` keeps lines logged on other threads, and native replies write negative zero as `0`, which strict clients rejected (#662).
+- **Builds**: the plugin declares Win64, Mac and Linux, so an Android build skips it (#666), and it compiles again with Fab's UE 5.0-5.4 toolchains.
+- **Undo, search and guidance**: volume and single-actor component edits are one undo step, more plain requests are found, a refusal names the parameter a stray key belongs to, a reply keeps the typed and project paths it quotes, and every pointer in record text names a real action.
+
+</details>
+
+<details>
+<summary><b>🗑️ Removed</b></summary>
+
+- **Level-call aliases that were always refused**: `open_level` `path` and `assetPath`, `focus_actor` `name`, `manage_level` `delete` `path` and `levelPaths`, `duplicate_level` `targetPath`, and `set_metadata` and `validate_level` `assetPath`. Send `levelPath`, `actorName` or `destinationPath`.
+
+</details>
+
+<details>
+<summary><b>⚠️ Migration</b></summary>
+
+- **Plugin rename**: delete `Plugins/McpAutomationBridge` and unpack `EngineWire-plugin-<version>.zip` in its place; a `.uproject` that names `McpAutomationBridge` should name `EngineWire`. Settings under `[/Script/McpAutomationBridge.McpAutomationBridgeSettings]` still load while `[/Script/EngineWire.EngineWireSettings]` is empty.
+- **`get_component_details`** lists property values only with `propertyNames` or `detailed: true`.
+- **`resume`** answers `GAME_PAUSED` when the game paused itself (a pause menu or a title screen); pass `unpauseGame: true` to lift that pause too.
+- **A spawn whose actor destroys itself** answers `SPAWNED_THEN_DESTROYED`, and property reads and writes refuse a destroyed actor.
+- **Reply fields**: `remove_mapping` and a per-mapping `set_modifier` return `actionMappings` (was `mappingCount` and `mappings`), and `set_camera` returns `requestedLocation` and `requestedRotation` only when the pose was not taken.
+
+</details>
+
+<details>
+<summary><b>🔄 Dependencies</b></summary>
+
+- GitHub Actions only: release-drafter 7.10.0, CodeQL 4.38.3 and setup-node 7.1.0 (#670-#674). No npm package changed.
+
+</details>
+
+<details>
+<summary><b>👥 Contributors</b></summary>
+
+- @SoloGorilla for making Niagara edits act only on the emitter the caller named (#658), and Niagara create actions refuse a folder that cannot be a package instead of reporting success with nothing saved (#668).
+- @Robin7-hub-code for reporting the negative zero that strict MCP clients rejected (#661), and @HeCPDF for reporting the Android packaging failure (#665).
 
 </details>
 
