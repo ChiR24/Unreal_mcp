@@ -16,6 +16,7 @@
 #endif
 
 #include "Containers/Ticker.h"
+#include "GameFramework/WorldSettings.h"
 namespace {
 // A raw key held for holdSeconds of GAME time, then released. key_down used to
 // ignore holdSeconds entirely, so "hold D for 1.2 s" pressed D and never let
@@ -54,9 +55,12 @@ void ScheduleKeyReleaseForMcp(const FString &Key, double HoldSeconds,
                                      EndWallTime, MinReleaseFrame](float) -> bool {
         UWorld *Live = GEditor != nullptr ? GEditor->PlayWorld.Get() : nullptr;
         const bool bWorldGone = bGameTime && (Live == nullptr || Live != HoldWorld.Get());
-        // A paused game (a title or pause menu) keeps game time still, so a key tapped on its menu stayed down
-        // for the whole 600 s grace and the focused button, which clicks on key up, never clicked.
-        const bool bGameClock = bGameTime && !bWorldGone && !Live->IsPaused();
+        // The game's own pause (a title or pause menu) keeps game time still, so a key tapped on its menu stayed
+        // down for the whole 600 s grace and the focused button, which clicks on key up, never clicked. The
+        // editor's pause is not that: step_frame runs game time through it, and a jump held across stepped
+        // frames let go on the wall clock before the first step.
+        const AWorldSettings *Settings = bWorldGone ? nullptr : Live->GetWorldSettings();
+        const bool bGameClock = bGameTime && !bWorldGone && !(Settings && Settings->GetPauserPlayerState());
         const bool bHolding = !bWorldGone &&
             (GFrameCounter < MinReleaseFrame ||
              (FPlatformTime::Seconds() < EndWallTime &&
@@ -276,7 +280,11 @@ bool UEngineWireSubsystem::HandleControlEditorSimulateInput(
     if (bSuccess && bPress && HoldSeconds > 0.0) {
       ScheduleKeyReleaseForMcp(Key, HoldSeconds, Payload);
       // The release is scheduled, not waited for: this reply leaves with the key still down.
-      Message += FString::Printf(TEXT(", released %.2fs from now (this reply does not wait for it)"), HoldSeconds);
+      const UWorld *PlayWorld = GEditor->PlayWorld.Get();
+      Message += PlayWorld && PlayWorld->bDebugPauseExecution
+                     ? FString::Printf(TEXT(", released after %.2fs of game time, which stands still under the "
+                                            "editor's pause until step_frame or resume runs it"), HoldSeconds)
+                     : FString::Printf(TEXT(", released %.2fs from now (this reply does not wait for it)"), HoldSeconds);
     }
   }
 

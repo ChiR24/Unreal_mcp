@@ -1166,10 +1166,19 @@ describe('sequence duplicates and the render queue', () => {
 describe('tapped keys while the game is paused', () => {
   // key_tap Enter reached a focused menu button that never clicked: the release waited on game time, which a pause
   // menu stops, so the key stayed down for the 600 s grace.
-  it('a tapped key is released on wall time while the game is paused', () => {
+  it('a tapped key is released on wall time while the game paused itself', () => {
     const source = code('ControlEditor', 'McpEditorInput.cpp');
-    expect(source).toContain('const bool bGameClock = bGameTime && !bWorldGone && !Live->IsPaused();');
+    expect(source).toContain('const bool bGameClock = bGameTime && !bWorldGone && !(Settings && Settings->GetPauserPlayerState());');
     expect(source).toContain('(bGameClock ? Live->GetTimeSeconds() < EndGameTime : FPlatformTime::Seconds() < EndHoldWall)');
+  });
+
+  // A jump held for 0.2 s across stepped frames let go on the wall clock before the first step: the editor's pause,
+  // which step_frame runs game time through, was read as a menu's.
+  it('a held key counts game time under the editor pause and says so', () => {
+    const source = code('ControlEditor', 'McpEditorInput.cpp');
+    expect(source).not.toContain('!Live->IsPaused()');
+    expect(source).toContain('PlayWorld && PlayWorld->bDebugPauseExecution');
+    expect(source).toContain('editor\'s pause until step_frame or resume runs it');
   });
 });
 
