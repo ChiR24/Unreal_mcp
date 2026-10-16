@@ -3087,3 +3087,13 @@ describe('a mouse move in a running game moves the game\'s own cursor', () => {
     expect(cursor).not.toContain('SetPosition(');
   });
 });
+
+describe('a game started in a minimized editor says what that does to physics', () => {
+  // A crate fell off a moving platform: at 3 fps each physics step is capped at 1/30 s, so physics runs a tenth as
+  // fast as the game clock that moves the platform. The warning named only frame rate and widgets.
+  it('names the slowed physics and asks for the window before physics or timing is tested', () => {
+    const play = code('ControlEditor', 'McpEditorPlay.cpp');
+    expect(play).toContain('physics at a tenth of the game clock');
+    expect(play).toContain('before testing physics or timing');
+  });
+});

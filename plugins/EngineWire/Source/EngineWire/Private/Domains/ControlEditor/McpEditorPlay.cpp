@@ -46,14 +46,16 @@ bool UEngineWireSubsystem::HandleControlEditorPlay(
     Resp->SetBoolField(TEXT("success"), bStarted);
     if (World) { Resp->SetStringField(TEXT("pieWorld"), World->GetOutermost()->GetName()); }
     // A minimized editor paints no widget, so a title screen that clears itself on a timer stood still and
-    // the game it paused looked hung.
+    // the game it paused looked hung. Physics steps at most MaxPhysicsDeltaTime (1/30 s) a frame, so at 3 fps it
+    // runs a tenth as fast as the game clock: a crate fell off the platform that moved out from under it.
     const TSharedPtr<SWindow> Root = FGlobalTabmanager::Get()->GetRootWindow();
     if (bStarted && Root.IsValid() && Root->IsWindowMinimized()) {
       TArray<TSharedPtr<FJsonValue>> Warnings;
       Warnings.Add(MakeShared<FJsonValueString>(TEXT(
-          "The editor window is minimized: the game runs at about 3 fps and its widgets are not painted, so a title "
-          "screen that clears itself on a timer stands still, and a game it paused stays paused. Restore it "
-          "(control_editor configure_editor setting window), or lift such a pause with resume unpauseGame.")));
+          "The editor window is minimized: the game runs at about 3 fps, physics at a tenth of the game clock (a body "
+          "falls off a platform that moves out from under it) and no widget is painted, so a title screen that clears "
+          "itself on a timer stands still and a game it paused stays paused. Restore it (control_editor "
+          "configure_editor setting window) before testing physics or timing, or lift such a pause with resume unpauseGame.")));
       Resp->SetArrayField(TEXT("warnings"), Warnings);
     }
     WeakThis->SendAutomationResponse(Socket, RequestId, bStarted,
