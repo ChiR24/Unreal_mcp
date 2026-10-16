@@ -3,6 +3,7 @@
 #include "Domains/ControlActor/Motion/McpMotionSpawnWatch.h"
 #include "Containers/Ticker.h"
 #include "Domains/ControlEditor/McpEditorScreenshotSupport.h"
+#include "Domains/Log/McpLogHistory.h"
 #include "Foundation/Reflection/McpPropertyReflection.h"
 
 // sample_motion: one call that watches an actor over GAME time in Play-In-Editor
@@ -29,7 +30,7 @@ struct FMcpMotionRun {
   TArray<TSharedPtr<FJsonValue>> Samples;
   TArray<TSharedPtr<FJsonValue>> Missing;
   double StartGame = 0.0, LastGame = 0.0, NextSample = 0.0, EndGame = 0.0, Interval = 0.05, LastSampleGame = -1.0;
-  double StartReal = 0.0, MaxReal = 40.0, Duration = 2.0, Waited = -1.0, LastAdvanceReal = 0.0;
+  double StartReal = 0.0, MaxReal = 40.0, Duration = 2.0, Waited = -1.0, LastAdvanceReal = 0.0, LogSince = FMcpLogHistory::Now();
   FBox Extent = FBox(ForceInit);
   FVector First = FVector::ZeroVector, Last = FVector::ZeroVector;
   TOptional<FRotator> LastRotation; // the rotation the samples last carried
@@ -289,6 +290,9 @@ bool UEngineWireSubsystem::HandleControlActorSampleMotion(
             Warnings.Add(Warning);
           }
         }
+        // What the game logged while it ran (an Accessed None, a light that cannot move): the samples showed only
+        // that nothing changed.
+        Warnings.Append(FMcpLogHistory::Get().WarningsSince(Run->LogSince, 5));
         SendStandardSuccessResponse(Self, Socket, RequestId, Message, McpMotionResult(*Run, ActorName, Ended),
                                     Warnings);
         return false;

@@ -2986,5 +2986,9 @@ describe('a frame step says what the game logged during it', () => {
     const history = code('Log', 'McpLogHistory.cpp');
     expect(history).toContain('Line.Verbosity <= ELogVerbosity::Warning && Line.Category != OwnCategory');
     expect(history).toContain('EngineWireSubsystemResponse::SanitizeEngineErrorForResponse(Raw)');
+    // A motion read runs game time the same way, from the moment its run is made.
+    const motion = code('ControlActor', 'McpActorMotionSample.cpp');
+    expect(motion).toContain('LogSince = FMcpLogHistory::Now();');
+    expect(motion).toContain('Warnings.Append(FMcpLogHistory::Get().WarningsSince(Run->LogSince, 5));');
   });
 });
