@@ -15378,7 +15378,7 @@
           },
           "memberClass": {
             "type": "string",
-            "description": "Class that declares functionName when it is not in the common Blueprint libraries: Light or PointLightComponent for SetLightColor, or a Blueprint asset path."
+            "description": "Class that declares functionName when it is not in the common Blueprint libraries: a native class name or a Blueprint asset path. The node's Target takes an object of that class, so an actor's function is fed from its K2Node_Literal, while a component's function (a light's SetLightColor is LightComponent's) needs that component, not the actor."
           },
           "nodeClass": {
             "type": "string",

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "ea836e959a0fc38e",
+  "catalogRevision": "67ff78ff30b196f1",
   "recordCount": 416,
   "records": [
     {
@@ -76152,7 +76152,7 @@
           "edit=open: The level blueprint graph must be edited.",
           "edit=add_node: A new node must be added to level scripting.",
           "edit=add_node: Level logic must react to a placed actor (K2Node_ActorBoundEvent with actorName and eventName) or use one (K2Node_Literal with actorName).",
-          "edit=add_node: A placed actor's own function must be called, such as a light's SetLightColor (K2Node_CallFunction with functionName and memberClass), its Target fed from that actor's K2Node_Literal.",
+          "edit=add_node: A function of a class outside the common Blueprint libraries must be called (K2Node_CallFunction with functionName and memberClass).",
           "edit=connect_nodes: Two level blueprint nodes must be wired together.",
           "edit=remove_node: A level blueprint node must be deleted, or an unbound K2Node_CallFunction (\"Could not find a function named None\") must be repaired."
         ],
@@ -76207,7 +76207,7 @@
             },
             "memberClass": {
               "type": "string",
-              "description": "Class that declares functionName when it is not in the common Blueprint libraries: Light or PointLightComponent for SetLightColor, or a Blueprint asset path."
+              "description": "Class that declares functionName when it is not in the common Blueprint libraries: a native class name or a Blueprint asset path. The node's Target takes an object of that class, so an actor's function is fed from its K2Node_Literal, while a component's function (a light's SetLightColor is LightComponent's) needs that component, not the actor."
             },
             "actorName": {
               "type": "string",
@@ -76378,8 +76378,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "4906ce395b532700091f9653decac60ac08144a66f855ea4f6e5536a487582c3",
-        "content": "4f66ccd05fac46d7d4f7459f2933676279ae2eb57baca8840e7d199ce83acec6"
+        "schema": "2a2f51bf0bf007ca61da93950814bbcd577f3c78ad0f6d04a44283e468095c9c",
+        "content": "b1a6a718c61ed0fd79ff24570fe20f6a1c7ce0febdcce571011f4099c339068c"
       }
     },
     {

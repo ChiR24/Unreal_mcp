@@ -164,13 +164,13 @@ export const LEVEL_STRUCTURE_RECORDS: readonly CapabilityRecordSource[] = [
     whenToUse: [
       'A new node must be added to level scripting.',
       'Level logic must react to a placed actor (K2Node_ActorBoundEvent with actorName and eventName) or use one (K2Node_Literal with actorName).',
-      'A placed actor\'s own function must be called, such as a light\'s SetLightColor (K2Node_CallFunction with functionName and memberClass), its Target fed from that actor\'s K2Node_Literal.',
+      'A function of a class outside the common Blueprint libraries must be called (K2Node_CallFunction with functionName and memberClass).',
     ],
     whenNotToUse: ['An existing node should be connected; use connect_level_blueprint_nodes.'],
     inputProps: {
       nodeClass: P.nodeClass, nodeName: P.nodeName, nodePosition: P.nodePosition, levelPath: BP_LEVEL, save: P.levelEditSave,
       functionName: { type: 'string', description: 'Function to bind when nodeClass is K2Node_CallFunction (e.g. PrintString); short function names may also be passed as nodeClass.' },
-      memberClass: { type: 'string', description: 'Class that declares functionName when it is not in the common Blueprint libraries: Light or PointLightComponent for SetLightColor, or a Blueprint asset path.' },
+      memberClass: { type: 'string', description: 'Class that declares functionName when it is not in the common Blueprint libraries: a native class name or a Blueprint asset path. The node\'s Target takes an object of that class, so an actor\'s function is fed from its K2Node_Literal, while a component\'s function (a light\'s SetLightColor is LightComponent\'s) needs that component, not the actor.' },
       actorName: { type: 'string', description: 'Placed actor (label, name or object path) in the edited level that a K2Node_ActorBoundEvent fires for or a K2Node_Literal references; required by both, refused for other nodes. A label two actors share is refused with their names, and an actor of another loaded level with that level (ACTOR_IN_OTHER_LEVEL).' },
       eventName: { type: 'string', description: 'Event dispatcher of actorName that a K2Node_ActorBoundEvent binds, e.g. OnActorBeginOverlap or OnActorEndOverlap; a wrong name is refused with the actor\'s events listed. Refused for any other node: BeginPlay or Tick go in nodeClass (EventBeginPlay, EventTick).' },
     },

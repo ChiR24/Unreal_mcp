@@ -198,7 +198,7 @@ bool ApplyLevelBlueprintNodeAlias(UK2Node* Node, const FString& EventName, const
     if (!FunctionName.IsEmpty())
     {
         UK2Node_CallFunction* CallNode = Cast<UK2Node_CallFunction>(Node);
-        // memberClass names the class of a function outside the common libraries (a light's SetLightColor), the
+        // memberClass names the class of a function outside the common libraries (a component's SetVisibility), the
         // way create_node takes it; without it, dogfood #221's search of every common Blueprint library binds the
         // gameplay calls (GetPlayerPawn, ApplyDamage, SpawnSystemAtLocation, ...).
         UClass* Owner = nullptr;
@@ -208,7 +208,7 @@ bool ApplyLevelBlueprintNodeAlias(UK2Node* Node, const FString& EventName, const
             Owner = Owner ? Owner : McpBlueprintGraphHandlers::ResolveTargetClassFromString(MemberClass);
             if (!Owner)
             {
-                OutError = FString::Printf(TEXT("memberClass '%s' is not a class: pass a native class name (Light, "
+                OutError = FString::Printf(TEXT("memberClass '%s' is not a class: pass a native class name (SceneComponent, "
                                                 "PointLightComponent) or a Blueprint asset path."), *MemberClass);
                 return false;
             }
@@ -221,7 +221,7 @@ bool ApplyLevelBlueprintNodeAlias(UK2Node* Node, const FString& EventName, const
                 : FString::Printf(
                     TEXT("Function '%s' could not be bound to a K2Node_CallFunction. Pass a K2 callable name from a "
                          "Blueprint library (KismetSystemLibrary, KismetMathLibrary, GameplayStatics, Actor, ...), "
-                         "memberClass for a function of another class (Light for SetLightColor), or an event alias."),
+                         "memberClass for a function of another class (SceneComponent for SetVisibility), or an event alias."),
                     *FunctionName);
             return false;
         }
