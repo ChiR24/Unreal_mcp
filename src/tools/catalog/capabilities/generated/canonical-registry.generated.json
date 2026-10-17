@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "01ce8d5962864c25",
+  "catalogRevision": "169f9425f1f12288",
   "recordCount": 416,
   "records": [
     {
@@ -45792,7 +45792,8 @@
         "inspect.get_viewport_info",
         "inspect.get_world_settings",
         "inspect.get_project_settings",
-        "inspect.get_editor_settings"
+        "inspect.get_editor_settings",
+        "inspect.get_editor_focus"
       ],
       "legacyIds": [
         {
@@ -45833,6 +45834,13 @@
           "folded": {
             "editorState": "editor_settings"
           }
+        },
+        {
+          "tool": "inspect",
+          "action": "get_editor_focus",
+          "folded": {
+            "editorState": "focus"
+          }
         }
       ],
       "discovery": {
@@ -45847,25 +45855,38 @@
           "project settings",
           "editor settings",
           "is the game paused",
+          "what is open",
+          "selected nodes",
+          "this node",
+          "editor focus",
           "selection",
           "current selection",
           "editor selection",
           "project config",
           "engine version",
           "project name",
-          "game settings"
+          "game settings",
+          "what the user is looking at",
+          "open asset editors",
+          "current blueprint",
+          "focused graph",
+          "recent errors"
         ],
-        "summary": "Read editor state: selected actors, viewport, world settings (with whether the game is playing or paused), project settings, editor settings.",
+        "summary": "Read editor state: selected actors, viewport, world settings (with whether the game is playing or paused), project settings, editor settings, or focus: what the user is working on (open editors, a Blueprint's selected nodes, recent errors).",
         "whenToUse": [
           "editorState=selected_actors: The current editor selection must be inspected.",
           "editorState=viewport: Viewport and camera state must be inspected.",
           "editorState=world_settings: The current level's world settings must be inspected.",
           "editorState=project_settings: Project settings must be inspected.",
-          "editorState=editor_settings: Editor settings must be inspected."
+          "editorState=editor_settings: Editor settings must be inspected.",
+          "editorState=focus: A request names something the user has in front of them (\"this node\", \"the Blueprint I have open\", \"fix that error\") and it must be resolved to an asset, a graph or a node.",
+          "editorState=focus: Work should start from the editor state the user left (the selected nodes, the open editors)."
         ],
         "whenNotToUse": [
           "editorState=selected_actors: All actors are needed; use list_objects.",
-          "editorState=viewport: A screenshot is needed; use control_editor."
+          "editorState=viewport: A screenshot is needed; use control_editor.",
+          "editorState=focus: Only the selected actors are needed (use editorState selected_actors).",
+          "editorState=focus: The whole log is wanted (use the log read)."
         ]
       },
       "schemas": {
@@ -45884,7 +45905,8 @@
                 "viewport",
                 "world_settings",
                 "project_settings",
-                "editor_settings"
+                "editor_settings",
+                "focus"
               ],
               "description": "Which get editor state variant to run."
             }
@@ -46068,6 +46090,47 @@
             "gRunningCommandlet": {
               "type": "number",
               "description": "1 when running as a commandlet, else 0."
+            },
+            "openEditors": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Each asset open in an editor, most recently used first: asset (its path) and editor (BlueprintEditor, MaterialEditor, ...)."
+            },
+            "blueprints": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Each open Blueprint editor, most recently used first: blueprint (path), graph (the graph whose editor last had keyboard focus; absent until one has) and selectedNodes [{title, nodeId, class}]; nodeId is what the graph tools take."
+            },
+            "selectedActors": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Labels of the actors selected in the level (at most 50)."
+            },
+            "recentWarnings": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "The distinct warnings and errors logged in the last minute (\"3x Category: message\"), at most 10, a Blueprint runtime error first with the node that raised it."
+            },
+            "scriptErrors": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "The Blueprint runtime errors of the last play session, as runtime_report lists them (message, node, nodeId, graph, blueprintPath, count)."
             }
           },
           "required": [
@@ -46078,7 +46141,7 @@
       },
       "examples": [
         {
-          "title": "Read editor state: selected actors, viewport, world settings (with whether the game is playing or paused), project settings, editor settings.",
+          "title": "Read editor state: selected actors, viewport, world settings (with whether the game is playing or paused), project settings, editor settings, or focus: what the user is working on (open editors, a Blueprint's selected nodes, recent errors).",
           "input": {
             "action": "get_editor_state",
             "editorState": "selected_actors"
@@ -46121,14 +46184,15 @@
             "viewport": "get_viewport_info",
             "world_settings": "get_world_settings",
             "project_settings": "get_project_settings",
-            "editor_settings": "get_editor_settings"
+            "editor_settings": "get_editor_settings",
+            "focus": "get_editor_focus"
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "a2825cdd0580b7b92e248dc5596a0190a17a978a7b7eee9e24dad2f4f11304d4",
-        "content": "40d45729b867c168d5c1a52485a3c2a07f9efbd34c2362f260b6d4cb86610c67"
+        "schema": "aa74e0138dc7425f3df3ed110d3aaf5f67b84ff1d0c3581811e3f21fa9663b62",
+        "content": "5aace3d5958426d50b39ba72b90051b6639f161a8c3e517171b7943615ca528f"
       }
     },
     {

@@ -92,6 +92,10 @@ bool UEngineWireSubsystem::HandleInspectAction(
     {
         return HandleInspectViewContentsAction(*this, RequestId, Payload, RequestingSocket);
     }
+    if (LowerSubAction.Equals(TEXT("get_editor_focus")))
+    {
+        return HandleInspectEditorFocusAction(*this, RequestId, RequestingSocket);
+    }
     if (LowerSubAction.Equals(TEXT("capture_passes")))
     {
         return HandleInspectCapturePassesAction(*this, RequestId, Payload, RequestingSocket);

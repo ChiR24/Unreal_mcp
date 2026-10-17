@@ -6451,7 +6451,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "viewport",
             "world_settings",
             "project_settings",
-            "editor_settings"
+            "editor_settings",
+            "focus"
           ],
           "description": "Which get editor state variant to run."
         },
@@ -6954,6 +6955,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "blueprintPath": {
           "type": "string",
           "description": "Blueprint asset /Game path (for CDO/component inspection without spawning)."
+        },
+        "blueprints": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Each open Blueprint editor, most recently used first: blueprint (path), graph (the graph whose editor last had keyboard focus; absent until one has) and selectedNodes [{title, nodeId, class}]; nodeId is what the graph tools take."
         },
         "brightness": {
           "type": "object",
@@ -7556,6 +7566,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Edges with a face on one side only and none on the other at that place: the outlines of holes and open rims."
         },
+        "openEditors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Each asset open in an editor, most recently used first: asset (its path) and editor (BlueprintEditor, MaterialEditor, ...)."
+        },
         "other": {
           "type": "number",
           "description": "Percent drawn by what only the editor shows (icons, gizmos, shapes hidden in game) or no actor owns (BSP)."
@@ -7678,6 +7697,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Real (unpaused) time in seconds."
         },
+        "recentWarnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The distinct warnings and errors logged in the last minute (\"3x Category: message\"), at most 10, a Blueprint runtime error first with the node that raised it."
+        },
         "renderThreadMs": {
           "type": "number",
           "description": "Render thread time in milliseconds."
@@ -7711,17 +7737,38 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "World scale as {x, y, z}."
         },
         "scriptErrors": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "additionalProperties": true,
-            "x-unreal-reflection-boundary": true
-          },
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Blueprint runtime errors (an Accessed None, an infinite loop) of this play session, or of the last one until the next play starts: message, blueprintPath, graph, node and nodeId (as edit_graph takes them; function when no node resolves), objects that raised it, count, firstGameSeconds, and values (the object's Blueprint variables at the first hit). Absent when none fired."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "The Blueprint runtime errors of the last play session, as runtime_report lists them (message, node, nodeId, graph, blueprintPath, count)."
+            }
+          ],
           "description": "Blueprint runtime errors (an Accessed None, an infinite loop) of this play session, or of the last one until the next play starts: message, blueprintPath, graph, node and nodeId (as edit_graph takes them; function when no node resolves), objects that raised it, count, firstGameSeconds, and values (the object's Blueprint variables at the first hit). Absent when none fired."
         },
         "seamEdges": {
           "type": "number",
           "description": "Places where two faces meet without sharing their corners (split for flat shading or UV seams): the surface renders whole, but booleans, remeshing and collision built from the mesh need it welded."
+        },
+        "selectedActors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Labels of the actors selected in the level (at most 50)."
         },
         "shadersCompiling": {
           "type": "number",

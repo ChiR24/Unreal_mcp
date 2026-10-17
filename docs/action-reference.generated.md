@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `01ce8d5962864c25`
+Catalog revision: `169f9425f1f12288`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -323,7 +323,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `inspect.get_blueprint_details` | `inspect` | `blueprint_get` | read | read | none | `inspect.get_blueprint_details` |
 | `inspect.get_component_details` | `inspect` | `control_actor` | read | read | none | `inspect.get_component_details` `inspect.get_component_property` |
 | `inspect.get_components` | `inspect` | `get_components` | read | read | none | `inspect.get_components` |
-| `inspect.get_editor_state` | `inspect` | `get_selected_actors` | read | read | none | `inspect.get_editor_state` `inspect.get_selected_actors` `inspect.get_viewport_info` `inspect.get_world_settings` `inspect.get_project_settings` `inspect.get_editor_settings` |
+| `inspect.get_editor_state` | `inspect` | `get_selected_actors` | read | read | none | `inspect.get_editor_state` `inspect.get_selected_actors` `inspect.get_viewport_info` `inspect.get_world_settings` `inspect.get_project_settings` `inspect.get_editor_settings` `inspect.get_editor_focus` |
 | `inspect.get_property` | `inspect` | `get_property` | read | read | none | `inspect.get_property` |
 | `inspect.get_stats` | `inspect` | `get_performance_stats` | read | read | none | `inspect.get_stats` `inspect.get_performance_stats` `inspect.get_memory_stats` `inspect.get_scene_stats` |
 | `inspect.inspect_class` | `inspect` | `inspect_class` | read | read | none | `inspect.inspect_class` `inspect.inspect_struct` `inspect.inspect_cdo` |

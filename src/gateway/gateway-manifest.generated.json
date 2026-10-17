@@ -5049,7 +5049,8 @@
               "viewport",
               "world_settings",
               "project_settings",
-              "editor_settings"
+              "editor_settings",
+              "focus"
             ],
             "description": "Which get editor state variant to run."
           },

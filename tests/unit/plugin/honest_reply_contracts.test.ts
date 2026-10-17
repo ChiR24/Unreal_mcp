@@ -2539,6 +2539,24 @@ describe('describe_view counts what the game draws in the camera view', () => {
   });
 });
 
+// A model asked to fix "this node" or "the Blueprint I have open" could not tell what that was.
+describe('get_editor_focus reads what the user is working on', () => {
+  it('lists the open editors newest first and each Blueprint editor\'s graph and selected nodes', () => {
+    const focus = code('Environment', 'Inspection', 'McpEnvInspectEditorFocus.cpp');
+    expect(focus).toContain('Editors->GetAllEditedAssets()');
+    expect(focus).toContain('const double When = Editor->GetLastActivationTime();');
+    // The Kismet module lists only editors it made as FBlueprintEditor, so the cast is the one the engine relies on.
+    expect(focus).toContain('for (const TSharedRef<IBlueprintEditor> &Each : Kismet.GetBlueprintEditors())');
+    expect(focus).toContain('FBlueprintEditor &Editor = static_cast<FBlueprintEditor &>(Each.Get());');
+    expect(focus).toContain('Item->SetStringField(TEXT("nodeId"), Node->NodeGuid.ToString());');
+    expect(focus).toContain('FMcpLogHistory::Get().WarningsSince(FMcpLogHistory::Now() - 60.0, 10)');
+    expect(focus).toContain('FMcpScriptErrors::Get().ToJson()');
+    expect(focus).toContain('McpAddShaderCompileState(Result, nullptr);');
+    const inspect = code('Environment', 'Inspection', 'McpEnvInspect.cpp');
+    expect(inspect).toContain('return HandleInspectEditorFocusAction(*this, RequestId, RequestingSocket);');
+  });
+});
+
 // A frame could only be judged by eye: no pass said which actor a region belongs to, how far it is or which way it
 // faces.
 describe('capture_passes writes aligned id, depth and normal passes of the level view', () => {
