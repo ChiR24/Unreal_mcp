@@ -3220,3 +3220,12 @@ describe('a Blueprint runtime error names the node that raised it', () => {
     expect(runtime).toMatch(/const TArray<TSharedPtr<FJsonValue>> ScriptErrors = FMcpScriptErrors::Get\(\)\.ToJson\(\);\s*if \(ScriptErrors\.Num\(\) > 0\)\s*\{\s*Report->SetArrayField\(TEXT\("scriptErrors"\), ScriptErrors\);/u);
   });
 });
+
+describe('runtime_report filter matches a path only whole', () => {
+  // Every actor's path holds its level's name, so a filter naming the level listed every actor in it.
+  it('matches name, label and class by part and the object path only exactly', () => {
+    const runtime = code('Environment', 'Inspection', 'McpEnvInspectRuntime.cpp');
+    expect(runtime).toContain('Actor->GetPathName().Equals(Filter, ESearchCase::IgnoreCase);');
+    expect(runtime).not.toContain('Actor->GetPathName().Contains(Filter)');
+  });
+});

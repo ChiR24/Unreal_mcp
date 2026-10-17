@@ -16,6 +16,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 </details>
 
+<details>
+<summary><b>🔧 Fixed</b></summary>
+
+- **`runtime_report` `filter`** matches an actor's path only whole, so a filter that names the level no longer lists every actor in it.
+
+</details>
+
 ---
 
 ## 🏷️ [0.6.0-beta-f] - 2026-10-16
