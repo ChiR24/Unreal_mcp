@@ -26,7 +26,7 @@ describe('native MCP 2026-07-28 requests', () => {
   });
 
   it('refuses an unsupported version and mismatched headers with 400, and an unknown method with 404', () => {
-    expect(modern).toContain('Reply(400, McpModern::UnsupportedVersionError(Rpc.Id, Meta.ProtocolVersion, Supported));');
+    expect(modern).toContain('Reply(400, McpModern::UnsupportedVersionError(Rpc.Id, Meta.ProtocolVersion, {FString(McpModern::Version)}));');
     expect(modern).toContain('Reply(400, FMcpJsonRpc::BuildError(Rpc.Id, McpModern::ErrorHeaderMismatch, Mismatch));');
     expect(modern).toContain('Reply(404, FMcpJsonRpc::BuildError(Rpc.Id, FMcpJsonRpc::ErrorMethodNotFound,');
     expect(header).toContain('constexpr int32 ErrorHeaderMismatch = -32020;');

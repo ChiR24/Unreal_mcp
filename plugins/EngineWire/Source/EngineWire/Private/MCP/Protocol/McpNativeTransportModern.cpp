@@ -20,9 +20,8 @@ void FMcpNativeTransport::HandleModernRequest(
 	const McpModern::FMeta Meta = McpModern::ReadMeta(Rpc.Params);
 	if (Meta.ProtocolVersion != McpModern::Version)
 	{
-		TArray<FString> Supported = McpSupportedProtocolVersions();
-		Supported.Insert(FString(McpModern::Version), 0);
-		Reply(400, McpModern::UnsupportedVersionError(Rpc.Id, Meta.ProtocolVersion, Supported));
+		// Only the versions a request can name here, as the TypeScript SDK answers; initialize negotiates the rest.
+		Reply(400, McpModern::UnsupportedVersionError(Rpc.Id, Meta.ProtocolVersion, {FString(McpModern::Version)}));
 		return;
 	}
 	const FString Mismatch = McpModern::HeaderMismatch(

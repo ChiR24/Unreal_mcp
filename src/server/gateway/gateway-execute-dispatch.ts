@@ -22,6 +22,7 @@ import { resolveDispatchAction } from './gateway-dispatch-by.js';
 import { buildNextCall } from './gateway-guidance.js';
 import { executeSuccessEnvelope, refuseWithTarget } from './gateway-execute-envelope.js';
 import type { GatewayReceiptContext } from './gateway-receipt-context.js';
+import type { ConsentChannel } from './gateway-execute-consent.js';
 
 export const MAX_EXECUTION_RESULT_CHARS = 100_000;
 
@@ -46,6 +47,8 @@ export type GatewayContext = {
   tools: ITools;
   logger: Logger;
   ensureConnected: () => Promise<boolean>;
+  /** What the tools/call request says about asking its user for consent (MCP 2026-07-28); absent elsewhere. */
+  consent?: ConsentChannel;
 };
 
 // The declared output contract describes the capability payload, not the

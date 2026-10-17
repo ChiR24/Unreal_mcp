@@ -67,12 +67,13 @@
   "author": "Unreal Engine MCP Team",
   "license": "MIT",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "1.32.1",
+    "@modelcontextprotocol/server": "2.3.1",
     "ws": "^8.18.3",
     "zod": "^4.2.1"
   },
   "devDependencies": {
     "@eslint/js": "9.39.5",
+    "@modelcontextprotocol/client": "2.3.1",
     "@types/node": "^26.0.1",
     "@types/ws": "^8.18.1",
     "@typescript-eslint/eslint-plugin": "8.63.0",

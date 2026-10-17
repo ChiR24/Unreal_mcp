@@ -4,7 +4,7 @@ import type { ExpectedRevisions } from '../../tools/catalog/capabilities/semanti
 
 export interface AutomationRequestBridge {
     isConnected(): boolean;
-    sendAutomationRequest(action: string, payload: Record<string, unknown>, options?: { timeoutMs?: number; mcpRequestId?: string; correlationId?: string; consent?: { capability: string; acknowledge: 'explicit' | 'elevated' }; expectedRevisions?: ExpectedRevisions }): Promise<unknown>;
+    sendAutomationRequest(action: string, payload: Record<string, unknown>, options?: { timeoutMs?: number; mcpRequestId?: string; correlationId?: string; consent?: { capability: string; acknowledge: 'explicit' | 'elevated'; nonce?: string }; expectedRevisions?: ExpectedRevisions }): Promise<unknown>;
     getAuthority?(): BridgeAuthority | undefined;
     /** Set while connected to a plugin from another release, naming the install that fixes it. */
     getVersionMismatch?(): string | undefined;

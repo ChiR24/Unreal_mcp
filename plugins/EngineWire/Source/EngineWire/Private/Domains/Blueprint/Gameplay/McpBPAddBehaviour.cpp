@@ -6,6 +6,7 @@
 // Character, chosen by McpBPBehaviourPlans.cpp) through McpBlueprintBehaviour::Author, so the Blueprint holds plain engine
 // nodes. Each was a hand-built graph of ten to forty nodes and pins to get right.
 #include "Domains/Blueprint/McpBPActionContext.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpBPAssetLoad.h"
 #include "Domains/Blueprint/Gameplay/McpBPBehaviourPlans.h"
 #include "Domains/BlueprintGraph/Behaviour/McpBPBehaviour.h"
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"

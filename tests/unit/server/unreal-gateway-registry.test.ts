@@ -31,7 +31,6 @@ describe('unreal gateway registry integration', () => {
                     params: { category: 'Project' }
                 }
             },
-            undefined,
             { timeout: 15000 }
         );
 

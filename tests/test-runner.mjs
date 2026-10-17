@@ -1,5 +1,5 @@
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { Client } from '@modelcontextprotocol/client';
+import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { readFileSync } from 'node:fs';
@@ -801,7 +801,7 @@ export function createToolCaller(client, { useProgressTimeouts = false } = {}) {
       ? `${outgoing.name}:${outgoing.arguments.tool}`
       : outgoing.name;
     console.log(`[CALL] ${callTarget} (${timeoutLabel})`);
-    const callPromise = client.callTool(outgoing, undefined, { timeout: clientTimeoutMs });
+    const callPromise = client.callTool(outgoing, { timeout: clientTimeoutMs });
 
     let timeoutId;
     const timeoutPromise = new Promise((_, rej) => {

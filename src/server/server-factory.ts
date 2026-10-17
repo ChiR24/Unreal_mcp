@@ -1,5 +1,4 @@
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { CancelledNotificationSchema } from '@modelcontextprotocol/sdk/types.js';
+import { Server } from '@modelcontextprotocol/server';
 
 import { AutomationBridge } from '../automation/index.js';
 import { AutomationLogger } from '../automation/log-redaction.js';
@@ -9,7 +8,8 @@ import { HealthMonitor } from '../services/health-monitor.js';
 import { UNREAL_GATEWAY_INSTRUCTIONS } from '../tools/catalog/unreal-gateway-definition.js';
 import { UnrealBridge } from '../unreal-bridge.js';
 import { canonicalizeMcpRequestId } from '../automation/request-context.js';
-import { SERVER_CAPABILITIES, wirePrimitives } from './mcp-primitives/primitive-wiring.js';
+import { CACHE_HINTS, SERVER_CAPABILITIES, wirePrimitives } from './mcp-primitives/primitive-wiring.js';
+import { consentStateCodec } from './gateway/gateway-execute-consent.js';
 
 const { name: SERVER_NAME, version: SERVER_VERSION } = PACKAGE;
 const AUTOMATION_HEARTBEAT_MS = 15_000;
@@ -65,55 +65,74 @@ export function createServer() {
   log.debug('Server starting without connecting to Unreal Engine');
   healthMonitor.metrics.connectionStatus = 'disconnected';
 
-  const server = new Server(
-    {
-      name: SERVER_NAME,
-      version: SERVER_VERSION,
-    },
-    {
-      capabilities: SERVER_CAPABILITIES,
-      // Injected into the client's system prompt by most MCP hosts: the one place a
-      // model reads the search -> describe -> execute procedure before its first call.
-      instructions: UNREAL_GATEWAY_INSTRUCTIONS,
-    },
-  );
+  // One Server per era instance: stdio serves one, but a 2026-07-28 discover probe followed by an initialize
+  // (a client falling back) makes serveStdio build a second. Bridge, services and listeners are shared.
+  const buildServer = (): Server => {
+    const server = new Server(
+      {
+        name: SERVER_NAME,
+        version: SERVER_VERSION,
+      },
+      {
+        capabilities: SERVER_CAPABILITIES,
+        // Injected into the client's system prompt by most MCP hosts: the one place a
+        // model reads the search -> describe -> execute procedure before its first call.
+        instructions: UNREAL_GATEWAY_INSTRUCTIONS,
+        cacheHints: CACHE_HINTS,
+        // Consent asked through a 2026-07-28 client: its requestState is verified before the handler runs.
+        requestState: { verify: consentStateCodec.verify },
+        // Only 2026-07-28 requests are asked; an older client keeps describe's consentGrant, never a pushed prompt.
+        inputRequired: { legacyShim: false },
+      },
+    );
 
-  automationBridge.on('automationEvent', (event) => {
-    server.notification({
-      method: 'notifications/unreal/automation_event',
-      params: event,
-    }).catch((error: unknown) => {
-      log.error(
-        'Failed to forward Unreal automation event notification',
-        error instanceof Error ? error : String(error),
-      );
+    const forwardAutomationEvent = (event: Record<string, unknown>): void => {
+      server.notification({
+        method: 'notifications/unreal/automation_event',
+        params: event,
+      }).catch((error: unknown) => {
+        log.error(
+          'Failed to forward Unreal automation event notification',
+          error instanceof Error ? error : String(error),
+        );
+      });
+    };
+    automationBridge.on('automationEvent', forwardAutomationEvent);
+
+    const serverSetup = new ServerSetup(
+      server,
+      bridge,
+      automationBridge,
+      log,
+      healthMonitor,
+    );
+    serverSetup.setup();
+
+    wirePrimitives(server);
+
+    // Forward inbound notifications/cancelled to the automation bridge so the
+    // matching queued or inflight Unreal work is cancelled. This is the TS stdio
+    // counterpart to the native /mcp transport's cancellation and converges on
+    // the same idempotent cancellation primitive as SDK AbortSignal cancellation.
+    server.setNotificationHandler('notifications/cancelled', (notification) => {
+      const rawId = notification.params.requestId;
+      if (rawId === undefined) return;
+      const requestId = canonicalizeMcpRequestId(rawId);
+      automationBridge.cancelMcpRequest(requestId, 'Client cancelled request');
     });
-  });
 
-  const serverSetup = new ServerSetup(
-    server,
-    bridge,
-    automationBridge,
-    log,
-    healthMonitor,
-  );
-  serverSetup.setup();
-
-  wirePrimitives(server, { name: SERVER_NAME, version: SERVER_VERSION }, UNREAL_GATEWAY_INSTRUCTIONS);
-
-  // Forward inbound notifications/cancelled to the automation bridge so the
-  // matching queued or inflight Unreal work is cancelled. This is the TS stdio
-  // counterpart to the native /mcp transport's cancellation and converges on
-  // the same idempotent cancellation primitive as SDK AbortSignal cancellation.
-  server.setNotificationHandler(CancelledNotificationSchema, (notification) => {
-    const rawId = (notification.params as { requestId?: string | number }).requestId;
-    if (rawId === undefined) return;
-    const requestId = canonicalizeMcpRequestId(rawId);
-    automationBridge.cancelMcpRequest(requestId, 'Client cancelled request');
-  });
+    // Chained, as the tool registry chains its own drain.
+    const previousOnClose = server.onclose;
+    server.onclose = (): void => {
+      automationBridge.off('automationEvent', forwardAutomationEvent);
+      previousOnClose?.();
+    };
+    return server;
+  };
 
   return {
-    server,
+    server: buildServer(),
+    buildServer,
     bridge,
     automationBridge,
     healthMonitor,

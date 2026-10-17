@@ -12,7 +12,7 @@ import { resolveActionTimeoutMs } from './handler-timeout.js';
 export interface GatewayControls {
   readonly timeoutMs?: number;
   readonly correlationId?: string;
-  readonly consent?: { capability: string; acknowledge: 'explicit' | 'elevated' };
+  readonly consent?: { capability: string; acknowledge: 'explicit' | 'elevated'; nonce?: string };
   readonly expectedRevisions?: ExpectedRevisions;
 }
 
@@ -77,7 +77,7 @@ export async function executeAutomationRequest(
     timeoutMs?: number;
     mcpRequestId?: string;
     correlationId?: string;
-    consent?: { capability: string; acknowledge: 'explicit' | 'elevated' };
+    consent?: { capability: string; acknowledge: 'explicit' | 'elevated'; nonce?: string };
     expectedRevisions?: ExpectedRevisions;
   } = { timeoutMs };
   const mcpRequestId = getMcpRequestContext()?.requestId;

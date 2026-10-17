@@ -257,12 +257,9 @@ FString FMcpNativeTransport::HandleServerDiscover(const TSharedPtr<FJsonValue>& 
 {
 	auto Result = MakeShared<FJsonObject>();
 	Result->SetStringField(TEXT("resultType"), TEXT("complete"));
-	// 2026-07-28 is served per request, with no session; the older versions through initialize.
+	// The versions a request can name in its _meta, as the TypeScript SDK lists them; the older ones are negotiated
+	// by initialize, which a client that calls this does not need.
 	TArray<TSharedPtr<FJsonValue>> Versions = {MakeShared<FJsonValueString>(McpModern::Version)};
-	for (const FString& Version : McpSupportedProtocolVersions())
-	{
-		Versions.Add(MakeShared<FJsonValueString>(Version));
-	}
 	Result->SetArrayField(TEXT("supportedVersions"), Versions);
 	auto Meta = MakeShared<FJsonObject>();
 	Meta->SetObjectField(TEXT("io.modelcontextprotocol/serverInfo"), DescribeServer(Result));

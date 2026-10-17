@@ -1,4 +1,3 @@
-import { ListResourcesRequestSchema, ListResourceTemplatesRequestSchema, ReadResourceRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { readDiagnosticsSnapshots } from '../automation/diagnostics-snapshot-reader.js';
 import { AutomationLogger } from '../automation/log-redaction.js';
 import { AssetResources } from '../resources/assets.js';
@@ -39,15 +38,15 @@ const RESOURCE_DEFINITIONS = [
 
 export type ResourceServer = {
   setRequestHandler(
-    schema: typeof ReadResourceRequestSchema,
+    method: 'resources/read',
     handler: (request: { params: { uri: string } }) => Promise<{ contents: Array<{ uri: string; mimeType: string; text: string }> }>
   ): void;
   setRequestHandler(
-    schema: typeof ListResourcesRequestSchema,
+    method: 'resources/list',
     handler: () => Promise<{ resources: ResourceDefinition[] }>
   ): void;
   setRequestHandler(
-    schema: typeof ListResourceTemplatesRequestSchema,
+    method: 'resources/templates/list',
     handler: () => Promise<{ resourceTemplates: ResourceTemplateDefinition[] }>
   ): void;
 };
@@ -122,13 +121,13 @@ export class ResourceHandler {
   ) { }
 
   registerHandlers() {
-    this.server.setRequestHandler(ListResourcesRequestSchema, async () => ({
+    this.server.setRequestHandler('resources/list', async () => ({
       resources: [...RESOURCE_DEFINITIONS, ...NEW_RESOURCE_DEFINITIONS]
     }));
-    this.server.setRequestHandler(ListResourceTemplatesRequestSchema, async () => ({
+    this.server.setRequestHandler('resources/templates/list', async () => ({
       resourceTemplates: [...RESOURCE_TEMPLATES]
     }));
-    this.server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+    this.server.setRequestHandler('resources/read', async (request) => {
       const uri = request.params.uri;
       switch (uri) {
         case 'ue://assets': return this.whenConnected(uri, () => this.assetResources.list('/Game'));

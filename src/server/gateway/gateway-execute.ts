@@ -24,6 +24,7 @@ import { resolveDispatchAction } from './gateway-dispatch-by.js';
 import { checkStaticRequest } from './gateway-execute-static-check.js';
 import { executeErrorEnvelope, executeSuccessEnvelope, refuseWithTarget } from './gateway-execute-envelope.js';
 import { dispatchAndValidate, type GatewayContext } from './gateway-execute-dispatch.js';
+import { askThroughClient } from './gateway-execute-consent.js';
 import { checkConsentAuthorization, checkExpectedCatalogRevision, checkScopeAuthorization, matchedFoldedGrant } from './gateway-execute-policy.js';
 import { ConsentGrantSchema, type ConsentGrant } from '../../tools/catalog/capabilities/semantic/authorization.js';
 import { buildReceiptContext, type GatewayReceiptContext } from './gateway-receipt-context.js';
@@ -101,7 +102,8 @@ export async function executeGatewayCall(
   const scopeFailure = checkScopeAuthorization(target, authority);
   if (scopeFailure !== undefined) return refuseWithTarget(target, scopeFailure, receiptContext);
 
-  let consentGrant: ConsentGrant | undefined;
+  // A grant the user gave through the client also carries the nonce the plugin burns once.
+  let consentGrant: (ConsentGrant & { readonly nonce?: string }) | undefined;
   if (args.consent !== undefined) {
     const parsedConsent = ConsentGrantSchema.safeParse(args.consent);
     if (!parsedConsent.success) {
@@ -114,7 +116,25 @@ export async function executeGatewayCall(
     consentGrant = parsedConsent.data;
   }
   const consentFailure = checkConsentAuthorization(target, authority, consentGrant);
-  if (consentFailure !== undefined) return refuseWithTarget(target, consentFailure, receiptContext);
+  if (consentFailure !== undefined) {
+    // A 2026-07-28 client that can elicit asks its user (gateway-execute-consent.ts); their yes is the grant. Scope
+    // was checked first, so nobody is asked about a call they could not make.
+    const asked = consentGrant === undefined
+      ? await askThroughClient(
+        context.consent,
+        target.record.id,
+        target.record.policy.consent === 'elevated' ? 'elevated' : 'explicit',
+        `${target.record.routing.parentTool}.${target.legacy.action}`,
+        checked.params
+      )
+      : undefined;
+    if (asked?.kind === 'ask') return asked.result;
+    if (asked?.kind !== 'yes') {
+      // Not after the user said no: describe's grant would run what they just refused.
+      return refuseWithTarget(target, asked?.kind === 'no' ? { ...consentFailure, message: asked.message, nextCall: undefined } : consentFailure, receiptContext);
+    }
+    consentGrant = { capability: target.record.id, acknowledge: asked.acknowledge, nonce: asked.nonce };
+  }
 
   // A grant naming a folded old pair authorized that pair's operation; the
   // resolved dispatch target must agree with it, or a grant for one sibling

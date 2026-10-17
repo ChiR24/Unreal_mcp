@@ -105,12 +105,12 @@ Behavior:
 
 Both transports answer `server/discover` without a session, handshake or
 `MCP-Protocol-Version` header (the native capability-token check still applies):
-`resultType: "complete"`, `supportedVersions`, the same `capabilities` and
-`instructions` as `initialize`, the server identity under
+`resultType: "complete"`, `supportedVersions: ["2026-07-28"]` (the version a request
+names in its `_meta`; `initialize` negotiates the older ones), the same `capabilities`
+and `instructions` as `initialize`, the server identity under
 `_meta["io.modelcontextprotocol/serverInfo"]`, and the cache hints `ttlMs: 3600000`
-and `cacheScope: "public"`. On native, `supportedVersions` leads with `2026-07-28`
-and `capabilities.extensions` lists `io.modelcontextprotocol/tasks`; on stdio it is
-still exactly the versions `initialize` negotiates.
+and `cacheScope: "public"`. On native, `capabilities.extensions` also lists
+`io.modelcontextprotocol/tasks`.
 
 ### 2026-07-28 on the native transport
 

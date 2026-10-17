@@ -3,6 +3,7 @@
 // there when it falls fallHeight below that point; on a pawn with the Health behaviour, RespawnOnDeath also brings it
 // back at full health when it dies. A pawn that fell off a level or died stayed gone: nothing put it back.
 #include "Domains/Blueprint/McpBPActionContext.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpBPAssetLoad.h"
 #include "Domains/Blueprint/Gameplay/McpBPBehaviourPlans.h"
 #include "Domains/BlueprintGraph/Behaviour/McpBPBehaviour.h"
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"

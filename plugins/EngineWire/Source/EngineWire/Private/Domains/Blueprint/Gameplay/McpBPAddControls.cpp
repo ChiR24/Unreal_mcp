@@ -3,6 +3,7 @@
 // Character) against them, and maps WASD and the left stick (Swizzle and Negate shape the keys into one 2D value),
 // the mouse and the right stick, and the jump key. A Character made over MCP had no input at all: it could not move.
 #include "Domains/Blueprint/McpBPActionContext.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpBPAssetLoad.h"
 #include "Domains/BlueprintGraph/Behaviour/McpBPBehaviour.h"
 #include "Core/Requests/McpResponseCaptureRegistry.h"
 #include "Domains/Input/McpInputActionRouting.h"

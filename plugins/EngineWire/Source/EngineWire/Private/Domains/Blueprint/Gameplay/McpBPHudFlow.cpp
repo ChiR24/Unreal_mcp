@@ -1,6 +1,7 @@
 #include "Domains/Blueprint/Gameplay/McpBPHudFlow.h"
 
 #include "Domains/Blueprint/McpBPActionContext.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpBPAssetLoad.h"
 #include "Domains/BlueprintGraph/Behaviour/McpBPBehaviour.h"
 #include "Core/Requests/McpResponseCaptureRegistry.h"
 #include "Domains/WidgetAuthoring/Support/McpWidgetBPLoading.h"

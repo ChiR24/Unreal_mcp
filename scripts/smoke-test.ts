@@ -1,8 +1,7 @@
 
 /// <reference types="node" />
 
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
+import { Client, InMemoryTransport } from '@modelcontextprotocol/client';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { z } from 'zod';
@@ -57,7 +56,7 @@ async function runSmokeTest(): Promise<void> {
     try {
         console.log('Sending initialize...');
         await server.connect(serverTransport);
-        await client.connect(clientTransport, { timeout: 15000 });
+        await client.connect(clientTransport);
         console.log('✅ Initialize success');
 
         const toolsResult = await client.listTools(undefined, { timeout: 15000 });
@@ -71,7 +70,6 @@ async function runSmokeTest(): Promise<void> {
 
         const searchResult = await client.callTool(
             { name: 'unreal', arguments: { operation: 'search', query: 'asset' } },
-            undefined,
             { timeout: 15000 }
         );
         const search = GatewayResultSchema.parse(getStructuredContent(searchResult));
@@ -80,7 +78,6 @@ async function runSmokeTest(): Promise<void> {
 
         const describeResult = await client.callTool(
             { name: 'unreal', arguments: { operation: 'describe', tool: 'manage_tools' } },
-            undefined,
             { timeout: 15000 }
         );
         const describe = getStructuredContent(describeResult) as Record<string, unknown>;
@@ -90,7 +87,6 @@ async function runSmokeTest(): Promise<void> {
 
         const configResult = await client.callTool(
             { name: 'unreal', arguments: { operation: 'configure', action: 'get_status' } },
-            undefined,
             { timeout: 15000 }
         );
         const config = getStructuredContent(configResult) as Record<string, unknown>;
@@ -103,7 +99,6 @@ async function runSmokeTest(): Promise<void> {
 
         const hiddenResult = await client.callTool(
             { name: 'manage_tools', arguments: { action: 'get_status' } },
-            undefined,
             { timeout: 15000 }
         );
         const hidden = hiddenResult as { isError?: boolean };

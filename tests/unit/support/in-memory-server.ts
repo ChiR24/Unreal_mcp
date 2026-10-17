@@ -2,8 +2,7 @@
 // createServer() under MOCK_UNREAL_CONNECTION, connected through an in-memory
 // transport pair, either to an SDK Client or to a raw frame recorder.
 
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
+import { Client, InMemoryTransport } from '@modelcontextprotocol/client';
 import { vi } from 'vitest';
 
 import { isRecord } from '../../../src/utils/validation/type-guards.js';
@@ -38,7 +37,7 @@ export async function connectClient(name: string, bridge?: (tool: string, args?:
   const client = new Client({ name, version: '1.0.0' }, { capabilities: {} });
   const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
   await built.server.connect(serverSide);
-  await client.connect(clientSide, { timeout: 15000 });
+  await client.connect(clientSide);
   return { built, client, close: () => closeServer(built, clientSide) };
 }
 

@@ -1,4 +1,4 @@
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { serveStdio } from '@modelcontextprotocol/server/stdio';
 
 import {
   createServer,
@@ -8,10 +8,19 @@ import {
 export async function startStdioServer(): Promise<void> {
   const {
     server,
+    buildServer,
     automationBridge,
     healthMonitor,
   } = createServer();
-  const transport = new StdioServerTransport();
+  // The opening exchange picks the era: initialize serves 2025-era clients as before, a request whose _meta names
+  // 2026-07-28 is served per request. The first instance is the server built above; a second one is only asked for
+  // when a discover probe is followed by an initialize.
+  let served = false;
+  const handle = serveStdio(() => {
+    if (served) return buildServer();
+    served = true;
+    return server;
+  }, { onerror: (error) => log.warn('Stdio serving error', error) });
   let shuttingDown = false;
 
   // Idempotent: shutdown, beforeExit and exit may all run it.
@@ -36,7 +45,7 @@ export async function startStdioServer(): Promise<void> {
     log.info(`Shutting down MCP server${signal ? ` due to ${signal}` : ''}`);
     stopServices();
     try {
-      await server.close();
+      await handle.close();
     } catch (error) {
       log.warn('Failed to close MCP server transport cleanly', error instanceof Error ? error : String(error));
     }
@@ -64,6 +73,5 @@ export async function startStdioServer(): Promise<void> {
   process.once('beforeExit', stopServices);
   process.once('exit', stopServices);
 
-  await server.connect(transport);
   log.info('Unreal Engine MCP Server started on stdio');
 }
