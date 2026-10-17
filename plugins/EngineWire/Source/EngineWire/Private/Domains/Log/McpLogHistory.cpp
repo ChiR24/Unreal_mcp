@@ -2,6 +2,7 @@
 
 #include "Algo/Reverse.h"
 #include "Core/Subsystem/EngineWireSubsystemResponseSanitization.h"
+#include "Domains/Log/McpScriptErrors.h"
 #include "CoreGlobals.h"
 #include "HAL/FileManager.h"
 #include "HAL/PlatformOutputDevices.h"
@@ -46,6 +47,10 @@ double FMcpLogHistory::Now()
 TArray<FString> FMcpLogHistory::WarningsSince(double SinceSeconds, int32 MaxDistinct) const
 {
     static const FName OwnCategory(TEXT("LogEngineWireSubsystem"));
+    // A Blueprint runtime error leads, read back to its node; the lines repeating it are left out (the LogScript
+    // warning and the PIE message log's "Blueprint Runtime Error").
+    TArray<FString> ScriptMessages;
+    TArray<FString> Result = FMcpScriptErrors::Get().LinesSince(SinceSeconds, ScriptMessages);
     TArray<FString> Logged;
     {
         FScopeLock Lock(&Mutex);
@@ -55,7 +60,8 @@ TArray<FString> FMcpLogHistory::WarningsSince(double SinceSeconds, int32 MaxDist
         {
             const FLine& Line = Lines[(Head + Offset) % Count];
             if (Line.Seconds >= SinceSeconds && Line.Verbosity != ELogVerbosity::NoLogging &&
-                Line.Verbosity <= ELogVerbosity::Warning && Line.Category != OwnCategory)
+                Line.Verbosity <= ELogVerbosity::Warning && Line.Category != OwnCategory &&
+                !ScriptMessages.ContainsByPredicate([&Line](const FString& Text) { return Line.Message.Contains(Text); }))
             {
                 Logged.Add(FString::Printf(TEXT("%s: %s"), *Line.Category.ToString(), *Line.Message.TrimStartAndEnd()));
             }
@@ -82,7 +88,9 @@ TArray<FString> FMcpLogHistory::WarningsSince(double SinceSeconds, int32 MaxDist
     {
         Messages[Index] = Counts[Index] > 1 ? FString::Printf(TEXT("%dx %s"), Counts[Index], *Messages[Index]) : Messages[Index];
     }
-    return Messages;
+    Result.Append(Messages);
+    Result.SetNum(FMath::Min(Result.Num(), MaxDistinct));
+    return Result;
 }
 
 void FMcpLogHistory::Serialize(const TCHAR* V, ELogVerbosity::Type Verbosity, const FName& Category)

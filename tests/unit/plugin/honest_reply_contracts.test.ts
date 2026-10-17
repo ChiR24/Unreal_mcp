@@ -3187,3 +3187,36 @@ describe('a plugin can be kept to the editor, and a smoke run can open a given l
     expect(launch).toContain('The game never logged loading %s');
   });
 });
+
+describe('a Blueprint runtime error names the node that raised it', () => {
+  // An Accessed None reached a frame step only as a LogScript line with a byte offset, and from 5.8 once per object.
+  it('reads each script exception of a play session back to its node, graph and Blueprint', () => {
+    const errors = code('Log', 'McpScriptErrors.cpp');
+    expect(errors).toContain('FBlueprintCoreDelegates::OnScriptException.AddRaw(this, &FMcpScriptErrors::OnScriptException);');
+    expect(errors).toContain('FEditorDelegates::BeginPIE.AddLambda');
+    expect(errors).toContain('static_cast<int32>(StackFrame.Code - StackFrame.Node->Script.GetData()) - 1');
+    expect(errors).toContain('FKismetDebugUtilities::FindSourceNodeForCodeLocation(ActiveObject, StackFrame.Node, Offset, true)');
+    expect(errors).toContain('Error.NodeId = Node->NodeGuid.ToString();');
+    expect(errors).toMatch(/Type == EBlueprintExceptionType::Breakpoint \|\| Type == EBlueprintExceptionType::Tracepoint \|\|\s*Type == EBlueprintExceptionType::WireTracepoint/u);
+    expect(errors).toContain('World->WorldType != EWorldType::PIE && World->WorldType != EWorldType::Game');
+    // BlueprintExceptionInfo.h exists from 5.4 on; earlier engines declare the struct in UObject/Script.h.
+    expect(errors).toMatch(/#if ENGINE_MAJOR_VERSION > 5 \|\| \(ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4\)\s*#include "Blueprint\/BlueprintExceptionInfo\.h"/u);
+    const lifecycle = readFileSync(join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'Core', 'Subsystem',
+      'EngineWireSubsystemLifecycle.cpp'), 'utf8');
+    expect(lifecycle).toContain('FMcpScriptErrors::Get().Watch(true);');
+    expect(lifecycle).toContain('FMcpScriptErrors::Get().Watch(false);');
+  });
+
+  it('frame steps and motion reads lead with the error and drop the log lines repeating it', () => {
+    // Both the LogScript warning and the PIE message log's "Blueprint Runtime Error" quote the error's text.
+    const history = code('Log', 'McpLogHistory.cpp');
+    expect(history).toContain('TArray<FString> Result = FMcpScriptErrors::Get().LinesSince(SinceSeconds, ScriptMessages);');
+    expect(history).toMatch(/Line\.Category != OwnCategory &&\s*!ScriptMessages\.ContainsByPredicate\(\[&Line\]\(const FString& Text\) \{ return Line\.Message\.Contains\(Text\); \}\)/u);
+    expect(history).toContain('Result.Append(Messages);');
+  });
+
+  it('runtime_report lists the session errors, kept after stop until the next play', () => {
+    const runtime = code('Environment', 'Inspection', 'McpEnvInspectRuntime.cpp');
+    expect(runtime).toMatch(/const TArray<TSharedPtr<FJsonValue>> ScriptErrors = FMcpScriptErrors::Get\(\)\.ToJson\(\);\s*if \(ScriptErrors\.Num\(\) > 0\)\s*\{\s*Report->SetArrayField\(TEXT\("scriptErrors"\), ScriptErrors\);/u);
+  });
+});

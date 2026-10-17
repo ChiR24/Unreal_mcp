@@ -9,7 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## 🏷️ [Unreleased]
 
-_Nothing yet._
+<details>
+<summary><b>✨ Added</b></summary>
+
+- **Blueprint runtime errors name their node**: frame steps and motion reads report an Accessed None or infinite loop with the node (and its `nodeId`), graph and Blueprint that raised it and how often it fired; `runtime_report` lists the play session's errors with the object's variables at the first hit.
+
+</details>
 
 ---
 

@@ -214,7 +214,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
       domain: DOMAIN,
       family: FAMILY_TRANSFORM,
       topics: ['sample motion', 'record trajectory', 'track actor over time', 'watch actor move', 'jump height', 'foot sliding', 'bone position over time', 'watch spawned actor', 'track projectile'],
-      summary: 'Watch an actor over game time in Play-In-Editor and return its location, velocity, rotation and chosen properties at every interval, plus start/end and min/max extents, in one call; it can also follow points on the actor (bones, sockets, components) with their height over the ground, press keys at exact game times (inputs) and wait for another actor\'s property to change before it starts (startWhen).',
+      summary: 'Watch an actor over game time in Play-In-Editor and return its location, velocity, rotation and chosen properties at every interval, plus start/end and min/max extents, in one call; it can also follow points on the actor (bones, sockets, components) with their height over the ground, press keys at exact game times (inputs) and wait for another actor\'s property to change before it starts (startWhen). The warnings say what the game logged while it ran, and a Blueprint runtime error names the node, graph and Blueprint that raised it.',
       whenToUse: [
         'A jump, spring launch, moving platform, enemy patrol or fall must be proven in PIE without a sleep-and-poll loop.',
         'The peak height, landing point or path of a moving actor is needed.',

@@ -11,6 +11,7 @@
 #include "Domains/ControlEditor/McpEditorSupport.h"
 #include "Domains/ControlEditor/McpEditorScreenshotSupport.h"
 #include "Domains/Log/McpLogHistory.h"
+#include "Domains/Log/McpScriptErrors.h"
 #include "Domains/SystemControl/McpSystemPrivate.h"
 #include "Foundation/McpLiveStateRevisionTracker.h"
 #include "Foundation/McpReadinessState.h"
@@ -37,6 +38,7 @@ void UEngineWireSubsystem::Initialize(FSubsystemCollectionBase& Collection)
     FMcpDiagnosticsSnapshot::Get().InitializeFromGameThread();
     FMcpDiagnosticsSnapshot::Get().RotateOnStartup();
     FMcpLogHistory::Get().Register();
+    FMcpScriptErrors::Get().Watch(true);
     McpSystemControlHandlers::McpWatchMaterialUsage(true);
 
     UE_LOG(
@@ -192,6 +194,7 @@ void UEngineWireSubsystem::Deinitialize()
 
     FMcpDiagnosticsSnapshot::Get().PersistCurrent();
     FMcpLogHistory::Get().Unregister();
+    FMcpScriptErrors::Get().Watch(false);
     McpSystemControlHandlers::McpWatchMaterialUsage(false);
 
     Super::Deinitialize();

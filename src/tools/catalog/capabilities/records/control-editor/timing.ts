@@ -37,7 +37,7 @@ export const TIMING_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'control_editor', action: 'step_frame', domain: D, family: F,
-    summary: 'Advance the PIE simulation by one or more frames, each at the current game speed (slow motion makes each step shorter; timeDilation says so).',
+    summary: 'Advance the PIE simulation by one or more frames, each at the current game speed (slow motion makes each step shorter; timeDilation says so). The warnings say what the game logged during the steps, and a Blueprint runtime error names the node, graph and Blueprint that raised it.',
     whenToUse: ['The simulation must advance a fixed number of frames.'],
     whenNotToUse: ['Real-time simulation is preferred.'],
     inputProps: { steps: P.steps },

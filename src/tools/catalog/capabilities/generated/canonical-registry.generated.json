@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "6355b2acc47399c2",
+  "catalogRevision": "4a1b058cccd1c90f",
   "recordCount": 416,
   "records": [
     {
@@ -48125,10 +48125,11 @@
         "summary": "Report the live state of a running PIE game: the player controller, pawn, view target and camera, plus up to 25 matching actors with class, transform, tags, components and the live values of the variables or properties named in propertyNames; actors are reported only while PIE runs.",
         "whenToUse": [
           "Runtime state of actors/components/properties must be inspected during PIE.",
-          "PIE-only runtime state must be inspected."
+          "PIE-only runtime state must be inspected.",
+          "A Blueprint failed while the game ran (Accessed None): scriptErrors names the node, graph and Blueprint."
         ],
         "whenNotToUse": [
-          "The editor is not in PIE; the report will be empty."
+          "The editor is not in PIE; the report then holds only the last play session's scriptErrors."
         ]
       },
       "schemas": {
@@ -48258,6 +48259,15 @@
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true,
               "description": "PlayerCameraManager described as a runtime actor, plus cameraLocation and cameraRotation as {x,y,z} / {pitch,yaw,roll} objects."
+            },
+            "scriptErrors": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Blueprint runtime errors (an Accessed None, an infinite loop) of this play session, or of the last one until the next play starts: message, blueprintPath, graph, node and nodeId (as edit_graph takes them; function when no node resolves), objects that raised it, count, firstGameSeconds, and values (the object's Blueprint variables at the first hit). Absent when none fired."
             }
           },
           "required": [
@@ -48313,8 +48323,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "60f6b745a2afa9b114093261528f632ae1f0f08630aaec678e4d5c091f8bdb81",
-        "content": "c642e45cff4005fb4bbda3b547ec5d778fb07c75c2fac4b7f47b693c7560a0a4"
+        "schema": "63fe2e692231acbce0d14dc9805e136b5bb8957deac3efab29f301cb17f230df",
+        "content": "3ae2f0f60bb6f8e65a8c4b91f9579c7de80e07f2ec92199d0b577c4c238fb0d7"
       }
     },
     {

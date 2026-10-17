@@ -6,7 +6,8 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 
 ## [Unreleased]
 
-_Nothing yet._
+### Added
+- **Blueprint runtime errors** in Play name their node, graph and Blueprint in frame steps and motion reads; `runtime_report` lists the session's errors with the object's variables.
 
 ## [0.6.0-beta-f] - 2026-10-16
 

@@ -1,4 +1,5 @@
 #include "Domains/Environment/McpEnvShared.h"
+#include "Domains/Log/McpScriptErrors.h"
 
 namespace McpEnvironmentHandlers {
 
@@ -183,6 +184,13 @@ bool HandleInspectRuntimeReportAction(
                     CameraJson->SetNumberField(TEXT("fov"), CameraManager->GetFOVAngle());
                     Report->SetObjectField(TEXT("playerCameraManager"), CameraJson);
                 }
+            }
+
+            // Blueprint runtime errors of this play session, or of the last one until the next play starts.
+            const TArray<TSharedPtr<FJsonValue>> ScriptErrors = FMcpScriptErrors::Get().ToJson();
+            if (ScriptErrors.Num() > 0)
+            {
+                Report->SetArrayField(TEXT("scriptErrors"), ScriptErrors);
             }
 
             Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,

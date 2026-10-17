@@ -7663,6 +7663,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true,
           "description": "World scale as {x, y, z}."
         },
+        "scriptErrors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Blueprint runtime errors (an Accessed None, an infinite loop) of this play session, or of the last one until the next play starts: message, blueprintPath, graph, node and nodeId (as edit_graph takes them; function when no node resolves), objects that raised it, count, firstGameSeconds, and values (the object's Blueprint variables at the first hit). Absent when none fired."
+        },
         "seamEdges": {
           "type": "number",
           "description": "Places where two faces meet without sharing their corners (split for flat shading or UV seams): the surface renders whole, but booleans, remeshing and collision built from the mesh need it welded."
