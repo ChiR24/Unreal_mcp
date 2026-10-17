@@ -66,8 +66,8 @@ bool FMcpNativeTransport::TryHandleLocalToolCall(
 TSharedPtr<FJsonObject> FMcpNativeTransport::DescribeTask(const FString& TaskId, const FString& SessionId)
 {
 	TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
-	TSharedPtr<FJsonObject> Outcome;
-	if (!TaskResults.Find(TaskId, GetSessionPrincipal(SessionId).Identity, Outcome))
+	FMcpTaskResults::FTask Task;
+	if (!TaskResults.Find(TaskId, GetSessionPrincipal(SessionId).Identity, Task))
 	{
 		Out->SetBoolField(TEXT("success"), false);
 		Out->SetStringField(TEXT("errorCode"), TEXT("TASK_NOT_FOUND"));
@@ -78,11 +78,17 @@ TSharedPtr<FJsonObject> FMcpNativeTransport::DescribeTask(const FString& TaskId,
 	}
 	Out->SetBoolField(TEXT("success"), true);
 	Out->SetStringField(TEXT("taskId"), TaskId);
-	if (Outcome.IsValid())
+	if (Task.Outcome.IsValid())
 	{
 		Out->SetStringField(TEXT("state"), TEXT("done"));
-		Out->SetObjectField(TEXT("outcome"), Outcome);
+		Out->SetObjectField(TEXT("outcome"), Task.Outcome);
 		Out->SetStringField(TEXT("message"), FString::Printf(TEXT("Task %s is done."), *TaskId));
+		return Out;
+	}
+	if (Task.bCancelled)
+	{
+		Out->SetStringField(TEXT("state"), TEXT("cancelled"));
+		Out->SetStringField(TEXT("message"), FString::Printf(TEXT("Task %s was cancelled before it ran."), *TaskId));
 		return Out;
 	}
 	float Percent = 0.0f;

@@ -1,4 +1,5 @@
 #include "MCP/Transport/McpNativeTransportPrivate.h"
+#include "MCP/Protocol/McpModernRequest.h"
 #include "Foundation/BridgeHelpers/Security/McpCapToken.h"
 
 bool FMcpNativeTransport::SendHttpResponse(FSocket* Socket, int32 StatusCode,
@@ -24,7 +25,11 @@ bool FMcpNativeTransport::SendHttpResponse(FSocket* Socket, int32 StatusCode,
 	default:  StatusText = TEXT("Unknown"); break;
 	}
 
-	FTCHARToUTF8 BodyUtf8(*Body);
+	// Every JSON answer to a 2026-07-28 request carries the result fields that revision requires.
+	const McpModern::FCall& Modern = McpModern::Current();
+	const FString Sent = Modern.bActive && ContentType == TEXT("application/json")
+		? McpModern::StampResponseBody(Body, Modern.Method) : Body;
+	FTCHARToUTF8 BodyUtf8(*Sent);
 	const int32 BodyLength = BodyUtf8.Length();
 
 	FString Response = FString::Printf(
@@ -72,13 +77,15 @@ bool FMcpNativeTransport::SendAndClose(FSocket* ClientSocket, int32 StatusCode,
 bool FMcpNativeTransport::SendSSEHeaders(FSocket* Socket, const FString& SessionId,
 	const FString& CorsOrigin)
 {
-	FString Headers = FString::Printf(
-		TEXT("HTTP/1.1 200 OK\r\n")
+	FString Headers = TEXT("HTTP/1.1 200 OK\r\n")
 		TEXT("Content-Type: text/event-stream\r\n")
 		TEXT("Cache-Control: no-cache\r\n")
-		TEXT("Connection: keep-alive\r\n")
-		TEXT("Mcp-Session-Id: %s\r\n"),
-		*SessionId);
+		TEXT("Connection: keep-alive\r\n");
+	// A 2026-07-28 call has no session to name.
+	if (!SessionId.IsEmpty())
+	{
+		Headers += FString::Printf(TEXT("Mcp-Session-Id: %s\r\n"), *SessionId);
+	}
 	AppendCorsHeaders(Headers, CorsOrigin);
 	Headers += TEXT("\r\n");
 
@@ -216,7 +223,7 @@ void FMcpNativeTransport::AppendCorsHeaders(FString& Response, const FString& Or
 	Response += FString::Printf(TEXT("Access-Control-Allow-Origin: %s\r\n"), *Origin.TrimStartAndEnd());
 	Response += TEXT("Vary: Origin\r\n");
 	Response += TEXT("Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS\r\n");
-	Response += TEXT("Access-Control-Allow-Headers: Content-Type, Accept, Mcp-Session-Id, MCP-Protocol-Version, X-MCP-Capability-Token\r\n");
+	Response += TEXT("Access-Control-Allow-Headers: Content-Type, Accept, Mcp-Session-Id, MCP-Protocol-Version, Mcp-Method, Mcp-Name, X-MCP-Capability-Token\r\n");
 	Response += TEXT("Access-Control-Expose-Headers: Mcp-Session-Id, MCP-Protocol-Version\r\n");
 }
 

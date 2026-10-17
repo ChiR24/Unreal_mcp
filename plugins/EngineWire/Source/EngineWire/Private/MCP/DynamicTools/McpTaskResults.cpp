@@ -1,9 +1,9 @@
 #include "MCP/DynamicTools/McpTaskResults.h"
 #include "Misc/ScopeLock.h"
 
-FMcpTaskResults::FEntry& FMcpTaskResults::FindOrAddLocked(const FString& TaskId)
+FMcpTaskResults::FTask& FMcpTaskResults::FindOrAddLocked(const FString& TaskId)
 {
-	if (FEntry* Found = Entries.Find(TaskId))
+	if (FTask* Found = Entries.Find(TaskId))
 	{
 		return *Found;
 	}
@@ -16,26 +16,45 @@ FMcpTaskResults::FEntry& FMcpTaskResults::FindOrAddLocked(const FString& TaskId)
 	return Entries.Add(TaskId);
 }
 
-void FMcpTaskResults::NoteRunning(const FString& TaskId, const FString& Principal)
+void FMcpTaskResults::NoteRunning(const FString& TaskId, const FString& Principal, const FDateTime& CreatedAt)
 {
 	FScopeLock Lock(&Mutex);
-	FindOrAddLocked(TaskId).Principal = Principal;
+	FTask& Task = FindOrAddLocked(TaskId);
+	Task.Principal = Principal;
+	Task.CreatedAt = CreatedAt;
+	Task.UpdatedAt = FDateTime::UtcNow();
 }
 
-void FMcpTaskResults::NoteDone(const FString& TaskId, const TSharedPtr<FJsonObject>& Outcome)
+void FMcpTaskResults::NoteDone(
+	const FString& TaskId, const TSharedPtr<FJsonObject>& Outcome, const TSharedPtr<FJsonObject>& ToolResult)
 {
 	FScopeLock Lock(&Mutex);
-	FindOrAddLocked(TaskId).Outcome = Outcome;
+	FTask& Task = FindOrAddLocked(TaskId);
+	Task.Outcome = Outcome;
+	Task.ToolResult = ToolResult;
+	Task.UpdatedAt = FDateTime::UtcNow();
 }
 
-bool FMcpTaskResults::Find(const FString& TaskId, const FString& Principal, TSharedPtr<FJsonObject>& OutOutcome) const
+void FMcpTaskResults::NoteCancelled(const FString& TaskId)
 {
 	FScopeLock Lock(&Mutex);
-	const FEntry* Entry = Entries.Find(TaskId);
-	if (Entry == nullptr || Entry->Principal != Principal)
+	FTask* Task = Entries.Find(TaskId);
+	if (Task != nullptr && !Task->Outcome.IsValid())
+	{
+		Task->bCancelled = true;
+		Task->UpdatedAt = FDateTime::UtcNow();
+	}
+}
+
+bool FMcpTaskResults::Find(const FString& TaskId, const FString& Principal, FTask& OutTask) const
+{
+	FScopeLock Lock(&Mutex);
+	const FTask* Entry = Entries.Find(TaskId);
+	// Case-sensitive: FString's != ignores case, which would let one principal read another's task.
+	if (Entry == nullptr || !Entry->Principal.Equals(Principal, ESearchCase::CaseSensitive))
 	{
 		return false;
 	}
-	OutOutcome = Entry->Outcome;
+	OutTask = *Entry;
 	return true;
 }

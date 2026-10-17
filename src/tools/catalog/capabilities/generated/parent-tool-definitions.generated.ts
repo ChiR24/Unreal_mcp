@@ -23826,9 +23826,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "enum": [
             "queued",
             "running",
-            "done"
+            "done",
+            "cancelled"
           ],
-          "description": "queued (waiting for the editor), running, or done."
+          "description": "queued (waiting for the editor), running, done, or cancelled (cancelled by the client before it ran)."
         },
         "success": {
           "type": "boolean",

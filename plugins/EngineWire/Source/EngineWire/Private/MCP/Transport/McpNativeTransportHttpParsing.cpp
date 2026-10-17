@@ -123,6 +123,14 @@ bool FMcpNativeTransport::ReadHttpRequest(FSocket* Socket, FParsedHttpRequest& O
 			{
 				OutRequest.ProtocolVersion = Value;
 			}
+			else if (Key.Equals(TEXT("Mcp-Method"), ESearchCase::IgnoreCase))
+			{
+				OutRequest.McpMethod = Value;
+			}
+			else if (Key.Equals(TEXT("Mcp-Name"), ESearchCase::IgnoreCase))
+			{
+				OutRequest.McpName = Value;
+			}
 		}
 	}
 

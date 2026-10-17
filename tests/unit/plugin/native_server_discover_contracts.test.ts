@@ -1,8 +1,8 @@
 /**
  * Source contracts for `server/discover` on the native /mcp transport (MCP 2026-07-28 discovery, issue #614). It is
- * answered without a session or protocol-version header, like initialize, and lists only the versions initialize
- * negotiates, so a 2026-07-28 client falls back to the handshake. The capability-token check before session
- * validation still applies to it. The C++ cannot run here.
+ * answered without a session or protocol-version header, like initialize, and lists 2026-07-28 (served per request)
+ * and the versions initialize negotiates. The capability-token check before session validation still applies to it.
+ * The C++ cannot run here.
  */
 
 import { readFileSync } from 'node:fs';

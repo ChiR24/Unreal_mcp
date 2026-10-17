@@ -1,6 +1,7 @@
 #include "MCP/Transport/McpNativeTransportPrivate.h"
 
 #include "MCP/Execute/McpNativeGatewayAuthorization.h"
+#include "MCP/Protocol/McpModernRequest.h"
 #include "Foundation/BridgeHelpers/Security/McpCapToken.h"
 
 void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket)
@@ -167,6 +168,13 @@ void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket)
 			(Rpc.ErrorType == EMcpJsonRpcError::ParseError)
 				? TEXT("Parse error") : TEXT("Invalid Request"));
 		SendAndClose(ClientSocket, 400, TEXT("application/json"), ErrorBody, {}, HttpReq.Origin);
+		return;
+	}
+
+	// A 2026-07-28 request names its version in _meta and has no session: served apart, after the token check.
+	if (McpModern::IsModern(Rpc.Params))
+	{
+		HandleModernRequest(ClientSocket, HttpReq, Rpc);
 		return;
 	}
 

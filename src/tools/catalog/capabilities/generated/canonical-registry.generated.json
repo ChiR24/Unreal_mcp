@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "4a1b058cccd1c90f",
+  "catalogRevision": "094239cbccd29833",
   "recordCount": 416,
   "records": [
     {
@@ -83157,9 +83157,10 @@
               "enum": [
                 "queued",
                 "running",
-                "done"
+                "done",
+                "cancelled"
               ],
-              "description": "queued (waiting for the editor), running, or done."
+              "description": "queued (waiting for the editor), running, done, or cancelled (cancelled by the client before it ran)."
             },
             "progress": {
               "type": "number",
@@ -83228,8 +83229,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "3c791137edeccb3bb91bc0a6ab5223d46be32fbbd677b771085563b9a1c722c4",
-        "content": "a5f2656acffc1f4d0c96405544699aca05fc690b23acd0befc19df8a805971fa"
+        "schema": "c756ccdd295e1188abd2d224c610058eaf5de552f8026e04e403c20a9777e4b3",
+        "content": "3d71279a9baf588fdf7468c5fa475acbf923e060d7beb53871521d991872a17f"
       }
     },
     {

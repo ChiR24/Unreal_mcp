@@ -105,12 +105,35 @@ Behavior:
 
 Both transports answer `server/discover` without a session, handshake or
 `MCP-Protocol-Version` header (the native capability-token check still applies):
-`resultType: "complete"`, `supportedVersions` (exactly the versions `initialize`
-negotiates: the three above on native, plus the two legacy ones on stdio), the same
-`capabilities` and `instructions` as `initialize`, the server identity under
+`resultType: "complete"`, `supportedVersions`, the same `capabilities` and
+`instructions` as `initialize`, the server identity under
 `_meta["io.modelcontextprotocol/serverInfo"]`, and the cache hints `ttlMs: 3600000`
-and `cacheScope: "public"`. The 2026-07-28 revision itself is not served, so a client
-on that revision sees the versions it can use and falls back to `initialize`.
+and `cacheScope: "public"`. On native, `supportedVersions` leads with `2026-07-28`
+and `capabilities.extensions` lists `io.modelcontextprotocol/tasks`; on stdio it is
+still exactly the versions `initialize` negotiates.
+
+### 2026-07-28 on the native transport
+
+A request whose `params._meta["io.modelcontextprotocol/protocolVersion"]` is
+`2026-07-28` needs no `initialize` and no `Mcp-Session-Id`; its client capabilities
+ride in the same `_meta`. The native transport:
+
+- requires `MCP-Protocol-Version`, `Mcp-Method` and (for `tools/call`,
+  `resources/read`, `prompts/get`) `Mcp-Name` headers that match the body
+  (HTTP 400, `-32020`; a `=?base64?…?=` name is decoded first), and answers an
+  unsupported version with HTTP 400, `-32022` and the supported list;
+- stamps `resultType` on every result and `ttlMs`/`cacheScope` on listings and reads;
+- answers HTTP 404 `-32601` for `ping`, `logging/setLevel`, `initialize` and any
+  unknown method;
+- asks for consent through the client: a call that needs a grant and has none answers
+  `resultType: "input_required"` with a yes/no form elicitation and a signed
+  `requestState` when the client declared `elicitation`; the retry with the user's yes
+  runs once;
+- with the `io.modelcontextprotocol/tasks` extension declared, a call still open near
+  the client's time limit answers a task handle; `tasks/get`, `tasks/cancel` and
+  `tasks/update` follow the extension.
+
+Older clients keep `initialize`, sessions and describe's `consentGrant` unchanged.
 
 ### Intentional native/TS asymmetry
 
@@ -123,10 +146,9 @@ TypeScript stdio server negotiates through the MCP SDK's
 - `2024-10-07`
 
 A client pinned to a legacy version therefore negotiates with the TS surface
-but not the native surface. The native transport **deliberately does not
-implement the later `2026-07-28` release-candidate version**; that RC is not
-part of this codebase and is excluded from `McpSupportedProtocolVersions`.
-State "latest" as `2025-11-25` only; do not claim support for any later RC.
+but not the native surface. `2026-07-28` is served per request on native (above)
+and is not an `initialize` version, so `McpSupportedProtocolVersions` still ends
+the negotiable set at `2025-11-25`.
 
 ## Cancellation
 

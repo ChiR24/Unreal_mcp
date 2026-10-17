@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <summary><b>✨ Added</b></summary>
 
 - **Blueprint runtime errors name their node**: frame steps and motion reads report an Accessed None or infinite loop with the node (and its `nodeId`), graph and Blueprint that raised it and how often it fired; `runtime_report` lists the play session's errors with the object's variables at the first hit.
+- **MCP 2026-07-28 on the native transport**: requests without initialize or a session, header checks, consent asked through the client, and the tasks extension for long calls. Older clients are unchanged.
 
 </details>
 
@@ -23,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The plugin links on UE 5.0 again**: the Niagara module add refuses there (the engine does not export it) and the emitter copy carries user parameters without a call 5.0 and 5.1 cannot link.
 - **Crash diagnostics are rewritten on Windows**: the session records replace their files instead of keeping the first one written.
 - **A long render keeps its native request open** for the `renderTimeoutMs` it asked for, not 335 s.
+- **`get_task_result` on the native transport** matches the sender's principal exactly; the match ignored case.
 
 </details>
 

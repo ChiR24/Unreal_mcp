@@ -70,7 +70,6 @@ public:
 	static FString BuildNotification(const FString& Method,
 		const TSharedPtr<FJsonObject>& Params = nullptr);
 
-private:
-	/** Serialize a JSON object to a compact string. */
+	/** Serialize a JSON object to a compact string, as every reply is written. */
 	static FString JsonToString(const TSharedPtr<FJsonObject>& Obj);
 };

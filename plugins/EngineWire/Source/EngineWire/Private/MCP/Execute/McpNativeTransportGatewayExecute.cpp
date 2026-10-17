@@ -10,6 +10,7 @@
 #include "MCP/Execute/McpNativeReceiptEnrichment.h"
 #include "MCP/Execute/McpNativeGatewayAuthorization.h"
 #include "MCP/Gateway/McpNativeGatewayGuidance.h"
+#include "MCP/Protocol/McpModernConsent.h"
 #include "Core/Security/McpPrequeueGate.h"
 #include "Foundation/McpIdempotencyLedger.h"
 #include "HAL/PlatformTime.h"
@@ -82,19 +83,46 @@ void FMcpNativeTransport::HandleGatewayExecute(
 			AuthRequest.Consent = *ConsentField;
 		}
 
-		const FMcpAuthorizationDecision Decision = McpPrequeueGate::Authorize(AuthRequest);
+		FMcpAuthorizationDecision Decision = McpPrequeueGate::Authorize(AuthRequest);
+		// A 2026-07-28 call that lacks only its grant asks the user through the client (McpModernConsent); their yes
+		// is the grant. The gate runs scope before consent, so nobody is asked about a call they could not make.
+		McpModernConsent::FOutcome Asked;
+		if (!Decision.bAllowed && Decision.ErrorCode == McpAuthorizationCodes::ConsentRequired && !AuthRequest.Consent.IsValid())
+		{
+			Asked = McpModernConsent::Resolve(Principal.Identity, Plan.CapabilityId,
+				McpPrequeueGate::ResolveDemand(AuthRequest).ConsentMode, Plan.ParentTool + TEXT(".") + Plan.LegacyAction,
+				Plan.Arguments);
+			if (Asked.Ask.IsValid() || Asked.bInvalidState)
+			{
+				SendHttpResponse(ClientSocket, 200, TEXT("application/json"), Asked.bInvalidState
+					? McpModernConsent::InvalidStateError(Id) : FMcpJsonRpc::BuildResponse(Id, Asked.Ask), {}, CorsOrigin);
+				ClientSocket->Close();
+				if (SocketSub) SocketSub->DestroySocket(ClientSocket);
+				return;
+			}
+			if (Asked.Grant.IsValid())
+			{
+				AuthRequest.Consent = Asked.Grant;
+				Decision = McpPrequeueGate::Authorize(AuthRequest);
+			}
+			else if (!Asked.Declined.IsEmpty())
+			{
+				Decision.Message = Asked.Declined;
+			}
+		}
 		if (!Decision.bAllowed)
 		{
 			UE_LOG(LogMcpNativeTransport, Warning,
 				TEXT("gateway execute refused by policy before dispatch (%s, correlationId=%s)"),
 				*Decision.ErrorCode, *Context.CorrelationId);
 			// Mirrors checkScopeAuthorization/checkConsentAuthorization in
-			// gateway-execute-policy.ts, which emit this same nextCall.
+			// gateway-execute-policy.ts, which emit this same nextCall. Not after the user said no: describe's
+			// grant would run what they just refused.
 			TSharedPtr<FJsonObject> Guidance = MakeShared<FJsonObject>();
 			Guidance->SetObjectField(TEXT("nextCall"),
 				GatewayBuildNextCall(TEXT("describe"), Plan.ParentTool, Plan.LegacyAction, FString()));
-			SendReceipt(McpBuildErrorReceipt(
-				Plan.CapabilityId, McpAuthorizationSemanticError(Decision), Context, Guidance));
+			SendReceipt(McpBuildErrorReceipt(Plan.CapabilityId, McpAuthorizationSemanticError(Decision), Context,
+				Asked.Declined.IsEmpty() ? Guidance : TSharedPtr<FJsonObject>()));
 			return;
 		}
 	}

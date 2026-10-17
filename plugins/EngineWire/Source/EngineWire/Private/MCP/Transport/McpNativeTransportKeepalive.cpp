@@ -1,5 +1,6 @@
 #include "MCP/Transport/McpNativeTransportPrivate.h"
 #include "MCP/Execute/McpNativeGatewayReceipt.h"
+#include "MCP/Protocol/McpModernRequest.h"
 #include "Foundation/McpScreenshotResample.h" // McpShaderWaitMaxSeconds
 
 // ─── Keepalive Loop (dedicated thread) ──────────────────────────────────────
@@ -133,8 +134,9 @@ void FMcpNativeTransport::AnswerStillRunning(const FString& RequestId)
 	}
 
 	// Kept before the answer goes out, so a get_task_result sent the moment it arrives finds the task.
-	TaskResults.NoteRunning(RequestId, GetSessionPrincipal(Conn->SessionId).Identity);
 	const double Elapsed = FPlatformTime::Seconds() - Conn->StartTime;
+	const FDateTime Now = FDateTime::UtcNow();
+	TaskResults.NoteRunning(RequestId, GetSessionPrincipal(Conn->SessionId).Identity, Now - FTimespan::FromSeconds(Elapsed));
 	const bool bWaiting = Subsystem && Subsystem->IsAutomationRequestWaiting(RequestId);
 	const FString Work = EngineWire::DescribeEditorWork(RequestId);
 	const FString Message = bWaiting
@@ -168,8 +170,17 @@ void FMcpNativeTransport::AnswerStillRunning(const FString& RequestId)
 		Context.Provenance = Conn->Provenance;
 		Result = McpBuildSuccessReceipt(Conn->CapabilityId, Data, Context, Raw, Message);
 	}
-	const FString Body = FMcpJsonRpc::BuildResponse(
-		Conn->JsonRpcId, FMcpJsonRpc::BuildToolResult(true, Message, Result, FString()));
+	TSharedPtr<FJsonObject> ToolResult = FMcpJsonRpc::BuildToolResult(true, Message, Result, FString());
+	if (Conn->bModern)
+	{
+		McpModern::StampResult(TEXT("tools/call"), ToolResult);
+	}
+	// A client with the tasks extension gets a task handle in place of the result and polls tasks/get for it.
+	const FString Body = FMcpJsonRpc::BuildResponse(Conn->JsonRpcId, Conn->bTasks
+		? McpModern::TaskObject(RequestId, TEXT("working"),
+			bWaiting ? FString::Printf(TEXT("Queued: Unreal is %s"), Work.IsEmpty() ? TEXT("busy") : *Work) : Work,
+			Now - FTimespan::FromSeconds(Elapsed), Now, TEXT("task"))
+		: ToolResult);
 	{
 		FScopeLock WriteLock(&Conn->WriteMutex);
 		if (Conn->Socket)

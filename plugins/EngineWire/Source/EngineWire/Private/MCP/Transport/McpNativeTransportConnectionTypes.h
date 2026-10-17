@@ -27,6 +27,8 @@ struct FParsedHttpRequest
 	FString CapabilityToken;  // from X-MCP-Capability-Token header
 	FString Origin;      // from Origin header for browser CORS validation
 	FString ProtocolVersion;  // from MCP-Protocol-Version header (post-initialize)
+	FString McpMethod;   // from Mcp-Method header (2026-07-28)
+	FString McpName;     // from Mcp-Name header (2026-07-28), as sent
 	int32 ContentLength = 0;
 };
 
@@ -95,6 +97,10 @@ struct FSSEConnection
 	TArray<FString> GatewayWarnings;
 	// resolvedFromAlias / migratedFrom of the request (FMcpReceiptContext::Provenance).
 	TSharedPtr<FJsonObject> Provenance;
+	// A 2026-07-28 call (McpModern::Current() at dispatch): its result carries resultType, and with the tasks
+	// extension a call still open at the client's time limit answers a task the client polls.
+	bool bModern = false;
+	bool bTasks = false;
 };
 
 /** Persistent SSE notification stream (GET /mcp). */

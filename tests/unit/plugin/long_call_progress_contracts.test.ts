@@ -59,15 +59,15 @@ describe('an open call hears from the editor even while the game thread is held'
   // Past the answer the call's own reply went only to the log; a client could not read it.
   it('keeps an answered call and its outcome for manage_tools get_task_result, readable only by its sender', () => {
     const answer = body(keepalive, 'void FMcpNativeTransport::AnswerStillRunning(');
-    expect(answer).toContain('TaskResults.NoteRunning(RequestId, GetSessionPrincipal(Conn->SessionId).Identity);');
+    expect(answer).toContain('TaskResults.NoteRunning(RequestId, GetSessionPrincipal(Conn->SessionId).Identity, ');
     expect(answer.indexOf('TaskResults.NoteRunning(')).toBeLessThan(answer.indexOf('SendSSEFrame('));
     expect(answer).toContain('manage_tools get_task_result taskId %s');
     const pending = code('Private/MCP/Transport/McpNativeTransportPendingRequests.cpp');
-    expect(pending).toContain('TaskResults.NoteDone(RequestId, McpTaskOutcome(bReportedSuccess, ReportedMessage, ReportedErrorCode, ReportedResult));');
+    expect(pending).toContain('TaskResults.NoteDone(RequestId, McpTaskOutcome(bReportedSuccess, ReportedMessage, ReportedErrorCode, ReportedResult), ToolResult);');
     const local = code('Private/MCP/Transport/McpNativeTransportDynamicTools.cpp');
     expect(local).toContain('if (Action == TEXT("get_task_result"))');
-    expect(local).toContain('TaskResults.Find(TaskId, GetSessionPrincipal(SessionId).Identity, Outcome)');
-    expect(code('Private/MCP/DynamicTools/McpTaskResults.cpp')).toContain('Entry->Principal != Principal');
+    expect(local).toContain('TaskResults.Find(TaskId, GetSessionPrincipal(SessionId).Identity, Task)');
+    expect(code('Private/MCP/DynamicTools/McpTaskResults.cpp')).toContain('!Entry->Principal.Equals(Principal, ESearchCase::CaseSensitive)');
   });
 
   it('never takes the execution lock a running handler holds', () => {

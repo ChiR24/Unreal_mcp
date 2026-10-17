@@ -2,6 +2,7 @@
 #include "MCP/Execute/McpNativeGatewayAuthorization.h"
 #include "MCP/Gateway/McpNativeGatewayDefinition.h"
 #include "Foundation/Diagnostics/McpDiagnosticsSnapshot.h"
+#include "MCP/Protocol/McpModernRequest.h"
 #include "Misc/SecureHash.h"
 
 namespace
@@ -256,7 +257,8 @@ FString FMcpNativeTransport::HandleServerDiscover(const TSharedPtr<FJsonValue>& 
 {
 	auto Result = MakeShared<FJsonObject>();
 	Result->SetStringField(TEXT("resultType"), TEXT("complete"));
-	TArray<TSharedPtr<FJsonValue>> Versions;
+	// 2026-07-28 is served per request, with no session; the older versions through initialize.
+	TArray<TSharedPtr<FJsonValue>> Versions = {MakeShared<FJsonValueString>(McpModern::Version)};
 	for (const FString& Version : McpSupportedProtocolVersions())
 	{
 		Versions.Add(MakeShared<FJsonValueString>(Version));
@@ -265,6 +267,10 @@ FString FMcpNativeTransport::HandleServerDiscover(const TSharedPtr<FJsonValue>& 
 	auto Meta = MakeShared<FJsonObject>();
 	Meta->SetObjectField(TEXT("io.modelcontextprotocol/serverInfo"), DescribeServer(Result));
 	Result->SetObjectField(TEXT("_meta"), Meta);
+	// The tasks extension: a 2026-07-28 call still open near the client's time limit answers a task to poll.
+	auto Extensions = MakeShared<FJsonObject>();
+	Extensions->SetObjectField(TEXT("io.modelcontextprotocol/tasks"), MakeShared<FJsonObject>());
+	Result->GetObjectField(TEXT("capabilities"))->SetObjectField(TEXT("extensions"), Extensions);
 	// Nothing here changes while the editor runs: an hour-long, shareable cache hint.
 	Result->SetNumberField(TEXT("ttlMs"), 3600000);
 	Result->SetStringField(TEXT("cacheScope"), TEXT("public"));

@@ -242,7 +242,7 @@ const SPECS: readonly Omit<CoreRecordSpec, 'parentTool' | 'domain'>[] = [
     required: ['taskId'],
     outputProps: {
       taskId: { type: 'string', description: 'The task read.' },
-      state: { type: 'string', enum: ['queued', 'running', 'done'], description: 'queued (waiting for the editor), running, or done.' },
+      state: { type: 'string', enum: ['queued', 'running', 'done', 'cancelled'], description: 'queued (waiting for the editor), running, done, or cancelled (cancelled by the client before it ran).' },
       progress: { type: 'number', description: 'While running, the share done (0-1) when the call reports progress.' },
       outcome: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Once done: the call\'s own reply as it would have answered (success, message, errorCode, data, and its receipt with what changed).' },
     },
