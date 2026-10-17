@@ -54,8 +54,10 @@ AActor* FindLevelActorForBinding(ULevel& Level, const FString& Name, FString& Ou
                                    *LevelName, *Name, *FString::Join(Names, TEXT(", ")));
         return nullptr;
     }
-    OutCode = TEXT("ACTOR_NOT_FOUND");
+    // An actor of another loaded level gets its own code: ACTOR_NOT_FOUND brings both gateways' "No actor in the world
+    // is named ..." hint, which is wrong for an actor that is there.
     const AActor* Elsewhere = FindActorByNameInWorldForMcp(Level.OwningWorld, Name, true);
+    OutCode = Elsewhere && Elsewhere->GetLevel() ? TEXT("ACTOR_IN_OTHER_LEVEL") : TEXT("ACTOR_NOT_FOUND");
     OutError = Elsewhere && Elsewhere->GetLevel()
         ? FString::Printf(TEXT("Actor '%s' is in level %s, not %s: a level Blueprint references only its own level's "
                                "actors, so edit %s's (levelPath)."),

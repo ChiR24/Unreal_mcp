@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "110d17139a5555fb",
+  "catalogRevision": "ea836e959a0fc38e",
   "recordCount": 416,
   "records": [
     {
@@ -76211,7 +76211,7 @@
             },
             "actorName": {
               "type": "string",
-              "description": "Placed actor (label, name or object path) in the edited level that a K2Node_ActorBoundEvent fires for or a K2Node_Literal references; required by both, refused for other nodes. A label two actors share is refused with their names."
+              "description": "Placed actor (label, name or object path) in the edited level that a K2Node_ActorBoundEvent fires for or a K2Node_Literal references; required by both, refused for other nodes. A label two actors share is refused with their names, and an actor of another loaded level with that level (ACTOR_IN_OTHER_LEVEL)."
             },
             "eventName": {
               "type": "string",
@@ -76378,8 +76378,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "10f492aed38c743e9672f81f7753ff94e44057715abcd7480cf9b997b96d777c",
-        "content": "3b9d5aab4feb6df11fe9f92c4c2653a54c36668a90c402bd663fcd314bcd6b74"
+        "schema": "4906ce395b532700091f9653decac60ac08144a66f855ea4f6e5536a487582c3",
+        "content": "4f66ccd05fac46d7d4f7459f2933676279ae2eb57baca8840e7d199ce83acec6"
       }
     },
     {
