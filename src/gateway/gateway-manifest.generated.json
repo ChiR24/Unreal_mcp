@@ -4941,6 +4941,7 @@
         "ignoreActors",
         "info",
         "kind",
+        "labels",
         "limit",
         "location",
         "lookup",
@@ -4953,6 +4954,7 @@
         "offset",
         "outputPath",
         "passes",
+        "points",
         "properties",
         "propertyName",
         "propertyNames",
@@ -5085,6 +5087,10 @@
             "description": "Which inspect class variant to run; omit for 'class'.",
             "default": "class"
           },
+          "labels": {
+            "type": "boolean",
+            "description": "Also return the frame (at most 960 px wide) with each actor listed under actors boxed in its own colour and numbered from 1 in list order, as an image (imageBase64)."
+          },
           "limit": {
             "type": "number",
             "description": "Maximum objects to return (default 100)."
@@ -5187,6 +5193,32 @@
               ]
             },
             "description": "Passes to write (default all three)."
+          },
+          "points": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 64,
+            "items": {
+              "type": "object",
+              "required": [
+                "x",
+                "y"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "x": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "y": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                }
+              }
+            },
+            "description": "Spots of the frame as {x, y} from 0 to 1 (x from the left, y from the top; 0.5, 0.5 is the middle): each answers under points at the same index with what is drawn there and what the line from the camera through it hits. A perspective viewport only."
           },
           "properties": {
             "oneOf": [

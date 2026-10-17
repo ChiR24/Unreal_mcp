@@ -161,6 +161,7 @@ bool HandleInspectViewContentsAction(
     const FVector Camera = Client->GetViewLocation();
     const auto Percent = [Samples](int64 Count) { return McpViewRound(100.0 * Count / Samples, 100.0); };
     TArray<TSharedPtr<FJsonValue>> Listed;
+    TArray<FIntRect> ListedBoxes;
     for (const FMcpViewActor &Row : Rows)
     {
         if (Requested && !Named.Contains(Row.Actor))
@@ -187,6 +188,18 @@ bool HandleInspectViewContentsAction(
                                                : FVector::Dist(Row.Actor->GetActorLocation(), Camera);
         Item->SetNumberField(TEXT("distance"), FMath::RoundToDouble(Distance));
         Listed.Add(MakeShared<FJsonValueObject>(Item));
+        ListedBoxes.Add(FIntRect(Row.MinX, Row.MinY, FMath::Min(Row.MaxX + McpViewStride, Size.X),
+                                 FMath::Min(Row.MaxY + McpViewStride, Size.Y)));
+    }
+    // points: what is under spots of the frame, as drawn and in the world.
+    const TArray<TSharedPtr<FJsonValue>> *Points = nullptr;
+    TArray<TSharedPtr<FJsonValue>> PointRows;
+    FString PointError;
+    if (Payload->TryGetArrayField(TEXT("points"), Points) && Points &&
+        !McpDescribeViewPoints(*Client, Size, Ids, Proxies, *Points, PointRows, PointError))
+    {
+        Bridge.SendAutomationError(RequestingSocket, RequestId, PointError, TEXT("INVALID_ARGUMENT"));
+        return true;
     }
 
     const auto Percentile = [&Histogram, Samples](double Fraction) {
@@ -220,6 +233,16 @@ bool HandleInspectViewContentsAction(
     {
         Result->SetArrayField(TEXT("notVisible"), NotVisible);
         Result->SetArrayField(TEXT("notFound"), NotFound);
+    }
+    if (Points)
+    {
+        Result->SetArrayField(TEXT("points"), PointRows);
+    }
+    // labels: the frame with each actor listed above boxed and numbered in list order, returned as an image.
+    if (GetJsonBoolField(Payload, TEXT("labels"), false))
+    {
+        Result->SetStringField(TEXT("imageBase64"), McpLabelledViewPng(Colors, Size, ListedBoxes));
+        Result->SetStringField(TEXT("mimeType"), TEXT("image/png"));
     }
     McpHandlerUtils::MarkNoAssetsChanged(Result);
     const FString Message = Requested

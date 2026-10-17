@@ -8,6 +8,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 
 ### Added
 - **Blueprint runtime errors** in Play name their node, graph and Blueprint in frame steps and motion reads; `runtime_report` lists the session's errors with the object's variables.
+- **`describe_view` `points` and `labels`**: per normalized spot, the actor its hit-proxy pixel draws and the Visibility trace through it from the view camera; the frame (at most 960 px wide) with the listed actors' boxes numbered, as a PNG image.
 - **MCP 2026-07-28 on `/mcp`**: per-request version with no session (the one `server/discover` lists, as the SDK does), `Mcp-Method`/`Mcp-Name` checks, `resultType` and cache hints, consent through client elicitation (signed `requestState`), and the tasks extension (`tasks/get`, `tasks/cancel`).
 
 ### Fixed

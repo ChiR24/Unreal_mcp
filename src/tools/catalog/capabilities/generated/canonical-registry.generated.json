@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "094239cbccd29833",
+  "catalogRevision": "01ce8d5962864c25",
   "recordCount": 416,
   "records": [
     {
@@ -44859,12 +44859,19 @@
           "in shot",
           "visible actors",
           "frame brightness",
-          "too dark"
+          "too dark",
+          "what is at this point on screen",
+          "screen point to world",
+          "deproject",
+          "labelled screenshot",
+          "numbered boxes"
         ],
-        "summary": "Describe what the level viewport's camera sees, as text: each actor in view with its share of the frame, its box on screen, how bright it is drawn and its distance, the share that is background (sky, void), and the frame's brightness; or only the actors named, with what hides each one that is not seen. location and rotation place the camera first, as control_editor screenshot takes them.",
+        "summary": "Describe what the level viewport's camera sees, as text: each actor in view with its share of the frame, its box on screen, how bright it is drawn and its distance, the share that is background (sky, void), and the frame's brightness; or only the actors named, with what hides each one that is not seen. points names what is under spots of the frame and where they are in the world; labels returns the frame with each listed actor boxed and numbered. location and rotation place the camera first, as control_editor screenshot takes them.",
         "whenToUse": [
           "A shot must be checked without looking at a picture: is the subject in view, how much of the frame it fills, where it sits, whether it is lit or lost in the dark.",
-          "A camera placement must be compared or tuned by numbers (subject coverage, sky share, brightness)."
+          "A camera placement must be compared or tuned by numbers (subject coverage, sky share, brightness).",
+          "A spot of the frame (from a screenshot, a click, a box) must be turned into an actor and a world location: points.",
+          "A picture where every actor is boxed and numbered to match the list is wanted, to point at one by number: labels."
         ],
         "whenNotToUse": [
           "A picture is wanted (use control_editor screenshot).",
@@ -44923,6 +44930,36 @@
             "limit": {
               "type": "number",
               "description": "Most actors to list, largest share first (default 20, at most 100); visibleActors counts them all."
+            },
+            "points": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 64,
+              "items": {
+                "type": "object",
+                "required": [
+                  "x",
+                  "y"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  }
+                }
+              },
+              "description": "Spots of the frame as {x, y} from 0 to 1 (x from the left, y from the top; 0.5, 0.5 is the middle): each answers under points at the same index with what is drawn there and what the line from the camera through it hits. A perspective viewport only."
+            },
+            "labels": {
+              "type": "boolean",
+              "description": "Also return the frame (at most 960 px wide) with each actor listed under actors boxed in its own colour and numbered from 1 in list order, as an image (imageBase64)."
             }
           },
           "required": [
@@ -45017,6 +45054,23 @@
                 "type": "string"
               },
               "description": "With actors: the names that match no actor."
+            },
+            "points": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "With points, one per spot: x, y; drawn (actor, editor for what only the editor draws, or background); actorName, the actor drawn there; and hit, what the line from the camera through the spot hits first against Visibility collision: location, normal, distance (cm), actorName and componentName. A drawn actor with no collision is passed through, so hit can name what is behind it; no hit means nothing within 20 km."
+            },
+            "imageBase64": {
+              "type": "string",
+              "description": "With labels: the frame as a PNG, base64, with each listed actor boxed and numbered; returned as an image."
+            },
+            "mimeType": {
+              "type": "string",
+              "description": "With labels: image/png."
             }
           },
           "required": [
@@ -45031,7 +45085,7 @@
       },
       "examples": [
         {
-          "title": "Describe what the level viewport's camera sees, as text: each actor in view with its share of the frame, its box on screen, how bright it is drawn and its distance, the share that is background (sky, void), and the frame's brightness; or only the actors named, with what hides each one that is not seen. location and rotation place the camera first, as control_editor screenshot takes them.",
+          "title": "Describe what the level viewport's camera sees, as text: each actor in view with its share of the frame, its box on screen, how bright it is drawn and its distance, the share that is background (sky, void), and the frame's brightness; or only the actors named, with what hides each one that is not seen. points names what is under spots of the frame and where they are in the world; labels returns the frame with each listed actor boxed and numbered. location and rotation place the camera first, as control_editor screenshot takes them.",
           "input": {
             "action": "describe_view",
             "location": {
@@ -45127,8 +45181,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "7f77935fb4404a24ed09030c12fe63a13f95a4e2a5f75c22ed053554b36e4536",
-        "content": "4439f5376f16c76d13d18e6da5aadc554054098797b04e699f3b8d5eef266995"
+        "schema": "92c437805d5376931813d30a6db2ecb814a77f84c11ae1edf658ae4383087d31",
+        "content": "eb4d1e3108753c2447513db5b15572b62559e7d34939b3e624506cefe4d65eac"
       }
     },
     {

@@ -2512,6 +2512,31 @@ describe('describe_view counts what the game draws in the camera view', () => {
     expect(unseen).toContain('Row->SetNumberField(TEXT("inFrame"), InFrame);');
     expect(unseen).toContain('InFrame < 50.0 ? TEXT("at the edge of the frame, mostly outside it")');
   });
+
+  // A spot of a picture could not be turned into the actor and the world point under it, and a picture could not
+  // point at an actor by number.
+  it('answers points from the id drawn there and a line through the same camera, and numbers the listed boxes', () => {
+    const view = code('Environment', 'Inspection', 'McpEnvInspectViewContents.cpp');
+    expect(view).toContain('!McpDescribeViewPoints(*Client, Size, Ids, Proxies, *Points, PointRows, PointError)');
+    expect(view).toContain('Result->SetStringField(TEXT("imageBase64"), McpLabelledViewPng(Colors, Size, ListedBoxes));');
+    const points = code('Environment', 'Inspection', 'McpEnvInspectViewPoints.cpp');
+    expect(points, 'the inverse of the unseen projection, horizontal FOV').toContain('const double TanY = TanX * Size.Y / Size.X;');
+    expect(points).toContain('Axes.GetScaledAxis(EAxis::Z) * ((1.0 - 2.0 * Y) * TanY)).GetSafeNormal();');
+    expect(points).toContain('World->LineTraceSingleByChannel(Hit, Camera, Camera + Direction * McpViewTraceLength, ECC_Visibility, Params)');
+    expect(points).toContain('if (Client.IsOrtho())');
+    expect(points, 'one digit glyph per 3 x 5 bitmask').toContain('constexpr uint16 McpDigits[10] = {0x7B6F, 0x2C97, 0x73E7, 0x73CF, 0x5BC9, 0x79CF, 0x79EF, 0x7249, 0x7BEF, 0x7BCF};');
+    expect(points, 'the labelled frame stays far under the reply cap').toContain('constexpr int32 McpLabelWidth = 960;');
+  });
+
+  it('draws every label digit as its 3 x 5 shape', () => {
+    const points = code('Environment', 'Inspection', 'McpEnvInspectViewPoints.cpp');
+    const masks = /McpDigits\[10\] = \{([^}]*)\}/u.exec(points)?.[1].split(',').map((hex) => Number.parseInt(hex.trim(), 16)) ?? [];
+    const shapes = masks.map((mask) => mask.toString(2).padStart(15, '0').match(/.{3}/gu)?.join(' '));
+    expect(shapes).toEqual([
+      '111 101 101 101 111', '010 110 010 010 111', '111 001 111 100 111', '111 001 111 001 111', '101 101 111 001 001',
+      '111 100 111 001 111', '111 100 111 101 111', '111 001 001 001 001', '111 101 111 101 111', '111 101 111 001 111'
+    ]);
+  });
 });
 
 // A frame could only be judged by eye: no pass said which actor a region belongs to, how far it is or which way it

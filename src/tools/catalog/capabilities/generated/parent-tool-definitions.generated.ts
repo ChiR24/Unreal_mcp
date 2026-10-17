@@ -6489,6 +6489,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Which inspect class variant to run; omit for 'class'.",
           "default": "class"
         },
+        "labels": {
+          "type": "boolean",
+          "description": "Also return the frame (at most 960 px wide) with each actor listed under actors boxed in its own colour and numbered from 1 in list order, as an image (imageBase64)."
+        },
         "limit": {
           "type": "number",
           "description": "Maximum objects to return (default 100)."
@@ -6591,6 +6595,32 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             ]
           },
           "description": "Passes to write (default all three)."
+        },
+        "points": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": {
+            "type": "object",
+            "required": [
+              "x",
+              "y"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "x": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "y": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              }
+            }
+          },
+          "description": "Spots of the frame as {x, y} from 0 to 1 (x from the left, y from the top; 0.5, 0.5 is the middle): each answers under points at the same index with what is drawn there and what the line from the camera through it hits. A perspective viewport only."
         },
         "properties": {
           "oneOf": [
@@ -7316,6 +7346,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "id: each actor in the id image, largest first (up to 256): color (#rrggbb in the PNG), name (actor label), class and coverage (percent of the frame). Black is background (sky, void), dark grey (#404040) what only the editor draws."
         },
+        "imageBase64": {
+          "type": "string",
+          "description": "With labels: the frame as a PNG, base64, with each listed actor boxed and numbered; returned as an image."
+        },
         "instancesUpdated": {
           "type": "number",
           "description": "A write to a class default or component template: how many placed copies, and derived Blueprints' defaults with their own copies, still held the old default and took the new one, as the details panel does; one that overrides the value keeps it. Absent for any other target."
@@ -7434,6 +7468,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "message": {
           "type": "string",
           "description": "Human-readable result message."
+        },
+        "mimeType": {
+          "type": "string",
+          "description": "With labels: image/png."
         },
         "missingComponents": {
           "type": "array",
@@ -7567,6 +7605,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "playerController": {
           "type": "string",
           "description": "Object path of the active PlayerController (inspect_object it for details)."
+        },
+        "points": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "With points, one per spot: x, y; drawn (actor, editor for what only the editor draws, or background); actorName, the actor drawn there; and hit, what the line from the camera through the spot hits first against Visibility collision: location, normal, distance (cm), actorName and componentName. A drawn actor with no collision is passed through, so hit can name what is behind it; no hit means nothing within 20 km."
         },
         "projectDir": {
           "type": "string",
