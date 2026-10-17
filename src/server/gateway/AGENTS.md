@@ -1,6 +1,6 @@
 # src/server/gateway/ — GATEWAY ROUTING ENGINE
 
-24 source modules (+ 3 colocated tests) own search/describe/execute/configure for the `unreal` gateway tool. They decide what to call and how to shape the request; the plugin does the work.
+26 source modules (+ 5 colocated tests) own search/describe/execute/configure for the `unreal` gateway tool. They decide what to call and how to shape the request; the plugin does the work.
 
 `src/gateway/` (sibling) is only the generated manifest data + loader. Never route through it at runtime.
 
@@ -20,6 +20,7 @@ Entry: `src/server/tool-registry-gateway.ts` → `handleUnrealGatewayCall()` swi
 | `gateway-option-validate.ts` | execution-option rules (keys, timeout bounds, idempotency key, `expectedRevisions`) |
 | `gateway-schema-validate.ts` | Draft-2020-12 subset validator: fail-closed on unknown keywords, `UNDECLARED_PARAMETER`, declared defaults |
 | `gateway-execute-policy.ts` | catalog-revision, scope and consent checks |
+| `gateway-execute-consent.ts` | consent asked through a 2026-07-28 client: the yes/no question, its signed `requestState` (`consentStateCodec`, verified by the SDK before the handler runs), and the retry's grant with the nonce the plugin burns once; native mirror `Private/MCP/Protocol/McpModernConsent` |
 | `gateway-dispatch-by.ts` | folded families: `applyFoldedPins()` and `inferSelector()` before validation, `resolveDispatchAction()` after; `unreadVariantParams()` warns about a sent param only other variants read |
 | `gateway-execute-dispatch.ts` | `runCapability()` → `handleManageToolsCall` (manage_tools) or `executeAutomationRequest(tools, parentTool, { ...params, action }, controls)`; output held to the declared schema |
 | `gateway-execute-idempotency.ts`, `idempotency-ledger.ts` | principal-scoped ledger (cap 1024; native mirror cap 4096 — change both) |

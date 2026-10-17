@@ -112,11 +112,19 @@ and `instructions` as `initialize`, the server identity under
 and `cacheScope: "public"`. On native, `capabilities.extensions` also lists
 `io.modelcontextprotocol/tasks`.
 
-### 2026-07-28 on the native transport
+### 2026-07-28 requests
 
-A request whose `params._meta["io.modelcontextprotocol/protocolVersion"]` is
-`2026-07-28` needs no `initialize` and no `Mcp-Session-Id`; its client capabilities
-ride in the same `_meta`. The native transport:
+Both transports serve a request whose
+`params._meta["io.modelcontextprotocol/protocolVersion"]` is `2026-07-28` with no
+`initialize` and no session; its client capabilities ride in the same `_meta`. The
+stdio server does it through the MCP SDK v2 (`serveStdio`), which picks the era from
+the opening message, stamps `resultType` and the cache hints, refuses `ping`, and
+verifies a signed `requestState` before the handler runs; it asks for consent through
+the client exactly as the native transport does (below). Long calls keep the
+"still running" answer and `manage_tools get_task_result` there: the SDK cannot answer
+`tools/call` with a task.
+
+The native transport:
 
 - requires `MCP-Protocol-Version`, `Mcp-Method` and (for `tools/call`,
   `resources/read`, `prompts/get`) `Mcp-Name` headers that match the body
@@ -146,9 +154,9 @@ TypeScript stdio server negotiates through the MCP SDK's
 - `2024-10-07`
 
 A client pinned to a legacy version therefore negotiates with the TS surface
-but not the native surface. `2026-07-28` is served per request on native (above)
-and is not an `initialize` version, so `McpSupportedProtocolVersions` still ends
-the negotiable set at `2025-11-25`.
+but not the native surface. `2026-07-28` is served per request on both (above) and is
+not an `initialize` version, so `McpSupportedProtocolVersions` still ends the
+negotiable set at `2025-11-25`.
 
 ## Cancellation
 
