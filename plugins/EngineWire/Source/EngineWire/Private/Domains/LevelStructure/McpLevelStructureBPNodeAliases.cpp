@@ -1,4 +1,4 @@
-// McpLevelStructureBPNodeAliases.cpp — friendly node names for add_level_blueprint_node.
+// McpLevelStructureBPNodeAliases.cpp — friendly node names and member binding for add_level_blueprint_node.
 //
 // Dogfood #160/#164: callers reach for "EventBeginPlay" or "PrintString"; only raw
 // K2Node_* class names used to resolve, and the created event/function nodes carried
@@ -15,11 +15,13 @@
 #include "Domains/LevelStructure/McpLevelStructureActions.h"
 
 #include "Domains/BlueprintGraph/McpBPGraphPrivate.h"
+#include "Components/ActorComponent.h"
 #include "Foundation/BridgeHelpers/Reflection/McpClassResolve.h"
 #include "GameFramework/Actor.h"
 #include "K2Node_CallFunction.h"
 #include "K2Node_Event.h"
 #include "K2Node_MacroInstance.h"
+#include "K2Node_Variable.h"
 #include "Kismet/KismetSystemLibrary.h"
 
 namespace McpLevelStructure
@@ -229,5 +231,64 @@ bool ApplyLevelBlueprintNodeAlias(UK2Node* Node, const FString& EventName, const
         return true;
     }
     return true;
+}
+
+// A variable node made by class name had no member, so no pins, and the add still reported success; a component
+// function (a light's SetLightColor) needs that component, which only a getter on the actor's class reads.
+bool BindLevelBlueprintVariableNode(UK2Node* Node, UBlueprint* LevelBP, const FString& MemberName,
+                                    const FString& MemberClass, FString& OutError, FString& OutCode)
+{
+    UK2Node_Variable* VariableNode = Cast<UK2Node_Variable>(Node);
+    OutCode = TEXT("INVALID_ARGUMENT");
+    if (!VariableNode)
+    {
+        OutError = TEXT("memberName applies to a K2Node_VariableGet or K2Node_VariableSet only; a function goes in functionName.");
+        return MemberName.IsEmpty();
+    }
+    if (MemberName.IsEmpty())
+    {
+        OutError = FString::Printf(TEXT("%s needs memberName: a level Blueprint variable, or with memberClass a property of "
+                                        "that class, such as a placed actor's component (PointLightComponent on PointLight)."),
+                                   *Node->GetClass()->GetName());
+        return false;
+    }
+    UClass* Owner = nullptr;
+    bool bOwnVariable = false;
+    FProperty* Property = McpBlueprintGraphHandlers::ResolveVariableMember(LevelBP, FName(*MemberName), MemberClass, Owner, bOwnVariable);
+    if (Property || bOwnVariable)
+    {
+        McpBlueprintGraphHandlers::SetVariableReference(*VariableNode, LevelBP, Property, Owner, bOwnVariable, FName(*MemberName));
+        return true;
+    }
+    if (!MemberClass.IsEmpty() && !Owner)
+    {
+        OutError = FString::Printf(TEXT("memberClass '%s' is not a class: pass a native class name (PointLight) or a "
+                                        "Blueprint asset path."), *MemberClass);
+        return false;
+    }
+    OutCode = TEXT("VARIABLE_NOT_FOUND");
+    if (!Owner)
+    {
+        OutError = FString::Printf(TEXT("'%s' is not a variable of the level Blueprint; for a property of another class, "
+                                        "such as a placed actor's component, pass memberClass (PointLight for "
+                                        "PointLightComponent)."), *MemberName);
+        return false;
+    }
+    // The component properties memberClass has, the names a component getter takes.
+    TArray<FString> Components;
+    for (TFieldIterator<FObjectPropertyBase> It(Owner); It; ++It)
+    {
+        if (It->HasAnyPropertyFlags(CPF_BlueprintVisible) && It->PropertyClass &&
+            It->PropertyClass->IsChildOf(UActorComponent::StaticClass()))
+        {
+            Components.Add(It->GetName());
+        }
+    }
+    OutError = FString::Printf(TEXT("%s has no property '%s'."), *Owner->GetName(), *MemberName);
+    if (Components.Num() > 0)
+    {
+        OutError += FString::Printf(TEXT(" Its components: %s."), *FString::Join(Components, TEXT(", ")));
+    }
+    return false;
 }
 }

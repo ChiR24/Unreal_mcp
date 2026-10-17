@@ -20707,7 +20707,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "memberClass": {
           "type": "string",
-          "description": "Class that declares functionName when it is not in the common Blueprint libraries: a native class name or a Blueprint asset path. The node's Target takes an object of that class, so an actor's function is fed from its K2Node_Literal, while a component's function (a light's SetLightColor is LightComponent's) needs that component, not the actor."
+          "description": "Class that declares functionName when it is not in the common Blueprint libraries, or memberName: a native class name or a Blueprint asset path. The node's Target (self pin) takes an object of that class, so an actor's function or component getter is fed from its K2Node_Literal, while a component's function (a light's SetLightColor is LightComponent's) takes the component that getter returns, not the actor."
+        },
+        "memberName": {
+          "type": "string",
+          "description": "Variable a K2Node_VariableGet or K2Node_VariableSet reads or writes, required by both and refused for other nodes: a level Blueprint variable, or with memberClass a property of that class, such as a placed actor's component (PointLightComponent on PointLight, StaticMeshComponent on StaticMeshActor). A wrong name is refused with that class's components listed (VARIABLE_NOT_FOUND)."
         },
         "nodeClass": {
           "type": "string",

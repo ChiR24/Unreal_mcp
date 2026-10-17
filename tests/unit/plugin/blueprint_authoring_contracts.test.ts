@@ -406,7 +406,7 @@ describe('a Blueprint asset path resolves wherever a graph node takes a class', 
     const special = read('Domains', 'BlueprintGraph', 'McpBPGraphSpecialNodes.cpp');
     expect(special).toContain('TargetClass = ResolveTargetClassFromString(TargetClassName);');
     expect(read('Domains', 'BlueprintGraph', 'McpBPGraphVariableNodes.cpp'))
-      .toContain('OwnerClass = ResolveTargetClassFromString(MemberClassName);');
+      .toContain('OutOwner = OutOwner ? OutOwner : ResolveTargetClassFromString(MemberClassName);');
     expect(read('Domains', 'BlueprintGraph', 'McpBPGraphFunctionEventNodes.cpp'))
       .toContain('TargetClass = ResolveTargetClassFromString(MemberClass);');
   });

@@ -21,6 +21,7 @@
 #include "Foundation/GraphLayout/McpGraphOverlap.h"
 
 class UK2Node_CallFunction;
+class UK2Node_Variable;
 
 namespace McpBlueprintGraphHandlers
 {
@@ -247,6 +248,16 @@ bool TryCreateCommonFunctionNode(
 // VariableGet, GetVariable or K2Node_VariableGet, any case (the Set forms set
 // bOutIsSet). Shared by create_node and the build_graph pre-check.
 bool ParseVariableNodeType(const FString& NodeType, bool& bOutIsSet);
+// The property a variable node names: VariableName on MemberClassName when given (a native class name or Blueprint
+// asset path; a placed actor's component is PointLightComponent on PointLight), else Blueprint's own variable
+// (bOutOwnVariable, no property yet) or one its class inherits. Null and no own variable when nothing matches;
+// OutOwner is then memberClass's class (null when it names none), the class a caller can list members of.
+FProperty* ResolveVariableMember(UBlueprint* Blueprint, FName VariableName, const FString& MemberClassName,
+                                 UClass*& OutOwner, bool& bOutOwnVariable);
+// Points Node at it, before its pins exist: a self member when Blueprint's class has it, else a member of Owner,
+// read from the object wired into the node's Target pin. Shared by create_node and the level Blueprint's add_node.
+void SetVariableReference(UK2Node_Variable& Node, UBlueprint* Blueprint, FProperty* Property, UClass* Owner,
+                          bool bOwnVariable, FName VariableName);
 bool TryCreateVariableNode(
     FActionContext& Context,
     const FString& NodeType,

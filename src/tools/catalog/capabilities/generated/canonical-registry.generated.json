@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "67ff78ff30b196f1",
+  "catalogRevision": "ab6a030a1df8411c",
   "recordCount": 416,
   "records": [
     {
@@ -76145,7 +76145,8 @@
           "level blueprint node",
           "actor bound event",
           "level blueprint overlap event",
-          "level blueprint actor reference"
+          "level blueprint actor reference",
+          "level blueprint component reference"
         ],
         "summary": "Edit the level Blueprint: open it, add or remove nodes, connect nodes.",
         "whenToUse": [
@@ -76153,6 +76154,7 @@
           "edit=add_node: A new node must be added to level scripting.",
           "edit=add_node: Level logic must react to a placed actor (K2Node_ActorBoundEvent with actorName and eventName) or use one (K2Node_Literal with actorName).",
           "edit=add_node: A function of a class outside the common Blueprint libraries must be called (K2Node_CallFunction with functionName and memberClass).",
+          "edit=add_node: A placed actor's component must be used, such as the light component whose SetLightColor changes a light (K2Node_VariableGet with memberClass and memberName, its self pin fed from the actor's K2Node_Literal).",
           "edit=connect_nodes: Two level blueprint nodes must be wired together.",
           "edit=remove_node: A level blueprint node must be deleted, or an unbound K2Node_CallFunction (\"Could not find a function named None\") must be repaired."
         ],
@@ -76207,7 +76209,11 @@
             },
             "memberClass": {
               "type": "string",
-              "description": "Class that declares functionName when it is not in the common Blueprint libraries: a native class name or a Blueprint asset path. The node's Target takes an object of that class, so an actor's function is fed from its K2Node_Literal, while a component's function (a light's SetLightColor is LightComponent's) needs that component, not the actor."
+              "description": "Class that declares functionName when it is not in the common Blueprint libraries, or memberName: a native class name or a Blueprint asset path. The node's Target (self pin) takes an object of that class, so an actor's function or component getter is fed from its K2Node_Literal, while a component's function (a light's SetLightColor is LightComponent's) takes the component that getter returns, not the actor."
+            },
+            "memberName": {
+              "type": "string",
+              "description": "Variable a K2Node_VariableGet or K2Node_VariableSet reads or writes, required by both and refused for other nodes: a level Blueprint variable, or with memberClass a property of that class, such as a placed actor's component (PointLightComponent on PointLight, StaticMeshComponent on StaticMeshActor). A wrong name is refused with that class's components listed (VARIABLE_NOT_FOUND)."
             },
             "actorName": {
               "type": "string",
@@ -76349,6 +76355,9 @@
             "memberClass": [
               "add_node"
             ],
+            "memberName": [
+              "add_node"
+            ],
             "actorName": [
               "add_node"
             ],
@@ -76378,8 +76387,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "2a2f51bf0bf007ca61da93950814bbcd577f3c78ad0f6d04a44283e468095c9c",
-        "content": "b1a6a718c61ed0fd79ff24570fe20f6a1c7ce0febdcce571011f4099c339068c"
+        "schema": "991f603eca86f090417c835b3a987ca3378567fcf52d41e9036e2bed2819095d",
+        "content": "894f788383e5b22b2db112aa988e1bcbc47dd8c316c4340d3b1d6ceaa9d3e1c1"
       }
     },
     {

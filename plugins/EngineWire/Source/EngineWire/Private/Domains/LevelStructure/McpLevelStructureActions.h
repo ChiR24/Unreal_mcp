@@ -11,6 +11,7 @@ class UPackage;
 class UWorld;
 class UWorldPartitionRuntimeHashSet;
 class UK2Node;
+class UBlueprint;
 class UDataLayerEditorSubsystem;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogMcpLevelStructureHandlers, Log, All);
@@ -40,6 +41,11 @@ bool ResolveLevelBlueprintNodeAlias(FString& InOutNodeClass, FString& OutEventNa
 // MemberClass, when given, is the class FunctionName is looked up on instead of the common libraries.
 bool ApplyLevelBlueprintNodeAlias(UK2Node* Node, const FString& EventName, const FString& FunctionName,
                                   const FString& MemberClass, FString& OutError);
+// A K2Node_VariableGet/Set reads MemberName: on MemberClass (a placed actor's component, PointLightComponent on
+// PointLight, its Target fed from the actor's K2Node_Literal) or the level Blueprint's own variable. False with
+// OutError and OutCode when nothing matches, or for any other node given a MemberName it would ignore.
+bool BindLevelBlueprintVariableNode(UK2Node* Node, UBlueprint* LevelBP, const FString& MemberName,
+                                    const FString& MemberClass, FString& OutError, FString& OutCode);
 bool HandleConnectLevelBlueprintNodes(UEngineWireSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 bool HandleGetLevelStructureInfo(UEngineWireSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 void CleanupCreatedLevelWorldAfterSave(UWorld* NewWorld, UPackage* Package, const FString& FullPath);
