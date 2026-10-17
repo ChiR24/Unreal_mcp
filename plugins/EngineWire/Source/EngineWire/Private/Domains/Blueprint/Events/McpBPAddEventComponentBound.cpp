@@ -1,6 +1,7 @@
 #include "Domains/Blueprint/McpBPActionContext.h"
 #include "Domains/BlueprintGraph/McpBPGraphCompatibility.h"
 #include "Foundation/BridgeHelpers/Assets/McpAssetSaveRegistry.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpBPActorBinding.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPCompileHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
@@ -95,21 +96,11 @@ bool McpBlueprintAddEventComponentBound(
   }
   UClass *ComponentClass = ComponentProp->PropertyClass;
 
-  // Find the multicast delegate property on the component's class. We
-  // accept the bare delegate name (OnComponentBeginOverlap) or the
-  // generated property suffix (OnComponentBeginOverlap__DelegateSignature)
-  // so callers don't need to know the engine's internal naming.
-  FMulticastDelegateProperty *DelegateProp = nullptr;
-  for (TFieldIterator<FMulticastDelegateProperty> PropIt(ComponentClass);
-       PropIt; ++PropIt) {
-    const FString PropName = PropIt->GetName();
-    if (PropName.Equals(DelegateEventName, ESearchCase::IgnoreCase) ||
-        PropName.StartsWith(DelegateEventName + TEXT("__"),
-                            ESearchCase::IgnoreCase)) {
-      DelegateProp = *PropIt;
-      break;
-    }
-  }
+  // The bare delegate name (OnComponentBeginOverlap) or its generated
+  // OnComponentBeginOverlap__ spelling, as the level Blueprint's actor events take it.
+  TArray<FString> Assignable;
+  FMulticastDelegateProperty *DelegateProp =
+      McpFindMulticastDelegate(ComponentClass, DelegateEventName, Assignable);
   // Only BlueprintAssignable delegates can drive an event, as in the editor's
   // component Events list; any other would build a node that fails to compile.
   if (DelegateProp && !DelegateProp->HasAnyPropertyFlags(CPF_BlueprintAssignable)) {
@@ -124,9 +115,9 @@ bool McpBlueprintAddEventComponentBound(
     Bridge.SendAutomationError(
         RequestingSocket, RequestId,
         FString::Printf(
-            TEXT("Delegate '%s' not found on component class '%s'. Expected a "
-                 "multicast delegate property name like OnComponentBeginOverlap."),
-            *DelegateEventName, *ComponentClass->GetName()),
+            TEXT("Delegate '%s' not found on component class '%s'; its events: %s."),
+            *DelegateEventName, *ComponentClass->GetName(),
+            *FString::Join(Assignable, TEXT(", "))),
         TEXT("DELEGATE_NOT_FOUND"));
     return true;
   }

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "5b214207f2d5b4d5",
+  "catalogRevision": "67ff78ff30b196f1",
   "recordCount": 416,
   "records": [
     {
@@ -17745,6 +17745,10 @@
               "type": "string",
               "description": "The class that declares the function (KismetMathLibrary, Character, or a Blueprint path); inspect_graph info functions names it. Omitted: the Blueprint itself and the common libraries are searched."
             },
+            "actorName": {
+              "type": "string",
+              "description": "For nodeType K2Node_ActorBoundEvent or K2Node_Literal, which belong in a level Blueprint: the placed actor of its level (label, name or object path) the event fires for, with eventName one of its event dispatchers (OnActorBeginOverlap), or the node references. Without it, or outside a level Blueprint, the node is refused."
+            },
             "inputAxisName": {
               "type": "string",
               "description": "Axis name for an InputAxis event node."
@@ -18333,6 +18337,9 @@
             "memberClass": [
               "create_node"
             ],
+            "actorName": [
+              "create_node"
+            ],
             "inputAxisName": [
               "create_node"
             ],
@@ -18408,8 +18415,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "0f1906975583b09b5e42015ad4154b894941f4783b1cd7de929c5a9e2cffed31",
-        "content": "78fe8ad842167caf69a908ae026509de2559c468defec8bab508e3494340e106"
+        "schema": "5982086781fd1cca21506fa514fe1bffbe539c72cd61a7bb021c04a2f0f0a502",
+        "content": "40665ee8e8c82e0bf59a9812ca6bea4272d6577a01d61f1862c4e91f30ce382b"
       }
     },
     {
@@ -76135,12 +76142,17 @@
         "topics": [
           "edit_level_blueprint",
           "level blueprint",
-          "level blueprint node"
+          "level blueprint node",
+          "actor bound event",
+          "level blueprint overlap event",
+          "level blueprint actor reference"
         ],
         "summary": "Edit the level Blueprint: open it, add or remove nodes, connect nodes.",
         "whenToUse": [
           "edit=open: The level blueprint graph must be edited.",
           "edit=add_node: A new node must be added to level scripting.",
+          "edit=add_node: Level logic must react to a placed actor (K2Node_ActorBoundEvent with actorName and eventName) or use one (K2Node_Literal with actorName).",
+          "edit=add_node: A function of a class outside the common Blueprint libraries must be called (K2Node_CallFunction with functionName and memberClass).",
           "edit=connect_nodes: Two level blueprint nodes must be wired together.",
           "edit=remove_node: A level blueprint node must be deleted, or an unbound K2Node_CallFunction (\"Could not find a function named None\") must be repaired."
         ],
@@ -76193,9 +76205,21 @@
               "type": "string",
               "description": "Function to bind when nodeClass is K2Node_CallFunction (e.g. PrintString); short function names may also be passed as nodeClass."
             },
+            "memberClass": {
+              "type": "string",
+              "description": "Class that declares functionName when it is not in the common Blueprint libraries: a native class name or a Blueprint asset path. The node's Target takes an object of that class, so an actor's function is fed from its K2Node_Literal, while a component's function (a light's SetLightColor is LightComponent's) needs that component, not the actor."
+            },
+            "actorName": {
+              "type": "string",
+              "description": "Placed actor (label, name or object path) in the edited level that a K2Node_ActorBoundEvent fires for or a K2Node_Literal references; required by both, refused for other nodes. A label two actors share is refused with their names, and an actor of another loaded level with that level (ACTOR_IN_OTHER_LEVEL)."
+            },
+            "eventName": {
+              "type": "string",
+              "description": "Event dispatcher of actorName that a K2Node_ActorBoundEvent binds, e.g. OnActorBeginOverlap or OnActorEndOverlap; a wrong name is refused with the actor's events listed. Refused for any other node: BeginPlay or Tick go in nodeClass (EventBeginPlay, EventTick)."
+            },
             "sourceNodeName": {
               "type": "string",
-              "description": "Source node name for connection."
+              "description": "Source node: the nodeName or nodeId add_level_blueprint_node returned, or its title. An exact match wins; otherwise the last node whose name or title contains it."
             },
             "sourcePinName": {
               "type": "string",
@@ -76203,7 +76227,7 @@
             },
             "targetNodeName": {
               "type": "string",
-              "description": "Target node name for connection."
+              "description": "Target node: the nodeName or nodeId add_level_blueprint_node returned, or its title. An exact match wins; otherwise the last node whose name or title contains it."
             },
             "targetPinName": {
               "type": "string",
@@ -76322,6 +76346,15 @@
             "functionName": [
               "add_node"
             ],
+            "memberClass": [
+              "add_node"
+            ],
+            "actorName": [
+              "add_node"
+            ],
+            "eventName": [
+              "add_node"
+            ],
             "sourceNodeName": [
               "connect_nodes"
             ],
@@ -76345,8 +76378,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "b9d10ac3d13c2ea3c71cd06c108407400b86b03a005044d6174f5129e7fc5d9e",
-        "content": "3148f63545c7bb75fe6c32f80c751aa82e968477f02c78dc8fbf2e1477c70cc1"
+        "schema": "2a2f51bf0bf007ca61da93950814bbcd577f3c78ad0f6d04a44283e468095c9c",
+        "content": "b1a6a718c61ed0fd79ff24570fe20f6a1c7ce0febdcce571011f4099c339068c"
       }
     },
     {

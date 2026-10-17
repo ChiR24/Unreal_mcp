@@ -6,6 +6,7 @@
 #include "Dom/JsonObject.h"
 #include "Core/Module/EngineWireGlobals.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpBPActorBinding.h"
 #include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
@@ -28,20 +29,7 @@ namespace McpBlueprintGraphHandlers
 // already in hand at each of those sites; this names them.
 static inline FString DescribeNodePins(UEdGraphNode* Node)
 {
-    if (!Node)
-    {
-        return TEXT("<node not found>");
-    }
-    TArray<FString> Names;
-    for (UEdGraphPin* Pin : Node->Pins)
-    {
-        if (Pin)
-        {
-            Names.Add(FString::Printf(TEXT("%s (%s)"), *Pin->GetName(),
-                Pin->Direction == EGPD_Output ? TEXT("out") : TEXT("in")));
-        }
-    }
-    return Names.Num() > 0 ? FString::Join(Names, TEXT(", ")) : TEXT("<none>");
+    return McpDescribeNodePins(Node);
 }
 
 // The classes other than Class that declare a Blueprint-callable Wanted, as a
@@ -291,6 +279,8 @@ bool TryCreateConstructObjectNode(
     float Y);
 // Switch on Enum and the other nodes that build their pins from an Enum property, seeded from enumPath.
 bool TryCreateEnumNode(FActionContext& Context, UClass* NodeClass, float X, float Y);
+// A level Blueprint's actor-bound event or actor reference, bound to actorName (and eventName) before its pins exist.
+bool TryCreateLevelActorNode(FActionContext& Context, UClass* NodeClass, float X, float Y);
 bool TryCreateSubsystemNode(
     FActionContext& Context,
     UClass* NodeClass,

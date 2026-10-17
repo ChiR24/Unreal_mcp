@@ -12815,6 +12815,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Index shown first by a widget switcher."
         },
+        "actorName": {
+          "type": "string",
+          "description": "For nodeType K2Node_ActorBoundEvent or K2Node_Literal, which belong in a level Blueprint: the placed actor of its level (label, name or object path) the event fires for, with eventName one of its event dispatchers (OnActorBeginOverlap), or the node references. Without it, or outside a level Blueprint, the node is refused."
+        },
         "alignment": {
           "type": "object",
           "additionalProperties": true,
@@ -20555,6 +20559,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Which edit level blueprint variant to run."
         },
+        "eventName": {
+          "type": "string",
+          "description": "Event dispatcher of actorName that a K2Node_ActorBoundEvent binds, e.g. OnActorBeginOverlap or OnActorEndOverlap; a wrong name is refused with the actor's events listed. Refused for any other node: BeginPlay or Tick go in nodeClass (EventBeginPlay, EventTick)."
+        },
         "extent": {
           "type": "object",
           "description": "Extent (half-size) of the volume in each axis.",
@@ -20697,6 +20705,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "World location {x, y, z}."
         },
+        "memberClass": {
+          "type": "string",
+          "description": "Class that declares functionName when it is not in the common Blueprint libraries: a native class name or a Blueprint asset path. The node's Target takes an object of that class, so an actor's function is fed from its K2Node_Literal, while a component's function (a light's SetLightColor is LightComponent's) needs that component, not the actor."
+        },
         "nodeClass": {
           "type": "string",
           "description": "Level blueprint graph node class."
@@ -20799,7 +20811,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "sourceNodeName": {
           "type": "string",
-          "description": "Source node name for connection."
+          "description": "Source node: the nodeName or nodeId add_level_blueprint_node returned, or its title. An exact match wins; otherwise the last node whose name or title contains it."
         },
         "sourcePinName": {
           "type": "string",
@@ -20839,7 +20851,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "targetNodeName": {
           "type": "string",
-          "description": "Target node name for connection."
+          "description": "Target node: the nodeName or nodeId add_level_blueprint_node returned, or its title. An exact match wins; otherwise the last node whose name or title contains it."
         },
         "targetPinName": {
           "type": "string",
