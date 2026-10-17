@@ -172,9 +172,10 @@ void CreateDynamicNode(
         return;
     }
 
-    // Subsystem getters and the enum nodes (Switch on Enum ...) keep their type in a UPROPERTY rather than a pin,
-    // so they must be seeded at construction; see TryCreateSubsystemNode and TryCreateEnumNode.
-    if (TryCreateSubsystemNode(Context, NodeClass, X, Y) || TryCreateEnumNode(Context, NodeClass, X, Y))
+    // Subsystem getters, the enum nodes (Switch on Enum ...) and a level Blueprint's actor-bound events and actor
+    // references keep what they are about in a UPROPERTY rather than a pin, so they must be seeded at construction.
+    if (TryCreateSubsystemNode(Context, NodeClass, X, Y) || TryCreateEnumNode(Context, NodeClass, X, Y) ||
+        TryCreateLevelActorNode(Context, NodeClass, X, Y))
     {
         return;
     }

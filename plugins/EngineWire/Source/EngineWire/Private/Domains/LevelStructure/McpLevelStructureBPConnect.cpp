@@ -69,22 +69,33 @@ bool HandleConnectLevelBlueprintNodes(
         return true;
     }
 
-    // Find source and target nodes
-    UEdGraphNode* SourceNode = nullptr;
-    UEdGraphNode* TargetNode = nullptr;
-
-    for (UEdGraphNode* Node : EventGraph->Nodes)
+    // A node whose name, title or id (the nodeId add_node returns) is the one asked for wins over one that only
+    // contains it: an actor reference's title is its actor's label, and that actor's bound event carries the label
+    // too ("On Actor Begin Overlap (TriggerBox_Center)"), so a part match alone picked whichever came last.
+    auto FindNode = [EventGraph](const FString& Wanted) -> UEdGraphNode*
     {
-        FString NodeTitle = Node->GetNodeTitle(ENodeTitleType::FullTitle).ToString();
-        if (NodeTitle.Contains(SourceNodeName) || Node->GetName().Contains(SourceNodeName))
+        UEdGraphNode* Partial = nullptr;
+        for (UEdGraphNode* Node : EventGraph->Nodes)
         {
-            SourceNode = Node;
+            if (!Node)
+            {
+                continue;
+            }
+            const FString NodeTitle = Node->GetNodeTitle(ENodeTitleType::FullTitle).ToString();
+            if (Node->GetName().Equals(Wanted, ESearchCase::IgnoreCase) || NodeTitle.Equals(Wanted, ESearchCase::IgnoreCase) ||
+                Node->NodeGuid.ToString().Equals(Wanted, ESearchCase::IgnoreCase))
+            {
+                return Node;
+            }
+            if (NodeTitle.Contains(Wanted) || Node->GetName().Contains(Wanted))
+            {
+                Partial = Node;
+            }
         }
-        if (NodeTitle.Contains(TargetNodeName) || Node->GetName().Contains(TargetNodeName))
-        {
-            TargetNode = Node;
-        }
-    }
+        return Partial;
+    };
+    UEdGraphNode* SourceNode = FindNode(SourceNodeName);
+    UEdGraphNode* TargetNode = FindNode(TargetNodeName);
 
     if (!SourceNode || !TargetNode)
     {

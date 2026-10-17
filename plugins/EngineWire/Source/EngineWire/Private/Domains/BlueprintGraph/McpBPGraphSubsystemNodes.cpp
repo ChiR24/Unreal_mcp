@@ -1,6 +1,9 @@
 #include "Domains/BlueprintGraph/McpBPGraphPrivate.h"
 
+#include "Engine/LevelScriptBlueprint.h"
+#include "K2Node_ActorBoundEvent.h"
 #include "K2Node_GetSubsystem.h"
+#include "K2Node_Literal.h"
 #include "K2Node_Select.h"
 #include "Misc/PackageName.h"
 #include "Subsystems/Subsystem.h"
@@ -154,6 +157,35 @@ bool TryCreateEnumNode(FActionContext& Context, UClass* NodeClass, float X, floa
     UK2Node* Node = Creator.CreateNode(NodeClass);
     // Before FinalizeNode, which allocates the pins from it.
     EnumProperty->SetObjectPropertyValue_InContainer(Node, Enum);
+    Context.FinalizeNode(Creator, Node, X, Y);
+    return true;
+}
+
+// An actor-bound event and an actor reference are about one placed actor of the level Blueprint's level. Spawned by
+// class name they came out as "None (None)" and "Unknown", reported success, and the bound event broke the compile.
+// Bound before the node joins the graph, so a refusal leaves nothing behind.
+bool TryCreateLevelActorNode(FActionContext& Context, UClass* NodeClass, float X, float Y)
+{
+    if (!NodeClass->IsChildOf(UK2Node_ActorBoundEvent::StaticClass()) && !NodeClass->IsChildOf(UK2Node_Literal::StaticClass()))
+    {
+        return false;
+    }
+    FString ActorName;
+    FString EventName;
+    Context.Payload->TryGetStringField(TEXT("actorName"), ActorName);
+    Context.Payload->TryGetStringField(TEXT("eventName"), EventName);
+    const ULevelScriptBlueprint* LevelBlueprint = Cast<ULevelScriptBlueprint>(Context.Blueprint);
+    UK2Node* Node = NewObject<UK2Node>(Context.TargetGraph, NodeClass, NAME_None, RF_Transactional);
+    FString Error;
+    FString Code;
+    if (!McpBindLevelActorNode(Node, LevelBlueprint ? LevelBlueprint->GetLevel() : nullptr, ActorName, EventName, Error, Code))
+    {
+        Node->MarkAsGarbage();
+        Context.SendError(Error, Code);
+        return true;
+    }
+    Context.TargetGraph->AddNode(Node, false, false);
+    TClassNodeCreator<UK2Node> Creator{*Context.TargetGraph, Node};
     Context.FinalizeNode(Creator, Node, X, Y);
     return true;
 }

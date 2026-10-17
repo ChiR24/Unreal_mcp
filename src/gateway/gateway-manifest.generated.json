@@ -9262,6 +9262,7 @@
       "parameterNames": [
         "actionPath",
         "activeIndex",
+        "actorName",
         "alignment",
         "alwaysShowScrollbar",
         "amount",
@@ -9538,6 +9539,10 @@
           "activeIndex": {
             "type": "number",
             "description": "Index shown first by a widget switcher."
+          },
+          "actorName": {
+            "type": "string",
+            "description": "For nodeType K2Node_ActorBoundEvent or K2Node_Literal, which belong in a level Blueprint: the placed actor of its level (label, name or object path) the event fires for, with eventName one of its event dispatchers (OnActorBeginOverlap), or the node references. Without it, or outside a level Blueprint, the node is refused."
           },
           "alignment": {
             "type": "object",
@@ -15018,6 +15023,7 @@
         "loadingDistance",
         "loadingRange",
         "location",
+        "memberClass",
         "nodeClass",
         "nodeId",
         "nodeName",
@@ -15226,7 +15232,7 @@
           },
           "eventName": {
             "type": "string",
-            "description": "Event dispatcher of actorName that a K2Node_ActorBoundEvent binds, e.g. OnActorBeginOverlap or OnActorEndOverlap; a wrong name is refused with the actor's events listed."
+            "description": "Event dispatcher of actorName that a K2Node_ActorBoundEvent binds, e.g. OnActorBeginOverlap or OnActorEndOverlap; a wrong name is refused with the actor's events listed. Refused for any other node: BeginPlay or Tick go in nodeClass (EventBeginPlay, EventTick)."
           },
           "extent": {
             "type": "object",
@@ -15370,6 +15376,10 @@
             ],
             "description": "World location {x, y, z}."
           },
+          "memberClass": {
+            "type": "string",
+            "description": "Class that declares functionName when it is not in the common Blueprint libraries: Light or PointLightComponent for SetLightColor, or a Blueprint asset path."
+          },
           "nodeClass": {
             "type": "string",
             "description": "Level blueprint graph node class."
@@ -15472,7 +15482,7 @@
           },
           "sourceNodeName": {
             "type": "string",
-            "description": "Source node name for connection."
+            "description": "Source node: the nodeName or nodeId add_level_blueprint_node returned, or its title. An exact match wins; otherwise the last node whose name or title contains it."
           },
           "sourcePinName": {
             "type": "string",
@@ -15512,7 +15522,7 @@
           },
           "targetNodeName": {
             "type": "string",
-            "description": "Target node name for connection."
+            "description": "Target node: the nodeName or nodeId add_level_blueprint_node returned, or its title. An exact match wins; otherwise the last node whose name or title contains it."
           },
           "targetPinName": {
             "type": "string",

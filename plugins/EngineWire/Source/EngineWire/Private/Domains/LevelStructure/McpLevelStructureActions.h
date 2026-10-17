@@ -11,7 +11,6 @@ class UPackage;
 class UWorld;
 class UWorldPartitionRuntimeHashSet;
 class UK2Node;
-class ULevel;
 class UDataLayerEditorSubsystem;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogMcpLevelStructureHandlers, Log, All);
@@ -38,9 +37,9 @@ bool HandleAddLevelBlueprintNode(UEngineWireSubsystem* Subsystem, const FString&
 bool HandleRemoveLevelBlueprintNode(UEngineWireSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 // Friendly node names (EventBeginPlay, PrintString, ...) -> node class + member to bind (dogfood #160).
 bool ResolveLevelBlueprintNodeAlias(FString& InOutNodeClass, FString& OutEventName, FString& OutFunctionName);
-bool ApplyLevelBlueprintNodeAlias(UK2Node* Node, const FString& EventName, const FString& FunctionName, FString& OutError);
-// The placed actor (actorName) an actor reference or actor-bound event (eventName) is about, set before its pins exist.
-bool BindLevelBlueprintNodeToActor(UK2Node* Node, ULevel* Level, const TSharedPtr<FJsonObject>& Payload, FString& OutError, FString& OutCode);
+// MemberClass, when given, is the class FunctionName is looked up on instead of the common libraries.
+bool ApplyLevelBlueprintNodeAlias(UK2Node* Node, const FString& EventName, const FString& FunctionName,
+                                  const FString& MemberClass, FString& OutError);
 bool HandleConnectLevelBlueprintNodes(UEngineWireSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 bool HandleGetLevelStructureInfo(UEngineWireSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 void CleanupCreatedLevelWorldAfterSave(UWorld* NewWorld, UPackage* Package, const FString& FullPath);
