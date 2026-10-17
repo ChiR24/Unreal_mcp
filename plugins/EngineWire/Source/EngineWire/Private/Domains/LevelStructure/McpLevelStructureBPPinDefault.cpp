@@ -24,10 +24,29 @@ bool HandleSetLevelBlueprintPinDefault(
         return true;
     }
 
-    // nodeId also takes the node's name or title, as the other level edits do (exactly: a write never lands on a node
-    // that only contains the text); the graph door then finds it by its guid.
+    // nodeId also takes the node's name or title, as the other level edits do, exactly: a write never lands on a node
+    // that only contains the text, nor on one of several that share it. The graph door then finds it by its guid.
+    const FString Wanted = GetJsonStringField(Payload, TEXT("nodeId"), TEXT(""));
+    UEdGraphNode* Node = nullptr;
+    TArray<FString> Matches;
+    for (UEdGraphNode* Each : EventGraph->Nodes)
+    {
+        if (IsLevelBlueprintNodeNamed(Each, Wanted))
+        {
+            Node = Each;
+            Matches.Add(Each->GetName());
+        }
+    }
+    if (Matches.Num() > 1)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("'%s' names %d level blueprint nodes (%s); pass one node's nodeId (guid) or node name."),
+                *Wanted, Matches.Num(), *FString::Join(Matches, TEXT(", "))),
+            nullptr, TEXT("AMBIGUOUS_NODE"));
+        return true;
+    }
     TSharedPtr<FJsonObject> Request = Payload;
-    if (UEdGraphNode* Node = FindLevelBlueprintNode(EventGraph, GetJsonStringField(Payload, TEXT("nodeId"), TEXT("")), false))
+    if (Node)
     {
         Request = MakeShared<FJsonObject>(*Payload);
         Request->SetStringField(TEXT("nodeId"), Node->NodeGuid.ToString());

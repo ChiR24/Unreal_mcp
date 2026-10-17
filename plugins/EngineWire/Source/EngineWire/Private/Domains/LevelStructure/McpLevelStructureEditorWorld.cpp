@@ -272,7 +272,7 @@ bool IsLevelBlueprintNodeNamed(UEdGraphNode* Node, const FString& Wanted)
            Node->GetNodeTitle(ENodeTitleType::ListView).ToString().Equals(Wanted, ESearchCase::IgnoreCase);
 }
 
-UEdGraphNode* FindLevelBlueprintNode(UEdGraph* Graph, const FString& Wanted, bool bAllowPartial)
+UEdGraphNode* FindLevelBlueprintNode(UEdGraph* Graph, const FString& Wanted)
 {
     // An actor reference's title is its actor's label, and that actor's bound event carries the label too
     // ("On Actor Begin Overlap (TriggerBox_Center)"), so a part match alone picked whichever came last.
@@ -287,8 +287,7 @@ UEdGraphNode* FindLevelBlueprintNode(UEdGraph* Graph, const FString& Wanted, boo
         {
             return Node;
         }
-        if (Node && bAllowPartial &&
-            (Node->GetNodeTitle(ENodeTitleType::FullTitle).ToString().Contains(Wanted) || Node->GetName().Contains(Wanted)))
+        if (Node && (Node->GetNodeTitle(ENodeTitleType::FullTitle).ToString().Contains(Wanted) || Node->GetName().Contains(Wanted)))
         {
             Partial = Node;
         }

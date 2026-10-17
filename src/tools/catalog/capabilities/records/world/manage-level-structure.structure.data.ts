@@ -20,7 +20,7 @@ const SAVE_LEVEL = { type: 'boolean', description: 'Save the open level (default
 // A connect end: an exact name, title or id wins over a node that only contains it (an actor's bound event holds its label).
 const LBP_NODE = (end: string) => ({ type: 'string', description: `${end} node: the nodeName or nodeId add_level_blueprint_node returned, or its title. An exact match wins; otherwise the last node whose name or title contains it.` });
 // One node an edit acts on; remove_node and set_pin_default_value share it in the edit_level_blueprint fold.
-const LBP_NODE_ID = { type: 'string', description: 'The node: the nodeId or nodeName add_level_blueprint_node returned, or its title, matched exactly (a node that only contains it is not taken).' };
+const LBP_NODE_ID = { type: 'string', description: 'The node: the nodeId or nodeName add_level_blueprint_node returned, or its title, matched exactly (a node that only contains it is not taken). A name or title several nodes share is refused with their names (AMBIGUOUS_NODE).' };
 
 export const LEVEL_STRUCTURE_RECORDS: readonly CapabilityRecordSource[] = [
   buildWorldRecord({
@@ -183,7 +183,7 @@ export const LEVEL_STRUCTURE_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildWorldRecord({
     parentTool: 'manage_level_structure', action: 'remove_level_blueprint_node', dispatchAction: 'remove_level_blueprint_node',
-    family: F, summary: 'Remove nodes from the level blueprint graph by id or name, or purge unbound call nodes.',
+    family: F, summary: 'Remove a level blueprint node by id, name or title (one several nodes share is refused), or purge unbound call nodes.',
     whenToUse: ['A level blueprint node must be deleted, or an unbound K2Node_CallFunction ("Could not find a function named None") must be repaired.'], whenNotToUse: ['The node only needs re-wiring; use connect_level_blueprint_nodes.'],
     inputProps: { nodeId: LBP_NODE_ID, nodeName: P.nodeName, unboundOnly: { type: 'boolean', description: 'Remove every call-function node that has no bound function instead of a named node.' }, levelPath: BP_LEVEL, save: P.levelEditSave },
     required: [], effect: 'write', costLatency: 'interactive', costResources: 'low',

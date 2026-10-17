@@ -50,8 +50,8 @@ bool HandleConnectLevelBlueprintNodes(
         return true;
     }
 
-    UEdGraphNode* SourceNode = FindLevelBlueprintNode(EventGraph, SourceNodeName, true);
-    UEdGraphNode* TargetNode = FindLevelBlueprintNode(EventGraph, TargetNodeName, true);
+    UEdGraphNode* SourceNode = FindLevelBlueprintNode(EventGraph, SourceNodeName);
+    UEdGraphNode* TargetNode = FindLevelBlueprintNode(EventGraph, TargetNodeName);
 
     if (!SourceNode || !TargetNode)
     {

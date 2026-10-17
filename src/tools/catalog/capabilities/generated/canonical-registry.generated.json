@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "ccbcf37c09908de4",
+  "catalogRevision": "6355b2acc47399c2",
   "recordCount": 416,
   "records": [
     {
@@ -76257,7 +76257,7 @@
             },
             "nodeId": {
               "type": "string",
-              "description": "The node: the nodeId or nodeName add_level_blueprint_node returned, or its title, matched exactly (a node that only contains it is not taken)."
+              "description": "The node: the nodeId or nodeName add_level_blueprint_node returned, or its title, matched exactly (a node that only contains it is not taken). A name or title several nodes share is refused with their names (AMBIGUOUS_NODE)."
             },
             "unboundOnly": {
               "type": "boolean",
@@ -76440,8 +76440,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "15c2e143725659c1df9d07fa85b923cb14b178ca1c12bd63c4285c9866dad00b",
-        "content": "c7a8c60b7705f57454c21ad50c2f504cfa948b4413c5c847d3164fe2f5b23dd9"
+        "schema": "aa20e53f8effd12ce1bf411e36c3096dddaf5339c059491c5a33279df505151a",
+        "content": "b81e750799ae84f9857fc145e10fb1111da6bfde453a04dda26ff32a53f5cd39"
       }
     },
     {

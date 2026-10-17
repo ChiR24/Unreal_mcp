@@ -20720,7 +20720,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "nodeId": {
           "type": "string",
-          "description": "The node: the nodeId or nodeName add_level_blueprint_node returned, or its title, matched exactly (a node that only contains it is not taken)."
+          "description": "The node: the nodeId or nodeName add_level_blueprint_node returned, or its title, matched exactly (a node that only contains it is not taken). A name or title several nodes share is refused with their names (AMBIGUOUS_NODE)."
         },
         "nodeName": {
           "type": "string",

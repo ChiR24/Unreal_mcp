@@ -70,7 +70,7 @@ bool ResolveLevelBlueprintGraph(
 // list title), any case.
 bool IsLevelBlueprintNodeNamed(UEdGraphNode* Node, const FString& Wanted);
 
-// The node of Graph that Wanted names (above). With bAllowPartial a node whose name or title only contains Wanted is
-// the fallback (the last one); an exact match always wins.
-UEdGraphNode* FindLevelBlueprintNode(UEdGraph* Graph, const FString& Wanted, bool bAllowPartial);
+// The node of Graph that Wanted names (above), else the last one whose name or title contains it (connect_nodes takes
+// a part of a title); an exact match always wins.
+UEdGraphNode* FindLevelBlueprintNode(UEdGraph* Graph, const FString& Wanted);
 }

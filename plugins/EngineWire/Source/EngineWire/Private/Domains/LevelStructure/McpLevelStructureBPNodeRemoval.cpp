@@ -68,6 +68,18 @@ bool HandleRemoveLevelBlueprintNode(
             if (bMatch) { ToRemove.Add(Node); }
         }
     }
+    // A name or title several nodes share ("Sequence", "Print String") names no one node: removing them all was not
+    // asked for, and the removal cannot be undone from here.
+    if (!bUnboundOnly && ToRemove.Num() > 1)
+    {
+        TArray<FString> Names;
+        for (UEdGraphNode* Node : ToRemove) { Names.Add(Node->GetName()); }
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("'%s' names %d level blueprint nodes (%s); nothing was removed. Pass one node's nodeId (guid) or node name."),
+                NodeId.IsEmpty() ? *NodeName : *NodeId, ToRemove.Num(), *FString::Join(Names, TEXT(", "))),
+            nullptr, TEXT("AMBIGUOUS_NODE"));
+        return true;
+    }
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     TArray<TSharedPtr<FJsonValue>> Removed;
     for (UEdGraphNode* Node : ToRemove)
