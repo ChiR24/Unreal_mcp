@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "aa997ed2fd5ecc8e",
+  "catalogRevision": "7c55bc868c67b59a",
   "recordCount": 416,
   "records": [
     {
@@ -16121,7 +16121,8 @@
           "compile widget blueprint",
           "compile widget",
           "compile all blueprints",
-          "blueprint warnings in a folder"
+          "blueprint warnings in a folder",
+          "compile level blueprint"
         ],
         "summary": "Compile a Blueprint asset, optionally saving after compile, or every Blueprint under a folder at once, answered with the ones the compiler or the graph checks flag.",
         "whenToUse": [
@@ -16143,7 +16144,7 @@
             },
             "blueprintPath": {
               "type": "string",
-              "description": "Canonical /Game Blueprint asset path."
+              "description": "Canonical /Game Blueprint asset path, or a loaded level's path (/Game/Maps/L_Main) to compile its level Blueprint."
             },
             "folder": {
               "type": "string",
@@ -16275,8 +16276,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "3eca9fb5e47b4535f20dfe869ce579a887c147e9c91628e5d761fd904afcf6c1",
-        "content": "017a6a796728ff8dd86cf4a2497189f18458e5bfacb6b0a12bc88b37d232b63b"
+        "schema": "dc0864afee9bb488c37a248610d634738bb0107f3eef0664aeff01f52302ab9c",
+        "content": "a74f1ea1bf95e6c6dd1888dc3990e1c9506d675ee4b1389033f4a296837e7bf3"
       }
     },
     {
@@ -76100,7 +76101,8 @@
         "manage_level_structure.open_level_blueprint",
         "manage_level_structure.add_level_blueprint_node",
         "manage_level_structure.connect_level_blueprint_nodes",
-        "manage_level_structure.remove_level_blueprint_node"
+        "manage_level_structure.remove_level_blueprint_node",
+        "manage_level_structure.set_level_blueprint_pin_default"
       ],
       "legacyIds": [
         {
@@ -76134,6 +76136,13 @@
           "folded": {
             "edit": "remove_node"
           }
+        },
+        {
+          "tool": "manage_level_structure",
+          "action": "set_level_blueprint_pin_default",
+          "folded": {
+            "edit": "set_pin_default_value"
+          }
         }
       ],
       "discovery": {
@@ -76146,9 +76155,12 @@
           "actor bound event",
           "level blueprint overlap event",
           "level blueprint actor reference",
-          "level blueprint component reference"
+          "level blueprint component reference",
+          "level blueprint pin default",
+          "level blueprint pin value",
+          "level blueprint literal"
         ],
-        "summary": "Edit the level Blueprint: open it, add or remove nodes, connect nodes.",
+        "summary": "Edit the level Blueprint: open it, add or remove nodes, connect nodes, set an input pin's default value.",
         "whenToUse": [
           "edit=open: The level blueprint graph must be edited.",
           "edit=add_node: A new node must be added to level scripting.",
@@ -76156,11 +76168,13 @@
           "edit=add_node: A function of a class outside the common Blueprint libraries must be called (K2Node_CallFunction with functionName and memberClass).",
           "edit=add_node: A placed actor's component must be used, such as the light component whose SetLightColor changes a light (K2Node_VariableGet with memberClass and memberName, its self pin fed from the actor's K2Node_Literal).",
           "edit=connect_nodes: Two level blueprint nodes must be wired together.",
-          "edit=remove_node: A level blueprint node must be deleted, or an unbound K2Node_CallFunction (\"Could not find a function named None\") must be repaired."
+          "edit=remove_node: A level blueprint node must be deleted, or an unbound K2Node_CallFunction (\"Could not find a function named None\") must be repaired.",
+          "edit=set_pin_default_value: A level blueprint node's input pin needs a literal value instead of a wire (a light color, a print string, a number)."
         ],
         "whenNotToUse": [
           "edit=open: A sub-level blueprint is needed; use the asset path directly.",
-          "edit=connect_nodes: The nodes are in a Blueprint asset, not the level Blueprint; use blueprint.edit_graph (edit=connect_pins)."
+          "edit=connect_nodes: The nodes are in a Blueprint asset, not the level Blueprint; use blueprint.edit_graph (edit=connect_pins).",
+          "edit=set_pin_default_value: The node is in a Blueprint asset, not the level Blueprint; use blueprint.edit_graph (edit=set_pin_default_value)."
         ]
       },
       "schemas": {
@@ -76247,13 +76261,21 @@
               "type": "boolean",
               "description": "Remove every call-function node that has no bound function instead of a named node."
             },
+            "pinName": {
+              "type": "string",
+              "description": "Input pin name or display name, as add_level_blueprint_node lists them (NewLightColor on SetLightColor)."
+            },
+            "propertyValue": {
+              "description": "The pin's new default: a number, true or false, text, an enum value name, an asset path, a vector as X,Y,Z or {x,y,z}, a rotator as P,Y,R or {pitch,yaw,roll}, a color as {r,g,b,a}."
+            },
             "edit": {
               "type": "string",
               "enum": [
                 "open",
                 "add_node",
                 "connect_nodes",
-                "remove_node"
+                "remove_node",
+                "set_pin_default_value"
               ],
               "description": "Which edit level blueprint variant to run."
             }
@@ -76280,6 +76302,26 @@
               "type": "object",
               "x-unreal-reflection-boundary": true,
               "description": "Additional handler result fields not named by the contract."
+            },
+            "nodeName": {
+              "type": "string",
+              "description": "The node whose pin was set."
+            },
+            "pinName": {
+              "type": "string",
+              "description": "The pin that was set."
+            },
+            "appliedValue": {
+              "type": "string",
+              "description": "Literal actually stored on the pin (or the resolved object path for an object or class pin)."
+            },
+            "literalNodeId": {
+              "type": "string",
+              "description": "Guid of the MakeLiteral node carrying the value when the pin itself takes no literal."
+            },
+            "saved": {
+              "type": "boolean",
+              "description": "Whether the level was saved."
             }
           },
           "required": [
@@ -76290,7 +76332,7 @@
       },
       "examples": [
         {
-          "title": "Edit the level Blueprint: open it, add or remove nodes, connect nodes.",
+          "title": "Edit the level Blueprint: open it, add or remove nodes, connect nodes, set an input pin's default value.",
           "input": {
             "action": "edit_level_blueprint",
             "levelPath": "/Game/Maps/Demo",
@@ -76331,7 +76373,8 @@
             "open": "open_level_blueprint",
             "add_node": "add_level_blueprint_node",
             "connect_nodes": "connect_level_blueprint_nodes",
-            "remove_node": "remove_level_blueprint_node"
+            "remove_node": "remove_level_blueprint_node",
+            "set_pin_default_value": "set_level_blueprint_pin_default"
           },
           "declaredBy": {
             "nodeClass": [
@@ -76347,7 +76390,8 @@
             "save": [
               "add_node",
               "connect_nodes",
-              "remove_node"
+              "remove_node",
+              "set_pin_default_value"
             ],
             "functionName": [
               "add_node"
@@ -76377,18 +76421,25 @@
               "connect_nodes"
             ],
             "nodeId": [
-              "remove_node"
+              "remove_node",
+              "set_pin_default_value"
             ],
             "unboundOnly": [
               "remove_node"
+            ],
+            "pinName": [
+              "set_pin_default_value"
+            ],
+            "propertyValue": [
+              "set_pin_default_value"
             ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "2b08d45ab2a79cd38e4b015c15a43c05e0be2385dbfedf4c8876417e2535a8ed",
-        "content": "6340f923be679177176f6998a7cb61f568bff1d08ebcc2b4687a3939cdf4dc6b"
+        "schema": "5791ee0a8d249aa4ca8e07d136dca219a1b586b34cf5c1e6a41aa7a289512149",
+        "content": "58fc3861392a335d659a38f4f2a9878b696e500a2620210bd701ff7ff4ebabae"
       }
     },
     {

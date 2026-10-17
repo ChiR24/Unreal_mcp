@@ -5,6 +5,9 @@
 #include "CoreMinimal.h"
 #include "EditorAssetLibrary.h"
 #include "Engine/Blueprint.h"
+#include "Engine/Level.h"
+#include "Engine/LevelScriptBlueprint.h"
+#include "Engine/World.h"
 #include "Misc/Paths.h"
 #include "Modules/ModuleManager.h"
 #include "UObject/Package.h"
@@ -72,6 +75,18 @@ static inline UBlueprint *LoadBlueprintAsset(const FString &Req,
     return InMemory;
   }
 
+  // A level's Blueprint is its level script, held by the persistent level, not
+  // the package: a loaded level's path reaches it, so callers need not spell the
+  // /Game/Maps/L.L:PersistentLevel.L object path.
+  if (UWorld* World = FindObject<UWorld>(nullptr, *ObjectPath)) {
+    if (UBlueprint* LevelBP = World->PersistentLevel ? World->PersistentLevel->GetLevelScriptBlueprint(true) : nullptr) {
+      OutNormalized = PackagePath;
+      return LevelBP;
+    }
+    OutError = FString::Printf(TEXT("Level %s has no level Blueprint yet; manage_level_structure edit_level_blueprint (edit open) creates it."), *PackagePath);
+    return nullptr;
+  }
+
   // From disk: Asset Registry lookup. (A UEditorAssetLibrary::DoesAssetExist
   // step used to precede it; that refuses and logs an engine error in PIE.)
   FAssetRegistryModule &ARM =
@@ -79,6 +94,11 @@ static inline UBlueprint *LoadBlueprintAsset(const FString &Req,
           TEXT("AssetRegistry"));
   TArray<FAssetData> Results;
   ARM.Get().GetAssetsByPackageName(FName(*PackagePath), Results);
+  // A level that is not loaded is not loaded from here just to reach its Blueprint.
+  if (Results.Num() > 0 && Results[0].GetClass() == UWorld::StaticClass()) {
+    OutError = FString::Printf(TEXT("%s is a level that is not loaded; load it (manage_level load), then this path reaches its level Blueprint."), *PackagePath);
+    return nullptr;
+  }
   // GetAsset loads the asset when it is not in memory yet.
   if (UBlueprint* BP = Results.Num() > 0 ? Cast<UBlueprint>(Results[0].GetAsset()) : nullptr) {
     OutNormalized = Results[0].PackageName.ToString();

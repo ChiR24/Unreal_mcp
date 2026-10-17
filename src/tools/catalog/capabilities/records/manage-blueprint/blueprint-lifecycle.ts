@@ -151,7 +151,7 @@ export const BLUEPRINT_LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'compile',
     family: FAMILY,
     domain: DOMAIN,
-    topics: ['build blueprint', 'recompile', 'compile errors', 'compile blueprint', 'compile widget blueprint', 'compile widget', 'compile all blueprints', 'blueprint warnings in a folder'],
+    topics: ['build blueprint', 'recompile', 'compile errors', 'compile blueprint', 'compile widget blueprint', 'compile widget', 'compile all blueprints', 'blueprint warnings in a folder', 'compile level blueprint'],
     summary: 'Compile a Blueprint asset, optionally saving after compile, or every Blueprint under a folder at once, answered with the ones the compiler or the graph checks flag.',
     whenToUse: [
       'Blueprint changes must be compiled to take effect.',
@@ -159,7 +159,7 @@ export const BLUEPRINT_LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
     ],
     whenNotToUse: ['The Blueprint has no pending changes.'],
     inputProps: {
-      blueprintPath: P.blueprintPath,
+      blueprintPath: { ...P.blueprintPath, description: 'Canonical /Game Blueprint asset path, or a loaded level\'s path (/Game/Maps/L_Main) to compile its level Blueprint.' },
       folder: { type: 'string', description: 'In place of blueprintPath: compile every Blueprint under this /Game folder (sub-folders too, widget and animation Blueprints included, at most 500) and answer with counts and the ones that failed or carry warnings, each with its diagnostics. An audit leaves each package as saved or unsaved as it was; saveAfterCompile does not apply.' },
       saveAfterCompile: P.saveAfterCompile,
     },

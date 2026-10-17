@@ -9650,7 +9650,7 @@
           },
           "blueprintPath": {
             "type": "string",
-            "description": "Canonical /Game Blueprint asset path."
+            "description": "Canonical /Game Blueprint asset path, or a loaded level's path (/Game/Maps/L_Main) to compile its level Blueprint."
           },
           "blueprintType": {
             "type": "string",
@@ -15030,8 +15030,10 @@
         "nodeName",
         "nodePosition",
         "parentLevel",
+        "pinName",
         "postProcessSettings",
         "priority",
+        "propertyValue",
         "reverbVolume",
         "rotation",
         "save",
@@ -15227,7 +15229,8 @@
               "open",
               "add_node",
               "connect_nodes",
-              "remove_node"
+              "remove_node",
+              "set_pin_default_value"
             ],
             "description": "Which edit level blueprint variant to run."
           },
@@ -15416,6 +15419,10 @@
             "type": "string",
             "description": "Parent level asset path."
           },
+          "pinName": {
+            "type": "string",
+            "description": "Input pin name or display name, as add_level_blueprint_node lists them (NewLightColor on SetLightColor)."
+          },
           "postProcessSettings": {
             "type": "object",
             "additionalProperties": false,
@@ -15444,6 +15451,9 @@
           "priority": {
             "type": "number",
             "description": "Priority where volumes overlap (PhysicsVolume, PostProcessVolume)."
+          },
+          "propertyValue": {
+            "description": "The pin's new default: a number, true or false, text, an enum value name, an asset path, a vector as X,Y,Z or {x,y,z}, a rotator as P,Y,R or {pitch,yaw,roll}, a color as {r,g,b,a}."
           },
           "reverbVolume": {
             "type": "number",
