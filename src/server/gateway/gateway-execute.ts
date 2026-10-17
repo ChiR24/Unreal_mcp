@@ -23,7 +23,8 @@ import { capabilityIndex } from './gateway-capability-index.js';
 import { resolveDispatchAction } from './gateway-dispatch-by.js';
 import { checkStaticRequest } from './gateway-execute-static-check.js';
 import { executeErrorEnvelope, executeSuccessEnvelope, refuseWithTarget } from './gateway-execute-envelope.js';
-import { dispatchAndValidate, type GatewayContext } from './gateway-execute-dispatch.js';
+import { dispatchAndValidate, MAX_EXECUTION_RESULT_CHARS, pageOwner, publishResult, type GatewayContext } from './gateway-execute-dispatch.js';
+import { nextPage } from './gateway-result-pages.js';
 import { askThroughClient } from './gateway-execute-consent.js';
 import { checkConsentAuthorization, checkExpectedCatalogRevision, checkScopeAuthorization, matchedFoldedGrant } from './gateway-execute-policy.js';
 import { ConsentGrantSchema, type ConsentGrant } from '../../tools/catalog/capabilities/semantic/authorization.js';
@@ -101,6 +102,21 @@ export async function executeGatewayCall(
   const authority = context.tools.automationBridge?.getAuthority?.();
   const scopeFailure = checkScopeAuthorization(target, authority);
   if (scopeFailure !== undefined) return refuseWithTarget(target, scopeFailure, receiptContext);
+
+  // A page cursor reads on through a result too large for one reply (gateway-result-pages.ts). Nothing runs again:
+  // scope still holds for every page, but consent was the first call's and is not asked twice.
+  const pageCursor = options === undefined ? undefined : getString(options, 'pageCursor');
+  if (pageCursor !== undefined) {
+    const next = nextPage(pageCursor, pageOwner(target.record, checked.params, context), MAX_EXECUTION_RESULT_CHARS);
+    if (typeof next !== 'string') return publishResult(target, next.result, checked.params, options, receiptContext, checked.unread, next.page);
+    return refuseWithTarget(target, {
+      errorCode: next,
+      message: next === 'PAGE_CURSOR_EXPIRED'
+        ? 'The page cursor has expired, was read to the end, or was never issued: run the call again without pageCursor for a fresh first page.'
+        : 'The page cursor belongs to another call: send the same capability and params as the call that returned it.',
+      nextCall: buildNextCall({ operation: 'describe', tool: target.record.routing.parentTool, action: target.legacy.action })
+    }, receiptContext);
+  }
 
   // A grant the user gave through the client also carries the nonce the plugin burns once.
   let consentGrant: (ConsentGrant & { readonly nonce?: string }) | undefined;

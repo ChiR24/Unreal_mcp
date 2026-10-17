@@ -45,7 +45,7 @@ TSharedPtr<FJsonObject> BuildUnrealGatewayToolDefinition()
 		// client had no legal way to send an idempotency key or a timeout.
 		.Object(TEXT("options"),
 			TEXT("Execution controls for execute only; never put these inside params. Honored keys: "
-				"idempotencyKey, expectedCatalogRevision, expectedRevisions, timeoutMs."),
+				"idempotencyKey, expectedCatalogRevision, expectedRevisions, timeoutMs, pageCursor."),
 			[](FMcpSchemaBuilder& Sub)
 			{
 				Sub.String(TEXT("idempotencyKey"),
@@ -57,7 +57,10 @@ TSharedPtr<FJsonObject> BuildUnrealGatewayToolDefinition()
 					.FreeformObject(TEXT("expectedRevisions"),
 						TEXT("Live editor-state revisions to pin (selection, level, assetRegistry, package), as the "
 							"ue://state/revisions resource reports them; the call is refused with STALE_STATE when one has moved."))
-					.Integer(TEXT("timeoutMs"), TEXT("Deadline for this call in milliseconds (1-600000)."));
+					.Integer(TEXT("timeoutMs"), TEXT("Deadline for this call in milliseconds (1-600000)."))
+					.String(TEXT("pageCursor"),
+						TEXT("Read the next page of a result too large for one reply: the cursor its page block named, sent with "
+							"the same capability and params (page.nextCall is that call). Nothing runs again."));
 			})
 		.Integer(TEXT("limit"), TEXT("Maximum rows per page: search results (default 12) or describe action rows (default 20). Defaults to 12."))
 		.Integer(TEXT("offset"), TEXT("Zero-based offset into search results or into a described tool's action list. Defaults to 0."))

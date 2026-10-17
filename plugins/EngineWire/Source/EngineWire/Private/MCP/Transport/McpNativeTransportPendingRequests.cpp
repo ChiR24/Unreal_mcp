@@ -159,6 +159,7 @@ bool FMcpNativeTransport::CompletePendingRequest(
 		Context.StartTimeSeconds = Conn->RequestStartSeconds;
 		Context.GatewayWarnings = Conn->GatewayWarnings;
 		Context.Provenance = Conn->Provenance;
+		Context.PageOwner = Conn->PageOwner;
 		ReportedResult = McpBuildGatewayExecuteReceipt(
 			Conn->CapabilityId, Conn->OutputSchema, Context, bSuccess, Message, Result, ErrorCode);
 		if (!bSuccess)

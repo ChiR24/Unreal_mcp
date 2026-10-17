@@ -263,7 +263,8 @@ wrapper flattened (top-level keys win) and the control fields `action`,
 | `UNKNOWN_CAPABILITY`, `UNKNOWN_TOOL`, `UNKNOWN_ACTION` | selector lookup |
 | `UNDECLARED_PARAMETER`, `MISSING_REQUIRED_PARAMETER`, `INVALID_PARAMETER_VALUE` | schema validation |
 | `NOT_CONNECTED` | the editor is unreachable |
-| `UNREAL_EXECUTION_ERROR` (or the handler's own code), `OUTPUT_SCHEMA_VIOLATION`, `RESULT_TOO_LARGE` | dispatch and output validation |
+| `UNREAL_EXECUTION_ERROR` (or the handler's own code), `OUTPUT_SCHEMA_VIOLATION`, `RESULT_TOO_LARGE` | dispatch and output validation; a result over 100k chars whose size is one top-level list comes in pages instead, each reply's `page.nextCall` reading the next |
+| `PAGE_CURSOR_EXPIRED`, `PAGE_CURSOR_MISMATCH` | `options.pageCursor` read to the end, older than 5 minutes or never issued; or sent with another capability or params |
 | `DIRECT_TOOL_CALL_REMOVED` | a `tools/call` on a non-`unreal` name |
 
 Authorization refusal codes are shared verbatim with the plugin and are

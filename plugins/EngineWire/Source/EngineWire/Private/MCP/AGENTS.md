@@ -6,7 +6,7 @@ Direct plugin MCP implementation for Streamable HTTP/SSE at `/mcp`. This subtree
 | Area | Responsibility |
 |------|----------------|
 | `DynamicTools/` (7) | Enabled state, categories, protected tools; `McpTaskResults` keeps the calls that answered "still running" for `manage_tools get_task_result` |
-| `Execute/` (24) | Native execute pipeline: request parse, folded pins, schema validation, receipts |
+| `Execute/` (25, at cap) | Native execute pipeline: request parse, folded pins, schema validation, receipts, result pages (`McpNativeResultPages`) |
 | `Gateway/` (25, at cap) | Native gateway mirror of the TS engine: catalog, capability store, describe, search, guidance, folding (`McpNativeGatewayFolding`: legacy pairs, pins, `dispatchBy`) |
 | `Generated/` (24) | **ALL GENERATED** capability shards (`npm run registry:generate`). Never hand-edit |
 | `Primitives/` (7) | Prompts, completions, resource revision |

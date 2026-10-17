@@ -13,6 +13,7 @@ const TArray<FString>& McpExecutionOptionKeys()
 		TEXT("expectedCatalogRevision"),
 		TEXT("expectedRevisions"),
 		TEXT("timeoutMs"),
+		TEXT("pageCursor"),
 	};
 	return Keys;
 }
@@ -72,6 +73,15 @@ bool McpValidateExecutionOptions(
 					McpMaxExecutionTimeoutMs));
 			return false;
 		}
+	}
+
+	// The cursor of a paged result's page block (McpNativeResultPages.cpp), as gateway-option-validate.ts checks it.
+	const TSharedPtr<FJsonValue> Cursor = Options->TryGetField(TEXT("pageCursor"));
+	if (Cursor.IsValid() && (Cursor->Type != EJson::String || Cursor->AsString().IsEmpty() || Cursor->AsString().Len() > 64))
+	{
+		OutError = McpValidationError(TEXT("INVALID_OPTIONS"),
+			TEXT("options.pageCursor must be the cursor string of a page block (1..64 characters)."), TEXT("/options/pageCursor"));
+		return false;
 	}
 
 	// Mirrors the 1..128 bound in gateway-execute-validate.ts. Only the key NAME

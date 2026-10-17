@@ -79,10 +79,11 @@ export const unrealGatewayToolDefinition: ToolDefinition = {
             additionalProperties: false,
             description: 'Live editor-state revisions to pin, as the ue://state/revisions resource reports them; the call is refused with STALE_STATE when one has moved.'
           },
-          timeoutMs: { type: 'integer', minimum: 1, maximum: 600000, description: 'Deadline for this call in milliseconds.' }
+          timeoutMs: { type: 'integer', minimum: 1, maximum: 600000, description: 'Deadline for this call in milliseconds.' },
+          pageCursor: { type: 'string', minLength: 1, maxLength: 64, description: 'Read the next page of a result too large for one reply: the cursor its page block named, sent with the same capability and params (page.nextCall is that call). Nothing runs again.' }
         },
         additionalProperties: false,
-        description: 'Execution controls for execute only; never put these inside params. Honored keys: idempotencyKey, expectedCatalogRevision, expectedRevisions, timeoutMs.'
+        description: 'Execution controls for execute only; never put these inside params. Honored keys: idempotencyKey, expectedCatalogRevision, expectedRevisions, timeoutMs, pageCursor.'
       },
       limit: { type: 'integer', minimum: 1, maximum: 25, description: 'Maximum rows per page: search results (default 12) or describe action rows (default 20). Defaults to 12.' },
       offset: { type: 'integer', minimum: 0, description: 'Zero-based offset into search results or into a described tool\x27s action list. Defaults to 0.' },

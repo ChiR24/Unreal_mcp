@@ -101,6 +101,8 @@ struct FSSEConnection
 	// extension a call still open at the client's time limit answers a task the client polls.
 	bool bModern = false;
 	bool bTasks = false;
+	// Who may page through the result if it is too large for one reply (FMcpReceiptContext::PageOwner).
+	TSharedPtr<struct FMcpPageOwner> PageOwner;
 };
 
 /** Persistent SSE notification stream (GET /mcp). */

@@ -50,6 +50,33 @@ struct FMcpSemanticError
 	TSharedPtr<FJsonObject> UnrealDetail;
 };
 
+/** Who may read on through a result too large for one reply: the principal, capability and params of the call that
+ *  produced it (McpNativeResultPages.cpp; the TypeScript twin is gateway-result-pages.ts). */
+struct FMcpPageOwner
+{
+	FString Principal;
+	FString CapabilityId;
+	FString Fingerprint;
+	/** The call's own params, for the page block's continuation call. */
+	TSharedPtr<FJsonObject> Params;
+};
+
+/** One page of such a result: the result with its array cut to what fits, and the page block (field, offset,
+ *  returned, total; cursor and nextCall while items remain). */
+struct FMcpResultPage
+{
+	TSharedPtr<FJsonObject> Result;
+	TSharedPtr<FJsonObject> Page;
+};
+
+/** The first page of an oversized result; false when it cannot be paged (no top-level array of two or more items,
+ *  the rest alone too large, or one item too large for a reply of its own). */
+bool McpFirstResultPage(const TSharedPtr<FJsonObject>& Result, int64 Budget, const FMcpPageOwner& Owner, FMcpResultPage& Out);
+
+/** The next page for a cursor, or why there is none: PAGE_CURSOR_EXPIRED (expired, read to the end or never issued)
+ *  or PAGE_CURSOR_MISMATCH (another principal, capability or params). */
+FString McpNextResultPage(const FString& Cursor, const FMcpPageOwner& Owner, int64 Budget, FMcpResultPage& Out);
+
 // Per-request join keys + timing threaded onto every receipt so success and error
 // envelopes carry the same correlation/request/idempotency ids and timing as the
 // TypeScript receipt. RequestId is the canonicalized external MCP id (num:/str:),
@@ -80,6 +107,9 @@ struct FMcpReceiptContext
 
 	/** resolvedFromAlias / migratedFrom of the request, copied onto every receipt (FMcpGatewayExecuteRequest). */
 	TSharedPtr<FJsonObject> Provenance;
+
+	/** Who may page through this call's result when it is too large for one reply; unset, it is refused instead. */
+	TSharedPtr<FMcpPageOwner> PageOwner;
 };
 
 FMcpSemanticError McpValidationError(const FString& GatewayCode, const FString& Message, const FString& Pointer = FString());

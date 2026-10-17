@@ -10,6 +10,7 @@
 #include "MCP/Execute/McpNativeReceiptEnrichment.h"
 #include "MCP/Execute/McpNativeGatewayAuthorization.h"
 #include "MCP/Gateway/McpNativeGatewayGuidance.h"
+#include "MCP/Gateway/McpNativeGatewayExecuteReceiptBuild.h"
 #include "MCP/Protocol/McpModernConsent.h"
 #include "Core/Security/McpPrequeueGate.h"
 #include "Foundation/McpIdempotencyLedger.h"
@@ -64,6 +65,53 @@ void FMcpNativeTransport::HandleGatewayExecute(
 	}
 	Context.ExpectedRevisions = Plan.ExpectedRevisions;
 	Context.GatewayWarnings = Plan.Warnings;
+	// Who may page through the result if it is too large for one reply: this principal, capability and params.
+	Context.PageOwner = MakeShared<FMcpPageOwner>();
+	Context.PageOwner->Principal = GetSessionPrincipal(SessionId).Identity;
+	Context.PageOwner->CapabilityId = Plan.CapabilityId;
+	Context.PageOwner->Fingerprint = McpCanonicalFingerprint(Plan.CapabilityId, Plan.Arguments);
+	const TSharedPtr<FJsonObject>* CallParams = nullptr;
+	Context.PageOwner->Params = Params->TryGetObjectField(TEXT("params"), CallParams) && CallParams ? *CallParams : TSharedPtr<FJsonObject>(MakeShared<FJsonObject>());
+
+	// A page cursor reads on through a result too large for one reply (McpNativeResultPages.cpp). Nothing runs again:
+	// scope still holds for every page, but consent was the first call's and is not asked twice.
+	const TSharedPtr<FJsonObject>* PageOptions = nullptr;
+	FString PageCursor;
+	if (Params->TryGetObjectField(TEXT("options"), PageOptions) && PageOptions &&
+		(*PageOptions)->TryGetStringField(TEXT("pageCursor"), PageCursor))
+	{
+		const FMcpCapabilityPrincipal Principal = GetSessionPrincipal(SessionId);
+		FMcpPrequeueRequest ScopeRequest;
+		ScopeRequest.Principal = &Principal;
+		ScopeRequest.CapabilityId = Plan.CapabilityId;
+		ScopeRequest.DispatchAction = Plan.DispatchAction;
+		ScopeRequest.Payload = Plan.Arguments;
+		const FMcpAuthorizationDecision Scope =
+			McpCapabilityAuthorization::CheckScope(Principal, McpPrequeueGate::ResolveDemand(ScopeRequest));
+		if (!Scope.bAllowed)
+		{
+			SendReceipt(McpBuildErrorReceipt(Plan.CapabilityId, McpAuthorizationSemanticError(Scope), Context));
+			return;
+		}
+		FMcpResultPage Page;
+		const FString Refusal = McpNextResultPage(PageCursor, *Context.PageOwner, 100000, Page);
+		if (!Refusal.IsEmpty())
+		{
+			TSharedPtr<FJsonObject> Guidance = MakeShared<FJsonObject>();
+			Guidance->SetObjectField(TEXT("nextCall"),
+				GatewayBuildNextCall(TEXT("describe"), Plan.ParentTool, Plan.LegacyAction, FString()));
+			SendReceipt(McpBuildErrorReceipt(Plan.CapabilityId, McpExecutionError(Refusal, Refusal == TEXT("PAGE_CURSOR_EXPIRED")
+				? TEXT("The page cursor has expired, was read to the end, or was never issued: run the call again without pageCursor for a fresh first page.")
+				: TEXT("The page cursor belongs to another call: send the same capability and params as the call that returned it."), false),
+				Context, Guidance));
+			return;
+		}
+		const TSharedPtr<FJsonObject> Receipt = McpBuildGatewayExecuteReceipt(Plan.CapabilityId, Plan.OutputSchema, Context, true,
+			FString(), Page.Result, FString());
+		Receipt->SetObjectField(TEXT("page"), Page.Page);
+		SendReceipt(Receipt);
+		return;
+	}
 
 	// The same pre-queue security gate the WebSocket bridge applies, so both
 	// transports refuse identically, with the identical typed error, before any
