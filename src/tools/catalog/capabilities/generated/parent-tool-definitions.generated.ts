@@ -12925,7 +12925,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "blueprintPath": {
           "type": "string",
-          "description": "Canonical /Game Blueprint asset path, or a loaded level's path (/Game/Maps/L_Main) to compile its level Blueprint."
+          "description": "Canonical /Game Blueprint asset path, or the path of a level open in the editor (/Game/Maps/L_Main) to compile its level Blueprint; saveAfterCompile then saves that level."
         },
         "blueprintType": {
           "type": "string",
@@ -20720,7 +20720,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "nodeId": {
           "type": "string",
-          "description": "Node GUID returned by add_level_blueprint_node."
+          "description": "The node: the nodeId or nodeName add_level_blueprint_node returned, or its title, matched exactly (a node that only contains it is not taken)."
         },
         "nodeName": {
           "type": "string",

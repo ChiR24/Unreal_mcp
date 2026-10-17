@@ -40,62 +40,18 @@ bool HandleConnectLevelBlueprintNodes(
         return true;
     }
 
-    UWorld* World = GetEditorWorld();
-    if (!World)
-    {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("No editor world available"), nullptr);
-        return true;
-    }
-
     // Same levelPath honoring as add_node: connect must act on the named level,
     // never on whatever level happens to be open.
-    FString ConnectLevelError;
-    ULevel* CurrentLevel = ResolveTargetLevelForBlueprintRequest(World, Payload, ConnectLevelError);
-    ULevelScriptBlueprint* LevelBP = CurrentLevel ? CurrentLevel->GetLevelScriptBlueprint(false) : nullptr;
-    if (!LevelBP)
+    ULevel* CurrentLevel = nullptr;
+    ULevelScriptBlueprint* LevelBP = nullptr;
+    UEdGraph* EventGraph = nullptr;
+    if (!ResolveLevelBlueprintGraph(Subsystem, RequestId, Socket, Payload, /*bCreate=*/false, CurrentLevel, LevelBP, EventGraph))
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            ConnectLevelError.IsEmpty() ? TEXT("Level Blueprint not available") : ConnectLevelError,
-            nullptr, TEXT("LEVEL_NOT_OPEN"));
         return true;
     }
 
-    UEdGraph* EventGraph = FBlueprintEditorUtils::FindEventGraph(LevelBP);
-    if (!EventGraph)
-    {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("Event graph not found"), nullptr);
-        return true;
-    }
-
-    // A node whose name, title or id (the nodeId add_node returns) is the one asked for wins over one that only
-    // contains it: an actor reference's title is its actor's label, and that actor's bound event carries the label
-    // too ("On Actor Begin Overlap (TriggerBox_Center)"), so a part match alone picked whichever came last.
-    auto FindNode = [EventGraph](const FString& Wanted) -> UEdGraphNode*
-    {
-        UEdGraphNode* Partial = nullptr;
-        for (UEdGraphNode* Node : EventGraph->Nodes)
-        {
-            if (!Node)
-            {
-                continue;
-            }
-            const FString NodeTitle = Node->GetNodeTitle(ENodeTitleType::FullTitle).ToString();
-            if (Node->GetName().Equals(Wanted, ESearchCase::IgnoreCase) || NodeTitle.Equals(Wanted, ESearchCase::IgnoreCase) ||
-                Node->NodeGuid.ToString().Equals(Wanted, ESearchCase::IgnoreCase))
-            {
-                return Node;
-            }
-            if (NodeTitle.Contains(Wanted) || Node->GetName().Contains(Wanted))
-            {
-                Partial = Node;
-            }
-        }
-        return Partial;
-    };
-    UEdGraphNode* SourceNode = FindNode(SourceNodeName);
-    UEdGraphNode* TargetNode = FindNode(TargetNodeName);
+    UEdGraphNode* SourceNode = FindLevelBlueprintNode(EventGraph, SourceNodeName, true);
+    UEdGraphNode* TargetNode = FindLevelBlueprintNode(EventGraph, TargetNodeName, true);
 
     if (!SourceNode || !TargetNode)
     {

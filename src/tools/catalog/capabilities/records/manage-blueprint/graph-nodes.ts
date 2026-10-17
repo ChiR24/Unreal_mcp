@@ -226,7 +226,7 @@ export const GRAPH_NODES_RECORDS: readonly CapabilityRecordSource[] = [
     family: FAMILY,
     domain: DOMAIN,
     summary: 'Read all nodes in a Blueprint graph, optionally including per-node pins and links; filter and page a large graph.',
-    whenToUse: ['The full node list of a graph must be inspected in one call.', 'A large graph must be read in parts: filter by node title or by what a pin holds, page with offset/limit.', 'The node that builds or uses a given asset, class or literal must be found, e.g. the Create Widget node for WBP_MainMenu.', 'Leftovers must be found after an edit: unusedOnly lists the nodes that do nothing, to delete them.'],
+    whenToUse: ['The full node list of a graph must be inspected in one call.', 'A large graph must be read in parts: filter by node title or by what a pin holds, page with offset/limit.', 'The node that builds or uses a given asset, class or literal must be found, e.g. the Create Widget node for WBP_MainMenu.', 'Leftovers must be found after an edit: unusedOnly lists the nodes that do nothing, to delete them.', 'A level Blueprint\'s nodes must be read: blueprintPath takes the path of a level open in the editor (/Game/Maps/L_Main).'],
     whenNotToUse: ['A single node\'s details are needed (use get_node_details).'],
     inputProps: {
       blueprintPath: P.blueprintPath, graphName: P.graphName, includePins: P.includePins,

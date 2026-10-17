@@ -159,7 +159,7 @@ export const BLUEPRINT_LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
     ],
     whenNotToUse: ['The Blueprint has no pending changes.'],
     inputProps: {
-      blueprintPath: { ...P.blueprintPath, description: 'Canonical /Game Blueprint asset path, or a loaded level\'s path (/Game/Maps/L_Main) to compile its level Blueprint.' },
+      blueprintPath: { ...P.blueprintPath, description: 'Canonical /Game Blueprint asset path, or the path of a level open in the editor (/Game/Maps/L_Main) to compile its level Blueprint; saveAfterCompile then saves that level.' },
       folder: { type: 'string', description: 'In place of blueprintPath: compile every Blueprint under this /Game folder (sub-folders too, widget and animation Blueprints included, at most 500) and answer with counts and the ones that failed or carry warnings, each with its diagnostics. An audit leaves each package as saved or unsaved as it was; saveAfterCompile does not apply.' },
       saveAfterCompile: P.saveAfterCompile,
     },

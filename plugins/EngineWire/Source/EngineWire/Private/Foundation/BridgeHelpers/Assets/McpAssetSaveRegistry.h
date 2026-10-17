@@ -30,12 +30,18 @@ struct FMcpDeferAssetSaves {
 // a dirty package is unsaved work and is always written.
 //
 // bForce: save even inside a batch deferral or when the package is clean.
+//
+// A level's package (a level Blueprint reached by its level path) is never
+// written here, even with bForce: that writes every other unsaved change in the
+// level, so it is saved only on request through McpSafeLevelSave. Answers false.
 static inline bool SaveLoadedAssetThrottled(UObject *Asset, bool bForce = false) {
   if (!Asset)
     return false;
+  const UPackage *const Package = Asset->GetOutermost();
+  if (Package && Package->ContainsMap())
+    return false;
   if (!bForce && McpAssetSaveDeferralDepth() > 0)
     return true; // the batch that opened the deferral saves this asset once at its end
-  const UPackage *const Package = Asset->GetOutermost();
   if (!bForce && Package && !Package->IsDirty() &&
       FPackageName::DoesPackageExist(Package->GetName()))
     return true;

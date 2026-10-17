@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "7c55bc868c67b59a",
+  "catalogRevision": "ccbcf37c09908de4",
   "recordCount": 416,
   "records": [
     {
@@ -16144,7 +16144,7 @@
             },
             "blueprintPath": {
               "type": "string",
-              "description": "Canonical /Game Blueprint asset path, or a loaded level's path (/Game/Maps/L_Main) to compile its level Blueprint."
+              "description": "Canonical /Game Blueprint asset path, or the path of a level open in the editor (/Game/Maps/L_Main) to compile its level Blueprint; saveAfterCompile then saves that level."
             },
             "folder": {
               "type": "string",
@@ -16276,8 +16276,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "dc0864afee9bb488c37a248610d634738bb0107f3eef0664aeff01f52302ab9c",
-        "content": "a74f1ea1bf95e6c6dd1888dc3990e1c9506d675ee4b1389033f4a296837e7bf3"
+        "schema": "d4fb546b1725226bbcac9350ad71cb1f4f028a5efd298fd6a265f5c99d9e1cf0",
+        "content": "7a83f255263ec466b1bc031eda168f6d7b8f0f7a1bd94f3796a378b427ab03f6"
       }
     },
     {
@@ -21221,6 +21221,7 @@
           "info=graph: A large graph must be read in parts: filter by node title or by what a pin holds, page with offset/limit.",
           "info=graph: The node that builds or uses a given asset, class or literal must be found, e.g. the Create Widget node for WBP_MainMenu.",
           "info=graph: Leftovers must be found after an edit: unusedOnly lists the nodes that do nothing, to delete them.",
+          "info=graph: A level Blueprint's nodes must be read: blueprintPath takes the path of a level open in the editor (/Game/Maps/L_Main).",
           "info=node: A single node's pins, type, and links must be inspected.",
           "info=node: What an event or function does must be read: followExec on its entry node lists every node its exec wires reach, with their inputs, in one call.",
           "info=pins: Pin-level details including linkedTo connections must be inspected for a single node.",
@@ -21672,7 +21673,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "4d318a4129a5018f35c6323878c46da787fbebcc8859c80ee91abb0c522bdc59",
-        "content": "35049052d960235dc8648a7e98b916394cd500fabd043396e29d903addffd870"
+        "content": "e41bb3d2d9a1fc7458e7d564ab71d90932c752ba2c93b89eee818ad7911b3ce4"
       }
     },
     {
@@ -76173,6 +76174,7 @@
         ],
         "whenNotToUse": [
           "edit=open: A sub-level blueprint is needed; use the asset path directly.",
+          "edit=add_node: The level Blueprint's nodes must be read, or edited beyond these edits; blueprint.inspect_graph and blueprint.edit_graph take the open level's path (/Game/Maps/L_Main) as blueprintPath.",
           "edit=connect_nodes: The nodes are in a Blueprint asset, not the level Blueprint; use blueprint.edit_graph (edit=connect_pins).",
           "edit=set_pin_default_value: The node is in a Blueprint asset, not the level Blueprint; use blueprint.edit_graph (edit=set_pin_default_value)."
         ]
@@ -76255,7 +76257,7 @@
             },
             "nodeId": {
               "type": "string",
-              "description": "Node GUID returned by add_level_blueprint_node."
+              "description": "The node: the nodeId or nodeName add_level_blueprint_node returned, or its title, matched exactly (a node that only contains it is not taken)."
             },
             "unboundOnly": {
               "type": "boolean",
@@ -76438,8 +76440,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "5791ee0a8d249aa4ca8e07d136dca219a1b586b34cf5c1e6a41aa7a289512149",
-        "content": "58fc3861392a335d659a38f4f2a9878b696e500a2620210bd701ff7ff4ebabae"
+        "schema": "15c2e143725659c1df9d07fa85b923cb14b178ca1c12bd63c4285c9866dad00b",
+        "content": "c7a8c60b7705f57454c21ad50c2f504cfa948b4413c5c847d3164fe2f5b23dd9"
       }
     },
     {

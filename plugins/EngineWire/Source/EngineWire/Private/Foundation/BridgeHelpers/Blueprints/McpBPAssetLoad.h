@@ -5,13 +5,16 @@
 #include "CoreMinimal.h"
 #include "EditorAssetLibrary.h"
 #include "Engine/Blueprint.h"
-#include "Engine/Level.h"
-#include "Engine/LevelScriptBlueprint.h"
-#include "Engine/World.h"
 #include "Misc/Paths.h"
 #include "Modules/ModuleManager.h"
 #include "UObject/Package.h"
 #include "UObject/UObjectIterator.h"
+
+// True when PackagePath is a level (Assets is the registry's answer for it), so a Blueprint lookup ends there:
+// OutBlueprint is then its level Blueprint when the level is open in the editor (the persistent level or one
+// streamed into it), else null with OutError saying how to reach it. A level that is not open is never loaded.
+bool McpResolveLevelBlueprint(const FString &PackagePath, const TArray<FAssetData> &Assets,
+                              UBlueprint *&OutBlueprint, FString &OutError);
 
 // Attempt to locate and load a Blueprint by several heuristics. Returns nullptr
 /**
@@ -75,18 +78,6 @@ static inline UBlueprint *LoadBlueprintAsset(const FString &Req,
     return InMemory;
   }
 
-  // A level's Blueprint is its level script, held by the persistent level, not
-  // the package: a loaded level's path reaches it, so callers need not spell the
-  // /Game/Maps/L.L:PersistentLevel.L object path.
-  if (UWorld* World = FindObject<UWorld>(nullptr, *ObjectPath)) {
-    if (UBlueprint* LevelBP = World->PersistentLevel ? World->PersistentLevel->GetLevelScriptBlueprint(true) : nullptr) {
-      OutNormalized = PackagePath;
-      return LevelBP;
-    }
-    OutError = FString::Printf(TEXT("Level %s has no level Blueprint yet; manage_level_structure edit_level_blueprint (edit open) creates it."), *PackagePath);
-    return nullptr;
-  }
-
   // From disk: Asset Registry lookup. (A UEditorAssetLibrary::DoesAssetExist
   // step used to precede it; that refuses and logs an engine error in PIE.)
   FAssetRegistryModule &ARM =
@@ -94,10 +85,12 @@ static inline UBlueprint *LoadBlueprintAsset(const FString &Req,
           TEXT("AssetRegistry"));
   TArray<FAssetData> Results;
   ARM.Get().GetAssetsByPackageName(FName(*PackagePath), Results);
-  // A level that is not loaded is not loaded from here just to reach its Blueprint.
-  if (Results.Num() > 0 && Results[0].GetClass() == UWorld::StaticClass()) {
-    OutError = FString::Printf(TEXT("%s is a level that is not loaded; load it (manage_level load), then this path reaches its level Blueprint."), *PackagePath);
-    return nullptr;
+  // A level's Blueprint is its level script, held by the level rather than the
+  // package, so a level path reaches it without the L.L:PersistentLevel.L spelling.
+  UBlueprint *LevelBP = nullptr;
+  if (McpResolveLevelBlueprint(PackagePath, Results, LevelBP, OutError)) {
+    OutNormalized = LevelBP ? PackagePath : FString();
+    return LevelBP;
   }
   // GetAsset loads the asset when it is not in memory yet.
   if (UBlueprint* BP = Results.Num() > 0 ? Cast<UBlueprint>(Results[0].GetAsset()) : nullptr) {
