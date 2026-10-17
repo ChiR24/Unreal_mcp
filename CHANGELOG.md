@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <summary><b>🔧 Fixed</b></summary>
 
 - **`runtime_report` `filter`** matches an actor's path only whole, so a filter that names the level no longer lists every actor in it.
+- **The plugin links on UE 5.0 again**: the Niagara module add refuses there (the engine does not export it) and the emitter copy carries user parameters without a call 5.0 and 5.1 cannot link.
 
 </details>
 

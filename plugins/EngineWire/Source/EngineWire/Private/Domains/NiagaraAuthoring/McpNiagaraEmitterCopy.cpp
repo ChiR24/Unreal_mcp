@@ -75,7 +75,31 @@ static TArray<FString> CopyUserParameters(UNiagaraSystem* System, UNiagaraSystem
         }
         const FNiagaraVariable Param(Var);
         Target.AddParameter(Param, true);
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION < 2
+        // 5.0 and 5.1 inline CopyParameterData, which logs to LogNiagara, a category the Niagara module does not
+        // export: the plugin did not link. The same copy, through the store's exported members.
+        const FNiagaraParameterStore& From = Source->GetExposedParameters();
+        if (Param.IsDataInterface())
+        {
+            UNiagaraDataInterface* FromInterface = From.GetDataInterface(Param);
+            UNiagaraDataInterface* ToInterface = Target.GetDataInterface(Param);
+            if (FromInterface && ToInterface)
+            {
+                FromInterface->CopyTo(ToInterface);
+                Target.OnInterfaceChange();
+            }
+        }
+        else if (Param.IsUObject())
+        {
+            Target.SetUObject(From.GetUObject(Param), Param);
+        }
+        else if (const uint8* Data = From.GetParameterData(Param))
+        {
+            Target.SetParameterData(Data, Param);
+        }
+#else
         Source->GetExposedParameters().CopyParameterData(Target, Param);
+#endif
         Added.Add(Param.GetName().ToString());
     }
     return Added;

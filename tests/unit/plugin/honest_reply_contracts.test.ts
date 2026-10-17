@@ -3229,3 +3229,21 @@ describe('runtime_report filter matches a path only whole', () => {
     expect(runtime).not.toContain('Actor->GetPathName().Contains(Filter)');
   });
 });
+
+describe('the plugin links on UE 5.0', () => {
+  // UE 5.0 declares AddScriptModuleToStack without exporting it, and 5.0 and 5.1 inline CopyParameterData with a
+  // LogNiagara line the Niagara module does not export: either call left the 5.0 build with unresolved externals.
+  it('calls AddScriptModuleToStack only where the engine exports it', () => {
+    for (const file of [['NiagaraAuthoring', 'McpNiagaraStackGraph.cpp'], ['NiagaraGraph', 'McpNiagaraGraphHandlers.cpp']]) {
+      const source = code(...file);
+      const calls = source.split('FNiagaraStackGraphUtilities::AddScriptModuleToStack(').length - 1;
+      expect(calls, file.join('/')).toBeGreaterThan(0);
+      expect(source.match(/#if MCP_HAS_NIAGARA_STACK_GRAPH_UTILITIES[^#]*FNiagaraStackGraphUtilities::AddScriptModuleToStack\(/gu)?.length, file.join('/')).toBe(calls);
+    }
+  });
+
+  it('copies a user parameter without the inline CopyParameterData on 5.0 and 5.1', () => {
+    const copy = code('NiagaraAuthoring', 'McpNiagaraEmitterCopy.cpp');
+    expect(copy).toMatch(/#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION < 2[^#]*Target\.SetParameterData\(Data, Param\);\s*\}\s*#else\s*Source->GetExposedParameters\(\)\.CopyParameterData\(Target, Param\);\s*#endif/u);
+  });
+});

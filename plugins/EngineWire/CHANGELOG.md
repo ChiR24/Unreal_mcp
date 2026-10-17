@@ -11,6 +11,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 
 ### Fixed
 - **`runtime_report` `filter`** matches an actor's path only whole, not every actor of a level named like the filter.
+- **Links on UE 5.0 again**: the graph module add is guarded like the stack one, and the emitter copy avoids the inline `CopyParameterData` on 5.0 and 5.1.
 
 ## [0.6.0-beta-f] - 2026-10-16
 
