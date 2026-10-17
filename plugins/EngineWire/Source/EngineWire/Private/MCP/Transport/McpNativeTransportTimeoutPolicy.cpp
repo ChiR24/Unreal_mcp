@@ -19,8 +19,10 @@ double ResolveToolCallTimeoutSeconds(
       FMath::Max(1, MaxMovieRenderTimeoutMs);
   double RenderTimeoutMs =
       FMath::Min(300000.0, MaximumRenderTimeoutMs);
+  // The render's own limit, as start_render's record declares and its handler reads it: under "timeoutMs" a
+  // render allowed an hour still had its request cut off after 335 s.
   double RequestedTimeoutMs = 0.0;
-  if (Arguments->TryGetNumberField(TEXT("timeoutMs"), RequestedTimeoutMs) &&
+  if (Arguments->TryGetNumberField(TEXT("renderTimeoutMs"), RequestedTimeoutMs) &&
       FMath::IsFinite(RequestedTimeoutMs) && RequestedTimeoutMs > 0.0) {
     RenderTimeoutMs =
         FMath::Min(RequestedTimeoutMs, MaximumRenderTimeoutMs);

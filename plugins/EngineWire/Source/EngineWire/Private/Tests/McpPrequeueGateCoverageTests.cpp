@@ -102,10 +102,11 @@ bool FMcpPrequeueGateScanTruncationTest::RunTest(const FString& Parameters)
 			CheckPathCoverage(Unconfined, Demand, Scan).bAllowed);
 	}
 
-	// Nesting the real path below the depth bound is the same attack.
+	// Nesting the real path below the depth bound (24 levels since payloads that deep are checked) is the same
+	// attack.
 	{
 		const TSharedPtr<FJsonObject> Deep =
-			Nest(McpTestFields({ { TEXT("folderPath"), TEXT("/Game/TeamB/Secret") } }), 12);
+			Nest(McpTestFields({ { TEXT("folderPath"), TEXT("/Game/TeamB/Secret") } }), 30);
 		const FMcpPayloadPathScan Scan = CollectPayloadPaths(Deep, true);
 		TestTrue(TEXT("a value nested below the depth bound reports truncation"),
 			Scan.bTruncated);

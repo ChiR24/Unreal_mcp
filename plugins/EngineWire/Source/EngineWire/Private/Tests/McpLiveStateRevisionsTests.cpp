@@ -216,7 +216,9 @@ bool FMcpLiveStateRevisionSnapshotTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("snapshot maximum"), Snapshot.Max(), static_cast<int64>(3));
 
 	const TSharedRef<FJsonObject> Json = Snapshot.ToJson();
-	TestEqual(TEXT("snapshot has four keys"), Json->Values.Num(), 4);
+	// The four revisions and the server instance id, which tells a restart from a rollback.
+	TestEqual(TEXT("snapshot has four revisions and the instance id"), Json->Values.Num(), 5);
+	TestFalse(TEXT("snapshot names its server instance"), Json->GetStringField(TEXT("serverInstanceId")).IsEmpty());
 	TestEqual(TEXT("selection JSON value"),
 		static_cast<int64>(Json->GetNumberField(TEXT("selection"))), static_cast<int64>(3));
 	TestEqual(TEXT("package JSON value"),

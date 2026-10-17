@@ -3247,3 +3247,24 @@ describe('the plugin links on UE 5.0', () => {
     expect(copy).toMatch(/#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION < 2[^#]*Target\.SetParameterData\(Data, Param\);\s*\}\s*#else\s*Source->GetExposedParameters\(\)\.CopyParameterData\(Target, Param\);\s*#endif/u);
   });
 });
+
+describe('what the native smoke run found', () => {
+  const privateCode = (...segments: readonly string[]): string =>
+    readFileSync(join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', ...segments), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//gu, ' ').replace(/\/\/[^\n]*/gu, ' ');
+
+  // IPlatformFile::MoveFile is a plain MoveFileW on Windows: every rewrite of a diagnostics record after the first
+  // failed and left the temp beside a stale file.
+  it('a diagnostics record replaces the file it rewrites', () => {
+    const snapshot = privateCode('Foundation', 'Diagnostics', 'McpDiagnosticsSnapshot.cpp');
+    expect(snapshot).toContain('return IFileManager::Get().Move(*TargetPath, *TempPath,  true);');
+    expect(snapshot).not.toContain('PlatformFile.MoveFile(*TargetPath, *TempPath)');
+  });
+
+  // start_render's record and handler say renderTimeoutMs; the request timeout read timeoutMs and cut an hour-long
+  // render off after 335 s.
+  it('a render request lives as long as the render it asked for', () => {
+    const policy = privateCode('MCP', 'Transport', 'McpNativeTransportTimeoutPolicy.cpp');
+    expect(policy).toContain('Arguments->TryGetNumberField(TEXT("renderTimeoutMs"), RequestedTimeoutMs)');
+  });
+});
