@@ -59,41 +59,16 @@ bool HandleAddLevelBlueprintNode(
         return true;
     }
 
-    UWorld* World = GetEditorWorld();
-    if (!World)
-    {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("No editor world available"), nullptr);
-        return true;
-    }
-
     // Honor levelPath: edit the level the caller named, not whatever level is
     // open. A transient /Temp/ level is refused because its blueprint cannot be
     // saved (previously such a call reported success and silently discarded the
-    // node — see ResolveTargetLevelForBlueprintRequest).
-    FString TargetLevelError;
-    ULevel* CurrentLevel = ResolveTargetLevelForBlueprintRequest(World, Payload, TargetLevelError);
-    if (!CurrentLevel)
+    // node — see ResolveTargetLevelForBlueprintRequest). Adding the first node
+    // creates the level Blueprint.
+    ULevel* CurrentLevel = nullptr;
+    ULevelScriptBlueprint* LevelBP = nullptr;
+    UEdGraph* EventGraph = nullptr;
+    if (!ResolveLevelBlueprintGraph(Subsystem, RequestId, Socket, Payload, /*bCreate=*/true, CurrentLevel, LevelBP, EventGraph))
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TargetLevelError, nullptr, TEXT("LEVEL_NOT_OPEN"));
-        return true;
-    }
-
-    // Pass false to allow creation of Level Blueprint if it doesn't exist
-    ULevelScriptBlueprint* LevelBP = CurrentLevel->GetLevelScriptBlueprint(false);
-    if (!LevelBP)
-    {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("Failed to get or create Level Blueprint"), nullptr);
-        return true;
-    }
-
-    UEdGraph* EventGraph = FBlueprintEditorUtils::FindEventGraph(LevelBP);
-    if (!EventGraph)
-    {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("Failed to find event graph in Level Blueprint"), nullptr);
         return true;
     }
 

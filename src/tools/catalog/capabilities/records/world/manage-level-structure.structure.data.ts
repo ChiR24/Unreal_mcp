@@ -19,6 +19,8 @@ const LEVEL_ASSET = { type: 'string', description: 'Saved level asset to instanc
 const SAVE_LEVEL = { type: 'boolean', description: 'Save the open level (default true unless it was never saved).' };
 // A connect end: an exact name, title or id wins over a node that only contains it (an actor's bound event holds its label).
 const LBP_NODE = (end: string) => ({ type: 'string', description: `${end} node: the nodeName or nodeId add_level_blueprint_node returned, or its title. An exact match wins; otherwise the last node whose name or title contains it.` });
+// One node an edit acts on; remove_node and set_pin_default_value share it in the edit_level_blueprint fold.
+const LBP_NODE_ID = { type: 'string', description: 'The node: the nodeId or nodeName add_level_blueprint_node returned, or its title, matched exactly (a node that only contains it is not taken). A name or title several nodes share is refused with their names (AMBIGUOUS_NODE).' };
 
 export const LEVEL_STRUCTURE_RECORDS: readonly CapabilityRecordSource[] = [
   buildWorldRecord({
@@ -167,7 +169,7 @@ export const LEVEL_STRUCTURE_RECORDS: readonly CapabilityRecordSource[] = [
       'A function of a class outside the common Blueprint libraries must be called (K2Node_CallFunction with functionName and memberClass).',
       'A placed actor\'s component must be used, such as the light component whose SetLightColor changes a light (K2Node_VariableGet with memberClass and memberName, its self pin fed from the actor\'s K2Node_Literal).',
     ],
-    whenNotToUse: ['An existing node should be connected; use connect_level_blueprint_nodes.'],
+    whenNotToUse: ['An existing node should be connected; use connect_level_blueprint_nodes.', 'The level Blueprint\'s nodes must be read, or edited beyond these edits; blueprint.inspect_graph and blueprint.edit_graph take the open level\'s path (/Game/Maps/L_Main) as blueprintPath.'],
     inputProps: {
       nodeClass: P.nodeClass, nodeName: P.nodeName, nodePosition: P.nodePosition, levelPath: BP_LEVEL, save: P.levelEditSave,
       functionName: { type: 'string', description: 'Function to bind when nodeClass is K2Node_CallFunction (e.g. PrintString); short function names may also be passed as nodeClass.' },
@@ -181,9 +183,9 @@ export const LEVEL_STRUCTURE_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildWorldRecord({
     parentTool: 'manage_level_structure', action: 'remove_level_blueprint_node', dispatchAction: 'remove_level_blueprint_node',
-    family: F, summary: 'Remove nodes from the level blueprint graph by id or name, or purge unbound call nodes.',
+    family: F, summary: 'Remove a level blueprint node by id, name or title (one several nodes share is refused), or purge unbound call nodes.',
     whenToUse: ['A level blueprint node must be deleted, or an unbound K2Node_CallFunction ("Could not find a function named None") must be repaired.'], whenNotToUse: ['The node only needs re-wiring; use connect_level_blueprint_nodes.'],
-    inputProps: { nodeId: { type: 'string', description: 'Node GUID returned by add_level_blueprint_node.' }, nodeName: P.nodeName, unboundOnly: { type: 'boolean', description: 'Remove every call-function node that has no bound function instead of a named node.' }, levelPath: BP_LEVEL, save: P.levelEditSave },
+    inputProps: { nodeId: LBP_NODE_ID, nodeName: P.nodeName, unboundOnly: { type: 'boolean', description: 'Remove every call-function node that has no bound function instead of a named node.' }, levelPath: BP_LEVEL, save: P.levelEditSave },
     required: [], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'remove_level_blueprint_node', unboundOnly: true },
     // Authored after the gateway migration: git history has no pre-gateway
@@ -196,6 +198,29 @@ export const LEVEL_STRUCTURE_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: { sourceNodeName: LBP_NODE('Source'), sourcePinName: P.sourcePinName, targetNodeName: LBP_NODE('Target'), targetPinName: P.targetPinName, levelPath: BP_LEVEL, save: P.levelEditSave },
     required: ['sourceNodeName', 'targetNodeName'], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'connect_level_blueprint_nodes', sourceNodeName: 'EventBegin', targetNodeName: 'Print' },
+  }),
+  buildWorldRecord({
+    parentTool: 'manage_level_structure', action: 'set_level_blueprint_pin_default', dispatchAction: 'set_level_blueprint_pin_default',
+    topics: ['level blueprint pin default', 'level blueprint pin value', 'level blueprint literal'],
+    family: F, summary: 'Set the default value of an input pin on a level blueprint node (in its event graph or one of its functions), such as the color SetLightColor sets; a read-only (const reference) pin gets it through a MakeLiteral node wired into it.',
+    whenToUse: ['A level blueprint node\'s input pin needs a literal value instead of a wire (a light color, a print string, a number).'],
+    whenNotToUse: ['The pin should take its value from another node; use connect_level_blueprint_nodes.', 'The node is in a Blueprint asset, not the level Blueprint; use blueprint.edit_graph (edit=set_pin_default_value).'],
+    inputProps: {
+      nodeId: LBP_NODE_ID,
+      pinName: { type: 'string', description: 'Input pin name or display name, as add_level_blueprint_node lists them (NewLightColor on SetLightColor).' },
+      propertyValue: { description: 'The pin\'s new default: a number, true or false, text, an enum value name, an asset path, a vector as X,Y,Z or {x,y,z}, a rotator as P,Y,R or {pitch,yaw,roll}, a color as {r,g,b,a}.' },
+      levelPath: BP_LEVEL, save: P.levelEditSave,
+    },
+    required: ['nodeId', 'pinName', 'propertyValue'], effect: 'write', costLatency: 'interactive', costResources: 'low',
+    outputProps: {
+      nodeName: { type: 'string', description: 'The node whose pin was set.' },
+      pinName: { type: 'string', description: 'The pin that was set.' },
+      appliedValue: { type: 'string', description: 'Literal actually stored on the pin (or the resolved object path for an object or class pin).' },
+      literalNodeId: { type: 'string', description: 'Guid of the MakeLiteral node carrying the value when the pin itself takes no literal.' },
+      saved: { type: 'boolean', description: 'Whether the level was saved.' },
+    },
+    exampleInput: { action: 'set_level_blueprint_pin_default', nodeId: 'K2Node_CallFunction_0', pinName: 'NewLightColor', propertyValue: { r: 1, g: 0, b: 0, a: 1 } },
+    exampleOutput: { success: true, message: 'Pin default value set. The level is not saved yet; pass save: true, or save it with manage_level save.', nodeName: 'K2Node_CallFunction_0', pinName: 'NewLightColor', appliedValue: '(R=1.000000,G=0.000000,B=0.000000,A=1.000000)', saved: false },
   }),
   buildWorldRecord({
     parentTool: 'manage_level_structure', action: 'get_level_structure_info', dispatchAction: 'get_level_structure_info',

@@ -12925,7 +12925,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "blueprintPath": {
           "type": "string",
-          "description": "Canonical /Game Blueprint asset path."
+          "description": "Canonical /Game Blueprint asset path, or the path of a level open in the editor (/Game/Maps/L_Main) to compile its level Blueprint; saveAfterCompile then saves that level."
         },
         "blueprintType": {
           "type": "string",
@@ -20555,7 +20555,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "open",
             "add_node",
             "connect_nodes",
-            "remove_node"
+            "remove_node",
+            "set_pin_default_value"
           ],
           "description": "Which edit level blueprint variant to run."
         },
@@ -20719,7 +20720,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "nodeId": {
           "type": "string",
-          "description": "Node GUID returned by add_level_blueprint_node."
+          "description": "The node: the nodeId or nodeName add_level_blueprint_node returned, or its title, matched exactly (a node that only contains it is not taken). A name or title several nodes share is refused with their names (AMBIGUOUS_NODE)."
         },
         "nodeName": {
           "type": "string",
@@ -20743,6 +20744,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "parentLevel": {
           "type": "string",
           "description": "Parent level asset path."
+        },
+        "pinName": {
+          "type": "string",
+          "description": "Input pin name or display name, as add_level_blueprint_node lists them (NewLightColor on SetLightColor)."
         },
         "postProcessSettings": {
           "type": "object",
@@ -20772,6 +20777,9 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "priority": {
           "type": "number",
           "description": "Priority where volumes overlap (PhysicsVolume, PostProcessVolume)."
+        },
+        "propertyValue": {
+          "description": "The pin's new default: a number, true or false, text, an enum value name, an asset path, a vector as X,Y,Z or {x,y,z}, a rotator as P,Y,R or {pitch,yaw,roll}, a color as {r,g,b,a}."
         },
         "reverbVolume": {
           "type": "number",
@@ -20979,6 +20987,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Object name of the placed Level Instance actor."
         },
+        "appliedValue": {
+          "type": "string",
+          "description": "Literal actually stored on the pin (or the resolved object path for an object or class pin)."
+        },
         "blueprintCreated": {
           "type": "boolean",
           "description": "True when the Blueprint was new."
@@ -21014,6 +21026,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true,
           "description": "currentLevel, persistentLevel, actorCount, sublevelCount, sublevels (package names), streamingLevels (name, packageName, isLoaded, isVisible, shouldBeLoaded, shouldBeVisible, streamingClass, alwaysLoaded, actorCount), worldPartitionEnabled, dataLayers when World Partition is on (name, fullName, isRuntime, runtimeState, initialRuntimeState), levelInstances (labels) and hlodLayers (name, type and the layer settings)."
         },
+        "literalNodeId": {
+          "type": "string",
+          "description": "Guid of the MakeLiteral node carrying the value when the pin itself takes no literal."
+        },
         "loaded": {
           "type": "boolean",
           "description": "Whether the instanced level is loaded in the editor now."
@@ -21022,9 +21038,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Human-readable result message."
         },
+        "nodeName": {
+          "type": "string",
+          "description": "The node whose pin was set."
+        },
+        "pinName": {
+          "type": "string",
+          "description": "The pin that was set."
+        },
         "saved": {
           "type": "boolean",
-          "description": "Whether the open level was saved."
+          "description": "Whether the level was saved."
         },
         "success": {
           "type": "boolean",

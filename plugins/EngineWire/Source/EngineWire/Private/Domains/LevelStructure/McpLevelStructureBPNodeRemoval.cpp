@@ -35,18 +35,14 @@ bool HandleRemoveLevelBlueprintNode(
             TEXT("Pass nodeId or nodeName, or unboundOnly:true to purge call nodes without a function"), nullptr, TEXT("INVALID_ARGUMENT"));
         return true;
     }
-    UWorld* World = GetEditorWorld();
     // Honor levelPath on removal too: deleting from whatever level is open would
     // otherwise report "Removed ..." against the wrong level (or a throwaway
     // /Temp/ world).
-    FString RemoveLevelError;
-    ULevel* CurrentLevel = ResolveTargetLevelForBlueprintRequest(World, Payload, RemoveLevelError);
-    ULevelScriptBlueprint* LevelBP = CurrentLevel ? CurrentLevel->GetLevelScriptBlueprint(true) : nullptr;
-    if (!LevelBP)
+    ULevel* CurrentLevel = nullptr;
+    ULevelScriptBlueprint* LevelBP = nullptr;
+    UEdGraph* EventGraph = nullptr;
+    if (!ResolveLevelBlueprintGraph(Subsystem, RequestId, Socket, Payload, /*bCreate=*/false, CurrentLevel, LevelBP, EventGraph))
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            RemoveLevelError.IsEmpty() ? TEXT("No level blueprint on the current level") : RemoveLevelError,
-            nullptr, RemoveLevelError.IsEmpty() ? TEXT("NOT_FOUND") : TEXT("LEVEL_NOT_OPEN"));
         return true;
     }
     TArray<UEdGraph*> Graphs;
@@ -66,12 +62,23 @@ bool HandleRemoveLevelBlueprintNode(
             }
             else
             {
-                bMatch = (!NodeId.IsEmpty() && Node->NodeGuid.ToString().Equals(NodeId, ESearchCase::IgnoreCase)) ||
-                         (!NodeName.IsEmpty() && (Node->GetName().Equals(NodeName, ESearchCase::IgnoreCase) ||
-                                                  Node->GetNodeTitle(ENodeTitleType::ListView).ToString().Equals(NodeName, ESearchCase::IgnoreCase)));
+                // nodeId and nodeName each take the guid, the node's name or its title (the pin edit's nodeId too).
+                bMatch = IsLevelBlueprintNodeNamed(Node, NodeId) || IsLevelBlueprintNodeNamed(Node, NodeName);
             }
             if (bMatch) { ToRemove.Add(Node); }
         }
+    }
+    // A name or title several nodes share ("Sequence", "Print String") names no one node: removing them all was not
+    // asked for, and the removal cannot be undone from here.
+    if (!bUnboundOnly && ToRemove.Num() > 1)
+    {
+        TArray<FString> Names;
+        for (UEdGraphNode* Node : ToRemove) { Names.Add(Node->GetName()); }
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("'%s' names %d level blueprint nodes (%s); nothing was removed. Pass one node's nodeId (guid) or node name."),
+                NodeId.IsEmpty() ? *NodeName : *NodeId, ToRemove.Num(), *FString::Join(Names, TEXT(", "))),
+            nullptr, TEXT("AMBIGUOUS_NODE"));
+        return true;
     }
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     TArray<TSharedPtr<FJsonValue>> Removed;

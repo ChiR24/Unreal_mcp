@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * manage_level_structure Tool Integration Tests
- * Covers all 17 actions with concrete native payload contracts.
+ * Covers all 18 actions with concrete native payload contracts.
  */
 
 import { runToolTests } from '../../test-runner.mjs';
@@ -32,6 +32,7 @@ const LITERAL_NODE = `StructActorRef_${ts}`;
 const MESH_NODE = `StructMeshGet_${ts}`;
 const VISIBILITY_NODE = `StructVisibility_${ts}`;
 const ACTOR_TAGS_NODE = `StructActorTags_${ts}`;
+const LIGHT_COLOR_NODE = `StructLightColor_${ts}`;
 const STREAMING_VOLUME = `StreamingVolume_${SUBLEVEL_PATH}`;
 
 const testCases = [
@@ -57,11 +58,11 @@ const testCases = [
 
   // === LEVEL BLUEPRINT ===
   { scenario: 'ACTION: open_level_blueprint', toolName: 'manage_level_structure', arguments: { action: 'open_level_blueprint' }, expected: 'success' },
-  { scenario: 'ADD: add_level_blueprint_node', toolName: 'manage_level_structure', arguments: { action: 'add_level_blueprint_node', nodeClass: 'K2Node_ExecutionSequence', nodeName: SEQUENCE_NODE, nodePosition: { x: 200, y: 100 } }, expected: 'success|already exists|not found' },
+  { scenario: 'ADD: add_level_blueprint_node', toolName: 'manage_level_structure', arguments: { action: 'add_level_blueprint_node', nodeClass: 'K2Node_ExecutionSequence', nodeName: SEQUENCE_NODE, nodePosition: { x: 200, y: 100 } }, expected: 'success|already exists|not found', captureResult: { key: 'lbpSequenceName', fromField: 'result.nodeName' } },
   { scenario: 'ADD: add_level_blueprint_node with functionName', toolName: 'manage_level_structure', arguments: { action: 'add_level_blueprint_node', nodeClass: 'K2Node_CallFunction', functionName: 'PrintString' }, expected: 'success' },
   { scenario: 'REMOVE: remove_level_blueprint_node by name', toolName: 'manage_level_structure', arguments: { action: 'remove_level_blueprint_node', nodeName: 'K2Node_CallFunction_0', nodeId: '0F806A8F437089C69734C4BE30FA3B9D', save: false }, expected: 'success|not found' },
   { scenario: 'REMOVE: remove unbound call nodes', toolName: 'manage_level_structure', arguments: { action: 'remove_level_blueprint_node', unboundOnly: true }, expected: 'success' },
-  { scenario: 'ADD: add target level blueprint node', toolName: 'manage_level_structure', arguments: { action: 'add_level_blueprint_node', nodeClass: 'K2Node_ExecutionSequence', nodeName: SEQUENCE_TARGET_NODE, nodePosition: { x: 500, y: 100 } }, expected: 'success|already exists|not found' },
+  { scenario: 'ADD: add target level blueprint node', toolName: 'manage_level_structure', arguments: { action: 'add_level_blueprint_node', nodeClass: 'K2Node_ExecutionSequence', nodeName: SEQUENCE_TARGET_NODE, nodePosition: { x: 500, y: 100 } }, expected: 'success|already exists|not found', captureResult: { key: 'lbpSequenceTargetName', fromField: 'result.nodeName' } },
   { scenario: 'ADD: add_level_blueprint_node refuses a level that is not open', toolName: 'manage_level_structure', arguments: { action: 'add_level_blueprint_node', nodeClass: 'K2Node_ExecutionSequence', levelPath: LEVEL_PATH }, expected: 'error' },
   { scenario: 'CONNECT: connect_level_blueprint_nodes refuses a level that is not open', toolName: 'manage_level_structure', arguments: { action: 'connect_level_blueprint_nodes', sourceNodeName: SEQUENCE_NODE, targetNodeName: SEQUENCE_TARGET_NODE, levelPath: LEVEL_PATH }, expected: 'error' },
   { scenario: 'REMOVE: remove_level_blueprint_node refuses a level that is not open', toolName: 'manage_level_structure', arguments: { action: 'remove_level_blueprint_node', unboundOnly: true, levelPath: LEVEL_PATH }, expected: 'error' },
@@ -95,6 +96,22 @@ const testCases = [
   { scenario: 'CONNECT: the actor reference feeds the Actor getter', toolName: 'manage_level_structure', arguments: { action: 'connect_level_blueprint_nodes', sourceNodeName: LITERAL_NODE, sourcePinName: TEST_ACTOR, targetNodeName: ACTOR_TAGS_NODE, targetPinName: 'self' }, expected: 'success' },
   { scenario: 'ADD: a getter of the level Blueprint\'s inherited variable', toolName: 'manage_level_structure', arguments: { action: 'add_level_blueprint_node', nodeClass: 'K2Node_VariableGet', memberName: 'Tags', nodePosition: { x: 2400, y: 2700 } }, expected: 'success', assertions: [{ path: 'structuredContent.result.nodeTitle', includes: 'Tags', label: 'bound to the variable' }], captureResult: { key: 'lbpOwnTagsGetId', fromField: 'result.nodeId' } },
   { scenario: 'ADD: a setter of the level Blueprint\'s inherited variable', toolName: 'manage_level_structure', arguments: { action: 'add_level_blueprint_node', nodeClass: 'K2Node_VariableSet', memberName: 'Tags', nodePosition: { x: 2400, y: 3000 } }, expected: 'success', assertions: [{ path: 'structuredContent.result.nodeTitle', includes: 'Tags', label: 'bound to the variable' }], captureResult: { key: 'lbpOwnTagsSetId', fromField: 'result.nodeId' } },
+  { scenario: 'ADD: a light color call whose color is a pin default', toolName: 'manage_level_structure', arguments: { action: 'add_level_blueprint_node', nodeClass: 'K2Node_CallFunction', nodeName: LIGHT_COLOR_NODE, functionName: 'SetLightColor', memberClass: 'LightComponent', nodePosition: { x: 3900, y: 2800 } }, expected: 'success', captureResult: [{ key: 'lbpLightColorId', fromField: 'result.nodeId' }, { key: 'lbpLightColorName', fromField: 'result.nodeName' }] },
+  { scenario: 'SET: set_level_blueprint_pin_default sets a color pin from {r,g,b,a}', toolName: 'manage_level_structure', arguments: { action: 'set_level_blueprint_pin_default', nodeId: '${captured:lbpLightColorId}', pinName: 'NewLightColor', propertyValue: { r: 1, g: 0, b: 0, a: 1 }, save: false }, expected: 'success', assertions: [{ path: 'structuredContent.result.appliedValue', includes: 'R=1', label: 'color stored on the pin' }, { path: 'structuredContent.result.saved', equals: false, label: 'level left unsaved' }] },
+  // A node's name is the nodeName add_level_blueprint_node returned (it gets a number), not the nodeName it was given.
+  { scenario: 'SET: set_level_blueprint_pin_default finds a node by its name', toolName: 'manage_level_structure', arguments: { action: 'set_level_blueprint_pin_default', nodeId: '${captured:lbpLightColorName}', pinName: 'bSRGB', propertyValue: false }, expected: 'success', assertions: [{ path: 'structuredContent.result.appliedValue', equals: 'false', label: 'bool stored on the pin' }] },
+  { scenario: 'SET: a pin the node does not have is refused', toolName: 'manage_level_structure', arguments: { action: 'set_level_blueprint_pin_default', nodeId: '${captured:lbpLightColorId}', pinName: `NoSuchPin_${ts}`, propertyValue: 1 }, expected: 'error|PIN_NOT_FOUND' },
+  { scenario: 'SET: an output pin is refused', toolName: 'manage_level_structure', arguments: { action: 'set_level_blueprint_pin_default', nodeId: '${captured:lbpMeshId}', pinName: 'StaticMeshComponent', propertyValue: 'None' }, expected: 'error|INVALID_PIN_DIRECTION' },
+  { scenario: 'SET: a node the level Blueprint does not have is refused', toolName: 'manage_level_structure', arguments: { action: 'set_level_blueprint_pin_default', nodeId: `NoSuchNode_${ts}`, pinName: 'NewLightColor', propertyValue: 1 }, expected: 'error|NODE_NOT_FOUND' },
+  { scenario: 'SET: set_level_blueprint_pin_default refuses a level that is not open', toolName: 'manage_level_structure', arguments: { action: 'set_level_blueprint_pin_default', nodeId: '${captured:lbpLightColorId}', pinName: 'NewLightColor', propertyValue: 1, levelPath: LEVEL_PATH }, expected: 'error' },
+  { scenario: 'SET: set_level_blueprint_pin_default finds a node by its title', toolName: 'manage_level_structure', arguments: { action: 'set_level_blueprint_pin_default', nodeId: 'Set Light Color', pinName: 'bSRGB', propertyValue: false }, expected: 'success', assertions: [{ path: 'structuredContent.result.nodeName', includes: LIGHT_COLOR_NODE, label: 'the titled node' }, { path: 'structuredContent.result.appliedValue', equals: 'false', label: 'bool stored on the pin' }] },
+  { scenario: 'SET: a node that only contains the text is not taken', toolName: 'manage_level_structure', arguments: { action: 'set_level_blueprint_pin_default', nodeId: `LightColor_${ts}`, pinName: 'bSRGB', propertyValue: true }, expected: 'error|NODE_NOT_FOUND' },
+  // The two sequence nodes share the title "Sequence": it names neither, so nothing is changed or removed.
+  { scenario: 'SET: a title several nodes share is refused', toolName: 'manage_level_structure', arguments: { action: 'set_level_blueprint_pin_default', nodeId: 'Sequence', pinName: 'then_0', propertyValue: 1 }, expected: 'error|AMBIGUOUS_NODE' },
+  { scenario: 'REMOVE: a title several nodes share is refused', toolName: 'manage_level_structure', arguments: { action: 'remove_level_blueprint_node', nodeId: 'Sequence' }, expected: 'error|AMBIGUOUS_NODE' },
+  { scenario: 'Cleanup: remove the light color call by its name as nodeId', toolName: 'manage_level_structure', arguments: { action: 'remove_level_blueprint_node', nodeId: '${captured:lbpLightColorName}' }, expected: 'success', assertions: [{ path: 'structuredContent.result.removedCount', equals: 1, label: 'one node removed' }] },
+  { scenario: 'Cleanup: remove the sequence node', toolName: 'manage_level_structure', arguments: { action: 'remove_level_blueprint_node', nodeId: '${captured:lbpSequenceName}' }, expected: 'success' },
+  { scenario: 'Cleanup: remove the target sequence node', toolName: 'manage_level_structure', arguments: { action: 'remove_level_blueprint_node', nodeId: '${captured:lbpSequenceTargetName}' }, expected: 'success' },
   { scenario: 'Cleanup: remove the bound event', toolName: 'manage_level_structure', arguments: { action: 'remove_level_blueprint_node', nodeId: '${captured:lbpOverlapId}' }, expected: 'success' },
   { scenario: 'Cleanup: remove the actor reference', toolName: 'manage_level_structure', arguments: { action: 'remove_level_blueprint_node', nodeId: '${captured:lbpLiteralId}' }, expected: 'success' },
   { scenario: 'Cleanup: remove the destroy node', toolName: 'manage_level_structure', arguments: { action: 'remove_level_blueprint_node', nodeId: '${captured:lbpDestroyId}' }, expected: 'success' },
@@ -103,6 +120,10 @@ const testCases = [
   { scenario: 'Cleanup: remove the Actor getter', toolName: 'manage_level_structure', arguments: { action: 'remove_level_blueprint_node', nodeId: '${captured:lbpActorTagsId}' }, expected: 'success' },
   { scenario: 'Cleanup: remove the inherited variable getter', toolName: 'manage_level_structure', arguments: { action: 'remove_level_blueprint_node', nodeId: '${captured:lbpOwnTagsGetId}' }, expected: 'success' },
   { scenario: 'Cleanup: remove the inherited variable setter', toolName: 'manage_level_structure', arguments: { action: 'remove_level_blueprint_node', nodeId: '${captured:lbpOwnTagsSetId}' }, expected: 'success' },
+  { scenario: 'COMPILE: read the open level path', toolName: 'manage_level_structure', arguments: { action: 'get_level_structure_info' }, expected: 'success', captureResult: { key: 'openLevelPath', fromField: 'result.levelStructureInfo.persistentLevel' } },
+  // The suite's nodes are gone by now, so the open test level's own graph must compile.
+  { scenario: 'COMPILE: blueprint compile takes the open level\'s path for its level Blueprint', toolName: 'manage_blueprint', arguments: { action: 'compile', blueprintPath: '${captured:openLevelPath}' }, expected: 'success', assertions: [{ path: 'structuredContent.result.compiled', equals: true, label: 'level Blueprint compiled' }] },
+  { scenario: 'COMPILE: a level that is not open is refused with how to reach it', toolName: 'manage_blueprint', arguments: { action: 'compile', blueprintPath: LEVEL_PATH }, expected: 'error|not open in the editor' },
 
   // === LEVEL INSTANCE / PACKED LEVEL ===
   // The engine's default template map holds a floor mesh, so it can be both instanced and packed.

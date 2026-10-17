@@ -104,6 +104,9 @@ struct FActionContext
     // No compile at response time: a build_graph step (half-wired states are
     // expected mid-batch, so the batch compiles once at the end) or a read.
     bool bDeferCompile = false;
+    // When set, a success reply goes here instead of to the socket: the level Blueprint door runs a graph edit on
+    // its level Blueprint and answers through its own level-save rule.
+    TFunction<void(const FString&, const TSharedPtr<FJsonObject>&)> OnSuccess;
 
     void SendError(const FString& Message, const FString& ErrorCode) const;
     void SendErrorWithDetails(
