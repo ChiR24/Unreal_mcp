@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`get_editor_state` `focus`**: what the user is working on: the open asset editors, each Blueprint editor's graph in front and its selected nodes (with `nodeId`), the selected actors, the last minute's warnings and errors, and the last play session's Blueprint runtime errors.
 - **`describe_view` `points` and `labels`**: `points` turns spots of the frame into the actor drawn there and the world point a line through each one hits; `labels` returns the frame with the listed actors boxed and numbered, as an image.
 - **Large results come in pages** instead of `RESULT_TOO_LARGE`, when one list makes them too big: the reply's `page.nextCall` reads the next page without running the call again.
+- **Search hands over a clear first hit**: when it needs no consent, the first result carries `signature` (required parameters, a family's selector values, one example) and `executeCall`, so describe can be skipped.
 
 </details>
 

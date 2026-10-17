@@ -77,6 +77,12 @@ constexpr int32 McpSearchPhraseTopicBonus = 50;
 constexpr int32 McpSearchReadIntentBonus = 40;
 /** The same for a query that opens with a delete word and a record whose effect is destructive. */
 constexpr int32 McpSearchDeleteIntentBonus = 40;
+/**
+ * A first hit whose runner-up scores at most this percentage of it, and that needs no consent, carries its signature
+ * and execute call so a caller can skip describe (SEARCH_CONFIDENT_RATIO_PERCENT in gateway-search.ts; measured by
+ * tests/eval/confident-hit.test.ts).
+ */
+constexpr int32 McpSearchConfidentRatioPercent = 90;
 constexpr int32 McpDescribeDefaultLimit = 20;
 constexpr int32 McpDescribeMaxLimit = 50;
 // Search result byte budget (24 KB); a page that would pass it is cut short and

@@ -101,6 +101,7 @@ TSharedPtr<FJsonObject> BuildUnrealGatewayToolDefinition()
 		TEXT("Unreal Engine editor automation: one tool, four operations. Always in this order: "
 			"(1) search with query = 2-4 plain words naming the verb and the object, e.g. 'spawn actor', 'add variable blueprint', 'save level'; every result row carries a one-line summary, its effect and a ready-made nextCall. "
 			"(2) describe: send the chosen row's nextCall unchanged; the reply is the exact contract: parameters (name, type, required), inputSchema, a working example and, when required, consentGrant. "
+			"A first row that carries signature may skip describe: fill params from its signature and send its executeCall. "
 			"(3) execute: send describe's nextCall with params filled in, using ONLY the parameter names describe listed. "
 			"Rules: never guess capability ids, tool names, action names or parameter names; never put action or subAction inside params; a failed call returns suggestions and an executable nextCall, so send that nextCall instead of retrying blindly. "
 			"To browse instead of search, call describe with no selector and follow the nextCall on each row one level down. "

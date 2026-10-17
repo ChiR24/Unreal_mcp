@@ -13,7 +13,8 @@
 import type { CapabilityRecord } from '../../tools/catalog/capabilities/model.js';
 import { rankCapabilityRecords } from '../../tools/catalog/capabilities/retrieval/scoring.js';
 import { capabilityIndex, catalogRevision } from './gateway-capability-index.js';
-import { capabilitySearchRow } from './gateway-capability-view.js';
+import { capabilityNextCall, capabilitySearchRow, capabilitySignature } from './gateway-capability-view.js';
+import { capabilityAvailability } from './gateway-availability.js';
 import {
   DEFAULT_SEARCH_MAX_BYTES,
   MAX_SEARCH_MAX_BYTES,
@@ -35,17 +36,35 @@ import {
   type ParameterCoercion
 } from './gateway-shared.js';
 
-type ScoredCandidate = { readonly record: CapabilityRecord; readonly reasons: readonly unknown[] };
+/** A first hit whose runner-up scores at most this percentage of it is clear enough to hand over its signature. */
+export const SEARCH_CONFIDENT_RATIO_PERCENT = 90;
+
+type ScoredCandidate = { readonly record: CapabilityRecord; readonly reasons: readonly unknown[]; readonly score: number };
 
 function orderCandidates(
   candidates: readonly CapabilityRecord[],
   query: string
 ): readonly ScoredCandidate[] {
   if (query.trim().length === 0) {
-    return candidates.map((record) => ({ record, reasons: [] }));
+    return candidates.map((record) => ({ record, reasons: [], score: 0 }));
   }
   const ranked = rankCapabilityRecords(capabilityIndex().search, candidates, query);
-  return ranked.map((entry) => ({ record: entry.record, reasons: entry.reasons }));
+  return ranked.map((entry) => ({ record: entry.record, reasons: entry.reasons, score: entry.score }));
+}
+
+/**
+ * A clear first hit that needs no consent carries its signature and the execute call, so a caller can skip describe;
+ * consent still needs describe's grant. Measured by tests/eval/confident-hit.test.ts; mirrored natively.
+ */
+function withSignature(row: Record<string, unknown>, ordered: readonly ScoredCandidate[]): Record<string, unknown> {
+  const [first, second] = ordered;
+  if (first === undefined || first.score <= 0 || first.record.policy.consent !== 'none' || row.runnable !== true) return row;
+  if (second !== undefined && second.score * 100 > first.score * SEARCH_CONFIDENT_RATIO_PERCENT) return row;
+  return {
+    ...row,
+    signature: capabilitySignature(first.record),
+    executeCall: capabilityNextCall(first.record, capabilityAvailability(first.record))
+  };
 }
 
 function declaredFilters(filters: SearchFilters): Record<string, unknown> {
@@ -78,7 +97,9 @@ function envelope(
     maxBytes: page.maxBytes,
     hasMore,
     truncationReason,
-    message: 'Results are compact. Call describe with an exact capability before execute.'
+    message: rows[0]?.signature === undefined
+      ? 'Results are compact. Call describe with an exact capability before execute.'
+      : 'The first result carries signature and executeCall: fill params from the signature and send executeCall, or describe it first for the full contract.'
   };
   if (hasMore) result.nextCursor = encodeCursor(page.offset + rows.length);
   // An empty page is where a caller starts inventing names. Say what to change
@@ -171,6 +192,7 @@ export function searchGatewayCapabilities(args: Record<string, unknown>): Record
   const rows = ordered
     .slice(offset, offset + limit)
     .map((entry) => capabilitySearchRow(entry.record, entry.reasons));
+  if (offset === 0 && rows[0] !== undefined) rows[0] = withSignature(rows[0], ordered);
 
   return withinByteBudget(
     filters,

@@ -170,6 +170,17 @@ that action's exact contract: `inputSchema` lists only the parameters the action
 declares, never the parent tool's union. Only the `{ tool }` summary is still a
 legacy view, which is why it also carries `browse`.
 
+### A clear first hit can skip describe
+
+When search's first row is clear (the runner-up scores at most 90% of it) and
+needs no consent, it also carries `signature` and `executeCall`. `signature`
+holds the `required` parameters' types (or values), an `oneOf` group, a
+family's `selector` (`name`, `values`, `default`) and one `example`;
+`executeCall` is the execute call describe would hand over. Fill `params` from
+the signature and send `executeCall`, or describe first for the full contract.
+Both doors apply the same rule, and `tests/eval/confident-hit.test.ts` holds it
+to 95% precision on both.
+
 ### Folded families
 
 Most capabilities are **families**: one record advertising one action whose

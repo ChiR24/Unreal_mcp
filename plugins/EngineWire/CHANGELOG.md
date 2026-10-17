@@ -12,6 +12,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **`describe_view` `points` and `labels`**: per normalized spot, the actor its hit-proxy pixel draws and the Visibility trace through it from the view camera; the frame (at most 960 px wide) with the listed actors' boxes numbered, as a PNG image.
 - **MCP 2026-07-28 on `/mcp`**: per-request version with no session (the one `server/discover` lists, as the SDK does), `Mcp-Method`/`Mcp-Name` checks, `resultType` and cache hints, consent through client elicitation (signed `requestState`), and the tasks extension (`tasks/get`, `tasks/cancel`).
 - **Result pages**: an execute result over 100k chars whose size is one top-level array is sent a page at a time; the rest waits 5 minutes for `options.pageCursor` from the same principal, capability and params (scope re-checked, at most 8 kept).
+- **Search signature**: a first hit whose runner-up scores at most 90% of it (`McpSearchConfidentRatioPercent`) and that needs no consent carries `signature` and `executeCall`.
 
 ### Fixed
 - **`runtime_report` `filter`** matches an actor's path only whole, not every actor of a level named like the filter.

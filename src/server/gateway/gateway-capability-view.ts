@@ -147,6 +147,36 @@ export function parameterSummaries(record: CapabilityRecord): Array<Record<strin
   });
 }
 
+/**
+ * What a clear first search hit needs to run without describe: each required parameter's type (or its values), an
+ * at-least-one-of group, a family's variant selector, and one example with the variant its action name pins. Mirrored
+ * by McpSearchSignature in McpNativeGatewaySearch.cpp.
+ */
+export function capabilitySignature(record: CapabilityRecord): Record<string, unknown> {
+  const selector = record.routing.dispatchBy?.param;
+  const required: Record<string, string> = {};
+  for (const name of requiredSet(record)) {
+    if (name === selector) continue;
+    const schema = parameterSchema(record, name) ?? {};
+    required[name] = Array.isArray(schema.enum)
+      ? schema.enum.map(String).join('|')
+      : typeof schema.type === 'string' ? schema.type : 'unknown';
+  }
+  const selectorSchema = selector === undefined ? undefined : parameterSchema(record, selector);
+  const values = selectorSchema !== undefined && Array.isArray(selectorSchema.enum) ? selectorSchema.enum : [];
+  const example = record.examples[0]?.input ?? {};
+  const pins = record.legacyIds.find((pair) => pair.folded !== undefined && pair.action === example.action)?.folded;
+  const oneOf = record.schemas.input.requiredOneOf;
+  return {
+    required,
+    ...(oneOf === undefined ? {} : { oneOf }),
+    ...(selector === undefined ? {} : {
+      selector: { name: selector, values, ...(selectorSchema?.default === undefined ? {} : { default: selectorSchema.default }) }
+    }),
+    example: Object.fromEntries(Object.entries({ ...pins, ...example }).filter(([name]) => !GATEWAY_CONTROL_PARAMS.has(name)))
+  };
+}
+
 export function isRequiredParameter(record: CapabilityRecord, name: string): boolean {
   return requiredSet(record).has(name);
 }

@@ -11,7 +11,7 @@ Entry: `src/server/tool-registry-gateway.ts` → `handleUnrealGatewayCall()` swi
 | File | Owns |
 |------|------|
 | `gateway-shared.ts` | `getString` `getBoundedInteger` `gatewayError` `isGatewayFailure` `findTool` `allToolNames` `nextGatewayCorrelationId` |
-| `gateway-search.ts`, `gateway-search-filters.ts` | `searchGatewayCapabilities()`; filters, candidate selection, cursor paging |
+| `gateway-search.ts`, `gateway-search-filters.ts` | `searchGatewayCapabilities()`; filters, candidate selection, cursor paging; a clear first hit (runner-up at most `SEARCH_CONFIDENT_RATIO_PERCENT` of its score, no consent) gets `signature` (`capabilitySignature()`) and `executeCall`, held to 95% precision by `tests/eval/confident-hit.test.ts` |
 | `gateway-describe.ts`, `-browse.ts`, `-capability.ts` | describe level router; domain/family browse; one contract / one parameter |
 | `gateway-capability-view.ts`, `gateway-capability-index.ts`, `gateway-availability.ts` | contract projection; id/legacy-pair index and catalog revision; availability |
 | `gateway-execute.ts` | `executeGatewayCall()` stage order |

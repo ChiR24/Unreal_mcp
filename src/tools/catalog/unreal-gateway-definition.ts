@@ -11,6 +11,7 @@ export const UNREAL_GATEWAY_DESCRIPTION =
   'Unreal Engine editor automation: one tool, four operations. Always in this order: '
   + "(1) search with query = 2-4 plain words naming the verb and the object, e.g. 'spawn actor', 'add variable blueprint', 'save level'; every result row carries a one-line summary, its effect and a ready-made nextCall. "
   + "(2) describe: send the chosen row's nextCall unchanged; the reply is the exact contract: parameters (name, type, required), inputSchema, a working example and, when required, consentGrant. "
+  + 'A first row that carries signature may skip describe: fill params from its signature and send its executeCall. '
   + "(3) execute: send describe's nextCall with params filled in, using ONLY the parameter names describe listed. "
   + 'Rules: never guess capability ids, tool names, action names or parameter names; never put action or subAction inside params; a failed call returns suggestions and an executable nextCall, so send that nextCall instead of retrying blindly. '
   + 'To browse instead of search, call describe with no selector and follow the nextCall on each row one level down. '
@@ -25,7 +26,7 @@ export const UNREAL_GATEWAY_INSTRUCTIONS = [
   '',
   'Workflow for every task:',
   '1. search: {"operation":"search","query":"spawn actor"}. Use 2-4 plain words (verb + object), not a sentence. Each result row has a one-line summary, an effect (read, write or destructive) and a nextCall. Pick the row whose summary matches the task. If none fits, retry with different words, narrow with a filter (domain, tool, effect), or browse by calling describe with no selector and following each row\'s nextCall one level down.',
-  '2. describe: send the chosen row\'s nextCall unchanged. The reply is the exact contract for that one action: parameters[] (name, type, required, description, and variants when only some variants of a family read it), inputSchema, examples[] with a working input, consentGrant when consent is required, and the nextCall for execute.',
+  '2. describe: send the chosen row\'s nextCall unchanged. The reply is the exact contract for that one action: parameters[] (name, type, required, description, and variants when only some variants of a family read it), inputSchema, examples[] with a working input, consentGrant when consent is required, and the nextCall for execute. When the first search row carries signature (required parameters with types, a family\'s selector values, one example) and executeCall, describe may be skipped: fill params from the signature and send executeCall.',
   '3. execute: send describe\'s nextCall with params filled in. Use only the parameter names describe listed, with the same casing. Never put action or subAction inside params. If describe returned consentGrant, pass it back as the top-level consent field.',
   '',
   'Recovery: every failed call returns errorCode, message, suggestions[] and an executable nextCall. Send that nextCall (adjusting params) instead of guessing another tool, action or capability. UNKNOWN_TOOL, UNKNOWN_ACTION and UNKNOWN_CAPABILITY mean a name was invented: go back to search. INVALID_PARAMS names the offending field in pointer and lists allowedParameters. NOT_CONNECTED means the Unreal Editor is not running with the bridge; report it instead of retrying.',
