@@ -19,6 +19,91 @@ bool ParseVariableNodeType(const FString& NodeType, bool& bOutIsSet)
            Type.Equals(TEXT("GetVariable"), ESearchCase::IgnoreCase);
 }
 
+UClass* ResolveMemberClass(const FString& MemberClassName)
+{
+    // A Blueprint asset path (/Game/UI/WBP_Pop) names the Blueprint, not its class.
+    UClass* Class = ResolveUClass(MemberClassName);
+    return Class ? Class : ResolveTargetClassFromString(MemberClassName);
+}
+
+FProperty* ResolveVariableMember(UBlueprint* Blueprint, FName VariableName, const FString& MemberClassName,
+                                 UClass*& OutOwner, bool& bOutOwnVariable)
+{
+    OutOwner = nullptr;
+    bOutOwnVariable = false;
+    if (!MemberClassName.IsEmpty())
+    {
+        OutOwner = ResolveMemberClass(MemberClassName);
+        return OutOwner ? OutOwner->FindPropertyByName(VariableName) : nullptr;
+    }
+    for (const FBPVariableDescription& Variable : Blueprint->NewVariables)
+    {
+        if (Variable.VarName == VariableName)
+        {
+            bOutOwnVariable = true;
+            OutOwner = Blueprint->GeneratedClass;
+            return nullptr;
+        }
+    }
+    // The skeleton class already has a component added since the last compile; the parent class stands in for a
+    // Blueprint never compiled. add_node searched these three, create_node only the first.
+    const TArray<UClass*> Classes = {Blueprint->GeneratedClass, Blueprint->SkeletonGeneratedClass, Blueprint->ParentClass};
+    for (UClass* Class : Classes)
+    {
+        if (FProperty* Property = Class ? Class->FindPropertyByName(VariableName) : nullptr)
+        {
+            OutOwner = Property->GetOwnerClass();
+            return Property;
+        }
+    }
+    return nullptr;
+}
+
+void SetVariableReference(UK2Node_Variable& Node, UBlueprint* Blueprint, FProperty* Property, UClass* Owner,
+                          bool bOwnVariable, FName VariableName)
+{
+    const UClass* Generated = Blueprint->GeneratedClass;
+    const UClass* Skeleton = Blueprint->SkeletonGeneratedClass;
+    if (bOwnVariable || (Generated && Generated->IsChildOf(Owner)) || (Skeleton && Skeleton->IsChildOf(Owner)))
+    {
+        Node.VariableReference.SetSelfMember(VariableName);
+    }
+    else
+    {
+        Node.VariableReference.SetFromField<FProperty>(Property, false, Owner);
+    }
+}
+
+FString DescribeVariableAccess(const UBlueprint* Blueprint, const FProperty* Property, bool bWrite)
+{
+    // The compiler's own checks, so the node is refused here instead of breaking the next compile.
+    using FUtils = FBlueprintEditorUtils;
+    if (!Property)
+    {
+        return FString();
+    }
+    const FString Member = GetNameSafe(Property->GetOwnerClass()) + TEXT(".") + Property->GetName();
+    const FString HiddenReason = Member + TEXT(" is not Blueprint-visible, so no graph can read or write it.");
+    const FString PrivateReason = Member + TEXT(" is private to the Blueprint that declares it.");
+    if (bWrite)
+    {
+        switch (FUtils::IsPropertyWritableInBlueprint(Blueprint, Property))
+        {
+        case FUtils::EPropertyWritableState::NotBlueprintVisible: return HiddenReason;
+        case FUtils::EPropertyWritableState::Private: return PrivateReason;
+        case FUtils::EPropertyWritableState::BlueprintReadOnly:
+            return Member + TEXT(" is read-only in Blueprints: read it with a VariableGet node.");
+        default: return FString();
+        }
+    }
+    switch (FUtils::IsPropertyReadableInBlueprint(Blueprint, Property))
+    {
+    case FUtils::EPropertyReadableState::NotBlueprintVisible: return HiddenReason;
+    case FUtils::EPropertyReadableState::Private: return PrivateReason;
+    default: return FString();
+    }
+}
+
 bool TryCreateVariableNode(
     FActionContext& Context,
     const FString& NodeType,
@@ -55,49 +140,10 @@ bool TryCreateVariableNode(
         TEXT("memberClass"),
         MemberClassName);
 
-    FProperty* FoundProperty = nullptr;
     UClass* ResolvedOwnerClass = nullptr;
     bool bFoundAsBlueprintVariable = false;
-
-    if (!MemberClassName.IsEmpty())
-    {
-        // A Blueprint asset path (/Game/UI/WBP_Pop) names the Blueprint, not its class.
-        UClass* OwnerClass = ResolveUClass(MemberClassName);
-        if (!OwnerClass)
-        {
-            OwnerClass = ResolveTargetClassFromString(MemberClassName);
-        }
-        if (OwnerClass)
-        {
-            FoundProperty = OwnerClass->FindPropertyByName(VariableFName);
-            if (FoundProperty)
-            {
-                ResolvedOwnerClass = OwnerClass;
-            }
-        }
-    }
-    else
-    {
-        for (const FBPVariableDescription& Variable :
-             Context.Blueprint->NewVariables)
-        {
-            if (Variable.VarName == VariableFName)
-            {
-                bFoundAsBlueprintVariable = true;
-                ResolvedOwnerClass = Context.Blueprint->GeneratedClass;
-                break;
-            }
-        }
-        if (!bFoundAsBlueprintVariable &&
-            Context.Blueprint->GeneratedClass)
-        {
-            FoundProperty = Context.Blueprint->GeneratedClass->FindPropertyByName(VariableFName);
-            if (FoundProperty)
-            {
-                ResolvedOwnerClass = FoundProperty->GetOwnerClass();
-            }
-        }
-    }
+    FProperty* FoundProperty = ResolveVariableMember(Context.Blueprint, VariableFName, MemberClassName,
+                                                     ResolvedOwnerClass, bFoundAsBlueprintVariable);
 
     // A widget in a Widget Blueprint's tree is a graph variable once it is flagged "Is Variable" AND the
     // Blueprint has been compiled since: the generated class only gains its property then. The widget
@@ -153,29 +199,20 @@ bool TryCreateVariableNode(
         Context.SendError(Reason, TEXT("VARIABLE_NOT_FOUND"));
         return true;
     }
-
-    const bool bIsSelfContext =
-        bFoundAsBlueprintVariable ||
-        (Context.Blueprint->GeneratedClass &&
-         Context.Blueprint->GeneratedClass->IsChildOf(
-             ResolvedOwnerClass));
+    const FString Access = DescribeVariableAccess(Context.Blueprint, FoundProperty, bIsSet);
+    if (!Access.IsEmpty())
+    {
+        Context.SendError(Access, TEXT("VARIABLE_NOT_ACCESSIBLE"));
+        return true;
+    }
 
     if (bIsSet)
     {
         FGraphNodeCreator<UK2Node_VariableSet> NodeCreator(
             *Context.TargetGraph);
         UK2Node_VariableSet* Node = NodeCreator.CreateNode(false);
-        if (bIsSelfContext)
-        {
-            Node->VariableReference.SetSelfMember(VariableFName);
-        }
-        else
-        {
-            Node->VariableReference.SetFromField<FProperty>(
-                FoundProperty,
-                false,
-                ResolvedOwnerClass);
-        }
+        SetVariableReference(*Node, Context.Blueprint, FoundProperty, ResolvedOwnerClass,
+                             bFoundAsBlueprintVariable, VariableFName);
         Context.FinalizeNode(NodeCreator, Node, X, Y);
         return true;
     }
@@ -183,17 +220,8 @@ bool TryCreateVariableNode(
     FGraphNodeCreator<UK2Node_VariableGet> NodeCreator(
         *Context.TargetGraph);
     UK2Node_VariableGet* Node = NodeCreator.CreateNode(false);
-    if (bIsSelfContext)
-    {
-        Node->VariableReference.SetSelfMember(VariableFName);
-    }
-    else
-    {
-        Node->VariableReference.SetFromField<FProperty>(
-            FoundProperty,
-            false,
-            ResolvedOwnerClass);
-    }
+    SetVariableReference(*Node, Context.Blueprint, FoundProperty, ResolvedOwnerClass,
+                         bFoundAsBlueprintVariable, VariableFName);
     Context.FinalizeNode(NodeCreator, Node, X, Y);
     return true;
 }

@@ -10321,7 +10321,7 @@
           },
           "memberName": {
             "type": "string",
-            "description": "The function, variable or event the node uses (PrintString, GetGameTimeInSeconds). A function whose name is not known: inspect_graph info functions finds it by what it does."
+            "description": "The function, variable or event the node uses (PrintString, GetGameTimeInSeconds). A function whose name is not known: inspect_graph info functions finds it by what it does. A variable Blueprints cannot read, or for VariableSet write (not Blueprint-visible, read-only), is refused with VARIABLE_NOT_ACCESSIBLE."
           },
           "meshPath": {
             "type": "string",
@@ -15024,6 +15024,7 @@
         "loadingRange",
         "location",
         "memberClass",
+        "memberName",
         "nodeClass",
         "nodeId",
         "nodeName",
@@ -15378,7 +15379,11 @@
           },
           "memberClass": {
             "type": "string",
-            "description": "Class that declares functionName when it is not in the common Blueprint libraries: a native class name or a Blueprint asset path. The node's Target takes an object of that class, so an actor's function is fed from its K2Node_Literal, while a component's function (a light's SetLightColor is LightComponent's) needs that component, not the actor."
+            "description": "Class that declares functionName when it is not in the common Blueprint libraries, or memberName: a native class name or a Blueprint asset path. The node's Target (self pin) takes an object of that class, so an actor's function or component getter is fed from its K2Node_Literal, while a component's function (a light's SetLightColor is LightComponent's) takes the component that getter returns, not the actor. One that names no class is refused with INVALID_ARGUMENT."
+          },
+          "memberName": {
+            "type": "string",
+            "description": "Variable a K2Node_VariableGet or K2Node_VariableSet reads or writes, required by both and refused for other nodes: a level Blueprint variable (its own or inherited, such as Tags), or with memberClass a property of that class, such as a placed actor's component (PointLightComponent on PointLight, StaticMeshComponent on StaticMeshActor); with memberClass the node always has the self pin the actor's K2Node_Literal feeds, even for Actor. A wrong name is refused with that class's components listed (VARIABLE_NOT_FOUND), and one Blueprints cannot read, or for a VariableSet write (not Blueprint-visible, read-only), with VARIABLE_NOT_ACCESSIBLE."
           },
           "nodeClass": {
             "type": "string",

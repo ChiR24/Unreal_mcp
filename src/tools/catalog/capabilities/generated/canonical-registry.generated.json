@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "67ff78ff30b196f1",
+  "catalogRevision": "aa997ed2fd5ecc8e",
   "recordCount": 416,
   "records": [
     {
@@ -17711,7 +17711,7 @@
             },
             "memberName": {
               "type": "string",
-              "description": "The function, variable or event the node uses (PrintString, GetGameTimeInSeconds). A function whose name is not known: inspect_graph info functions finds it by what it does."
+              "description": "The function, variable or event the node uses (PrintString, GetGameTimeInSeconds). A function whose name is not known: inspect_graph info functions finds it by what it does. A variable Blueprints cannot read, or for VariableSet write (not Blueprint-visible, read-only), is refused with VARIABLE_NOT_ACCESSIBLE."
             },
             "functionName": {
               "type": "string",
@@ -18415,8 +18415,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "5982086781fd1cca21506fa514fe1bffbe539c72cd61a7bb021c04a2f0f0a502",
-        "content": "40665ee8e8c82e0bf59a9812ca6bea4272d6577a01d61f1862c4e91f30ce382b"
+        "schema": "493a24ff1d8dba67bf7e84ddf54249f34c5f7364140df83042705669668a14cc",
+        "content": "68f858e9c2f36b3be3e2d7e8ed557c7cb2ac1706fc126db00e42b1dc8c1640a3"
       }
     },
     {
@@ -76145,7 +76145,8 @@
           "level blueprint node",
           "actor bound event",
           "level blueprint overlap event",
-          "level blueprint actor reference"
+          "level blueprint actor reference",
+          "level blueprint component reference"
         ],
         "summary": "Edit the level Blueprint: open it, add or remove nodes, connect nodes.",
         "whenToUse": [
@@ -76153,6 +76154,7 @@
           "edit=add_node: A new node must be added to level scripting.",
           "edit=add_node: Level logic must react to a placed actor (K2Node_ActorBoundEvent with actorName and eventName) or use one (K2Node_Literal with actorName).",
           "edit=add_node: A function of a class outside the common Blueprint libraries must be called (K2Node_CallFunction with functionName and memberClass).",
+          "edit=add_node: A placed actor's component must be used, such as the light component whose SetLightColor changes a light (K2Node_VariableGet with memberClass and memberName, its self pin fed from the actor's K2Node_Literal).",
           "edit=connect_nodes: Two level blueprint nodes must be wired together.",
           "edit=remove_node: A level blueprint node must be deleted, or an unbound K2Node_CallFunction (\"Could not find a function named None\") must be repaired."
         ],
@@ -76207,7 +76209,11 @@
             },
             "memberClass": {
               "type": "string",
-              "description": "Class that declares functionName when it is not in the common Blueprint libraries: a native class name or a Blueprint asset path. The node's Target takes an object of that class, so an actor's function is fed from its K2Node_Literal, while a component's function (a light's SetLightColor is LightComponent's) needs that component, not the actor."
+              "description": "Class that declares functionName when it is not in the common Blueprint libraries, or memberName: a native class name or a Blueprint asset path. The node's Target (self pin) takes an object of that class, so an actor's function or component getter is fed from its K2Node_Literal, while a component's function (a light's SetLightColor is LightComponent's) takes the component that getter returns, not the actor. One that names no class is refused with INVALID_ARGUMENT."
+            },
+            "memberName": {
+              "type": "string",
+              "description": "Variable a K2Node_VariableGet or K2Node_VariableSet reads or writes, required by both and refused for other nodes: a level Blueprint variable (its own or inherited, such as Tags), or with memberClass a property of that class, such as a placed actor's component (PointLightComponent on PointLight, StaticMeshComponent on StaticMeshActor); with memberClass the node always has the self pin the actor's K2Node_Literal feeds, even for Actor. A wrong name is refused with that class's components listed (VARIABLE_NOT_FOUND), and one Blueprints cannot read, or for a VariableSet write (not Blueprint-visible, read-only), with VARIABLE_NOT_ACCESSIBLE."
             },
             "actorName": {
               "type": "string",
@@ -76349,6 +76355,9 @@
             "memberClass": [
               "add_node"
             ],
+            "memberName": [
+              "add_node"
+            ],
             "actorName": [
               "add_node"
             ],
@@ -76378,8 +76387,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "2a2f51bf0bf007ca61da93950814bbcd577f3c78ad0f6d04a44283e468095c9c",
-        "content": "b1a6a718c61ed0fd79ff24570fe20f6a1c7ce0febdcce571011f4099c339068c"
+        "schema": "2b08d45ab2a79cd38e4b015c15a43c05e0be2385dbfedf4c8876417e2535a8ed",
+        "content": "6340f923be679177176f6998a7cb61f568bff1d08ebcc2b4687a3939cdf4dc6b"
       }
     },
     {

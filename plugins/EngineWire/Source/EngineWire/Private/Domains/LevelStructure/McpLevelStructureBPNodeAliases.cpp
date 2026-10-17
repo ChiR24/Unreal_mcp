@@ -15,7 +15,6 @@
 #include "Domains/LevelStructure/McpLevelStructureActions.h"
 
 #include "Domains/BlueprintGraph/McpBPGraphPrivate.h"
-#include "Foundation/BridgeHelpers/Reflection/McpClassResolve.h"
 #include "GameFramework/Actor.h"
 #include "K2Node_CallFunction.h"
 #include "K2Node_Event.h"
@@ -147,8 +146,9 @@ bool ResolveLevelBlueprintNodeAlias(FString& InOutNodeClass, FString& OutEventNa
 }
 
 bool ApplyLevelBlueprintNodeAlias(UK2Node* Node, const FString& EventName, const FString& FunctionName,
-                                  const FString& MemberClass, FString& OutError)
+                                  const FString& MemberClass, FString& OutError, FString& OutCode)
 {
+    OutCode = TEXT("NOT_SUPPORTED");
     if (!EventName.IsEmpty())
     {
         UK2Node_Event* EventNode = Cast<UK2Node_Event>(Node);
@@ -201,17 +201,12 @@ bool ApplyLevelBlueprintNodeAlias(UK2Node* Node, const FString& EventName, const
         // memberClass names the class of a function outside the common libraries (a component's SetVisibility), the
         // way create_node takes it; without it, dogfood #221's search of every common Blueprint library binds the
         // gameplay calls (GetPlayerPawn, ApplyDamage, SpawnSystemAtLocation, ...).
-        UClass* Owner = nullptr;
-        if (!MemberClass.IsEmpty())
+        UClass* Owner = MemberClass.IsEmpty() ? nullptr : McpBlueprintGraphHandlers::ResolveMemberClass(MemberClass);
+        if (!MemberClass.IsEmpty() && !Owner)
         {
-            Owner = ResolveUClass(MemberClass);
-            Owner = Owner ? Owner : McpBlueprintGraphHandlers::ResolveTargetClassFromString(MemberClass);
-            if (!Owner)
-            {
-                OutError = FString::Printf(TEXT("memberClass '%s' is not a class: pass a native class name (SceneComponent, "
-                                                "PointLightComponent) or a Blueprint asset path."), *MemberClass);
-                return false;
-            }
+            OutError = DescribeUnknownMemberClass(MemberClass);
+            OutCode = TEXT("INVALID_ARGUMENT");
+            return false;
         }
         UFunction* Function = Owner ? Owner->FindFunctionByName(FName(*FunctionName)) : FindBindableFunctionByName(FunctionName);
         if (!CallNode || !Function || !Function->HasAnyFunctionFlags(FUNC_BlueprintCallable | FUNC_BlueprintPure))

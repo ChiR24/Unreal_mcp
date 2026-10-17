@@ -131,10 +131,13 @@ bool HandleAddLevelBlueprintNode(
     {
         UK2Node* NewNode = NewObject<UK2Node>(EventGraph, NodeClassObj);
         FString AliasError;
+        FString AliasCode;
         const FString MemberClass = GetJsonStringField(Payload, TEXT("memberClass"), TEXT(""));
-        if (NewNode && !ApplyLevelBlueprintNodeAlias(NewNode, AliasEventName, AliasFunctionName, MemberClass, AliasError))
+        // Every refusal below drops the node it made, so no orphan stays in the graph to take a later node's name.
+        if (NewNode && !ApplyLevelBlueprintNodeAlias(NewNode, AliasEventName, AliasFunctionName, MemberClass, AliasError, AliasCode))
         {
-            Subsystem->SendAutomationResponse(Socket, RequestId, false, AliasError, nullptr, TEXT("NOT_SUPPORTED"));
+            NewNode->MarkAsGarbage();
+            Subsystem->SendAutomationResponse(Socket, RequestId, false, AliasError, nullptr, AliasCode);
             return true;
         }
         // An unbound call node compiles as "Could not find a function named None" and breaks the level blueprint.
@@ -142,6 +145,7 @@ bool HandleAddLevelBlueprintNode(
         {
             if (!CallNode->GetTargetFunction())
             {
+                NewNode->MarkAsGarbage();
                 Subsystem->SendAutomationResponse(Socket, RequestId, false,
                     TEXT("K2Node_CallFunction needs a function: pass the function name as nodeClass (PrintString, Delay, ...) or functionName"),
                     nullptr, TEXT("INVALID_ARGUMENT"));
@@ -162,15 +166,18 @@ bool HandleAddLevelBlueprintNode(
             }
             NewNode->CreateNewGuid();
             // After the rename: a bound event's function name carries the node name. Before the pins: they come
-            // from the actor's class or the event's signature. eventName binds nothing else here: BeginPlay, Tick
-            // and the other events are nodeClass aliases, and an ignored eventName left an unbound event node.
+            // from the actor's class, the event's signature or the variable's property. eventName binds nothing
+            // else here: BeginPlay, Tick and the other events are nodeClass aliases, and an ignored eventName left
+            // an unbound event node.
             const FString EventName = GetJsonStringField(Payload, TEXT("eventName"), TEXT(""));
             FString BindError = TEXT("eventName applies to a K2Node_ActorBoundEvent only; pass BeginPlay, Tick and the "
                                      "other events as nodeClass (EventBeginPlay, EventTick).");
             FString BindCode = TEXT("INVALID_ARGUMENT");
             if ((!EventName.IsEmpty() && !NewNode->IsA<UK2Node_ActorBoundEvent>()) ||
                 !McpBindLevelActorNode(NewNode, CurrentLevel, GetJsonStringField(Payload, TEXT("actorName"), TEXT("")),
-                                       EventName, BindError, BindCode))
+                                       EventName, BindError, BindCode) ||
+                !BindLevelBlueprintVariableNode(NewNode, LevelBP, GetJsonStringField(Payload, TEXT("memberName"), TEXT("")),
+                                                MemberClass, BindError, BindCode))
             {
                 NewNode->MarkAsGarbage();
                 Subsystem->SendAutomationResponse(Socket, RequestId, false, BindError, nullptr, BindCode);
