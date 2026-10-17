@@ -141,6 +141,16 @@ bool HandleAddLevelBlueprintNode(
                 }
             }
             NewNode->CreateNewGuid();
+            // After the rename: a bound event's function name carries the node name. Before the pins: they come
+            // from the actor's class or the event's signature.
+            FString BindError;
+            FString BindCode;
+            if (!BindLevelBlueprintNodeToActor(NewNode, CurrentLevel, Payload, BindError, BindCode))
+            {
+                NewNode->MarkAsGarbage();
+                Subsystem->SendAutomationResponse(Socket, RequestId, false, BindError, nullptr, BindCode);
+                return true;
+            }
             // ROOT-CAUSE FIX: allocate pins BEFORE PostPlacedNewNode(). Node families
             // such as UK2Node_SpawnActorFromClass read checked pin accessors inside
             // PostPlacedNewNode() (GetScaleMethodPin() => FindPinChecked()), which
@@ -213,6 +223,13 @@ bool HandleAddLevelBlueprintNode(
     {
         ResponseJson->SetStringField(TEXT("nodeTitle"), CreatedGraphNode->GetNodeTitle(ENodeTitleType::FullTitle).ToString());
         ResponseJson->SetStringField(TEXT("nodeId"), CreatedGraphNode->NodeGuid.ToString());
+        // The names connect_level_blueprint_nodes takes (a bound event's OtherActor, an actor reference's output).
+        TArray<FString> PinNames;
+        for (const UEdGraphPin* Pin : CreatedGraphNode->Pins)
+        {
+            PinNames.Add(Pin->PinName.ToString());
+        }
+        ResponseJson->SetArrayField(TEXT("pins"), McpHandlerUtils::ToJsonStringArray(PinNames));
     }
     ResponseJson->SetNumberField(TEXT("posX"), PosX);
     ResponseJson->SetNumberField(TEXT("posY"), PosY);

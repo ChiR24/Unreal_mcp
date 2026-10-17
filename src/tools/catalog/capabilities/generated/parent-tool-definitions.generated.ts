@@ -20555,6 +20555,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Which edit level blueprint variant to run."
         },
+        "eventName": {
+          "type": "string",
+          "description": "Event dispatcher of actorName that a K2Node_ActorBoundEvent binds, e.g. OnActorBeginOverlap or OnActorEndOverlap; a wrong name is refused with the actor's events listed."
+        },
         "extent": {
           "type": "object",
           "description": "Extent (half-size) of the volume in each axis.",

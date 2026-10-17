@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "5b214207f2d5b4d5",
+  "catalogRevision": "4d875e54230837e0",
   "recordCount": 416,
   "records": [
     {
@@ -76135,12 +76135,16 @@
         "topics": [
           "edit_level_blueprint",
           "level blueprint",
-          "level blueprint node"
+          "level blueprint node",
+          "actor bound event",
+          "level blueprint overlap event",
+          "level blueprint actor reference"
         ],
         "summary": "Edit the level Blueprint: open it, add or remove nodes, connect nodes.",
         "whenToUse": [
           "edit=open: The level blueprint graph must be edited.",
           "edit=add_node: A new node must be added to level scripting.",
+          "edit=add_node: Level logic must react to a placed actor (K2Node_ActorBoundEvent with actorName and eventName) or use one (K2Node_Literal with actorName).",
           "edit=connect_nodes: Two level blueprint nodes must be wired together.",
           "edit=remove_node: A level blueprint node must be deleted, or an unbound K2Node_CallFunction (\"Could not find a function named None\") must be repaired."
         ],
@@ -76192,6 +76196,14 @@
             "functionName": {
               "type": "string",
               "description": "Function to bind when nodeClass is K2Node_CallFunction (e.g. PrintString); short function names may also be passed as nodeClass."
+            },
+            "actorName": {
+              "type": "string",
+              "description": "Placed actor (label, name or object path) in the edited level that a K2Node_ActorBoundEvent fires for or a K2Node_Literal references; required by both, refused for other nodes."
+            },
+            "eventName": {
+              "type": "string",
+              "description": "Event dispatcher of actorName that a K2Node_ActorBoundEvent binds, e.g. OnActorBeginOverlap or OnActorEndOverlap; a wrong name is refused with the actor's events listed."
             },
             "sourceNodeName": {
               "type": "string",
@@ -76322,6 +76334,12 @@
             "functionName": [
               "add_node"
             ],
+            "actorName": [
+              "add_node"
+            ],
+            "eventName": [
+              "add_node"
+            ],
             "sourceNodeName": [
               "connect_nodes"
             ],
@@ -76345,8 +76363,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "b9d10ac3d13c2ea3c71cd06c108407400b86b03a005044d6174f5129e7fc5d9e",
-        "content": "3148f63545c7bb75fe6c32f80c751aa82e968477f02c78dc8fbf2e1477c70cc1"
+        "schema": "8db0b76b9b36ce487df8cf170cead32be97570b5b00db276fc69da7746d0619a",
+        "content": "4bb2ec8dfd43f61bb67910bfca2bd6d3c2530b9af866731d38d8f4960c604073"
       }
     },
     {

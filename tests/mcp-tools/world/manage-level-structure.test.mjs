@@ -26,6 +26,8 @@ const PACKED_BLUEPRINT = `${TEST_FOLDER}/${PACKED_LEVEL}`;
 const TEMPLATE_MAP = '/Engine/Maps/Templates/Template_Default';
 const SEQUENCE_NODE = `StructSequence_${ts}`;
 const SEQUENCE_TARGET_NODE = `StructSequenceTarget_${ts}`;
+const OVERLAP_NODE = `StructOverlap_${ts}`;
+const DESTROY_NODE = `StructDestroy_${ts}`;
 const STREAMING_VOLUME = `StreamingVolume_${SUBLEVEL_PATH}`;
 
 const testCases = [
@@ -60,6 +62,13 @@ const testCases = [
   { scenario: 'CONNECT: connect_level_blueprint_nodes refuses a level that is not open', toolName: 'manage_level_structure', arguments: { action: 'connect_level_blueprint_nodes', sourceNodeName: SEQUENCE_NODE, targetNodeName: SEQUENCE_TARGET_NODE, levelPath: LEVEL_PATH }, expected: 'error' },
   { scenario: 'REMOVE: remove_level_blueprint_node refuses a level that is not open', toolName: 'manage_level_structure', arguments: { action: 'remove_level_blueprint_node', unboundOnly: true, levelPath: LEVEL_PATH }, expected: 'error' },
   { scenario: 'CONNECT: connect_level_blueprint_nodes', toolName: 'manage_level_structure', arguments: { action: 'connect_level_blueprint_nodes', sourceNodeName: SEQUENCE_NODE, targetNodeName: SEQUENCE_TARGET_NODE, sourcePinName: 'then_0', targetPinName: 'execute' }, expected: 'success' },
+  // Issue #675: a bound event and an actor reference used to come back unbound ("None (None)", "Unknown") as success.
+  { scenario: 'ADD: add_level_blueprint_node binds an overlap event to a placed actor', toolName: 'manage_level_structure', arguments: { action: 'add_level_blueprint_node', nodeClass: 'K2Node_ActorBoundEvent', nodeName: OVERLAP_NODE, actorName: TEST_ACTOR, eventName: 'OnActorBeginOverlap', nodePosition: { x: 3000, y: 2000 } }, expected: 'success', assertions: [{ path: 'structuredContent.result.nodeTitle', includes: 'Overlap', label: 'bound to the event' }, { path: 'structuredContent.result.nodeTitle', includes: TEST_ACTOR, label: 'bound to the actor' }] },
+  { scenario: 'ADD: a second bound event for the same actor and event is refused', toolName: 'manage_level_structure', arguments: { action: 'add_level_blueprint_node', nodeClass: 'K2Node_ActorBoundEvent', actorName: TEST_ACTOR, eventName: 'OnActorBeginOverlap', nodePosition: { x: 3000, y: 2400 } }, expected: 'error|ALREADY_EXISTS' },
+  { scenario: 'ADD: an actor-bound event without its event is refused', toolName: 'manage_level_structure', arguments: { action: 'add_level_blueprint_node', nodeClass: 'K2Node_ActorBoundEvent', actorName: TEST_ACTOR, nodePosition: { x: 3000, y: 2400 } }, expected: 'error|INVALID_ARGUMENT' },
+  { scenario: 'ADD: add_level_blueprint_node references a placed actor', toolName: 'manage_level_structure', arguments: { action: 'add_level_blueprint_node', nodeClass: 'K2Node_Literal', actorName: TEST_ACTOR, nodePosition: { x: 3000, y: 2400 } }, expected: 'success', assertions: [{ path: 'structuredContent.result.nodeTitle', equals: TEST_ACTOR, label: 'references the actor' }] },
+  { scenario: 'ADD: destroy node for the overlapping actor', toolName: 'manage_level_structure', arguments: { action: 'add_level_blueprint_node', nodeClass: 'DestroyActor', nodeName: DESTROY_NODE, nodePosition: { x: 3600, y: 2000 } }, expected: 'success' },
+  { scenario: 'CONNECT: the bound event OtherActor drives further logic', toolName: 'manage_level_structure', arguments: { action: 'connect_level_blueprint_nodes', sourceNodeName: OVERLAP_NODE, sourcePinName: 'OtherActor', targetNodeName: DESTROY_NODE, targetPinName: 'self' }, expected: 'success' },
 
   // === LEVEL INSTANCE / PACKED LEVEL ===
   // The engine's default template map holds a floor mesh, so it can be both instanced and packed.

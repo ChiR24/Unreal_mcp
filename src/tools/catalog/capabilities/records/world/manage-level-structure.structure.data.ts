@@ -157,9 +157,15 @@ export const LEVEL_STRUCTURE_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildWorldRecord({
     parentTool: 'manage_level_structure', action: 'add_level_blueprint_node', dispatchAction: 'add_level_blueprint_node',
-    family: F, summary: 'Add a node to the level blueprint graph.',
-    whenToUse: ['A new node must be added to level scripting.'], whenNotToUse: ['An existing node should be connected; use connect_level_blueprint_nodes.'],
-    inputProps: { nodeClass: P.nodeClass, nodeName: P.nodeName, nodePosition: P.nodePosition, levelPath: BP_LEVEL, save: P.levelEditSave, functionName: { type: 'string', description: 'Function to bind when nodeClass is K2Node_CallFunction (e.g. PrintString); short function names may also be passed as nodeClass.' } },
+    topics: ['actor bound event', 'level blueprint overlap event', 'level blueprint actor reference'],
+    family: F, summary: 'Add a node to the level blueprint graph, including an event bound to a placed actor (OnActorBeginOverlap of a trigger) or a reference to one; the reply lists the node\'s pins.',
+    whenToUse: ['A new node must be added to level scripting.', 'Level logic must react to a placed actor (K2Node_ActorBoundEvent with actorName and eventName) or use one (K2Node_Literal with actorName).'], whenNotToUse: ['An existing node should be connected; use connect_level_blueprint_nodes.'],
+    inputProps: {
+      nodeClass: P.nodeClass, nodeName: P.nodeName, nodePosition: P.nodePosition, levelPath: BP_LEVEL, save: P.levelEditSave,
+      functionName: { type: 'string', description: 'Function to bind when nodeClass is K2Node_CallFunction (e.g. PrintString); short function names may also be passed as nodeClass.' },
+      actorName: { type: 'string', description: 'Placed actor (label, name or object path) in the edited level that a K2Node_ActorBoundEvent fires for or a K2Node_Literal references; required by both, refused for other nodes.' },
+      eventName: { type: 'string', description: 'Event dispatcher of actorName that a K2Node_ActorBoundEvent binds, e.g. OnActorBeginOverlap or OnActorEndOverlap; a wrong name is refused with the actor\'s events listed.' },
+    },
     required: ['nodeClass'], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'add_level_blueprint_node', nodeClass: 'K2Node_CallFunction', nodeName: 'Print' },
   }),

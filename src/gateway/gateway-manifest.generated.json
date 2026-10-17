@@ -14997,6 +14997,7 @@
         "dataLayerName",
         "dataLayerType",
         "edit",
+        "eventName",
         "extent",
         "fadeTime",
         "filter",
@@ -15222,6 +15223,10 @@
               "remove_node"
             ],
             "description": "Which edit level blueprint variant to run."
+          },
+          "eventName": {
+            "type": "string",
+            "description": "Event dispatcher of actorName that a K2Node_ActorBoundEvent binds, e.g. OnActorBeginOverlap or OnActorEndOverlap; a wrong name is refused with the actor's events listed."
           },
           "extent": {
             "type": "object",
