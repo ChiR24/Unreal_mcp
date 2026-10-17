@@ -131,10 +131,13 @@ bool HandleAddLevelBlueprintNode(
     {
         UK2Node* NewNode = NewObject<UK2Node>(EventGraph, NodeClassObj);
         FString AliasError;
+        FString AliasCode;
         const FString MemberClass = GetJsonStringField(Payload, TEXT("memberClass"), TEXT(""));
-        if (NewNode && !ApplyLevelBlueprintNodeAlias(NewNode, AliasEventName, AliasFunctionName, MemberClass, AliasError))
+        // Every refusal below drops the node it made, so no orphan stays in the graph to take a later node's name.
+        if (NewNode && !ApplyLevelBlueprintNodeAlias(NewNode, AliasEventName, AliasFunctionName, MemberClass, AliasError, AliasCode))
         {
-            Subsystem->SendAutomationResponse(Socket, RequestId, false, AliasError, nullptr, TEXT("NOT_SUPPORTED"));
+            NewNode->MarkAsGarbage();
+            Subsystem->SendAutomationResponse(Socket, RequestId, false, AliasError, nullptr, AliasCode);
             return true;
         }
         // An unbound call node compiles as "Could not find a function named None" and breaks the level blueprint.
@@ -142,6 +145,7 @@ bool HandleAddLevelBlueprintNode(
         {
             if (!CallNode->GetTargetFunction())
             {
+                NewNode->MarkAsGarbage();
                 Subsystem->SendAutomationResponse(Socket, RequestId, false,
                     TEXT("K2Node_CallFunction needs a function: pass the function name as nodeClass (PrintString, Delay, ...) or functionName"),
                     nullptr, TEXT("INVALID_ARGUMENT"));

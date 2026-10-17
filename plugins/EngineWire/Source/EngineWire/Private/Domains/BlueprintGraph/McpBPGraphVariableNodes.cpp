@@ -19,6 +19,13 @@ bool ParseVariableNodeType(const FString& NodeType, bool& bOutIsSet)
            Type.Equals(TEXT("GetVariable"), ESearchCase::IgnoreCase);
 }
 
+UClass* ResolveMemberClass(const FString& MemberClassName)
+{
+    // A Blueprint asset path (/Game/UI/WBP_Pop) names the Blueprint, not its class.
+    UClass* Class = ResolveUClass(MemberClassName);
+    return Class ? Class : ResolveTargetClassFromString(MemberClassName);
+}
+
 FProperty* ResolveVariableMember(UBlueprint* Blueprint, FName VariableName, const FString& MemberClassName,
                                  UClass*& OutOwner, bool& bOutOwnVariable)
 {
@@ -26,9 +33,7 @@ FProperty* ResolveVariableMember(UBlueprint* Blueprint, FName VariableName, cons
     bOutOwnVariable = false;
     if (!MemberClassName.IsEmpty())
     {
-        // A Blueprint asset path (/Game/UI/WBP_Pop) names the Blueprint, not its class.
-        OutOwner = ResolveUClass(MemberClassName);
-        OutOwner = OutOwner ? OutOwner : ResolveTargetClassFromString(MemberClassName);
+        OutOwner = ResolveMemberClass(MemberClassName);
         return OutOwner ? OutOwner->FindPropertyByName(VariableName) : nullptr;
     }
     for (const FBPVariableDescription& Variable : Blueprint->NewVariables)
@@ -40,21 +45,62 @@ FProperty* ResolveVariableMember(UBlueprint* Blueprint, FName VariableName, cons
             return nullptr;
         }
     }
-    FProperty* Property = Blueprint->GeneratedClass ? Blueprint->GeneratedClass->FindPropertyByName(VariableName) : nullptr;
-    OutOwner = Property ? Property->GetOwnerClass() : nullptr;
-    return Property;
+    // The skeleton class already has a component added since the last compile; the parent class stands in for a
+    // Blueprint never compiled. add_node searched these three, create_node only the first.
+    const TArray<UClass*> Classes = {Blueprint->GeneratedClass, Blueprint->SkeletonGeneratedClass, Blueprint->ParentClass};
+    for (UClass* Class : Classes)
+    {
+        if (FProperty* Property = Class ? Class->FindPropertyByName(VariableName) : nullptr)
+        {
+            OutOwner = Property->GetOwnerClass();
+            return Property;
+        }
+    }
+    return nullptr;
 }
 
 void SetVariableReference(UK2Node_Variable& Node, UBlueprint* Blueprint, FProperty* Property, UClass* Owner,
                           bool bOwnVariable, FName VariableName)
 {
-    if (bOwnVariable || (Blueprint->GeneratedClass && Blueprint->GeneratedClass->IsChildOf(Owner)))
+    const UClass* Generated = Blueprint->GeneratedClass;
+    const UClass* Skeleton = Blueprint->SkeletonGeneratedClass;
+    if (bOwnVariable || (Generated && Generated->IsChildOf(Owner)) || (Skeleton && Skeleton->IsChildOf(Owner)))
     {
         Node.VariableReference.SetSelfMember(VariableName);
     }
     else
     {
         Node.VariableReference.SetFromField<FProperty>(Property, false, Owner);
+    }
+}
+
+FString DescribeVariableAccess(const UBlueprint* Blueprint, const FProperty* Property, bool bWrite)
+{
+    // The compiler's own checks, so the node is refused here instead of breaking the next compile.
+    using FUtils = FBlueprintEditorUtils;
+    if (!Property)
+    {
+        return FString();
+    }
+    const FString Member = GetNameSafe(Property->GetOwnerClass()) + TEXT(".") + Property->GetName();
+    const FString HiddenReason = Member + TEXT(" is not Blueprint-visible, so no graph can read or write it.");
+    const FString PrivateReason = Member + TEXT(" is private to the Blueprint that declares it.");
+    if (bWrite)
+    {
+        switch (FUtils::IsPropertyWritableInBlueprint(Blueprint, Property))
+        {
+        case FUtils::EPropertyWritableState::NotBlueprintVisible: return HiddenReason;
+        case FUtils::EPropertyWritableState::Private: return PrivateReason;
+        case FUtils::EPropertyWritableState::BlueprintReadOnly:
+            return Member + TEXT(" is read-only in Blueprints: read it with a VariableGet node.");
+        default: return FString();
+        }
+    }
+    switch (FUtils::IsPropertyReadableInBlueprint(Blueprint, Property))
+    {
+    case FUtils::EPropertyReadableState::NotBlueprintVisible: return HiddenReason;
+    case FUtils::EPropertyReadableState::Private: return PrivateReason;
+    default: return FString();
     }
 }
 
@@ -151,6 +197,12 @@ bool TryCreateVariableNode(
                 *VariableName, *MemberClassName);
         }
         Context.SendError(Reason, TEXT("VARIABLE_NOT_FOUND"));
+        return true;
+    }
+    const FString Access = DescribeVariableAccess(Context.Blueprint, FoundProperty, bIsSet);
+    if (!Access.IsEmpty())
+    {
+        Context.SendError(Access, TEXT("VARIABLE_NOT_ACCESSIBLE"));
         return true;
     }
 
