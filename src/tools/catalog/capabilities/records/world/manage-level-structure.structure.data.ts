@@ -202,7 +202,7 @@ export const LEVEL_STRUCTURE_RECORDS: readonly CapabilityRecordSource[] = [
   buildWorldRecord({
     parentTool: 'manage_level_structure', action: 'set_level_blueprint_pin_default', dispatchAction: 'set_level_blueprint_pin_default',
     topics: ['level blueprint pin default', 'level blueprint pin value', 'level blueprint literal'],
-    family: F, summary: 'Set the default value of an input pin on a level blueprint node, such as the color SetLightColor sets; a read-only (const reference) pin gets it through a MakeLiteral node wired into it.',
+    family: F, summary: 'Set the default value of an input pin on a level blueprint node (in its event graph or one of its functions), such as the color SetLightColor sets; a read-only (const reference) pin gets it through a MakeLiteral node wired into it.',
     whenToUse: ['A level blueprint node\'s input pin needs a literal value instead of a wire (a light color, a print string, a number).'],
     whenNotToUse: ['The pin should take its value from another node; use connect_level_blueprint_nodes.', 'The node is in a Blueprint asset, not the level Blueprint; use blueprint.edit_graph (edit=set_pin_default_value).'],
     inputProps: {

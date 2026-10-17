@@ -121,8 +121,8 @@ const testCases = [
   { scenario: 'Cleanup: remove the inherited variable getter', toolName: 'manage_level_structure', arguments: { action: 'remove_level_blueprint_node', nodeId: '${captured:lbpOwnTagsGetId}' }, expected: 'success' },
   { scenario: 'Cleanup: remove the inherited variable setter', toolName: 'manage_level_structure', arguments: { action: 'remove_level_blueprint_node', nodeId: '${captured:lbpOwnTagsSetId}' }, expected: 'success' },
   { scenario: 'COMPILE: read the open level path', toolName: 'manage_level_structure', arguments: { action: 'get_level_structure_info' }, expected: 'success', captureResult: { key: 'openLevelPath', fromField: 'result.levelStructureInfo.persistentLevel' } },
-  // Either outcome proves the path reached the level Blueprint (NOT_FOUND fails); the open level's own graph decides which.
-  { scenario: 'COMPILE: blueprint compile takes the open level\'s path for its level Blueprint', toolName: 'manage_blueprint', arguments: { action: 'compile', blueprintPath: '${captured:openLevelPath}' }, expected: 'success|COMPILE_FAILED' },
+  // The suite's nodes are gone by now, so the open test level's own graph must compile.
+  { scenario: 'COMPILE: blueprint compile takes the open level\'s path for its level Blueprint', toolName: 'manage_blueprint', arguments: { action: 'compile', blueprintPath: '${captured:openLevelPath}' }, expected: 'success', assertions: [{ path: 'structuredContent.result.compiled', equals: true, label: 'level Blueprint compiled' }] },
   { scenario: 'COMPILE: a level that is not open is refused with how to reach it', toolName: 'manage_blueprint', arguments: { action: 'compile', blueprintPath: LEVEL_PATH }, expected: 'error|not open in the editor' },
 
   // === LEVEL INSTANCE / PACKED LEVEL ===
