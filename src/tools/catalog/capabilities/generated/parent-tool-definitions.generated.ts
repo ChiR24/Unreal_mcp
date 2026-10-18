@@ -7004,7 +7004,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "busiestThreadMs": {
           "type": "number",
-          "description": "Slowest of game/render/GPU thread times, in milliseconds."
+          "description": "Slowest of the game, render, RHI and GPU thread times, in milliseconds."
         },
         "cameraLocation": {
           "type": "object",
@@ -7901,7 +7901,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "additionalProperties": true,
             "x-unreal-reflection-boundary": true
           },
-          "description": "Up to 5 classes with the most ticking actors: class and count."
+          "description": "Up to 5 classes with the most ticking actors: class, count and ticks, what ticks on them: \"Event Tick\" (the Blueprint graph implements Tick), \"actor Tick\" (its C++ class ticks) or a component class (a movement, rotating or timeline component ticks without any graph)."
         },
         "timeDilation": {
           "type": "number",

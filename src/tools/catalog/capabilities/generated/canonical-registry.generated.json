@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "b878c637a83266de",
+  "catalogRevision": "ef34e750c8c8a2c4",
   "recordCount": 416,
   "records": [
     {
@@ -46582,7 +46582,7 @@
             },
             "busiestThreadMs": {
               "type": "number",
-              "description": "Slowest of game/render/GPU thread times, in milliseconds."
+              "description": "Slowest of the game, render, RHI and GPU thread times, in milliseconds."
             },
             "threadTimeDerivedFps": {
               "type": "number",
@@ -46784,7 +46784,7 @@
                 "additionalProperties": true,
                 "x-unreal-reflection-boundary": true
               },
-              "description": "Up to 5 classes with the most ticking actors: class and count."
+              "description": "Up to 5 classes with the most ticking actors: class, count and ticks, what ticks on them: \"Event Tick\" (the Blueprint graph implements Tick), \"actor Tick\" (its C++ class ticks) or a component class (a movement, rotating or timeline component ticks without any graph)."
             }
           },
           "required": [
@@ -46857,8 +46857,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "b72322d696dff6b61717ddd9a657c194fcffa15850439ac16e0cf5b48ea98f2c",
-        "content": "55b1cbe418a801cf437acab9d7e3104fdce1d296c6f87225af1b4aee4c5b9728"
+        "schema": "ae2da5471e2b94145c70e71bab20bf8d230500b46b3ab4399f35dc22b07352c4",
+        "content": "b47d0d409cffcc79279ece3ab5a1cad9a55d1f07cea91a753de955d8a4e12f69"
       }
     },
     {

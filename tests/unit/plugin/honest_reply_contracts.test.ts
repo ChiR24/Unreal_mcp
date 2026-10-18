@@ -3322,8 +3322,14 @@ describe('get_frame_cost names what bounds the frame', () => {
 
   // An unfocused editor waits 333 ms between frames while its busiest thread works 4 ms: that is no bottleneck.
   it('says the frame waits when no thread fills it, and keeps Nanite meshes out of the heavy list', () => {
-    expect(source).toContain('if (Ms < FrameMs * 0.5)');
+    expect(source).toMatch(/if \(Ms < T\.Frame \* 0\.5\)/u);
     expect(source).toMatch(/if \(Asset->HasValidNaniteData\(\)\)\s*\{\s*\+\+Nanite;\s*\}\s*else/u);
+  });
+
+  // An RHI-bound frame read "Render-thread-bound", and in Play a game thread the editor filled read as a slow game.
+  it('names each thread it can pick, and the editor share of the game thread in Play', () => {
+    expect(source).toContain('TEXT("RHI-thread")');
+    expect(source).toMatch(/bGame && T\.bPie && T\.WorldTick >= 0\.0 && T\.WorldTick < Ms \* 0\.5/u);
   });
 
   it('declares every field it sends', () => {

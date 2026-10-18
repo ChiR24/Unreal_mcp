@@ -56,18 +56,24 @@ FString FrameCostLightType(const ULightComponent* Light)
     }
 }
 
-bool FrameCostTicks(const AActor* Actor)
+bool FrameCostTicks(const FTickFunction& Tick)
 {
-    if (Actor->PrimaryActorTick.bCanEverTick && Actor->PrimaryActorTick.IsTickFunctionEnabled()) return true;
-    for (const UActorComponent* Component : Actor->GetComponents())
-    {
-        if (Component && Component->PrimaryComponentTick.bCanEverTick && Component->PrimaryComponentTick.IsTickFunctionEnabled())
-        {
-            return true;
-        }
-    }
-    return false;
+    return Tick.bCanEverTick && Tick.IsTickFunctionEnabled();
 }
+
+// What runs an actor's own tick: a Blueprint graph's Event Tick, or the Tick of its C++ class.
+const TCHAR* FrameCostActorTick(const AActor* Actor)
+{
+    const UFunction* Event = Actor->GetClass()->FindFunctionByName(FName(TEXT("ReceiveTick")));
+    return Event && Event->GetOwnerClass() != AActor::StaticClass() ? TEXT("Event Tick") : TEXT("actor Tick");
+}
+
+// The ticking actors of one class, and what ticks on them (a component class ticks without any graph).
+struct FFrameCostTicking
+{
+    int32 Count = 0;
+    TSet<FString> Sources;
+};
 
 // One mesh asset drawn without Nanite: every component that draws it counts toward its triangles.
 struct FFrameCostMesh
@@ -83,7 +89,7 @@ struct FFrameCostScan
     int32 Primitives = 0, Meshes = 0, Nanite = 0, ShadowLights = 0, Translucent = 0, Ticking = 0;
     FFrameCostRows LightRows, TranslucentRows;
     TMap<FString, FFrameCostMesh> MeshByAsset;
-    TMap<FString, int32> TickingByClass;
+    TMap<FString, FFrameCostTicking> TickingByClass;
 
     void AddLight(const AActor* Actor, const ULightComponent* Light)
     {
@@ -141,38 +147,48 @@ struct FFrameCostScan
 
     void AddActor(const AActor* Actor)
     {
-        if (FrameCostTicks(Actor))
-        {
-            ++Ticking;
-            ++TickingByClass.FindOrAdd(Actor->GetClass()->GetName());
-        }
+        TSet<FString> Sources;
+        if (FrameCostTicks(Actor->PrimaryActorTick)) Sources.Add(FrameCostActorTick(Actor));
         for (const UActorComponent* Component : Actor->GetComponents())
         {
+            if (!Component) continue;
+            if (FrameCostTicks(Component->PrimaryComponentTick)) Sources.Add(Component->GetClass()->GetName());
             if (const ULightComponent* Light = Cast<ULightComponent>(Component)) AddLight(Actor, Light);
             else if (const UPrimitiveComponent* Prim = Cast<UPrimitiveComponent>(Component)) AddPrimitive(Actor, Prim);
         }
+        if (Sources.Num() == 0) return;
+        ++Ticking;
+        FFrameCostTicking& Entry = TickingByClass.FindOrAdd(Actor->GetClass()->GetName());
+        ++Entry.Count;
+        Entry.Sources.Append(Sources);
     }
 };
 
-FString FrameCostVerdict(const FString& Thread, double Ms, double FrameMs, double GameMs, double RenderMs, double RhiMs, double GpuMs, bool bPie)
+// Thread and frame times in milliseconds, and the world's own tick (-1 until it has ticked).
+struct FFrameCostTimes { double Game, Render, Rhi, Gpu, Frame, WorldTick; bool bPie; };
+
+FString FrameCostVerdict(const FString& Thread, double Ms, const FFrameCostTimes& T)
 {
-    const FString Times = FString::Printf(TEXT("game thread %.1f ms, render thread %.1f ms, RHI %.1f ms, GPU %.1f ms"), GameMs, RenderMs, RhiMs, GpuMs);
-    // No thread fills the frame: the engine waits between frames (an unfocused or minimized editor, vsync, a frame rate cap).
-    if (Ms < FrameMs * 0.5)
+    const FString Times = FString::Printf(TEXT("game thread %.1f ms, render thread %.1f ms, RHI %.1f ms, GPU %.1f ms"), T.Game, T.Render, T.Rhi, T.Gpu);
+    // No thread fills the frame: the engine waits between frames (a minimized or throttled editor, vsync, a frame rate cap).
+    if (Ms < T.Frame * 0.5)
     {
-        return FString::Printf(TEXT("No thread bounds the frame: a frame takes %.1f ms but the busiest thread (%s) %.1f ms (%s); the engine waits between frames, as an unfocused editor, vsync or a frame rate cap make it. Focus the editor window to measure."),
-            FrameMs, *Thread, Ms, *Times);
+        return FString::Printf(TEXT("No thread bounds the frame: a frame takes %.1f ms but the busiest thread (%s) %.1f ms (%s); the engine waits between frames, as a minimized or background-throttled editor, vsync or a frame rate cap make it. control_editor configure_editor setting window restores the editor and turns the background throttle off, for a real measure."),
+            T.Frame, *Thread, Ms, *Times);
     }
-    if (Thread == TEXT("gpu"))
+    const bool bGame = Thread == TEXT("game");
+    const TCHAR* Bound = Thread == TEXT("gpu") ? TEXT("GPU") : Thread == TEXT("rhi") ? TEXT("RHI-thread") : bGame ? TEXT("Game-thread") : TEXT("Render-thread");
+    FString Hint = Thread == TEXT("gpu") ? TEXT(": look at movableShadowLights, heaviestMeshes and translucentPrimitives.")
+        : Thread == TEXT("rhi") ? TEXT(": it hands the render thread's draw calls to the graphics driver, so look at primitivesInView and heaviestMeshes.")
+        : !bGame ? TEXT(": look at primitivesInView, heaviestMeshes and translucentPrimitives.")
+        : !T.bPie ? TEXT(": look at tickingActorsByClass; outside Play the game thread also runs the editor.")
+        : TEXT(": look at tickingActorsByClass and worldTickMs.");
+    // In Play the game thread also runs the editor's UI and viewports: say so when they, not the game, fill it.
+    if (bGame && T.bPie && T.WorldTick >= 0.0 && T.WorldTick < Ms * 0.5)
     {
-        return FString::Printf(TEXT("GPU-bound at %.1f ms (%s): look at movableShadowLights, heaviestMeshes and translucentPrimitives."), Ms, *Times);
+        Hint = FString::Printf(TEXT(", but the game's own tick takes only %.1f ms of it: the rest is the editor's UI and viewports, which a packaged game does not run. tickingActorsByClass shows the game's part."), T.WorldTick);
     }
-    if (Thread == TEXT("game"))
-    {
-        return FString::Printf(TEXT("Game-thread-bound at %.1f ms (%s): look at tickingActorsByClass%s."), Ms, *Times,
-            bPie ? TEXT(" and worldTickMs") : TEXT("; outside Play the game thread also runs the editor"));
-    }
-    return FString::Printf(TEXT("Render-thread-bound at %.1f ms (%s): look at primitivesInView, heaviestMeshes and translucentPrimitives."), Ms, *Times);
+    return FString::Printf(TEXT("%s-bound at %.1f ms (%s)%s"), Bound, Ms, *Times, *Hint);
 }
 } // namespace
 
@@ -182,14 +198,12 @@ bool HandleInspectFrameCostAction(
 {
     const bool bPie = GEditor && GEditor->PlayWorld;
     UWorld* World = bPie ? GEditor->PlayWorld.Get() : (GEditor ? GEditor->GetEditorWorldContext().World() : nullptr);
-    const double GameMs = FPlatformTime::ToMilliseconds(GGameThreadTime);
-    const double RenderMs = FPlatformTime::ToMilliseconds(GRenderThreadTime);
-    const double RhiMs = FPlatformTime::ToMilliseconds(GRHIThreadTime);
-    const double GpuMs = FPlatformTime::ToMilliseconds(RHIGetGPUFrameCycles());
     const double PieDelta = bPie && World ? World->GetDeltaSeconds() : 0.0;
-    const double FrameMs = (PieDelta > 0.0 ? PieDelta : FApp::GetDeltaTime()) * 1000.0;
+    const FFrameCostTimes T{FPlatformTime::ToMilliseconds(GGameThreadTime), FPlatformTime::ToMilliseconds(GRenderThreadTime),
+        FPlatformTime::ToMilliseconds(GRHIThreadTime), FPlatformTime::ToMilliseconds(RHIGetGPUFrameCycles()),
+        (PieDelta > 0.0 ? PieDelta : FApp::GetDeltaTime()) * 1000.0, McpWorldTickTimer::AverageMs(World), bPie};
     struct FFrameCostThread { const TCHAR* Name; double Ms; };
-    const FFrameCostThread Threads[] = {{TEXT("game"), GameMs}, {TEXT("render"), RenderMs}, {TEXT("rhi"), RhiMs}, {TEXT("gpu"), GpuMs}};
+    const FFrameCostThread Threads[] = {{TEXT("game"), T.Game}, {TEXT("render"), T.Render}, {TEXT("rhi"), T.Rhi}, {TEXT("gpu"), T.Gpu}};
     FString Thread;
     double BusiestMs = -1.0;
     for (const FFrameCostThread& Candidate : Threads)
@@ -217,26 +231,30 @@ bool HandleInspectFrameCostAction(
         MeshRows.Emplace(Entry.Value.Triangles, Row);
     }
     FFrameCostRows ClassRows;
-    for (const TPair<FString, int32>& Entry : Scan.TickingByClass)
+    for (const TPair<FString, FFrameCostTicking>& Entry : Scan.TickingByClass)
     {
         TSharedPtr<FJsonObject> Row = MakeShared<FJsonObject>();
         Row->SetStringField(TEXT("class"), Entry.Key);
-        Row->SetNumberField(TEXT("count"), Entry.Value);
-        ClassRows.Emplace(Entry.Value, Row);
+        Row->SetNumberField(TEXT("count"), Entry.Value.Count);
+        TArray<FString> Sources = Entry.Value.Sources.Array();
+        Sources.Sort();
+        TArray<TSharedPtr<FJsonValue>> Ticks;
+        for (const FString& Source : Sources) Ticks.Add(MakeShared<FJsonValueString>(Source));
+        Row->SetArrayField(TEXT("ticks"), Ticks);
+        ClassRows.Emplace(Entry.Value.Count, Row);
     }
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("worldType"), bPie ? TEXT("PIE") : (World ? TEXT("Editor") : TEXT("None")));
-    Resp->SetNumberField(TEXT("frameTimeMs"), FrameMs);
+    Resp->SetNumberField(TEXT("frameTimeMs"), T.Frame);
     Resp->SetStringField(TEXT("busiestThread"), Thread);
     Resp->SetNumberField(TEXT("busiestThreadMs"), BusiestMs);
-    Resp->SetNumberField(TEXT("gameThreadMs"), GameMs);
-    const double WorldTickMs = McpWorldTickTimer::AverageMs(World);
-    if (WorldTickMs >= 0.0) Resp->SetNumberField(TEXT("worldTickMs"), WorldTickMs);
-    Resp->SetNumberField(TEXT("renderThreadMs"), RenderMs);
-    Resp->SetNumberField(TEXT("rhiThreadMs"), RhiMs);
-    Resp->SetNumberField(TEXT("gpuMs"), GpuMs);
+    Resp->SetNumberField(TEXT("gameThreadMs"), T.Game);
+    if (T.WorldTick >= 0.0) Resp->SetNumberField(TEXT("worldTickMs"), T.WorldTick);
+    Resp->SetNumberField(TEXT("renderThreadMs"), T.Render);
+    Resp->SetNumberField(TEXT("rhiThreadMs"), T.Rhi);
+    Resp->SetNumberField(TEXT("gpuMs"), T.Gpu);
     Resp->SetNumberField(TEXT("primitivesInView"), Scan.Primitives);
     Resp->SetNumberField(TEXT("meshesInView"), Scan.Meshes);
     Resp->SetNumberField(TEXT("naniteMeshesInView"), Scan.Nanite);
@@ -258,9 +276,17 @@ bool HandleInspectFrameCostAction(
             "The editor window is minimized, so no frame is drawn: nothing reads as in view and the thread times are "
             "left from the last drawn frame. Restore it (control_editor configure_editor setting window) before measuring.")));
     }
+    else if (World && Scan.Primitives == 0)
+    {
+        Warnings.Add(MakeShared<FJsonValueString>(TEXT(
+            "Nothing was drawn in the last half second, so the in-view lists are empty: no viewport redraws this world "
+            "(the editor is in the background and throttled, realtime is off, or its tab is hidden). control_editor "
+            "configure_editor setting window restores it and lifts the throttle; then start Play or turn realtime on "
+            "(control_editor configure_viewport) and read again.")));
+    }
     if (Warnings.Num() > 0) Resp->SetArrayField(TEXT("warnings"), Warnings);
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
-        FrameCostVerdict(Thread, BusiestMs, FrameMs, GameMs, RenderMs, RhiMs, GpuMs, bPie), Resp, FString());
+        FrameCostVerdict(Thread, BusiestMs, T), Resp, FString());
     return true;
 }
 

@@ -18,7 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`describe_view` `points` and `labels`**: `points` turns spots of the frame into the actor drawn there and the world point a line through each one hits; `labels` returns the frame with the listed actors boxed and numbered, as an image.
 - **Large results come in pages** instead of `RESULT_TOO_LARGE`, when one list makes them too big: the reply's `page.nextCall` reads the next page without running the call again.
 - **Search hands over a clear first hit**: when it needs no consent, the first result carries `signature` (required parameters, a family's selector values, one example) and `executeCall`, so describe can be skipped.
-- **`get_stats` `frame`**: names the thread that bounds the frame, or says the frame only waits (an unfocused editor, vsync), and ranks what in view weighs on it: movable shadow-casting lights, the heaviest meshes drawn without Nanite, translucent primitives and ticking actors by class.
+- **`get_stats` `frame`**: names the thread that bounds the frame (in Play, how much of the game thread the game's own tick takes), or says the frame only waits (a throttled editor, vsync), and ranks what in view weighs on it: movable shadow-casting lights, the heaviest meshes drawn without Nanite, translucent primitives and ticking actors by class with what ticks on them.
 - **`inspect_asset` `diff`**: compares a Blueprint, DataTable or data asset with its saved file (its unsaved edits) or with another asset: properties and class defaults, components, graph nodes and rows.
 
 </details>
@@ -32,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **A long render keeps its native request open** for the `renderTimeoutMs` it asked for, not 335 s.
 - **`get_task_result` on the native transport** matches the sender's principal exactly; the match ignored case.
 - **`edit_scs` `modify` keeps `save: false`**: adding a part through it saved the Blueprint anyway while the reply said it had not.
+- **`get_stats` `performance`** counts the RHI thread in `busiestThreadMs`, as `frame` does.
 
 </details>
 
