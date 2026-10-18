@@ -261,6 +261,7 @@ bool UEngineWireSubsystem::HandleSetObjectProperty(
   }
   McpPropertyActorAccess::RefreshK2NodeTitleCacheIfNeeded(RootObject);
   const bool bMaterialRebuilt = McpPropertyActorAccess::RefreshMaterialHostAfterEdit(RootObject);
+  McpPropertyActorAccess::RefreshNiagaraHostAfterEdit(RootObject);
 
   FString SaveSkippedReason;
   const bool bSaved = McpPropertyTarget::SaveAfterWrite(RootObject, ResolvedBlueprint, bMarkDirty, SaveSkippedReason);

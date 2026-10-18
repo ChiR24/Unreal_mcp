@@ -18,6 +18,8 @@
 
 #include "Materials/Material.h"
 #include "Materials/MaterialFunction.h"
+#include "NiagaraCommon.h"
+#include "NiagaraSystem.h"
 
 namespace McpPropertyActorAccess
 {
@@ -163,6 +165,20 @@ bool RefreshMaterialHostAfterEdit(UObject* Edited)
     }
     Host->PreEditChange(nullptr);
     Host->PostEditChange();
+    return true;
+}
+
+bool RefreshNiagaraHostAfterEdit(UObject* Edited)
+{
+    // A placed effect keeps the render data it was started with, so a renderer property written on its system (a mesh
+    // renderer's mesh or pivot) changed nothing on screen until the effect was assigned again. Re-initialize every
+    // component running the system, as the Niagara editor does on a change.
+    UNiagaraSystem* System = Edited ? Edited->GetTypedOuter<UNiagaraSystem>() : nullptr;
+    if (!System)
+    {
+        return false;
+    }
+    FNiagaraSystemUpdateContext ReInit(System, true);
     return true;
 }
 }

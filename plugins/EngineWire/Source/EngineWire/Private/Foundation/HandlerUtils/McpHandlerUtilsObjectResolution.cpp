@@ -193,7 +193,8 @@ FPropertyResolveResult ResolveProperty(UObject* Object, const FString& PropertyN
     // paths at any depth, and a bare name that lives in one struct member.
     FString ResolvedPath;
     Result.Property = McpResolvePropertyPath(Object, PropertyName, Result.Container, ResolvedPath, Result.Error);
-    if (!Result.Property && !PropertyName.Contains(TEXT(".")))
+    const FProperty* Deprecated = FindFProperty<FProperty>(Object->GetClass(), FName(*PropertyName));
+    if (!Result.Property && !PropertyName.Contains(TEXT(".")) && !(Deprecated && Deprecated->HasAnyPropertyFlags(CPF_Deprecated)))
     {
         // Most misses are a component property looked up on the actor
         // (Intensity lives on LightComponent0, not the light actor). The

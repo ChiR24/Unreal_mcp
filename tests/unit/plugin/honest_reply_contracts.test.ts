@@ -222,6 +222,14 @@ describe('handlers answer what they did', () => {
     expect(resolver).toContain('TEXT("; similar: ")');
   });
 
+  // set_property "PivotOffset" on a Niagara mesh renderer answered applied for PivotOffset_DEPRECATED, which UHT
+  // registers under the bare name: the engine ignores it, so the cars never moved.
+  it('a deprecated property is refused, naming where a member of that name lives now', () => {
+    const resolver = code('..', 'Foundation', 'BridgeHelpers', 'Properties', 'McpNestedPropPath.h');
+    expect(resolver).toMatch(/if \(CurrentProperty && CurrentProperty->HasAnyPropertyFlags\(CPF_Deprecated\)\) \{\s*OutError = McpDeprecatedPropertyError\(CurrentTypeScope, CurrentProperty\);\s*return nullptr;/u);
+    expect(resolver).toContain('const FStructProperty *Inner = CastField<FStructProperty>(Array ? Array->Inner : *It);');
+  });
+
   // create_audio_actor named its new component QuietComp, then get_property "QuietComp.bAutoActivate" on the actor
   // missed it: an instance component has no property behind it.
   it('a middle path segment may name an actor component exactly', () => {
@@ -421,6 +429,17 @@ describe('handlers answer what they did', () => {
     const properties = capabilityIndex().byId.get('material.get_material_info')?.schemas.output.properties;
     const parameters = isRecord(properties) ? properties.parameters : undefined;
     expect(isRecord(parameters) ? parameters.description : '').toMatch(/texture parameter also carries texture .* and samplerType/u);
+  });
+
+  // A mesh renderer's Meshes written on a Niagara system changed nothing on screen: placed effects kept the render data
+  // they started with until each was assigned its system again.
+  it('set_property on an object inside a Niagara system re-initializes the effects running it', () => {
+    const access = code('Property', 'McpPropActorAccess.cpp');
+    const set = code('Property', 'McpPropObjectSet.cpp');
+    expect(access).toContain('UNiagaraSystem* System = Edited ? Edited->GetTypedOuter<UNiagaraSystem>() : nullptr;');
+    expect(access).toContain('FNiagaraSystemUpdateContext ReInit(System, true);');
+    expect(set.indexOf('RefreshNiagaraHostAfterEdit(RootObject)')).toBeGreaterThan(-1);
+    expect(set.indexOf('RefreshNiagaraHostAfterEdit(RootObject)')).toBeLessThan(set.indexOf('McpPropertyTarget::SaveAfterWrite('));
   });
 
   // set_property on a material expression (<material>.<material>:<nodeName>) ran only the expression's own PostEditChange,
@@ -2426,6 +2445,16 @@ describe('an editor viewport capture shows what changed since the last frame', (
     expect(windows).toMatch(/if \(World\) \{\s*World->SendAllEndOfFrameUpdates\(\);\s*\}\s*Viewport->Draw\(\);\s*FlushRenderingCommands\(\);/u);
     const screenshot = code('ControlEditor', 'McpEditorScreenshot.cpp');
     expect(screenshot).toContain('DrawViewportFramesForMcp(Viewport, CaptureClient ? CaptureClient->GetWorld() : nullptr, bCameraMoved ? 3 : 1);');
+  });
+
+  // A just-built Nanite mesh photographed at once showed blobs of its coarsest clusters: its pages stream in over engine
+  // ticks, which no drawing inside one call waits out.
+  it('takes the picture again a beat later until the frame matches the one before, at most five passes', () => {
+    const screenshot = code('ControlEditor', 'McpEditorScreenshot.cpp');
+    const settle = code('ControlEditor', 'Camera', 'McpViewSettle.cpp');
+    expect(screenshot).toMatch(/bCameraMoved \? 3 : 1\);\s*if \(!ViewFrameSettledForMcp\(Viewport, Payload\)\) \{ RetryLater\(\); return true; \}/u);
+    expect(settle).toContain('constexpr int32 MaxSettleRounds = 5;');
+    expect(settle).toContain('if (SignaturesMatch(Signature, GetJsonStringField(Payload, TEXT("_settleFrame"))) || Round >= MaxSettleRounds) return true;');
   });
 });
 

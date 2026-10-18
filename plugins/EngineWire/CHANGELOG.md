@@ -27,6 +27,9 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **`edit_scs` `modify` `add_component`** saved the Blueprint after each part; the batch's own save step decides now, so `save: false` leaves it unsaved.
 - **Refusal details survive reply compaction**: `SendStandardErrorResponse` merges a handler's details into `error`, and the whole object went when its message and code repeated the reply's.
 - **`get_performance_stats` `busiestThreadMs`** includes the RHI thread.
+- **Editor viewport captures settle across ticks**: the capture retries 0.3 s later (at most five passes) until the 32 px block means match the previous pass, so Nanite pages that stream in over engine ticks are drawn.
+- **The property resolver refuses `CPF_Deprecated`** (UHT registers `X_DEPRECATED` as `X`) and names a struct or struct-array member of that name.
+- **`set_property` on an object in a Niagara system** runs `FNiagaraSystemUpdateContext` with re-init, as the Niagara editor does.
 
 ## [0.6.0-beta-f] - 2026-10-16
 

@@ -29,4 +29,6 @@ void RefreshK2NodeTitleCacheIfNeeded(UObject* RootObject);
 // material or function it lives in that it changed, as compile_material does, so the parameter lists every
 // instance reads are rebuilt and the material recompiled now. False when the object is in neither.
 bool RefreshMaterialHostAfterEdit(UObject* Edited);
+// A write inside a Niagara system re-initializes the placed components that run it; false when Edited is in none.
+bool RefreshNiagaraHostAfterEdit(UObject* Edited);
 }

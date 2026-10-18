@@ -235,6 +235,7 @@ bool UEngineWireSubsystem::HandleControlEditorScreenshot(
   // (a sign's text, a tree) the new view shows; a few frames later the picture is what the camera sees.
   const bool bCameraMoved = CaptureClient && (Payload->HasField(TEXT("location")) || Payload->HasField(TEXT("rotation")));
   DrawViewportFramesForMcp(Viewport, CaptureClient ? CaptureClient->GetWorld() : nullptr, bCameraMoved ? 3 : 1);
+  if (!ViewFrameSettledForMcp(Viewport, Payload)) { RetryLater(); return true; }
 
   TArray<FColor> Bitmap;
   const FReadSurfaceDataFlags ReadFlags(RCM_UNorm);

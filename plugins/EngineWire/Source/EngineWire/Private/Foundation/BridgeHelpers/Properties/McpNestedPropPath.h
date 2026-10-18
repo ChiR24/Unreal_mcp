@@ -50,6 +50,23 @@ static inline FString McpSimilarPropertyNames(const UStruct *Scope, const FStrin
   return FString::Join(Similar, TEXT(", "));
 }
 
+// A deprecated property is registered under its old name (UHT strips _DEPRECATED) only so old assets still load;
+// the engine no longer reads it, so a write answered success and changed nothing (a Niagara mesh renderer's
+// PivotOffset, which moved into each Meshes entry). The refusal names where a member of that name lives now.
+static inline FString McpDeprecatedPropertyError(const UStruct *Scope, const FProperty *Property) {
+  TArray<FString> Homes;
+  for (TFieldIterator<FProperty> It(Scope); It; ++It) {
+    const FArrayProperty *Array = CastField<FArrayProperty>(*It);
+    const FStructProperty *Inner = CastField<FStructProperty>(Array ? Array->Inner : *It);
+    if (*It != Property && Inner && Inner->Struct && FindFProperty<FProperty>(Inner->Struct, Property->GetFName())) {
+      Homes.Add(Array ? FString::Printf(TEXT("%s (an array: write it whole, each entry with its own %s)"), *It->GetName(), *Property->GetName())
+                      : It->GetName() + TEXT(".") + Property->GetName());
+    }
+  }
+  return FString::Printf(TEXT("'%s' is a deprecated property of %s: the engine keeps it only to load old assets and no longer reads it, so a write would change nothing%s"),
+                         *Property->GetName(), *Scope->GetName(), Homes.IsEmpty() ? TEXT("") : *(TEXT("; it lives on as ") + FString::Join(Homes, TEXT(", "))));
+}
+
 static inline FProperty *ResolveNestedPropertyPath(UObject *RootObject,
                                                    const FString &PropertyPath,
                                                    void *&OutContainerPtr,
@@ -88,6 +105,10 @@ static inline FProperty *ResolveNestedPropertyPath(UObject *RootObject,
     // The details panel shows a bool without its b prefix (Simulate Physics is bSimulatePhysics).
     if (!CurrentProperty && bIsLastSegment) {
       CurrentProperty = CastField<FBoolProperty>(FindFProperty<FProperty>(CurrentTypeScope, FName(*(TEXT("b") + Segment))));
+    }
+    if (CurrentProperty && CurrentProperty->HasAnyPropertyFlags(CPF_Deprecated)) {
+      OutError = McpDeprecatedPropertyError(CurrentTypeScope, CurrentProperty);
+      return nullptr;
     }
     // An actor's instance components (placed in the level, or added by AddInstanceComponent) have no property
     // behind them, so a middle segment may name one exactly: the component name a create call reported.

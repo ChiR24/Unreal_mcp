@@ -36,6 +36,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`edit_scs` `modify` keeps `save: false`**: adding a part through it saved the Blueprint anyway while the reply said it had not.
 - **A refusal keeps the details it names**, such as the unsaved packages of a refused close; the reply dropped them along with its repeated message.
 - **`get_stats` `performance`** counts the RHI thread in `busiestThreadMs`, as `frame` does.
+- **A level viewport screenshot waits for streaming**: a Nanite mesh just built or framed no longer shows as blobs of its coarsest clusters.
+- **A deprecated property is refused**, naming where its replacement lives (a Niagara mesh renderer's `PivotOffset` is in each `Meshes` entry); the write answered success and changed nothing.
+- **`set_property` inside a Niagara system restarts its placed effects**, so a renderer change shows without assigning the system again.
 
 </details>
 

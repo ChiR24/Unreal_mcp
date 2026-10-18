@@ -71,6 +71,10 @@ void AppendEditorWindowListForMcp(const TSharedPtr<FJsonObject> &Resp);
 // Draws the viewport Frames times, each after World sends its pending render updates, so a component edited or a
 // particle system advanced since the last frame shows in the picture (it drew the old state). World may be null.
 void DrawViewportFramesForMcp(FViewport *Viewport, UWorld *World, int32 Frames);
+// True when the frame about to be read matches the one Payload recorded on the capture's previous pass (Camera/
+// McpViewSettle.cpp); false, after recording this one, when the capture should be taken again a beat later, so
+// streaming that lands over engine ticks (Nanite pages, texture mips) is in the picture. At most five passes.
+bool ViewFrameSettledForMcp(FViewport *Viewport, const TSharedPtr<FJsonObject> &Payload);
 // Resolves a window by list index or case-insensitive title substring.
 TSharedPtr<SWindow> FindEditorSlateWindowForMcp(const FString &Query,
                                                 FString &OutResolvedTitle,
