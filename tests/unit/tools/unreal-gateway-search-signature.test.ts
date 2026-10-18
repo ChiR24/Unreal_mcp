@@ -26,7 +26,7 @@ describe('a search signature', () => {
       expect(row.executeCall, query).toMatchObject({ operation: 'execute', capability: row.capability, params: {} });
     }
     expect(carried, 'some action names are clear hits').toBeGreaterThan(100);
-  });
+  }, 60_000); // a search per record: a cold run took it past the default 10 s
 
   it('never goes past the first page', () => {
     expect(firstRow({ query: 'save level' })?.signature).toBeDefined();

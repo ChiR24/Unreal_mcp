@@ -7,7 +7,9 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     include: ['tests/eval/**/*.test.ts'],
-    testTimeout: 10000,
-    hookTimeout: 10000,
+    // Each measure runs hundreds of searches over the whole catalog, which a cold run (CI, a fresh transform cache)
+    // took past 10 s; the warm latency budget is gate.test.ts's own assertion.
+    testTimeout: 60000,
+    hookTimeout: 60000,
   },
 });
