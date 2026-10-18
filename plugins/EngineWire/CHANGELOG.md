@@ -24,6 +24,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **The native request timeout reads `renderTimeoutMs`**, the name `start_render` declares, so a long render is not cut off at 335 s.
 - **Task results match their principal case-sensitively** (`FString::operator!=` ignores case).
 - **`edit_scs` `modify` `add_component`** saved the Blueprint after each part; the batch's own save step decides now, so `save: false` leaves it unsaved.
+- **Refusal details survive reply compaction**: `SendStandardErrorResponse` merges a handler's details into `error`, and the whole object went when its message and code repeated the reply's.
 - **`get_performance_stats` `busiestThreadMs`** includes the RHI thread.
 
 ## [0.6.0-beta-f] - 2026-10-16

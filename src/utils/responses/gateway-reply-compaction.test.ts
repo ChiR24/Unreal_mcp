@@ -139,6 +139,20 @@ describe('compactGatewayReply', () => {
     });
   });
 
+  it('keeps the details a refusal names beside its repeated message and code', () => {
+    // A close refused for unsaved work named its packages, and the reply dropped them with the repeats.
+    const refusal = compactGatewayReply({
+      success: false, operation: 'execute', message: '1 unsaved package', errorCode: 'UNSAVED_CHANGES',
+      typedError: {
+        kind: 'execution', code: 'UNREAL_ENGINE_ERROR', handlerCode: 'UNSAVED_CHANGES',
+        unrealDetail: { success: false, data: {}, error: { code: 'UNSAVED_CHANGES', message: '1 unsaved package', unsavedPackages: ['/Game/A'], unsavedCount: 1 } }
+      }
+    }) as Record<string, unknown>;
+    expect(refusal.typedError).toEqual({
+      kind: 'execution', code: 'UNREAL_ENGINE_ERROR', unrealDetail: { error: { unsavedPackages: ['/Game/A'], unsavedCount: 1 } }
+    });
+  });
+
   it('keeps partial results, a running task and a typed error no other field carries', () => {
     const partial = compactGatewayReply({
       success: false, operation: 'execute', message: 'stopped at operations[10]', errorCode: 'EXPRESSION_INVALID',
