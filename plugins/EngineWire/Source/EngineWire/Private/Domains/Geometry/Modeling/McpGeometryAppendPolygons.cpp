@@ -10,7 +10,7 @@
 namespace McpGeometryHandlers
 {
 bool HandleAppendPolygons(UEngineWireSubsystem* Self, const FString& RequestId,
-                          const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
+                          const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket, const FString& Edit)
 {
     const FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
     const TOptional<FMcpGeometryTarget> Target = ResolveGeometryTarget(Self, RequestId, ActorName, Socket);
@@ -19,9 +19,13 @@ bool HandleAppendPolygons(UEngineWireSubsystem* Self, const FString& RequestId,
 
     FAppendPolygonsInput Input;
     FString Error;
-    if (!ParseAppendPolygonsInput(Payload, Input, Error))
+    const bool bBoxes = Edit == TEXT("append_cuboids");
+    const bool bLoft = Edit == TEXT("append_loft");
+    const TCHAR* Code = bBoxes ? TEXT("INVALID_CUBOIDS") : bLoft ? TEXT("INVALID_LOFT") : TEXT("INVALID_POLYGONS");
+    if (!(bBoxes ? ParseAppendBoxesInput(Payload, Input, Error) : bLoft ? ParseAppendLoftInput(Payload, Input, Error)
+                 : ParseAppendPolygonsInput(Payload, Input, Error)))
     {
-        Self->SendAutomationError(Socket, RequestId, Error, TEXT("INVALID_POLYGONS"));
+        Self->SendAutomationError(Socket, RequestId, Error, Code);
         return true;
     }
     if (!GuardMeshBudget(Self, RequestId, Socket, static_cast<int64>(Mesh->GetTriangleCount()) + Input.Triangles.Num(), TEXT("Append polygons"))) return true;
@@ -110,7 +114,7 @@ bool HandleAppendPolygons(UEngineWireSubsystem* Self, const FString& RequestId,
     {
         Mesh->SetMesh(MoveTemp(Backup));
         DMC->NotifyMeshUpdated();
-        Self->SendAutomationError(Socket, RequestId, Error, TEXT("INVALID_POLYGONS"));
+        Self->SendAutomationError(Socket, RequestId, Error, Code);
         return true;
     }
     RecomputeMeshNormals(Mesh);
@@ -135,8 +139,11 @@ bool HandleAppendPolygons(UEngineWireSubsystem* Self, const FString& RequestId,
     Result->SetNumberField(TEXT("triangleCount"), Mesh->GetTriangleCount());
     Result->SetNumberField(TEXT("groupCount"), GroupCount);
     McpHandlerUtils::AddVerification(Result, TargetActor);
+    const FString What = bBoxes ? FString::Printf(TEXT("%d cuboids"), Input.BoxCount)
+                       : bLoft ? FString::Printf(TEXT("a loft of %d faces"), Input.Faces.Num())
+                               : FString::Printf(TEXT("%d faces"), Input.Faces.Num());
     Self->SendAutomationResponse(Socket, RequestId, true,
-        FString::Printf(TEXT("Appended %d faces (%d triangles)"), Input.Faces.Num(), Input.Triangles.Num()), Result);
+        FString::Printf(TEXT("Appended %s (%d triangles)"), *What, Input.Triangles.Num()), Result);
     return true;
 }
 } // namespace McpGeometryHandlers

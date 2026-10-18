@@ -207,14 +207,23 @@ static bool CheckAppendEdges(const FAppendPolygonsInput& Input, FString& OutErro
     return true;
 }
 
+bool FinishAppendPolygonsInput(FAppendPolygonsInput& Input, FString& OutError)
+{
+    if (Input.Faces.Num() > MaxAppendFaces)
+    {
+        OutError = FString::Printf(TEXT("the shape comes to %d faces; at most %d can be appended in one call"), Input.Faces.Num(), MaxAppendFaces);
+        return false;
+    }
+    return TriangulateAppendFaces(Input, OutError) && CheckAppendEdges(Input, OutError);
+}
+
 bool ParseAppendPolygonsInput(const TSharedPtr<FJsonObject>& Payload, FAppendPolygonsInput& OutInput, FString& OutError)
 {
     return ParseAppendVertices(Payload, OutInput.Vertices, OutError)
         && ParseAppendFaces(Payload, OutInput.Vertices.Num(), OutInput.Faces, OutError)
         && ParseAppendFaceIntegers(Payload, TEXT("faceGroups"), OutInput.Faces.Num(), MaxAppendGroupId, OutInput.FaceGroups, OutError)
         && ParseAppendFaceIntegers(Payload, TEXT("faceMaterials"), OutInput.Faces.Num(), MAX_MATERIAL_ID, OutInput.FaceMaterials, OutError)
-        && TriangulateAppendFaces(OutInput, OutError)
-        && CheckAppendEdges(OutInput, OutError);
+        && FinishAppendPolygonsInput(OutInput, OutError);
 }
 } // namespace McpGeometryHandlers
 

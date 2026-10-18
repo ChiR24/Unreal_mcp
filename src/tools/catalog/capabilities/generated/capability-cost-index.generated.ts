@@ -1088,6 +1088,9 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_gas::set_effect_tags": "interactive|low",
   "manage_gas::set_instancing_policy": "interactive|low",
   "manage_gas::set_modifier_magnitude": "interactive|low",
+  "manage_geometry::append_cuboids": "interactive|medium",
+  "manage_geometry::append_loft": "interactive|medium",
+  "manage_geometry::append_mesh": "interactive|medium",
   "manage_geometry::append_polygons": "interactive|medium",
   "manage_geometry::append_triangle": "interactive|medium",
   "manage_geometry::append_vertex": "interactive|medium",
@@ -1128,6 +1131,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_geometry::create_torus": "interactive|medium",
   "manage_geometry::cylindrify": "interactive|medium",
   "manage_geometry::deform_mesh": "interactive|medium",
+  "manage_geometry::delete_triangles": "interactive|medium",
   "manage_geometry::difference": "interactive|medium",
   "manage_geometry::displace_by_texture": "interactive|medium",
   "manage_geometry::duplicate_along_spline": "interactive|medium",
@@ -1596,4 +1600,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1583;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1587;

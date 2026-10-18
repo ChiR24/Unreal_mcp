@@ -114,9 +114,32 @@ struct FAppendPolygonsInput
     TArray<int32> FaceMaterials;
     TArray<UE::Geometry::FIndex3i> Triangles;
     TArray<int32> TriangleFace;
+    int32 BoxCount = 0;  // append_cuboids: boxes laid out once repeats are unrolled
 };
 // False, with OutError naming the face at fault, when the payload's vertices and faces cannot be appended as a clean cage.
 bool ParseAppendPolygonsInput(const TSharedPtr<FJsonObject>& Payload, FAppendPolygonsInput& OutInput, FString& OutError);
+// The same input from append_cuboids' boxes and append_loft's sections (McpGeometryAppendShapes.cpp).
+bool ParseAppendBoxesInput(const TSharedPtr<FJsonObject>& Payload, FAppendPolygonsInput& OutInput, FString& OutError);
+bool ParseAppendLoftInput(const TSharedPtr<FJsonObject>& Payload, FAppendPolygonsInput& OutInput, FString& OutError);
+// Triangulates the faces of an input built in code and checks it is a clean cage, as ParseAppendPolygonsInput does.
+bool FinishAppendPolygonsInput(FAppendPolygonsInput& Input, FString& OutError);
+// A part laid out count x rows x layers times (append_cuboids' boxes, append_mesh's placements): copy k is moved by
+// At(k), counted along count, then rows, then layers.
+struct FMcpRepeatGrid
+{
+    int32 Count = 1;
+    int32 Rows = 1;
+    int32 Layers = 1;
+    FVector3d Offset = FVector3d::ZeroVector;
+    FVector3d RowOffset = FVector3d::ZeroVector;
+    FVector3d LayerOffset = FVector3d::ZeroVector;
+    int64 Num() const { return static_cast<int64>(Count) * Rows * Layers; }
+    FVector3d At(int32 Copy) const { return Offset * (Copy % Count) + RowOffset * ((Copy / Count) % Rows) + LayerOffset * (Copy / (Count * Rows)); }
+};
+// Owner's optional repeat object {count, offset, rows, rowOffset, layers, layerOffset}; false when it is malformed.
+bool ReadRepeatGrid(const TSharedPtr<FJsonObject>& Owner, FMcpRepeatGrid& Out);
+// Every material id the mesh's triangles carry, ascending (0 for a mesh without ids), for a reply's materialIdsInUse.
+TArray<TSharedPtr<FJsonValue>> MaterialIdsInUseJson(UDynamicMesh* Mesh);
 // Face operators take distance, or amount as the documented spelling.
 double FaceOpDistance(const TSharedPtr<FJsonObject>& Payload, double Default);
 int32 ClampSegments(int32 Value, int32 Default = 1);
@@ -238,8 +261,11 @@ bool HandleCreateProceduralMesh(UEngineWireSubsystem* Self, const FString& Reque
 bool HandleAppendTriangle(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 bool HandleSetVertexColor(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 bool HandleBakeVertexColors(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
-bool HandleAppendPolygons(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
+// append_polygons, append_cuboids or append_loft (Edit), all appended as one validated cage.
+bool HandleAppendPolygons(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket, const FString& Edit);
 bool HandleSetMaterialId(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
+bool HandleDeleteTriangles(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
+bool HandleAppendMesh(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 bool HandleSetUVs(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 bool HandleAppendVertex(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 bool HandleGetVertexPosition(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);

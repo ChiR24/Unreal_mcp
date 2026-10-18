@@ -63,7 +63,10 @@ bool UEngineWireSubsystem::HandleGeometryAction(
     if (SubAction == TEXT("revolve")) return HandleRevolve(this, RequestId, Payload, RequestingSocket);
     if (SubAction == TEXT("create_procedural_mesh")) return HandleCreateProceduralMesh(this, RequestId, Payload, RequestingSocket);
     if (SubAction == TEXT("append_triangle")) return HandleAppendTriangle(this, RequestId, Payload, RequestingSocket);
-    if (SubAction == TEXT("append_polygons")) return HandleAppendPolygons(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("append_mesh")) return HandleAppendMesh(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("delete_triangles")) return HandleDeleteTriangles(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("append_polygons") || SubAction == TEXT("append_cuboids") || SubAction == TEXT("append_loft"))
+        return HandleAppendPolygons(this, RequestId, Payload, RequestingSocket, SubAction);
 
     // Booleans
     if (SubAction == TEXT("boolean_union")) return HandleBooleanUnion(this, RequestId, Payload, RequestingSocket);

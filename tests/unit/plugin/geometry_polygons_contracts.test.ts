@@ -77,8 +77,56 @@ describe('append_polygons validates everything before it touches the mesh', () =
     expect(source).toContain('Result->SetNumberField(TEXT("verticesAdded"), VerticesAdded);');
   });
 
-  it('the dispatcher routes append_polygons to HandleAppendPolygons', () => {
-    expect(read('McpGeometryHandlers.cpp')).toContain('if (SubAction == TEXT("append_polygons")) return HandleAppendPolygons(this, RequestId, Payload, RequestingSocket);');
+  it('the dispatcher routes append_polygons, append_cuboids and append_loft to HandleAppendPolygons', () => {
+    expect(read('McpGeometryHandlers.cpp')).toMatch(
+      /SubAction == TEXT\("append_polygons"\) \|\| SubAction == TEXT\("append_cuboids"\) \|\| SubAction == TEXT\("append_loft"\)\)\s*return HandleAppendPolygons\(this, RequestId, Payload, RequestingSocket, SubAction\);/u);
+  });
+});
+
+// A cage of boxes or a loft took hundreds of hand-wound faces in one payload; both now build the input append_polygons
+// validates, wound outward for the caller.
+describe('append_cuboids and append_loft build a validated cage', () => {
+  const source = read('Modeling', 'McpGeometryAppendShapes.cpp');
+
+  it('lay every box face outward and repeat on three axes, then validate like append_polygons', () => {
+    expect(source).toContain('{TEXT("-z"), {0, 2, 3, 1}}, {TEXT("+z"), {4, 5, 7, 6}}, {TEXT("-y"), {0, 1, 5, 4}}');
+    expect(source).toContain('const FVector3d Shift = Grid.At(Copy);');
+    expect(source.match(/return FinishAppendPolygonsInput\(OutInput, OutError\);/gu)).toHaveLength(2);
+  });
+
+  it('count copies along count, then rows, then layers', () => {
+    expect(read('McpGeometryHandlers.h')).toContain(
+      'return Offset * (Copy % Count) + RowOffset * ((Copy / Count) % Rows) + LayerOffset * (Copy / (Count * Rows));');
+  });
+
+  it('turn a loft outward from its first section against the way the sections run', () => {
+    expect(source).toContain('const bool bAlong = Normal.Dot(Last - First) > 0.0;');
+    expect(source).toContain('TEXT("startPoint and endPoint close a tube\'s ends, so they need closed true")');
+  });
+});
+
+// A model assembled from detailed parts took one actor per part; append_mesh copies an asset in, and delete_triangles
+// takes a picked region back out.
+describe('append_mesh copies a static mesh in and delete_triangles removes a selection', () => {
+  const copy = read('Modeling', 'McpGeometryAppendMesh.cpp');
+  const ids = read('Modeling', 'McpGeometryMatIds.cpp');
+
+  it('reads the asset once, caps the copies before the mesh is touched, and maps each slot to its ids in turn', () => {
+    expect(copy).toContain('UGeometryScriptLibrary_StaticMeshFunctions::CopyMeshFromStaticMesh(Source, Part,');
+    expect(copy.indexOf('if (Copies > MaxMeshCopies)')).toBeLessThan(copy.indexOf('Mesh->EditMesh('));
+    expect(copy).toContain('Placement.SlotIds[Slot][Copy % Placement.SlotIds[Slot].Num()]');
+    expect(copy).toContain('if (bMirrored) EditMesh.ReverseTriOrientation(Added);');
+  });
+
+  it('never deletes the whole mesh: no selection is a refusal', () => {
+    expect(ids).toMatch(/if \(!bHasSelection\)\s*\{\s*Self->SendAutomationError\([\s\S]*?TEXT\("INVALID_SELECTION"\)\);/u);
+    expect(ids).toContain('EditMesh.RemoveTriangle(TriangleId, true, false) == UE::Geometry::EMeshResult::Ok');
+  });
+
+  it('the dispatcher routes both edits', () => {
+    const dispatcher = read('McpGeometryHandlers.cpp');
+    expect(dispatcher).toContain('if (SubAction == TEXT("append_mesh")) return HandleAppendMesh(this, RequestId, Payload, RequestingSocket);');
+    expect(dispatcher).toContain('if (SubAction == TEXT("delete_triangles")) return HandleDeleteTriangles(this, RequestId, Payload, RequestingSocket);');
   });
 });
 

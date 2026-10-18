@@ -12864,9 +12864,13 @@
         "baseRadius",
         "blurIterations",
         "booleanOp",
+        "boxes",
         "by",
         "cap",
+        "capMaterialId",
+        "caps",
         "center",
+        "closed",
         "collision",
         "collisionOp",
         "collisionType",
@@ -12880,12 +12884,15 @@
         "distance",
         "dropRepeats",
         "dryRun",
+        "edgeMaterials",
         "edges",
         "edit",
         "enableCollision",
+        "endPoint",
         "faceGroups",
         "faceMaterials",
         "faces",
+        "flip",
         "floating",
         "frequency",
         "g",
@@ -12903,6 +12910,7 @@
         "latticeResolution",
         "length",
         "location",
+        "lod",
         "lodCount",
         "lodIndex",
         "lodOp",
@@ -12927,6 +12935,7 @@
         "outerRadius",
         "outputPath",
         "pivot",
+        "placements",
         "position",
         "primitive",
         "profile",
@@ -12944,12 +12953,14 @@
         "scale",
         "scheme",
         "screenSizes",
+        "sections",
         "segments",
         "setAll",
         "shapes",
         "simplificationFactor",
         "splineActorName",
         "splitAngle",
+        "startPoint",
         "stepDepth",
         "stepHeight",
         "stepWidth",
@@ -13046,6 +13057,187 @@
             ],
             "description": "Which boolean mesh variant to run."
           },
+          "boxes": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 500,
+            "items": {
+              "type": "object",
+              "properties": {
+                "min": {
+                  "type": "object",
+                  "properties": {
+                    "x": {
+                      "type": "number",
+                      "description": "X"
+                    },
+                    "y": {
+                      "type": "number",
+                      "description": "Y"
+                    },
+                    "z": {
+                      "type": "number",
+                      "description": "Z"
+                    }
+                  },
+                  "required": [
+                    "x",
+                    "y",
+                    "z"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Corner with the smallest x, y and z, in the mesh's local space."
+                },
+                "max": {
+                  "type": "object",
+                  "properties": {
+                    "x": {
+                      "type": "number",
+                      "description": "X"
+                    },
+                    "y": {
+                      "type": "number",
+                      "description": "Y"
+                    },
+                    "z": {
+                      "type": "number",
+                      "description": "Z"
+                    }
+                  },
+                  "required": [
+                    "x",
+                    "y",
+                    "z"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Corner with the largest x, y and z; larger than min on every axis."
+                },
+                "materialId": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 255,
+                  "description": "Material id of every face of the box and its copies (default 0); a baked asset gets one slot per id."
+                },
+                "materialIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 255
+                  },
+                  "maxItems": 256,
+                  "description": "Material ids the copies take in turn (copy k takes entry k modulo the list length), counted along count, then rows, then layers: colour variety across a stack or a row. Replaces materialId."
+                },
+                "open": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "-x",
+                      "+x",
+                      "-y",
+                      "+y",
+                      "-z",
+                      "+z"
+                    ]
+                  },
+                  "maxItems": 6,
+                  "description": "Faces to leave out, by the direction they face: a face nobody sees (the bottom of a post on a floor, the faces two touching boxes share) costs triangles and can flicker."
+                },
+                "repeat": {
+                  "type": "object",
+                  "properties": {
+                    "count": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 1000,
+                      "description": "Copies along offset, the box itself included (default 1)."
+                    },
+                    "offset": {
+                      "type": "object",
+                      "properties": {
+                        "x": {
+                          "type": "number",
+                          "description": "X"
+                        },
+                        "y": {
+                          "type": "number",
+                          "description": "Y"
+                        },
+                        "z": {
+                          "type": "number",
+                          "description": "Z"
+                        }
+                      },
+                      "required": [],
+                      "additionalProperties": false,
+                      "description": "Step from one copy to the next, e.g. {x: 200} for one every 2 m."
+                    },
+                    "rows": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 1000,
+                      "description": "Rows of those copies (default 1)."
+                    },
+                    "rowOffset": {
+                      "type": "object",
+                      "properties": {
+                        "x": {
+                          "type": "number",
+                          "description": "X"
+                        },
+                        "y": {
+                          "type": "number",
+                          "description": "Y"
+                        },
+                        "z": {
+                          "type": "number",
+                          "description": "Z"
+                        }
+                      },
+                      "required": [],
+                      "additionalProperties": false,
+                      "description": "Step from one row to the next."
+                    },
+                    "layers": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 1000,
+                      "description": "Layers of those rows (default 1), e.g. the tiers of a stack."
+                    },
+                    "layerOffset": {
+                      "type": "object",
+                      "properties": {
+                        "x": {
+                          "type": "number",
+                          "description": "X"
+                        },
+                        "y": {
+                          "type": "number",
+                          "description": "Y"
+                        },
+                        "z": {
+                          "type": "number",
+                          "description": "Z"
+                        }
+                      },
+                      "required": [],
+                      "additionalProperties": false,
+                      "description": "Step from one layer to the next."
+                    }
+                  },
+                  "additionalProperties": false,
+                  "description": "Lay the box out count x rows x layers times, each copy moved by offset per step, rowOffset per row and layerOffset per layer. A step larger than the box leaves a gap between copies."
+                }
+              },
+              "required": [
+                "min",
+                "max"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Boxes to append, at most 2500 once repeats are unrolled: each an axis-aligned box from min to max, its six faces wound outward and each face its own polygroup."
+          },
           "by": {
             "type": "string",
             "enum": [
@@ -13057,6 +13249,16 @@
           "cap": {
             "type": "boolean",
             "description": "Close open ends: the tube ends of a loft, sweep or extrude along a spline, or for a revolve flat discs from the first and last profile points to the axis (revolve default true)."
+          },
+          "capMaterialId": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255,
+            "description": "Material id of the end caps and tip fans (default 0)."
+          },
+          "caps": {
+            "type": "boolean",
+            "description": "Close a closed tube's first and last sections with a flat face each (default true), unless startPoint or endPoint closes that end."
           },
           "center": {
             "oneOf": [
@@ -13100,6 +13302,10 @@
               }
             ],
             "description": "A point on the mirror plane in the mesh's local space, cm (default 0,0,0)."
+          },
+          "closed": {
+            "type": "boolean",
+            "description": "Each section is a closed loop and the loft a closed tube (default true). false joins open polylines into a sheet (an awning, a curved panel), its faces turned by the order of the points; flip reverses them."
           },
           "collision": {
             "type": "string",
@@ -13198,6 +13404,16 @@
             "type": "boolean",
             "description": "Answer the meshes the split would make (size, triangles, offset, and exists when the name is taken) and create nothing, to tune gap and minTriangles first. A large pack can take longer than one call waits."
           },
+          "edgeMaterials": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 255
+            },
+            "maxItems": 256,
+            "description": "Material id of each edge of the section loop, one per edge (point k to point k+1; a closed loop has as many edges as points, an open one one fewer): the strip each edge sweeps keeps it, for a painted band, a stripe or a row of windows. Default 0."
+          },
           "edges": {
             "type": "array",
             "items": {
@@ -13212,6 +13428,10 @@
               "append_vertex",
               "append_triangle",
               "append_polygons",
+              "append_cuboids",
+              "append_loft",
+              "append_mesh",
+              "delete_triangles",
               "set_vertex_position",
               "set_vertex_color",
               "bake_vertex_colors",
@@ -13226,6 +13446,30 @@
           "enableCollision": {
             "type": "boolean",
             "description": "Enable simple collision on the created DynamicMesh actor."
+          },
+          "endPoint": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number",
+                "description": "X"
+              },
+              "y": {
+                "type": "number",
+                "description": "Y"
+              },
+              "z": {
+                "type": "number",
+                "description": "Z"
+              }
+            },
+            "required": [
+              "x",
+              "y",
+              "z"
+            ],
+            "additionalProperties": false,
+            "description": "Close the last section as a fan of triangles to this point instead of a flat cap: a bow, a nose cone, a spire. Needs closed true."
           },
           "faceGroups": {
             "type": "array",
@@ -13260,6 +13504,10 @@
             "minItems": 1,
             "maxItems": 20000,
             "description": "Faces, each a list of three or more vertex indices into vertices (at most 20000 faces). List a face's corners so that (v1 - v0) x (v2 - v0) points outward, and let two faces that share an edge run along it in opposite directions; the call refuses a face wound the other way, or an edge shared by more than two faces, and names the face. A face with more than three corners is triangulated (it may be concave) and all its triangles keep the face's polygroup. The new faces get smooth normals, shared where they meet; split_normals creases the hard edges."
+          },
+          "flip": {
+            "type": "boolean",
+            "description": "Reverse every face. A closed tube is turned outward from the first section's turning order and the way the sections run, so flip is for an open sheet or an inside surface (a tunnel seen from within)."
           },
           "floating": {
             "type": "boolean",
@@ -13343,6 +13591,14 @@
               }
             },
             "additionalProperties": false
+          },
+          "lod": {
+            "type": "string",
+            "enum": [
+              "source",
+              "render"
+            ],
+            "description": "Which geometry is copied: source (default) is the full-detail source mesh; render is the mesh as it draws, for a Nanite mesh its fallback, often a twentieth of the source triangles: use it to lay out many copies of a Nanite part within the mesh's 500000-triangle budget."
           },
           "lodCount": {
             "type": "integer",
@@ -13532,6 +13788,190 @@
               "source"
             ],
             "description": "Each new mesh's pivot: bottom (default), the bottom centre of its bounds, so it stands on what it is placed on; center; or source, the source's own origin."
+          },
+          "placements": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 500,
+            "items": {
+              "type": "object",
+              "properties": {
+                "location": {
+                  "type": "object",
+                  "properties": {
+                    "x": {
+                      "type": "number",
+                      "description": "X"
+                    },
+                    "y": {
+                      "type": "number",
+                      "description": "Y"
+                    },
+                    "z": {
+                      "type": "number",
+                      "description": "Z"
+                    }
+                  },
+                  "required": [
+                    "x",
+                    "y",
+                    "z"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Where the copy's pivot goes, in the target mesh's local space (default 0, 0, 0)."
+                },
+                "rotation": {
+                  "type": "object",
+                  "properties": {
+                    "pitch": {
+                      "type": "number",
+                      "description": "Pitch"
+                    },
+                    "yaw": {
+                      "type": "number",
+                      "description": "Yaw"
+                    },
+                    "roll": {
+                      "type": "number",
+                      "description": "Roll"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "description": "Turn of the copy in degrees (default none)."
+                },
+                "scale": {
+                  "type": "object",
+                  "properties": {
+                    "x": {
+                      "type": "number",
+                      "description": "X"
+                    },
+                    "y": {
+                      "type": "number",
+                      "description": "Y"
+                    },
+                    "z": {
+                      "type": "number",
+                      "description": "Z"
+                    }
+                  },
+                  "required": [
+                    "x",
+                    "y",
+                    "z"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Scale of the copy on each axis (default 1, 1, 1); a negative axis mirrors it, faces still turned outward."
+                },
+                "materialIds": {
+                  "type": "array",
+                  "maxItems": 256,
+                  "items": {
+                    "type": [
+                      "integer",
+                      "array"
+                    ],
+                    "minimum": 0,
+                    "maximum": 255,
+                    "items": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 255
+                    },
+                    "minItems": 1,
+                    "maxItems": 256
+                  },
+                  "description": "The target material id of each material slot of the copied mesh, one entry per slot in slot order (the reply's sourceSlots, or inspect_object objectKind=mesh, says how many): an id, or a list of ids the copies take in turn (copy k takes entry k modulo the list length) for colour variety across a stack or a row. Omitted, each slot keeps its own index as its id."
+                },
+                "repeat": {
+                  "type": "object",
+                  "properties": {
+                    "count": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 1000,
+                      "description": "Copies along offset, the copy itself included (default 1)."
+                    },
+                    "offset": {
+                      "type": "object",
+                      "properties": {
+                        "x": {
+                          "type": "number",
+                          "description": "X"
+                        },
+                        "y": {
+                          "type": "number",
+                          "description": "Y"
+                        },
+                        "z": {
+                          "type": "number",
+                          "description": "Z"
+                        }
+                      },
+                      "required": [],
+                      "additionalProperties": false,
+                      "description": "Step from one copy to the next, e.g. {x: 200} for one every 2 m."
+                    },
+                    "rows": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 1000,
+                      "description": "Rows of those copies (default 1)."
+                    },
+                    "rowOffset": {
+                      "type": "object",
+                      "properties": {
+                        "x": {
+                          "type": "number",
+                          "description": "X"
+                        },
+                        "y": {
+                          "type": "number",
+                          "description": "Y"
+                        },
+                        "z": {
+                          "type": "number",
+                          "description": "Z"
+                        }
+                      },
+                      "required": [],
+                      "additionalProperties": false,
+                      "description": "Step from one row to the next."
+                    },
+                    "layers": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 1000,
+                      "description": "Layers of those rows (default 1), e.g. the tiers of a stack."
+                    },
+                    "layerOffset": {
+                      "type": "object",
+                      "properties": {
+                        "x": {
+                          "type": "number",
+                          "description": "X"
+                        },
+                        "y": {
+                          "type": "number",
+                          "description": "Y"
+                        },
+                        "z": {
+                          "type": "number",
+                          "description": "Z"
+                        }
+                      },
+                      "required": [],
+                      "additionalProperties": false,
+                      "description": "Step from one layer to the next."
+                    }
+                  },
+                  "additionalProperties": false,
+                  "description": "Lay the copy out count x rows x layers times, each copy moved by offset per step, rowOffset per row and layerOffset per layer. A step larger than the copy leaves a gap between copies."
+                }
+              },
+              "additionalProperties": false
+            },
+            "description": "Where the copies go, at most 2500 once repeats are unrolled: each placement a transform in the target mesh's local space, an optional repeat on up to three axes (its steps add to location and are not turned by rotation), and how the copy's material slots map to the target's material ids."
           },
           "position": {
             "type": "object",
@@ -13791,6 +14231,40 @@
             },
             "description": "Screen size for each LOD."
           },
+          "sections": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 256,
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "description": "X"
+                  },
+                  "y": {
+                    "type": "number",
+                    "description": "Y"
+                  },
+                  "z": {
+                    "type": "number",
+                    "description": "Z"
+                  }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "z"
+                ],
+                "additionalProperties": false
+              },
+              "minItems": 2,
+              "maxItems": 256
+            },
+            "description": "Cross sections in order along the shape, 2 to 256, each a list of {x, y, z} points in the mesh's local space, the same count in every section (3 or more for a closed loop). Point k of one section joins point k of the next, so list every section in the same turning order from the same starting place. A section need not be flat (a raked bow); a section a few cm across gives a blunt end, endPoint a sharp one."
+          },
           "segments": {
             "type": "integer",
             "description": "Subdivisions for a rounded bevel (UE 5.4 or later); omit or 0 for a flat bevel."
@@ -14040,6 +14514,30 @@
           "splitAngle": {
             "type": "number",
             "description": "Angle threshold in degrees above which normals are split."
+          },
+          "startPoint": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number",
+                "description": "X"
+              },
+              "y": {
+                "type": "number",
+                "description": "Y"
+              },
+              "z": {
+                "type": "number",
+                "description": "Z"
+              }
+            },
+            "required": [
+              "x",
+              "y",
+              "z"
+            ],
+            "additionalProperties": false,
+            "description": "Close the first section as a fan of triangles to this point instead of a flat cap: a bow, a nose cone, a spire. Needs closed true."
           },
           "stepDepth": {
             "type": "number",
