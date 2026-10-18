@@ -237,8 +237,9 @@ if (!ComponentClass) {
           }
           FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(
               LocalBP);
+          // Compiled for the operations after it; saving is the batch's own step (save, applyAndSave): a save here
+          // wrote the Blueprint to disk under save:false while the reply said saved:false.
           McpSafeCompileBlueprint(LocalBP);
-          SaveLoadedAssetThrottled(LocalBP);
           bAddedViaSubsystem = true;
         }
       }

@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Crash diagnostics are rewritten on Windows**: the session records replace their files instead of keeping the first one written.
 - **A long render keeps its native request open** for the `renderTimeoutMs` it asked for, not 335 s.
 - **`get_task_result` on the native transport** matches the sender's principal exactly; the match ignored case.
+- **`edit_scs` `modify` keeps `save: false`**: adding a part through it saved the Blueprint anyway while the reply said it had not.
 
 </details>
 

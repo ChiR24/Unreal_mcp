@@ -603,6 +603,12 @@ describe('an edit_scs add takes its class from componentType as well as componen
     expect(fields()).toMatch(/inline FString ScsOpComponentClass\(const TSharedPtr<FJsonObject> &Op\)\s*\{\s*return McpGetFirstStringField\(Op, \{TEXT\("componentClass"\), TEXT\("component_class"\), TEXT\("componentType"\)\}\);/u);
   });
 
+  // The batch saved each part it added, so save:false wrote the Blueprint to disk while the reply said saved:false.
+  it('a batch add leaves saving to the batch, which honours save', () => {
+    expect(batchAdd()).not.toMatch(/SaveLoadedAsset|McpSafeAssetSave/u);
+    expect(scs('McpBPModifyScsFinalize.cpp')).toContain('if (State.bSave && LocalBP && !(State.bCompile && !bCompileOk)) {');
+  });
+
   it('the promotion, the batch add and the single add_scs_component route all read the class through it', () => {
     expect(state()).toContain('const bool bIsAdd = !ScsOpComponentClass(Op).IsEmpty();');
     expect(batchAdd()).toContain('const FString ComponentClassPath = ScsOpComponentClass(Op);');
