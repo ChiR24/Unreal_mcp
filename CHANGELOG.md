@@ -39,6 +39,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **A level viewport screenshot waits for streaming**: a Nanite mesh just built or framed no longer shows as blobs of its coarsest clusters.
 - **A deprecated property is refused**, naming where its replacement lives (a Niagara mesh renderer's `PivotOffset` is in each `Meshes` entry); the write answered success and changed nothing.
 - **`set_property` inside a Niagara system restarts its placed effects**, so a renderer change shows without assigning the system again.
+- **`audit_placement` sees simulated bodies as surfaces**: a crate stacked on a physics crate no longer reads as floating.
+- **`fix_coplanar` brings a piece laid across several neighbours forward** (a carpet over floor tiles), instead of sinking it under them.
 
 </details>
 

@@ -30,6 +30,8 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **Editor viewport captures settle across ticks**: the capture retries 0.3 s later (at most five passes) until the 32 px block means match the previous pass, so Nanite pages that stream in over engine ticks are drawn.
 - **The property resolver refuses `CPF_Deprecated`** (UHT registers `X_DEPRECATED` as `X`) and names a struct or struct-array member of that name.
 - **`set_property` on an object in a Niagara system** runs `FNiagaraSystemUpdateContext` with re-init, as the Niagara editor does.
+- **The placement ground trace queries `ECC_PhysicsBody`** with WorldStatic and WorldDynamic.
+- **`fix_coplanar` sums a face's overlaps over all its pairs** before judging it wholly inside (comes forward) or partly inside (goes back).
 
 ## [0.6.0-beta-f] - 2026-10-16
 

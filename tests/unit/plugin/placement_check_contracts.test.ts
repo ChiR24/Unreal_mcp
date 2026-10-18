@@ -20,6 +20,11 @@ describe('audit_placement finds the floor under an actor, not what it holds up',
     expect(placementCheck()).toContain('if (HitBottomZ >= Origin.Z) {');
   });
 
+  // A crate stacked on a simulated crate read "floating" above the floor under both: a physics body is a PhysicsBody.
+  it('counts a simulated body as a surface', () => {
+    expect(placementCheck()).toContain('Solids.AddObjectTypesToQuery(ECC_PhysicsBody);');
+  });
+
   // A BlockingVolume standing in a ground slab: the trace began inside it and
   // took its own start for the floor, so the slab read "sunk 160 units".
   it('never takes an invisible volume for the floor', () => {

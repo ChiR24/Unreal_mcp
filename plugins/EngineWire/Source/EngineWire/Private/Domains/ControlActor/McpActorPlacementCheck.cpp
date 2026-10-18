@@ -204,9 +204,11 @@ void DescribePlacement(AActor *Actor, const TSharedPtr<FJsonObject> &Data) {
   // Every hit along the ray, not just those up to the first block: a channel
   // trace ended at a pipe's lip resting on its body, so the floor beneath was
   // never seen and the body read "nothing below it".
+  // A simulated body is a PhysicsBody: a crate stacked on a physics crate read "floating" above the floor under both.
   FCollisionObjectQueryParams Solids;
   Solids.AddObjectTypesToQuery(ECC_WorldStatic);
   Solids.AddObjectTypesToQuery(ECC_WorldDynamic);
+  Solids.AddObjectTypesToQuery(ECC_PhysicsBody);
   TArray<FHitResult> Hits;
   World->LineTraceMultiByObjectType(Hits, TraceStart, TraceEnd, Solids, Params);
 

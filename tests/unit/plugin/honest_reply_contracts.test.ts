@@ -1962,6 +1962,13 @@ describe('a row of flush pieces is parted in one pass', () => {
       .toContain('const TMap<AActor*, FMcpCoplanarPlan> Plans = PlanCoplanarPass(Hits, Distance, Inside);');
   });
 
+  // A carpet laid over six floor tiles lay partly inside each and was sent under the floor.
+  it('judges a piece by its overlaps with all its neighbours together', () => {
+    const plan = code('ControlActor', 'Placement', 'McpCoplanarPlan.cpp');
+    expect(plan).toContain('Covered.FindOrAdd(FMcpFaceKey(Hits[Index].Actor, Sides[Index])) += Hits[Index].OverlapU * Hits[Index].OverlapV;');
+    expect(plan).toContain('const bool bApplied = Hit.FaceArea > 0.0 && Overlap >= 0.95 * Hit.FaceArea;');
+  });
+
   // An ocean was reported as a coplanar pair of its two water info meshes, which no view ever draws.
   it('skips meshes kept out of the main view', () => {
     const faces = code('ControlActor', 'Placement', 'McpCoplanarFaces.cpp');
