@@ -181,9 +181,9 @@ void McpAddShaderCompileState(const TSharedPtr<FJsonObject> &Resp,
       Warnings = *Existing;
     }
     Warnings.Add(MakeShared<FJsonValueString>(FString::Printf(
-        TEXT("%d shader job(s) were still compiling, so surfaces they cover are drawn with the engine's default ")
-        TEXT("material (black or grey) and this picture may not show the final look. Retry with waitForShaders ")
-        TEXT("true, or once shadersCompiling reads 0."),
+        TEXT("%d shader job(s) were still compiling: until they finish, surfaces they cover draw with the engine's ")
+        TEXT("default material (black or grey), so a picture taken now may not show the final look. A capture takes ")
+        TEXT("waitForShaders true; otherwise wait until shadersCompiling reads 0."),
         Jobs)));
     Resp->SetArrayField(TEXT("warnings"), Warnings);
   }
