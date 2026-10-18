@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "b49c1e3db7d36a99",
+  "catalogRevision": "bf999a7769077bbc",
   "recordCount": 416,
   "records": [
     {
@@ -62810,7 +62810,7 @@
           "user parameters",
           "static switches"
         ],
-        "summary": "Read a Niagara system: each emitter (enabled, CPU or GPU, stack modules, current module input values, an input that reads a parameter or a dynamic input as {linkedTo}, the static switches such as Ribbon Width Mode that gate them, and its renderers with the object path inspect.set_property writes and their material) and its user parameters; emitterName and moduleNames narrow it to one emitter and the named modules. An emitter asset gives its name and CPU or GPU target. info=validate lists errors and warnings, each naming the module, the problem and the fixes the editor offers.",
+        "summary": "Read a Niagara system: each emitter (enabled, CPU or GPU, stack modules, current module input values, an input that reads a parameter or a dynamic input as {linkedTo}, the static switches such as Ribbon Width Mode that gate them, and its renderers with the object path inspect.set_property writes and their material) and its user parameters with their default values; emitterName and moduleNames narrow it to one emitter and the named modules, and actorName reads one placed effect's own values and which of them it overrides. An emitter asset gives its name and CPU or GPU target. info=validate lists errors and warnings, each naming the module, the problem and the fixes the editor offers.",
         "whenToUse": [
           "info=info: Inspect a Niagara system.",
           "info=validate: Catch authoring errors."
@@ -62846,6 +62846,14 @@
                 "type": "string"
               },
               "description": "Only these modules' moduleInputs and staticSwitches (Collision, SpawnRate), any case; a whole system's inputs run to 15 KB."
+            },
+            "actorName": {
+              "type": "string",
+              "description": "A placed actor running the system: its own user parameter values (a tint, a rate set for that placement) come back under placed, with the ones that differ from the system's defaults (userParameters value) listed as overridden."
+            },
+            "componentName": {
+              "type": "string",
+              "description": "With actorName, which Niagara component of the actor to read when it has several; default the one running this system. A name it lacks fails COMPONENT_NOT_FOUND with the names it has."
             },
             "info": {
               "type": "string",
@@ -62886,6 +62894,30 @@
               "type": "number",
               "description": "Numeric parameter."
             },
+            "placed": {
+              "type": "object",
+              "description": "With actorName: actorName, componentName, values ({User.Name: value} as the component holds them: a number, a bool, or an array for a vector or colour) and overridden (the names whose value differs from the system default).",
+              "properties": {
+                "actorName": {
+                  "type": "string"
+                },
+                "componentName": {
+                  "type": "string"
+                },
+                "values": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "x-unreal-reflection-boundary": true
+                },
+                "overridden": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "additionalProperties": false
+            },
             "valid": {
               "type": "boolean",
               "description": "Boolean parameter."
@@ -62913,7 +62945,7 @@
       },
       "examples": [
         {
-          "title": "Read a Niagara system: each emitter (enabled, CPU or GPU, stack modules, current module input values, an input that reads a parameter or a dynamic input as {linkedTo}, the static switches such as Ribbon Width Mode that gate them, and its renderers with the object path inspect.set_property writes and their material) and its user parameters; emitterName and moduleNames narrow it to one emitter and the named modules. An emitter asset gives its name and CPU or GPU target. info=validate lists errors and warnings, each naming the module, the problem and the fixes the editor offers.",
+          "title": "Read a Niagara system: each emitter (enabled, CPU or GPU, stack modules, current module input values, an input that reads a parameter or a dynamic input as {linkedTo}, the static switches such as Ribbon Width Mode that gate them, and its renderers with the object path inspect.set_property writes and their material) and its user parameters with their default values; emitterName and moduleNames narrow it to one emitter and the named modules, and actorName reads one placed effect's own values and which of them it overrides. An emitter asset gives its name and CPU or GPU target. info=validate lists errors and warnings, each naming the module, the problem and the fixes the editor offers.",
           "input": {
             "action": "get_niagara_info",
             "assetPath": "/Game/NS_Fire",
@@ -62968,14 +63000,20 @@
             ],
             "moduleNames": [
               "info"
+            ],
+            "actorName": [
+              "info"
+            ],
+            "componentName": [
+              "info"
             ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "1aa66d5f6c60d1566427754ec9bb5c1d129768ad2e579c1b76b5bb9478db65d5",
-        "content": "dfd56811b168a165968d75fdc11cb7939b7fbab254b5e0798a7e733412224d00"
+        "schema": "b33bf502c32968f1a526cc0502e16790ba73f9435aacff1a82d517a7ff00418a",
+        "content": "e7a35eae29103ae4a266f0b5f5f135a96e8f729876f3c8a235b17bd7b4e43b60"
       }
     },
     {

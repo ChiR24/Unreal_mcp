@@ -54,7 +54,7 @@ export const MANAGE_EFFECT_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'get_niagara_info', selector: 'info',
-    summary: 'Read a Niagara system: each emitter (enabled, CPU or GPU, stack modules, current module input values, an input that reads a parameter or a dynamic input as {linkedTo}, the static switches such as Ribbon Width Mode that gate them, and its renderers with the object path inspect.set_property writes and their material) and its user parameters; emitterName and moduleNames narrow it to one emitter and the named modules. An emitter asset gives its name and CPU or GPU target. info=validate lists errors and warnings, each naming the module, the problem and the fixes the editor offers.',
+    summary: 'Read a Niagara system: each emitter (enabled, CPU or GPU, stack modules, current module input values, an input that reads a parameter or a dynamic input as {linkedTo}, the static switches such as Ribbon Width Mode that gate them, and its renderers with the object path inspect.set_property writes and their material) and its user parameters with their default values; emitterName and moduleNames narrow it to one emitter and the named modules, and actorName reads one placed effect\'s own values and which of them it overrides. An emitter asset gives its name and CPU or GPU target. info=validate lists errors and warnings, each naming the module, the problem and the fixes the editor offers.',
     topics: ['emitter list', 'stack modules', 'user parameters', 'static switches'],
     members: { info: 'get_niagara_info', validate: 'validate_niagara_system' },
   },

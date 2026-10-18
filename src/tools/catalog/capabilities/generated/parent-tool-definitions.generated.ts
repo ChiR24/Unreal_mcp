@@ -16904,7 +16904,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
       "properties": {
         "actorName": {
           "type": "string",
-          "description": "Target actor name in the current level."
+          "description": "A placed actor running the system: its own user parameter values (a tint, a rate set for that placement) come back under placed, with the ones that differ from the system's defaults (userParameters value) listed as overridden."
         },
         "angle": {
           "type": "number",
@@ -17456,6 +17456,30 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "x-unreal-reflection-boundary": true
           },
           "description": "A parameters call: each entry {parameterName, applied, error (when it did not apply), moduleInputCopiesWritten}."
+        },
+        "placed": {
+          "type": "object",
+          "description": "With actorName: actorName, componentName, values ({User.Name: value} as the component holds them: a number, a bool, or an array for a vector or colour) and overridden (the names whose value differs from the system default).",
+          "properties": {
+            "actorName": {
+              "type": "string"
+            },
+            "componentName": {
+              "type": "string"
+            },
+            "values": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true
+            },
+            "overridden": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false
         },
         "saved": {
           "type": "boolean",

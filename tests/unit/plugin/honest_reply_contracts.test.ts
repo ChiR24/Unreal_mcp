@@ -1790,6 +1790,16 @@ describe('a Niagara read narrows to one emitter and the named modules', () => {
     expect(info).toContain('KeepModuleEntries(EmitterObj, ModuleNames);');
     expect(info).toContain('TEXT("EMITTER_NOT_FOUND")');
   });
+
+  // A placed effect's tint read back as the raw bytes of its override store, and user parameters had no values at all.
+  it('reads user parameter defaults, and with actorName the placed component\'s values and overrides', () => {
+    const info = code('NiagaraAuthoring', 'McpNiagaraInfoValidate.cpp');
+    expect(info).toContain('ReadNiagaraValue(System->GetExposedParameters(), Param)) ParamObj->SetField(TEXT("value"), Value);');
+    expect(info).toContain('if (System && !AddPlacedUserParameters(Context, System)) return true;');
+    const user = code('NiagaraAuthoring', 'McpNiagaraUserParams.cpp');
+    expect(user).toContain('const TSharedPtr<FJsonValue> Value = ReadNiagaraValue(Component->GetOverrideParameters(), Param);');
+    expect(user).toContain('Actor ? TEXT("COMPONENT_NOT_FOUND") : TEXT("ACTOR_NOT_FOUND")');
+  });
 });
 
 // A dozen fire lights each took an edit_component call for one property.

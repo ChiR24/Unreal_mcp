@@ -11975,7 +11975,7 @@
         "properties": {
           "actorName": {
             "type": "string",
-            "description": "Target actor name in the current level."
+            "description": "A placed actor running the system: its own user parameter values (a tint, a rate set for that placement) come back under placed, with the ones that differ from the system's defaults (userParameters value) listed as overridden."
           },
           "angle": {
             "type": "number",

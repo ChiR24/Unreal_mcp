@@ -3,11 +3,11 @@
 
 namespace McpNiagaraAuthoringHandlers
 {
-// A module input's current value in its own type (int for an enum), or null for a type not rendered.
-static TSharedPtr<FJsonValue> ReadModuleInputValue(const FNiagaraParameterStore& Store, const FNiagaraVariableWithOffset& Entry)
+// A parameter's current value in its own type (int for an enum), or null for a type not rendered.
+TSharedPtr<FJsonValue> ReadNiagaraValue(const FNiagaraParameterStore& Store, const FNiagaraVariable& Variable)
 {
-    const FNiagaraTypeDefinition& Type = Entry.GetType();
-    const uint8* Data = Store.GetParameterData(FNiagaraVariable(Entry));
+    const FNiagaraTypeDefinition& Type = Variable.GetType();
+    const uint8* Data = Store.GetParameterData(Variable);
     if (!Data) return nullptr;
     // Floats as typed: a smoke colour of 0.035 read 0.03500000014901161.
     if (Type == FNiagaraTypeDefinition::GetFloatDef()) return MakeShared<FJsonValueNumber>(McpPropertyReflection::ReadableFloat(*reinterpret_cast<const float*>(Data)));
@@ -38,7 +38,7 @@ static TSharedPtr<FJsonObject> CollectModuleInputs(const TArray<UNiagaraScript*>
             const FString Name = Entry.GetName().ToString();
             const FString Short = Name.StartsWith(Scope) ? Name.RightChop(Scope.Len()) : FString();
             if (Short.IsEmpty() || Inputs->HasField(Short)) continue;
-            if (TSharedPtr<FJsonValue> Value = ReadModuleInputValue(Script->RapidIterationParameters, Entry))
+            if (TSharedPtr<FJsonValue> Value = ReadNiagaraValue(Script->RapidIterationParameters, FNiagaraVariable(Entry)))
             {
                 Inputs->SetField(Short, Value);
             }
@@ -169,6 +169,7 @@ static void AddSystemInfo(TSharedPtr<FJsonObject>& InfoObj, UNiagaraSystem* Syst
         TSharedPtr<FJsonObject> ParamObj = McpHandlerUtils::CreateResultObject();
         ParamObj->SetStringField(TEXT("name"), Param.GetName().ToString());
         ParamObj->SetStringField(TEXT("type"), Param.GetType().GetName());
+        if (const TSharedPtr<FJsonValue> Value = ReadNiagaraValue(System->GetExposedParameters(), Param)) ParamObj->SetField(TEXT("value"), Value);
         ParamsArray.Add(MakeShared<FJsonValueObject>(ParamObj));
     }
     InfoObj->SetArrayField(TEXT("userParameters"), ParamsArray);
@@ -201,6 +202,7 @@ static bool GetNiagaraInfo(FActionContext& Context)
                                           *FString::Join(Names, TEXT(", "))), TEXT("EMITTER_NOT_FOUND"));
         return true;
     }
+    if (System && !AddPlacedUserParameters(Context, System)) return true;
     TSharedPtr<FJsonObject> InfoObj = McpHandlerUtils::CreateResultObject();
     if (System)
     {

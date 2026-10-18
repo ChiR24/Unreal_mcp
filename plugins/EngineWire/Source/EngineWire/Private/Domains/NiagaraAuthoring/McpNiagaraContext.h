@@ -170,6 +170,11 @@ UNiagaraNodeFunctionCall* AddModuleToEmitterStack(
 UNiagaraScriptSource* GetEmitterScriptSource(FNiagaraEmitterHandle* Handle);
 bool EnsureScriptOutputGraph(UNiagaraScriptSource* ScriptSource, ENiagaraScriptUsage ScriptUsage, FGuid ScriptUsageId);
 bool AddDataInterfaceUserParameter(UNiagaraSystem* System, const FString& ParamName, UClass* DataInterfaceClass);
+// A parameter's value in its own type: a number, a bool, or an array for a vector or colour; null for other types.
+TSharedPtr<FJsonValue> ReadNiagaraValue(const FNiagaraParameterStore& Store, const FNiagaraVariable& Variable);
+// With actorName, puts the placed effect's own user parameter values (and the ones it overrides) under placed; false
+// after replying ACTOR_NOT_FOUND or COMPONENT_NOT_FOUND. Without actorName it does nothing and returns true.
+bool AddPlacedUserParameters(FActionContext& Context, UNiagaraSystem* System);
 FNiagaraTypeDefinition ResolveNiagaraTypeByName(const FString& ParamType);
 // Every script whose rapid-iteration store holds module inputs: the system spawn/update scripts
 // (emitter-stage modules are mirrored there) plus each emitter's own scripts.
