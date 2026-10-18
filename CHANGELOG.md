@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Large results come in pages** instead of `RESULT_TOO_LARGE`, when one list makes them too big: the reply's `page.nextCall` reads the next page without running the call again.
 - **Search hands over a clear first hit**: when it needs no consent, the first result carries `signature` (required parameters, a family's selector values, one example) and `executeCall`, so describe can be skipped.
 - **`get_stats` `frame`**: names the thread that bounds the frame (in Play, how much of the game thread the game's own tick takes), or says the frame only waits (a throttled editor, vsync), and ranks what in view weighs on it: movable shadow-casting lights, the heaviest meshes drawn without Nanite, translucent primitives and ticking actors by class with what ticks on them.
+- **`nanite_rebuild_mesh` `assetPaths`**: several meshes under one consent, one row each. A mesh with a glass (translucent) slot is left as it is, and the materials a mesh draws with get the Nanite usage flag and are saved, so a packaged game draws them.
 - **`inspect_asset` `diff`**: compares a Blueprint, DataTable or data asset with its saved file (its unsaved edits) or with another asset: properties and class defaults, components, graph nodes and rows.
 
 </details>

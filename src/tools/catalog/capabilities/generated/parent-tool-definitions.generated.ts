@@ -9370,6 +9370,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "type": "string"
               },
               "description": "Several asset paths to process in one call: lods generates LODs for each; mesh_materials sets the same materials entries on each mesh by slot name, passing over a slot a mesh lacks (an entry no mesh has fails the call), as a whole imported pack needs."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Several static meshes, each turned on, rebuilt and saved in this one call (a whole imported pack, or every heavy mesh get_stats statsKind=frame lists); one mesh that fails does not stop the others."
             }
           ],
           "description": "Absolute paths of the downloaded pack files. Used with folderName to synthesize a single-entry envelope when payload is omitted."
@@ -11586,6 +11593,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Every slot of the mesh after the call, each {slotIndex, slotName, material (the asset path the slot holds, empty for none), changed (true when this call changed it)}."
         },
+        "materialsFlagged": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Materials of the mesh, and those its placed copies in the open level override its slots with (from UE 5.8, material instances too), that lacked the Nanite usage flag: it is set and they are saved, since the editor sets a missing one only when it next draws the mesh, never saves it, and a packaged game draws that surface without it. Absent when none lacked it."
+        },
         "maxDepth": {
           "type": "number",
           "description": "Traversal depth actually used after clamping."
@@ -11598,12 +11612,33 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Average texel over the whole texture, 0-1 (unused texels count as 1)."
         },
+        "meshName": {
+          "type": "string",
+          "description": "Its asset name."
+        },
+        "meshPath": {
+          "type": "string",
+          "description": "The mesh changed (assetPath)."
+        },
         "meshes": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "x-unreal-reflection-boundary": true
-          },
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "With assetPaths: one row per mesh, {assetPath, changed (slots this call changed on it), error (it is not a mesh, or does not load), saved (false only when it could not be saved)}."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "With assetPaths: one row per mesh, {assetPath, naniteEnabled, trianglePercent, materialsFlagged} for one rebuilt and saved, or {assetPath, error} for one that is not a static mesh, holds a translucent material, is outside the allowed paths or could not be saved; any error fails the call (NANITE_PARTIAL) with the other meshes done."
+            }
+          ],
           "description": "With assetPaths: one row per mesh, {assetPath, changed (slots this call changed on it), error (it is not a mesh, or does not load), saved (false only when it could not be saved)}."
         },
         "message": {
@@ -11637,6 +11672,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "movedCount": {
           "type": "number",
           "description": "Assets moved or renamed by that relocation."
+        },
+        "naniteEnabled": {
+          "type": "boolean",
+          "description": "Nanite is on, read back from the mesh."
         },
         "nextCall": {
           "type": "object",
@@ -11850,6 +11889,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "How many ratings the average rests on. Absent when Fab publishes no count."
         },
+        "rebuilt": {
+          "type": "boolean",
+          "description": "Its render data was rebuilt."
+        },
         "referenceIntegrity": {
           "type": "string",
           "description": "\"preserved\" when the source layout was reproduced under /Game, \"at-risk\" when destinationPath relocated it."
@@ -11908,7 +11951,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "saved": {
           "type": "boolean",
-          "description": "Present once the import settled and any assets landed: true when every package the import left dirty was saved, false when some could not be (see unsavedPackages, and the message and note say so in capitals). Fab leaves what it imports unsaved in memory, so a Megascans add would otherwise be lost when the editor closes. The import is saved again 15 and 60 seconds after it ends, because Interchange marks packages dirty after the last asset has appeared; read again before saving by hand."
+          "description": "It was saved."
         },
         "savedCount": {
           "type": "number",
@@ -12047,6 +12090,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "totalNodes": {
           "type": "number",
           "description": "Total nodes across every Blueprint graph."
+        },
+        "trianglePercent": {
+          "type": "number",
+          "description": "Percent of its triangles Nanite keeps, read back from the mesh."
         },
         "truncated": {
           "type": "boolean",

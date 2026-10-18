@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "ef34e750c8c8a2c4",
+  "catalogRevision": "1ff4613782649e5d",
   "recordCount": 416,
   "records": [
     {
@@ -10697,13 +10697,15 @@
         "topics": [
           "nanite_rebuild_mesh"
         ],
-        "summary": "Turn Nanite on for a static mesh asset and set the share of its triangles Nanite keeps; the mesh is rebuilt and saved, and the reply reads naniteEnabled and trianglePercent back from it.",
+        "summary": "Turn Nanite on for a static mesh asset, or several in one call (assetPaths), and set the share of its triangles Nanite keeps; each mesh is rebuilt and saved, and the reply reads naniteEnabled and trianglePercent back from it.",
         "whenToUse": [
-          "A static mesh needs Nanite enabled, or the percentage of triangles Nanite keeps changed."
+          "A static mesh needs Nanite enabled, or the percentage of triangles Nanite keeps changed.",
+          "Several meshes need Nanite: assetPaths does them all under one consent."
         ],
         "whenNotToUse": [
           "A dynamic mesh must be baked into a new Nanite static mesh asset (use manage_geometry.convert_to_nanite).",
-          "Plain LOD levels are wanted for a mesh that will not use Nanite (use asset.process_asset with process=lods)."
+          "Plain LOD levels are wanted for a mesh that will not use Nanite (use asset.process_asset with process=lods).",
+          "The mesh has a translucent material slot (glass): Nanite draws only opaque and masked materials, so the call leaves such a mesh as it is (NANITE_UNSUPPORTED_MATERIAL)."
         ]
       },
       "schemas": {
@@ -10715,15 +10717,24 @@
               "type": "string",
               "description": "Static mesh asset path."
             },
+            "assetPaths": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Several static meshes, each turned on, rebuilt and saved in this one call (a whole imported pack, or every heavy mesh get_stats statsKind=frame lists); one mesh that fails does not stop the others."
+            },
             "trianglePercent": {
               "type": "number",
               "description": "Percent of the source triangles Nanite keeps, 0-100 (default 100)."
             }
           },
-          "required": [
-            "assetPath"
-          ],
-          "additionalProperties": false
+          "required": [],
+          "additionalProperties": false,
+          "requiredOneOf": [
+            "assetPath",
+            "assetPaths"
+          ]
         },
         "output": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -10732,6 +10743,45 @@
             "success": {
               "type": "boolean",
               "description": "Operation succeeded."
+            },
+            "meshPath": {
+              "type": "string",
+              "description": "The mesh changed (assetPath)."
+            },
+            "meshName": {
+              "type": "string",
+              "description": "Its asset name."
+            },
+            "naniteEnabled": {
+              "type": "boolean",
+              "description": "Nanite is on, read back from the mesh."
+            },
+            "trianglePercent": {
+              "type": "number",
+              "description": "Percent of its triangles Nanite keeps, read back from the mesh."
+            },
+            "rebuilt": {
+              "type": "boolean",
+              "description": "Its render data was rebuilt."
+            },
+            "saved": {
+              "type": "boolean",
+              "description": "It was saved."
+            },
+            "materialsFlagged": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Materials of the mesh, and those its placed copies in the open level override its slots with (from UE 5.8, material instances too), that lacked the Nanite usage flag: it is set and they are saved, since the editor sets a missing one only when it next draws the mesh, never saves it, and a packaged game draws that surface without it. Absent when none lacked it."
+            },
+            "meshes": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "With assetPaths: one row per mesh, {assetPath, naniteEnabled, trianglePercent, materialsFlagged} for one rebuilt and saved, or {assetPath, error} for one that is not a static mesh, holds a translucent material, is outside the allowed paths or could not be saved; any error fails the call (NANITE_PARTIAL) with the other meshes done."
             },
             "details": {
               "type": "object",
@@ -10785,8 +10835,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "7fa368fbf58e7741789722261b38dc71d5de82945cdcdbe975e85b513e3a7774",
-        "content": "7957092f6726461d2106dc03e3d6098304889c200547dbfb1a68a2edad1dbf8f"
+        "schema": "051efc73c70f4e83cd3f395abc6dc0aaf3eaf962bb927f0a36758add8fb6a90c",
+        "content": "2d343a621933d8c5242039ccbd7a9b3f9dac37064ee3bc31d150dbd51152c95b"
       }
     },
     {

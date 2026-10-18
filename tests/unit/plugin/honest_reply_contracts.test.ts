@@ -871,6 +871,12 @@ describe('Nanite bakes and rebuilds', () => {
     expect(nanite).toContain('Resp->SetBoolField(TEXT("naniteEnabled"), After.bEnabled);');
     expect(nanite).not.toContain('PositionPrecision = 8');
     expect(code('Render', 'McpRenderHandlers.cpp')).toContain('return HandleNaniteRebuildMesh(RequestId, SubAction, Payload, RequestingSocket);');
+    // assetPaths does a whole pack under one consent: one row per mesh, and a failed mesh fails the call.
+    expect(nanite).toContain('TEXT("assetPaths")');
+    expect(nanite).toContain('TEXT("NANITE_PARTIAL")');
+    // A glass slot would draw the default material under Nanite, so such a mesh is refused before it changes.
+    expect(nanite.indexOf('TEXT("NANITE_UNSUPPORTED_MATERIAL")')).toBeGreaterThan(-1);
+    expect(nanite.indexOf('TEXT("NANITE_UNSUPPORTED_MATERIAL")')).toBeLessThan(nanite.indexOf('StaticMesh->Build(true);'));
   });
 });
 

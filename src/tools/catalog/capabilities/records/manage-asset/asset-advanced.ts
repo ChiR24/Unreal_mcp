@@ -38,6 +38,19 @@ const MESH_MATERIALS_OUT = schema({
   details: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Operation details.' },
 }, ['success']);
 
+const NANITE_OUT = schema({
+  success: bool('Operation succeeded.'),
+  meshPath: str('The mesh changed (assetPath).'),
+  meshName: str('Its asset name.'),
+  naniteEnabled: bool('Nanite is on, read back from the mesh.'),
+  trianglePercent: num('Percent of its triangles Nanite keeps, read back from the mesh.'),
+  rebuilt: bool('Its render data was rebuilt.'),
+  saved: bool('It was saved.'),
+  materialsFlagged: arr('Materials of the mesh, and those its placed copies in the open level override its slots with (from UE 5.8, material instances too), that lacked the Nanite usage flag: it is set and they are saved, since the editor sets a missing one only when it next draws the mesh, never saves it, and a packaged game draws that surface without it. Absent when none lacked it.'),
+  meshes: arrObj('With assetPaths: one row per mesh, {assetPath, naniteEnabled, trianglePercent, materialsFlagged} for one rebuilt and saved, or {assetPath, error} for one that is not a static mesh, holds a translucent material, is outside the allowed paths or could not be saved; any error fails the call (NANITE_PARTIAL) with the other meshes done.'),
+  details: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Operation details.' },
+}, ['success']);
+
 export const ASSET_ADVANCED_RECORDS: readonly RecordSpec[] = [
   r('create_render_target', 'asset', 'Create a render target texture asset.',
     schema({ name: str('Render target name.'), packagePath: str('Package path (default /Game/Textures).'), renderTargetPath: str('Full asset path, e.g. /Game/RenderTargets/RT_Capture; replaces name and packagePath.'), width: num('Width in pixels.'), height: num('Height in pixels.'), format: str('Pixel format.'), save: bool('Save after creation. Defaults to true.') }, [], ['name', 'renderTargetPath']),
@@ -184,14 +197,15 @@ export const ASSET_ADVANCED_RECORDS: readonly RecordSpec[] = [
       whenNotToUse: ['The individual nodes of a material and their connections are needed (use material.get_material_info).'],
       examples: [ex('Read instruction counts for a material', { assetPath: '/Game/Materials/M_Base' }, { success: true })] }
   ),
-  r('nanite_rebuild_mesh', 'asset', 'Turn Nanite on for a static mesh asset and set the share of its triangles Nanite keeps; the mesh is rebuilt and saved, and the reply reads naniteEnabled and trianglePercent back from it.',
-    schema({ assetPath: str('Static mesh asset path.'), trianglePercent: num('Percent of the source triangles Nanite keeps, 0-100 (default 100).') }, ['assetPath']),
-    OK, { ...WRITE, longRunning: true }, WRITE_POLICY, HIGH,
+  r('nanite_rebuild_mesh', 'asset', 'Turn Nanite on for a static mesh asset, or several in one call (assetPaths), and set the share of its triangles Nanite keeps; each mesh is rebuilt and saved, and the reply reads naniteEnabled and trianglePercent back from it.',
+    schema({ assetPath: str('Static mesh asset path.'), assetPaths: arr('Several static meshes, each turned on, rebuilt and saved in this one call (a whole imported pack, or every heavy mesh get_stats statsKind=frame lists); one mesh that fails does not stop the others.'), trianglePercent: num('Percent of the source triangles Nanite keeps, 0-100 (default 100).') }, [], ['assetPath', 'assetPaths']),
+    NANITE_OUT, { ...WRITE, longRunning: true }, WRITE_POLICY, HIGH,
     { dispatchAction: 'manage_render',
-      whenToUse: ['A static mesh needs Nanite enabled, or the percentage of triangles Nanite keeps changed.'],
+      whenToUse: ['A static mesh needs Nanite enabled, or the percentage of triangles Nanite keeps changed.', 'Several meshes need Nanite: assetPaths does them all under one consent.'],
       whenNotToUse: [
         'A dynamic mesh must be baked into a new Nanite static mesh asset (use manage_geometry.convert_to_nanite).',
         'Plain LOD levels are wanted for a mesh that will not use Nanite (use asset.process_asset with process=lods).',
+        'The mesh has a translucent material slot (glass): Nanite draws only opaque and masked materials, so the call leaves such a mesh as it is (NANITE_UNSUPPORTED_MATERIAL).',
       ],
       examples: [ex('Rebuild Nanite data after a mesh edit', { assetPath: '/Game/Meshes/SM_Rock' }, { success: true })] }
   ),
