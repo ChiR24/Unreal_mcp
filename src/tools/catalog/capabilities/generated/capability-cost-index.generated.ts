@@ -603,6 +603,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_asset::delete_node": "instant|low",
   "manage_asset::delete_struct": "interactive|medium",
   "manage_asset::desaturate": "interactive|medium",
+  "manage_asset::diff_asset": "interactive|medium",
   "manage_asset::disconnect_nodes": "instant|low",
   "manage_asset::download_fab_asset": "long-running|high",
   "manage_asset::duplicate": "interactive|medium",
@@ -1595,4 +1596,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1582;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1583;

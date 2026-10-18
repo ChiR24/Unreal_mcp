@@ -6599,6 +6599,7 @@
       "parameterNames": [
         "additionalOutputs",
         "adjust",
+        "againstPath",
         "alphaTexture",
         "amount",
         "angle",
@@ -6877,6 +6878,10 @@
               "invert"
             ],
             "description": "Which adjust texture variant to run."
+          },
+          "againstPath": {
+            "type": "string",
+            "description": "Another asset of the same kind to compare with, such as a duplicate kept as a backup. Omitted, the asset is compared with its own saved file, so the reply lists its unsaved edits."
           },
           "alphaTexture": {
             "type": "string",
@@ -7546,7 +7551,8 @@
               "metadata",
               "dependencies",
               "validate",
-              "report"
+              "report",
+              "diff"
             ],
             "description": "Which inspect asset variant to run."
           },

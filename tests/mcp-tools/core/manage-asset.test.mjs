@@ -52,6 +52,8 @@ const DELETE_BULK_SOURCE = asset(`M_DeleteBulkSource_${ts}`);
 const BULK_RENAME_SOURCE = asset(`M_BulkRenameSource_${ts}`);
 const BULK_DELETE_SOURCE = asset(`M_BulkDeleteSource_${ts}`);
 const TAG_KEY = `MCPAssetTag_${ts}`;
+const DIFF_BP = asset(`BP_Diff_${ts}`);
+const DIFF_BP_COPY = asset(`BP_DiffCopy_${ts}`);
 const TAG_VALUE = 'real-live';
 
 const createMaterial = (name) => ({
@@ -113,6 +115,12 @@ const testCases = [
   { scenario: 'INFO: get_metadata', toolName: 'manage_asset', arguments: { action: 'get_metadata', assetPath: BASE_MATERIAL }, expected: 'success' },
   { scenario: 'CONFIG: set_metadata', toolName: 'manage_asset', arguments: { action: 'set_metadata', assetPath: BASE_MATERIAL, metadata: { [TAG_KEY]: TAG_VALUE } }, expected: 'success' },
   { scenario: 'ACTION: validate', toolName: 'manage_asset', arguments: { action: 'validate', assetPath: BASE_MATERIAL }, expected: 'success' },
+  { scenario: 'SETUP: a Blueprint to diff', toolName: 'manage_blueprint', arguments: { action: 'create', name: `BP_Diff_${ts}`, savePath: TEST_FOLDER, blueprintType: 'Actor' }, expected: 'success' },
+  { scenario: 'SETUP: a copy of it', toolName: 'manage_asset', arguments: { action: 'duplicate', sourcePath: DIFF_BP, destinationPath: DIFF_BP_COPY }, expected: 'success' },
+  { scenario: 'INFO: diff_asset against its saved file', toolName: 'manage_asset', arguments: { action: 'diff_asset', assetPath: DIFF_BP }, expected: 'success', assertions: [{ path: 'structuredContent.result.identical', equals: true, label: 'a just-saved Blueprint matches its file' }] },
+  { scenario: 'INFO: diff_asset against another asset', toolName: 'manage_asset', arguments: { action: 'diff_asset', assetPath: DIFF_BP, againstPath: DIFF_BP_COPY }, expected: 'success', assertions: [{ path: 'structuredContent.result.identical', equals: true, label: 'a copy matches its source' }] },
+  { scenario: 'ERROR: diff_asset refuses a material', toolName: 'manage_asset', arguments: { action: 'diff_asset', assetPath: BASE_MATERIAL }, expected: 'error', assertions: [{ path: 'structuredContent.error', includes: 'UNSUPPORTED_ASSET_TYPE' }] },
+  { scenario: 'Cleanup: delete the diffed Blueprints', toolName: 'manage_asset', arguments: { action: 'delete_assets', paths: [DIFF_BP, DIFF_BP_COPY], force: true }, expected: 'success|not found' },
   { scenario: 'ACTION: fixup_redirectors', toolName: 'manage_asset', arguments: { action: 'fixup_redirectors', directoryPath: TEST_FOLDER, checkoutFiles: false }, expected: 'success' },
   { scenario: 'INFO: find_by_tag', toolName: 'manage_asset', arguments: { action: 'find_by_tag', tag: TAG_KEY }, expected: 'success' },
   { scenario: 'ACTION: generate_report', toolName: 'manage_asset', arguments: { action: 'generate_report', directory: TEST_FOLDER, reportType: 'Summary' }, expected: 'success' },

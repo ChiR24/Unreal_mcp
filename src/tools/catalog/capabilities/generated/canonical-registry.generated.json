@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "6c87a721d363f8ce",
+  "catalogRevision": "b878c637a83266de",
   "recordCount": 416,
   "records": [
     {
@@ -9501,7 +9501,8 @@
         "asset.get_dependencies",
         "asset.get_asset_graph",
         "asset.validate",
-        "asset.generate_report"
+        "asset.generate_report",
+        "asset.diff_asset"
       ],
       "legacyIds": [
         {
@@ -9542,6 +9543,13 @@
           "folded": {
             "lookup": "report"
           }
+        },
+        {
+          "tool": "manage_asset",
+          "action": "diff_asset",
+          "folded": {
+            "lookup": "diff"
+          }
         }
       ],
       "discovery": {
@@ -9562,16 +9570,20 @@
           "look at asset",
           "meshes using a material",
           "which assets use this",
-          "what uses this material"
+          "what uses this material",
+          "unsaved changes",
+          "compare assets"
         ],
-        "summary": "Inspect an asset: metadata, what it uses or what uses it (referencers), its dependency graph, an exists-and-loads check, or a directory report.",
+        "summary": "Inspect an asset: metadata, what it uses or what uses it (referencers), its dependency graph, an exists-and-loads check, a directory report, or a diff: its unsaved changes against the saved file, or a compare with another asset.",
         "whenToUse": [
           "lookup=metadata: What was recorded on an asset must be read back: its registry tags and the package metadata that asset.set_metadata writes, tags included (a tag set with kind=tags shows under metadata as \"true\").",
           "lookup=dependencies: Before deleting or replacing an asset, the packages, Blueprints and levels that use it must be listed.",
           "lookup=dependencies: The packages an asset itself uses must be listed (direct ones only).",
           "lookup=graph: The reference graph of an asset must be walked several levels deep in one call (depth is capped at 8).",
           "lookup=validate: An asset must be confirmed to exist and load before other calls rely on it (no content, reference or data checks are run).",
-          "lookup=report: Every asset under a directory, with name, path and class, must be listed in one reply, optionally saved as a JSON file in the project."
+          "lookup=report: Every asset under a directory, with name, path and class, must be listed in one reply, optionally saved as a JSON file in the project.",
+          "lookup=diff: What changed in an asset since it was last saved must be known before saving or discarding it.",
+          "lookup=diff: Two versions of an asset must be compared, such as a backup copy and the current one."
         ],
         "whenNotToUse": [
           "lookup=metadata: The asset's own values are wanted, such as a texture size or material parameters (use texture.get_texture_info or material.get_material_info).",
@@ -9579,7 +9591,9 @@
           "lookup=graph: Only the direct packages an asset uses, or the packages that use it, are needed (use lookup=dependencies, which is cheaper).",
           "lookup=graph: A material's package references are wanted; a plain material answers here with its expression nodes (use lookup=dependencies).",
           "lookup=validate: Every asset in a folder must be checked for load errors (use system_control.validate_assets).",
-          "lookup=report: A paged view of one folder is enough (use asset.list); the report returns the whole tree unpaged."
+          "lookup=report: A paged view of one folder is enough (use asset.list); the report returns the whole tree unpaged.",
+          "lookup=diff: The asset's current values are wanted (use blueprint.get_blueprint or inspect.get_property).",
+          "lookup=diff: A level or another kind of asset must be compared; only Blueprints, DataTables and data assets are."
         ]
       },
       "schemas": {
@@ -9611,6 +9625,10 @@
               "type": "string",
               "description": "Output file path."
             },
+            "againstPath": {
+              "type": "string",
+              "description": "Another asset of the same kind to compare with, such as a duplicate kept as a backup. Omitted, the asset is compared with its own saved file, so the reply lists its unsaved edits."
+            },
             "lookup": {
               "type": "string",
               "enum": [
@@ -9618,7 +9636,8 @@
                 "dependencies",
                 "graph",
                 "validate",
-                "report"
+                "report",
+                "diff"
               ],
               "description": "Which inspect asset variant to run."
             }
@@ -9671,6 +9690,46 @@
             "truncated": {
               "type": "boolean",
               "description": "True when the walk hit the depth or node ceiling and the graph is partial."
+            },
+            "against": {
+              "type": "string",
+              "description": "What the asset was compared with: \"saved file\", or the againstPath asset."
+            },
+            "identical": {
+              "type": "boolean",
+              "description": "True when nothing differs."
+            },
+            "propertyChanges": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Saved properties that differ, at most 50: object (asset, defaults for a Blueprint's class defaults, component <name>, or row <name>), property, change (changed, added or removed) and now and saved (the other side) as text, each cut at 200 characters."
+            },
+            "componentChanges": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Blueprint components added, removed, or moved to another class or parent, at most 50: component, change, now and saved; a component's changed values are under propertyChanges."
+            },
+            "graphChanges": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Blueprint graph changes, at most 50, node moves left out: graph, change (graph added, graph removed, node added, node removed, or changed), node and nodeId when a node is named (nodeId is the live graph's node where it has one), and detail, the engine's own description."
+            },
+            "rowChanges": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "DataTable rows added or removed, at most 50: row and change; a changed row's values are under propertyChanges."
             }
           },
           "required": [
@@ -9681,7 +9740,7 @@
       },
       "examples": [
         {
-          "title": "Inspect an asset: metadata, what it uses or what uses it (referencers), its dependency graph, an exists-and-loads check, or a directory report.",
+          "title": "Inspect an asset: metadata, what it uses or what uses it (referencers), its dependency graph, an exists-and-loads check, a directory report, or a diff: its unsaved changes against the saved file, or a compare with another asset.",
           "input": {
             "assetPath": "/Game/Meshes/SM_Crate",
             "action": "inspect_asset",
@@ -9729,14 +9788,16 @@
             "dependencies": "get_dependencies",
             "graph": "get_asset_graph",
             "validate": "validate",
-            "report": "generate_report"
+            "report": "generate_report",
+            "diff": "diff_asset"
           },
           "declaredBy": {
             "assetPath": [
               "metadata",
               "dependencies",
               "graph",
-              "validate"
+              "validate",
+              "diff"
             ],
             "referencers": [
               "dependencies"
@@ -9752,14 +9813,17 @@
             ],
             "outputPath": [
               "report"
+            ],
+            "againstPath": [
+              "diff"
             ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "145428ec6e63a6f611f13febd5d124ecbb5682b042c63fe1c3c71c67066513d1",
-        "content": "5eb963d85cd1d4c3f3e12042d99c518d613fcea01c397f4162b4da41c1b275d4"
+        "schema": "9351f444d5fa023cccfa1722a4d4357f191a59cee12d0a8b2c05eeee665e5c7e",
+        "content": "dcc57993f3a7cc00878f3d14984ef207507388e4d39ed20d65d59b18557a765d"
       }
     },
     {

@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `6c87a721d363f8ce`
+Catalog revision: `b878c637a83266de`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -175,7 +175,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `asset.export_mesh` | `manage_asset` | `export_mesh` | read | read | none | `manage_asset.export_mesh` |
 | `asset.import` | `manage_asset` | `import` | write | write | explicit | `manage_asset.import` |
 | `asset.import_marketplace_asset` | `manage_asset` | `add_fab_asset_to_project` | write | write | explicit | `manage_asset.import_marketplace_asset` `manage_asset.add_fab_asset_to_project` `manage_asset.cancel_fab_import` `manage_asset.download_fab_asset` `manage_asset.import_megascans_asset` |
-| `asset.inspect_asset` | `manage_asset` | `get_metadata` | read | read | none | `manage_asset.inspect_asset` `manage_asset.get_metadata` `manage_asset.get_dependencies` `manage_asset.get_asset_graph` `manage_asset.validate` `manage_asset.generate_report` |
+| `asset.inspect_asset` | `manage_asset` | `get_metadata` | read | read | none | `manage_asset.inspect_asset` `manage_asset.get_metadata` `manage_asset.get_dependencies` `manage_asset.get_asset_graph` `manage_asset.validate` `manage_asset.generate_report` `manage_asset.diff_asset` |
 | `asset.list` | `manage_asset` | `list` | read | read | none | `manage_asset.list` `manage_asset.list_content_sources` `manage_asset.list_instances` |
 | `asset.maintain_content` | `manage_asset` | `bulk_rename` | write | write | explicit | `manage_asset.maintain_content` `manage_asset.bulk_rename` `manage_asset.fixup_redirectors` `manage_asset.refresh_blueprints` `manage_asset.migrate_assets` |
 | `asset.move` | `manage_asset` | `move` | write | write | explicit | `manage_asset.move` `manage_asset.move_asset` |

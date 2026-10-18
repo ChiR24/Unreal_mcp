@@ -3334,3 +3334,23 @@ describe('get_frame_cost names what bounds the frame', () => {
     for (const field of sent.filter((name) => name !== 'warnings')) expect(declared, field).toContain(field);
   });
 });
+
+describe('diff_asset compares without writing', () => {
+  const diff = code('AssetWorkflow', 'Analysis', 'McpAssetDiff.cpp');
+
+  // The editor's own diff loads a revision this way; the copy is released and deleted after the read.
+  it('loads a copy of the saved file for diffing and releases it', () => {
+    expect(diff).toContain('LoadPackage(nullptr, *TempPackageName, LOAD_ForDiff | LOAD_DisableCompileOnLoad)');
+    expect(diff).toMatch(/ResetLoaders\(Package\);[\s\S]*?ClearFlags\(RF_Standalone\)[\s\S]*?DeleteDirectory\(\*Dir, false, true\)/u);
+    expect(diff).not.toMatch(/McpSafeAssetSave|SaveLoadedAsset|SavePackage/u);
+  });
+
+  it('leaves out what a package does not keep', () => {
+    expect(diff).toContain('CPF_Transient | CPF_DuplicateTransient | CPF_Deprecated');
+  });
+
+  it('is answered by its own handler', () => {
+    expect(code('AssetWorkflow', 'McpAssetHandlers.cpp'))
+      .toMatch(/Lower == TEXT\("diff_asset"\)\)\s*return McpAssetDiff::HandleDiffAsset\(/u);
+  });
+});

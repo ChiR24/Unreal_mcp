@@ -9306,6 +9306,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Which adjust texture variant to run."
         },
+        "againstPath": {
+          "type": "string",
+          "description": "Another asset of the same kind to compare with, such as a duplicate kept as a backup. Omitted, the asset is compared with its own saved file, so the reply lists its unsaved edits."
+        },
         "alphaTexture": {
           "type": "string",
           "description": "Alpha channel source: an 8-bit BGRA8 or G8 texture."
@@ -9974,7 +9978,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "metadata",
             "dependencies",
             "validate",
-            "report"
+            "report",
+            "diff"
           ],
           "description": "Which inspect asset variant to run."
         },
@@ -10948,6 +10953,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "The parameters this call added."
         },
+        "against": {
+          "type": "string",
+          "description": "What the asset was compared with: \"saved file\", or the againstPath asset."
+        },
         "alreadyRunning": {
           "type": "boolean",
           "description": "True when this listing was already queued or being imported and this call returned that same operation instead of starting another."
@@ -11116,6 +11125,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "completedBytes": {
           "type": "number",
           "description": "Bytes transferred."
+        },
+        "componentChanges": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Blueprint components added, removed, or moved to another class or parent, at most 50: component, change, now and saved; a component's changed values are under propertyChanges."
         },
         "componentsRefreshed": {
           "type": "number",
@@ -11377,6 +11394,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true,
           "description": "Adjacency map of asset path -> array of dependency paths."
         },
+        "graphChanges": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Blueprint graph changes, at most 50, node moves left out: graph, change (graph added, graph removed, node added, node removed, or changed), node and nodeId when a node is named (nodeId is the live graph's node where it has one), and detail, the engine's own description."
+        },
         "graphCount": {
           "type": "number",
           "description": "Number of graphs in the Blueprint."
@@ -11408,6 +11433,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "height": {
           "type": "number",
           "description": "Texture height."
+        },
+        "identical": {
+          "type": "boolean",
+          "description": "True when nothing differs."
         },
         "imageBase64": {
           "type": "string",
@@ -11774,6 +11803,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Key names of a price field this does not recognise, so a Fab change reports itself. Present only then."
         },
+        "propertyChanges": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Saved properties that differ, at most 50: object (asset, defaults for a Blueprint's class defaults, component <name>, or row <name>), property, change (changed, added or removed) and now and saved (the other side) as text, each cut at 200 characters."
+        },
         "publishedAt": {
           "type": "string",
           "description": "When the listing was published, as Fab states it."
@@ -11845,6 +11882,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "object",
           "x-unreal-reflection-boundary": true,
           "description": "Absolute directory each root token resolved to, so an operator can confirm where the Bridge library was found."
+        },
+        "rowChanges": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "DataTable rows added or removed, at most 50: row and change; a changed row's values are under propertyChanges."
         },
         "runningEngine": {
           "type": "string",
