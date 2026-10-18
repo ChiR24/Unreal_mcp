@@ -155,6 +155,7 @@ const testCases = [
   { scenario: 'INFO: get_editor_focus reads what the user is working on', toolName: 'inspect', arguments: { action: 'get_editor_focus' }, expected: 'success', assertions: [{ path: 'structuredContent.result.shadersCompiling', gte: 0, label: 'every editor-state read carries the shader count' }, { path: 'structuredContent.result.openEditors', label: 'the open editors are listed' }] },
   { scenario: 'INFO: get_scene_stats', toolName: 'inspect', arguments: { action: 'get_scene_stats' }, expected: 'success' },
   { scenario: 'INFO: get_performance_stats', toolName: 'inspect', arguments: { action: 'get_performance_stats' }, expected: 'success' },
+  { scenario: 'INFO: get_frame_cost names the thread that bounds the frame', toolName: 'inspect', arguments: { action: 'get_frame_cost' }, expected: 'success', assertions: [{ path: 'structuredContent.result.tickingActorCount', gte: 0, label: 'the ticking actors are counted' }] },
   { scenario: 'INFO: get_memory_stats', toolName: 'inspect', arguments: { action: 'get_memory_stats' }, expected: 'success' },
   { scenario: 'INFO: get_editor_settings', toolName: 'inspect', arguments: { action: 'get_editor_settings' }, expected: 'success', assertions: [{ path: 'structuredContent.result.shadersCompiling', gte: 0, label: 'the editor settings read carries the shader count too' }] },
   { scenario: 'INFO: runtime_report', toolName: 'inspect', arguments: { action: 'runtime_report', actorName: ACTOR, componentNames: [COMPONENT], propertyNames: ['ActorLabel'] }, expected: 'success' },

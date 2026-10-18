@@ -3311,3 +3311,26 @@ describe('what the native smoke run found', () => {
     expect(policy).toContain('Arguments->TryGetNumberField(TEXT("renderTimeoutMs"), RequestedTimeoutMs)');
   });
 });
+
+describe('get_frame_cost names what bounds the frame', () => {
+  const source = code('Environment', 'Inspection', 'Performance', 'McpEnvInspectFrameCost.cpp');
+
+  it('is answered by its own handler', () => {
+    expect(code('Environment', 'Inspection', 'McpEnvInspect.cpp'))
+      .toMatch(/LowerSubAction\.Equals\(TEXT\("get_frame_cost"\)\)\)\s*\{\s*return HandleInspectFrameCostAction\(/u);
+  });
+
+  // An unfocused editor waits 333 ms between frames while its busiest thread works 4 ms: that is no bottleneck.
+  it('says the frame waits when no thread fills it, and keeps Nanite meshes out of the heavy list', () => {
+    expect(source).toContain('if (Ms < FrameMs * 0.5)');
+    expect(source).toMatch(/if \(Asset->HasValidNaniteData\(\)\)\s*\{\s*\+\+Nanite;\s*\}\s*else/u);
+  });
+
+  it('declares every field it sends', () => {
+    const record = capabilityIndex().records.find((entry) => String(entry.id) === 'inspect.get_stats');
+    const declared = Object.keys(record?.schemas.output.properties ?? {});
+    const sent = [...source.matchAll(/Resp->Set\w+Field\(TEXT\("(\w+)"\)/gu)].map((match) => String(match[1]));
+    expect(sent.length).toBeGreaterThan(10);
+    for (const field of sent.filter((name) => name !== 'warnings')) expect(declared, field).toContain(field);
+  });
+});

@@ -13,6 +13,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **MCP 2026-07-28 on `/mcp`**: per-request version with no session (the one `server/discover` lists, as the SDK does), `Mcp-Method`/`Mcp-Name` checks, `resultType` and cache hints, consent through client elicitation (signed `requestState`), and the tasks extension (`tasks/get`, `tasks/cancel`).
 - **Result pages**: an execute result over 100k chars whose size is one top-level array is sent a page at a time; the rest waits 5 minutes for `options.pageCursor` from the same principal, capability and params (scope re-checked, at most 8 kept).
 - **Search signature**: a first hit whose runner-up scores at most 90% of it (`McpSearchConfidentRatioPercent`) and that needs no consent carries `signature` and `executeCall`.
+- **`get_frame_cost`**: the busiest of the game, render, RHI and GPU times against the frame time, plus the movable shadow-casting lights, meshes drawn without Nanite by summed LOD 0 triangles, translucent primitives (drawn within 0.5 s) and ticking actors by class.
 
 ### Fixed
 - **`runtime_report` `filter`** matches an actor's path only whole, not every actor of a level named like the filter.

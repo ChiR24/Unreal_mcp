@@ -6786,7 +6786,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "enum": [
             "performance",
             "memory",
-            "scene"
+            "scene",
+            "frame"
           ],
           "description": "Which get stats variant to run."
         },
@@ -6990,6 +6991,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "buildConfig": {
           "type": "string",
           "description": "Build configuration, e.g. Development."
+        },
+        "busiestThread": {
+          "type": "string",
+          "enum": [
+            "game",
+            "render",
+            "rhi",
+            "gpu"
+          ],
+          "description": "The slowest thread: game, render, rhi or gpu. It sets the frame time unless the frame waits (busiestThreadMs under half of frameTimeMs: an unfocused editor, vsync or a frame rate cap), which the message then says."
         },
         "busiestThreadMs": {
           "type": "number",
@@ -7244,6 +7255,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether the world has begun play."
         },
+        "heaviestMeshes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Up to 5 static meshes drawn without Nanite in the last half second, most triangles first: mesh, triangles (LOD 0 times instances, summed over every component drawing it), components, instances and actor (one that shows it)."
+        },
         "height": {
           "type": "number",
           "description": "Active viewport height in pixels."
@@ -7475,6 +7495,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "The mesh checked."
         },
+        "meshesInView": {
+          "type": "number",
+          "description": "Static mesh components drawn in the last half second."
+        },
         "message": {
           "type": "string",
           "description": "Human-readable result message."
@@ -7508,6 +7532,23 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "mouseSensitivity": {
           "type": "number",
           "description": "Viewport mouse sensitivity."
+        },
+        "movableShadowLightCount": {
+          "type": "number",
+          "description": "Visible movable lights that cast shadows; each renders its shadows again every frame."
+        },
+        "movableShadowLights": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Up to 5 of them, widest reach first: actor, light (Directional, Point, Spot or Rect) and radius (0 for a directional light, which reaches everything)."
+        },
+        "naniteMeshesInView": {
+          "type": "number",
+          "description": "Of meshesInView, those whose mesh has Nanite data (drawn as Nanite while Nanite is on)."
         },
         "nonManifoldEdges": {
           "type": "number",
@@ -7633,6 +7674,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "x-unreal-reflection-boundary": true
           },
           "description": "With points, one per spot: x, y; drawn (actor, editor for what only the editor draws, or background); actorName, the actor drawn there; and hit, what the line from the camera through the spot hits first against Visibility collision: location, normal, distance (cm), actorName and componentName. A drawn actor with no collision is passed through, so hit can name what is behind it; no hit means nothing within 20 km."
+        },
+        "primitivesInView": {
+          "type": "number",
+          "description": "Primitive components drawn in the last half second, a stand-in for the draw calls the render thread issues."
         },
         "projectDir": {
           "type": "string",
@@ -7845,6 +7890,19 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Thread timers are process-global, not per-world."
         },
+        "tickingActorCount": {
+          "type": "number",
+          "description": "Actors that tick, by their own tick or a component's."
+        },
+        "tickingActorsByClass": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Up to 5 classes with the most ticking actors: class and count."
+        },
         "timeDilation": {
           "type": "number",
           "description": "Global time dilation multiplier."
@@ -7885,6 +7943,19 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "object",
           "x-unreal-reflection-boundary": true,
           "description": "Combined transform: location, rotation and scale."
+        },
+        "translucentPrimitiveCount": {
+          "type": "number",
+          "description": "Primitive components drawn in the last half second with at least one translucent material."
+        },
+        "translucentPrimitives": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Up to 5 of them, most translucent sections first: actor, component and translucentSections."
         },
         "triangles": {
           "type": "number",

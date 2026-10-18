@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `169f9425f1f12288`
+Catalog revision: `6c87a721d363f8ce`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -325,7 +325,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `inspect.get_components` | `inspect` | `get_components` | read | read | none | `inspect.get_components` |
 | `inspect.get_editor_state` | `inspect` | `get_selected_actors` | read | read | none | `inspect.get_editor_state` `inspect.get_selected_actors` `inspect.get_viewport_info` `inspect.get_world_settings` `inspect.get_project_settings` `inspect.get_editor_settings` `inspect.get_editor_focus` |
 | `inspect.get_property` | `inspect` | `get_property` | read | read | none | `inspect.get_property` |
-| `inspect.get_stats` | `inspect` | `get_performance_stats` | read | read | none | `inspect.get_stats` `inspect.get_performance_stats` `inspect.get_memory_stats` `inspect.get_scene_stats` |
+| `inspect.get_stats` | `inspect` | `get_performance_stats` | read | read | none | `inspect.get_stats` `inspect.get_performance_stats` `inspect.get_memory_stats` `inspect.get_scene_stats` `inspect.get_frame_cost` |
 | `inspect.inspect_class` | `inspect` | `inspect_class` | read | read | none | `inspect.inspect_class` `inspect.inspect_struct` `inspect.inspect_cdo` |
 | `inspect.inspect_object` | `inspect` | `inspect_object` | read | read | none | `inspect.inspect_object` `inspect.get_actor_details` `inspect.get_level_details` `inspect.get_material_details` `inspect.get_mesh_details` `inspect.get_texture_details` |
 | `inspect.query_object` | `inspect` | `control_actor` | read | read | none | `inspect.query_object` `inspect.list_objects` `inspect.find_by_tag` `inspect.get_metadata` `inspect.get_bounding_box` `inspect.export` |

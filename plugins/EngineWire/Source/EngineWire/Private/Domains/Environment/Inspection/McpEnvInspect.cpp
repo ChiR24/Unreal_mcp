@@ -96,6 +96,10 @@ bool UEngineWireSubsystem::HandleInspectAction(
     {
         return HandleInspectEditorFocusAction(*this, RequestId, RequestingSocket);
     }
+    if (LowerSubAction.Equals(TEXT("get_frame_cost")))
+    {
+        return HandleInspectFrameCostAction(*this, RequestId, RequestingSocket);
+    }
     if (LowerSubAction.Equals(TEXT("capture_passes")))
     {
         return HandleInspectCapturePassesAction(*this, RequestId, Payload, RequestingSocket);

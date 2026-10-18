@@ -5384,7 +5384,8 @@
             "enum": [
               "performance",
               "memory",
-              "scene"
+              "scene",
+              "frame"
             ],
             "description": "Which get stats variant to run."
           },

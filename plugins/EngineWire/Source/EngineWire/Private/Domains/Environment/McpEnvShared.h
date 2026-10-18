@@ -303,6 +303,9 @@ bool HandleInspectViewContentsAction(
 bool HandleInspectEditorFocusAction(
     UEngineWireSubsystem &Bridge, const FString &RequestId,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+bool HandleInspectFrameCostAction(
+    UEngineWireSubsystem &Bridge, const FString &RequestId,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 bool HandleInspectCapturePassesAction(
     UEngineWireSubsystem &Bridge, const FString &RequestId,
     const TSharedPtr<FJsonObject> &Payload,

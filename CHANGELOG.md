@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`describe_view` `points` and `labels`**: `points` turns spots of the frame into the actor drawn there and the world point a line through each one hits; `labels` returns the frame with the listed actors boxed and numbered, as an image.
 - **Large results come in pages** instead of `RESULT_TOO_LARGE`, when one list makes them too big: the reply's `page.nextCall` reads the next page without running the call again.
 - **Search hands over a clear first hit**: when it needs no consent, the first result carries `signature` (required parameters, a family's selector values, one example) and `executeCall`, so describe can be skipped.
+- **`get_stats` `frame`**: names the thread that bounds the frame, or says the frame only waits (an unfocused editor, vsync), and ranks what in view weighs on it: movable shadow-casting lights, the heaviest meshes drawn without Nanite, translucent primitives and ticking actors by class.
 
 </details>
 

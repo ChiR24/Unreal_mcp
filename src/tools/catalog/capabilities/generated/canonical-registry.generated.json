@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "169f9425f1f12288",
+  "catalogRevision": "6c87a721d363f8ce",
   "recordCount": 416,
   "records": [
     {
@@ -46398,7 +46398,8 @@
       "aliases": [
         "inspect.get_performance_stats",
         "inspect.get_memory_stats",
-        "inspect.get_scene_stats"
+        "inspect.get_scene_stats",
+        "inspect.get_frame_cost"
       ],
       "legacyIds": [
         {
@@ -46425,6 +46426,13 @@
           "folded": {
             "statsKind": "scene"
           }
+        },
+        {
+          "tool": "inspect",
+          "action": "get_frame_cost",
+          "folded": {
+            "statsKind": "frame"
+          }
         }
       ],
       "discovery": {
@@ -46442,13 +46450,18 @@
           "frame time",
           "how fast the game runs",
           "gpu time",
-          "stat unit"
+          "stat unit",
+          "frame cost",
+          "why is the game slow",
+          "performance bottleneck",
+          "gpu bound"
         ],
-        "summary": "Read performance (FPS, frame rate and time, thread and GPU ms), memory usage (used, available, peak) or scene statistics (actors by category, components, hidden actors).",
+        "summary": "Read performance (FPS, frame rate and time, thread and GPU ms), memory usage (used, available, peak), scene statistics (actors by category, components, hidden actors), or frame cost: the thread that bounds the frame and what in view weighs on it (movable shadow-casting lights, heavy meshes, translucency, ticking actors).",
         "whenToUse": [
           "statsKind=performance: Performance metrics must be inspected.",
           "statsKind=memory: Memory usage must be inspected.",
-          "statsKind=scene: Scene-level statistics must be inspected."
+          "statsKind=scene: Scene-level statistics must be inspected.",
+          "statsKind=frame: The game or the editor runs slowly and the cause must be found."
         ],
         "whenNotToUse": []
       },
@@ -46466,7 +46479,8 @@
               "enum": [
                 "performance",
                 "memory",
-                "scene"
+                "scene",
+                "frame"
               ],
               "description": "Which get stats variant to run."
             }
@@ -46637,6 +46651,76 @@
             "totalWorldActors": {
               "type": "number",
               "description": "Raw world actor count including editor-internal actors (explains the gap vs actorCount)."
+            },
+            "busiestThread": {
+              "type": "string",
+              "enum": [
+                "game",
+                "render",
+                "rhi",
+                "gpu"
+              ],
+              "description": "The slowest thread: game, render, rhi or gpu. It sets the frame time unless the frame waits (busiestThreadMs under half of frameTimeMs: an unfocused editor, vsync or a frame rate cap), which the message then says."
+            },
+            "primitivesInView": {
+              "type": "number",
+              "description": "Primitive components drawn in the last half second, a stand-in for the draw calls the render thread issues."
+            },
+            "meshesInView": {
+              "type": "number",
+              "description": "Static mesh components drawn in the last half second."
+            },
+            "naniteMeshesInView": {
+              "type": "number",
+              "description": "Of meshesInView, those whose mesh has Nanite data (drawn as Nanite while Nanite is on)."
+            },
+            "heaviestMeshes": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Up to 5 static meshes drawn without Nanite in the last half second, most triangles first: mesh, triangles (LOD 0 times instances, summed over every component drawing it), components, instances and actor (one that shows it)."
+            },
+            "movableShadowLightCount": {
+              "type": "number",
+              "description": "Visible movable lights that cast shadows; each renders its shadows again every frame."
+            },
+            "movableShadowLights": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Up to 5 of them, widest reach first: actor, light (Directional, Point, Spot or Rect) and radius (0 for a directional light, which reaches everything)."
+            },
+            "translucentPrimitiveCount": {
+              "type": "number",
+              "description": "Primitive components drawn in the last half second with at least one translucent material."
+            },
+            "translucentPrimitives": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Up to 5 of them, most translucent sections first: actor, component and translucentSections."
+            },
+            "tickingActorCount": {
+              "type": "number",
+              "description": "Actors that tick, by their own tick or a component's."
+            },
+            "tickingActorsByClass": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Up to 5 classes with the most ticking actors: class and count."
             }
           },
           "required": [
@@ -46647,7 +46731,7 @@
       },
       "examples": [
         {
-          "title": "Read performance (FPS, frame rate and time, thread and GPU ms), memory usage (used, available, peak) or scene statistics (actors by category, components, hidden actors).",
+          "title": "Read performance (FPS, frame rate and time, thread and GPU ms), memory usage (used, available, peak), scene statistics (actors by category, components, hidden actors), or frame cost: the thread that bounds the frame and what in view weighs on it (movable shadow-casting lights, heavy meshes, translucency, ticking actors).",
           "input": {
             "action": "get_stats",
             "statsKind": "performance"
@@ -46702,14 +46786,15 @@
           "actions": {
             "performance": "get_performance_stats",
             "memory": "get_memory_stats",
-            "scene": "get_scene_stats"
+            "scene": "get_scene_stats",
+            "frame": "get_frame_cost"
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "079862c2327a65992c17e703636fe4fd3dc2c3260d0867cc65ccc35cd4e9f883",
-        "content": "94b7d64796dc6ee4703688cb911cdf175731c7d3db8cc1d29154191e036447f7"
+        "schema": "b72322d696dff6b61717ddd9a657c194fcffa15850439ac16e0cf5b48ea98f2c",
+        "content": "55b1cbe418a801cf437acab9d7e3104fdce1d296c6f87225af1b4aee4c5b9728"
       }
     },
     {
