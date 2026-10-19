@@ -11922,10 +11922,10 @@
         "autoActivate",
         "autoConnect",
         "boxSize",
-        "cleanupTarget",
         "color",
         "componentName",
         "control",
+        "debugOp",
         "deltaTime",
         "density",
         "deterministicEnabled",
@@ -12036,15 +12036,6 @@
             "maxItems": 3,
             "description": "Box half extents as [x, y, z] for shapeType box (default the radius on every axis)."
           },
-          "cleanupTarget": {
-            "type": "string",
-            "enum": [
-              "effects",
-              "debug_shapes"
-            ],
-            "description": "Which cleanup variant to run; omit for 'effects'.",
-            "default": "effects"
-          },
           "color": {
             "oneOf": [
               {
@@ -12070,6 +12061,15 @@
             ],
             "description": "Which activate variant to run; omit for 'activate'.",
             "default": "activate"
+          },
+          "debugOp": {
+            "type": "string",
+            "enum": [
+              "draw",
+              "clear"
+            ],
+            "description": "Which debug shape variant to run; omit for 'draw'.",
+            "default": "draw"
           },
           "deltaTime": {
             "type": "number",
@@ -12160,7 +12160,7 @@
           },
           "filter": {
             "type": "string",
-            "description": "Actor name prefix selecting which transient effects are cleaned up."
+            "description": "Label prefix: every actor whose label starts with it is deleted (ignoring case)."
           },
           "fixedBoundsEnabled": {
             "type": "boolean",

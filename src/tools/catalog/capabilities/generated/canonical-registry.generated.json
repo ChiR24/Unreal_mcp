@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "a4eb8045d6fc50bb",
+  "catalogRevision": "6975550b0add0a32",
   "recordCount": 416,
   "records": [
     {
@@ -61661,20 +61661,11 @@
     },
     {
       "id": "manage_effect.cleanup",
-      "aliases": [
-        "manage_effect.clear_debug_shapes"
-      ],
+      "aliases": [],
       "legacyIds": [
         {
           "tool": "manage_effect",
           "action": "cleanup"
-        },
-        {
-          "tool": "manage_effect",
-          "action": "clear_debug_shapes",
-          "folded": {
-            "cleanupTarget": "debug_shapes"
-          }
         }
       ],
       "discovery": {
@@ -61683,16 +61674,15 @@
         "topics": [
           "cleanup",
           "clean up effects",
-          "delete spawned effects"
+          "delete spawned effects",
+          "delete actors by name prefix"
         ],
-        "summary": "Clean up spawned effects, or clear debug shapes.",
+        "summary": "Delete every actor in the level being edited whose label starts with filter, ignoring case, whatever its kind: not only effects. An empty filter deletes nothing. One undo step; refused during Play (PIE_ACTIVE). Replies removed and removedActors.",
         "whenToUse": [
-          "cleanupTarget=effects: Reset authoring session.",
-          "cleanupTarget=debug_shapes: Debug shapes must be removed."
+          "Many actors that share a label prefix (a batch of spawned effects, test props) must go at once."
         ],
         "whenNotToUse": [
-          "cleanupTarget=effects: Persist work.",
-          "cleanupTarget=debug_shapes: Use debug_shape."
+          "Actors named one by one, or carrying a tag: use control_actor delete, which matches whole names or tags."
         ]
       },
       "schemas": {
@@ -61702,19 +61692,12 @@
           "properties": {
             "filter": {
               "type": "string",
-              "description": "Actor name prefix selecting which transient effects are cleaned up."
-            },
-            "cleanupTarget": {
-              "type": "string",
-              "enum": [
-                "effects",
-                "debug_shapes"
-              ],
-              "description": "Which cleanup variant to run; omit for 'effects'.",
-              "default": "effects"
+              "description": "Label prefix: every actor whose label starts with it is deleted (ignoring case)."
             }
           },
-          "required": [],
+          "required": [
+            "filter"
+          ],
           "additionalProperties": false
         },
         "output": {
@@ -61733,6 +61716,17 @@
               "type": "object",
               "x-unreal-reflection-boundary": true,
               "description": "Additional handler result fields not named by the contract."
+            },
+            "removed": {
+              "type": "number",
+              "description": "How many actors were deleted."
+            },
+            "removedActors": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Their labels."
             }
           },
           "required": [
@@ -61743,11 +61737,10 @@
       },
       "examples": [
         {
-          "title": "Clean up spawned effects, or clear debug shapes.",
+          "title": "Delete every actor in the level being edited whose label starts with filter, ignoring case, whatever its kind: not only effects. An empty filter deletes nothing. One undo step; refused during Play (PIE_ACTIVE). Replies removed and removedActors.",
           "input": {
             "action": "cleanup",
-            "filter": "MCP_ManageEffectDefaultActor_",
-            "cleanupTarget": "effects"
+            "filter": "MCP_ManageEffectDefaultActor_"
           },
           "output": {
             "success": true
@@ -61761,14 +61754,14 @@
         ]
       },
       "behavior": {
-        "effect": "write",
+        "effect": "destructive",
         "idempotency": "non-idempotent",
         "longRunning": false,
         "safeToRetry": true
       },
       "policy": {
-        "requiredScope": "write",
-        "consent": "none",
+        "requiredScope": "destructive",
+        "consent": "explicit",
         "dataAccess": "project-write"
       },
       "cost": {
@@ -61777,24 +61770,12 @@
       },
       "routing": {
         "parentTool": "manage_effect",
-        "dispatchAction": "cleanup",
-        "dispatchBy": {
-          "param": "cleanupTarget",
-          "actions": {
-            "effects": "cleanup",
-            "debug_shapes": "clear_debug_shapes"
-          },
-          "declaredBy": {
-            "filter": [
-              "effects"
-            ]
-          }
-        }
+        "dispatchAction": "cleanup"
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "59bfd1da1d3641c792ad8e3692dcee9aea46e5543041e20efd502f6a484f1514",
-        "content": "a81f37aafcf97e97640e228bd745eb89021f8e26d73a592baf33ebb70d019aa2"
+        "schema": "bd61ee3740fcd820cce2e47709ade701acce65df4c96ca56021fcce17ef27c59",
+        "content": "b9503a977672d4e30c75575a4418a71bd8de4315b4b4891cd23fdc3b6b1f932e"
       }
     },
     {
@@ -62331,11 +62312,20 @@
     },
     {
       "id": "manage_effect.debug_shape",
-      "aliases": [],
+      "aliases": [
+        "manage_effect.clear_debug_shapes"
+      ],
       "legacyIds": [
         {
           "tool": "manage_effect",
           "action": "debug_shape"
+        },
+        {
+          "tool": "manage_effect",
+          "action": "clear_debug_shapes",
+          "folded": {
+            "debugOp": "clear"
+          }
         }
       ],
       "discovery": {
@@ -62349,12 +62339,13 @@
           "draw a debug line",
           "draw debug line"
         ],
-        "summary": "Draw a temporary debug shape in the editor viewport (sphere, box, circle, line, point, coordinate, cylinder, cone, capsule, arrow or plane) at location, for duration seconds (default 5). Nothing is spawned or saved, and nothing shows in Play In Editor or a packaged game.",
+        "summary": "Draw a temporary debug shape in the editor viewport (debugOp draw, the default: sphere, box, circle, line, point, coordinate, cylinder, cone, capsule, arrow or plane at location, for duration seconds, default 5), or clear every debug shape drawn (clear). Nothing is spawned or saved, and nothing shows in Play In Editor or a packaged game.",
         "whenToUse": [
-          "A point, a reach or a region must be shown in the viewport while checking a layout."
+          "debugOp=draw: A point, a reach or a region must be shown in the viewport while checking a layout.",
+          "debugOp=clear: Debug shapes must be removed."
         ],
         "whenNotToUse": [
-          "An effect players should see (use spawn_niagara)."
+          "debugOp=draw: An effect players should see (use spawn_niagara)."
         ]
       },
       "schemas": {
@@ -62441,11 +62432,18 @@
             "halfHeight": {
               "type": "number",
               "description": "Capsule half height (default the radius)."
+            },
+            "debugOp": {
+              "type": "string",
+              "enum": [
+                "draw",
+                "clear"
+              ],
+              "description": "Which debug shape variant to run; omit for 'draw'.",
+              "default": "draw"
             }
           },
-          "required": [
-            "location"
-          ],
+          "required": [],
           "additionalProperties": false
         },
         "output": {
@@ -62474,7 +62472,7 @@
       },
       "examples": [
         {
-          "title": "Draw a temporary debug shape in the editor viewport (sphere, box, circle, line, point, coordinate, cylinder, cone, capsule, arrow or plane) at location, for duration seconds (default 5). Nothing is spawned or saved, and nothing shows in Play In Editor or a packaged game.",
+          "title": "Draw a temporary debug shape in the editor viewport (debugOp draw, the default: sphere, box, circle, line, point, coordinate, cylinder, cone, capsule, arrow or plane at location, for duration seconds, default 5), or clear every debug shape drawn (clear). Nothing is spawned or saved, and nothing shows in Play In Editor or a packaged game.",
           "input": {
             "action": "debug_shape",
             "shape": "Sphere",
@@ -62483,7 +62481,8 @@
               0,
               0
             ],
-            "radius": 100
+            "radius": 100,
+            "debugOp": "draw"
           },
           "output": {
             "success": true
@@ -62491,9 +62490,7 @@
         }
       ],
       "availability": {
-        "requiredPlugins": [
-          "Niagara"
-        ],
+        "requiredPlugins": [],
         "editorStates": [
           "edit"
         ]
@@ -62515,12 +62512,63 @@
       },
       "routing": {
         "parentTool": "manage_effect",
-        "dispatchAction": "debug_shape"
+        "dispatchAction": "debug_shape",
+        "dispatchBy": {
+          "param": "debugOp",
+          "actions": {
+            "draw": "debug_shape",
+            "clear": "clear_debug_shapes"
+          },
+          "declaredBy": {
+            "shape": [
+              "draw"
+            ],
+            "shapeType": [
+              "draw"
+            ],
+            "location": [
+              "draw"
+            ],
+            "radius": [
+              "draw"
+            ],
+            "color": [
+              "draw"
+            ],
+            "duration": [
+              "draw"
+            ],
+            "thickness": [
+              "draw"
+            ],
+            "boxSize": [
+              "draw"
+            ],
+            "endLocation": [
+              "draw"
+            ],
+            "rotation": [
+              "draw"
+            ],
+            "direction": [
+              "draw"
+            ],
+            "length": [
+              "draw"
+            ],
+            "angle": [
+              "draw"
+            ],
+            "halfHeight": [
+              "draw"
+            ]
+          }
+        }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "700129d171e562a1f13afc010dd0e6d1d3a16821f3ba6d6b20b2ca9080de799a",
-        "content": "cb51dd94974e14961cbd3da58279a85516b90183693a218b500444142c8a2071"
+        "schema": "1d0a79e1de69d0fd63c865d7cca9a6458ef32c22e387b4594eed94e620dd699a",
+        "content": "32b08fc3c19a2e1a398241f6f6908f346648f95fdb94a4a0ac30f9fd548d06d2"
       }
     },
     {

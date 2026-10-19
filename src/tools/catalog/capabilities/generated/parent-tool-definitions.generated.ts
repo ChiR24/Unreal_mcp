@@ -17126,15 +17126,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "maxItems": 3,
           "description": "Box half extents as [x, y, z] for shapeType box (default the radius on every axis)."
         },
-        "cleanupTarget": {
-          "type": "string",
-          "enum": [
-            "effects",
-            "debug_shapes"
-          ],
-          "description": "Which cleanup variant to run; omit for 'effects'.",
-          "default": "effects"
-        },
         "color": {
           "oneOf": [
             {
@@ -17160,6 +17151,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Which activate variant to run; omit for 'activate'.",
           "default": "activate"
+        },
+        "debugOp": {
+          "type": "string",
+          "enum": [
+            "draw",
+            "clear"
+          ],
+          "description": "Which debug shape variant to run; omit for 'draw'.",
+          "default": "draw"
         },
         "deltaTime": {
           "type": "number",
@@ -17250,7 +17250,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "filter": {
           "type": "string",
-          "description": "Actor name prefix selecting which transient effects are cleaned up."
+          "description": "Label prefix: every actor whose label starts with it is deleted (ignoring case)."
         },
         "fixedBoundsEnabled": {
           "type": "boolean",
@@ -17671,6 +17671,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             }
           },
           "additionalProperties": false
+        },
+        "removed": {
+          "type": "number",
+          "description": "How many actors were deleted."
+        },
+        "removedActors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Their labels."
         },
         "saved": {
           "type": "boolean",

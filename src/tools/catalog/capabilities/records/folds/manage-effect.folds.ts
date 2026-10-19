@@ -47,10 +47,11 @@ export const MANAGE_EFFECT_FOLDS: readonly FoldSpec[] = [
       enable_gpu_simulation: 'enable_gpu_simulation', connect_pins: 'connect_niagara_pins',
     },
   },
+  // cleanup deletes level actors, so it is destructive and stands alone; clearing debug shapes is a write.
   {
-    primary: 'cleanup', topics: ['clean up effects', 'delete spawned effects'], selector: 'cleanupTarget',
-    summary: 'Clean up spawned effects, or clear debug shapes.',
-    members: { effects: 'cleanup', debug_shapes: 'clear_debug_shapes' },
+    primary: 'debug_shape', selector: 'debugOp',
+    summary: 'Draw a temporary debug shape in the editor viewport (debugOp draw, the default: sphere, box, circle, line, point, coordinate, cylinder, cone, capsule, arrow or plane at location, for duration seconds, default 5), or clear every debug shape drawn (clear). Nothing is spawned or saved, and nothing shows in Play In Editor or a packaged game.',
+    members: { draw: 'debug_shape', clear: 'clear_debug_shapes' },
   },
   {
     primary: 'get_niagara_info', selector: 'info',
