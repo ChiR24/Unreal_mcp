@@ -8,31 +8,35 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 
 ### Added
 - **Blueprint runtime errors** in Play name their node, graph and Blueprint in frame steps and motion reads; `runtime_report` lists the session's errors with the object's variables.
-- **`get_editor_focus`**: open asset editors newest first, each Blueprint editor's focused graph and selected nodes (from the Kismet module's editor list), the selected actors, the last minute's distinct warnings and the script errors.
-- **`describe_view` `points` and `labels`**: per normalized spot, the actor its hit-proxy pixel draws and the Visibility trace through it from the view camera; the frame (at most 960 px wide) with the listed actors' boxes numbered, as a PNG image.
-- **MCP 2026-07-28 on `/mcp`**: per-request version with no session (the one `server/discover` lists, as the SDK does), `Mcp-Method`/`Mcp-Name` checks, `resultType` and cache hints, consent through client elicitation (signed `requestState`), and the tasks extension (`tasks/get`, `tasks/cancel`).
-- **Result pages**: an execute result over 100k chars whose size is one top-level array is sent a page at a time; the rest waits 5 minutes for `options.pageCursor` from the same principal, capability and params (scope re-checked, at most 8 kept). A cursor names its page's offset, so reading it again returns the same page; `page.nextCall` repeats the call's own routing; an `imageBase64` goes with the first page only.
+- **`get_editor_focus`**: open asset editors newest first, each Blueprint editor's focused graph and selected nodes, the selected actors, the last minute's distinct warnings and the script errors.
+- **`describe_view` `points` and `labels`**: per spot, the actor its hit-proxy pixel draws and the Visibility trace through it; the frame (at most 960 px wide) with the listed actors' boxes numbered, as a PNG.
+- **MCP 2026-07-28 on `/mcp`**: per-request version with no session, `Mcp-Method`/`Mcp-Name` checks, `resultType` and cache hints, consent through client elicitation (signed `requestState`), and the tasks extension.
+- **Result pages**: a result over 100k chars whose size is one top-level array goes a page at a time; the rest waits 5 minutes (at most 8 kept) for `options.pageCursor` from the same principal, capability and params. A cursor names its page's offset, `page.nextCall` repeats the call's routing, and an `imageBase64` goes with the first page only.
 - **Search signature**: a first hit whose runner-up scores at most 90% of it (`McpSearchConfidentRatioPercent`) and that needs no consent carries `signature` and `executeCall`.
-- **`get_frame_cost`**: the busiest of the game, render, RHI and GPU times against the frame time (in Play, the world tick against the game thread), plus the movable shadow-casting lights, meshes drawn without Nanite by summed LOD 0 triangles, translucent primitives (drawn within 0.5 s) and ticking actors by class with their tick sources (Event Tick, the C++ Tick, component classes).
-- **`nanite_rebuild_mesh` `assetPaths`**: one row per mesh. A slot neither opaque nor masked refuses the mesh before it changes (`NANITE_UNSUPPORTED_MATERIAL`), and the flag owner (the material; from 5.8 an instance) of each material the mesh or its placed copies in the open level draw with gets `MATUSAGE_Nanite`, read before the build and saved after it.
-- **`get_niagara_info` values**: `userParameters` carry the system default; `actorName` (`componentName`) reads the component's `GetOverrideParameters()` into `placed` (`values`, `overridden`).
-- **`edit_dynamic_mesh` `append_cuboids`, `append_loft`, `append_mesh`, `delete_triangles`**: boxes (open faces, `repeat` on three axes, a cycling id list) and lofts (sections, tip fans, edge and cap ids) build the input `append_polygons` validates; `append_mesh` appends a static mesh's LOD 0 (`lod: "render"`: its render data, a Nanite fallback) per placement through `FDynamicMeshEditor::AppendMesh`, mirrored copies turned back; `delete_triangles` removes a `triangleIndices` or `region` pick.
-- **`diff_asset`**: a copy of the saved file loaded for diffing (`LOAD_ForDiff`, then released and deleted) or another asset, compared property by property with references read as the asset's own; `NewVariables` by name and type, components by variable name, graphs through `FGraphDiffControl::DiffGraphs` (node moves left out), rows by name.
+- **`get_frame_cost`**: the busiest of game, render, RHI and GPU against the frame (in Play, the world tick), plus movable shadowed lights, non-Nanite meshes by LOD 0 triangles, translucent primitives and ticking actors by class with their tick sources.
+- **`nanite_rebuild_mesh` `assetPaths`**: one row per mesh; a slot neither opaque nor masked refuses the mesh first (`NANITE_UNSUPPORTED_MATERIAL`), and each material's flag owner gets `MATUSAGE_Nanite`, saved after the build.
+- **`get_niagara_info` values**: `userParameters` carry the default; `actorName` reads the component's `GetOverrideParameters()` into `placed`.
+- **`edit_dynamic_mesh` `append_cuboids`, `append_loft`, `append_mesh`, `delete_triangles`**: boxes and lofts build the input `append_polygons` validates; `append_mesh` appends a static mesh (`lod: "render"` for its Nanite fallback) per placement through `FDynamicMeshEditor::AppendMesh`; `delete_triangles` removes a picked region.
+- **`diff_asset`**: a saved copy loaded with `LOAD_ForDiff` (then released) or another asset, compared property by property; `NewVariables`, components by variable name, graphs through `FGraphDiffControl::DiffGraphs`, rows by name.
+- **`cancel_render`** (`CancelAllJobs()` on the active executor, `MRQ_NOT_RENDERING` when none) and **`configure_render_camera`** (`ShutterTiming`, `OverscanPercentage`; `bOverrideCameraOverscan` and `bRenderAllCameras` found by name, as newer engines add them).
+- **`set_section` `playRate`**: a float to 5.4, `FMovieSceneTimeWarpVariant` from 5.5; the range rescales by old over new rate unless `endFrame` is given. **Reads**: list_tracks `animations`, get_animation_info `boneTracks`.
 
 ### Fixed
-- **`runtime_report` `filter`** matches an actor's path only whole, not every actor of a level named like the filter.
-- **Links on UE 5.0 again**: the graph module add is guarded like the stack one, and the emitter copy avoids the inline `CopyParameterData` on 5.0 and 5.1.
-- **Diagnostics records replace their files** (`IFileManager::Move` with replace; `IPlatformFile::MoveFile` refuses an existing target on Windows).
-- **The native request timeout reads `renderTimeoutMs`**, the name `start_render` declares, so a long render is not cut off at 335 s; its schema maximum (300000) is a day now, with `MaxMovieRenderTimeoutMs` the limit.
-- **Task results match their principal case-sensitively** (`FString::operator!=` ignores case).
-- **`edit_scs` reads `save`** for every action: `FinalizeBlueprintSCSChange` saved the Blueprint after each add, remove, reparent or edit, and a `modify` batch's own save step decides.
-- **Refusal details survive reply compaction**: `SendStandardErrorResponse` merges a handler's details into `error`, and the whole object went when its message and code repeated the reply's.
+- **`runtime_report` `filter`** matches an actor's path only whole.
+- **Links on UE 5.0 again**: the graph module add is guarded, and the emitter copy avoids the inline `CopyParameterData` on 5.0 and 5.1.
+- **Diagnostics records replace their files** (`IFileManager::Move` with replace).
+- **The native request timeout reads `renderTimeoutMs`**, whose schema maximum is a day now, with `MaxMovieRenderTimeoutMs` the limit.
+- **Task results match their principal case-sensitively.**
+- **`edit_scs` reads `save`** for every action, not only `modify`.
+- **Refusal details survive reply compaction** when the message and code repeat the reply's.
 - **`get_performance_stats` `busiestThreadMs`** includes the RHI thread.
-- **Editor viewport captures settle across ticks**: the capture retries 0.3 s later (at most five passes) until the 32 px block means match the previous pass, so Nanite pages that stream in over engine ticks are drawn.
-- **The property resolver refuses `CPF_Deprecated`** (UHT registers `X_DEPRECATED` as `X`) and names a struct or struct-array member of that name.
-- **`set_property` on an object in a Niagara system** runs `FNiagaraSystemUpdateContext` with re-init, as the Niagara editor does.
-- **The placement ground trace queries `ECC_PhysicsBody`** with WorldStatic and WorldDynamic.
-- **`fix_coplanar` sums a face's overlaps over all its pairs** before judging it wholly inside (comes forward) or partly inside (goes back).
+- **Editor viewport captures settle across ticks** (retried 0.3 s later, at most five passes, until two frames match).
+- **The property resolver refuses `CPF_Deprecated`** (UHT registers `X_DEPRECATED` as `X`) and names the member that holds it.
+- **`set_property` in a Niagara system** re-inits it with `FNiagaraSystemUpdateContext`.
+- **The placement ground trace queries `ECC_PhysicsBody`**; **`fix_coplanar` sums a face's overlaps** over all its pairs.
+- **Track lookups prefer a whole name**: `FindTrackByName` tries whole names first; `CollectTracksByName` keeps only whole matches when any.
+- **`McpMovieRenderRunning()`** refuses save_all and restart_editor with `RENDER_IN_PROGRESS`; validateOnly reports `renderRunning`.
+- **`set_bone_key` defaults** read the track's key at the frame (`GetBoneTrackTransform` from 5.2, the raw keys before) or the reference pose.
 - **Pre-queue scans** walk up to `McpMaxPayloadScanNodes` (262144) values; command keys compare in place.
 - **Rate limit replies** name the cap, its setting and the wait, with `data.errorCode` `RATE_LIMITED`, `retryAfterSeconds` and `Retry-After`.
 - **`McpApplyPayloadSettings`** writes through the full `ApplyJsonValueToProperty` (objects, soft references, arrays).

@@ -70,6 +70,7 @@ export const TIMELINE_TRACKS_RECORDS: readonly CapabilityRecordSource[] = [
         bindingName: { type: 'string', description: 'Bound actor name, or Actor/Component for a component bound under its actor (binding tracks only).' },
         bindingGuid: { type: 'string', description: 'Bound object guid string (binding tracks only).' },
         sectionCount: { type: 'integer', description: 'Number of sections on the track.' },
+        animations: { type: 'array', items: { type: 'string', description: 'Animation asset path.' }, description: 'An animation track: the clips its sections play, once each, in section order.' },
       }, required: ['trackName', 'trackType', 'displayName', 'isMasterTrack', 'sectionCount'] }, description: 'Sequence tracks.' },
       trackCount: { type: 'integer', description: 'Total number of tracks reported.' },
       sequencePath: { type: 'string', description: 'Resolved sequence asset path.' },

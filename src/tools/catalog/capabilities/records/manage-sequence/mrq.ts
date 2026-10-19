@@ -112,6 +112,29 @@ export const MRQ_RECORDS: readonly CapabilityRecordSource[] = [
     exampleInput: { action: 'configure_anti_aliasing', jobId: 'render-job-1', antiAliasingMethod: 'TSAA', spatialSampleCount: 4, temporalSampleCount: 4 },
   }),
   buildRecord({
+    id: 'sequence.mrq.configure_render_camera', action: 'configure_render_camera', family: F, domain: D,
+    summary: 'Configure an MRQ job\'s camera setting: when the shutter opens around each frame (shutterTiming), the overscan rendered past the frame edges, and whether every camera of the cut renders.',
+    whenToUse: ['With motion blur, the first frame after each camera cut blends in the shot before it: the default FrameCenter shutter opens half a frame early; FrameOpen starts at the frame.', 'A render needs pixels past the frame edges for a later crop, distortion or stabilization (overscanPercentage).'],
+    whenNotToUse: ['The render has no motion blur and needs no overscan.'],
+    // HandleConfigureRenderCamera (McpSeqMRQCamera.cpp) selects the job as the other job actions do.
+    inputProps: {
+      jobId: P.jobId, renderJobName: P.renderJobName,
+      shutterTiming: { type: 'string', enum: ['FrameOpen', 'FrameCenter', 'FrameClose'], description: 'When the shutter opens: FrameOpen at the frame (no blur reaching back across a cut), FrameCenter (the default) half a frame before it, FrameClose a whole frame before it.' },
+      overscanPercentage: { type: 'number', minimum: 0, maximum: 1, description: 'Extra image rendered past the frame edges, as a fraction of the frame (0.1 is 10%); it also turns the setting\'s overscan override on where the engine has one.' },
+      renderAllCameras: { type: 'boolean', description: 'Render every camera of the sequence instead of the camera cut; refused with NOT_SUPPORTED_ON_ENGINE where the engine has no such option.' },
+    },
+    requiredOneOf: JOB_SELECTOR,
+    outputProps: {
+      shutterTiming: { type: 'string', description: 'The shutter timing now set.' },
+      overscanPercentage: { type: 'number', description: 'The overscan now set.' },
+      renderAllCameras: { type: 'boolean', description: 'Whether every camera renders (engines that have the option).' },
+    },
+    outputRequired: [],
+    effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'instant', resources: 'low', plugins: MRQ_PLUGINS,
+    exampleInput: { action: 'configure_render_camera', jobId: 'render-job-1', shutterTiming: 'FrameOpen' },
+    exampleOutput: { success: true, shutterTiming: 'FrameOpen', overscanPercentage: 0 },
+  }),
+  buildRecord({
     id: 'sequence.mrq.configure_console_variables', action: 'configure_console_variables', family: F, domain: D,
     summary: 'Set console variables for an MRQ job render.',
     whenToUse: ['CVars must be set for render-specific behavior.'],
@@ -165,6 +188,19 @@ export const MRQ_RECORDS: readonly CapabilityRecordSource[] = [
     latency: 'long-running', resources: 'high', plugins: MRQ_PLUGINS,
     exampleInput: { action: 'start_render', jobId: 'render-job-1' },
     exampleOutput: { success: true, outputDirectory: '/tmp/renders', renderContinuesAsynchronously: false, bCancellationDeadlineExpired: false },
+  }),
+  buildRecord({
+    id: 'sequence.mrq.cancel_render', action: 'cancel_render', family: F, domain: D,
+    summary: 'Stop the Movie Render Queue render that is running, as the queue window\'s Stop does: every job is cancelled, frames already written stay on disk, and the sequence gets back the state the render held it in.',
+    whenToUse: ['A render runs with the wrong settings or range and should stop now.', 'save_all or restart_editor answered RENDER_IN_PROGRESS and cannot wait for the render.'],
+    whenNotToUse: ['No render is running (MRQ_NOT_RENDERING).'],
+    // HandleCancelRender (JobCreation.cpp) reads no parameters: it cancels the active executor's jobs.
+    inputProps: {},
+    outputProps: { cancelRequested: { type: 'boolean', description: 'The executor was told to cancel its jobs.' } },
+    outputRequired: [],
+    effect: 'write', latency: 'instant', resources: 'low', plugins: MRQ_PLUGINS,
+    exampleInput: { action: 'cancel_render' },
+    exampleOutput: { success: true, cancelRequested: true },
   }),
   buildRecord({
     id: 'sequence.mrq.remove_render_job', action: 'remove_render_job', family: F, domain: D,

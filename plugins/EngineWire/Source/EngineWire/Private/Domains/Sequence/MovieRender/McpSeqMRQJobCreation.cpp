@@ -153,6 +153,31 @@ bool HandleRemoveRenderJob(UEngineWireSubsystem *Subsystem,
       FString::Printf(TEXT("Removed %d job(s) from the Movie Render Queue."), Removed), Result);
   return true;
 }
+
+// The queue window's Stop: the executor cancels every job, and MRQ puts back the sequence state it held for the render.
+bool HandleCancelRender(UEngineWireSubsystem *Subsystem,
+                        const FString &RequestId,
+                        const TSharedPtr<FJsonObject> &Payload,
+                        TSharedPtr<FMcpBridgeWebSocket> Socket) {
+  FString Message, Code;
+  UMoviePipelineQueueSubsystem *QueueSubsystem = GetQueueSubsystem(Message, Code);
+  if (!QueueSubsystem)
+    return SendError(Subsystem, RequestId, Socket, Message, Code), true;
+  UMoviePipelineExecutorBase *Executor = QueueSubsystem->GetActiveExecutor();
+  if (!Executor || !Executor->IsRendering())
+    return SendError(Subsystem, RequestId, Socket, TEXT("No Movie Render Queue render is running."),
+                     TEXT("MRQ_NOT_RENDERING")),
+           true;
+  Executor->CancelAllJobs();
+  TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+  Result->SetBoolField(TEXT("cancelRequested"), true);
+  Subsystem->SendAutomationResponse(
+      Socket, RequestId, true,
+      TEXT("The render was told to stop; frames already written stay on disk. A start_render call still open answers "
+           "once it has stopped."),
+      Result);
+  return true;
+}
 }
 
 #endif

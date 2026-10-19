@@ -3449,6 +3449,12 @@ const privateCode = (...segments: readonly string[]): string =>
   readFileSync(join(PRIVATE, ...segments), 'utf8').replace(/\/\*[\s\S]*?\*\//gu, ' ').replace(/\/\/[^\n]*/gu, ' ');
 
 describe('long cinematic work: tracks, settings, batches, rate limits and renders', () => {
+  // MovieScene3DTransformTrack_1 also matched _10 to _19, and remove_track could take the first of those.
+  it('a whole track name picks that track before any that contains it', () => {
+    const support = code('Sequence', 'McpSeqEditorSupport.h');
+    expect(support).toContain('for (const bool bWhole : {true, false})');
+    expect(support).toContain('Out.RemoveAll([&Whole](UMovieSceneTrack *Track) { return !Whole(Track); });');
+  });
 
   it('environment settings take objects and soft references through the shared writer', () => {
     expect(code('Environment', 'Runtime', 'McpEnvReflectSettings.cpp')).toContain('if (::ApplyJsonValueToProperty(Target, Property, Pair.Value, ApplyError))');
@@ -3469,4 +3475,11 @@ describe('long cinematic work: tracks, settings, batches, rate limits and render
     }
   });
 
+  it('saves and restarts wait for a running render, which cancel_render stops', () => {
+    expect(code('ControlEditor', 'McpEditorAssets.cpp'))
+      .toMatch(/if \(McpMovieRenderRunning\(\)\) \{\s*SendAutomationError\(Socket, RequestId, McpMovieRenderRunningMessage\(\), TEXT\("RENDER_IN_PROGRESS"\)\);/u);
+    expect(code('ControlEditor', 'McpEditorRestart.cpp')).toContain('TEXT("RENDER_IN_PROGRESS"), McpMovieRenderRunningMessage()');
+    expect(code('Sequence', 'MovieRender', 'McpSeqMRQRouting.cpp')).toContain('{TEXT("cancel_render"), &HandleCancelRender}');
+    expect(code('Sequence', 'MovieRender', 'McpSeqMRQJobCreation.cpp')).toContain('Executor->CancelAllJobs();');
+  });
 });

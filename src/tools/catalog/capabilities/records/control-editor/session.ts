@@ -125,7 +125,8 @@ export const SESSION_RECORDS: readonly CapabilityRecordSource[] = [
       'The editor is no longer needed and should close (relaunch false).',
       'Which packages have unsaved changes must be known (validateOnly).'],
     whenNotToUse: ['Only a level needs reloading; use open_level.',
-      'A PIE session should end; use stop.'],
+      'A PIE session should end; use stop.',
+      'A Movie Render Queue render is running: refused with RENDER_IN_PROGRESS until it ends or manage_sequence cancel_render stops it.'],
     inputProps: {
       validateOnly: P.validateOnly, discardUnsaved: P.discardUnsaved, delaySeconds: P.delaySeconds,
       relaunch: { type: 'boolean', description: 'false closes the editor instead of relaunching it (default true). Unsaved packages are refused the same way.' },
@@ -138,6 +139,7 @@ export const SESSION_RECORDS: readonly CapabilityRecordSource[] = [
       closing: { type: 'boolean', description: 'True once closing the editor (relaunch false) has been scheduled.' },
       validateOnly: { type: 'boolean', description: 'True when this call only reported what a restart would do.' },
       wouldRestart: { type: 'boolean', description: 'Under validateOnly, whether a real restart would proceed.' },
+      renderRunning: { type: 'boolean', description: 'Under validateOnly, whether a Movie Render Queue render is running (a restart is refused until it ends).' },
       unsavedPackages: { type: 'array', items: { type: 'string', description: 'Package path.' }, description: 'Packages with unsaved changes a restart would discard.' },
       unsavedCount: { type: 'integer', description: 'How many packages have unsaved changes.' },
       delaySeconds: { type: 'number', description: 'Seconds the editor waits before relaunching.' },

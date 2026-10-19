@@ -12,36 +12,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details>
 <summary><b>✨ Added</b></summary>
 
-- **Blueprint runtime errors name their node**: frame steps and motion reads report an Accessed None or infinite loop with the node (and its `nodeId`), graph and Blueprint that raised it and how often it fired; `runtime_report` lists the play session's errors with the object's variables at the first hit.
-- **MCP 2026-07-28 on both transports**: requests without initialize or a session, and consent asked through the client; the native transport adds the header checks and the tasks extension for long calls. Older clients are unchanged.
-- **`get_editor_state` `focus`**: what the user is working on: the open asset editors, each Blueprint editor's graph in front and its selected nodes (with `nodeId`), the selected actors, the last minute's warnings and errors, and the last play session's Blueprint runtime errors.
-- **`describe_view` `points` and `labels`**: `points` turns spots of the frame into the actor drawn there and the world point a line through each one hits; `labels` returns the frame with the listed actors boxed and numbered, as an image.
-- **Large results come in pages** instead of `RESULT_TOO_LARGE`, when one list makes them too big: the reply's `page.nextCall` reads the next page without running the call again, and reading a page again (a retry) returns the same page.
-- **Search hands over a clear first hit**: when it needs no consent, the first result carries `signature` (required parameters, a family's selector values, one example) and `executeCall`, so describe can be skipped.
-- **`get_stats` `frame`**: names the thread that bounds the frame (in Play, how much of the game thread the game's own tick takes), or says the frame only waits (a throttled editor, vsync), and ranks what in view weighs on it: movable shadow-casting lights, the heaviest meshes drawn without Nanite, translucent primitives and ticking actors by class with what ticks on them.
-- **`nanite_rebuild_mesh` `assetPaths`**: several meshes under one consent, one row each. A mesh with a glass (translucent) slot is left as it is, and the materials a mesh draws with get the Nanite usage flag and are saved, so a packaged game draws them.
-- **`inspect_asset` `diff`**: compares a Blueprint, DataTable or data asset with its saved file (its unsaved edits) or with another asset: properties and class defaults, variables (compiled or not), components, graph nodes and rows.
-- **`get_niagara_info` reads values**: each user parameter's default, and with `actorName` a placed effect's own values and which of them it overrides.
-- **Whole parts in one `edit_dynamic_mesh` call**: `append_cuboids` lays out boxes repeated in rows, grids and stacks; `append_loft` skins cross sections (a hull, a car body) with tips and per-edge materials; `append_mesh` copies a static mesh asset (a detailed container, a window frame) at placements with its slots mapped to cycling material ids; `delete_triangles` removes a picked region.
+- **Blueprint runtime errors name their node** in frame steps and motion reads (node, `nodeId`, graph, Blueprint, hit count); `runtime_report` lists them with the object's variables at the first hit.
+- **MCP 2026-07-28 on both transports**: requests with no initialize or session, and consent asked through the client; the native transport adds the header checks and the tasks extension. Older clients are unchanged.
+- **`get_editor_state` `focus`**: the open asset editors, each Blueprint editor's graph in front and its selected nodes, the selected actors, recent warnings and the Blueprint runtime errors.
+- **`describe_view` `points` and `labels`**: the actor and world point under spots of the frame; the frame with the listed actors boxed and numbered.
+- **Large results come in pages** instead of `RESULT_TOO_LARGE`: `page.nextCall` reads the next page without running the call again, and a page read again comes back the same.
+- **Search hands over a clear first hit** with `signature` and `executeCall` when it needs no consent, so describe can be skipped.
+- **`get_stats` `frame`**: the thread that bounds the frame, or that it only waits, and what in view weighs on it (movable shadowed lights, heavy meshes without Nanite, translucency, ticking actors).
+- **`nanite_rebuild_mesh` `assetPaths`**: several meshes under one consent; a mesh with a translucent slot is left alone, and the materials get the Nanite usage flag and are saved.
+- **`inspect_asset` `diff`**: a Blueprint, DataTable or data asset against its saved file or another asset: properties, variables, components, graph nodes and rows.
+- **`get_niagara_info` values**: each user parameter's default, and with `actorName` a placed effect's own values.
+- **Whole parts in one `edit_dynamic_mesh` call**: `append_cuboids` (boxes in rows, grids and stacks), `append_loft` (skinned cross sections), `append_mesh` (copies of a static mesh at placements) and `delete_triangles`.
+- **Movie Render Queue**: `cancel_render` stops a running render; `configure_render_camera` sets the shutter timing (FrameOpen keeps motion blur from reaching back across a camera cut), the overscan and rendering every camera.
+- **Sequences and animations**: `set_section` `playRate` speeds a clip up or down; `get_properties` `tracks` lists each animation track's clips; `get_animation_info` lists the bones a sequence keys.
 
 </details>
 
 <details>
 <summary><b>🔧 Fixed</b></summary>
 
-- **`runtime_report` `filter`** matches an actor's path only whole, so a filter that names the level no longer lists every actor in it.
-- **The plugin links on UE 5.0 again**: the Niagara module add refuses there (the engine does not export it) and the emitter copy carries user parameters without a call 5.0 and 5.1 cannot link.
-- **Crash diagnostics are rewritten on Windows**: the session records replace their files instead of keeping the first one written.
-- **A long render keeps its native request open** for the `renderTimeoutMs` it asked for, not 335 s, and asks for more than 5 minutes (up to the project's `MaxMovieRenderTimeoutMs`, an hour by default).
-- **`get_task_result` on the native transport** matches the sender's principal exactly; the match ignored case.
-- **`edit_scs` keeps `save: false`**: adding, removing, reparenting or editing a part saved the Blueprint anyway while the reply said it had not.
-- **A refusal keeps the details it names**, such as the unsaved packages of a refused close; the reply dropped them along with its repeated message.
-- **`get_stats` `performance`** counts the RHI thread in `busiestThreadMs`, as `frame` does.
-- **A level viewport screenshot waits for streaming**: a Nanite mesh just built or framed no longer shows as blobs of its coarsest clusters.
-- **A deprecated property is refused**, naming where its replacement lives (a Niagara mesh renderer's `PivotOffset` is in each `Meshes` entry); the write answered success and changed nothing.
-- **`set_property` inside a Niagara system restarts its placed effects**, so a renderer change shows without assigning the system again.
-- **`audit_placement` sees simulated bodies as surfaces**: a crate stacked on a physics crate no longer reads as floating.
-- **`fix_coplanar` brings a piece laid across several neighbours forward** (a carpet over floor tiles), instead of sinking it under them.
+- **`runtime_report` `filter`** matches an actor's path only whole.
+- **The plugin links on UE 5.0 again** (the Niagara module add and the emitter copy).
+- **Crash diagnostics are rewritten on Windows** instead of keeping the first file written.
+- **A long render keeps its native request open** for its `renderTimeoutMs`, which may now pass 5 minutes (up to `MaxMovieRenderTimeoutMs`, an hour by default).
+- **`get_task_result` on the native transport** matches the principal exactly.
+- **`edit_scs` keeps `save: false`** for every edit; the Blueprint was saved anyway.
+- **A refusal keeps the details it names**, such as the unsaved packages of a refused close.
+- **`get_stats` `performance`** counts the RHI thread in `busiestThreadMs`.
+- **A level viewport screenshot waits for streaming**, so a Nanite mesh just built is not drawn as coarse blobs.
+- **A deprecated property is refused**, naming where its replacement lives; the write had answered success and changed nothing.
+- **`set_property` inside a Niagara system restarts its placed effects**, so a renderer change shows.
+- **`audit_placement` counts simulated bodies as surfaces**, and **`fix_coplanar` brings a piece laid across several neighbours forward** instead of sinking it.
+- **A whole track name picks only that track**: `MovieScene3DTransformTrack_1` also matched `_10` to `_19`, in reads and in `remove_track`.
+- **`save_all` and `restart_editor` wait for a running render** (`RENDER_IN_PROGRESS`): a save wrote the render's temporary sequence state to disk, and a restart cut the render off.
+- **`set_bone_key` keeps what it is not given**: a key with no location put the bone on its parent; it keeps the bone's own value at that frame.
 - **Large batches pass the pre-queue checks**: a payload past 4096 values (a 392-item spawn batch) was refused as unchecked.
 - **A rate-limited request says when to retry** (`RATE_LIMITED`, `retryAfterSeconds`, a `Retry-After` header).
 - **Environment settings take object and soft references** (a volumetric cloud's material), as `edit_component` does.

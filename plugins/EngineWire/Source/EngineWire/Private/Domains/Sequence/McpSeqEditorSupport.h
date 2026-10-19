@@ -89,44 +89,47 @@ inline FString GetBindingLabel(UMovieScene *MovieScene, const FGuid &Guid) {
   return Parent.IsEmpty() || Parent == Name ? Name : Parent + TEXT("/") + Name;
 }
 
-// First track whose name (or, optionally, display name) contains TrackName: the
+// First track whose name (or, optionally, display name) is TrackName, else the first that contains it: the
 // movie scene tracks first, then the tracks of every binding whose name contains
-// BindingFilter (all bindings when the filter is empty).
+// BindingFilter (all bindings when the filter is empty). A whole name wins, so Transform_1 never lands on
+// Transform_10 because that one came first.
 inline UMovieSceneTrack *FindTrackByName(UMovieScene *MovieScene, const FString &TrackName,
                                          bool bMatchDisplayName = false,
                                          const FString &BindingFilter = FString()) {
-  auto Matches = [&](UMovieSceneTrack *Track) {
-    return Track && (Track->GetName().Contains(TrackName) ||
-                     (bMatchDisplayName && Track->GetDisplayName().ToString().Contains(TrackName)));
-  };
-  for (UMovieSceneTrack *Track : MCP_GET_MOVIESCENE_TRACKS(MovieScene)) {
-    if (Matches(Track)) {
-      return Track;
-    }
-  }
-  // The camera cut track is stored in its OWN UMovieScene member, not in the
-  // Tracks array, so every lookup that walked only those two collections was
-  // blind to it: removing, muting, soloing or locking a camera cut answered
-  // TRACK_NOT_FOUND for a track the readback had just listed.
-  if (UMovieSceneTrack *CameraCutTrack = MovieScene->GetCameraCutTrack()) {
-    if (Matches(CameraCutTrack)) {
-      return CameraCutTrack;
-    }
-  }
-  for (const FMovieSceneBinding &Binding : const_cast<const UMovieScene *>(MovieScene)->GetBindings()) {
-    if (!BindingFilter.IsEmpty() && !GetBindingName(MovieScene, Binding.GetObjectGuid()).Contains(BindingFilter)) {
-      continue;
-    }
-    for (UMovieSceneTrack *Track : MCP_GET_BINDING_TRACKS(Binding)) {
+  for (const bool bWhole : {true, false}) {
+    auto Fits = [&](const FString &Name) { return bWhole ? Name.Equals(TrackName, ESearchCase::IgnoreCase) : Name.Contains(TrackName); };
+    auto Matches = [&](UMovieSceneTrack *Track) {
+      return Track && (Fits(Track->GetName()) || (bMatchDisplayName && Fits(Track->GetDisplayName().ToString())));
+    };
+    for (UMovieSceneTrack *Track : MCP_GET_MOVIESCENE_TRACKS(MovieScene)) {
       if (Matches(Track)) {
         return Track;
+      }
+    }
+    // The camera cut track is stored in its OWN UMovieScene member, not in the
+    // Tracks array, so every lookup that walked only those two collections was
+    // blind to it: removing, muting, soloing or locking a camera cut answered
+    // TRACK_NOT_FOUND for a track the readback had just listed.
+    if (UMovieSceneTrack *CameraCutTrack = MovieScene->GetCameraCutTrack()) {
+      if (Matches(CameraCutTrack)) {
+        return CameraCutTrack;
+      }
+    }
+    for (const FMovieSceneBinding &Binding : const_cast<const UMovieScene *>(MovieScene)->GetBindings()) {
+      if (!BindingFilter.IsEmpty() && !GetBindingName(MovieScene, Binding.GetObjectGuid()).Contains(BindingFilter)) {
+        continue;
+      }
+      for (UMovieSceneTrack *Track : MCP_GET_BINDING_TRACKS(Binding)) {
+        if (Matches(Track)) {
+          return Track;
+        }
       }
     }
   }
   return nullptr;
 }
 
-// Every track whose name contains TrackName (all tracks when it is empty),
+// Every track whose name contains TrackName (all tracks when it is empty; only those it names whole, when any),
 // under the same name rule as FindTrackByName so a name that works for
 // remove_track works for the key actions too. The movie scene tracks and the
 // camera cut track are included only when no BindingId is given: a caller who
@@ -165,6 +168,11 @@ inline void CollectTracksByName(UMovieScene *MovieScene, const FString &TrackNam
         Out.Add(Track);
       }
     }
+  }
+  // A whole name keeps only the tracks of that name: Transform_1 swept up Transform_10 to _19 as well.
+  auto Whole = [&TrackName](UMovieSceneTrack *Track) { return Track->GetName().Equals(TrackName, ESearchCase::IgnoreCase); };
+  if (!TrackName.IsEmpty() && Out.ContainsByPredicate(Whole)) {
+    Out.RemoveAll([&Whole](UMovieSceneTrack *Track) { return !Whole(Track); });
   }
 }
 

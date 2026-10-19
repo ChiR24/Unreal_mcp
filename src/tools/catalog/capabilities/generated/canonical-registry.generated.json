@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "9b89097d71ee1823",
+  "catalogRevision": "c363dcbab6cd3517",
   "recordCount": 416,
   "records": [
     {
@@ -2974,7 +2974,7 @@
               },
               "minItems": 3,
               "maxItems": 3,
-              "description": "World or relative location as [x, y, z]."
+              "description": "Bone location relative to its parent; left out, the bone keeps its own at this frame."
             },
             "rotation": {
               "type": "array",
@@ -2983,7 +2983,7 @@
               },
               "minItems": 3,
               "maxItems": 3,
-              "description": "Rotation as [pitch, yaw, roll] in degrees."
+              "description": "Bone rotation relative to its parent as [pitch, yaw, roll]; left out, the bone keeps its own at this frame."
             },
             "scale": {
               "type": "array",
@@ -2992,7 +2992,7 @@
               },
               "minItems": 3,
               "maxItems": 3,
-              "description": "Bone scale as [x, y, z] (default [1, 1, 1])."
+              "description": "Bone scale as [x, y, z]; left out, the bone keeps its own at this frame."
             },
             "curveName": {
               "type": "string",
@@ -3297,8 +3297,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "fb5a31bec6f5f554bdbb49834b0b674dd598f24c9077582793c7b24828b4fc1a",
-        "content": "28bf8f2d3a85933e9957a7b7735083235aa8e48cbcf2b863e00bf6f536fcbaee"
+        "schema": "383976b855fd7c843cdd32c21056f2c8dee2dde6c5a092aabb377ba6a42f2986",
+        "content": "30df2982b338f9fc946a5cea78ec7e75a7ee1fe641af26739d39e3d0af9a4507"
       }
     },
     {
@@ -5721,9 +5721,10 @@
           "length and frame rate",
           "notifies and curves",
           "list montage sections",
-          "blend space axes"
+          "blend space axes",
+          "which bones an animation keys"
         ],
-        "summary": "Read an animation asset: sequence or montage length, frame rate, notifies, curves, root motion and additive flags; montage sections and slots; blend space axes; anim Blueprint skeleton and parent class.",
+        "summary": "Read an animation asset: sequence or montage length, frame rate, notifies, curves, root motion and additive flags, and the bone tracks of a sequence; montage sections and slots; blend space axes; anim Blueprint skeleton and parent class.",
         "whenToUse": [
           "The length, notifies or curves of an animation sequence or montage must be read.",
           "A montage's sections and slots, or a blend space's axes, must be checked before editing."
@@ -5771,6 +5772,18 @@
             "frameRate": {
               "type": "number",
               "description": "Numeric parameter."
+            },
+            "boneTracks": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "description": "Bone name."
+              },
+              "description": "A sequence: the bones it has tracks for (set_bone_key keys them)."
+            },
+            "numBoneTracks": {
+              "type": "integer",
+              "description": "How many bone tracks the sequence has."
             }
           },
           "required": [
@@ -5781,7 +5794,7 @@
       },
       "examples": [
         {
-          "title": "Read an animation asset: sequence or montage length, frame rate, notifies, curves, root motion and additive flags; montage sections and slots; blend space axes; anim Blueprint skeleton and parent class.",
+          "title": "Read an animation asset: sequence or montage length, frame rate, notifies, curves, root motion and additive flags, and the bone tracks of a sequence; montage sections and slots; blend space axes; anim Blueprint skeleton and parent class.",
           "input": {
             "action": "get_animation_info",
             "assetPath": "/Game/A_Run"
@@ -5823,8 +5836,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "aadb9f4a7264b3cff76e1eafdaac489b5ebd3df261a6cc13f55246b89a0efbde",
-        "content": "9d36cf5d20656a9ab9c1b2e50731680eaf62a6a079dac564f83cc5d27bd5cf88"
+        "schema": "437bc5cbb0506de2d4c3cd4a44ad6d32fe778290c26bbf49734713c0f999ef35",
+        "content": "6810e26cf55a64a8f25f9d3da37f85fe99cf5a5d088818abbe208524b57b2363"
       }
     },
     {
@@ -40982,7 +40995,8 @@
         ],
         "whenNotToUse": [
           "Only a level needs reloading; use open_level.",
-          "A PIE session should end; use stop."
+          "A PIE session should end; use stop.",
+          "A Movie Render Queue render is running: refused with RENDER_IN_PROGRESS until it ends or manage_sequence cancel_render stops it."
         ]
       },
       "schemas": {
@@ -41048,6 +41062,10 @@
             "wouldRestart": {
               "type": "boolean",
               "description": "Under validateOnly, whether a real restart would proceed."
+            },
+            "renderRunning": {
+              "type": "boolean",
+              "description": "Under validateOnly, whether a Movie Render Queue render is running (a restart is refused until it ends)."
             },
             "unsavedPackages": {
               "type": "array",
@@ -41126,8 +41144,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "86e93b77400f13ec76559419d592f30ee502196699f3d988013baf52f87f22cf",
-        "content": "208ae8ee97c853c3f1835d0bef5e3e6a24b4517865b91f170ca429651bc67543"
+        "schema": "cb0056eaee8d9453a451fa3cea2082b2a74361971bbc860485a9f95042074dec",
+        "content": "4dae93fa36332f500f17c74107c7f5035c31309d77405e50b72e2e79211b008c"
       }
     },
     {
@@ -41158,7 +41176,8 @@
           "Only the assets this task changed should be saved (assetPaths), leaving other unsaved work alone."
         ],
         "whenNotToUse": [
-          "Nothing has changed since the last save."
+          "Nothing has changed since the last save.",
+          "A Movie Render Queue render is running: its sequence is in a temporary state until the job ends, so the save is refused with RENDER_IN_PROGRESS."
         ]
       },
       "schemas": {
@@ -41396,7 +41415,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "87a41e8aa358d75918a48115cfc07c6df04f15b3b2d3e3d78c35ea069da76b9a",
-        "content": "c67e7edd64df5f6094390e5dd39131ab553363cab427a3b0af384feb392d3271"
+        "content": "0b7c438a3335d5d569095258d130015c5b377e0a0ea08384288899c45ca466cc"
       }
     },
     {
@@ -89710,7 +89729,7 @@
             },
             "trackName": {
               "type": "string",
-              "description": "Name of the track to modify."
+              "description": "The track, by the name get_properties lists (MovieScene3DTransformTrack_1). A whole name picks that track only; part of a name (Transform) picks the tracks whose names contain it."
             },
             "bindingId": {
               "type": "string",
@@ -89860,8 +89879,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "2cc4e96109cb7714d5e8c10fa3fd3eb127e3eabcd24e02bff627d46d394e9a3a",
-        "content": "a2941076827c07ac5c92d600de3fbdf2ea9e7c2338747dbbdf49a432bb839d28"
+        "schema": "ea1e91967153cbe1ea77e4a84594e1cfdaa2f8458f56626c7b389999d6a307ad",
+        "content": "99a3c91eda5e9f96301eadbccc3d6fe72879459e99bdc6d02bf16e7e230c47f5"
       }
     },
     {
@@ -90198,11 +90217,16 @@
           "crossfade clips",
           "ease section",
           "trim section",
+          "clip play rate",
           "add music to sequence",
           "add sound to cutscene",
-          "sequence audio"
+          "sequence audio",
+          "animation play rate",
+          "speed up a clip",
+          "slow motion clip",
+          "ease in and out"
         ],
-        "summary": "Edit sequence tracks: add a track, section or keyframe; move, trim or ease a section; lock, mute or solo a track.",
+        "summary": "Edit sequence tracks: add a track, section or keyframe; move, trim or ease a section, or change the play rate of an animation clip; lock, mute or solo a track.",
         "whenToUse": [
           "edit=add_track: A new track (transform, float, event, etc.) must be added.",
           "edit=add_section: A section must be added to animate a sub-range of a track.",
@@ -90212,7 +90236,8 @@
           "edit=set_muted: A track must be temporarily silenced.",
           "edit=set_solo: A single track must be isolated for preview.",
           "edit=set_section: Two animation clips should crossfade: overlap their sections, ease the later one in and the earlier one out.",
-          "edit=set_section: A section must start or end on another frame."
+          "edit=set_section: A section must start or end on another frame.",
+          "edit=set_section: An animation clip should play faster or slower (playRate)."
         ],
         "whenNotToUse": [
           "edit=add_track: The track type is not supported by the sequence.",
@@ -90243,7 +90268,7 @@
             },
             "trackName": {
               "type": "string",
-              "description": "Name of the track to modify."
+              "description": "The track, by the name get_properties lists (MovieScene3DTransformTrack_1). A whole name picks that track only; part of a name (Transform) picks the tracks whose names contain it."
             },
             "actorName": {
               "type": "string",
@@ -90352,6 +90377,12 @@
               "minimum": 0,
               "description": "Frames the section fades out over; 0 removes its ease out."
             },
+            "playRate": {
+              "type": "number",
+              "minimum": 0.01,
+              "maximum": 100,
+              "description": "The speed of an animation section (2 is twice as fast). Without endFrame the section keeps playing the same frames, so it gets shorter or longer by the same factor, as in Sequencer."
+            },
             "edit": {
               "type": "string",
               "enum": [
@@ -90396,7 +90427,7 @@
             },
             "trackName": {
               "type": "string",
-              "description": "Name of the track to modify."
+              "description": "The track, by the name get_properties lists (MovieScene3DTransformTrack_1). A whole name picks that track only; part of a name (Transform) picks the tracks whose names contain it."
             },
             "trackId": {
               "type": "string",
@@ -90421,6 +90452,10 @@
             "sectionIndex": {
               "type": "integer",
               "description": "The section that changed."
+            },
+            "playRate": {
+              "type": "number",
+              "description": "An animation section: its play rate now (1 when it warps time another way)."
             }
           },
           "required": [
@@ -90431,7 +90466,7 @@
       },
       "examples": [
         {
-          "title": "Edit sequence tracks: add a track, section or keyframe; move, trim or ease a section; lock, mute or solo a track.",
+          "title": "Edit sequence tracks: add a track, section or keyframe; move, trim or ease a section, or change the play rate of an animation clip; lock, mute or solo a track.",
           "input": {
             "action": "edit_sequence_tracks",
             "path": "/Game/Cinematics/SEQ_Master",
@@ -90549,14 +90584,17 @@
             ],
             "easeOutFrames": [
               "set_section"
+            ],
+            "playRate": [
+              "set_section"
             ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "ae79d154ef5af1c2893d4b4bae205d54d155149b392efbb2432f80c0543fa40f",
-        "content": "b3d1432d7489c7a70479bae817bdab9b88e2fbbe9eaf3cd4c4b2e54324ac11f0"
+        "schema": "d9284181080e6ac936c5b7ce87220ed252ff1bf5dcb7a0192fba0c6afca06519",
+        "content": "93dfe7e5ead1504763c13e95f6f4a602bd5cdb3966e298fcb08cac2ce11d180c"
       }
     },
     {
@@ -90821,7 +90859,7 @@
             },
             "trackName": {
               "type": "string",
-              "description": "Name of the track to modify."
+              "description": "The track, by the name get_properties lists (MovieScene3DTransformTrack_1). A whole name picks that track only; part of a name (Transform) picks the tracks whose names contain it."
             },
             "info": {
               "type": "string",
@@ -90940,6 +90978,14 @@
                   "sectionCount": {
                     "type": "integer",
                     "description": "Number of sections on the track."
+                  },
+                  "animations": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "description": "Animation asset path."
+                    },
+                    "description": "An animation track: the clips its sections play, once each, in section order."
                   }
                 },
                 "required": [
@@ -91183,8 +91229,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "b76739bedb3934eb3401285f2dc7027d3b252a01f5d00132af0c1633e4ce2298",
-        "content": "d78a48c5a6c6997de640c89c90fd4aa2f6f70c112d948cb8fb6699cb7fd18e4f"
+        "schema": "6b48ff28deb65e59e13f75f15aa5a81c168b1e0f7d5269dce8e0b3dc5c535d04",
+        "content": "cdf0ebba7f723830a6fd57a7ba51a01f8b8a8d295bacdfa6afca00280e2c21d9"
       }
     },
     {
@@ -91859,7 +91905,8 @@
         "sequence.mrq.configure_anti_aliasing",
         "sequence.mrq.add_render_pass",
         "sequence.mrq.configure_burn_ins",
-        "sequence.mrq.configure_console_variables"
+        "sequence.mrq.configure_console_variables",
+        "sequence.mrq.configure_render_camera"
       ],
       "legacyIds": [
         {
@@ -91900,6 +91947,13 @@
           "folded": {
             "setting": "console_variables"
           }
+        },
+        {
+          "tool": "manage_sequence",
+          "action": "configure_render_camera",
+          "folded": {
+            "setting": "camera"
+          }
         }
       ],
       "discovery": {
@@ -91912,23 +91966,29 @@
           "render pass",
           "burn in",
           "console variables",
-          "movie output resolution"
+          "movie output resolution",
+          "shutter timing",
+          "motion blur at camera cuts",
+          "render overscan"
         ],
-        "summary": "Configure a Movie Render Queue job: output settings, anti-aliasing, render passes, burn-ins, console variables.",
+        "summary": "Configure a Movie Render Queue job: output settings, anti-aliasing, render passes, burn-ins, console variables, and the camera setting (shutter timing, overscan).",
         "whenToUse": [
           "setting=output: Render output settings must be specified.",
           "setting=anti_aliasing: Anti-aliasing settings must be specified for render quality.",
           "setting=add_render_pass: An additional render pass must be added to the job.",
           "setting=add_render_pass: A render of gameplay must show the HUD and menus (renderPass ui).",
           "setting=burn_ins: Burn-in overlays must be composited onto rendered frames.",
-          "setting=console_variables: CVars must be set for render-specific behavior."
+          "setting=console_variables: CVars must be set for render-specific behavior.",
+          "setting=camera: With motion blur, the first frame after each camera cut blends in the shot before it: the default FrameCenter shutter opens half a frame early; FrameOpen starts at the frame.",
+          "setting=camera: A render needs pixels past the frame edges for a later crop, distortion or stabilization (overscanPercentage)."
         ],
         "whenNotToUse": [
           "setting=output: The job does not exist.",
           "setting=anti_aliasing: Default anti-aliasing is acceptable.",
           "setting=add_render_pass: The pass is not supported by the MRQ configuration.",
           "setting=burn_ins: Burn-ins are not needed for the render.",
-          "setting=console_variables: Default CVars are acceptable."
+          "setting=console_variables: Default CVars are acceptable.",
+          "setting=camera: The render has no motion blur and needs no overscan."
         ]
       },
       "schemas": {
@@ -92091,6 +92151,25 @@
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true
             },
+            "shutterTiming": {
+              "type": "string",
+              "enum": [
+                "FrameOpen",
+                "FrameCenter",
+                "FrameClose"
+              ],
+              "description": "When the shutter opens: FrameOpen at the frame (no blur reaching back across a cut), FrameCenter (the default) half a frame before it, FrameClose a whole frame before it."
+            },
+            "overscanPercentage": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "Extra image rendered past the frame edges, as a fraction of the frame (0.1 is 10%); it also turns the setting's overscan override on where the engine has one."
+            },
+            "renderAllCameras": {
+              "type": "boolean",
+              "description": "Render every camera of the sequence instead of the camera cut; refused with NOT_SUPPORTED_ON_ENGINE where the engine has no such option."
+            },
             "setting": {
               "type": "string",
               "enum": [
@@ -92098,7 +92177,8 @@
                 "anti_aliasing",
                 "add_render_pass",
                 "burn_ins",
-                "console_variables"
+                "console_variables",
+                "camera"
               ],
               "description": "Which configure render job variant to run."
             }
@@ -92129,6 +92209,18 @@
               "type": "object",
               "x-unreal-reflection-boundary": true,
               "description": "Additional handler result fields not named by the contract."
+            },
+            "shutterTiming": {
+              "type": "string",
+              "description": "The shutter timing now set."
+            },
+            "overscanPercentage": {
+              "type": "number",
+              "description": "The overscan now set."
+            },
+            "renderAllCameras": {
+              "type": "boolean",
+              "description": "Whether every camera renders (engines that have the option)."
             }
           },
           "required": [
@@ -92139,7 +92231,7 @@
       },
       "examples": [
         {
-          "title": "Configure a Movie Render Queue job: output settings, anti-aliasing, render passes, burn-ins, console variables.",
+          "title": "Configure a Movie Render Queue job: output settings, anti-aliasing, render passes, burn-ins, console variables, and the camera setting (shutter timing, overscan).",
           "input": {
             "action": "configure_render_job",
             "jobId": "render-job-1",
@@ -92186,7 +92278,8 @@
             "anti_aliasing": "configure_anti_aliasing",
             "add_render_pass": "add_render_pass",
             "burn_ins": "configure_burn_ins",
-            "console_variables": "configure_console_variables"
+            "console_variables": "configure_console_variables",
+            "camera": "configure_render_camera"
           },
           "declaredBy": {
             "outputDirectory": [
@@ -92255,14 +92348,23 @@
             ],
             "consoleVariables": [
               "console_variables"
+            ],
+            "shutterTiming": [
+              "camera"
+            ],
+            "overscanPercentage": [
+              "camera"
+            ],
+            "renderAllCameras": [
+              "camera"
             ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "4b50323e7c40a35018a40faf58ca1a58bd389353f7aef19ef68aa8dddf6ba46b",
-        "content": "2f50144a7c7b2cfa5c93e332fd45fc405dfc36b801a53bbd9ad3995a3b678e96"
+        "schema": "f1ff1e580a5b13e36de8ff4f942c304411526ef08e4e6c9047d476374b9f5fbe",
+        "content": "d9d0ae27b1ae1e4f4bfb348ff42c038236fbbc367ad36bc560cc9c0f7dfda4e4"
       }
     },
     {
@@ -92270,6 +92372,7 @@
       "aliases": [
         "sequence.mrq.queue_render",
         "sequence.mrq.start_render",
+        "sequence.mrq.cancel_render",
         "sequence.mrq.remove_render_job"
       ],
       "legacyIds": [
@@ -92293,6 +92396,13 @@
         },
         {
           "tool": "manage_sequence",
+          "action": "cancel_render",
+          "folded": {
+            "control": "cancel"
+          }
+        },
+        {
+          "tool": "manage_sequence",
           "action": "remove_render_job",
           "folded": {
             "control": "remove"
@@ -92311,19 +92421,24 @@
           "mrq",
           "render video",
           "remove render job",
-          "clear render queue"
+          "clear render queue",
+          "cancel render",
+          "stop render"
         ],
-        "summary": "Movie Render Queue: create a render job, queue it, start rendering, or remove jobs from the queue.",
+        "summary": "Movie Render Queue: create a render job, queue it, start rendering, cancel a running render, or remove jobs from the queue.",
         "whenToUse": [
           "control=create: A new render job must be created for a cinematic sequence.",
           "control=queue: A job must be added to the render queue for later execution.",
           "control=start: The MRQ queue must be executed to produce rendered output files.",
+          "control=cancel: A render runs with the wrong settings or range and should stop now.",
+          "control=cancel: save_all or restart_editor answered RENDER_IN_PROGRESS and cannot wait for the render.",
           "control=remove: create_render_job answered MRQ_RESOURCE_LIMIT_EXCEEDED: the queue is full.",
           "control=remove: Finished jobs would render again with the next start."
         ],
         "whenNotToUse": [
           "control=create: A render job already exists for the sequence.",
           "control=start: A render is already in progress (MRQ_ALREADY_RENDERING).",
+          "control=cancel: No render is running (MRQ_NOT_RENDERING).",
           "control=remove: A render is running (MRQ_ALREADY_RENDERING)."
         ]
       },
@@ -92447,6 +92562,7 @@
                 "create",
                 "queue",
                 "start",
+                "cancel",
                 "remove"
               ],
               "description": "Which create render job variant to run; omit for 'create'.",
@@ -92491,6 +92607,10 @@
               "type": "boolean",
               "description": "Whether the cancellation deadline expired."
             },
+            "cancelRequested": {
+              "type": "boolean",
+              "description": "The executor was told to cancel its jobs."
+            },
             "removedCount": {
               "type": "integer",
               "description": "Jobs removed."
@@ -92508,7 +92628,7 @@
       },
       "examples": [
         {
-          "title": "Movie Render Queue: create a render job, queue it, start rendering, or remove jobs from the queue.",
+          "title": "Movie Render Queue: create a render job, queue it, start rendering, cancel a running render, or remove jobs from the queue.",
           "input": {
             "action": "create_render_job",
             "sequencePath": "/Game/Cinematics/SEQ_Master",
@@ -92557,6 +92677,7 @@
             "create": "create_render_job",
             "queue": "queue_render",
             "start": "start_render",
+            "cancel": "cancel_render",
             "remove": "remove_render_job"
           },
           "declaredBy": {
@@ -92565,6 +92686,12 @@
             ],
             "mapPath": [
               "create"
+            ],
+            "renderJobName": [
+              "create",
+              "queue",
+              "start",
+              "remove"
             ],
             "jobName": [
               "create"
@@ -92632,8 +92759,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "1c40f42f61936908d274f586b393a7b785feb12805a4afd91209afb41655c499",
-        "content": "7a05af13354383b6cf47015aa6d1ae8cd759fb75ac2d84ed8a39e8aeaa93ad8e"
+        "schema": "b8ff966a69940d136fd49869ae6914989b88e0e22e2797701f8fdbaff7c1c45e",
+        "content": "7b28c2f5a4fc4236953fc3d3110bf1fa95776c9fc23a57fb668da3fcebacc51a"
       }
     },
     {
@@ -92667,13 +92794,19 @@
         "family": "timeline",
         "topics": [
           "play",
+          "sequencer playhead",
+          "scrub sequence",
+          "set sequence time",
+          "go to frame",
+          "jump to time in sequence",
+          "hold a frame",
           "play sequence",
           "play cinematic",
           "preview sequence",
           "play cutscene",
           "preview cutscene"
         ],
-        "summary": "Play, pause or stop a level sequence in the editor.",
+        "summary": "Play, pause or stop a level sequence in the editor; pause with startTime moves the playhead to that time and holds the frame there, so the level shows that moment.",
         "whenToUse": [
           "control=play: Sequence playback must be started for preview or PIE.",
           "control=pause: Sequence playback must be paused.",
@@ -92754,7 +92887,7 @@
       },
       "examples": [
         {
-          "title": "Play, pause or stop a level sequence in the editor.",
+          "title": "Play, pause or stop a level sequence in the editor; pause with startTime moves the playhead to that time and holds the frame there, so the level shows that moment.",
           "input": {
             "action": "play",
             "path": "/Game/Cinematics/SEQ_Master",
@@ -92812,7 +92945,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "4ddb9578cbfeb625dabccaf9e972252cb8a1f47e9ba5c11f5283b912032e4197",
-        "content": "984f80f741a7f47e01bbd9d50dd66318b7f2ed15eb97153df231f4d1a643ef59"
+        "content": "ab974daeeceb02040e85745926bf1fdfc7b05980ae59a2712c3b2c4c7bc14e21"
       }
     },
     {

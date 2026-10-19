@@ -121,7 +121,8 @@ export const ASSET_RECORDS: readonly CapabilityRecordSource[] = [
     topics: ['save all', 'save everything', 'save dirty packages', 'save project', 'save assets', 'save asset', 'save one asset'],
     summary: 'Save all dirty assets and levels in the editor, or only the ones listed in assetPaths.',
     whenToUse: ['All unsaved changes must be persisted.', 'Only the assets this task changed should be saved (assetPaths), leaving other unsaved work alone.'],
-    whenNotToUse: ['Nothing has changed since the last save.'],
+    whenNotToUse: ['Nothing has changed since the last save.',
+      'A Movie Render Queue render is running: its sequence is in a temporary state until the job ends, so the save is refused with RENDER_IN_PROGRESS.'],
     inputProps: {
       // Saving everything also wrote out unrelated work someone had open, and the
       // contract pointed at a per-asset save that did not exist.

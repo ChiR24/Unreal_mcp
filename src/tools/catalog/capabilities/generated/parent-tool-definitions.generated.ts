@@ -603,6 +603,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               },
               "minItems": 3,
               "maxItems": 3,
+              "description": "Bone location relative to its parent; left out, the bone keeps its own at this frame."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 3,
+              "maxItems": 3,
               "description": "World or relative location as [x, y, z]."
             },
             {
@@ -615,7 +624,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "description": "add_bone, add_null, add_control: location [x, y, z] in cm (a control's offset), relative to the parent unless global."
             }
           ],
-          "description": "World or relative location as [x, y, z]."
+          "description": "Bone location relative to its parent; left out, the bone keeps its own at this frame."
         },
         "lodIndex": {
           "type": "number",
@@ -875,6 +884,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               },
               "minItems": 3,
               "maxItems": 3,
+              "description": "Bone rotation relative to its parent as [pitch, yaw, roll]; left out, the bone keeps its own at this frame."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 3,
+              "maxItems": 3,
               "description": "Box or capsule rotation relative to the bone as [pitch, yaw, roll]."
             },
             {
@@ -896,7 +914,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "description": "add_bone, add_null, add_control: rotation [pitch, yaw, roll] in degrees."
             }
           ],
-          "description": "Box or capsule rotation relative to the bone as [pitch, yaw, roll]."
+          "description": "Bone rotation relative to its parent as [pitch, yaw, roll]; left out, the bone keeps its own at this frame."
         },
         "sampleValue": {
           "description": "Sample position: a number on a 1D blend space, or {x, y} (or [x, y]) on a 2D one."
@@ -921,7 +939,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               },
               "minItems": 3,
               "maxItems": 3,
-              "description": "Bone scale as [x, y, z] (default [1, 1, 1])."
+              "description": "Bone scale as [x, y, z]; left out, the bone keeps its own at this frame."
             },
             {
               "type": "array",
@@ -933,7 +951,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "description": "add_bone, add_null, add_control: scale [x, y, z] (default 1)."
             }
           ],
-          "description": "Bone scale as [x, y, z] (default [1, 1, 1])."
+          "description": "Bone scale as [x, y, z]; left out, the bone keeps its own at this frame."
         },
         "sectionIndex": {
           "type": "number",
@@ -1403,6 +1421,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Left and right bone pairs that were swapped."
         },
+        "boneTracks": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "Bone name."
+          },
+          "description": "A sequence: the bones it has tracks for (set_bone_key keys them)."
+        },
         "boneVertexCounts": {
           "type": "object",
           "additionalProperties": true,
@@ -1781,6 +1807,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "numBodies": {
           "type": "number",
           "description": "Number of physics bodies in the asset."
+        },
+        "numBoneTracks": {
+          "type": "integer",
+          "description": "How many bone tracks the sequence has."
         },
         "numConstraints": {
           "type": "number",
@@ -6179,6 +6209,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "projectPath": {
           "type": "string",
           "description": "Project the editor relaunches with."
+        },
+        "renderRunning": {
+          "type": "boolean",
+          "description": "Under validateOnly, whether a Movie Render Queue render is running (a restart is refused until it ends)."
         },
         "resolvedObject": {
           "type": "string",
@@ -22974,6 +23008,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "create",
             "queue",
             "start",
+            "cancel",
             "remove",
             "play",
             "pause",
@@ -23453,6 +23488,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Output directory for rendered frames."
         },
+        "overscanPercentage": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Extra image rendered past the frame edges, as a fraction of the frame (0.1 is 10%); it also turns the setting's overscan override on where the engine has one."
+        },
         "parameterName": {
           "type": "string",
           "description": "Material parameter name to animate."
@@ -23483,6 +23524,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "playOnOpen": {
           "type": "boolean",
           "description": "Whether the media player plays on open (alias of autoPlay)."
+        },
+        "playRate": {
+          "type": "number",
+          "minimum": 0.01,
+          "maximum": 100,
+          "description": "The speed of an animation section (2 is twice as fast). Without endFrame the section keeps playing the same frames, so it gets shorter or longer by the same factor, as in Sequencer."
         },
         "playbackEnd": {
           "type": "integer",
@@ -23563,6 +23610,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "reduceKeys": {
           "type": "boolean",
           "description": "Whether to reduce keyframes."
+        },
+        "renderAllCameras": {
+          "type": "boolean",
+          "description": "Render every camera of the sequence instead of the camera cut; refused with NOT_SUPPORTED_ON_ENGINE where the engine has no such option."
         },
         "renderJobId": {
           "type": "string",
@@ -23776,6 +23827,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Canonical /Game shot sequence path."
         },
+        "shutterTiming": {
+          "type": "string",
+          "enum": [
+            "FrameOpen",
+            "FrameCenter",
+            "FrameClose"
+          ],
+          "description": "When the shutter opens: FrameOpen at the frame (no blur reaching back across a cut), FrameCenter (the default) half a frame before it, FrameClose a whole frame before it."
+        },
         "solo": {
           "type": "boolean",
           "description": "Whether to solo."
@@ -23896,7 +23956,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "trackName": {
           "type": "string",
-          "description": "Name of the track to modify."
+          "description": "The track, by the name get_properties lists (MovieScene3DTransformTrack_1). A whole name picks that track only; part of a name (Transform) picks the tracks whose names contain it."
         },
         "trackNames": {
           "type": "array",
@@ -24045,6 +24105,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Sequence bindings."
         },
+        "cancelRequested": {
+          "type": "boolean",
+          "description": "The executor was told to cancel its jobs."
+        },
         "class": {
           "type": "string",
           "description": "Sequence asset class name."
@@ -24155,6 +24219,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Output directory for rendered frames."
         },
+        "overscanPercentage": {
+          "type": "number",
+          "description": "The overscan now set."
+        },
         "packageName": {
           "type": "string",
           "description": "Package name of the created asset."
@@ -24166,6 +24234,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "playOnOpen": {
           "type": "boolean",
           "description": "Whether the player starts on open."
+        },
+        "playRate": {
+          "type": "number",
+          "description": "An animation section: its play rate now (1 when it warps time another way)."
         },
         "playbackEnd": {
           "type": "integer",
@@ -24190,6 +24262,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "removedKeys": {
           "type": "integer",
           "description": "Keys actually removed."
+        },
+        "renderAllCameras": {
+          "type": "boolean",
+          "description": "Whether every camera renders (engines that have the option)."
         },
         "renderContinuesAsynchronously": {
           "type": "boolean",
@@ -24243,6 +24319,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               }
             }
           }
+        },
+        "shutterTiming": {
+          "type": "string",
+          "description": "The shutter timing now set."
         },
         "success": {
           "type": "boolean",
@@ -24382,7 +24462,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "trackName": {
           "type": "string",
-          "description": "Name of the track to modify."
+          "description": "The track, by the name get_properties lists (MovieScene3DTransformTrack_1). A whole name picks that track only; part of a name (Transform) picks the tracks whose names contain it."
         },
         "trackPath": {
           "type": "string",
@@ -24430,6 +24510,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "sectionCount": {
                 "type": "integer",
                 "description": "Number of sections on the track."
+              },
+              "animations": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "description": "Animation asset path."
+                },
+                "description": "An animation track: the clips its sections play, once each, in section order."
               }
             },
             "required": [

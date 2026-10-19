@@ -11,7 +11,8 @@ export const MANAGE_SEQUENCE_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'play', selector: 'control',
-    summary: 'Play, pause or stop a level sequence in the editor.',
+    summary: 'Play, pause or stop a level sequence in the editor; pause with startTime moves the playhead to that time and holds the frame there, so the level shows that moment.',
+    topics: ['sequencer playhead', 'scrub sequence', 'set sequence time', 'go to frame', 'jump to time in sequence', 'hold a frame'],
     members: { play: 'play', pause: 'pause', stop: 'stop' },
   },
   {
@@ -22,8 +23,8 @@ export const MANAGE_SEQUENCE_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'edit_sequence_tracks', selector: 'edit',
-    summary: 'Edit sequence tracks: add a track, section or keyframe; move, trim or ease a section; lock, mute or solo a track.',
-    topics: ['sequence track', 'add track', 'add section', 'keyframe', 'mute track', 'solo track', 'lock track', 'keyframe actor location', 'crossfade clips', 'ease section', 'trim section'],
+    summary: 'Edit sequence tracks: add a track, section or keyframe; move, trim or ease a section, or change the play rate of an animation clip; lock, mute or solo a track.',
+    topics: ['sequence track', 'add track', 'add section', 'keyframe', 'mute track', 'solo track', 'lock track', 'keyframe actor location', 'crossfade clips', 'ease section', 'trim section', 'clip play rate'],
     members: { add_track: 'add_track', add_section: 'add_section', add_keyframe: 'add_keyframe', set_locked: 'set_track_locked', set_muted: 'set_track_muted', set_solo: 'set_track_solo', set_section: 'set_section' },
   },
   {
@@ -67,15 +68,15 @@ export const MANAGE_SEQUENCE_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'create_render_job', selector: 'control',
-    summary: 'Movie Render Queue: create a render job, queue it, start rendering, or remove jobs from the queue.',
-    topics: ['movie render queue', 'render job', 'queue render', 'start render', 'mrq', 'render video', 'remove render job', 'clear render queue'],
-    members: { create: 'create_render_job', queue: 'queue_render', start: 'start_render', remove: 'remove_render_job' },
+    summary: 'Movie Render Queue: create a render job, queue it, start rendering, cancel a running render, or remove jobs from the queue.',
+    topics: ['movie render queue', 'render job', 'queue render', 'start render', 'mrq', 'render video', 'remove render job', 'clear render queue', 'cancel render', 'stop render'],
+    members: { create: 'create_render_job', queue: 'queue_render', start: 'start_render', cancel: 'cancel_render', remove: 'remove_render_job' },
   },
   {
     primary: 'configure_render_job', selector: 'setting',
-    summary: 'Configure a Movie Render Queue job: output settings, anti-aliasing, render passes, burn-ins, console variables.',
-    topics: ['render output settings', 'anti aliasing', 'render pass', 'burn in', 'console variables', 'movie output resolution'],
-    members: { output: 'configure_output_settings', anti_aliasing: 'configure_anti_aliasing', add_render_pass: 'add_render_pass', burn_ins: 'configure_burn_ins', console_variables: 'configure_console_variables' },
+    summary: 'Configure a Movie Render Queue job: output settings, anti-aliasing, render passes, burn-ins, console variables, and the camera setting (shutter timing, overscan).',
+    topics: ['render output settings', 'anti aliasing', 'render pass', 'burn in', 'console variables', 'movie output resolution', 'shutter timing', 'motion blur at camera cuts', 'render overscan'],
+    members: { output: 'configure_output_settings', anti_aliasing: 'configure_anti_aliasing', add_render_pass: 'add_render_pass', burn_ins: 'configure_burn_ins', console_variables: 'configure_console_variables', camera: 'configure_render_camera' },
   },
   {
     primary: 'create_media_asset', selector: 'kind',

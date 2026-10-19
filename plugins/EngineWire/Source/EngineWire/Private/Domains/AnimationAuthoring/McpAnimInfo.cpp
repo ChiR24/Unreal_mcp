@@ -42,6 +42,33 @@ void AddCurveNames(const UAnimSequenceBase* Asset, const TSharedPtr<FJsonObject>
     Response->SetNumberField(TEXT("numCurves"), Curves.Num());
 }
 
+// The bones the sequence keys: a pose fix began with "which bones does this clip animate?" and nothing answered it.
+void AddBoneTrackNames(const UAnimSequence* Sequence, const TSharedPtr<FJsonObject>& Response)
+{
+    TArray<FString> Names;
+#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 2)
+    TArray<FName> TrackNames;
+    if (Sequence->GetDataModel())
+    {
+        Sequence->GetDataModel()->GetBoneTrackNames(TrackNames);
+    }
+    for (const FName& Name : TrackNames)
+    {
+        Names.Add(Name.ToString());
+    }
+#else
+    if (Sequence->GetDataModel())
+    {
+        for (const FBoneAnimationTrack& Track : Sequence->GetDataModel()->GetBoneAnimationTracks())
+        {
+            Names.Add(Track.Name.ToString());
+        }
+    }
+#endif
+    Response->SetArrayField(TEXT("boneTracks"), McpHandlerUtils::ToJsonStringArray(Names));
+    Response->SetNumberField(TEXT("numBoneTracks"), Names.Num());
+}
+
 // Fields shared by every UAnimSequenceBase (sequences, montages, composites).
 void AddSequenceBaseInfo(const UAnimSequenceBase* Asset, const TSharedPtr<FJsonObject>& Response)
 {
@@ -142,6 +169,7 @@ TSharedPtr<FJsonObject> HandleAnimationInfoActions(const FString& SubAction, con
         Response->SetBoolField(TEXT("additive"), bAdditive);
         Response->SetBoolField(TEXT("isAdditive"), bAdditive);
         Response->SetBoolField(TEXT("hasRootMotion"), Sequence->bEnableRootMotion);
+        AddBoneTrackNames(Sequence, Response);
     }
     else if (const UAnimMontage* Montage = Cast<UAnimMontage>(Asset))
     {

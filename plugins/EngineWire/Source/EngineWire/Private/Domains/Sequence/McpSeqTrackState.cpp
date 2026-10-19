@@ -1,7 +1,28 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/Sequence/McpSeqEditorSupport.h"
+#include "Sections/MovieSceneSkeletalAnimationSection.h"
 
 namespace {
+// An animation section's speed when it is a fixed one: from 5.5 a section can also warp time (a loop, a clamp, a curve).
+double ClipPlayRate(const UMovieSceneSkeletalAnimationSection *Clip, bool &bOutFixed) {
+#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5)
+  bOutFixed = Clip->Params.PlayRate.GetType() == EMovieSceneTimeWarpType::FixedPlayRate;
+  return bOutFixed ? Clip->Params.PlayRate.AsFixedPlayRate() : 1.0;
+#else
+  bOutFixed = true;
+  return Clip->Params.PlayRate;
+#endif
+}
+
+void SetClipPlayRate(UMovieSceneSkeletalAnimationSection *Clip, double Rate) {
+#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5)
+  Clip->Params.PlayRate = FMovieSceneTimeWarpVariant(Rate);
+#else
+  Clip->Params.PlayRate = static_cast<float>(Rate);
+#endif
+  Clip->PreviousPlayRate = static_cast<float>(Rate);
+}
+
 // The payload's sequence and its trackName track; replies and returns null on a miss.
 UMovieSceneTrack *LoadTrackOrReply(UEngineWireSubsystem *Self, const FString &RequestId,
                                    TSharedPtr<FMcpBridgeWebSocket> Socket,
@@ -120,10 +141,29 @@ bool UEngineWireSubsystem::HandleSequenceSetSection(
     return FFrameRate::TransformTime(FFrameTime::FromDecimal(Frames), MovieScene->GetDisplayRate(),
                                      MovieScene->GetTickResolution()).RoundToFrame();
   };
-  double Start = 0.0, End = 0.0, EaseIn = 0.0, EaseOut = 0.0;
+  double Start = 0.0, End = 0.0, EaseIn = 0.0, EaseOut = 0.0, Rate = 0.0;
   const bool bStart = Payload->TryGetNumberField(TEXT("startFrame"), Start);
   const bool bEnd = Payload->TryGetNumberField(TEXT("endFrame"), End);
+  const bool bRate = Payload->TryGetNumberField(TEXT("playRate"), Rate);
+  UMovieSceneSkeletalAnimationSection *Clip = Cast<UMovieSceneSkeletalAnimationSection>(Section);
+  if (bRate && (!Clip || !(Rate > 0.0 && Rate <= 100.0))) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           Clip ? TEXT("playRate is above 0 and at most 100 (2 plays the clip twice as fast)")
+                                : TEXT("playRate is for an animation section; this one plays no animation"),
+                           nullptr, TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
   TRange<FFrameNumber> Range = Section->GetRange();
+  bool bFixedRate = false;
+  const double OldRate = Clip ? ClipPlayRate(Clip, bFixedRate) : 1.0;
+  // The clip keeps the frames it plays, as the Sequencer's play rate does: twice the rate, half the section. An
+  // endFrame given wins, and a time warp that is not a fixed rate leaves the length alone. Setting the rate as a
+  // property instead left the section one tick long.
+  if (bRate && !bEnd && bFixedRate && Range.HasLowerBound() && Range.HasUpperBound()) {
+    const FFrameNumber Low = Range.GetLowerBoundValue();
+    const double Length = static_cast<double>((Range.GetUpperBoundValue() - Low).Value);
+    Range.SetUpperBound(TRangeBound<FFrameNumber>::Exclusive(Low + FFrameNumber(FMath::Max(1, static_cast<int32>(FMath::RoundToDouble(Length * OldRate / Rate))))));
+  }
   if (bStart)
     Range.SetLowerBound(TRangeBound<FFrameNumber>::Inclusive(Ticks(Start)));
   if (bEnd)
@@ -134,8 +174,10 @@ bool UEngineWireSubsystem::HandleSequenceSetSection(
     return true;
   }
   Section->Modify();
-  if (bStart || bEnd)
+  if (bStart || bEnd || bRate)
     Section->SetRange(Range);
+  if (bRate)
+    SetClipPlayRate(Clip, Rate);
   if (Payload->TryGetNumberField(TEXT("easeInFrames"), EaseIn)) {
     Section->Easing.bManualEaseIn = EaseIn > 0.0;
     Section->Easing.ManualEaseInDuration = Ticks(FMath::Max(EaseIn, 0.0)).Value;
@@ -149,6 +191,10 @@ bool UEngineWireSubsystem::HandleSequenceSetSection(
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("trackName"), Track->GetName());
   Resp->SetNumberField(TEXT("sectionIndex"), static_cast<int32>(Index));
+  if (Clip) {
+    bool bFixed = false;
+    Resp->SetNumberField(TEXT("playRate"), ClipPlayRate(Clip, bFixed));
+  }
   SendAutomationResponse(Socket, RequestId, true, TEXT("Section updated"), Resp);
   return true;
 }

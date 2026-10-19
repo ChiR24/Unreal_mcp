@@ -28,6 +28,7 @@
 #include "Domains/ControlEditor/McpEditorSupport.h"
 
 #include "Containers/Ticker.h"
+#include "Safety/McpSafeOperationsRenderGuard.h"
 #include "UnrealEdMisc.h"
 
 bool UEngineWireSubsystem::HandleControlEditorRestart(
@@ -61,6 +62,11 @@ bool UEngineWireSubsystem::HandleControlEditorRestart(
   const bool bDiscardUnsaved =
       GetJsonBoolField(Payload, TEXT("discardUnsaved"), false);
   const bool bBlockedByUnsaved = DirtyNames.Num() > 0 && !bDiscardUnsaved;
+  // A restart answered "requested" while a render went on writing frames, and cut it off.
+  if (McpMovieRenderRunning() && !GetJsonBoolField(Payload, TEXT("validateOnly"), false)) {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("RENDER_IN_PROGRESS"), McpMovieRenderRunningMessage(), nullptr);
+    return true;
+  }
 
   TArray<TSharedPtr<FJsonValue>> NameValues;
   for (const FString &Name : DirtyNames) {
@@ -79,7 +85,8 @@ bool UEngineWireSubsystem::HandleControlEditorRestart(
     TSharedPtr<FJsonObject> Preview = McpHandlerUtils::CreateResultObject();
     Preview->SetBoolField(TEXT("restarting"), false);
     Preview->SetBoolField(TEXT("validateOnly"), true);
-    Preview->SetBoolField(TEXT("wouldRestart"), !bBlockedByUnsaved);
+    Preview->SetBoolField(TEXT("wouldRestart"), !bBlockedByUnsaved && !McpMovieRenderRunning());
+    Preview->SetBoolField(TEXT("renderRunning"), McpMovieRenderRunning());
     Preview->SetArrayField(TEXT("unsavedPackages"), NameValues);
     Preview->SetNumberField(TEXT("unsavedCount"), DirtyNames.Num());
     Preview->SetNumberField(TEXT("delaySeconds"), DelaySeconds);

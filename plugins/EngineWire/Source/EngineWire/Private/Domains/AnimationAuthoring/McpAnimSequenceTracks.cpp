@@ -3,6 +3,34 @@
 
 namespace McpAnimationAuthoring {
 
+namespace {
+// What a key leaves out stays the bone's own at that frame: its track's key, or the skeleton's reference pose for a
+// bone with no track yet. A location left out read as (0,0,0) and put the bone on its parent, in an additive clip too.
+FTransform BoneKeyBase(const UAnimSequence* Sequence, FName Bone, int32 Frame)
+{
+#if ENGINE_MINOR_VERSION >= 2
+    const IAnimationDataModel* Model = Sequence->GetDataModel();
+    if (Model && Model->IsValidBoneTrackName(Bone))
+    {
+        return Model->GetBoneTrackTransform(Bone, FFrameNumber(Frame));
+    }
+#else
+    // 5.0 and 5.1 have no transform read; a track holds one key per frame, or a single key for a constant one.
+    const FBoneAnimationTrack* Track = Sequence->GetDataModel() ? Sequence->GetDataModel()->FindBoneTrackByName(Bone) : nullptr;
+    const FRawAnimSequenceTrack* Raw = Track ? &Track->InternalTrackData : nullptr;
+    if (Raw && Raw->PosKeys.Num() > 0 && Raw->RotKeys.Num() > 0)
+    {
+        const auto At = [Frame](int32 Num) { return FMath::Clamp(Frame, 0, Num - 1); };
+        const FVector Scale = Raw->ScaleKeys.Num() > 0 ? FVector(Raw->ScaleKeys[At(Raw->ScaleKeys.Num())]) : FVector::OneVector;
+        return FTransform(FQuat(Raw->RotKeys[At(Raw->RotKeys.Num())]), FVector(Raw->PosKeys[At(Raw->PosKeys.Num())]), Scale);
+    }
+#endif
+    const USkeleton* Skeleton = Sequence->GetSkeleton();
+    const int32 Index = Skeleton ? Skeleton->GetReferenceSkeleton().FindBoneIndex(Bone) : INDEX_NONE;
+    return Index != INDEX_NONE ? Skeleton->GetReferenceSkeleton().GetRefBonePose()[Index] : FTransform::Identity;
+}
+} // namespace
+
 TSharedPtr<FJsonObject> HandleSequenceTrackActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response)
 {
     if (SubAction == TEXT("add_bone_track"))
@@ -154,14 +182,6 @@ TSharedPtr<FJsonObject> HandleSequenceTrackActions(const FString& SubAction, con
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation sequence: %s"), *AssetPath), TEXT("SEQUENCE_NOT_FOUND"));
         }
 
-        // Build transform key
-        FVector Location = ExtractVectorField(Params, TEXT("location"), FVector::ZeroVector);
-        // The contract types rotation as [pitch, yaw, roll] and the gateway
-        // hands objects over as that array; GetObjectField read null for it, so
-        // every key was written with identity rotation and reported success.
-        FQuat Rotation = ExtractRotatorField(Params, TEXT("rotation"), FRotator::ZeroRotator).Quaternion();
-        FVector Scale = ExtractVectorField(Params, TEXT("scale"), FVector::OneVector);
-
         int32 TotalFrames = Sequence->GetDataModel()->GetNumberOfFrames();
         if (Frame < 0 || Frame >= TotalFrames)
         {
@@ -170,6 +190,16 @@ TSharedPtr<FJsonObject> HandleSequenceTrackActions(const FString& SubAction, con
                 TEXT("FRAME_OUT_OF_RANGE")
             );
         }
+
+        // Build transform key
+        const FTransform Base = BoneKeyBase(Sequence, FName(*BoneName), Frame);
+        FVector Location = ExtractVectorField(Params, TEXT("location"), Base.GetLocation());
+        // The contract types rotation as [pitch, yaw, roll] and the gateway
+        // hands objects over as that array; GetObjectField read null for it, so
+        // every key was written with identity rotation and reported success.
+        FQuat Rotation = Params->HasField(TEXT("rotation"))
+            ? ExtractRotatorField(Params, TEXT("rotation"), FRotator::ZeroRotator).Quaternion() : Base.GetRotation();
+        FVector Scale = ExtractVectorField(Params, TEXT("scale"), Base.GetScale3D());
 
 #if ENGINE_MINOR_VERSION >= 2
         // UE 5.2+ API

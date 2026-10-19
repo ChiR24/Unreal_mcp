@@ -46,8 +46,9 @@ export const TIMELINE_STATE_RANGE_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'sequence.set_section', action: 'set_section', family: F, domain: D,
-    summary: 'Move, trim or ease a section already on a track: its start and end frames, and the frames it eases in and out over.',
-    whenToUse: ['Two animation clips should crossfade: overlap their sections, ease the later one in and the earlier one out.', 'A section must start or end on another frame.'],
+    summary: 'Move, trim, ease or speed up a section already on a track: its start and end frames, the frames it eases in and out over, and the play rate of an animation section.',
+    topics: ['animation play rate', 'speed up a clip', 'slow motion clip', 'ease in and out'],
+    whenToUse: ['Two animation clips should crossfade: overlap their sections, ease the later one in and the earlier one out.', 'A section must start or end on another frame.', 'An animation clip should play faster or slower (playRate).'],
     whenNotToUse: ['The section does not exist yet (use add_section, or add_cinematic_track for a clip).'],
     inputProps: {
       path: P.path,
@@ -57,9 +58,10 @@ export const TIMELINE_STATE_RANGE_RECORDS: readonly CapabilityRecordSource[] = [
       endFrame: { type: 'number', description: 'New end of the section in display-rate frames, after its start.' },
       easeInFrames: { type: 'number', minimum: 0, description: 'Frames the section fades in over; 0 removes its ease in.' },
       easeOutFrames: { type: 'number', minimum: 0, description: 'Frames the section fades out over; 0 removes its ease out.' },
+      playRate: { type: 'number', minimum: 0.01, maximum: 100, description: 'The speed of an animation section (2 is twice as fast). Without endFrame the section keeps playing the same frames, so it gets shorter or longer by the same factor, as in Sequencer.' },
     },
     required: ['path', 'trackName'],
-    outputProps: { trackName: { type: 'string', description: 'The track the section is on.' }, sectionIndex: { type: 'integer', description: 'The section that changed.' } },
+    outputProps: { trackName: { type: 'string', description: 'The track the section is on.' }, sectionIndex: { type: 'integer', description: 'The section that changed.' }, playRate: { type: 'number', description: 'An animation section: its play rate now (1 when it warps time another way).' } },
     effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'instant', resources: 'low', plugins: SEQ_PLUGINS,
     exampleInput: { action: 'set_section', path: '/Game/Cinematics/SEQ_Master', trackName: 'MovieSceneSkeletalAnimationTrack_3', endFrame: 130, easeOutFrames: 10 },
   }),

@@ -30,6 +30,7 @@ export const TIMELINE_PLAYBACK_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'sequence.pause', action: 'pause', family: F, domain: D,
+    topics: ['sequencer playhead', 'scrub sequence', 'set sequence time', 'go to frame', 'hold a frame'],
     summary: 'Pause playback of the currently open Level Sequence, or hold it at one moment to inspect it.',
     whenToUse: ['Sequence playback must be paused.', 'A pose, camera or effect must be checked at one moment of the sequence: pause with startTime, then take a screenshot.'],
     whenNotToUse: ['The sequence is not open in Sequencer (play opens it).'],

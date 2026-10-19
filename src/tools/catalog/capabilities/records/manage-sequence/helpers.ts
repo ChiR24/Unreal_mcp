@@ -18,7 +18,7 @@ export const P = {
   actorNames: { type: 'array', items: str('Actor name.'), description: 'Actor names.' },
   className: str('Unreal class path for the spawnable.'),
   trackType: str('Track type: "Audio" (music or sound, then add_section with soundPath), "Transform", or a MovieScene track class name such as MovieSceneEventTrack.'),
-  trackName: str('Name of the track to modify.'),
+  trackName: str('The track, by the name get_properties lists (MovieScene3DTransformTrack_1). A whole name picks that track only; part of a name (Transform) picks the tracks whose names contain it.'),
   property: str('Property name to keyframe (Transform, Location, Rotation, Scale).'),
   frame: int('Frame number for the keyframe.'),
   bindingId: str('Sequencer binding GUID to key against.'),

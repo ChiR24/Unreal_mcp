@@ -1440,6 +1440,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_sequence::add_subsequence": "interactive|low",
   "manage_sequence::add_track": "interactive|low",
   "manage_sequence::add_transform_track": "interactive|low",
+  "manage_sequence::cancel_render": "long-running|high",
   "manage_sequence::configure_anti_aliasing": "instant|low",
   "manage_sequence::configure_burn_ins": "instant|low",
   "manage_sequence::configure_camera_rig_crane": "interactive|low",
@@ -1451,6 +1452,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_sequence::configure_killcam_duration": "instant|low",
   "manage_sequence::configure_output_settings": "instant|low",
   "manage_sequence::configure_recorded_tracks": "long-running|medium",
+  "manage_sequence::configure_render_camera": "instant|low",
   "manage_sequence::configure_render_job": "instant|low",
   "manage_sequence::configure_shot_settings": "interactive|low",
   "manage_sequence::configure_take_recorder": "long-running|medium",
@@ -1600,4 +1602,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1587;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1589;

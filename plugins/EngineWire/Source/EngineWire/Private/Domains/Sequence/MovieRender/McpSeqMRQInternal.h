@@ -73,6 +73,14 @@ bool HandleRemoveRenderJob(UEngineWireSubsystem *Subsystem,
                            const FString &RequestId,
                            const TSharedPtr<FJsonObject> &Payload,
                            TSharedPtr<FMcpBridgeWebSocket> Socket);
+bool HandleConfigureRenderCamera(UEngineWireSubsystem *Subsystem,
+                                 const FString &RequestId,
+                                 const TSharedPtr<FJsonObject> &Payload,
+                                 TSharedPtr<FMcpBridgeWebSocket> Socket);
+bool HandleCancelRender(UEngineWireSubsystem *Subsystem,
+                        const FString &RequestId,
+                        const TSharedPtr<FJsonObject> &Payload,
+                        TSharedPtr<FMcpBridgeWebSocket> Socket);
 bool HandleConfigureOutputSettings(UEngineWireSubsystem *Subsystem,
                                    const FString &RequestId,
                                    const TSharedPtr<FJsonObject> &Payload,
