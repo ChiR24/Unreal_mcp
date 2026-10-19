@@ -156,10 +156,19 @@ bool UEngineWireSubsystem::HandleSequenceSetSection(
   TRange<FFrameNumber> Range = Section->GetRange();
   bool bFixedRate = false;
   const double OldRate = Clip ? ClipPlayRate(Clip, bFixedRate) : 1.0;
+  // A loop, clamp or curve time warp is more than a rate: a fixed playRate written over it changed the frames played.
+  if (bRate && !bFixedRate) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("This clip's play rate is a time warp (a loop, clamp or curve), not one rate; edit it in "
+                                "Sequencer, or remove the warp before setting playRate."),
+                           nullptr, TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
   // The clip keeps the frames it plays, as the Sequencer's play rate does: twice the rate, half the section. An
   // endFrame given wins, and a time warp that is not a fixed rate leaves the length alone. Setting the rate as a
   // property instead left the section one tick long.
-  if (bRate && !bEnd && bFixedRate && Range.HasLowerBound() && Range.HasUpperBound()) {
+  // A frozen clip (rate 0) plays no frames to keep, so its length stays: scaled by 0 it became one tick.
+  if (bRate && !bEnd && bFixedRate && OldRate > 0.0 && Range.HasLowerBound() && Range.HasUpperBound()) {
     const FFrameNumber Low = Range.GetLowerBoundValue();
     const double Length = static_cast<double>((Range.GetUpperBoundValue() - Low).Value);
     Range.SetUpperBound(TRangeBound<FFrameNumber>::Exclusive(Low + FFrameNumber(FMath::Max(1, static_cast<int32>(FMath::RoundToDouble(Length * OldRate / Rate))))));

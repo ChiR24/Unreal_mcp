@@ -91,12 +91,13 @@ bool UEngineWireSubsystem::HandleControlEditorRestart(
     Preview->SetNumberField(TEXT("unsavedCount"), DirtyNames.Num());
     Preview->SetNumberField(TEXT("delaySeconds"), DelaySeconds);
     Preview->SetStringField(TEXT("projectPath"), FPaths::GetProjectFilePath());
-    SendAutomationResponse(
-        Socket, RequestId, true,
-        bBlockedByUnsaved
+    // A running render refuses the restart as well, and the message said it would proceed beside wouldRestart false.
+    const TCHAR *Verdict = McpMovieRenderRunning()
+        ? (bRelaunch ? TEXT("Restart would be refused: a Movie Render Queue render is running.") : TEXT("Closing the editor would be refused: a Movie Render Queue render is running."))
+        : bBlockedByUnsaved
             ? (bRelaunch ? TEXT("Restart would be refused: unsaved packages would be lost.") : TEXT("Closing the editor would be refused: unsaved packages would be lost."))
-            : (bRelaunch ? TEXT("Restart would proceed.") : TEXT("Closing the editor would proceed.")),
-        Preview, FString());
+            : (bRelaunch ? TEXT("Restart would proceed.") : TEXT("Closing the editor would proceed."));
+    SendAutomationResponse(Socket, RequestId, true, Verdict, Preview, FString());
     return true;
   }
 

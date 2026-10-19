@@ -29,6 +29,7 @@ struct FMcpKeptResult
 	FString Field;
 	TArray<TSharedPtr<FJsonValue>> Items;
 	TArray<int64> Sizes;
+	TSet<int32> Issued; // the offsets this result's pages handed out (gateway-result-pages.ts issued)
 	double Expires = 0.0;
 };
 
@@ -89,6 +90,7 @@ void McpSlicePage(FMcpKeptResult& Entry, const FString& Id, int32 Offset, int64 
 	{
 		// The same call with the cursor reads the next page; params are checked against the first call's.
 		const FString Cursor = Id + TEXT(":") + FString::FromInt(End);
+		Entry.Issued.Add(End);
 		TSharedPtr<FJsonObject> Options = MakeShared<FJsonObject>();
 		Options->SetStringField(TEXT("pageCursor"), Cursor);
 		TSharedPtr<FJsonObject> NextCall = MakeShared<FJsonObject>();
@@ -191,7 +193,7 @@ FString McpNextResultPage(const FString& Cursor, const FMcpPageOwner& Owner, int
 	}
 	// Only an offset a page of this result issued: a whole number inside it, written as the cursor wrote it.
 	const int32 Offset = FCString::Atoi(*OffsetText);
-	if (!Entry || FString::FromInt(Offset) != OffsetText || Offset <= 0 || Offset >= Entry->Items.Num())
+	if (!Entry || FString::FromInt(Offset) != OffsetText || Offset <= 0 || Offset >= Entry->Items.Num() || !Entry->Issued.Contains(Offset))
 	{
 		return TEXT("PAGE_CURSOR_EXPIRED");
 	}

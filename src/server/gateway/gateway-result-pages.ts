@@ -38,6 +38,8 @@ interface KeptResult extends PageOwner {
   rest: Record<string, unknown>;
   readonly field: string;
   readonly items: readonly unknown[];
+  /** The offsets this result's pages handed out: a cursor rewritten to another offset read a page that overlapped. */
+  readonly issued: Set<number>;
   expires: number;
 }
 
@@ -47,6 +49,11 @@ const sizeOf = (value: unknown): number => JSON.stringify(value)?.length ?? 0;
 
 function roomFor(rest: Record<string, unknown>, budget: number): number {
   return budget - sizeOf(rest) - PAGE_OVERHEAD_CHARS;
+}
+
+function issue(entry: KeptResult, id: string, offset: number): string {
+  entry.issued.add(offset);
+  return `${id}:${offset}`;
 }
 
 function slice(entry: KeptResult, id: string, offset: number, budget: number, now: number): ResultPage {
@@ -63,7 +70,7 @@ function slice(entry: KeptResult, id: string, offset: number, budget: number, no
     offset,
     returned: end - offset,
     total: entry.items.length,
-    ...(end < entry.items.length ? { cursor: `${id}:${end}` } : {})
+    ...(end < entry.items.length ? { cursor: issue(entry, id, end) } : {})
   };
   entry.expires = now + PAGE_TTL_MS;
   return { result: { ...entry.rest, [entry.field]: entry.items.slice(offset, end) }, page };
@@ -99,7 +106,7 @@ export function firstPage(result: Record<string, unknown>, budget: number, owner
     kept.delete(oldest);
   }
   const id = randomUUID();
-  const entry: KeptResult = { ...owner, rest, field, items, expires: now + PAGE_TTL_MS };
+  const entry: KeptResult = { ...owner, rest, field, items, issued: new Set<number>(), expires: now + PAGE_TTL_MS };
   kept.set(id, entry);
   const first = slice(entry, id, 0, budget, now);
   // The image goes out once, with the first page: later pages have the flat budget, and an image kept in rest left
@@ -119,7 +126,7 @@ export function nextPage(cursor: string, owner: PageOwner, budget: number, now =
   const entry = colon < 0 ? undefined : kept.get(id);
   if (entry !== undefined && entry.expires <= now) kept.delete(id);
   // Only an offset a page of this result issued: a whole number inside it, written as the cursor wrote it.
-  const issued = Number.isInteger(offset) && String(offset) === text && offset > 0;
+  const issued = Number.isInteger(offset) && String(offset) === text && offset > 0 && entry?.issued.has(offset) === true;
   if (entry === undefined || entry.expires <= now || !issued || offset >= entry.items.length) return 'PAGE_CURSOR_EXPIRED';
   if (entry.principal !== owner.principal || entry.capabilityId !== owner.capabilityId || entry.fingerprint !== owner.fingerprint) {
     return 'PAGE_CURSOR_MISMATCH';

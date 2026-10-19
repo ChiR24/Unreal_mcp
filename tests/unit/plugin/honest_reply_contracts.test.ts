@@ -3660,3 +3660,27 @@ describe('edits that skipped undo, and replies that said too little', () => {
     expect(code('NiagaraGraph', 'McpNiagaraGraphHandlers.cpp')).toContain('.Equals(TEXT("Update"), ESearchCase::IgnoreCase)');
   });
 });
+
+describe('review findings on renders, bone keys, play rate and paging', () => {
+  const priv = (...segments: readonly string[]): string =>
+    readFileSync(join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', ...segments), 'utf8');
+
+  // A track add_bone_track just made holds no key, and the read answered identity: an omitted rotation snapped the bone.
+  it('set_bone_key on 5.2+ uses a track value only where a key is', () => {
+    expect(code('AnimationAuthoring', 'McpAnimSequenceTracks.cpp')).toContain('if (!Keyed.Equals(FTransform::Identity, 0.0))');
+  });
+
+  // A frozen clip became one tick long, and a fixed rate replaced a loop or curve warp.
+  it('set_section playRate keeps a frozen clip and refuses a time warp', () => {
+    const state = code('Sequence', 'McpSeqTrackState.cpp');
+    expect(state).toContain('bFixedRate && OldRate > 0.0');
+    expect(state).toContain('if (bRate && !bFixedRate) {');
+  });
+
+  it('restart validateOnly names a running render, a blank cursor is refused natively, the cut note is inside the bound', () => {
+    expect(code('ControlEditor', 'McpEditorRestart.cpp')).toContain('a Movie Render Queue render is running.');
+    expect(priv('MCP', 'Execute', 'McpNativeGatewayExecuteRequest.cpp')).toContain('Cursor->AsString().TrimStartAndEnd().IsEmpty()');
+    expect(priv('MCP', 'Execute', 'McpNativeResultPages.cpp')).toContain('!Entry->Issued.Contains(Offset)');
+    expect(code('Log', 'McpLogHistory.cpp')).toContain('if (Unlisted > 0 && MaxDistinct > 0)');
+  });
+});

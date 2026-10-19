@@ -12,7 +12,14 @@ FTransform BoneKeyBase(const UAnimSequence* Sequence, FName Bone, int32 Frame)
     const IAnimationDataModel* Model = Sequence->GetDataModel();
     if (Model && Model->IsValidBoneTrackName(Bone))
     {
-        return Model->GetBoneTrackTransform(Bone, FFrameNumber(Frame));
+        // The read answers identity where the track holds no key, and a track add_bone_track just made holds none: the
+        // omitted rotation and scale became identity instead of the bone's own pose. Only a key that is there counts.
+        // ponytail: a real key of exactly identity reads as the reference pose; read the track's keys if that matters.
+        const FTransform Keyed = Model->GetBoneTrackTransform(Bone, FFrameNumber(Frame));
+        if (!Keyed.Equals(FTransform::Identity, 0.0))
+        {
+            return Keyed;
+        }
     }
 #else
     // 5.0 and 5.1 have no transform read; a track holds one key per frame, or a single key for a constant one.

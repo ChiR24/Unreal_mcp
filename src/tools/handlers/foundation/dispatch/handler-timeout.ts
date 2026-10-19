@@ -43,6 +43,16 @@ export function resolveActionTimeoutMs(toolName: string, action?: string): numbe
     : budget;
 }
 
+// start_render's own limit (renderTimeoutMs, 300000 by default) plus the cancel wait and reply grace, as the native door
+// budgets it (McpNativeTransportTimeoutPolicy.cpp): a render allowed an hour was cancelled by the 20-minute tier, or by a
+// caller's 10-minute options.timeoutMs, while it was running fine. 0 for every other action.
+export function renderTransportBudgetMs(toolName: string, action: string | undefined, args: Record<string, unknown>): number {
+  if (toolName !== 'manage_sequence' || action !== 'start_render') return 0;
+  const requested = args.renderTimeoutMs;
+  const renderMs = typeof requested === 'number' && Number.isFinite(requested) && requested > 0 ? requested : 300_000;
+  return renderMs + MRQ_START_RENDER_TRANSPORT_MS - 300_000;
+}
+
 function tierTimeoutMs(toolName: string, action?: string): number {
   if (action === undefined || action.length === 0) return UNKNOWN_CAPABILITY_TIMEOUT_MS;
 

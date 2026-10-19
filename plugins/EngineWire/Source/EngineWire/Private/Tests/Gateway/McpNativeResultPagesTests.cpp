@@ -96,6 +96,10 @@ bool FMcpNativeResultPagesReadThroughTest::RunTest(const FString& Parameters)
 		TestEqual(TEXT("an offset no page issued is refused"),
 			McpNextResultPage(Id + Forged, Owner, PagesTestBudget, Wrong), FString(TEXT("PAGE_CURSOR_EXPIRED")));
 	}
+	// An offset inside the result that no page handed out read a page overlapping the first.
+	const FString Inside = Id + TEXT(":") + FString::FromInt(static_cast<int32>(FirstReturned) - 1);
+	TestEqual(TEXT("an inside offset no page issued is refused"),
+		McpNextResultPage(Inside, Owner, PagesTestBudget, Wrong), FString(TEXT("PAGE_CURSOR_EXPIRED")));
 	return true;
 }
 

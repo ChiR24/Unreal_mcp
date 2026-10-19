@@ -3,7 +3,7 @@ import { CommandValidator } from '../../../../utils/commands/command-validator.j
 import { validateArgsSecurity } from '../arguments/handler-argument-validation.js';
 import { getMcpRequestContext } from '../../../../automation/request-context.js';
 import type { ExpectedRevisions } from '../../../catalog/capabilities/semantic/execution-options.js';
-import { resolveActionTimeoutMs } from './handler-timeout.js';
+import { renderTransportBudgetMs, resolveActionTimeoutMs } from './handler-timeout.js';
 
 /**
  * Gateway controls for one execute: never handler params. They ride the
@@ -70,8 +70,12 @@ export async function executeAutomationRequest(
   }
 
   // The client's own deadline (options.timeoutMs) wins; otherwise the budget
-  // comes from the cost class the capability declares.
-  const timeoutMs = controls.timeoutMs ?? resolveActionTimeoutMs(toolName, action);
+  // comes from the cost class the capability declares. A render's own limit is a
+  // floor under both: a shorter deadline's cancel_request stops a healthy render.
+  const timeoutMs = Math.max(
+    controls.timeoutMs ?? resolveActionTimeoutMs(toolName, action),
+    renderTransportBudgetMs(toolName, action, args)
+  );
 
   const sendOptions: {
     timeoutMs?: number;

@@ -101,9 +101,11 @@ TArray<FString> FMcpLogHistory::WarningsSince(double SinceSeconds, int32 MaxDist
     Unlisted += Result.Num() - ScriptKeep;
     Result.SetNum(ScriptKeep);
     Result.Append(Messages);
-    Unlisted += FMath::Max(0, Result.Num() - MaxDistinct);
-    Result.SetNum(FMath::Min(Result.Num(), MaxDistinct));
-    if (Unlisted > 0) Result.Add(FString::Printf(TEXT("(%d more distinct warnings or Blueprint errors not listed)"), Unlisted));
+    // The note on what was cut is one of the MaxDistinct lines, not one more; with no lines allowed there is no note.
+    const int32 Cap = Unlisted > 0 || Result.Num() > MaxDistinct ? MaxDistinct - 1 : MaxDistinct;
+    Unlisted += FMath::Max(0, Result.Num() - FMath::Max(Cap, 0));
+    Result.SetNum(FMath::Clamp(Cap, 0, Result.Num()));
+    if (Unlisted > 0 && MaxDistinct > 0) Result.Add(FString::Printf(TEXT("(%d more distinct warnings or Blueprint errors not listed)"), Unlisted));
     return Result;
 }
 

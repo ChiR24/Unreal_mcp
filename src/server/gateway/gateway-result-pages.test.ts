@@ -45,7 +45,10 @@ describe('paging a result too large for one reply', () => {
     expect(nextPage(cursor, { ...OWNER, fingerprint: 'other params' }, BUDGET, 1)).toBe('PAGE_CURSOR_MISMATCH');
     expect(nextPage('never-issued', OWNER, BUDGET, 1)).toBe('PAGE_CURSOR_EXPIRED');
     const id = cursor.slice(0, cursor.lastIndexOf(':'));
-    for (const forged of [`${id}:0`, `${id}:300`, `${id}:-1`, `${id}:1.5`, `${id}:01`, id]) {
+    // An offset inside the result that no page handed out (the issued one minus one) reads a page overlapping the first.
+    const inside = Number(cursor.slice(cursor.lastIndexOf(':') + 1)) - 1;
+    expect(inside).toBeGreaterThan(0);
+    for (const forged of [`${id}:0`, `${id}:${inside}`, `${id}:300`, `${id}:-1`, `${id}:1.5`, `${id}:01`, id]) {
       expect(nextPage(forged, OWNER, BUDGET, 1), forged).toBe('PAGE_CURSOR_EXPIRED');
     }
     expect(typeof nextPage(cursor, OWNER, BUDGET, 1), 'the issued cursor still reads').not.toBe('string');
