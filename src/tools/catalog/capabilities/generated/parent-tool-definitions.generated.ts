@@ -759,7 +759,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "playRate": {
           "type": "number",
-          "description": "Playback rate."
+          "description": "Speed (default 1; 2 plays it twice as fast)."
         },
         "poseNames": {
           "type": "array",

@@ -122,7 +122,14 @@ bool UEngineWireSubsystem::HandlePlayAnimMontage(
   Resp->SetStringField(TEXT("montagePath"), MontagePath);
   Resp->SetNumberField(TEXT("playRate"), PlayRate);
   Resp->SetNumberField(TEXT("montageLength"), MontageLength);
-  Resp->SetBoolField(TEXT("playing"), true);
+  // Outside Play In Editor the actor does not tick, so the montage was started and stands still; "playing" said otherwise.
+  Resp->SetBoolField(TEXT("playing"), PieWorld != nullptr);
+  if (!PieWorld) {
+    TArray<TSharedPtr<FJsonValue>> Warnings;
+    Warnings.Add(MakeShared<FJsonValueString>(TEXT("Started on the editor-world actor, which does not tick: nothing moves "
+        "until Play In Editor runs. Start play (control_editor play) and play it on the playing actor to see it.")));
+    Resp->SetArrayField(TEXT("warnings"), Warnings);
+  }
 
   SendAutomationResponse(RequestingSocket, RequestId, true,
                          TEXT("Animation montage playing"), Resp, FString());

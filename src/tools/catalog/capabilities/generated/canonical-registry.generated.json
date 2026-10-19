@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "fcafc94e65b84e46",
+  "catalogRevision": "e71f9f941d6e19d2",
   "recordCount": 416,
   "records": [
     {
@@ -494,12 +494,13 @@
           "cleanup",
           "clean up test animation assets"
         ],
-        "summary": "Delete the listed transient animation authoring assets.",
+        "summary": "Delete animation assets by path (artifacts), each closed in any editor and garbage collected first. Paths that do not exist are listed under missing; when none of them existed the call still succeeds, saying nothing needed removing. No undo and no reference check: an asset others still use leaves them pointing at nothing.",
         "whenToUse": [
-          "Reset authoring session."
+          "Assets made for a test or a discarded attempt (a temporary Anim Blueprint, a trial montage) must go."
         ],
         "whenNotToUse": [
-          "Persist work."
+          "The work should be kept.",
+          "Other assets may still use them: check their referencers first (asset.inspect_asset with lookup=dependencies and referencers=true)."
         ]
       },
       "schemas": {
@@ -546,7 +547,7 @@
       },
       "examples": [
         {
-          "title": "Delete the listed transient animation authoring assets.",
+          "title": "Delete animation assets by path (artifacts), each closed in any editor and garbage collected first. Paths that do not exist are listed under missing; when none of them existed the call still succeeds, saying nothing needed removing. No undo and no reference check: an asset others still use leaves them pointing at nothing.",
           "input": {
             "action": "cleanup",
             "artifacts": [
@@ -588,7 +589,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "c39fea3568cb78746b4e965789ceaab6dbe06cf08d59888046913253de451967",
-        "content": "f4e56d14104a7868e860425759e989550915ba9c3cdeaa882dbd6019e54b8d57"
+        "content": "ce3ba310fd9d8eca366aa4ebe18accb4a3e9918edeab6f1b126fe67deabce9b6"
       }
     },
     {
@@ -1063,12 +1064,13 @@
           "configure_vehicle",
           "set up vehicle"
         ],
-        "summary": "Configure vehicle movement on a skeletal actor.",
+        "summary": "Make a placed skeletal-mesh actor drive as a wheeled vehicle (Chaos Vehicles): adds an MCP_VehicleMovement4W movement component when it has none, then sets the wheels (replacing them), engine, transmission, mass and drag. Each value is set by name, so one an engine version lacks is skipped without a word; only that actor changes, and nothing is saved until its level is.",
         "whenToUse": [
-          "A vehicle must be set up (ChaosVehicles)."
+          "A car or truck actor (a skeletal mesh with wheel bones) must be set up to drive."
         ],
         "whenNotToUse": [
-          "A skeletal mesh only has to simulate physics, not drive (use setup_physics_simulation)."
+          "A skeletal mesh only has to simulate physics, not drive (use setup_physics_simulation).",
+          "Every copy of a vehicle Blueprint should drive: add the vehicle movement component in the Blueprint (manage_blueprint edit_scs)."
         ]
       },
       "schemas": {
@@ -1200,7 +1202,7 @@
       },
       "examples": [
         {
-          "title": "Configure vehicle movement on a skeletal actor.",
+          "title": "Make a placed skeletal-mesh actor drive as a wheeled vehicle (Chaos Vehicles): adds an MCP_VehicleMovement4W movement component when it has none, then sets the wheels (replacing them), engine, transmission, mass and drag. Each value is set by name, so one an engine version lacks is skipped without a word; only that actor changes, and nothing is saved until its level is.",
           "input": {
             "action": "configure_vehicle",
             "actorName": "Car_1",
@@ -1243,7 +1245,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "04e2a8d02b4107691ef7269803fde158f4cdfa9dd20865cd8a1df0f564420761",
-        "content": "ab1d78953d355becafb33b4d69001095d2e86200c91ffbfd5e27a8b8f8d43847"
+        "content": "e310002a4d2eab3b147b40148178274cb0b996895c9904223b8a31cc8649f5ab"
       }
     },
     {
@@ -1853,12 +1855,13 @@
           "create_control_rig",
           "control rig blueprint"
         ],
-        "summary": "Create a Control Rig asset.",
+        "summary": "Create a Control Rig Blueprint at path/name (path default /Game/ControlRigs), from skeletalMeshPath or skeletonPath when given, saved unless save is false. UE 5.5 and later build the rig for that mesh (modularRig makes a Modular Rig); 5.1 to 5.4 only set the preview mesh and ignore modularRig; UE 5.0 answers NOT_SUPPORTED. The reply's assetPath is where the asset landed.",
         "whenToUse": [
-          "Procedural rigging/IK needed (ControlRig)."
+          "A rig is needed for procedural animation or IK driven from controls (Control Rig)."
         ],
         "whenNotToUse": [
-          "Use create_ik_rig."
+          "Retargeting or a plain IK chain (use create_ik_rig).",
+          "The rig exists and needs its graph, bones or controls (use edit_control_rig)."
         ]
       },
       "schemas": {
@@ -1922,7 +1925,7 @@
       },
       "examples": [
         {
-          "title": "Create a Control Rig asset.",
+          "title": "Create a Control Rig Blueprint at path/name (path default /Game/ControlRigs), from skeletalMeshPath or skeletonPath when given, saved unless save is false. UE 5.5 and later build the rig for that mesh (modularRig makes a Modular Rig); 5.1 to 5.4 only set the preview mesh and ignore modularRig; UE 5.0 answers NOT_SUPPORTED. The reply's assetPath is where the asset landed.",
           "input": {
             "action": "create_control_rig",
             "name": "CR_Char",
@@ -1965,7 +1968,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "4fdefd7b4494f5b89ffbb5619b3fb0fba183eed4ff83d39a03c816dd1966316b",
-        "content": "9f162f6365cb276e6ce00cd1dd20d17833d7ba9015ec53724bb177603d05dd0d"
+        "content": "ffc3f73deb91523beddd649d249c9d57a8f28d608fe6d9cd2f2b17386f9ed2f8"
       }
     },
     {
@@ -2152,12 +2155,12 @@
           "create_skeleton",
           "new skeleton asset"
         ],
-        "summary": "Create a new Skeleton asset.",
+        "summary": "Create a Skeleton asset holding one root bone (rootBoneName, default Root) at path, or path/name when name is given (without name the last part of path names it), under /Game, /Engine or /Temp. Saved unless save is false; the reply's saved says whether it reached disk (a /Temp skeleton never does).",
         "whenToUse": [
           "A skeleton, bone, socket, physics body or morph target must be authored."
         ],
         "whenNotToUse": [
-          "A SkeletalMesh already exists."
+          "A skeletal mesh already has its skeleton: build on that one (add_bone)."
         ]
       },
       "schemas": {
@@ -2211,7 +2214,7 @@
       },
       "examples": [
         {
-          "title": "Create a new Skeleton asset.",
+          "title": "Create a Skeleton asset holding one root bone (rootBoneName, default Root) at path, or path/name when name is given (without name the last part of path names it), under /Game, /Engine or /Temp. Saved unless save is false; the reply's saved says whether it reached disk (a /Temp skeleton never does).",
           "input": {
             "action": "create_skeleton",
             "path": "/Game/SK_Char",
@@ -2253,7 +2256,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "05c5ac05bad8f8e79fd2b115921a6542c51d09d9b823617e131e13ae720dbb24",
-        "content": "9a84b6835c96f42d16374326c7bc474f06779affb21352e51011f8e17701a74b"
+        "content": "075ebadcd1b2946c8cfd0959bd7b1cf9a4386b5464772f3f0a32837706fba6b5"
       }
     },
     {
@@ -6677,12 +6680,13 @@
           "play anim",
           "trigger montage"
         ],
-        "summary": "Play an animation montage on an actor.",
+        "summary": "Play an animation montage on a placed skeletal actor (the playing one while Play In Editor runs): Montage_Play through its Anim Instance at playRate, or the montage as a single-node animation when the mesh has none, which switches that component's animation mode. The reply gives playMode and montageLength; outside play the actor does not tick, so nothing moves, playing is false and a warning says so.",
         "whenToUse": [
-          "A montage must play on a live actor."
+          "A montage (an attack, an emote, a hit reaction) must play on a character while the game runs, to see it or to test it."
         ],
         "whenNotToUse": [
-          "Author the montage asset."
+          "The game should play it: call Play Montage in the character's Blueprint (manage_blueprint edit_graph).",
+          "The montage asset itself must be made or edited."
         ]
       },
       "schemas": {
@@ -6692,15 +6696,15 @@
           "properties": {
             "actorName": {
               "type": "string",
-              "description": "Target actor name in the current level."
+              "description": "The actor's label, object name or path, matched whole (no partial match); its first skeletal mesh plays the montage."
             },
             "montagePath": {
               "type": "string",
-              "description": "Canonical /Game asset path."
+              "description": "Montage asset path, e.g. /Game/Anims/AM_Slash. It must use the skeleton of the actor's mesh, or Montage_Play refuses it (MONTAGE_PLAY_FAILED)."
             },
             "playRate": {
               "type": "number",
-              "description": "Playback rate."
+              "description": "Speed (default 1; 2 plays it twice as fast)."
             }
           },
           "required": [
@@ -6735,7 +6739,7 @@
       },
       "examples": [
         {
-          "title": "Play an animation montage on an actor.",
+          "title": "Play an animation montage on a placed skeletal actor (the playing one while Play In Editor runs): Montage_Play through its Anim Instance at playRate, or the montage as a single-node animation when the mesh has none, which switches that component's animation mode. The reply gives playMode and montageLength; outside play the actor does not tick, so nothing moves, playing is false and a warning says so.",
           "input": {
             "action": "play_montage",
             "actorName": "Char_1",
@@ -6777,8 +6781,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "c24f2bb2051ec40ac1af3984bb1d2088fb0228ee03091329be713124cd4c113e",
-        "content": "656c086e4805a5d2de7c13ed2c277f77cf71bab1f5361d4fc6870d3fd1bd43dc"
+        "schema": "261821b6f2c38f12b0da21ef2b61f9e99e11d3b5ac196e52fe545b00b0e5527f",
+        "content": "bfa0de55eaae3ab6c11bbadc189bc3487bdb89da8d0faa346a1421c5f6a618a6"
       }
     },
     {
@@ -49585,7 +49589,7 @@
           "enemy ai",
           "add enemy ai"
         ],
-        "summary": "Create an AIController Blueprint asset.",
+        "summary": "Create an AI Controller Blueprint (parent AIController) at path/name (path default /Game/AI/Controllers) and save it; an asset already there is refused. A pawn uses it through its AIControllerClass with Auto Possess AI; saved in the reply says whether it reached disk.",
         "whenToUse": [
           "A pawn needs a dedicated AIController asset."
         ],
@@ -49642,7 +49646,7 @@
       },
       "examples": [
         {
-          "title": "Create an AIController Blueprint asset.",
+          "title": "Create an AI Controller Blueprint (parent AIController) at path/name (path default /Game/AI/Controllers) and save it; an asset already there is refused. A pawn uses it through its AIControllerClass with Auto Possess AI; saved in the reply says whether it reached disk.",
           "input": {
             "action": "create_ai_controller",
             "name": "AIC_Enemy",
@@ -49682,7 +49686,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "fad90d86cdbc13c4386180465febdd0bb45c804e587641eeda0232f888b1a346",
-        "content": "0344c7fbfd1a26a06b801609f208c1353cdf59165e09da8fe62e9ae7f2a4ceb2"
+        "content": "f231f256ff0f0d7386e94e01d5b397498ad13bdf2bd329851a57498b6d66736a"
       }
     },
     {
@@ -57933,7 +57937,7 @@
           "pawn",
           "third person character"
         ],
-        "summary": "Create a Character Blueprint asset.",
+        "summary": "Create a Character Blueprint at path/name (path default /Game) from parentClass (Character or a subclass, default Character), with skeletalMeshPath set on its inherited Mesh, and save it. An asset already at that path is refused (CREATION_FAILED), never reused.",
         "whenToUse": [
           "A character Blueprint or its movement must be authored."
         ],
@@ -57999,7 +58003,7 @@
       },
       "examples": [
         {
-          "title": "Create a Character Blueprint asset.",
+          "title": "Create a Character Blueprint at path/name (path default /Game) from parentClass (Character or a subclass, default Character), with skeletalMeshPath set on its inherited Mesh, and save it. An asset already at that path is refused (CREATION_FAILED), never reused.",
           "input": {
             "action": "create_character_blueprint",
             "name": "BP_Char",
@@ -58040,7 +58044,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "04730a63085dd4601b903a6514d4806dc6ea3905f164a80a95a460028d4c36c7",
-        "content": "2764822ef9ca912f28884ccb06ef3d677bb5172089a9c72b274520c65cdfa624"
+        "content": "547b6e8f935439ae53d4a8382769dae9ebb8707372ec4a1c39ecca0f10a1873f"
       }
     },
     {
@@ -58062,7 +58066,7 @@
           "digital human",
           "photoreal character"
         ],
-        "summary": "Create a MetaHuman Character asset.",
+        "summary": "Create an empty MetaHuman Character asset at path/name (path default /Game/MetaHumans), or report the one already there (created false). It is not rigged or built yet (rig_metahuman, build_metahuman); coreDataInstalled says whether the Core Data it needs is installed, saved whether it reached disk. Needs UE 5.6 or later with the MetaHumanCharacter plugin (FEATURE_UNAVAILABLE otherwise).",
         "whenToUse": [
           "A photoreal human is needed and MetaHuman Creator is available."
         ],
@@ -58125,7 +58129,7 @@
       },
       "examples": [
         {
-          "title": "Create a MetaHuman Character asset.",
+          "title": "Create an empty MetaHuman Character asset at path/name (path default /Game/MetaHumans), or report the one already there (created false). It is not rigged or built yet (rig_metahuman, build_metahuman); coreDataInstalled says whether the Core Data it needs is installed, saved whether it reached disk. Needs UE 5.6 or later with the MetaHumanCharacter plugin (FEATURE_UNAVAILABLE otherwise).",
           "input": {
             "action": "create_metahuman",
             "name": "MH_Neo",
@@ -58167,7 +58171,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "d3ef49d98fd01acab08ca5437456a1ffa64473f05ad44e1040cfa0a3feffc461",
-        "content": "94e3a78fd18499831453402937e136c6a9882d059ef76d67b98ff0036561b9c5"
+        "content": "b3e71d8512953669e853ce54e271440badc12ad4eec9926a09402efb4f813cda"
       }
     },
     {
@@ -59081,9 +59085,9 @@
         "topics": [
           "setup_movement"
         ],
-        "summary": "Set up the base character movement component.",
+        "summary": "Set a Character Blueprint's walk speed (walkSpeed, or runSpeed when walkSpeed is absent) and acceleration on its Character Movement defaults, then compile and save it; a value not sent stays as it is. The reply gives the maxWalkSpeed and maxAcceleration it now has; a Blueprint that is not a Character is refused (INVALID_TARGET).",
         "whenToUse": [
-          "Movement component must initialize."
+          "A character must walk faster or slower, or reach its speed sooner."
         ],
         "whenNotToUse": [
           "Use configure_movement_speeds."
@@ -59142,7 +59146,7 @@
       },
       "examples": [
         {
-          "title": "Set up the base character movement component.",
+          "title": "Set a Character Blueprint's walk speed (walkSpeed, or runSpeed when walkSpeed is absent) and acceleration on its Character Movement defaults, then compile and save it; a value not sent stays as it is. The reply gives the maxWalkSpeed and maxAcceleration it now has; a Blueprint that is not a Character is refused (INVALID_TARGET).",
           "input": {
             "action": "setup_movement",
             "blueprintPath": "/Game/BP_Char",
@@ -59182,7 +59186,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "e4a44b41622a3dd289ba00c448262214968d649d561b9a0fd66e06720a65a205",
-        "content": "8222db484ab2f8b47abc3d20147c08d56cbac7861672e6e837a4168596a128dd"
+        "content": "9dc1413ef37ce24aa427059cf9e83292ab87835217c33c9f29cc0744c842e037"
       }
     },
     {

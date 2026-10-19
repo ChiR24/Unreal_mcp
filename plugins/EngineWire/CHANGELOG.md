@@ -44,6 +44,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **Undoable** in an `FMcpScopedEditorTransaction`: `set_property` actor transforms, `set_volume_bounds`, spline mesh asset/material, `scatter_meshes_along_spline`.
 - **`McpCapFindRows`** cuts class, name and tag finds at `limit` with `truncated` and `totalCount`.
 - **`save` is declared on every SCS edit**: `FSCSHandlers::bSaveScsChanges` reads it for all of them.
+- **Honest creators**: `setup_movement` answers `INVALID_TARGET` without a `CharacterMovement`; `play_montage` sets `playing` from the play world; skeleton, AI controller and MetaHuman creation report `saved` and mark an unsaved package dirty.
 
 ## [0.6.0-beta-f] - 2026-10-16
 

@@ -39,7 +39,7 @@ export const CHARACTER_3: readonly CapabilityRecordSource[] = [
 
   buildRecord({ parentTool: T, id: `${T}.create_metahuman`, action: 'create_metahuman', family: F,
     topics: ['metahuman', 'create metahuman', 'digital human', 'photoreal character'],
-    summary: 'Create a MetaHuman Character asset.',
+    summary: 'Create an empty MetaHuman Character asset at path/name (path default /Game/MetaHumans), or report the one already there (created false). It is not rigged or built yet (rig_metahuman, build_metahuman); coreDataInstalled says whether the Core Data it needs is installed, saved whether it reached disk. Needs UE 5.6 or later with the MetaHumanCharacter plugin (FEATURE_UNAVAILABLE otherwise).',
     whenToUse: ['A photoreal human is needed and MetaHuman Creator is available.'],
     whenNotToUse: ['Use create_character_blueprint for a gameplay pawn.'],
     inputProps: { name: P.name, path: P.path }, required: ['name'],

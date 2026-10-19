@@ -78,7 +78,10 @@ static UBlueprint* CreateAIControllerBlueprint(const FString& Path, const FStrin
     }
 
     FAssetRegistryModule::AssetCreated(Blueprint);
-    McpSafeAssetSave(Blueprint);
+    if (!McpSafeAssetSave(Blueprint))
+    {
+        Blueprint->MarkPackageDirty(); // unsaved, so save_all saves it and the reply can tell
+    }
 
     return Blueprint;
 }
@@ -107,7 +110,15 @@ bool HandleCreateAIController(UEngineWireSubsystem* Self, const FString& Request
     }
 
     Result->SetStringField(TEXT("controllerPath"), Blueprint->GetPathName());
-    Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Created AI Controller: %s"), *Name));
+    // The save's result was dropped, so a controller that never reached disk answered like a saved one.
+    const bool bSaved = !Blueprint->GetOutermost()->IsDirty();
+    Result->SetBoolField(TEXT("saved"), bSaved);
+    if (!bSaved)
+    {
+        TArray<TSharedPtr<FJsonValue>> Warnings;
+        Warnings.Add(MakeShared<FJsonValueString>(TEXT("Created in memory only: the save failed, so it is lost when the editor closes unless control_editor save_all saves it.")));
+        Result->SetArrayField(TEXT("warnings"), Warnings);
+    }
     McpHandlerUtils::AddVerification(Result, Blueprint);
     Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("AI Controller created"), Result);
     return true;

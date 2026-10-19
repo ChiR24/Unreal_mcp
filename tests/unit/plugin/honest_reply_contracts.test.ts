@@ -3597,3 +3597,37 @@ describe('a player start is judged where a pawn spawns', () => {
     expect(check).toContain('Extent = StartCapsule->Bounds.BoxExtent;');
   });
 });
+
+describe('animation and character creators say what they did', () => {
+  // A Blueprint that is not a Character was compiled, saved unchanged and answered "Movement configured".
+  it('setup_movement refuses a Blueprint with no character movement and reports the speeds it set', () => {
+    const movement = code('Character', 'McpCharacterMovementCore.cpp');
+    expect(movement).toContain('TEXT("INVALID_TARGET")');
+    expect(movement).toContain('Result->SetNumberField(TEXT("maxWalkSpeed"), Movement->MaxWalkSpeed);');
+  });
+
+  // The editor-world actor does not tick, so a montage "playing" there stood still.
+  it('play_montage outside play reports that nothing moves', () => {
+    const montage = code('Animation', 'Montages', 'McpAnimPlayAnimMontage.cpp');
+    expect(montage).toContain('Resp->SetBoolField(TEXT("playing"), PieWorld != nullptr);');
+  });
+
+  // A failed save answered like a saved asset, and the new package was not even dirty for save_all.
+  it('skeleton, AI controller and MetaHuman creators report saved and leave an unsaved asset dirty', () => {
+    expect(code('Skeleton', 'Bones', 'McpSkeletonStructureCreation.cpp')).toContain('Result->SetBoolField(TEXT("saved"), bSave && bSaveOk);');
+    const controller = code('AI', 'Controllers', 'McpAIControllerSetup.cpp');
+    expect(controller).toContain('Blueprint->MarkPackageDirty();');
+    expect(controller).toContain('Result->SetBoolField(TEXT("saved"), bSaved);');
+    const metahuman = code('MetaHuman', 'McpMetaHumanCreate.cpp');
+    expect(metahuman).toContain('Created->MarkPackageDirty();');
+    expect(metahuman).toContain('Result->SetBoolField(TEXT("saved"), bSaved);');
+  });
+});
+
+describe('native search renders a signature with fractions', () => {
+  // A confident first hit carries its example; playRate 1.25 failed canonical rendering, and with it the whole search.
+  it('renders search rows with fractions allowed', () => {
+    const search = readFileSync(join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'MCP', 'Gateway', 'McpNativeGatewaySearch.cpp'), 'utf8');
+    expect(search).toContain('McpCanonicalJsonObject(View, Rendered, /*bAllowFractions=*/true)');
+  });
+});

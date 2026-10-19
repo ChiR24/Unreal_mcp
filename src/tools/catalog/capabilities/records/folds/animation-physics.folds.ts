@@ -3,7 +3,7 @@ import { byName } from '../shared/fold-spec.js';
 import type { FoldSpec } from '../shared/fold-types.js';
 
 export const ANIMATION_PHYSICS_FOLDS: readonly FoldSpec[] = [
-  { primary: 'play_montage', summary: 'Play an animation montage on an actor.', members: ['play_anim_montage'] },
+  { primary: 'play_montage', summary: 'Play an animation montage on a placed skeletal actor (the playing one while Play In Editor runs): Montage_Play through its Anim Instance at playRate, or the montage as a single-node animation when the mesh has none, which switches that component\'s animation mode. The reply gives playMode and montageLength; outside play the actor does not tick, so nothing moves, playing is false and a warning says so.', members: ['play_anim_montage'] },
   {
     primary: 'setup_ragdoll', topics: ['go limp', 'make body go limp', 'make character go limp'], selector: 'ragdoll',
     summary: 'Set up ragdoll physics on an actor, or activate/deactivate an existing ragdoll.',

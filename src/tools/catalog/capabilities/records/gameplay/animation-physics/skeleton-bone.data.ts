@@ -17,7 +17,8 @@ const SKEL_BONE_REQUIRED = ['skeletonPath', 'boneName'];
 
 export const SKELETON_BONE_RECORDS: readonly CapabilityRecordSource[] = [
   buildRecord({ parentTool: T, id: `${T}.create_skeleton`, action: 'create_skeleton', topics: ['new skeleton asset'], family: F,
-    summary: 'Create a new Skeleton asset.', whenToUse: W, whenNotToUse: ['A SkeletalMesh already exists.'],
+    summary: 'Create a Skeleton asset holding one root bone (rootBoneName, default Root) at path, or path/name when name is given (without name the last part of path names it), under /Game, /Engine or /Temp. Saved unless save is false; the reply\'s saved says whether it reached disk (a /Temp skeleton never does).',
+    whenToUse: W, whenNotToUse: ['A skeletal mesh already has its skeleton: build on that one (add_bone).'],
     inputProps: { name: P.name, path: P.path, rootBoneName: A.rootBoneName, save: A.save }, required: [],
     effect: 'write', latency: 'interactive', resources: 'medium', plugins: ESU,
     exampleInput: { action: 'create_skeleton', path: '/Game/SK_Char', rootBoneName: 'Root', save: true } }),

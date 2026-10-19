@@ -20,11 +20,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Search hands over a clear first hit** with `signature` and `executeCall` when it needs no consent, so describe can be skipped.
 - **`get_stats` `frame`**: the thread bounding the frame and what in view weighs on it (shadowed movable lights, non-Nanite meshes, translucency, ticking actors).
 - **`nanite_rebuild_mesh` `assetPaths`**: several meshes under one consent; translucent ones are left alone and the materials get the Nanite flag.
-- **`inspect_asset` `diff`**: a Blueprint, DataTable or data asset against its saved file or another asset: properties, variables, components, graph nodes and rows.
+- **`inspect_asset` `diff`**: a Blueprint, DataTable or data asset against its saved file or another asset.
 - **`get_niagara_info` values**: each user parameter's default, and with `actorName` a placed effect's own values.
 - **Whole parts in one `edit_dynamic_mesh` call**: `append_cuboids` (boxes in rows, grids, stacks), `append_loft` (skinned sections), `append_mesh` (a static mesh at placements), `delete_triangles`.
-- **Movie Render Queue**: `cancel_render` stops a render; `configure_render_camera` sets shutter timing (FrameOpen keeps motion blur off a camera cut), overscan and rendering every camera.
-- **Sequences and animations**: `set_section` `playRate` speeds a clip up or down; `get_properties` `tracks` lists each animation track's clips; `get_animation_info` lists the bones a sequence keys.
+- **Movie Render Queue**: `cancel_render` stops a render; `configure_render_camera` sets shutter timing (FrameOpen), overscan and rendering every camera.
+- **Sequences and animations**: `set_section` `playRate`; `get_properties` `tracks` lists each track's clips; `get_animation_info` the bones a sequence keys.
 - **Every call that spawns, moves or re-meshes actors checks them**, a Blueprint edit its placed copies: warnings name one sunk, floating, intersecting or z-fighting, a default grid material, a label still reading "Text" or a pasted duplicate; `audit_placement` finds that content level-wide.
 
 </details>
@@ -53,13 +53,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Undo takes back** `set_property` moves, `set_volume_bounds` and spline mesh edits and scatters.
 - **Class, name and tag finds stop at `limit`** (default 200) and say how many matched.
 - **Every SCS edit declares `save`**: a `save: false` drew a warning that it was ignored.
+- **`setup_movement` refuses a non-Character Blueprint**; `play_montage` outside play says nothing moves; skeleton, AI controller and MetaHuman creation report `saved`.
 
 </details>
 
 <details>
 <summary><b>🔄 Dependencies</b></summary>
 
-- The stdio server moves from `@modelcontextprotocol/sdk` 1.32.1 to the MCP SDK v2: `@modelcontextprotocol/server` 2.3.1 (and `@modelcontextprotocol/client` 2.3.1 for the tests).
+- The stdio server moves from `@modelcontextprotocol/sdk` 1.32.1 to the MCP SDK v2 (`@modelcontextprotocol/server` 2.3.1).
 
 </details>
 

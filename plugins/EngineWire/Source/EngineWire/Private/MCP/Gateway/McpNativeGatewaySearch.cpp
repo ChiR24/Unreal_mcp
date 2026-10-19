@@ -233,8 +233,9 @@ TSharedPtr<FJsonObject> McpGatewaySearchCapabilities(
 			View->SetObjectField(TEXT("executeCall"), Execute);
 		}
 
+		// A row is a reply, not a fingerprint: a confident hit's signature example (playRate 1.25) failed the whole search.
 		FString Rendered;
-		if (!McpCanonicalJsonObject(View, Rendered))
+		if (!McpCanonicalJsonObject(View, Rendered, /*bAllowFractions=*/true))
 		{
 			return GatewayError(TEXT("search"), TEXT("CAPABILITY_RENDER_FAILED"),
 				FString::Printf(TEXT("Capability '%s' could not be rendered deterministically."), *Entry.Record->Id));

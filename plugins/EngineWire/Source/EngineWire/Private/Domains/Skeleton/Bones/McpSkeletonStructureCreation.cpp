@@ -102,9 +102,23 @@ bool HandleCreateSkeletonAction(UEngineWireSubsystem* Subsystem, const FString& 
         Modifier.Add(RootBone, FTransform::Identity);
 #endif
 
-        SaveIfRequested(NewSkeleton, Payload);
+        bool bSave = true;
+        Payload->TryGetBoolField(TEXT("save"), bSave);
+        const bool bSaveOk = SaveIfRequested(NewSkeleton, Payload);
+        if (!bSave || !bSaveOk)
+        {
+            NewSkeleton->MarkPackageDirty(); // unsaved, so save_all saves it
+        }
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+        // A failed save (a /Temp path is never saved) answered like a saved skeleton.
+        Result->SetBoolField(TEXT("saved"), bSave && bSaveOk);
+        if (!bSaveOk)
+        {
+            TArray<TSharedPtr<FJsonValue>> Warnings;
+            Warnings.Add(MakeShared<FJsonValueString>(TEXT("Created in memory only: the save failed, so it is lost when the editor closes unless control_editor save_all saves it.")));
+            Result->SetArrayField(TEXT("warnings"), Warnings);
+        }
         Result->SetStringField(TEXT("skeletonPath"), NewSkeleton->GetPathName());
         Result->SetStringField(TEXT("rootBoneName"), RootBoneName);
         Result->SetNumberField(TEXT("boneCount"), 1);

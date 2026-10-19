@@ -207,18 +207,31 @@ bool HandleSetupMovement(UEngineWireSubsystem* Self, const FString& RequestId, c
     }
 
     ACharacter* CharCDO = Blueprint->GeneratedClass ? Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject()) : nullptr;
-    if (CharCDO && CharCDO->GetCharacterMovement())
+    UCharacterMovementComponent* Movement = CharCDO ? CharCDO->GetCharacterMovement() : nullptr;
+    // A Blueprint that is not a Character has no movement to set: the call compiled and saved it unchanged and said so.
+    if (!Movement)
     {
-        UCharacterMovementComponent* Movement = CharCDO->GetCharacterMovement();
-        if (Payload->HasField(TEXT("walkSpeed"))) Movement->MaxWalkSpeed = static_cast<float>(GetJsonNumberField(Payload, TEXT("walkSpeed"), 600.0));
-        else if (Payload->HasField(TEXT("runSpeed"))) Movement->MaxWalkSpeed = static_cast<float>(GetJsonNumberField(Payload, TEXT("runSpeed"), 600.0));
-        if (Payload->HasField(TEXT("acceleration"))) Movement->MaxAcceleration = static_cast<float>(GetJsonNumberField(Payload, TEXT("acceleration"), 2048.0));
+        Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("%s is not a Character Blueprint with a "
+            "CharacterMovement component, so it has no walk speed to set."), *BlueprintPath), TEXT("INVALID_TARGET"));
+        return true;
     }
+    if (Payload->HasField(TEXT("walkSpeed"))) Movement->MaxWalkSpeed = static_cast<float>(GetJsonNumberField(Payload, TEXT("walkSpeed"), 600.0));
+    else if (Payload->HasField(TEXT("runSpeed"))) Movement->MaxWalkSpeed = static_cast<float>(GetJsonNumberField(Payload, TEXT("runSpeed"), 600.0));
+    if (Payload->HasField(TEXT("acceleration"))) Movement->MaxAcceleration = static_cast<float>(GetJsonNumberField(Payload, TEXT("acceleration"), 2048.0));
 
     FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
     if (!CommitCharacterEdit(Self, RequestId, Blueprint, Socket)) return true;
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+    Result->SetNumberField(TEXT("maxWalkSpeed"), Movement->MaxWalkSpeed);
+    Result->SetNumberField(TEXT("maxAcceleration"), Movement->MaxAcceleration);
+    if (Payload->HasField(TEXT("walkSpeed")) && Payload->HasField(TEXT("runSpeed")))
+    {
+        TArray<TSharedPtr<FJsonValue>> Warnings;
+        Warnings.Add(MakeShared<FJsonValueString>(TEXT("runSpeed was left out: a Character has one walk speed, and walkSpeed "
+            "set it. A sprint is game logic that raises MaxWalkSpeed while a key is held (manage_blueprint edit_graph).")));
+        Result->SetArrayField(TEXT("warnings"), Warnings);
+    }
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Movement configured"), Result);
     return true;
 }
