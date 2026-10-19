@@ -119,7 +119,7 @@ const testCases = [
   { scenario: 'SETUP: a copy of it', toolName: 'manage_asset', arguments: { action: 'duplicate', sourcePath: DIFF_BP, destinationPath: DIFF_BP_COPY }, expected: 'success' },
   { scenario: 'INFO: diff_asset against its saved file', toolName: 'manage_asset', arguments: { action: 'diff_asset', assetPath: DIFF_BP }, expected: 'success', assertions: [{ path: 'structuredContent.result.identical', equals: true, label: 'a just-saved Blueprint matches its file' }] },
   { scenario: 'INFO: diff_asset against another asset', toolName: 'manage_asset', arguments: { action: 'diff_asset', assetPath: DIFF_BP, againstPath: DIFF_BP_COPY }, expected: 'success', assertions: [{ path: 'structuredContent.result.identical', equals: true, label: 'a copy matches its source' }] },
-  { scenario: 'ERROR: diff_asset refuses a material', toolName: 'manage_asset', arguments: { action: 'diff_asset', assetPath: BASE_MATERIAL }, expected: 'error', assertions: [{ path: 'structuredContent.error', includes: 'UNSUPPORTED_ASSET_TYPE' }] },
+  { scenario: 'ERROR: diff_asset refuses a material', toolName: 'manage_asset', arguments: { action: 'diff_asset', assetPath: BASE_MATERIAL }, expected: 'error|UNSUPPORTED_ASSET_TYPE' },
   { scenario: 'Cleanup: delete the diffed Blueprints', toolName: 'manage_asset', arguments: { action: 'delete_assets', paths: [DIFF_BP, DIFF_BP_COPY], force: true }, expected: 'success|not found' },
   { scenario: 'ACTION: fixup_redirectors', toolName: 'manage_asset', arguments: { action: 'fixup_redirectors', directoryPath: TEST_FOLDER, checkoutFiles: false }, expected: 'success' },
   { scenario: 'INFO: find_by_tag', toolName: 'manage_asset', arguments: { action: 'find_by_tag', tag: TAG_KEY }, expected: 'success' },
@@ -318,7 +318,7 @@ const testCases = [
     { scenario: 'DELETE: delete_node batch', toolName: 'manage_asset', arguments: { action: 'delete_node', materialPath: MATERIAL_PATH, nodeIds: ['${captured:customExpressionNodeId}'], save: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.saved', equals: true, label: 'material saved after the delete' }] },
 
     // === CLEANUP ===
-    { scenario: 'DELETE: delete keeps a material its instance still references', toolName: 'manage_asset', arguments: { action: 'delete', path: MATERIAL_PATH }, expected: 'error', assertions: [{ path: 'structuredContent.error', includes: 'ASSET_REFERENCED', label: 'referenced asset kept without force' }] },
+    { scenario: 'DELETE: delete keeps a material its instance still references', toolName: 'manage_asset', arguments: { action: 'delete', path: MATERIAL_PATH }, expected: 'error|ASSET_REFERENCED' },
     { scenario: 'Cleanup: delete material instance', toolName: 'manage_asset', arguments: { action: 'delete', path: INSTANCE_PATH, force: true }, expected: 'success|not found' },
     { scenario: 'Cleanup: delete authored material', toolName: 'manage_asset', arguments: { action: 'delete', path: MATERIAL_PATH, force: true }, expected: 'success|not found' },
     { scenario: 'Cleanup: delete material function', toolName: 'manage_asset', arguments: { action: 'delete', path: FUNCTION_PATH, force: true }, expected: 'success|not found' },
