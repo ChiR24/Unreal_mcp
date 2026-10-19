@@ -5575,7 +5575,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "includeMetadata": {
           "type": "boolean",
-          "description": "Attach caller-provided metadata to the response."
+          "description": "true: echo metadata back in the reply (default false)."
         },
         "input": {
           "oneOf": [
@@ -5665,7 +5665,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "metadata": {
           "type": "object",
-          "description": "Caller-provided metadata.",
+          "description": "An object of your own, such as a label or a step number, returned under metadata when includeMetadata is true; the capture itself never reads it.",
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true
         },
@@ -10059,7 +10059,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "key": {
           "type": "string",
-          "description": "Metadata key."
+          "description": "Metadata key on the entry, such as ToolTip."
         },
         "kind": {
           "type": "string",
@@ -10329,7 +10329,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "newValueName": {
           "type": "string",
-          "description": "New enum value name."
+          "description": "New name the editor shows; the internal name stored values hold stays."
         },
         "newWidth": {
           "type": "number",
@@ -10438,7 +10438,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "items": {
             "type": "string"
           },
-          "description": "Desired value name order."
+          "description": "Every value once, in the new order, by internal or shown name; a partial list is refused."
         },
         "orphansOnly": {
           "type": "boolean",
@@ -10546,6 +10546,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             {
               "type": "string",
               "description": "Folder path, e.g. /Game/Art/Props; a path outside the allowed roots is refused (INVALID_PATH)."
+            },
+            {
+              "type": "string",
+              "description": "Package path (default /Game/Enums)."
             },
             {
               "type": "string",
@@ -10853,7 +10857,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "sourcePath": {
           "type": "string",
-          "description": "Project-relative JSON file holding the members: a bare array, or an object with a members array as export_struct returns. Used when members is omitted."
+          "description": "File to import, inside the project folder: relative to it (Saved/Imports/Crate.fbx) or absolute under it; any other path is refused."
         },
         "sourcePin": {
           "type": "string",
@@ -10997,7 +11001,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "value": {
           "oneOf": [
             {
-              "description": "Metadata value."
+              "description": "Metadata value (text)."
             },
             {
               "description": "Parameter value."
@@ -11011,15 +11015,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "description": "Optional tag value to match, ignoring case."
             }
           ],
-          "description": "Metadata value."
+          "description": "Metadata value (text)."
         },
         "valueName": {
           "type": "string",
-          "description": "Enum value (entry) name."
+          "description": "Enum value (entry), by its internal name or the name the editor shows (get_enum lists both as name and displayName)."
         },
         "values": {
           "type": "array",
-          "description": "Initial enum value names.",
+          "description": "create: the initial value names in order, as strings or { name } objects (a name given twice is refused and nothing is made). split: the values to copy into the new enum, by internal or shown name.",
           "items": {
             "type": "string"
           }
@@ -15070,6 +15074,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Expression: names that read the Blueprint's own variable of that name instead of making a pin; rename the input to get a pin."
         },
+        "brokenLinks": {
+          "type": "number",
+          "description": "How many wires of the pin were broken (0 when it had none, and nothing changed)."
+        },
         "buttons": {
           "type": "array",
           "items": {
@@ -15283,6 +15291,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             }
           ],
           "description": "Compile messages: { severity, message }."
+        },
+        "disconnectedFrom": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The pins it was wired to, each as nodeGuid.pinName."
         },
         "dispatchers": {
           "type": "array",
@@ -25197,7 +25212,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "filename": {
           "type": "string",
-          "description": "Screenshot filename base."
+          "description": "File name of the PNG (.png is added; a folder part is dropped). Default Screenshot_<unix time>."
         },
         "filter": {
           "type": "string",
@@ -25234,7 +25249,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "includeMetadata": {
           "type": "boolean",
-          "description": "Include capture metadata."
+          "description": "true: echo metadata back in the reply (default false)."
         },
         "info": {
           "type": "string",
@@ -25325,7 +25340,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "metadata": {
           "type": "object",
-          "description": "Optional metadata payload.",
+          "description": "An object of your own, such as a label or a step number, returned under metadata when includeMetadata is true; the capture itself never reads it.",
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true
         },

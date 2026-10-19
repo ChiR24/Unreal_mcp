@@ -380,7 +380,6 @@ describe('handlers answer what they did', () => {
       ['Nodes', 'McpMatUseMatFunction.cpp'],
       ['Nodes', 'McpMatFunctionInputsOutputs.cpp'],
       ['Properties', 'McpMatSetMatEnum.cpp'],
-      ['Properties', 'McpMatSetTwoSided.cpp'],
     ] as const) {
       const source = code('MaterialAuthoring', ...file);
       expect(source, file[1]).toContain('McpFinishMaterialEdit(RequestId, ');
@@ -3808,5 +3807,67 @@ describe('thumbnails are stored, found assets are not changes, a new audio actor
 
   it('create_audio_component names the actor the component is on', () => {
     expect(code('Audio', 'McpAudioComponentsAndFades.cpp')).toContain('Resp->SetStringField(TEXT("actorName"), McpActorRef(Owner));');
+  });
+});
+
+describe('material property setters edit an instance by override and leave engine content alone', () => {
+  it('blend mode, shading model and two-sided override on an instance; the domain and engine content are refused', () => {
+    const setters = code('MaterialAuthoring', 'Properties', 'McpMatSetMatEnum.cpp');
+    expect(setters).toContain('Instance->BasePropertyOverrides.bOverride_BlendMode = true;');
+    expect(setters).toContain('Instance->BasePropertyOverrides.bOverride_ShadingModel = true;');
+    expect(setters).toContain('Instance->BasePropertyOverrides.bOverride_TwoSided = true;');
+    expect(setters).toContain('TEXT("set_material_domain"), TEXT("materialDomain"), TEXT("Material domain"), &ApplyMaterialDomain, &ValidMaterialDomains, nullptr}');
+    expect(setters).toContain('TEXT("MATERIAL_INSTANCE")');
+    expect(setters).toContain('TEXT("ENGINE_CONTENT")');
+    expect(setters).toContain('Result->SetBoolField(TEXT("saved"), bSaved);');
+    expect(setters.indexOf('if (!Setter->Apply(nullptr, Value))')).toBeLessThan(setters.indexOf('Target->Modify();'));
+  });
+});
+
+describe('break_pin_links names what it disconnected and touches nothing when it refuses', () => {
+  it('validates the node and pin before the transaction, and a pin with no links changes nothing', () => {
+    const pins = code('BlueprintGraph', 'McpBPGraphPinMutations.cpp');
+    const block = pins.slice(pins.indexOf('TEXT("break_pin_links")'));
+    expect(block.indexOf('TEXT("PIN_NOT_FOUND")')).toBeLessThan(block.indexOf('TEXT("Break Blueprint Pin Links")'));
+    expect(block).toContain('Result->SetArrayField(TEXT("disconnectedFrom"), McpHandlerUtils::ToJsonStringArray(Linked));');
+    expect(block).toMatch(/if \(Linked\.Num\(\) == 0\)\s*\{[\s\S]*?McpHandlerUtils::MarkNoAssetsChanged\(Result\);/u);
+  });
+});
+
+describe('sequence create, duplicate and rename write only /Game sequences and say what they did', () => {
+  it('duplicate and rename go through one guard; create keeps only a level sequence it finds', () => {
+    const library = code('Sequence', 'McpSeqAssetLibrary.cpp');
+    expect(library.match(/McpResolveSequenceMove\(this, Socket, RequestId, /gu)).toHaveLength(2);
+    expect(library).toContain('TEXT("SEQUENCE_PATH_NOT_WRITABLE")');
+    expect(library).toContain('TEXT("ASSET_ALREADY_EXISTS")');
+    expect(library).toContain('Resp->SetBoolField(TEXT("saved"), bSaved);');
+    const create = code('Sequence', 'McpSeqAssetCreation.cpp');
+    expect(create).toMatch(/if \(!Cast<ULevelSequence>\(Existing\)\)[\s\S]*?TEXT\("ASSET_ALREADY_EXISTS"\)/u);
+    expect(create).toContain('Resp->SetBoolField(TEXT("alreadyExists"), true);');
+    expect(create).toContain('Resp->SetBoolField(TEXT("saved"), McpSafeAssetSave(NewSequence));');
+  });
+});
+
+describe('enum values keep their stored meaning: renames change the shown name, duplicates are refused', () => {
+  it('rename uses the display name, metadata goes on the entry, and every lookup takes either name', () => {
+    const values = code('AssetWorkflow', 'Enums', 'Values.cpp');
+    expect(values).toContain('FEnumEditorUtils::SetEnumeratorDisplayName(Enum, Index, FText::FromString(NewValueName))');
+    expect(values).toContain('Enum->SetMetaData(*Key, *Value, Index);');
+    expect(values).not.toContain('Value_%s_%s');
+    expect(values).toContain('TEXT("VALUE_EXISTS")');
+    expect(code('AssetWorkflow', 'Enums', 'Shared.h')).toContain('Enum->GetDisplayNameTextByIndex(Index).ToString() == Requested');
+    expect(code('AssetWorkflow', 'Enums', 'Split.cpp')).toContain('McpFindEnumValue(Enum, V->AsString())');
+    const lifecycle = code('AssetWorkflow', 'Enums', 'LifecycleEnums.cpp');
+    expect(lifecycle.indexOf('if (ValueNames.Contains(ValName))')).toBeLessThan(lifecycle.indexOf('FEnumEditorUtils::CreateUserDefinedEnum('));
+    expect(lifecycle).toContain('V->SetStringField(TEXT("displayName"), Enum->GetDisplayNameTextByIndex(i).ToString());');
+  });
+});
+
+describe('an import replaces what is at its destination only when told to', () => {
+  it('every import checks the destination; only an FBX with options deletes the old asset first', () => {
+    const header = code('AssetWorkflow', 'Operations', 'McpAssetFbxImportOptions.h');
+    expect(header).toMatch(/if \(!bDeleteExisting\) \{\s*continue;\s*\}/u);
+    const importer = code('AssetWorkflow', 'Operations', 'McpAssetImportDuplicate.cpp');
+    expect(importer).toMatch(/if \(SetupError\.IsEmpty\(\)\) \{\s*McpClearImportTarget\(DestPath, DestName, ResolvedSourcePath,\s*bOverwrite, SetupError, SetupCode, ImportData->Factory != nullptr\);/u);
   });
 });

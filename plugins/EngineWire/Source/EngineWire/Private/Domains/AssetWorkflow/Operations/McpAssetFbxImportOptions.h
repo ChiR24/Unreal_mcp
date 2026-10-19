@@ -114,12 +114,15 @@ inline UFactory *McpMakeFbxFactory(UAutomatedAssetImportData *Owner,
 // The factory keys that early return on the name AssetTools derives from the
 // SOURCE file, and HandleImportAsset only renames to DestName afterwards, so
 // both names have to be clear. Returns false and fills OutError when something
-// is in the way and the caller did not ask to overwrite it.
-inline bool McpClearFbxImportTarget(const FString &DestPath,
-                                    const FString &DestName,
-                                    const FString &SourceFile, bool bOverwrite,
-                                    FString &OutError,
-                                    FString &OutErrorCode) {
+// is in the way and the caller did not ask to overwrite it. Every import asks:
+// a PNG or WAV used to be reimported over whatever sat there, whatever
+// overwrite said. bDeleteExisting (an FBX with options) deletes the old asset
+// first; any other file replaces it in place, keeping what points at it.
+inline bool McpClearImportTarget(const FString &DestPath,
+                                 const FString &DestName,
+                                 const FString &SourceFile, bool bOverwrite,
+                                 FString &OutError,
+                                 FString &OutErrorCode, bool bDeleteExisting) {
   TArray<FString> Names;
   Names.Add(DestName);
   Names.AddUnique(ObjectTools::SanitizeObjectName(FPaths::GetBaseFilename(SourceFile)));
@@ -135,12 +138,14 @@ inline bool McpClearFbxImportTarget(const FString &DestPath,
     }
     if (!bOverwrite) {
       OutError = FString::Printf(
-          TEXT("%s/%s already exists and would be reimported with its own stored ")
-          TEXT("settings, dropping the import options given here. Pass ")
-          TEXT("overwrite:true to replace it, or choose an empty destination."),
+          TEXT("%s/%s already exists. Pass overwrite:true to replace it, or ")
+          TEXT("choose an empty destination."),
           *DestPath, *Name);
       OutErrorCode = TEXT("DESTINATION_OCCUPIED");
       return false;
+    }
+    if (!bDeleteExisting) {
+      continue;
     }
     // The reference check keeps an asset something else still points at from
     // being deleted out from under it. Its refusal is a message dialog, which

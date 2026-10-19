@@ -54,8 +54,19 @@ bool UEngineWireSubsystem::HandleSequenceCreate(
   // result to schema-declared names, so it must be present on every success.
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("sequencePath"), FullPath);
+  // A level sequence already there is kept and answered as found; any other asset there was answered the same way.
   if (McpAssetExists(FullPath)) {
+    UObject *Existing = McpLoadAsset(FullPath);
+    if (!Cast<ULevelSequence>(Existing)) {
+      SendAutomationResponse(Socket, RequestId, false,
+          FString::Printf(TEXT("%s already holds a %s, not a level sequence"), *FullPath,
+                          Existing ? *Existing->GetClass()->GetName() : TEXT("asset")),
+          nullptr, TEXT("ASSET_ALREADY_EXISTS"));
+      return true;
+    }
     VerifyAssetExists(Resp, FullPath);
+    Resp->SetBoolField(TEXT("alreadyExists"), true);
+    McpHandlerUtils::MarkNoAssetsChanged(Resp);
     SendAutomationResponse(Socket, RequestId, true, TEXT("Sequence already exists"), Resp, FString());
     return true;
   }
@@ -67,7 +78,7 @@ bool UEngineWireSubsystem::HandleSequenceCreate(
         nullptr, TEXT("CREATE_ASSET_FAILED"));
     return true;
   }
-  McpSafeAssetSave(NewSequence);
+  Resp->SetBoolField(TEXT("saved"), McpSafeAssetSave(NewSequence));
   GCurrentSequencePath = FullPath;
   McpHandlerUtils::AddVerification(Resp, NewSequence);
   SendAutomationResponse(Socket, RequestId, true, TEXT("Sequence created"), Resp, FString());

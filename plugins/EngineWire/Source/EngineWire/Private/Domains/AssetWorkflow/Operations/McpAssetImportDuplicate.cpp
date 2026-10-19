@@ -115,9 +115,10 @@ bool UEngineWireSubsystem::HandleImportAsset(
           ImportData->Filenames = {ResolvedSourcePath};
           FString SetupError, SetupCode;
           ImportData->Factory = McpMakeFbxFactory(ImportData, FbxOptions, SetupError, SetupCode);
-          if (SetupError.IsEmpty() && ImportData->Factory != nullptr) {
-            McpClearFbxImportTarget(DestPath, DestName, ResolvedSourcePath,
-                                    bOverwrite, SetupError, SetupCode);
+          // Every import: an asset at the destination is replaced only with overwrite.
+          if (SetupError.IsEmpty()) {
+            McpClearImportTarget(DestPath, DestName, ResolvedSourcePath,
+                                 bOverwrite, SetupError, SetupCode, ImportData->Factory != nullptr);
           }
           if (!SetupError.IsEmpty()) {
             StrongThis->SendAutomationResponse(Socket, RequestId, false,

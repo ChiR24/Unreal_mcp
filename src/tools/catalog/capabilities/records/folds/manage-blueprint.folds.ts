@@ -42,7 +42,7 @@ export const MANAGE_BLUEPRINT_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'delete_node', selector: 'deleteScope',
-    summary: 'Delete a graph node, or break (disconnect) the links of one of its pins.',
+    summary: 'Delete Blueprint graph nodes (deleteScope node, the default), or disconnect every wire of one pin (pin_links). node deletes nodeId, or every node in nodeIds (up to 500), all or nothing: an id that matches no node is NODE_NOT_FOUND and a function entry or result node is PROTECTED_NODE, with nothing deleted; their wires go with them, and the reply lists the removed guids. pin_links breaks the links of pinName on nodeId (PIN_NOT_FOUND lists the pins the node has) and names the pins it was wired to under disconnectedFrom; a pin with no links changes nothing. Either is one undo step, then the Blueprint compiles (diagnostics when it no longer compiles) and is saved. A pinName sent with deleteScope node is refused (CONTRADICTORY_SCOPE) rather than deleting the whole node.',
     topics: ['delete node', 'remove node', 'disconnect pins', 'unlink pins', 'break pin links', 'remove wire', 'disconnect wire', 'unwire pin'],
     members: { node: 'delete_node', pin_links: 'break_pin_links' },
   },

@@ -41,10 +41,10 @@ export const P = {
   path: str('Directory or file path.'),
   resolution: str('Resolution setting (e.g. 1024x1024).'),
   returnBase64: bool('Return the PNG inline as an image (default true); a capture also saves a file unless keepFile is false. With no resolution, an inline image is downscaled to fit 1600x900. false returns only the saved path and metadata, at the full viewport size.'),
-  includeMetadata: bool('Attach caller-provided metadata to the response.'),
+  includeMetadata: bool('true: echo metadata back in the reply (default false).'),
   metadata: {
     type: 'object',
-    description: 'Caller-provided metadata.',
+    description: 'An object of your own, such as a label or a step number, returned under metadata when includeMetadata is true; the capture itself never reads it.',
     additionalProperties: true,
     'x-unreal-reflection-boundary': true,
   },

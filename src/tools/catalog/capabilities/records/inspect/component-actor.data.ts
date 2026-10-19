@@ -13,7 +13,7 @@ export const COMPONENT_ACTOR_RECORDS: readonly CapabilityRecordSource[] = [
     parentTool: 'inspect', action: 'get_components', dispatchAction: 'get_components', domain: D, family: 'components',
     topics: ['list components', 'actor components', 'component list', 'components of actor'],
     aliases: ['inspect.list_components'],
-    summary: 'List components on a world actor (or a Blueprint CDO when blueprintPath is supplied).',
+    summary: 'List the components of a level actor (actorName, name or objectPath) or of a Blueprint (blueprintPath, or an objectPath that is a Blueprint asset: its construction-script components and class defaults), each with its name, class, parent and where it comes from. A mesh component adds its static mesh and the material drawn in each slot, overrides included; a Blueprint component adds its relative transform and visibility. componentNames narrows the list, naming the ones not found under missingComponents.',
     whenToUse: ['An actor\'s component list must be enumerated.'],
     whenNotToUse: ['A single component\'s properties are needed; use get_component_property.'],
     inputProps: {

@@ -127,7 +127,7 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
   // enum
   {
     primary: 'edit_enum', selector: 'edit',
-    summary: 'Create an enum or edit its values: add, rename, reorder, set metadata, split.',
+    summary: 'Create a user enum or edit its values, chosen by edit. create makes it (name and path, default /Game/Enums, or enumPath) with values in order; a name given twice is refused and nothing is made. add_value appends valueName (index and valueCount answer where). rename_value changes the name the editor shows and keeps the internal name every stored value (defaults, pins, table cells) holds, answered as internalName. reorder_values takes order, every value once, and moves them as the enum editor does, so stored values keep their entries (the order it already has changes nothing). set_value_metadata sets key to value on one entry, such as its ToolTip. split copies the named values, or every value from index on, into a new enum newEnumName (in path, default /Game/Enums) and leaves the source as it is. A value is named by its internal or its shown name; a name the enum already has is VALUE_EXISTS and one it lacks NOT_FOUND. Every edit saves unless save is false.',
     topics: ['enum value', 'user defined enum', 'reorder enum', 'split enum', 'make enum', 'new enum', 'define enum'],
     members: { create: 'create_enum', add_value: 'add_enum_value', rename_value: 'rename_enum_value', reorder_values: 'reorder_enum_values', set_value_metadata: 'set_enum_value_metadata', split: 'split_enum' },
   },
@@ -173,7 +173,7 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'set_material_property', selector: 'materialProperty',
-    summary: 'Set a material property: blend mode, domain, shading model or two-sided.',
+    summary: 'Set a property of a material, or override it on a material instance, by materialProperty: blend_mode, domain, shading_model or two_sided. The material recompiles and is saved unless save is false (saved), and the reply gives the value written; on an instance the value becomes an override of its parent, as its Material Property Overrides do (instanceOverride), and the domain cannot be overridden (MATERIAL_INSTANCE). An unknown value is INVALID_ENUM, listing the valid ones, and leaves the asset as it was; a material function is UNSUPPORTED_ASSET_TYPE; engine content is refused (ENGINE_CONTENT), so duplicate it into /Game first.',
     topics: ['blend mode', 'material domain', 'shading model', 'two sided', 'make material transparent', 'unlit material'],
     members: { blend_mode: 'set_blend_mode', domain: 'set_material_domain', shading_model: 'set_shading_model', two_sided: 'set_two_sided' },
   },

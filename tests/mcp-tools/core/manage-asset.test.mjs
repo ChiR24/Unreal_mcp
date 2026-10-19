@@ -290,6 +290,11 @@ const testCases = [
 
     // === MATERIAL INSTANCES ===
     { scenario: 'CREATE: create_material_instance', toolName: 'manage_asset', arguments: { action: 'create_material_instance', name: INSTANCE_NAME, savePath: TEST_FOLDER, parentMaterial: MATERIAL_PATH }, expected: 'success|already exists' },
+    // An instance takes blend mode, shading model and two-sided as overrides of its parent; the domain stays the parent's.
+    { scenario: 'CONFIG: set_blend_mode overrides it on an instance', toolName: 'manage_asset', arguments: { action: 'set_blend_mode', assetPath: INSTANCE_PATH, blendMode: 'Translucent', save: false }, expected: 'success', assertions: [{ path: 'structuredContent.result.instanceOverride', equals: true, label: 'written as an override' }] },
+    { scenario: 'CONFIG: set_two_sided overrides it on an instance', toolName: 'manage_asset', arguments: { action: 'set_two_sided', assetPath: INSTANCE_PATH, value: true, save: false }, expected: 'success', assertions: [{ path: 'structuredContent.result.twoSided', equals: true, label: 'instance reads two-sided' }] },
+    { scenario: 'ERROR: set_material_domain refuses an instance', toolName: 'manage_asset', arguments: { action: 'set_material_domain', assetPath: INSTANCE_PATH, materialDomain: 'UI' }, expected: 'error|MATERIAL_INSTANCE' },
+    { scenario: 'ERROR: set_blend_mode refuses engine content', toolName: 'manage_asset', arguments: { action: 'set_blend_mode', assetPath: '/Engine/BasicShapes/BasicShapeMaterial', blendMode: 'Masked' }, expected: 'error|ENGINE_CONTENT' },
     { scenario: 'CONFIG: set_static_switch_parameter_value', toolName: 'manage_asset', arguments: { action: 'set_static_switch_parameter_value', assetPath: INSTANCE_PATH, parameterName: 'UseDetailParam', value: false, save: false }, expected: 'success' },
     { scenario: 'CONFIG: set_scalar_parameter_value', toolName: 'manage_asset', arguments: { action: 'set_scalar_parameter_value', assetPath: INSTANCE_PATH, parameterName: 'RoughnessParam', value: 0.35, save: false }, expected: 'success' },
     { scenario: 'CONFIG: set_vector_parameter_value', toolName: 'manage_asset', arguments: { action: 'set_vector_parameter_value', assetPath: INSTANCE_PATH, parameterName: 'TintParam', value: { r: 0.8, g: 0.2, b: 0.1, a: 1 } }, expected: 'success' },

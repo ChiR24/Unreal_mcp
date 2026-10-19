@@ -207,11 +207,6 @@ static bool BreakPinLinks(FActionContext& Context)
         return false;
     }
 
-    const FScopedTransaction Transaction(
-        FText::FromString(TEXT("Break Blueprint Pin Links")));
-    Context.Blueprint->Modify();
-    Context.TargetGraph->Modify();
-
     const FString NodeId = McpGetFirstStringField(
         Context.Payload, {TEXT("nodeId"), TEXT("nodeGuid"), TEXT("fromNodeId"),
                           TEXT("fromNode"), TEXT("sourceNodeGuid"),
@@ -237,14 +232,37 @@ static bool BreakPinLinks(FActionContext& Context)
         return true;
     }
 
+    // The pins it was wired to, named in the reply: "Pin links broken." also answered a pin with no links, and a
+    // refused call had already dirtied the Blueprint, whose transaction opened before the node was found.
+    TArray<FString> Linked;
+    for (const UEdGraphPin* Other : Pin->LinkedTo)
+    {
+        if (Other && Other->GetOwningNode())
+        {
+            Linked.Add(FString::Printf(TEXT("%s.%s"), *Other->GetOwningNode()->NodeGuid.ToString(), *Other->PinName.ToString()));
+        }
+    }
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetNumberField(TEXT("brokenLinks"), Linked.Num());
+    Result->SetArrayField(TEXT("disconnectedFrom"), McpHandlerUtils::ToJsonStringArray(Linked));
+    if (Linked.Num() == 0)
+    {
+        McpHandlerUtils::AddVerification(Result, Context.Blueprint);
+        McpHandlerUtils::MarkNoAssetsChanged(Result);
+        Context.SendResponse(FString::Printf(TEXT("Pin '%s' had no links; nothing changed."), *PinName), Result);
+        return true;
+    }
+
+    const FScopedTransaction Transaction(FText::FromString(TEXT("Break Blueprint Pin Links")));
+    Context.Blueprint->Modify();
+    Context.TargetGraph->Modify();
     TargetNode->Modify();
     Context.TargetGraph->GetSchema()->BreakPinLinks(*Pin, true);
     FBlueprintEditorUtils::MarkBlueprintAsModified(Context.Blueprint);
     SaveLoadedAssetThrottled(Context.Blueprint);
 
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     McpHandlerUtils::AddVerification(Result, Context.Blueprint);
-    Context.SendResponse(TEXT("Pin links broken."), Result);
+    Context.SendResponse(FString::Printf(TEXT("Broke %d link(s) of pin '%s'."), Linked.Num(), *PinName), Result);
     return true;
 }
 

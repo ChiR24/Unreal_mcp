@@ -60,6 +60,10 @@ export const GRAPH_PINS_RECORDS: readonly CapabilityRecordSource[] = [
     whenToUse: ['All links from a specific pin must be removed (disconnect or unlink a wire).'],
     whenNotToUse: ['A single link should be redirected (use connect_pins after breaking).'],
     inputProps: { blueprintPath: P.blueprintPath, graphName: P.graphName, nodeId: P.nodeId, pinName: P.pinName, nodeGuid: P.nodeGuid },
+    outputProps: {
+      brokenLinks: { type: 'number', description: 'How many wires of the pin were broken (0 when it had none, and nothing changed).' },
+      disconnectedFrom: { type: 'array', items: { type: 'string' }, description: 'The pins it was wired to, each as nodeGuid.pinName.' },
+    },
     required: ['blueprintPath', 'pinName'],
     requiredOneOf: ['nodeId', 'nodeGuid'],
     effect: 'destructive',
