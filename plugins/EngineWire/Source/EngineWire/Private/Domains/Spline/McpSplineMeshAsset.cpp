@@ -4,6 +4,7 @@
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 
 #include "Components/SplineMeshComponent.h"
 #include "Editor.h"
@@ -49,6 +50,8 @@ bool HandleSetSplineMeshAsset(
         return true;
     }
 
+    FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Set Spline Mesh")), EMcpMutationDurability::EditorStateOnly,
+                                            {TargetComp});
     TargetComp->SetStaticMesh(Mesh);
     Actor->MarkPackageDirty();
 

@@ -8,6 +8,7 @@
 #include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
 #include "Foundation/BridgeHelpers/Actors/McpActorMove.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
@@ -71,6 +72,15 @@ bool TryHandleSetActorProperty(
             TEXT("Cannot modify runtime transform on a Blueprint CDO. Edit defaults on the root component or SCS template instead."),
             TEXT("CDO_TRANSFORM"));
         return true;
+    }
+
+    // A move here ran outside any transaction: undo could not take it back, and the reply's placement checks,
+    // which watch what a call modifies, never saw the actor move.
+    TOptional<FMcpScopedEditorTransaction> Transaction;
+    if (IsActorTransformProperty(PropertyName))
+    {
+        Transaction.Emplace(FText::FromString(TEXT("Set Actor Transform")), EMcpMutationDurability::EditorStateOnly,
+                            TArray<UObject*>{Actor});
     }
 
     if (!bIsClassDefaultObject &&

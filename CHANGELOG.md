@@ -14,17 +14,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Blueprint runtime errors name their node** in frame steps and motion reads (node, `nodeId`, graph, Blueprint, hit count); `runtime_report` lists them with the object's variables at the first hit.
 - **MCP 2026-07-28 on both transports**: requests with no initialize or session, and consent asked through the client; the native transport adds the header checks and the tasks extension. Older clients are unchanged.
-- **`get_editor_state` `focus`**: the open asset editors, each Blueprint editor's graph in front and its selected nodes, the selected actors, recent warnings and the Blueprint runtime errors.
-- **`describe_view` `points`, `labels` and `coveredBy`**: the actor and world point under spots of the frame; the frame with the listed actors boxed and numbered; what partly covers a named actor that is in view.
-- **Large results come in pages** instead of `RESULT_TOO_LARGE`: `page.nextCall` reads the next page without running the call again, and a page read again comes back the same.
+- **`get_editor_state` `focus`**: open asset editors, the front Blueprint graph and its selected nodes, selected actors, recent warnings and runtime errors.
+- **`describe_view` `points`, `labels` and `coveredBy`**: the actor and world point under a spot; the frame with listed actors boxed and numbered; what partly covers a named actor.
+- **Large results come in pages** instead of `RESULT_TOO_LARGE`; `page.nextCall` reads the next one without rerunning the call.
 - **Search hands over a clear first hit** with `signature` and `executeCall` when it needs no consent, so describe can be skipped.
-- **`get_stats` `frame`**: the thread that bounds the frame, or that it only waits, and what in view weighs on it (movable shadowed lights, heavy meshes without Nanite, translucency, ticking actors).
-- **`nanite_rebuild_mesh` `assetPaths`**: several meshes under one consent; a mesh with a translucent slot is left alone, and the materials get the Nanite usage flag and are saved.
+- **`get_stats` `frame`**: the thread bounding the frame and what in view weighs on it (shadowed movable lights, non-Nanite meshes, translucency, ticking actors).
+- **`nanite_rebuild_mesh` `assetPaths`**: several meshes under one consent; translucent ones are left alone and the materials get the Nanite flag.
 - **`inspect_asset` `diff`**: a Blueprint, DataTable or data asset against its saved file or another asset: properties, variables, components, graph nodes and rows.
 - **`get_niagara_info` values**: each user parameter's default, and with `actorName` a placed effect's own values.
 - **Whole parts in one `edit_dynamic_mesh` call**: `append_cuboids` (boxes in rows, grids and stacks), `append_loft` (skinned cross sections), `append_mesh` (copies of a static mesh at placements) and `delete_triangles`.
 - **Movie Render Queue**: `cancel_render` stops a running render; `configure_render_camera` sets the shutter timing (FrameOpen keeps motion blur from reaching back across a camera cut), the overscan and rendering every camera.
 - **Sequences and animations**: `set_section` `playRate` speeds a clip up or down; `get_properties` `tracks` lists each animation track's clips; `get_animation_info` lists the bones a sequence keys.
+- **Every call that spawns, moves or re-meshes actors checks them**: its warnings name one left sunk, floating, intersecting or z-fighting, a default grid material, a label still reading "Text" or a copy pasted onto its original; `audit_placement` finds that content level-wide.
 
 </details>
 
@@ -39,16 +40,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`edit_scs` keeps `save: false`** for every edit; the Blueprint was saved anyway.
 - **A refusal keeps the details it names**, such as the unsaved packages of a refused close.
 - **`get_stats` `performance`** counts the RHI thread in `busiestThreadMs`.
-- **A level viewport screenshot waits for streaming**, so a Nanite mesh just built is not drawn as coarse blobs, and says when video memory is over budget; `set_viewport_realtime` reports the state it reached (it said enabled while the editor's background throttle kept the viewport off).
+- **A level viewport screenshot waits for streaming** (no coarse blobs for a new Nanite mesh) and names video memory over budget; `set_viewport_realtime` reports the state it reached.
 - **A deprecated property is refused**, naming where its replacement lives; the write had answered success and changed nothing.
 - **`set_property` inside a Niagara system restarts its placed effects**, so a renderer change shows.
 - **`audit_placement` counts simulated bodies as surfaces**, and **`fix_coplanar` brings a piece laid across several neighbours forward** instead of sinking it; undersides lying on a floor are no longer reported.
 - **A whole track name picks only that track**: `MovieScene3DTransformTrack_1` also matched `_10` to `_19`, in reads and in `remove_track`.
-- **`save_all` and `restart_editor` wait for a running render** (`RENDER_IN_PROGRESS`): a save wrote the render's temporary sequence state to disk, and a restart cut the render off.
-- **`set_bone_key` keeps what it is not given**: a key with no location put the bone on its parent; it keeps the bone's own value at that frame.
-- **Large batches pass the pre-queue checks**: a payload past 4096 values (a 392-item spawn batch) was refused as unchecked.
+- **`save_all` and `restart_editor` wait for a running render** (`RENDER_IN_PROGRESS`) instead of saving its temporary state or cutting it off.
+- **`set_bone_key` keeps what it is not given** (a key with no location put the bone on its parent).
+- **Large batches pass the pre-queue checks** (past 4096 values they were refused).
 - **A rate-limited request says when to retry** (`RATE_LIMITED`, `retryAfterSeconds`, a `Retry-After` header).
 - **Environment settings take object and soft references** (a volumetric cloud's material), as `edit_component` does.
+- **Undo takes back** an actor moved with `set_property`, a volume's `set_volume_bounds` and spline mesh edits and scatters.
 
 </details>
 

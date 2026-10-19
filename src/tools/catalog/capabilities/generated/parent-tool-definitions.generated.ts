@@ -4260,10 +4260,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "overlapping",
               "unsupported",
               "tilted",
-              "coplanar"
+              "coplanar",
+              "default_material",
+              "placeholder_text",
+              "duplicate"
             ]
           },
-          "description": "Report only these problem kinds, e.g. [\"coplanar\"] to list z-fighting alone in a platformer full of platforms that float on purpose. An actor whose worst problem is another kind still counts for coplanar when it has coplanarFaces. An actor whose bounds touch or overlap another actor's vertical face (a window band on a hall, an awning on a facade) is mounted, never floating or unsupported. Two faces pointing down with something solid right below them (pieces lying on a floor) are not reported as coplanar: no camera sees them. Omit for every kind."
+          "description": "Report only these problem kinds, e.g. [\"coplanar\"] to list z-fighting alone in a platformer full of platforms that float on purpose. default_material: a visible mesh slot drawing the engine's default grid (no material, or one made from it). placeholder_text: a text render still reading the engine default \"Text\" (give it its label, or an empty text when a script writes it in play). duplicate: an actor that is a copy of another in the same place with the same meshes, drawn twice. An actor whose worst problem is another kind still counts for these, as for coplanar, when its contentIssues hold them. An actor whose worst problem is another kind still counts for coplanar when it has coplanarFaces. An actor whose bounds touch or overlap another actor's vertical face (a window band on a hall, an awning on a facade) is mounted, never floating or unsupported. Two faces pointing down with something solid right below them (pieces lying on a floor) are not reported as coplanar: no camera sees them. Omit for every kind."
         },
         "limit": {
           "oneOf": [
@@ -4349,7 +4352,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "newName": {
           "type": "string",
-          "description": "New name for the duplicate or renamed actor."
+          "description": "Label for the copy. Without it the editor numbers the copy after the highest label of its series (Desk_1 copied becomes Desk_20 when Desk_19 exists); the reply's actorName names the copy either way."
         },
         "offset": {
           "oneOf": [
@@ -4369,7 +4372,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               },
               "minItems": 3,
               "maxItems": 3,
-              "description": "Spawn/duplicate offset as [x, y, z]."
+              "description": "World offset [x, y, z] in cm from the original's location (default [0, 0, 0]). With no offset the copy sits exactly on the original: both draw every face in the same place, which flickers, and the reply's warnings call it a duplicate. Wherever it lands, the reply's warnings name a copy left sunk, floating or intersecting."
             },
             {
               "type": "number",
@@ -4845,7 +4848,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "byKind": {
           "type": "object",
-          "description": "Count of flagged actors per problem kind: sunk, floating, overlapping, unsupported, tilted, coplanar.",
+          "description": "Count of flagged actors per problem kind: sunk, floating, overlapping, unsupported, tilted, coplanar, default_material, placeholder_text, duplicate.",
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true
         },
@@ -5197,7 +5200,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "problems": {
           "type": "array",
-          "description": "Findings worst-first: actorName, kind, severity in world units, the issue in words, suggestedZ when a resting height can be computed, overlappingActors when it intersects others (up to 8, each with actorName, actorClass and penetrationDepth), and coplanarFaces when faces z-fight: one entry per pair with direction (the axis both faces point along, e.g. -Y), component, otherActor, otherComponent, gap and overlapU x overlapV. Fix a pair by moving the face about 2 units along direction (this piece shows) or against it (the other shows, right for a piece sunk into it, such as a ramp in the floor), by moving or scaling the actor.",
+          "description": "Findings worst-first: actorName, kind, severity in world units, the issue in words, suggestedZ when a resting height can be computed, overlappingActors when it intersects others (up to 8, each with actorName, actorClass and penetrationDepth), and coplanarFaces when faces z-fight: one entry per pair with direction (the axis both faces point along, e.g. -Y), component, otherActor, otherComponent, gap and overlapU x overlapV. Fix a pair by moving the face about 2 units along direction (this piece shows) or against it (the other shows, right for a piece sunk into it, such as a ramp in the floor), by moving or scaling the actor. contentIssues lists the unfinished content it shows: kind (default_material, placeholder_text, duplicate), component and the issue; their severity is the size in cm of what shows them.",
           "items": {
             "type": "object",
             "additionalProperties": true,

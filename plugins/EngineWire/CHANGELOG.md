@@ -9,17 +9,18 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 ### Added
 - **Blueprint runtime errors** in Play name their node, graph and Blueprint in frame steps and motion reads; `runtime_report` lists the session's errors with the object's variables.
 - **`get_editor_focus`**: open asset editors newest first, each Blueprint editor's focused graph and selected nodes, the selected actors, the last minute's distinct warnings and the script errors.
-- **`describe_view` `points` and `labels`**: per spot, the actor its hit-proxy pixel draws and the Visibility trace through it; the frame (at most 960 px wide) with the listed actors' boxes numbered, as a PNG; a named actor in view gets `coveredBy`, the nearer actors over at least 5% of its box.
+- **`describe_view` `points` and `labels`**: per spot, the hit-proxy actor and the Visibility trace through it; a PNG of the frame (at most 960 px) with listed actors boxed and numbered; `coveredBy`, nearer actors over at least 5% of a named actor's box.
 - **MCP 2026-07-28 on `/mcp`**: per-request version with no session, `Mcp-Method`/`Mcp-Name` checks, `resultType` and cache hints, consent through client elicitation (signed `requestState`), and the tasks extension.
-- **Result pages**: a result over 100k chars whose size is one top-level array goes a page at a time; the rest waits 5 minutes (at most 8 kept) for `options.pageCursor` from the same principal, capability and params. A cursor names its page's offset, `page.nextCall` repeats the call's routing, and an `imageBase64` goes with the first page only.
+- **Result pages**: a result over 100k chars that is one top-level array goes a page at a time; the rest waits 5 minutes (8 kept) for `options.pageCursor` from the same principal, capability and params; a cursor names its offset and an `imageBase64` goes with the first page.
 - **Search signature**: a first hit whose runner-up scores at most 90% of it (`McpSearchConfidentRatioPercent`) and that needs no consent carries `signature` and `executeCall`.
-- **`get_frame_cost`**: the busiest of game, render, RHI and GPU against the frame (in Play, the world tick), plus movable shadowed lights, non-Nanite meshes by LOD 0 triangles, translucent primitives and ticking actors by class with their tick sources.
+- **`get_frame_cost`**: the busiest of game, render, RHI and GPU against the frame, plus shadowed movable lights, non-Nanite meshes by LOD 0 triangles, translucent primitives and ticking actors by class.
 - **`nanite_rebuild_mesh` `assetPaths`**: one row per mesh; a slot neither opaque nor masked refuses the mesh first (`NANITE_UNSUPPORTED_MATERIAL`), and each material's flag owner gets `MATUSAGE_Nanite`, saved after the build.
 - **`get_niagara_info` values**: `userParameters` carry the default; `actorName` reads the component's `GetOverrideParameters()` into `placed`.
-- **`edit_dynamic_mesh` `append_cuboids`, `append_loft`, `append_mesh`, `delete_triangles`**: boxes and lofts build the input `append_polygons` validates; `append_mesh` appends a static mesh (`lod: "render"` for its Nanite fallback) per placement through `FDynamicMeshEditor::AppendMesh`; `delete_triangles` removes a picked region.
+- **`edit_dynamic_mesh` `append_cuboids`, `append_loft`, `append_mesh`, `delete_triangles`**: boxes and lofts build `append_polygons` input; `append_mesh` appends a static mesh per placement (`FDynamicMeshEditor::AppendMesh`, `lod: "render"` for the Nanite fallback).
 - **`diff_asset`**: a saved copy loaded with `LOAD_ForDiff` (then released) or another asset, compared property by property; `NewVariables`, components by variable name, graphs through `FGraphDiffControl::DiffGraphs`, rows by name.
 - **`cancel_render`** (`CancelAllJobs()` on the active executor, `MRQ_NOT_RENDERING` when none) and **`configure_render_camera`** (`ShutterTiming`, `OverscanPercentage`; `bOverrideCameraOverscan` and `bRenderAllCameras` found by name, as newer engines add them).
 - **`set_section` `playRate`**: a float to 5.4, `FMovieSceneTimeWarpVariant` from 5.5; the range rescales by old over new rate unless `endFrame` is given. **Reads**: list_tracks `animations`, get_animation_info `boneTracks`.
+- **Change watch** (`McpChangeWatch`): editor actors a request spawns (`OnLevelActorAdded`) or modifies (`OnObjectModified`) are fingerprinted, and a reply's `warnings` get their placement and content findings (64 checked, 12 listed); `audit_placement` kinds `default_material`, `placeholder_text`, `duplicate`.
 
 ### Fixed
 - **`runtime_report` `filter`** matches an actor's path only whole.
@@ -30,7 +31,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **`edit_scs` reads `save`** for every action, not only `modify`.
 - **Refusal details survive reply compaction** when the message and code repeat the reply's.
 - **`get_performance_stats` `busiestThreadMs`** includes the RHI thread.
-- **Editor viewport captures settle across ticks** (retried 0.3 s later, at most five passes, until two frames match) and warn when `GDemotedLocalMemorySize` says video memory is over budget; `set_viewport_realtime` puts its own override over other holds and names the background one the editor re-adds every tick (`heldBy`) instead of claiming realtime.
+- **Editor viewport captures settle across ticks** (0.3 s retries, five passes, until two frames match) and warn on `GDemotedLocalMemorySize`; `set_viewport_realtime` overrides other holds and names the background one re-added every tick (`heldBy`).
 - **The property resolver refuses `CPF_Deprecated`** (UHT registers `X_DEPRECATED` as `X`) and names the member that holds it.
 - **`set_property` in a Niagara system** re-inits it with `FNiagaraSystemUpdateContext`.
 - **The placement ground trace queries `ECC_PhysicsBody`**; **`fix_coplanar` sums a face's overlaps** over all its pairs; two down-facing faces with something solid within 2 cm below are skipped.
@@ -40,6 +41,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **Pre-queue scans** walk up to `McpMaxPayloadScanNodes` (262144) values; command keys compare in place.
 - **Rate limit replies** name the cap, its setting and the wait, with `data.errorCode` `RATE_LIMITED`, `retryAfterSeconds` and `Retry-After`.
 - **`McpApplyPayloadSettings`** writes through the full `ApplyJsonValueToProperty` (objects, soft references, arrays).
+- **Undoable** in an `FMcpScopedEditorTransaction`: `set_property` actor transforms, `set_volume_bounds`, spline mesh asset/material, `scatter_meshes_along_spline`.
 
 ## [0.6.0-beta-f] - 2026-10-16
 

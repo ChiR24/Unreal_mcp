@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "91348227efd7615d",
+  "catalogRevision": "80790e8d9f01d239",
   "recordCount": 416,
   "records": [
     {
@@ -33883,18 +33883,25 @@
           "legs inside the body",
           "feet below the capsule",
           "driver clipping through seat",
-          "blueprint part overlap"
+          "blueprint part overlap",
+          "find slop in the level",
+          "unfinished content",
+          "default grid material",
+          "placeholder text",
+          "two copies in the same place"
         ],
-        "summary": "Sweep every actor in the level and report the ones that interpenetrate another actor, sit sunk below the surface under them, float above it, lean off vertical, or have a face in the same plane as another surface (z-fighting flicker); or, with blueprintPath, the mesh parts of one actor Blueprint that are buried in each other or sunk below its capsule.",
+        "summary": "Sweep every actor in the level and report the ones that interpenetrate another actor, sit sunk below the surface under them, float above it, lean off vertical, or have a face in the same plane as another surface (z-fighting flicker), and the unfinished content they show (a slot on the engine's default grid material, a text still reading \"Text\", a copy pasted onto the original); or, with blueprintPath, the mesh parts of one actor Blueprint that are buried in each other or sunk below its capsule.",
         "whenToUse": [
           "A level was assembled programmatically and needs checking before anyone looks at it.",
           "Actors appear to clip through each other, stand in the ground, or lie on their side.",
           "A placement pass should be verified without flying the viewport around to eyeball it.",
+          "Judging what was already in the level, or what an import, a merge or a script outside the MCP left: a call's own warnings cover only the actors that call changed.",
+          "A level must be checked for slop before anyone plays it: default_material, placeholder_text and duplicate name what was left unfinished.",
           "Surfaces flicker, or another material shows through in ragged patches (z-fighting): the coplanar face pairs responsible are listed under coplanarFaces, with the direction to push each one; control_actor fix_coplanar fixes them all in one call.",
           "A character, vehicle or prop is assembled from mesh components in a Blueprint (a driver in a seat, legs on a body): blueprintPath checks every part against every other on their real triangles and against the capsule bottom, so a leg sunk into the seat or a foot through the floor is named with its depth."
         ],
         "whenNotToUse": [
-          "One actor was just moved; spawn and set_transform already return placementWarning for it.",
+          "Checking only what one call just did: every call that spawns, moves, duplicates or re-meshes actors already runs these checks on the actors it changed (spawn and set_transform answer placementWarning; every other call lists what it finds in its reply's warnings).",
           "A finding is a deliberate composition (a keep bedding its towers into its platform, an island meant to hang in the air, a signpost leaning by design): tag that actor mcp.placement.ok with control_actor.add_tag and it drops out of the sweep entirely -- as tilt subject, and as both subject and target for overlap -- rather than being re-reported every time. Coplanar faces are still reported for tagged actors, because they flicker whatever the intent."
         ]
       },
@@ -33929,10 +33936,13 @@
                   "overlapping",
                   "unsupported",
                   "tilted",
-                  "coplanar"
+                  "coplanar",
+                  "default_material",
+                  "placeholder_text",
+                  "duplicate"
                 ]
               },
-              "description": "Report only these problem kinds, e.g. [\"coplanar\"] to list z-fighting alone in a platformer full of platforms that float on purpose. An actor whose worst problem is another kind still counts for coplanar when it has coplanarFaces. An actor whose bounds touch or overlap another actor's vertical face (a window band on a hall, an awning on a facade) is mounted, never floating or unsupported. Two faces pointing down with something solid right below them (pieces lying on a floor) are not reported as coplanar: no camera sees them. Omit for every kind."
+              "description": "Report only these problem kinds, e.g. [\"coplanar\"] to list z-fighting alone in a platformer full of platforms that float on purpose. default_material: a visible mesh slot drawing the engine's default grid (no material, or one made from it). placeholder_text: a text render still reading the engine default \"Text\" (give it its label, or an empty text when a script writes it in play). duplicate: an actor that is a copy of another in the same place with the same meshes, drawn twice. An actor whose worst problem is another kind still counts for these, as for coplanar, when its contentIssues hold them. An actor whose worst problem is another kind still counts for coplanar when it has coplanarFaces. An actor whose bounds touch or overlap another actor's vertical face (a window band on a hall, an awning on a facade) is mounted, never floating or unsupported. Two faces pointing down with something solid right below them (pieces lying on a floor) are not reported as coplanar: no camera sees them. Omit for every kind."
             },
             "maxTilt": {
               "type": "number",
@@ -33979,13 +33989,13 @@
             },
             "byKind": {
               "type": "object",
-              "description": "Count of flagged actors per problem kind: sunk, floating, overlapping, unsupported, tilted, coplanar.",
+              "description": "Count of flagged actors per problem kind: sunk, floating, overlapping, unsupported, tilted, coplanar, default_material, placeholder_text, duplicate.",
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true
             },
             "problems": {
               "type": "array",
-              "description": "Findings worst-first: actorName, kind, severity in world units, the issue in words, suggestedZ when a resting height can be computed, overlappingActors when it intersects others (up to 8, each with actorName, actorClass and penetrationDepth), and coplanarFaces when faces z-fight: one entry per pair with direction (the axis both faces point along, e.g. -Y), component, otherActor, otherComponent, gap and overlapU x overlapV. Fix a pair by moving the face about 2 units along direction (this piece shows) or against it (the other shows, right for a piece sunk into it, such as a ramp in the floor), by moving or scaling the actor.",
+              "description": "Findings worst-first: actorName, kind, severity in world units, the issue in words, suggestedZ when a resting height can be computed, overlappingActors when it intersects others (up to 8, each with actorName, actorClass and penetrationDepth), and coplanarFaces when faces z-fight: one entry per pair with direction (the axis both faces point along, e.g. -Y), component, otherActor, otherComponent, gap and overlapU x overlapV. Fix a pair by moving the face about 2 units along direction (this piece shows) or against it (the other shows, right for a piece sunk into it, such as a ramp in the floor), by moving or scaling the actor. contentIssues lists the unfinished content it shows: kind (default_material, placeholder_text, duplicate), component and the issue; their severity is the size in cm of what shows them.",
               "items": {
                 "type": "object",
                 "additionalProperties": true,
@@ -34014,7 +34024,7 @@
       },
       "examples": [
         {
-          "title": "Sweep every actor in the level and report the ones that interpenetrate another actor, sit sunk below the surface under them, float above it, lean off vertical, or have a face in the same plane as another surface (z-fighting flicker); or, with blueprintPath, the mesh parts of one actor Blueprint that are buried in each other or sunk below its capsule.",
+          "title": "Sweep every actor in the level and report the ones that interpenetrate another actor, sit sunk below the surface under them, float above it, lean off vertical, or have a face in the same plane as another surface (z-fighting flicker), and the unfinished content they show (a slot on the engine's default grid material, a text still reading \"Text\", a copy pasted onto the original); or, with blueprintPath, the mesh parts of one actor Blueprint that are buried in each other or sunk below its capsule.",
           "input": {
             "action": "audit_placement",
             "nameFilter": "HubNPC_"
@@ -34057,8 +34067,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "c28cd567d0500076b40f6a04be1db1b204bf48bd1997eacdabbd19434297ffeb",
-        "content": "d0cef383bfa2a97e703433ed88256a7f4b57562bf5773695cbbf20ac011c1d3b"
+        "schema": "0560abba1e4013aea0ed52d9e2edf48081c38acd766c58a0276096c153ce7906",
+        "content": "e411af4027b88c41dbe6f94eb9bc86e4d9f0cb3b609eb6db9de0288059bfb14a"
       }
     },
     {
@@ -34640,12 +34650,14 @@
           "copy actor",
           "make actor copy"
         ],
-        "summary": "Duplicate an existing actor, optionally with a new name and offset.",
+        "summary": "Duplicate a placed actor: a copy with its components, properties, materials and tags at the original's transform moved by offset, labelled newName or numbered after the original, in one undo step.",
         "whenToUse": [
-          "An actor must be copied within the current level."
+          "An actor must be copied within the current level.",
+          "A configured prop, light or Blueprint instance should appear again elsewhere without setting each property again: duplicate it with the offset to where the copy goes."
         ],
         "whenNotToUse": [
-          "A distinct class instance is needed (use spawn)."
+          "A distinct class instance is needed (use spawn).",
+          "Many copies in a row or a grid are wanted: spawn_batch places them in one call and one undo step."
         ]
       },
       "schemas": {
@@ -34663,7 +34675,7 @@
             },
             "newName": {
               "type": "string",
-              "description": "New name for the duplicate or renamed actor."
+              "description": "Label for the copy. Without it the editor numbers the copy after the highest label of its series (Desk_1 copied becomes Desk_20 when Desk_19 exists); the reply's actorName names the copy either way."
             },
             "offset": {
               "type": "array",
@@ -34672,7 +34684,7 @@
               },
               "minItems": 3,
               "maxItems": 3,
-              "description": "Spawn/duplicate offset as [x, y, z]."
+              "description": "World offset [x, y, z] in cm from the original's location (default [0, 0, 0]). With no offset the copy sits exactly on the original: both draw every face in the same place, which flickers, and the reply's warnings call it a duplicate. Wherever it lands, the reply's warnings name a copy left sunk, floating or intersecting."
             }
           },
           "required": [
@@ -34707,7 +34719,7 @@
       },
       "examples": [
         {
-          "title": "Duplicate an existing actor, optionally with a new name and offset.",
+          "title": "Duplicate a placed actor: a copy with its components, properties, materials and tags at the original's transform moved by offset, labelled newName or numbered after the original, in one undo step.",
           "input": {
             "action": "duplicate",
             "actorName": "Cube1",
@@ -34755,8 +34767,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "5ebc4adc13a37155ba9702e4ba8941cf0c5e68bea9f5262dd4f746cf6ade087d",
-        "content": "4d20b6af1a916784d13b184b365cc562bd84ac7ae601fb27a8fb5a73fcd881b0"
+        "schema": "325ccfd05f51b91aa27187b57988388402d0af00117e967ac21ea27c4b3379a6",
+        "content": "7e57f94f1e64d064d3cf6b5263a67f1a79824c600b3ae72d582c578e542aeb9f"
       }
     },
     {

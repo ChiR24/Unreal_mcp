@@ -3524,3 +3524,47 @@ describe('set_viewport_realtime takes effect over another override', () => {
       .toContain('const bool bBackgroundHold = bRealtime && !FApp::HasFocus() && Performance && Performance->bThrottleCPUWhenNotForeground;');
   });
 });
+
+describe('audit_placement finds unfinished content', () => {
+  // A level full of grid-checker meshes, "Text" labels and actors pasted twice read as slop, and only a camera fly-by found it.
+  it('reports default materials, placeholder text and pasted duplicates beside placement problems', () => {
+    const audit = code('ControlActor', 'McpActorPlacementAudit.cpp');
+    expect(audit).toContain('McpContentAudit::MergeContent(World, NameFilter, Findings, FindingIndex);');
+    expect(audit).toContain('Object->SetArrayField(TEXT("contentIssues"), Finding.ContentIssues);');
+    const content = code('ControlActor', 'Placement', 'McpContentAudit.cpp');
+    expect(content).toContain('Material->GetMaterial() == Default');
+    expect(content).toContain('Text->Text.ToString() == TEXT("Text")');
+  });
+});
+
+describe('every call that changes actors is checked on the spot', () => {
+  const core = (...segments: readonly string[]): string =>
+    readFileSync(join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', ...segments), 'utf8');
+
+  // An actor duplicated, re-meshed or spawned by any capability but spawn and set_transform answered a bare success, so a
+  // caller that never ran audit_placement left it sunk, floating, z-fighting or on the default grid material.
+  it('watches what a request spawns or modifies and checks it in the reply', () => {
+    const dispatch = core('Core', 'Requests', 'McpProcessRequest.cpp');
+    expect(dispatch).toContain('McpChangeWatch::Begin(RequestId);');
+    expect(dispatch).toContain('McpChangeWatch::End();');
+    expect(core('Core', 'Subsystem', 'EngineWireSubsystemResponses.cpp')).toContain('McpChangeWatch::AddWarnings(RequestId, EffectiveResult);');
+    const watch = code('ControlActor', 'Placement', 'McpChangeWatch.cpp');
+    expect(watch).toContain('FCoreUObjectDelegates::OnObjectModified.AddStatic(&WatchOnModified)');
+    expect(watch).toContain('GEngine->OnLevelActorAdded().AddStatic(&WatchOnAdded)');
+    expect(watch).toContain('McpPlacement::DescribePlacement(Actor, Row);');
+    expect(watch).toContain('McpContentAudit::FindUnfinished(Actor, Issues);');
+    expect(watch).toContain('McpContentAudit::FindTwin(Actor)');
+  });
+
+  // A Blueprint compile respawns every placed instance and a construction script rebuilds parts: neither moved anything.
+  it('skips respawns and compares assets, not component objects', () => {
+    const watch = code('ControlActor', 'Placement', 'McpChangeWatch.cpp');
+    expect(watch).toContain('GIsReinstancing');
+    expect(watch).toContain('Actor->IsChildActor()');
+    expect(watch).toContain('OutDrawn += Drawn;');
+  });
+
+  it('leaves an actor whose reply carries its placement to that reply', () => {
+    expect(code('ControlActor', 'McpActorPlacementCheck.cpp')).toContain('McpChangeWatch::NotePlacementReported(Actor);');
+  });
+});

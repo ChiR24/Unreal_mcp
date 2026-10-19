@@ -13,6 +13,7 @@ Core owns the request queue, the game-thread drain and the per-tool handler map:
 2. `QueueAutomationRequest()` locks `PendingAutomationRequestsMutex` and appends; it rejects with `EAutomationQueueRejection::{NotAccepting, AlreadyCanceled, QueueFull}` (cap `MaxPendingAutomationRequests`).
 3. `Tick()` → `ProcessPendingAutomationRequests()` drains 16 per tick on the game thread (re-posts itself when called off it).
 4. `ProcessRequest` looks up the tool name in `AutomationHandlers` and invokes the handler; the handler replies through its socket.
+5. While the handler runs, `McpChangeWatch` (`../Domains/ControlActor/Placement/`) notes the editor-level actors it spawns or modifies, and `SendAutomationResponse` adds their placement and content checks to a successful reply's `warnings`. A reply sent after the handler returned carries none. Core only calls it: the checks live in the domain.
 
 ## HANDLER REGISTRATION
 The wire contract is the 23 parent tools plus `console_command`. `InitializeHandlers()` in `...HandlerRegistration.cpp` is one table:

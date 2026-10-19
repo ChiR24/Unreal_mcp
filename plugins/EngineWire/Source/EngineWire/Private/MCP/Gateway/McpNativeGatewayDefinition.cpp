@@ -103,6 +103,7 @@ TSharedPtr<FJsonObject> BuildUnrealGatewayToolDefinition()
 			"(2) describe: send the chosen row's nextCall unchanged; the reply is the exact contract: parameters (name, type, required), inputSchema, a working example and, when required, consentGrant. "
 			"A first row that carries signature may skip describe: fill params from its signature and send its executeCall. "
 			"(3) execute: send describe's nextCall with params filled in, using ONLY the parameter names describe listed. "
+			"(4) read warnings[] on a successful reply: they name what the call left wrong (an actor it placed now sunk, floating, intersecting or z-fighting; a default grid material; placeholder text; a pasted duplicate), so fix those before the next step. "
 			"Rules: never guess capability ids, tool names, action names or parameter names; never put action or subAction inside params; a failed call returns suggestions and an executable nextCall, so send that nextCall instead of retrying blindly. "
 			"To browse instead of search, call describe with no selector and follow the nextCall on each row one level down. "
 			"configure only enables or disables internal tool groups; it never performs editor work."));

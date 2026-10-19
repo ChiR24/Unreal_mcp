@@ -4,7 +4,7 @@
  */
 import type { CapabilityRecordSource } from '../../model.js';
 import { ANY_EDITOR_STATE, buildCoreRecord } from '../core/builder.js';
-import { bool, num, str } from '../shared/schema-props.js';
+import { bool, num, str, vec3 } from '../shared/schema-props.js';
 import { DOMAIN, P, PLACEMENT_FACTS } from './properties.js';
 
 const FAMILY_SPAWN = 'spawn';
@@ -218,13 +218,19 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
     family: FAMILY_LIFECYCLE,
     topics: ['clone actor', 'copy actor', 'make actor copy'],
     summary:
-      'Duplicate an existing actor, optionally with a new name and offset.',
-    whenToUse: ['An actor must be copied within the current level.'],
-    whenNotToUse: ['A distinct class instance is needed (use spawn).'],
+      'Duplicate a placed actor: a copy with its components, properties, materials and tags at the original\'s transform moved by offset, labelled newName or numbered after the original, in one undo step.',
+    whenToUse: [
+      'An actor must be copied within the current level.',
+      'A configured prop, light or Blueprint instance should appear again elsewhere without setting each property again: duplicate it with the offset to where the copy goes.',
+    ],
+    whenNotToUse: [
+      'A distinct class instance is needed (use spawn).',
+      'Many copies in a row or a grid are wanted: spawn_batch places them in one call and one undo step.',
+    ],
     inputProps: {
       actorName: P.actorName,
-      newName: P.newName,
-      offset: P.offset,
+      newName: str('Label for the copy. Without it the editor numbers the copy after the highest label of its series (Desk_1 copied becomes Desk_20 when Desk_19 exists); the reply\'s actorName names the copy either way.'),
+      offset: vec3('World offset [x, y, z] in cm from the original\'s location (default [0, 0, 0]). With no offset the copy sits exactly on the original: both draw every face in the same place, which flickers, and the reply\'s warnings call it a duplicate. Wherever it lands, the reply\'s warnings name a copy left sunk, floating or intersecting.'),
     },
     required: ['actorName'],
     effect: 'write',

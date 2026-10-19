@@ -243,6 +243,18 @@ Rules the resolver enforces:
 - Unknown selectors return `UNKNOWN_CAPABILITY` / `UNKNOWN_TOOL` /
   `UNKNOWN_ACTION`, each with `suggestions` and an executable `nextCall`.
 
+### A success can carry warnings
+
+A successful receipt's `warnings` name what the call left wrong. Every request
+that spawns, moves or re-meshes editor-level actors, whichever capability did
+it, has those actors checked in the plugin before it replies
+(`McpChangeWatch`): one now sunk, floating, intersecting another or sharing a
+face plane with one (z-fighting), a mesh slot on the engine's default grid
+material, a text still reading "Text", a copy pasted onto its original. Play
+In Editor caveats and engine warnings logged during the call land there too.
+A reply sent after its handler returned (a long-running task) carries no
+placement checks; `control_actor audit_placement` sweeps the whole level.
+
 ## Deprecation and removal behavior
 
 Three distinct removal behaviors exist. They are not interchangeable.

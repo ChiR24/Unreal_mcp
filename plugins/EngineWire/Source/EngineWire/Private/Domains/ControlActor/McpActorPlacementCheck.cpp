@@ -1,6 +1,7 @@
 // Copyright (c) 2024 EngineWire Contributors
 
 #include "Domains/ControlActor/McpActorSupport.h"
+#include "Domains/ControlActor/Placement/McpChangeWatch.h"
 #include "Domains/ControlActor/Placement/McpPlacementMount.h"
 #include "Domains/ControlActor/Placement/McpPlacementShapes.h"
 
@@ -114,6 +115,7 @@ bool McpPlacementAccepted(const AActor *Actor) {
 // overlappingActors[] and suggestedLocation to Data when there is something to
 // say, and leaves Data untouched when the placement looks clean.
 void DescribePlacement(AActor *Actor, const TSharedPtr<FJsonObject> &Data) {
+  McpChangeWatch::NotePlacementReported(Actor); // the reply reports it: the change watch checks only what it shows
   if (!Actor || !Data.IsValid()) {
     return;
   }

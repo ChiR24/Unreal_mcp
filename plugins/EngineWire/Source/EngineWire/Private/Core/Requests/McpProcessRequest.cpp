@@ -3,6 +3,7 @@
 #include "HAL/PlatformTime.h"
 #include "Core/Module/EngineWireGlobals.h"
 #include "Core/Security/McpPrequeueGate.h"
+#include "Domains/ControlActor/Placement/McpChangeWatch.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/McpTelemetryRegistry.h"
 #include "EngineWireSubsystem.h"
@@ -206,6 +207,7 @@ void UEngineWireSubsystem::ProcessAutomationRequest(
         // engine error.
       }
 
+      McpChangeWatch::End();
       bProcessingAutomationRequest = false;
       EngineWire::SetInFlightAction(FString(), FString()); // clear the in-flight action on every exit path
       CurrentRequestOrigin = ERequestOrigin::WebSocket;
@@ -242,6 +244,8 @@ void UEngineWireSubsystem::ProcessAutomationRequest(
     // responses stay aligned with the Unreal log.
     BeginErrorCapture();
     bErrorCaptureStarted = true;
+    // Whatever actors the handler spawns, moves or redraws are checked when it replies (McpChangeWatch::AddWarnings).
+    McpChangeWatch::Begin(RequestId);
 
     // Map this requestId to the requesting socket so responses can be
     // delivered reliably
