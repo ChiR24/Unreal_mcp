@@ -227,7 +227,7 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'adjust_texture', selector: 'adjust',
-    summary: 'Adjust texture pixels in place: curves, levels, blur, sharpen, desaturate, invert.',
+    summary: 'Edit the pixels of an 8-bit texture in place (assetPath; a 16-bit or HDR source is refused, and a grayscale one becomes BGRA8), chosen by adjust: curves maps the channel through curvePoints ({x, y} pairs from 0 to 1, at least two); levels remaps inBlack to inWhite (0 to 1) with gamma; blur averages over radius (default 2, 1 to 10); sharpen at strength (default 1, up to 5); desaturate by amount (default 1, fully gray); invert flips the colors. channel picks R, G, B or A for curves, levels and invert (otherwise the three color channels). The texture is saved unless save is false (saved), with no undo, so duplicate it first to keep the original; engine content is refused (ENGINE_CONTENT).',
     topics: ['adjust texture', 'blur texture', 'sharpen', 'desaturate', 'invert texture', 'levels', 'curves', 'grayscale texture', 'sharpen image'],
     members: { curves: 'adjust_curves', levels: 'adjust_levels', blur: 'blur', sharpen: 'sharpen', desaturate: 'desaturate', invert: 'invert' },
   },

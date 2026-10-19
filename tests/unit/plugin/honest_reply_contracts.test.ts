@@ -3912,3 +3912,15 @@ describe('a landscape layer blend refuses a blend type it does not know', () => 
     expect(blend).toContain('Result->SetBoolField(TEXT("saved"), bSaved);');
   });
 });
+
+describe('texture edits in place leave engine content alone and say whether they saved', () => {
+  it('the in-place loader refuses engine content before the grayscale conversion, and each editor reports saved', () => {
+    const shared = code('Texture', 'McpTextureShared.cpp');
+    expect(shared.indexOf('*OutErrorCode = TEXT("ENGINE_CONTENT");')).toBeLessThan(shared.indexOf('if (bConvertToBGRA8 && Format == TSF_G8)'));
+    for (const file of ['McpTextureColor.cpp', 'McpTextureCurves.cpp', 'McpTextureFilters.cpp']) {
+      const source = code('Texture', file);
+      expect(source, file).toMatch(/AssetPath, Error,\s*true, &ErrorCode\);/u);
+      expect(source, file).toContain('Response->SetBoolField(TEXT("saved"), GetJsonBoolField(Params, TEXT("save"), true) && McpSafeAssetSave(Texture));');
+    }
+  });
+});

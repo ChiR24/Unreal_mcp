@@ -16,9 +16,11 @@ TSharedPtr<FJsonObject> HandleTextureFilterAction(const FString& SubAction, cons
     }
 
     FString AssetPath;
-    UTexture2D* Texture = LoadSourceTexture(GetJsonStringField(Params, TEXT("assetPath")), TEXT("assetPath"), AssetPath, Error, /*bConvertToBGRA8=*/true);
+    FString ErrorCode;
+    UTexture2D* Texture = LoadSourceTexture(GetJsonStringField(Params, TEXT("assetPath")), TEXT("assetPath"), AssetPath, Error, /*bConvertToBGRA8=*/true, &ErrorCode);
     if (!Texture)
     {
+        if (!ErrorCode.IsEmpty()) { Response->SetStringField(TEXT("errorCode"), ErrorCode); }
         TEXTURE_ERROR_RESPONSE(Error);
     }
     const int32 Width = Texture->Source.GetSizeX();
@@ -85,7 +87,7 @@ TSharedPtr<FJsonObject> HandleTextureFilterAction(const FString& SubAction, cons
     Texture->Source.UnlockMip(0);
     Texture->UpdateResource();
     Texture->MarkPackageDirty();
-    if (GetJsonBoolField(Params, TEXT("save"), true)) McpSafeAssetSave(Texture);
+    Response->SetBoolField(TEXT("saved"), GetJsonBoolField(Params, TEXT("save"), true) && McpSafeAssetSave(Texture));
     Response->SetBoolField(TEXT("success"), true);
     Response->SetStringField(TEXT("message"), SubAction == TEXT("blur")
         ? FString::Printf(TEXT("Blur applied (radius: %d)"), Radius)

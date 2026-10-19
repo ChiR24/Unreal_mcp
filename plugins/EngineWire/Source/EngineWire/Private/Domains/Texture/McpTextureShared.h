@@ -41,7 +41,7 @@ FString NormalizeTexturePath(const FString& Path);
 // BGRA8 in the asset, for the operations that edit it in place; the ones that only read use
 // ReadSourceBGRA and leave the asset as it is.
 UTexture2D* LoadSourceTexture(const FString& RawPath, const TCHAR* Field, FString& OutPath, FString& OutError,
-                              bool bConvertToBGRA8 = false);
+                              bool bConvertToBGRA8 = false, FString* OutErrorCode = nullptr);
 // Source mip 0 of a LoadSourceTexture result as a BGRA8 copy (G8 becomes gray in B, G and R,
 // alpha 255); empty when the mip cannot be locked.
 TArray<uint8> ReadSourceBGRA(UTexture2D* Texture);
