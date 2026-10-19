@@ -67,8 +67,9 @@ export function validateExecutionOptions(raw: unknown): OptionViolation | undefi
     };
   }
 
+  // A blank cursor read as no cursor further on, so the handler ran again (a write twice) instead of reading a page.
   const pageCursor = Object.hasOwn(raw, 'pageCursor') ? raw.pageCursor : undefined;
-  if (pageCursor !== undefined && (typeof pageCursor !== 'string' || pageCursor.length < 1 || pageCursor.length > 64)) {
+  if (pageCursor !== undefined && (typeof pageCursor !== 'string' || pageCursor.trim().length < 1 || pageCursor.length > 64)) {
     return {
       errorCode: 'INVALID_OPTIONS',
       option: 'pageCursor',

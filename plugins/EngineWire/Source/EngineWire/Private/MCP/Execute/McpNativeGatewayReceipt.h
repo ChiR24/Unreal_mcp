@@ -57,8 +57,8 @@ struct FMcpPageOwner
 	FString Principal;
 	FString CapabilityId;
 	FString Fingerprint;
-	/** The call's own params, for the page block's continuation call. */
-	TSharedPtr<FJsonObject> Params;
+	/** The call's own routing (capability, or tool and action) and params, for the page block's continuation call. */
+	TSharedPtr<FJsonObject> Call;
 };
 
 /** One page of such a result: the result with its array cut to what fits, and the page block (field, offset,

@@ -70,8 +70,16 @@ void FMcpNativeTransport::HandleGatewayExecute(
 	Context.PageOwner->Principal = GetSessionPrincipal(SessionId).Identity;
 	Context.PageOwner->CapabilityId = Plan.CapabilityId;
 	Context.PageOwner->Fingerprint = McpCanonicalFingerprint(Plan.CapabilityId, Plan.Arguments);
-	const TSharedPtr<FJsonObject>* CallParams = nullptr;
-	Context.PageOwner->Params = Params->TryGetObjectField(TEXT("params"), CallParams) && CallParams ? *CallParams : TSharedPtr<FJsonObject>(MakeShared<FJsonObject>());
+	// The continuation repeats this call's own routing, so it resolves to the same plan: sent by capability, a folded
+	// old name's call lost the selector that name pins, and its fingerprint no longer matched.
+	Context.PageOwner->Call = MakeShared<FJsonObject>();
+	for (const TCHAR* Key : {TEXT("capability"), TEXT("tool"), TEXT("action"), TEXT("params")})
+	{
+		if (const TSharedPtr<FJsonValue> Value = Params->TryGetField(Key))
+		{
+			Context.PageOwner->Call->SetField(Key, Value);
+		}
+	}
 
 	// A page cursor reads on through a result too large for one reply (McpNativeResultPages.cpp). Nothing runs again:
 	// scope still holds for every page, but consent was the first call's and is not asked twice.
@@ -101,7 +109,7 @@ void FMcpNativeTransport::HandleGatewayExecute(
 			Guidance->SetObjectField(TEXT("nextCall"),
 				GatewayBuildNextCall(TEXT("describe"), Plan.ParentTool, Plan.LegacyAction, FString()));
 			SendReceipt(McpBuildErrorReceipt(Plan.CapabilityId, McpExecutionError(Refusal, Refusal == TEXT("PAGE_CURSOR_EXPIRED")
-				? TEXT("The page cursor has expired, was read to the end, or was never issued: run the call again without pageCursor for a fresh first page.")
+				? TEXT("The page cursor has expired or was never issued: run the call again without pageCursor for a fresh first page.")
 				: TEXT("The page cursor belongs to another call: send the same capability and params as the call that returned it."), false),
 				Context, Guidance));
 			return;

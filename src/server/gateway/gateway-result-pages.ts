@@ -1,7 +1,9 @@
 // A result too large for one reply, paged instead of refused. When one top-level array is what makes it too big, the
 // items that fit go out with a page cursor, and the rest waits here briefly for the same principal, capability and
 // params to read with options.pageCursor, without the handler running again. Each page is the capability's own
-// output with a slice of that array, so it still meets the declared output schema. Mirrors McpNativeResultPages.cpp.
+// output with a slice of that array, so it still meets the declared output schema. A cursor names the kept result and
+// the offset its page starts at, so reading it again (a retry, or an idempotent replay of the first call) returns the
+// same page instead of the one after. Mirrors McpNativeResultPages.cpp.
 
 import { randomUUID } from 'node:crypto';
 
@@ -33,10 +35,9 @@ export interface ResultPage {
 }
 
 interface KeptResult extends PageOwner {
-  readonly rest: Record<string, unknown>;
+  rest: Record<string, unknown>;
   readonly field: string;
   readonly items: readonly unknown[];
-  offset: number;
   expires: number;
 }
 
@@ -48,27 +49,24 @@ function roomFor(rest: Record<string, unknown>, budget: number): number {
   return budget - sizeOf(rest) - PAGE_OVERHEAD_CHARS;
 }
 
-function slice(entry: KeptResult, cursor: string, budget: number, now: number): ResultPage {
+function slice(entry: KeptResult, id: string, offset: number, budget: number, now: number): ResultPage {
   const room = roomFor(entry.rest, budget);
   let used = 0;
-  let end = entry.offset;
+  let end = offset;
   // firstPage checked that every item fits on its own, so each page takes at least one and paging always advances.
-  while (end < entry.items.length && (end === entry.offset || used + sizeOf(entry.items[end]) + 1 <= room)) {
+  while (end < entry.items.length && (end === offset || used + sizeOf(entry.items[end]) + 1 <= room)) {
     used += sizeOf(entry.items[end]) + 1;
     end += 1;
   }
   const page: PageInfo = {
     field: entry.field,
-    offset: entry.offset,
-    returned: end - entry.offset,
+    offset,
+    returned: end - offset,
     total: entry.items.length,
-    ...(end < entry.items.length ? { cursor } : {})
+    ...(end < entry.items.length ? { cursor: `${id}:${end}` } : {})
   };
-  const result = { ...entry.rest, [entry.field]: entry.items.slice(entry.offset, end) };
-  entry.offset = end;
   entry.expires = now + PAGE_TTL_MS;
-  if (end >= entry.items.length) kept.delete(cursor);
-  return { result, page };
+  return { result: { ...entry.rest, [entry.field]: entry.items.slice(offset, end) }, page };
 }
 
 /**
@@ -100,25 +98,33 @@ export function firstPage(result: Record<string, unknown>, budget: number, owner
     if (oldest === undefined) break;
     kept.delete(oldest);
   }
-  const cursor = randomUUID();
-  const entry: KeptResult = { ...owner, rest, field, items, offset: 0, expires: now + PAGE_TTL_MS };
-  kept.set(cursor, entry);
-  return slice(entry, cursor, budget, now);
+  const id = randomUUID();
+  const entry: KeptResult = { ...owner, rest, field, items, expires: now + PAGE_TTL_MS };
+  kept.set(id, entry);
+  const first = slice(entry, id, 0, budget, now);
+  // The image goes out once, with the first page: later pages have the flat budget, and an image kept in rest left
+  // them room for one item each while it was sent again with every page.
+  entry.rest = Object.fromEntries(Object.entries(rest).filter(([key]) => key !== 'imageBase64'));
+  return first;
 }
 
 export type PageRefusal = 'PAGE_CURSOR_EXPIRED' | 'PAGE_CURSOR_MISMATCH';
 
-/** The next page for a cursor, or why there is none: expired (or never issued, or already read to the end), or owned by another principal, capability or set of params. */
+/** The page a cursor names, or why there is none: expired (or never issued), or owned by another principal, capability or set of params. */
 export function nextPage(cursor: string, owner: PageOwner, budget: number, now = Date.now()): ResultPage | PageRefusal {
-  const entry = kept.get(cursor);
-  if (entry === undefined || entry.expires <= now) {
-    kept.delete(cursor);
-    return 'PAGE_CURSOR_EXPIRED';
-  }
+  const colon = cursor.lastIndexOf(':');
+  const id = cursor.slice(0, colon);
+  const text = cursor.slice(colon + 1);
+  const offset = Number(text);
+  const entry = colon < 0 ? undefined : kept.get(id);
+  if (entry !== undefined && entry.expires <= now) kept.delete(id);
+  // Only an offset a page of this result issued: a whole number inside it, written as the cursor wrote it.
+  const issued = Number.isInteger(offset) && String(offset) === text && offset > 0;
+  if (entry === undefined || entry.expires <= now || !issued || offset >= entry.items.length) return 'PAGE_CURSOR_EXPIRED';
   if (entry.principal !== owner.principal || entry.capabilityId !== owner.capabilityId || entry.fingerprint !== owner.fingerprint) {
     return 'PAGE_CURSOR_MISMATCH';
   }
-  return slice(entry, cursor, budget, now);
+  return slice(entry, id, offset, budget, now);
 }
 
 /** Test seam: forget every kept result. */

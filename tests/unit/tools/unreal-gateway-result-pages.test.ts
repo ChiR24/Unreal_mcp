@@ -64,6 +64,14 @@ describe('a result too large for one reply is paged', () => {
     expect(unknown.errorCode).toBe('PAGE_CURSOR_EXPIRED');
   });
 
+  // A blank cursor read as none further on, so the handler ran again instead of reading a page.
+  it('refuses a blank cursor before anything runs', async () => {
+    const calls = { count: 0 };
+    const blank = await handleUnrealGatewayCall({ ...CALL, options: { pageCursor: '   ' } }, context(calls));
+    expect(blank.errorCode).toBe('INVALID_OPTIONS');
+    expect(calls.count, 'the handler never ran').toBe(0);
+  });
+
   it('holds every page to the scope the first call needed', async () => {
     const scopes = ['read'];
     const ctx = gatewayContext({

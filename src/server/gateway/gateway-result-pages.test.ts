@@ -29,18 +29,44 @@ describe('paging a result too large for one reply', () => {
     expect(read).toEqual(items);
   });
 
-  it('forgets a cursor read to the end, refuses another owner, and lets an unread one expire', () => {
+  // A cursor that moved its result on read the page after it the second time: a replayed first receipt skipped one.
+  it('reads the same page again from the same cursor', () => {
+    const first = firstPage(big, BUDGET, OWNER, 0);
+    const again = (): unknown => nextPage(first?.page.cursor ?? '', OWNER, BUDGET, 1);
+    const once = again();
+    expect(typeof once).not.toBe('string');
+    expect(again()).toEqual(once);
+  });
+
+  it('refuses another owner, a cursor it never issued, and one left unread past its time', () => {
     const first = firstPage(big, BUDGET, OWNER, 0);
     const cursor = first?.page.cursor ?? '';
     expect(nextPage(cursor, { ...OWNER, principal: 'p2' }, BUDGET, 1)).toBe('PAGE_CURSOR_MISMATCH');
     expect(nextPage(cursor, { ...OWNER, fingerprint: 'other params' }, BUDGET, 1)).toBe('PAGE_CURSOR_MISMATCH');
-    expect(nextPage(cursor, OWNER, BUDGET, PAGE_TTL_MS + 1)).toBe('PAGE_CURSOR_EXPIRED');
     expect(nextPage('never-issued', OWNER, BUDGET, 1)).toBe('PAGE_CURSOR_EXPIRED');
+    const id = cursor.slice(0, cursor.lastIndexOf(':'));
+    for (const forged of [`${id}:0`, `${id}:300`, `${id}:-1`, `${id}:1.5`, `${id}:01`, id]) {
+      expect(nextPage(forged, OWNER, BUDGET, 1), forged).toBe('PAGE_CURSOR_EXPIRED');
+    }
+    expect(typeof nextPage(cursor, OWNER, BUDGET, 1), 'the issued cursor still reads').not.toBe('string');
+    expect(nextPage(cursor, OWNER, BUDGET, 1 + PAGE_TTL_MS)).toBe('PAGE_CURSOR_EXPIRED');
   });
 
   it('pages nothing it cannot: no array, or one item too large for a reply of its own', () => {
     expect(firstPage({ text: 'x'.repeat(50_000) }, BUDGET, OWNER, 0)).toBeUndefined();
     expect(firstPage({ assets: [{ blob: 'x'.repeat(10_000) }, { blob: 'y' }] }, BUDGET, OWNER, 0)).toBeUndefined();
+  });
+
+  // An image kept with the rest went out again with every page and, against the flat later-page budget, left room
+  // for one item per page.
+  it('sends an image with the first page only, so later pages keep their whole budget', () => {
+    const image = 'i'.repeat(6_000);
+    const first = firstPage({ ...big, imageBase64: image }, BUDGET + image.length, OWNER, 0);
+    expect(first?.result.imageBase64).toBe(image);
+    const next = nextPage(first?.page.cursor ?? '', OWNER, BUDGET, 1);
+    if (typeof next === 'string') throw new Error(next);
+    expect(next.result.imageBase64).toBeUndefined();
+    expect(next.page.returned).toBeGreaterThanOrEqual(first?.page.returned ?? Infinity);
   });
 
   it('keeps at most the newest few paged results', () => {

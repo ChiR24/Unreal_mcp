@@ -15,7 +15,9 @@ FMcpPageOwner PagesTestOwner(const TCHAR* Principal)
 	Owner.Principal = Principal;
 	Owner.CapabilityId = TEXT("asset.list");
 	Owner.Fingerprint = TEXT("fp-pages");
-	Owner.Params = MakeShared<FJsonObject>();
+	Owner.Call = MakeShared<FJsonObject>();
+	Owner.Call->SetStringField(TEXT("tool"), TEXT("manage_asset"));
+	Owner.Call->SetStringField(TEXT("action"), TEXT("list"));
 	return Owner;
 }
 
@@ -61,12 +63,15 @@ bool FMcpNativeResultPagesReadThroughTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("the rest of the result is kept"), Page.Result->HasField(TEXT("message")));
 	const FString Cursor = Page.Page->GetStringField(TEXT("cursor"));
 	TestTrue(TEXT("a cursor names the next page"), !Cursor.IsEmpty() && Page.Page->HasField(TEXT("nextCall")));
+	TestEqual(TEXT("the next call repeats the call's own routing"),
+		Page.Page->GetObjectField(TEXT("nextCall"))->GetStringField(TEXT("action")), FString(TEXT("list")));
 
 	FMcpResultPage Wrong;
 	TestEqual(TEXT("another principal is refused"),
 		McpNextResultPage(Cursor, PagesTestOwner(TEXT("scoped:other")), PagesTestBudget, Wrong), FString(TEXT("PAGE_CURSOR_MISMATCH")));
 
-	int32 Read = PagesTestNumber(Page.Page, TEXT("returned"));
+	const int32 FirstReturned = PagesTestNumber(Page.Page, TEXT("returned"));
+	int32 Read = FirstReturned;
 	int32 Pages = 1;
 	while (Page.Page->HasField(TEXT("cursor")) && Pages < 60)
 	{
@@ -81,8 +86,16 @@ bool FMcpNativeResultPagesReadThroughTest::RunTest(const FString& Parameters)
 	}
 	TestEqual(TEXT("every item is read exactly once"), Read, 60);
 	TestTrue(TEXT("it took more than one page"), Pages > 1);
-	TestEqual(TEXT("a cursor read to the end is gone"),
-		McpNextResultPage(Cursor, Owner, PagesTestBudget, Wrong), FString(TEXT("PAGE_CURSOR_EXPIRED")));
+	// A cursor that moved its result on read the page after it the second time: a replayed first receipt skipped one.
+	TestEqual(TEXT("an earlier cursor reads its page again"), McpNextResultPage(Cursor, Owner, PagesTestBudget, Wrong), FString());
+	TestEqual(TEXT("from the same offset"), PagesTestNumber(Wrong.Page, TEXT("offset")), FirstReturned);
+	FString Id;
+	Cursor.Split(TEXT(":"), &Id, nullptr, ESearchCase::CaseSensitive, ESearchDir::FromEnd);
+	for (const TCHAR* Forged : {TEXT(":0"), TEXT(":60"), TEXT(":-1"), TEXT(":01"), TEXT(":1x"), TEXT("")})
+	{
+		TestEqual(TEXT("an offset no page issued is refused"),
+			McpNextResultPage(Id + Forged, Owner, PagesTestBudget, Wrong), FString(TEXT("PAGE_CURSOR_EXPIRED")));
+	}
 	return true;
 }
 
@@ -103,6 +116,32 @@ bool FMcpNativeResultPagesRefusalTest::RunTest(const FString& Parameters)
 		McpFirstResultPage(PagesTestResult(3, 9000), PagesTestBudget, Owner, Page));
 	TestEqual(TEXT("a cursor never issued is refused"),
 		McpNextResultPage(TEXT("never-issued"), Owner, PagesTestBudget, Page), FString(TEXT("PAGE_CURSOR_EXPIRED")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FMcpNativeResultPagesImageOnceTest,
+	"EngineWire.Gateway.ResultPages.ImageOnce",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+// An image kept with the rest went out again with every page and, against the flat later-page budget, left room for
+// one item per page.
+bool FMcpNativeResultPagesImageOnceTest::RunTest(const FString& Parameters)
+{
+	(void)Parameters;
+	const FMcpPageOwner Owner = PagesTestOwner(TEXT("scoped:reader"));
+	const TSharedPtr<FJsonObject> Result = PagesTestResult(60, 300);
+	Result->SetStringField(TEXT("imageBase64"), FString::ChrN(6000, TEXT('i')));
+	FMcpResultPage Page;
+	if (!TestTrue(TEXT("a result with an image pages"), McpFirstResultPage(Result, PagesTestBudget + 6000, Owner, Page)))
+	{
+		return false;
+	}
+	TestTrue(TEXT("the first page carries the image"), Page.Result->HasField(TEXT("imageBase64")));
+	const int32 FirstReturned = PagesTestNumber(Page.Page, TEXT("returned"));
+	TestEqual(TEXT("the next page follows on"), McpNextResultPage(Page.Page->GetStringField(TEXT("cursor")), Owner, PagesTestBudget, Page), FString());
+	TestFalse(TEXT("later pages leave the image out"), Page.Result->HasField(TEXT("imageBase64")));
+	TestTrue(TEXT("later pages keep their whole budget"), PagesTestNumber(Page.Page, TEXT("returned")) >= FirstReturned);
 	return true;
 }
 

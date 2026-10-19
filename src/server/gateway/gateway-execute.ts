@@ -112,7 +112,7 @@ export async function executeGatewayCall(
     return refuseWithTarget(target, {
       errorCode: next,
       message: next === 'PAGE_CURSOR_EXPIRED'
-        ? 'The page cursor has expired, was read to the end, or was never issued: run the call again without pageCursor for a fresh first page.'
+        ? 'The page cursor has expired or was never issued: run the call again without pageCursor for a fresh first page.'
         : 'The page cursor belongs to another call: send the same capability and params as the call that returned it.',
       nextCall: buildNextCall({ operation: 'describe', tool: target.record.routing.parentTool, action: target.legacy.action })
     }, receiptContext);

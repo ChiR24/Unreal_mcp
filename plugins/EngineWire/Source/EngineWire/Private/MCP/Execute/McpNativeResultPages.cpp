@@ -1,8 +1,9 @@
 // McpNativeResultPages.cpp — a result too large for one reply, paged instead of refused. When one top-level array is
 // what makes it too big, the items that fit go out with a page block, and the rest waits here briefly for the same
 // principal, capability and params to read with options.pageCursor, without the handler running again. Each page is
-// the capability's own output with a slice of that array, so it still meets the declared output schema. Mirrors
-// src/server/gateway/gateway-result-pages.ts.
+// the capability's own output with a slice of that array, so it still meets the declared output schema. A cursor
+// names the kept result and the offset its page starts at, so reading it again (a retry, or an idempotent replay of
+// the first call) returns the same page instead of the one after. Mirrors src/server/gateway/gateway-result-pages.ts.
 
 #include "MCP/Execute/McpNativeGatewayReceipt.h"
 #include "MCP/Execute/McpNativeReceiptRedaction.h"
@@ -28,7 +29,6 @@ struct FMcpKeptResult
 	FString Field;
 	TArray<TSharedPtr<FJsonValue>> Items;
 	TArray<int64> Sizes;
-	int32 Offset = 0;
 	double Expires = 0.0;
 };
 
@@ -67,44 +67,41 @@ int64 McpObjectChars(const TSharedPtr<FJsonObject>& Object)
 }
 
 // Caller holds McpPagesMutex. Takes at least one item (every item was checked to fit alone), so paging advances.
-void McpSlicePage(FMcpKeptResult& Entry, const FString& Cursor, int64 Budget, double Now, FMcpResultPage& Out)
+void McpSlicePage(FMcpKeptResult& Entry, const FString& Id, int32 Offset, int64 Budget, double Now, FMcpResultPage& Out)
 {
 	const int64 Room = Budget - McpObjectChars(Entry.Rest) - McpPageOverheadChars;
 	int64 Used = 0;
-	int32 End = Entry.Offset;
-	while (End < Entry.Items.Num() && (End == Entry.Offset || Used + Entry.Sizes[End] + 1 <= Room))
+	int32 End = Offset;
+	while (End < Entry.Items.Num() && (End == Offset || Used + Entry.Sizes[End] + 1 <= Room))
 	{
 		Used += Entry.Sizes[End] + 1;
 		++End;
 	}
 	Out.Result = MakeShared<FJsonObject>();
 	Out.Result->Values = Entry.Rest->Values;
-	Out.Result->SetArrayField(Entry.Field, TArray<TSharedPtr<FJsonValue>>(Entry.Items.GetData() + Entry.Offset, End - Entry.Offset));
+	Out.Result->SetArrayField(Entry.Field, TArray<TSharedPtr<FJsonValue>>(Entry.Items.GetData() + Offset, End - Offset));
 	Out.Page = MakeShared<FJsonObject>();
 	Out.Page->SetStringField(TEXT("field"), Entry.Field);
-	Out.Page->SetNumberField(TEXT("offset"), Entry.Offset);
-	Out.Page->SetNumberField(TEXT("returned"), End - Entry.Offset);
+	Out.Page->SetNumberField(TEXT("offset"), Offset);
+	Out.Page->SetNumberField(TEXT("returned"), End - Offset);
 	Out.Page->SetNumberField(TEXT("total"), Entry.Items.Num());
 	if (End < Entry.Items.Num())
 	{
 		// The same call with the cursor reads the next page; params are checked against the first call's.
+		const FString Cursor = Id + TEXT(":") + FString::FromInt(End);
 		TSharedPtr<FJsonObject> Options = MakeShared<FJsonObject>();
 		Options->SetStringField(TEXT("pageCursor"), Cursor);
 		TSharedPtr<FJsonObject> NextCall = MakeShared<FJsonObject>();
 		NextCall->SetStringField(TEXT("operation"), TEXT("execute"));
-		NextCall->SetStringField(TEXT("capability"), Entry.Owner.CapabilityId);
-		NextCall->SetObjectField(TEXT("params"), Entry.Owner.Params.IsValid() ? Entry.Owner.Params : MakeShared<FJsonObject>());
+		if (Entry.Owner.Call.IsValid())
+		{
+			NextCall->Values.Append(Entry.Owner.Call->Values);
+		}
 		NextCall->SetObjectField(TEXT("options"), Options);
 		Out.Page->SetStringField(TEXT("cursor"), Cursor);
 		Out.Page->SetObjectField(TEXT("nextCall"), NextCall);
 	}
-	Entry.Offset = End;
 	Entry.Expires = Now + McpPageTtlSeconds;
-	if (End >= Entry.Items.Num())
-	{
-		McpKeptPages().Remove(Cursor);
-		McpKeptOrder().Remove(Cursor);
-	}
 }
 } // namespace
 
@@ -169,10 +166,13 @@ bool McpFirstResultPage(const TSharedPtr<FJsonObject>& Result, int64 Budget, con
 		McpKeptPages().Remove(McpKeptOrder()[0]);
 		McpKeptOrder().RemoveAt(0);
 	}
-	const FString Cursor = FGuid::NewGuid().ToString(EGuidFormats::DigitsWithHyphens);
-	FMcpKeptResult& Stored = McpKeptPages().Add(Cursor, MoveTemp(Entry));
-	McpKeptOrder().Add(Cursor);
-	McpSlicePage(Stored, Cursor, Budget, Now, Out);
+	const FString Id = FGuid::NewGuid().ToString(EGuidFormats::DigitsWithHyphens);
+	FMcpKeptResult& Stored = McpKeptPages().Add(Id, MoveTemp(Entry));
+	McpKeptOrder().Add(Id);
+	McpSlicePage(Stored, Id, 0, Budget, Now, Out);
+	// The image goes out once, with the first page: later pages have the flat budget, and an image kept in Rest left
+	// them room for one item each while it was sent again with every page. The page copied Rest's values already.
+	Stored.Rest->RemoveField(TEXT("imageBase64"));
 	return true;
 }
 
@@ -180,11 +180,19 @@ FString McpNextResultPage(const FString& Cursor, const FMcpPageOwner& Owner, int
 {
 	const double Now = FPlatformTime::Seconds();
 	FScopeLock Lock(&McpPagesMutex());
-	FMcpKeptResult* Entry = McpKeptPages().Find(Cursor);
-	if (!Entry || Entry->Expires <= Now)
+	FString Id, OffsetText;
+	Cursor.Split(TEXT(":"), &Id, &OffsetText, ESearchCase::CaseSensitive, ESearchDir::FromEnd);
+	FMcpKeptResult* Entry = McpKeptPages().Find(Id);
+	if (Entry && Entry->Expires <= Now)
 	{
-		McpKeptPages().Remove(Cursor);
-		McpKeptOrder().Remove(Cursor);
+		McpKeptPages().Remove(Id);
+		McpKeptOrder().Remove(Id);
+		Entry = nullptr;
+	}
+	// Only an offset a page of this result issued: a whole number inside it, written as the cursor wrote it.
+	const int32 Offset = FCString::Atoi(*OffsetText);
+	if (!Entry || FString::FromInt(Offset) != OffsetText || Offset <= 0 || Offset >= Entry->Items.Num())
+	{
 		return TEXT("PAGE_CURSOR_EXPIRED");
 	}
 	if (!Entry->Owner.Principal.Equals(Owner.Principal, ESearchCase::CaseSensitive) ||
@@ -193,6 +201,6 @@ FString McpNextResultPage(const FString& Cursor, const FMcpPageOwner& Owner, int
 	{
 		return TEXT("PAGE_CURSOR_MISMATCH");
 	}
-	McpSlicePage(*Entry, Cursor, Budget, Now, Out);
+	McpSlicePage(*Entry, Id, Offset, Budget, Now, Out);
 	return FString();
 }
