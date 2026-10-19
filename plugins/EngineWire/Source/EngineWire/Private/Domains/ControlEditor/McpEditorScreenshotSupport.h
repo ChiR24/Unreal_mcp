@@ -75,6 +75,9 @@ void DrawViewportFramesForMcp(FViewport *Viewport, UWorld *World, int32 Frames);
 // McpViewSettle.cpp); false, after recording this one, when the capture should be taken again a beat later, so
 // streaming that lands over engine ticks (Nanite pages, texture mips) is in the picture. At most five passes.
 bool ViewFrameSettledForMcp(FViewport *Viewport, const TSharedPtr<FJsonObject> &Payload);
+
+// What a level viewport capture cannot show as it is: a viewport that is not realtime, video memory over budget.
+TArray<TSharedPtr<FJsonValue>> ViewCaptureWarningsForMcp(const FEditorViewportClient *Client);
 // Resolves a window by list index or case-insensitive title substring.
 TSharedPtr<SWindow> FindEditorSlateWindowForMcp(const FString &Query,
                                                 FString &OutResolvedTitle,

@@ -39,10 +39,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`edit_scs` keeps `save: false`** for every edit; the Blueprint was saved anyway.
 - **A refusal keeps the details it names**, such as the unsaved packages of a refused close.
 - **`get_stats` `performance`** counts the RHI thread in `busiestThreadMs`.
-- **A level viewport screenshot waits for streaming**, so a Nanite mesh just built is not drawn as coarse blobs.
+- **A level viewport screenshot waits for streaming**, so a Nanite mesh just built is not drawn as coarse blobs, and says when video memory is over budget.
 - **A deprecated property is refused**, naming where its replacement lives; the write had answered success and changed nothing.
 - **`set_property` inside a Niagara system restarts its placed effects**, so a renderer change shows.
-- **`audit_placement` counts simulated bodies as surfaces**, and **`fix_coplanar` brings a piece laid across several neighbours forward** instead of sinking it.
+- **`audit_placement` counts simulated bodies as surfaces**, and **`fix_coplanar` brings a piece laid across several neighbours forward** instead of sinking it; undersides lying on a floor are no longer reported.
 - **A whole track name picks only that track**: `MovieScene3DTransformTrack_1` also matched `_10` to `_19`, in reads and in `remove_track`.
 - **`save_all` and `restart_editor` wait for a running render** (`RENDER_IN_PROGRESS`): a save wrote the render's temporary sequence state to disk, and a restart cut the render off.
 - **`set_bone_key` keeps what it is not given**: a key with no location put the bone on its parent; it keeps the bone's own value at that frame.

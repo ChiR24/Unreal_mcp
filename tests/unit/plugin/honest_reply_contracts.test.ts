@@ -2985,9 +2985,15 @@ describe('a folder delete counts the assets it held', () => {
 describe('a level viewport screenshot says when the viewport is not realtime', () => {
   // A fire placed in the level showed no flame in an editor screenshot: nothing ticks in a viewport that is not realtime.
   it('warns from the client it photographed', () => {
-    const shot = code('ControlEditor', 'McpEditorScreenshot.cpp');
-    expect(shot).toContain('if (CaptureClient && !CaptureClient->IsRealtime()) {');
-    expect(shot).toContain('The level viewport is not realtime');
+    expect(code('ControlEditor', 'McpEditorScreenshot.cpp')).toContain('ViewCaptureWarningsForMcp(CaptureClient);');
+    const warnings = code('ControlEditor', 'Camera', 'McpViewSettle.cpp');
+    expect(warnings).toContain('if (Client && !Client->IsRealtime())');
+    expect(warnings).toContain('The level viewport is not realtime');
+  });
+
+  // Over its video memory budget the editor took 27 s for a soft capture, and only the line drawn into it said why.
+  it('says when video memory is over budget', () => {
+    expect(code('ControlEditor', 'Camera', 'McpViewSettle.cpp')).toMatch(/const double OverMB = double\(GDemotedLocalMemorySize\) \/ \(1024\.0 \* 1024\.0\);\s*if \(OverMB >= 1\.0\)/u);
   });
 });
 
@@ -3481,5 +3487,14 @@ describe('long cinematic work: tracks, settings, batches, rate limits and render
     expect(code('ControlEditor', 'McpEditorRestart.cpp')).toContain('TEXT("RENDER_IN_PROGRESS"), McpMovieRenderRunningMessage()');
     expect(code('Sequence', 'MovieRender', 'McpSeqMRQRouting.cpp')).toContain('{TEXT("cancel_render"), &HandleCancelRender}');
     expect(code('Sequence', 'MovieRender', 'McpSeqMRQJobCreation.cpp')).toContain('Executor->CancelAllJobs();');
+  });
+});
+
+describe('coplanar faces no camera can see', () => {
+  // Carpet trims whose bottoms lay in the carpet's plane on the floor were reported, and fixed, as flicker.
+  it('leaves out two undersides with something solid right below them', () => {
+    const faces = code('ControlActor', 'Placement', 'McpCoplanarFaces.cpp');
+    expect(faces).toContain('if (Normal.Z > -0.99)');
+    expect(faces).toContain('if (Best.OverlapU <= 0.0 || McpCoplanarHiddenUnderside(World, Best.Normal, SmallerCenter, A.Actor, B.Actor))');
   });
 });

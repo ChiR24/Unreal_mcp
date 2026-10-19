@@ -30,10 +30,10 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **`edit_scs` reads `save`** for every action, not only `modify`.
 - **Refusal details survive reply compaction** when the message and code repeat the reply's.
 - **`get_performance_stats` `busiestThreadMs`** includes the RHI thread.
-- **Editor viewport captures settle across ticks** (retried 0.3 s later, at most five passes, until two frames match).
+- **Editor viewport captures settle across ticks** (retried 0.3 s later, at most five passes, until two frames match) and warn when `GDemotedLocalMemorySize` says video memory is over budget.
 - **The property resolver refuses `CPF_Deprecated`** (UHT registers `X_DEPRECATED` as `X`) and names the member that holds it.
 - **`set_property` in a Niagara system** re-inits it with `FNiagaraSystemUpdateContext`.
-- **The placement ground trace queries `ECC_PhysicsBody`**; **`fix_coplanar` sums a face's overlaps** over all its pairs.
+- **The placement ground trace queries `ECC_PhysicsBody`**; **`fix_coplanar` sums a face's overlaps** over all its pairs; two down-facing faces with something solid within 2 cm below are skipped.
 - **Track lookups prefer a whole name**: `FindTrackByName` tries whole names first; `CollectTracksByName` keeps only whole matches when any.
 - **`McpMovieRenderRunning()`** refuses save_all and restart_editor with `RENDER_IN_PROGRESS`; validateOnly reports `renderRunning`.
 - **`set_bone_key` defaults** read the track's key at the frame (`GetBoneTrackTransform` from 5.2, the raw keys before) or the reference pose.

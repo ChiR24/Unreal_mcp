@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "c363dcbab6cd3517",
+  "catalogRevision": "1577e62178dd36ae",
   "recordCount": 416,
   "records": [
     {
@@ -33932,7 +33932,7 @@
                   "coplanar"
                 ]
               },
-              "description": "Report only these problem kinds, e.g. [\"coplanar\"] to list z-fighting alone in a platformer full of platforms that float on purpose. An actor whose worst problem is another kind still counts for coplanar when it has coplanarFaces. An actor whose bounds touch or overlap another actor's vertical face (a window band on a hall, an awning on a facade) is mounted, never floating or unsupported. Omit for every kind."
+              "description": "Report only these problem kinds, e.g. [\"coplanar\"] to list z-fighting alone in a platformer full of platforms that float on purpose. An actor whose worst problem is another kind still counts for coplanar when it has coplanarFaces. An actor whose bounds touch or overlap another actor's vertical face (a window band on a hall, an awning on a facade) is mounted, never floating or unsupported. Two faces pointing down with something solid right below them (pieces lying on a floor) are not reported as coplanar: no camera sees them. Omit for every kind."
             },
             "maxTilt": {
               "type": "number",
@@ -34057,8 +34057,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "281bee05b2676e8052af31d843191e88a7a9f7ffcddb079b2e23481feebbfa97",
-        "content": "225f26322cc4436d6aed04e20ce64f4472079afeb0f831e6f75fd7dd2b624fd3"
+        "schema": "c28cd567d0500076b40f6a04be1db1b204bf48bd1997eacdabbd19434297ffeb",
+        "content": "d0cef383bfa2a97e703433ed88256a7f4b57562bf5773695cbbf20ac011c1d3b"
       }
     },
     {

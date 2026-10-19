@@ -6,7 +6,27 @@
 // the one it recorded on its previous pass and takes the picture again a beat later until two in a row match.
 #include "Domains/ControlEditor/McpEditorScreenshotSupport.h"
 
+#include "EditorViewportClient.h"
 #include "Misc/Parse.h"
+#include "RHI.h"
+
+TArray<TSharedPtr<FJsonValue>> ViewCaptureWarningsForMcp(const FEditorViewportClient* Client)
+{
+    TArray<TSharedPtr<FJsonValue>> Warnings;
+    // Nothing that ticks moves in a viewport that is not realtime: a placed fire showed no flame at all.
+    if (Client && !Client->IsRealtime())
+    {
+        Warnings.Add(MakeShared<FJsonValueString>(TEXT("The level viewport is not realtime, so particle effects and anything else that ticks stand still or are missing from this picture: turn realtime on with control_editor configure_viewport, or capture the running game.")));
+    }
+    // Over budget the renderer drops texture mips and every frame slows: a capture came back soft after 27 s, and only
+    // the red line drawn into the picture said why.
+    const double OverMB = double(GDemotedLocalMemorySize) / (1024.0 * 1024.0);
+    if (OverMB >= 1.0)
+    {
+        Warnings.Add(MakeShared<FJsonValueString>(FString::Printf(TEXT("Video memory is %.0f MB over budget, so textures in this picture may be blurred and captures run slowly: lower the editor scalability (console command scalability 0) or close another application holding the GPU."), OverMB)));
+    }
+    return Warnings;
+}
 
 namespace
 {
