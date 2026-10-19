@@ -30,6 +30,7 @@ bool HandleScsAddComponent(const FBlueprintActionContext &Context) {
       !ActionMatchesPattern(TEXT("add_scs_component"))) {
     return false;
   }
+  TGuardValue<bool> SaveScope(FSCSHandlers::bSaveScsChanges, GetJsonBoolField(Payload, TEXT("save"), true));
 
   const FString BlueprintPath = ResolveBlueprintRequestedPath();
   const FString ComponentClass = ScsOpComponentClass(Payload);

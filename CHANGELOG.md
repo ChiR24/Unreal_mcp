@@ -20,7 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Search hands over a clear first hit**: when it needs no consent, the first result carries `signature` (required parameters, a family's selector values, one example) and `executeCall`, so describe can be skipped.
 - **`get_stats` `frame`**: names the thread that bounds the frame (in Play, how much of the game thread the game's own tick takes), or says the frame only waits (a throttled editor, vsync), and ranks what in view weighs on it: movable shadow-casting lights, the heaviest meshes drawn without Nanite, translucent primitives and ticking actors by class with what ticks on them.
 - **`nanite_rebuild_mesh` `assetPaths`**: several meshes under one consent, one row each. A mesh with a glass (translucent) slot is left as it is, and the materials a mesh draws with get the Nanite usage flag and are saved, so a packaged game draws them.
-- **`inspect_asset` `diff`**: compares a Blueprint, DataTable or data asset with its saved file (its unsaved edits) or with another asset: properties and class defaults, components, graph nodes and rows.
+- **`inspect_asset` `diff`**: compares a Blueprint, DataTable or data asset with its saved file (its unsaved edits) or with another asset: properties and class defaults, variables (compiled or not), components, graph nodes and rows.
 - **`get_niagara_info` reads values**: each user parameter's default, and with `actorName` a placed effect's own values and which of them it overrides.
 - **Whole parts in one `edit_dynamic_mesh` call**: `append_cuboids` lays out boxes repeated in rows, grids and stacks; `append_loft` skins cross sections (a hull, a car body) with tips and per-edge materials; `append_mesh` copies a static mesh asset (a detailed container, a window frame) at placements with its slots mapped to cycling material ids; `delete_triangles` removes a picked region.
 
@@ -34,7 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Crash diagnostics are rewritten on Windows**: the session records replace their files instead of keeping the first one written.
 - **A long render keeps its native request open** for the `renderTimeoutMs` it asked for, not 335 s.
 - **`get_task_result` on the native transport** matches the sender's principal exactly; the match ignored case.
-- **`edit_scs` `modify` keeps `save: false`**: adding a part through it saved the Blueprint anyway while the reply said it had not.
+- **`edit_scs` keeps `save: false`**: adding, removing, reparenting or editing a part saved the Blueprint anyway while the reply said it had not.
 - **A refusal keeps the details it names**, such as the unsaved packages of a refused close; the reply dropped them along with its repeated message.
 - **`get_stats` `performance`** counts the RHI thread in `busiestThreadMs`, as `frame` does.
 - **A level viewport screenshot waits for streaming**: a Nanite mesh just built or framed no longer shows as blobs of its coarsest clusters.

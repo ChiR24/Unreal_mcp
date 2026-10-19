@@ -53,9 +53,22 @@ TSharedPtr<FJsonObject> BlueprintValues(const UObject* Object)
         {
             continue;
         }
-        if (const TSharedPtr<FJsonValue> Value =
+        // Kept small: an error holds its snapshot for the session, and a large array or string was exported whole.
+        const void* Data = Property->ContainerPtrToValuePtr<void>(Object);
+        const FArrayProperty* Array = CastField<FArrayProperty>(Property);
+        const FMapProperty* Map = CastField<FMapProperty>(Property);
+        const FSetProperty* Set = CastField<FSetProperty>(Property);
+        const int32 Elements = Array ? FScriptArrayHelper(Array, Data).Num() : Map ? FScriptMapHelper(Map, Data).Num() : Set ? FScriptSetHelper(Set, Data).Num() : 0;
+        if (Elements > 16)
+        {
+            Values->SetStringField(Property->GetName(), FString::Printf(TEXT("%d elements"), Elements));
+            continue;
+        }
+        if (TSharedPtr<FJsonValue> Value =
                 McpPropertyReflection::ExportPropertyToJsonValueOrText(const_cast<UObject*>(Object), Property))
         {
+            FString Text;
+            if (Value->TryGetString(Text) && Text.Len() > 200) Value = MakeShared<FJsonValueString>(Text.Left(200) + TEXT("..."));
             Values->SetField(Property->GetName(), Value);
         }
     }

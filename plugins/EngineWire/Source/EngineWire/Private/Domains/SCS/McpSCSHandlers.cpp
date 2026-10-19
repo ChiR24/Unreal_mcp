@@ -45,6 +45,8 @@ void EnableLoadOverlapsForBuoyancy(UBlueprint *Blueprint) {
 }
 }
 
+bool FSCSHandlers::bSaveScsChanges = true;
+
 void FSCSHandlers::FinalizeBlueprintSCSChange(UBlueprint *Blueprint,
                                               bool &bOutCompiled,
                                               bool &bOutSaved) {
@@ -59,6 +61,10 @@ void FSCSHandlers::FinalizeBlueprintSCSChange(UBlueprint *Blueprint,
   FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
   bOutCompiled = McpSafeCompileBlueprint(Blueprint);
 
+  // save false leaves the Blueprint unsaved: every edit but modify saved it anyway while the schema took save false.
+  if (!bSaveScsChanges) {
+    return;
+  }
   bOutSaved = McpSafeAssetSave(Blueprint);
   if (!bOutSaved) {
     UE_LOG(LogEngineWireSubsystem, Warning,

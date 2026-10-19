@@ -7,6 +7,7 @@
 #include "DiffResults.h"
 #include "EdGraph/EdGraph.h"
 #include "EdGraph/EdGraphNode.h"
+#include "EdGraphSchema_K2.h"
 #include "Engine/Blueprint.h"
 #include "Engine/DataTable.h"
 #include "Engine/SCS_Node.h"
@@ -29,6 +30,27 @@ TSharedPtr<FJsonObject> AssetDiffRow(const TCHAR* Key, const FString& Name, cons
 	if (!Now.IsEmpty()) Row->SetStringField(TEXT("now"), Now);
 	if (!Saved.IsEmpty()) Row->SetStringField(TEXT("saved"), Saved);
 	return Row;
+}
+
+// A variable added, removed or retyped stays on the Blueprint's own list until it compiles, so the class defaults
+// alone missed it and an uncompiled edit read as identical. Defaults are left to the class defaults compare.
+void AssetDiffVariables(FMcpAssetDiff& Diff, const UBlueprint* Live, const UBlueprint* Other)
+{
+	auto Type = [](const FBPVariableDescription& Var) { return UEdGraphSchema_K2::TypeToText(Var.VarType).ToString(); };
+	auto Find = [](const UBlueprint* Blueprint, FName Name)
+	{
+		return Blueprint->NewVariables.FindByPredicate([Name](const FBPVariableDescription& Each) { return Each.VarName == Name; });
+	};
+	for (const FBPVariableDescription& Var : Live->NewVariables)
+	{
+		const FBPVariableDescription* Saved = Find(Other, Var.VarName);
+		if (!Saved) Diff.Add(Diff.Properties, AssetDiffRow(TEXT("variable"), Var.VarName.ToString(), TEXT("added"), Type(Var), FString()));
+		else if (Type(*Saved) != Type(Var)) Diff.Add(Diff.Properties, AssetDiffRow(TEXT("variable"), Var.VarName.ToString(), TEXT("type changed"), Type(Var), Type(*Saved)));
+	}
+	for (const FBPVariableDescription& Var : Other->NewVariables)
+	{
+		if (!Find(Live, Var.VarName)) Diff.Add(Diff.Properties, AssetDiffRow(TEXT("variable"), Var.VarName.ToString(), TEXT("removed")));
+	}
 }
 
 TMap<FName, USCS_Node*> AssetDiffNodes(const UBlueprint* Blueprint)
@@ -144,6 +166,7 @@ void McpAssetDiff::DiffBlueprint(FMcpAssetDiff& Diff, UBlueprint* Live, UBluepri
 		Diff.DiffContainers(TEXT("defaults"), LiveClass, LiveClass->GetDefaultObject(), OtherClass, OtherClass->GetDefaultObject());
 		Diff.Skip.Reset();
 	}
+	AssetDiffVariables(Diff, Live, Other);
 	AssetDiffComponents(Diff, Live, Other);
 	AssetDiffGraphs(Diff, Live, Other);
 }

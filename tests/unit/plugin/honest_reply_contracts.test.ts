@@ -1972,6 +1972,28 @@ describe('a row of flush pieces is parted in one pass', () => {
       .toContain('const TMap<AActor*, FMcpCoplanarPlan> Plans = PlanCoplanarPass(Hits, Distance, Inside);');
   });
 
+  // A variable added but not compiled lives only on the Blueprint's list, so diff_asset called the edit identical.
+  it('diff_asset compares a Blueprint\'s variable list as well as its class defaults', () => {
+    const diff = code('AssetWorkflow', 'Analysis', 'McpAssetDiffBlueprint.cpp');
+    expect(diff).toContain('AssetDiffVariables(Diff, Live, Other);');
+    expect(diff).toContain('UEdGraphSchema_K2::TypeToText(Var.VarType).ToString()');
+  });
+
+  // A Blueprint runtime error kept every variable's value for the session, a large array or string exported whole.
+  it('keeps a script error\'s variable snapshot small', () => {
+    const errors = code('Log', 'McpScriptErrors.cpp');
+    expect(errors).toContain('if (Elements > 16)');
+    expect(errors).toContain('Text.Len() > 200) Value = MakeShared<FJsonValueString>(Text.Left(200) + TEXT("..."));');
+  });
+
+  // edit_scs add, remove, reparent, set_property and set_transform saved the Blueprint though the schema took save false.
+  it('edit_scs holds every SCS edit to the payload\'s save', () => {
+    expect(code('SCS', 'McpSCSHandlers.cpp')).toMatch(/if \(!bSaveScsChanges\) \{\s*return;\s*\}\s*bOutSaved = McpSafeAssetSave\(Blueprint\);/u);
+    for (const file of ['McpBPScsWrappers.cpp', 'McpBPScsAddComponent.cpp']) {
+      expect(code('Blueprint', 'Components', file), file).toContain('TGuardValue<bool> SaveScope(FSCSHandlers::bSaveScsChanges, GetJsonBoolField(Payload, TEXT("save"), true));');
+    }
+  });
+
   // A carpet laid over six floor tiles lay partly inside each and was sent under the floor.
   it('judges a piece by its overlaps with all its neighbours together', () => {
     const plan = code('ControlActor', 'Placement', 'McpCoplanarPlan.cpp');
@@ -3132,6 +3154,15 @@ describe('a frame step says what the game logged during it', () => {
     const motion = code('ControlActor', 'McpActorMotionSample.cpp');
     expect(motion).toContain('LogSince = FMcpLogHistory::Now();');
     expect(motion).toContain('Warnings.Append(FMcpLogHistory::Get().WarningsSince(Run->LogSince, 5));');
+  });
+
+  // An empty Raise Script Error message matched every line and hid the whole window's warnings; ten script errors
+  // pushed every other warning off the list with no sign anything was cut.
+  it('ignores a blank script error message and keeps half the lines for other warnings, naming a cut', () => {
+    const history = code('Log', 'McpLogHistory.cpp');
+    expect(history).toContain('ScriptMessages.RemoveAll([](const FString& Text) { return Text.TrimStartAndEnd().IsEmpty(); });');
+    expect(history).toContain('FMath::Max(MaxDistinct - Messages.Num(), MaxDistinct / 2)');
+    expect(history).toContain('more distinct warnings or Blueprint errors not listed');
   });
 });
 

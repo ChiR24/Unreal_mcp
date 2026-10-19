@@ -17,7 +17,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **`nanite_rebuild_mesh` `assetPaths`**: one row per mesh. A slot neither opaque nor masked refuses the mesh before it changes (`NANITE_UNSUPPORTED_MATERIAL`), and the flag owner (the material; from 5.8 an instance) of each material the mesh or its placed copies in the open level draw with gets `MATUSAGE_Nanite`, read before the build and saved after it.
 - **`get_niagara_info` values**: `userParameters` carry the system default; `actorName` (`componentName`) reads the component's `GetOverrideParameters()` into `placed` (`values`, `overridden`).
 - **`edit_dynamic_mesh` `append_cuboids`, `append_loft`, `append_mesh`, `delete_triangles`**: boxes (open faces, `repeat` on three axes, a cycling id list) and lofts (sections, tip fans, edge and cap ids) build the input `append_polygons` validates; `append_mesh` appends a static mesh's LOD 0 (`lod: "render"`: its render data, a Nanite fallback) per placement through `FDynamicMeshEditor::AppendMesh`, mirrored copies turned back; `delete_triangles` removes a `triangleIndices` or `region` pick.
-- **`diff_asset`**: a copy of the saved file loaded for diffing (`LOAD_ForDiff`, then released and deleted) or another asset, compared property by property with references read as the asset's own; components by variable name, graphs through `FGraphDiffControl::DiffGraphs` (node moves left out), rows by name.
+- **`diff_asset`**: a copy of the saved file loaded for diffing (`LOAD_ForDiff`, then released and deleted) or another asset, compared property by property with references read as the asset's own; `NewVariables` by name and type, components by variable name, graphs through `FGraphDiffControl::DiffGraphs` (node moves left out), rows by name.
 
 ### Fixed
 - **`runtime_report` `filter`** matches an actor's path only whole, not every actor of a level named like the filter.
@@ -25,7 +25,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **Diagnostics records replace their files** (`IFileManager::Move` with replace; `IPlatformFile::MoveFile` refuses an existing target on Windows).
 - **The native request timeout reads `renderTimeoutMs`**, the name `start_render` declares, so a long render is not cut off at 335 s.
 - **Task results match their principal case-sensitively** (`FString::operator!=` ignores case).
-- **`edit_scs` `modify` `add_component`** saved the Blueprint after each part; the batch's own save step decides now, so `save: false` leaves it unsaved.
+- **`edit_scs` reads `save`** for every action: `FinalizeBlueprintSCSChange` saved the Blueprint after each add, remove, reparent or edit, and a `modify` batch's own save step decides.
 - **Refusal details survive reply compaction**: `SendStandardErrorResponse` merges a handler's details into `error`, and the whole object went when its message and code repeated the reply's.
 - **`get_performance_stats` `busiestThreadMs`** includes the RHI thread.
 - **Editor viewport captures settle across ticks**: the capture retries 0.3 s later (at most five passes) until the 32 px block means match the previous pass, so Nanite pages that stream in over engine ticks are drawn.

@@ -51,6 +51,8 @@ TArray<FString> FMcpLogHistory::WarningsSince(double SinceSeconds, int32 MaxDist
     // warning and the PIE message log's "Blueprint Runtime Error").
     TArray<FString> ScriptMessages;
     TArray<FString> Result = FMcpScriptErrors::Get().LinesSince(SinceSeconds, ScriptMessages);
+    // A Raise Script Error with an empty message is in every line, so it left out every warning of the window.
+    ScriptMessages.RemoveAll([](const FString& Text) { return Text.TrimStartAndEnd().IsEmpty(); });
     TArray<FString> Logged;
     {
         FScopeLock Lock(&Mutex);
@@ -70,6 +72,7 @@ TArray<FString> FMcpLogHistory::WarningsSince(double SinceSeconds, int32 MaxDist
     // Sanitized outside the lock: the redactor asks the engine for its content mounts.
     TArray<FString> Messages;
     TArray<int32> Counts;
+    int32 Unlisted = 0;
     for (const FString& Raw : Logged)
     {
         const FString Text = EngineWireSubsystemResponse::SanitizeEngineErrorForResponse(Raw);
@@ -83,13 +86,24 @@ TArray<FString> FMcpLogHistory::WarningsSince(double SinceSeconds, int32 MaxDist
             Messages.Add(Text);
             Counts.Add(1);
         }
+        else
+        {
+            ++Unlisted;
+        }
     }
     for (int32 Index = 0; Index < Messages.Num(); ++Index)
     {
         Messages[Index] = Counts[Index] > 1 ? FString::Printf(TEXT("%dx %s"), Counts[Index], *Messages[Index]) : Messages[Index];
     }
+    // Blueprint errors lead but leave other warnings at least half the lines, and a cut says how much it left out:
+    // ten script errors pushed every other warning off with no sign.
+    const int32 ScriptKeep = FMath::Min(Result.Num(), Messages.Num() > 0 ? FMath::Max(MaxDistinct - Messages.Num(), MaxDistinct / 2) : MaxDistinct);
+    Unlisted += Result.Num() - ScriptKeep;
+    Result.SetNum(ScriptKeep);
     Result.Append(Messages);
+    Unlisted += FMath::Max(0, Result.Num() - MaxDistinct);
     Result.SetNum(FMath::Min(Result.Num(), MaxDistinct));
+    if (Unlisted > 0) Result.Add(FString::Printf(TEXT("(%d more distinct warnings or Blueprint errors not listed)"), Unlisted));
     return Result;
 }
 
