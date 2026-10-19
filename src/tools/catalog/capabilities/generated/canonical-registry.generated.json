@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "5b0a9b72c6feaebd",
+  "catalogRevision": "91348227efd7615d",
   "recordCount": 416,
   "records": [
     {
@@ -44998,7 +44998,9 @@
           "screen point to world",
           "deproject",
           "labelled screenshot",
-          "numbered boxes"
+          "numbered boxes",
+          "what covers an actor",
+          "occluded from the camera"
         ],
         "summary": "Describe what the level viewport's camera sees, as text: each actor in view with its share of the frame, its box on screen, how bright it is drawn and its distance, the share that is background (sky, void), and the frame's brightness; or only the actors named, with what hides each one that is not seen. points names what is under spots of the frame and where they are in the world; labels returns the frame with each listed actor boxed and numbered. location and rotation place the camera first, as control_editor screenshot takes them.",
         "whenToUse": [
@@ -45316,7 +45318,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "35618390674de7af81bc1ad60649d77802b7eca01427e6dae087e08aff860ac4",
-        "content": "a2a19232ee6857de27443e88cbb75d334b1e0f2093bc97362c4c401f74304cfd"
+        "content": "e7790dcae9b86d41c5395629b87974a2b4e5373d74b41aee4aec5a3fb8af4488"
       }
     },
     {
