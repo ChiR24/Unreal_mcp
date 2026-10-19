@@ -200,14 +200,14 @@ void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket)
 			return;
 		}
 		FString RateLimitError;
+		int32 RetryAfter = 0;
 		if (!ConsumeSessionRequestBudget(
 				HttpReq.SessionId, Rpc.Method == TEXT("tools/call"),
-				RateLimitError))
+				RateLimitError, &RetryAfter))
 		{
-			const FString ErrorBody = FMcpJsonRpc::BuildError(
-				Rpc.Id, FMcpJsonRpc::ErrorRateLimited, RateLimitError);
-			SendAndClose(ClientSocket, 429, TEXT("application/json"), ErrorBody, {},
-				HttpReq.Origin);
+			SendAndClose(ClientSocket, 429, TEXT("application/json"),
+				FMcpJsonRpc::BuildRateLimitError(Rpc.Id, RateLimitError, RetryAfter),
+				FMcpJsonRpc::RetryAfterHeader(RetryAfter), HttpReq.Origin);
 			return;
 		}
 	}

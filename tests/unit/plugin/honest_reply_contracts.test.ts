@@ -3443,3 +3443,30 @@ describe('diff_asset compares without writing', () => {
       .toMatch(/Lower == TEXT\("diff_asset"\)\)\s*return McpAssetDiff::HandleDiffAsset\(/u);
   });
 });
+
+const PRIVATE = join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private');
+const privateCode = (...segments: readonly string[]): string =>
+  readFileSync(join(PRIVATE, ...segments), 'utf8').replace(/\/\*[\s\S]*?\*\//gu, ' ').replace(/\/\/[^\n]*/gu, ' ');
+
+describe('long cinematic work: tracks, settings, batches, rate limits and renders', () => {
+
+  it('environment settings take objects and soft references through the shared writer', () => {
+    expect(code('Environment', 'Runtime', 'McpEnvReflectSettings.cpp')).toContain('if (::ApplyJsonValueToProperty(Target, Property, Pair.Value, ApplyError))');
+  });
+
+  it('the pre-queue scans reach every value of a full batch', () => {
+    expect(privateCode('Foundation', 'McpCapabilityAuthorization.h')).toContain('inline constexpr int32 McpMaxPayloadScanNodes = 262144;');
+    for (const file of [['Foundation', 'McpCapabilityPathScan.cpp'], ['Core', 'Security', 'McpPrequeueGate.cpp']]) {
+      expect(privateCode(...file), file.join('/')).toContain('constexpr int32 MaxScanNodes = McpMaxPayloadScanNodes;');
+    }
+    expect(privateCode('Core', 'Security', 'McpPrequeueGate.cpp')).not.toContain('Key.ToLower()');
+  });
+
+  it('a rate-limited request names its wait and sends Retry-After', () => {
+    expect(privateCode('MCP', 'Protocol', 'McpJsonRpc.cpp')).toContain('Data->SetNumberField(TEXT("retryAfterSeconds"), RetryAfterSeconds);');
+    for (const file of [['MCP', 'Transport', 'McpNativeTransportConnection.cpp'], ['MCP', 'Protocol', 'McpNativeTransportModern.cpp']]) {
+      expect(privateCode(...file), file.join('/')).toContain('FMcpJsonRpc::RetryAfterHeader(RetryAfter)');
+    }
+  });
+
+});

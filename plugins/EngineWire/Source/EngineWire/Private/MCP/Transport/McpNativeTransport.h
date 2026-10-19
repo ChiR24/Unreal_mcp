@@ -205,10 +205,11 @@ private:
 	static int32 GetSessionValidationStatusCode(ESessionValidationResult Result);
 	void TouchSession(const FString& SessionId);
 	void MarkSessionInitializationComplete(const FString& SessionId);
+	// False with OutError (the cap, its setting and the wait) and, when asked, the seconds until the window resets.
 	bool ConsumeSessionRequestBudget(
-		const FString& SessionId, bool bToolCall, FString& OutError);
+		const FString& SessionId, bool bToolCall, FString& OutError, int32* OutRetryAfterSeconds = nullptr);
 	bool ConsumeClientRequestBudgetLocked(
-		const FString& ClientRateKey, bool bToolCall, FString& OutError);
+		const FString& ClientRateKey, bool bToolCall, FString& OutError, int32* OutRetryAfterSeconds = nullptr);
 	bool QueueAutomationRequestForSession(
 		const FString& SessionId, const FString& RequestId,
 		const FString& DispatchAction,

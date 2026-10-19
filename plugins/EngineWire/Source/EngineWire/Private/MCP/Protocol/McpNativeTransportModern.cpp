@@ -40,9 +40,11 @@ void FMcpNativeTransport::HandleModernRequest(
 
 	const FString SessionId = EnsureModernSession(HttpReq.CapabilityToken);
 	FString RateLimitError;
-	if (!ConsumeSessionRequestBudget(SessionId, Rpc.Method == TEXT("tools/call"), RateLimitError))
+	int32 RetryAfter = 0;
+	if (!ConsumeSessionRequestBudget(SessionId, Rpc.Method == TEXT("tools/call"), RateLimitError, &RetryAfter))
 	{
-		Reply(429, FMcpJsonRpc::BuildError(Rpc.Id, FMcpJsonRpc::ErrorRateLimited, RateLimitError));
+		SendAndClose(ClientSocket, 429, TEXT("application/json"), FMcpJsonRpc::BuildRateLimitError(Rpc.Id, RateLimitError, RetryAfter),
+			FMcpJsonRpc::RetryAfterHeader(RetryAfter), HttpReq.Origin);
 		return;
 	}
 

@@ -110,6 +110,12 @@ struct FMcpPayloadPathScan
 	bool bTruncated = false;
 };
 
+// The JSON values a pre-queue scan (paths, console commands) visits before it stops and refuses the payload as
+// unchecked. It has to cover the largest payload a schema allows: at 4096, a 392-item spawn batch with transforms
+// (about 16 values an item) was refused although batches declare up to 500 items. Walking them costs the same order
+// as the parse that built them.
+inline constexpr int32 McpMaxPayloadScanNodes = 262144;
+
 namespace McpCapabilityAuthorization
 {
 // Exact-set scope membership with an Admin wildcard, refused with the caller-safe

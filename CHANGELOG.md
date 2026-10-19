@@ -42,6 +42,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`set_property` inside a Niagara system restarts its placed effects**, so a renderer change shows without assigning the system again.
 - **`audit_placement` sees simulated bodies as surfaces**: a crate stacked on a physics crate no longer reads as floating.
 - **`fix_coplanar` brings a piece laid across several neighbours forward** (a carpet over floor tiles), instead of sinking it under them.
+- **Large batches pass the pre-queue checks**: a payload past 4096 values (a 392-item spawn batch) was refused as unchecked.
+- **A rate-limited request says when to retry** (`RATE_LIMITED`, `retryAfterSeconds`, a `Retry-After` header).
+- **Environment settings take object and soft references** (a volumetric cloud's material), as `edit_component` does.
 
 </details>
 

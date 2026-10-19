@@ -14,7 +14,7 @@ namespace
 // Bounds mirror the payload path scan: a hostile client cannot make the gate
 // walk an unbounded structure before its request is even queued.
 constexpr int32 MaxScanDepth = 24;
-constexpr int32 MaxScanNodes = 4096;
+constexpr int32 MaxScanNodes = McpMaxPayloadScanNodes;
 
 FMcpAuthorizationGrant ReadGrant(const TSharedPtr<FJsonObject>& Consent)
 {
@@ -84,15 +84,15 @@ bool ScanForBlockedCommand(
 	}
 	--State.NodeBudget;
 
-	const FString LowerKey = Key.ToLower();
 	// Every key the executors actually read. `cmd` is the per-entry key a console
 	// batch accepts, so omitting it here let a blocked command
 	// wrapped as {"commands":[{"cmd":"..."}]} pass the PRE-queue gate and consume
 	// editor-thread work. The post-queue check still refused execution, so this
 	// closes a defence-in-depth gap rather than an execution hole -- but the gate
-	// exists precisely so such a request never reaches the queue.
-	const bool bCommandKey = LowerKey == TEXT("command") || LowerKey == TEXT("commands")
-		|| LowerKey == TEXT("cmd");
+	// exists precisely so such a request never reaches the queue. (Compared in place:
+	// a lowered copy per value was an allocation for every node of a large batch.)
+	const bool bCommandKey = Key.Equals(TEXT("command"), ESearchCase::IgnoreCase)
+		|| Key.Equals(TEXT("commands"), ESearchCase::IgnoreCase) || Key.Equals(TEXT("cmd"), ESearchCase::IgnoreCase);
 
 	if (Value->Type == EJson::String)
 	{

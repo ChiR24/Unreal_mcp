@@ -125,12 +125,12 @@ FString FMcpNativeTransport::HandleInitialize(
 		FScopeLock Lock(&SessionMutex);
 		const double Now = FPlatformTime::Seconds();
 		FString RateLimitError;
+		int32 RetryAfter = 0;
 		if (!ConsumeClientRequestBudgetLocked(
-				ClientRateKey, false, RateLimitError))
+				ClientRateKey, false, RateLimitError, &RetryAfter))
 		{
 			OutSessionId.Reset();
-			return FMcpJsonRpc::BuildError(
-				Id, FMcpJsonRpc::ErrorInvalidRequest, RateLimitError);
+			return FMcpJsonRpc::BuildRateLimitError(Id, RateLimitError, RetryAfter);
 		}
 		if (ActiveSessions.Num() >= MaxActiveSessions)
 		{

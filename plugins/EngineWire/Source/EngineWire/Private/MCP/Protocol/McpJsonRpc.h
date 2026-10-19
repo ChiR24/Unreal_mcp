@@ -52,6 +52,10 @@ public:
 
 	/** Build a JSON-RPC 2.0 error response string with an optional data object. */
 	static FString BuildError(const TSharedPtr<FJsonValue>& Id, int32 Code, const FString& Message, const TSharedPtr<FJsonObject>& Data = nullptr);
+	/** ErrorRateLimited with data {errorCode: RATE_LIMITED, retryAfterSeconds}, sent with RetryAfterHeader; no data when
+	 *  the refusal was not the limit (RetryAfterSeconds 0: the session had gone). */
+	static FString BuildRateLimitError(const TSharedPtr<FJsonValue>& Id, const FString& Message, int32 RetryAfterSeconds);
+	static TMap<FString, FString> RetryAfterHeader(int32 RetryAfterSeconds);
 
 	/** Build an MCP tool result object (content array + isError). */
 	static TSharedPtr<FJsonObject> BuildToolResult(

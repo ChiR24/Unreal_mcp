@@ -33,6 +33,9 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **`set_property` on an object in a Niagara system** runs `FNiagaraSystemUpdateContext` with re-init, as the Niagara editor does.
 - **The placement ground trace queries `ECC_PhysicsBody`** with WorldStatic and WorldDynamic.
 - **`fix_coplanar` sums a face's overlaps over all its pairs** before judging it wholly inside (comes forward) or partly inside (goes back).
+- **Pre-queue scans** walk up to `McpMaxPayloadScanNodes` (262144) values; command keys compare in place.
+- **Rate limit replies** name the cap, its setting and the wait, with `data.errorCode` `RATE_LIMITED`, `retryAfterSeconds` and `Retry-After`.
+- **`McpApplyPayloadSettings`** writes through the full `ApplyJsonValueToProperty` (objects, soft references, arrays).
 
 ## [0.6.0-beta-f] - 2026-10-16
 
