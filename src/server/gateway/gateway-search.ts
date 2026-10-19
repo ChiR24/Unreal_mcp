@@ -128,7 +128,17 @@ function withinByteBudget(
   let kept = rows;
   let response = envelope(filters, page, kept, false, coercions);
   while (kept.length > 0 && JSON.stringify(response).length > page.maxBytes) {
-    kept = kept.slice(0, kept.length - 1);
+    // The first row's signature is an extra: it goes before the row does, so a tight budget still gets the first hit
+    // (it answered no results at all, where the native door keeps its first row).
+    const first = kept[0];
+    if (kept.length === 1 && first !== undefined && 'signature' in first) {
+      const plain = { ...first };
+      delete plain.signature;
+      delete plain.executeCall;
+      kept = [plain];
+    } else {
+      kept = kept.slice(0, kept.length - 1);
+    }
     response = envelope(filters, page, kept, true, coercions);
   }
   // Not even one row fits. `envelope` would still advertise hasMore with a
