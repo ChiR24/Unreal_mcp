@@ -44,6 +44,11 @@ inline double McpViewRound(double Value, double Scale)
 TSharedPtr<FJsonObject> McpDescribeUnseenActor(AActor *Actor, const FEditorViewportClient &Client, const FIntPoint &Size,
                                                const TArray<FColor> &Ids, TMap<uint32, FMcpViewProxy> &Proxies);
 
+// describe_view's coveredBy for a named actor in view: the nearer actors drawn over at least 5% of its box (up to three,
+// by share of the box), the same measure hiddenBy takes for one that is not seen.
+TArray<TSharedPtr<FJsonValue>> McpCoveringActors(AActor *Actor, const FEditorViewportClient &Client, const FIntPoint &Size,
+                                                 const TArray<FColor> &Ids, TMap<uint32, FMcpViewProxy> &Proxies);
+
 // describe_view points: per normalized {x, y}, what is drawn at that pixel (drawn, actorName) and what the line from
 // the camera through it hits first against Visibility collision (hit: location, normal, distance, actorName,
 // componentName). False with OutError for a malformed point or an orthographic viewport.

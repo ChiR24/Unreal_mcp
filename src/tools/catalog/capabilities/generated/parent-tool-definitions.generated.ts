@@ -6426,7 +6426,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "items": {
             "type": "string"
           },
-          "description": "Only these actors (label, name or path): their rows under actors, and under notVisible each one that drew no pixel with its reason, outside the frame or hidden, with hiddenBy naming the actors drawn over its box (up to three, by share of the box). Names that match no actor are listed under notFound. limit does not apply."
+          "description": "Only these actors (label, name or path): their rows under actors (a row whose box nearer actors partly cover names them under coveredBy, as a sign half behind a row of blocks), and under notVisible each one that drew no pixel with its reason, outside the frame or hidden, with hiddenBy naming the actors drawn over its box (up to three, by share of the box). Names that match no actor are listed under notFound. limit does not apply."
         },
         "blueprintPath": {
           "type": "string",
@@ -6929,7 +6929,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "additionalProperties": true,
                 "x-unreal-reflection-boundary": true
               },
-              "description": "Largest share first: name (actor label), class, coverage (percent of the frame), box [left, top, right, bottom] in percent of the frame's width and height, brightness (0-1, as drawn) and distance (cm from the camera to its bounds). Editor icons and shapes hidden in game are left out."
+              "description": "Largest share first: name (actor label), class, coverage (percent of the frame), box [left, top, right, bottom] in percent of the frame's width and height, brightness (0-1, as drawn) and distance (cm from the camera to its bounds); with actors, coveredBy [{name, share}] lists the nearer actors drawn over at least 5% of its box. Editor icons and shapes hidden in game are left out."
             },
             {
               "type": "array",

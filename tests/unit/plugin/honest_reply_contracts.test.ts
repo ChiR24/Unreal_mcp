@@ -3498,3 +3498,13 @@ describe('coplanar faces no camera can see', () => {
     expect(faces).toContain('if (Best.OverlapU <= 0.0 || McpCoplanarHiddenUnderside(World, Best.Normal, SmallerCenter, A.Actor, B.Actor))');
   });
 });
+
+describe('describe_view names what covers part of a named actor', () => {
+  // A sign half behind a row of blocks still drew pixels, so it read as seen and nothing named what covered it.
+  it('measures nearer actors over a visible actor box as it does for an unseen one', () => {
+    expect(code('Environment', 'Inspection', 'McpEnvInspectViewContents.cpp')).toContain('McpCoveringActors(Row.Actor, *Client, Size, Ids, Proxies)');
+    const unseen = code('Environment', 'Inspection', 'McpEnvInspectViewUnseen.cpp');
+    expect(unseen).toContain('Covers.Remove(Actor);');
+    expect(unseen).toContain('McpNearerCovers(Actor, Client, Size, Ids, Proxies, 5.0, InFrame, Covers);');
+  });
+});

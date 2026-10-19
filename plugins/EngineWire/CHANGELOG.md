@@ -9,7 +9,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 ### Added
 - **Blueprint runtime errors** in Play name their node, graph and Blueprint in frame steps and motion reads; `runtime_report` lists the session's errors with the object's variables.
 - **`get_editor_focus`**: open asset editors newest first, each Blueprint editor's focused graph and selected nodes, the selected actors, the last minute's distinct warnings and the script errors.
-- **`describe_view` `points` and `labels`**: per spot, the actor its hit-proxy pixel draws and the Visibility trace through it; the frame (at most 960 px wide) with the listed actors' boxes numbered, as a PNG.
+- **`describe_view` `points` and `labels`**: per spot, the actor its hit-proxy pixel draws and the Visibility trace through it; the frame (at most 960 px wide) with the listed actors' boxes numbered, as a PNG; a named actor in view gets `coveredBy`, the nearer actors over at least 5% of its box.
 - **MCP 2026-07-28 on `/mcp`**: per-request version with no session, `Mcp-Method`/`Mcp-Name` checks, `resultType` and cache hints, consent through client elicitation (signed `requestState`), and the tasks extension.
 - **Result pages**: a result over 100k chars whose size is one top-level array goes a page at a time; the rest waits 5 minutes (at most 8 kept) for `options.pageCursor` from the same principal, capability and params. A cursor names its page's offset, `page.nextCall` repeats the call's routing, and an `imageBase64` goes with the first page only.
 - **Search signature**: a first hit whose runner-up scores at most 90% of it (`McpSearchConfidentRatioPercent`) and that needs no consent carries `signature` and `executeCall`.

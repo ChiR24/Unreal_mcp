@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "1577e62178dd36ae",
+  "catalogRevision": "7099e60f18c0214d",
   "recordCount": 416,
   "records": [
     {
@@ -45026,7 +45026,7 @@
               "items": {
                 "type": "string"
               },
-              "description": "Only these actors (label, name or path): their rows under actors, and under notVisible each one that drew no pixel with its reason, outside the frame or hidden, with hiddenBy naming the actors drawn over its box (up to three, by share of the box). Names that match no actor are listed under notFound. limit does not apply."
+              "description": "Only these actors (label, name or path): their rows under actors (a row whose box nearer actors partly cover names them under coveredBy, as a sign half behind a row of blocks), and under notVisible each one that drew no pixel with its reason, outside the frame or hidden, with hiddenBy naming the actors drawn over its box (up to three, by share of the box). Names that match no actor are listed under notFound. limit does not apply."
             },
             "location": {
               "type": "object",
@@ -45140,7 +45140,7 @@
                 "additionalProperties": true,
                 "x-unreal-reflection-boundary": true
               },
-              "description": "Largest share first: name (actor label), class, coverage (percent of the frame), box [left, top, right, bottom] in percent of the frame's width and height, brightness (0-1, as drawn) and distance (cm from the camera to its bounds). Editor icons and shapes hidden in game are left out."
+              "description": "Largest share first: name (actor label), class, coverage (percent of the frame), box [left, top, right, bottom] in percent of the frame's width and height, brightness (0-1, as drawn) and distance (cm from the camera to its bounds); with actors, coveredBy [{name, share}] lists the nearer actors drawn over at least 5% of its box. Editor icons and shapes hidden in game are left out."
             },
             "background": {
               "type": "number",
@@ -45314,8 +45314,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "92c437805d5376931813d30a6db2ecb814a77f84c11ae1edf658ae4383087d31",
-        "content": "eb4d1e3108753c2447513db5b15572b62559e7d34939b3e624506cefe4d65eac"
+        "schema": "35618390674de7af81bc1ad60649d77802b7eca01427e6dae087e08aff860ac4",
+        "content": "a2a19232ee6857de27443e88cbb75d334b1e0f2093bc97362c4c401f74304cfd"
       }
     },
     {

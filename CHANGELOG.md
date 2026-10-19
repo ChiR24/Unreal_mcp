@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Blueprint runtime errors name their node** in frame steps and motion reads (node, `nodeId`, graph, Blueprint, hit count); `runtime_report` lists them with the object's variables at the first hit.
 - **MCP 2026-07-28 on both transports**: requests with no initialize or session, and consent asked through the client; the native transport adds the header checks and the tasks extension. Older clients are unchanged.
 - **`get_editor_state` `focus`**: the open asset editors, each Blueprint editor's graph in front and its selected nodes, the selected actors, recent warnings and the Blueprint runtime errors.
-- **`describe_view` `points` and `labels`**: the actor and world point under spots of the frame; the frame with the listed actors boxed and numbered.
+- **`describe_view` `points`, `labels` and `coveredBy`**: the actor and world point under spots of the frame; the frame with the listed actors boxed and numbered; what partly covers a named actor that is in view.
 - **Large results come in pages** instead of `RESULT_TOO_LARGE`: `page.nextCall` reads the next page without running the call again, and a page read again comes back the same.
 - **Search hands over a clear first hit** with `signature` and `executeCall` when it needs no consent, so describe can be skipped.
 - **`get_stats` `frame`**: the thread that bounds the frame, or that it only waits, and what in view weighs on it (movable shadowed lights, heavy meshes without Nanite, translucency, ticking actors).

@@ -187,6 +187,8 @@ bool HandleInspectViewContentsAction(
         const double Distance = Bounds.IsValid ? FMath::Sqrt(Bounds.ComputeSquaredDistanceToPoint(Camera))
                                                : FVector::Dist(Row.Actor->GetActorLocation(), Camera);
         Item->SetNumberField(TEXT("distance"), FMath::RoundToDouble(Distance));
+        const TArray<TSharedPtr<FJsonValue>> CoveredBy = Requested ? McpCoveringActors(Row.Actor, *Client, Size, Ids, Proxies) : TArray<TSharedPtr<FJsonValue>>();
+        if (CoveredBy.Num() > 0) Item->SetArrayField(TEXT("coveredBy"), CoveredBy);
         Listed.Add(MakeShared<FJsonValueObject>(Item));
         ListedBoxes.Add(FIntRect(Row.MinX, Row.MinY, FMath::Min(Row.MaxX + McpViewStride, Size.X),
                                  FMath::Min(Row.MaxY + McpViewStride, Size.Y)));
