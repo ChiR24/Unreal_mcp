@@ -54,6 +54,14 @@ describe('consent through the client (MCP 2026-07-28)', () => {
     expect(await answer(undefined)).toBe('ask');
   });
 
+  // A wrapped answer the SDK dropped read as missing, so the question went out again every round until the cap failed.
+  it('refuses an answer the SDK dropped as wrapped instead of asking again', async () => {
+    const { state } = await asked();
+    const outcome = await askThroughClient(channel({ state, responses: {}, dropped: ['consent'] }), CAPABILITY, 'elevated', 'manage_asset.delete', PARAMS);
+    expect(outcome?.kind).toBe('no');
+    if (outcome?.kind === 'no') expect(outcome.message).toContain('consentGrant');
+  });
+
   it('refuses a verified state minted for another call with -32602', async () => {
     const { state } = await asked();
     const other = askThroughClient(

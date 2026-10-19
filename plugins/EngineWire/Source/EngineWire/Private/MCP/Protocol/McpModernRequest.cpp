@@ -79,8 +79,10 @@ FString HeaderMismatch(const FString& HeaderVersion, const FString& HeaderMethod
             : FString::Printf(TEXT("Header mismatch: Mcp-Method header value '%s' does not match body value '%s'"),
                   *HeaderMethod, *Method);
     }
+    // The tasks methods name their task in Mcp-Name too: a mismatched taskId was served here while the SDK refused it.
     const TCHAR* NameField = Method == TEXT("resources/read") ? TEXT("uri")
-        : (Method == TEXT("tools/call") || Method == TEXT("prompts/get")) ? TEXT("name") : nullptr;
+        : (Method == TEXT("tools/call") || Method == TEXT("prompts/get")) ? TEXT("name")
+        : (Method == TEXT("tasks/get") || Method == TEXT("tasks/update") || Method == TEXT("tasks/cancel")) ? TEXT("taskId") : nullptr;
     if (!NameField)
     {
         return FString();

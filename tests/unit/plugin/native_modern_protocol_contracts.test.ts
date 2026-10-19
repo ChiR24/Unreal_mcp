@@ -32,6 +32,8 @@ describe('native MCP 2026-07-28 requests', () => {
     expect(header).toContain('constexpr int32 ErrorHeaderMismatch = -32020;');
     expect(header).toContain('constexpr int32 ErrorUnsupportedProtocolVersion = -32022;');
     expect(request).toContain('TEXT("=?base64?")');
+    // A tasks method names its task in Mcp-Name, as the SDK checks it.
+    expect(request).toContain('(Method == TEXT("tasks/get") || Method == TEXT("tasks/update") || Method == TEXT("tasks/cancel")) ? TEXT("taskId")');
   });
 
   it('serves every modern request on the implicit session, rate limits first, and never names that session', () => {

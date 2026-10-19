@@ -7,7 +7,6 @@ import { ServerSetup } from '../server-setup.js';
 import { HealthMonitor } from '../services/health-monitor.js';
 import { UNREAL_GATEWAY_INSTRUCTIONS } from '../tools/catalog/unreal-gateway-definition.js';
 import { UnrealBridge } from '../unreal-bridge.js';
-import { canonicalizeMcpRequestId } from '../automation/request-context.js';
 import { CACHE_HINTS, SERVER_CAPABILITIES, wirePrimitives } from './mcp-primitives/primitive-wiring.js';
 import { consentStateCodec } from './gateway/gateway-execute-consent.js';
 
@@ -110,16 +109,9 @@ export function createServer() {
 
     wirePrimitives(server);
 
-    // Forward inbound notifications/cancelled to the automation bridge so the
-    // matching queued or inflight Unreal work is cancelled. This is the TS stdio
-    // counterpart to the native /mcp transport's cancellation and converges on
-    // the same idempotent cancellation primitive as SDK AbortSignal cancellation.
-    server.setNotificationHandler('notifications/cancelled', (notification) => {
-      const rawId = notification.params.requestId;
-      if (rawId === undefined) return;
-      const requestId = canonicalizeMcpRequestId(rawId);
-      automationBridge.cancelMcpRequest(requestId, 'Client cancelled request');
-    });
+    // notifications/cancelled stays the SDK's: it aborts the request's signal, which the tool registry turns into
+    // automationBridge.cancelMcpRequest, and the SDK then sends no late response. A handler set here replaced the
+    // SDK's, so the signal never aborted and the cancelled call still answered.
 
     // Chained, as the tool registry chains its own drain.
     const previousOnClose = server.onclose;

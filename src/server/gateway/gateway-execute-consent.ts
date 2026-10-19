@@ -48,6 +48,8 @@ export interface ConsentChannel {
   readonly canAsk: boolean;
   readonly state: unknown;
   readonly responses: Record<string, unknown> | undefined;
+  /** Answers the SDK dropped as not bare responses (a `{method, result}` wrapper). */
+  readonly dropped?: readonly string[];
   mint(state: ConsentState): Promise<string>;
 }
 
@@ -60,6 +62,7 @@ export function consentChannel(ctx: ServerContext): ConsentChannel {
     canAsk: isRecord(elicitation) && (elicitation.form !== undefined || elicitation.url === undefined),
     state: ctx.mcpReq.requestState(),
     responses: ctx.mcpReq.inputResponses,
+    dropped: ctx.mcpReq.droppedInputResponseKeys,
     mint: (state) => consentStateCodec.mint(state, ctx)
   };
 }
@@ -95,6 +98,11 @@ export async function askThroughClient(
     const state = ConsentStateSchema.safeParse(channel.state);
     if (!state.success || state.data.capability !== capabilityId || state.data.digest !== digest) {
       throw new ProtocolError(ProtocolErrorCode.InvalidParams, 'Invalid or expired requestState', { reason: 'invalid_request_state' });
+    }
+    // An answer the SDK dropped as wrapped read as no answer, so the question went out again every round until the
+    // round cap failed the call: a client that always wraps its answers gets the other way through instead.
+    if (channel.dropped?.includes(INPUT_KEY) === true) {
+      return { kind: 'no', message: `The client answered the consent question for ${target} in a shape this server cannot read (a wrapped response), so it did not run. Run describe and pass its consentGrant as consent instead.` };
     }
     const answer = inputResponse(channel.responses, INPUT_KEY);
     if (answer.kind !== 'missing') {
