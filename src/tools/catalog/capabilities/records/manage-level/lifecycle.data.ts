@@ -4,6 +4,7 @@
 import type { CapabilityRecordSource } from '../../model.js';
 import { buildCoreRecord } from '../core/builder.js';
 import { P } from './properties.js';
+import { ADD_SUBLEVEL_OUT } from './operations.data.js';
 
 const F = 'lifecycle';
 const D = 'level';
@@ -33,6 +34,8 @@ export const LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
       unsavedPackages: { type: 'array', items: { type: 'string' }, description: 'alreadyLoaded only: the packages with unsaved changes (the first 100).' },
       unsavedPackageCount: { type: 'number', description: 'alreadyLoaded only: how many packages have unsaved changes.' },
       settledSeconds: { type: 'number', description: 'How long the reply waited for the level to settle (its water, streamed textures and effects drawn), so a screenshot right after shows the level as it looks.' }, texturesStillStreaming: { type: 'number', description: 'Textures still streaming in when the wait ended at its cap; absent when streaming had gone quiet.' },
+      // streaming:true is add_sublevel, which answers.
+      ...ADD_SUBLEVEL_OUT,
     },
     outputRequired: [],
     effect: 'write', behavior: { idempotency: 'idempotent' }, costLatency: 'interactive', costResources: 'medium',
@@ -75,9 +78,9 @@ export const LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
     parentTool: 'manage_level', action: 'create_level', dispatchAction: 'manage_level_structure',
     domain: D, family: F,
     topics: ['new level', 'new map', 'create map', 'empty level', 'make a new map'],
-    summary: 'Create a new level asset and load it into the editor.',
+    summary: 'Create a new empty level map, save it and open it in the editor in place of the open one: levelName in the levelPath folder (default /Game/Maps). A level already at that path is opened instead, not replaced (alreadyExists). Open levels with unsaved changes refuse the call (DIRTY_PACKAGES, listed in unsavedPackages; nothing is created) unless saveDirtyPackages saves them. The new level has no light, sky or floor, so it renders black until some are added. useWorldPartition makes it a World Partition level (default off); when that fails the reply warns and worldPartitionEnabled is false.',
     whenToUse: ['A brand-new level must be created and opened.'],
-    whenNotToUse: ['An existing level should be loaded instead.'],
+    whenNotToUse: ['An existing level should be loaded instead.', 'A copy of an existing level is wanted; use duplicate_level.'],
     inputProps: {
       // The handler reads levelPath (or its alias savePath) as the folder for
       // levelName; it never applied a template, so none is declared.
@@ -88,6 +91,16 @@ export const LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
       saveDirtyPackages: { ...P.saveDirtyPackages, description: 'Save every dirty level and asset package first: the new level replaces the open one. Without it, open levels with unsaved changes refuse the call with DIRTY_PACKAGES (listing them in unsavedPackages) and nothing is created.' },
     },
     required: ['levelName'],
+    outputProps: {
+      levelName: { type: 'string', description: 'The level asset name.' },
+      levelPath: { type: 'string', description: 'The new level package path.' },
+      saved: { type: 'boolean', description: 'Whether the new level was written to disk.' },
+      loaded: { type: 'boolean', description: 'Whether it is now the level open in the editor.' },
+      currentLevelPath: { type: 'string', description: 'The level open in the editor after the call.' },
+      worldPartitionRequested: { type: 'boolean', description: 'Whether useWorldPartition asked for World Partition.' },
+      worldPartitionEnabled: { type: 'boolean', description: 'Whether the new level uses World Partition.' },
+      alreadyExists: { type: 'boolean', description: 'True when a level was already at that path: it was opened, nothing was created.' },
+    },
     effect: 'write', costLatency: 'interactive', costResources: 'medium',
     exampleInput: { action: 'create_level', levelName: 'NewMap', useWorldPartition: false },
   }),

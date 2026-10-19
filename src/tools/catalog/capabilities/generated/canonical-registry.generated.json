@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "81d2efee9af6bd64",
+  "catalogRevision": "025d9bdc61b1b94e",
   "recordCount": 416,
   "records": [
     {
@@ -73180,12 +73180,13 @@
           "add_sublevel",
           "add streaming level"
         ],
-        "summary": "Add a sub-level as a streaming child of the level open in the editor.",
+        "summary": "Add an existing level map to the level open in the editor as a streaming sublevel, loaded and shown in the editor at once. streamingMethod Blueprint (the default) is not loaded when the game starts until something streams it in (stream during Play, or a Load Stream Level node); AlwaysLoaded loads with the open level. A sublevel already there answers alreadyExists with the method it streams with. The add is not undoable and leaves the open level unsaved: save it to keep the sublevel, or load the level again with discardUnsaved to drop it (and every other unsaved change). Refusals: PARENT_LEVEL_NOT_LOADED (parentLevel is not the open level), PACKAGE_NOT_FOUND or FILE_NOT_FOUND (no such map; nothing is left behind).",
         "whenToUse": [
-          "A streaming child level must be associated with a parent."
+          "An existing level map must become a sublevel of the open level."
         ],
         "whenNotToUse": [
-          "The sub-level should be streamed independently; use stream."
+          "The sublevel is already added and should be streamed in or out, or shown or hidden; use stream.",
+          "A new empty level is needed first; use create_level."
         ]
       },
       "schemas": {
@@ -73199,11 +73200,11 @@
             },
             "subLevelPath": {
               "type": "string",
-              "description": "Sub-level asset path to add as a streaming child."
+              "description": "The level map to add, by /Game package path (an object path or .umap name is cut to the package); it must exist."
             },
             "levelPath": {
               "type": "string",
-              "description": "Level asset path (e.g. /Game/Maps/Demo)."
+              "description": "Alias of subLevelPath, read when subLevelPath is absent."
             },
             "parentLevel": {
               "type": "string",
@@ -73211,7 +73212,11 @@
             },
             "streamingMethod": {
               "type": "string",
-              "description": "Streaming method: Blueprint or AlwaysLoaded."
+              "description": "Blueprint (default): the game streams it in and out, and it starts unloaded. AlwaysLoaded: loaded whenever the open level is.",
+              "enum": [
+                "Blueprint",
+                "AlwaysLoaded"
+              ]
             }
           },
           "required": [
@@ -73239,6 +73244,26 @@
               "type": "object",
               "x-unreal-reflection-boundary": true,
               "description": "Additional handler result fields not named by the contract."
+            },
+            "subLevelPath": {
+              "type": "string",
+              "description": "The sublevel package that was added, or was already there."
+            },
+            "world": {
+              "type": "string",
+              "description": "Name of the open level it belongs to."
+            },
+            "streamingMethod": {
+              "type": "string",
+              "enum": [
+                "Blueprint",
+                "AlwaysLoaded"
+              ],
+              "description": "How it streams: the method asked for, or for alreadyExists the one it already had."
+            },
+            "alreadyExists": {
+              "type": "boolean",
+              "description": "True when it was already a sublevel of the open level; nothing was added."
             }
           },
           "required": [
@@ -73249,7 +73274,7 @@
       },
       "examples": [
         {
-          "title": "Add a sub-level as a streaming child of the level open in the editor.",
+          "title": "Add an existing level map to the level open in the editor as a streaming sublevel, loaded and shown in the editor at once. streamingMethod Blueprint (the default) is not loaded when the game starts until something streams it in (stream during Play, or a Load Stream Level node); AlwaysLoaded loads with the open level. A sublevel already there answers alreadyExists with the method it streams with. The add is not undoable and leaves the open level unsaved: save it to keep the sublevel, or load the level again with discardUnsaved to drop it (and every other unsaved change). Refusals: PARENT_LEVEL_NOT_LOADED (parentLevel is not the open level), PACKAGE_NOT_FOUND or FILE_NOT_FOUND (no such map; nothing is left behind).",
           "input": {
             "action": "add_sublevel",
             "subLevelPath": "/Game/Maps/Sub01",
@@ -73287,8 +73312,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "c0c88425306a2b3defbfb9f8b354e7961c98965c2a9a33fa96667787e117611a",
-        "content": "0b915b2cbd3567df06dcaa08a9965dafe18e0034763812a757166cddbd6eecbd"
+        "schema": "f8613743b40e37b9b3a4ca8bd98c523eb8839dc40c6f84fef4896e2d733b1b5f",
+        "content": "30244c574934f66b12944dcc6f6ab0e777a2aaf857bada7cb1dcfe3a109c577a"
       }
     },
     {
@@ -73420,12 +73445,13 @@
           "empty level",
           "make a new map"
         ],
-        "summary": "Create a new level asset and load it into the editor.",
+        "summary": "Create a new empty level map, save it and open it in the editor in place of the open one: levelName in the levelPath folder (default /Game/Maps). A level already at that path is opened instead, not replaced (alreadyExists). Open levels with unsaved changes refuse the call (DIRTY_PACKAGES, listed in unsavedPackages; nothing is created) unless saveDirtyPackages saves them. The new level has no light, sky or floor, so it renders black until some are added. useWorldPartition makes it a World Partition level (default off); when that fails the reply warns and worldPartitionEnabled is false.",
         "whenToUse": [
           "A brand-new level must be created and opened."
         ],
         "whenNotToUse": [
-          "An existing level should be loaded instead."
+          "An existing level should be loaded instead.",
+          "A copy of an existing level is wanted; use duplicate_level."
         ]
       },
       "schemas": {
@@ -73480,6 +73506,38 @@
               "type": "object",
               "x-unreal-reflection-boundary": true,
               "description": "Additional handler result fields not named by the contract."
+            },
+            "levelName": {
+              "type": "string",
+              "description": "The level asset name."
+            },
+            "levelPath": {
+              "type": "string",
+              "description": "The new level package path."
+            },
+            "saved": {
+              "type": "boolean",
+              "description": "Whether the new level was written to disk."
+            },
+            "loaded": {
+              "type": "boolean",
+              "description": "Whether it is now the level open in the editor."
+            },
+            "currentLevelPath": {
+              "type": "string",
+              "description": "The level open in the editor after the call."
+            },
+            "worldPartitionRequested": {
+              "type": "boolean",
+              "description": "Whether useWorldPartition asked for World Partition."
+            },
+            "worldPartitionEnabled": {
+              "type": "boolean",
+              "description": "Whether the new level uses World Partition."
+            },
+            "alreadyExists": {
+              "type": "boolean",
+              "description": "True when a level was already at that path: it was opened, nothing was created."
             }
           },
           "required": [
@@ -73490,7 +73548,7 @@
       },
       "examples": [
         {
-          "title": "Create a new level asset and load it into the editor.",
+          "title": "Create a new empty level map, save it and open it in the editor in place of the open one: levelName in the levelPath folder (default /Game/Maps). A level already at that path is opened instead, not replaced (alreadyExists). Open levels with unsaved changes refuse the call (DIRTY_PACKAGES, listed in unsavedPackages; nothing is created) unless saveDirtyPackages saves them. The new level has no light, sky or floor, so it renders black until some are added. useWorldPartition makes it a World Partition level (default off); when that fails the reply warns and worldPartitionEnabled is false.",
           "input": {
             "action": "create_level",
             "levelName": "NewMap",
@@ -73528,8 +73586,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "88414c84fe898f6a49385262e748a2a8c542d5404a04ba8dd6ae3d461e833488",
-        "content": "c3dc324f7c2a86ccfbfb4d178e9600a34a07bbf18573be4e000121ba1f86cb2b"
+        "schema": "81130c2e10bff9be3ccf5840052552810f89b9b48b1878ecfc5528994674434d",
+        "content": "7efb35a5b749f49ce130e812476f123606599ed2d3e197d9e55201b69c25f171"
       }
     },
     {
@@ -73855,7 +73913,7 @@
           "copy level",
           "copy map"
         ],
-        "summary": "Duplicate a level to a new path, or rename it.",
+        "summary": "Copy a level map to destinationPath (levelOp duplicate, the default), or rename or move it (rename: newName in the same folder, or destinationPath). Both copy the saved files (the .umap, its built data and its external actor and object files), so unsaved changes to an open level are not in the copy: save first. A destination that exists is refused (DESTINATION_EXISTS) unless overwrite is true, which backs it up and restores it if a step fails; one loaded in the editor is refused (DESTINATION_LOADED). Rename then deletes the source files, and refuses a level loaded in the editor, open or as a sublevel (LEVEL_IN_USE, LEVEL_LOADED). Neither opens the result.",
         "whenToUse": [
           "levelOp=duplicate: A level asset must be copied to a new path.",
           "levelOp=rename: A level asset must be renamed in place."
@@ -73935,7 +73993,7 @@
       },
       "examples": [
         {
-          "title": "Duplicate a level to a new path, or rename it.",
+          "title": "Copy a level map to destinationPath (levelOp duplicate, the default), or rename or move it (rename: newName in the same folder, or destinationPath). Both copy the saved files (the .umap, its built data and its external actor and object files), so unsaved changes to an open level are not in the copy: save first. A destination that exists is refused (DESTINATION_EXISTS) unless overwrite is true, which backs it up and restores it if a step fails; one loaded in the editor is refused (DESTINATION_LOADED). Rename then deletes the source files, and refuses a level loaded in the editor, open or as a sublevel (LEVEL_IN_USE, LEVEL_LOADED). Neither opens the result.",
           "input": {
             "action": "duplicate_level",
             "sourcePath": "/Game/Maps/Demo",
@@ -73987,7 +74045,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "fe13039535f4b2a75881962f7c881a23520f115abb1701baf5b0dbf5da28fa7d",
-        "content": "830e58469094ea6913c45063fbfbe7feba0c8d2be8d82aba21f273e60775d9a3"
+        "content": "beb7405513d6d36260239a26728e1c499f1ca06fa346a9b1a61565b22cb7f89a"
       }
     },
     {
@@ -74683,7 +74741,7 @@
           "change level",
           "reload level"
         ],
-        "summary": "Load a level in the editor.",
+        "summary": "Open a level in the editor in place of the open one (levelPath: a /Game package or object path, or a bare name tried under /Game/Maps), or with streaming:true add it to the open level as a sublevel instead (add_sublevel answers). Open levels with unsaved changes refuse the load (DIRTY_PACKAGES, listed in unsavedPackages) until saveDirtyPackages saves them or discardUnsaved drops them; the level already open is not reloaded (alreadyLoaded, with its unsaved state); a missing map answers FILE_NOT_FOUND with both paths it checked. The reply waits for the level to settle (settledSeconds), so a screenshot right after shows it drawn.",
         "whenToUse": [
           "A level must be opened or streamed into the current session."
         ],
@@ -74783,6 +74841,26 @@
             "texturesStillStreaming": {
               "type": "number",
               "description": "Textures still streaming in when the wait ended at its cap; absent when streaming had gone quiet."
+            },
+            "subLevelPath": {
+              "type": "string",
+              "description": "The sublevel package that was added, or was already there."
+            },
+            "world": {
+              "type": "string",
+              "description": "Name of the open level it belongs to."
+            },
+            "streamingMethod": {
+              "type": "string",
+              "enum": [
+                "Blueprint",
+                "AlwaysLoaded"
+              ],
+              "description": "How it streams: the method asked for, or for alreadyExists the one it already had."
+            },
+            "alreadyExists": {
+              "type": "boolean",
+              "description": "True when it was already a sublevel of the open level; nothing was added."
             }
           },
           "required": [
@@ -74793,7 +74871,7 @@
       },
       "examples": [
         {
-          "title": "Load a level in the editor.",
+          "title": "Open a level in the editor in place of the open one (levelPath: a /Game package or object path, or a bare name tried under /Game/Maps), or with streaming:true add it to the open level as a sublevel instead (add_sublevel answers). Open levels with unsaved changes refuse the load (DIRTY_PACKAGES, listed in unsavedPackages) until saveDirtyPackages saves them or discardUnsaved drops them; the level already open is not reloaded (alreadyLoaded, with its unsaved state); a missing map answers FILE_NOT_FOUND with both paths it checked. The reply waits for the level to settle (settledSeconds), so a screenshot right after shows it drawn.",
           "input": {
             "action": "load",
             "levelPath": "/Game/Maps/Demo",
@@ -74831,8 +74909,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "4971b9a7d68ca16d4aa9cb28576ba422a6479113491b123577090f69e8b80fda",
-        "content": "84cec769bb2d1f0672af930d5bbe5cf489fa837e0baad5bfb20e72df6f1271d3"
+        "schema": "3096cb32481c6996ae67b74ad001356e2c7db315a38ef57870e1cb9b6abc5728",
+        "content": "2aa471fc0341af00d2cd922355afbdc1b6f96276384924120513d13b6db3b7a1"
       }
     },
     {
@@ -75317,16 +75395,19 @@
         "topics": [
           "stream",
           "load sublevel",
-          "unload sublevel"
+          "unload sublevel",
+          "hide sublevel"
         ],
-        "summary": "Stream a sublevel in or out, or unload it.",
+        "summary": "Stream in a sublevel of the open level (streamOp stream, the default) or stream it out (unload). During Play it streams in the running game, as the Load and Unload Stream Level nodes do, and settles before the reply; otherwise the editor, which keeps every sublevel loaded, shows or hides it as the Levels panel does, and unload hides it with a warning. The reply says which world it acted on (play or editor) and whether the level is loaded and visible now. levelPath is the full package path or the part after its last slash; STREAMING_LEVEL_NOT_FOUND means it is not a sublevel yet (add_sublevel), AMBIGUOUS_LEVEL that two sublevels share the name (listed in matches), LEVEL_NOT_LOADED that its map failed to load.",
         "whenToUse": [
-          "streamOp=stream: A streaming level must be loaded, unloaded, or toggled visible.",
-          "streamOp=unload: A streaming level must be removed from the world."
+          "streamOp=stream: A sublevel must be streamed in or out while the game plays, or shown or hidden in the editor.",
+          "streamOp=unload: A sublevel must stop being drawn: unloaded while the game plays, hidden in the editor."
         ],
         "whenNotToUse": [
-          "streamOp=stream: The level should be permanently loaded; use load.",
-          "streamOp=unload: The level asset should be deleted; use delete."
+          "streamOp=stream: The level is not a sublevel of the open level yet (STREAMING_LEVEL_NOT_FOUND): add it with add_sublevel first.",
+          "streamOp=stream: The level should replace the open one; use load.",
+          "streamOp=unload: The level asset should be deleted; use delete.",
+          "streamOp=unload: The open level itself: open another one with load."
         ]
       },
       "schemas": {
@@ -75340,19 +75421,19 @@
             },
             "levelPath": {
               "type": "string",
-              "description": "Level asset path (e.g. /Game/Maps/Demo)."
+              "description": "The sublevel: its full package path (/Game/Maps/Sub01; an object path or .umap name is cut to the package) or the part after its last slash (Sub01). A name two sublevels share is refused (AMBIGUOUS_LEVEL, listing them in matches)."
             },
             "levelName": {
               "type": "string",
-              "description": "Level name identifier."
+              "description": "Alias of levelPath, read first when both are given."
             },
             "shouldBeLoaded": {
               "type": "boolean",
-              "description": "Whether the level should be loaded."
+              "description": "Load it (true, the default) or stream it out (false). In the editor false hides it instead, with a warning; a sublevel added AlwaysLoaded stays loaded in the game and is hidden."
             },
             "shouldBeVisible": {
               "type": "boolean",
-              "description": "Whether the level should be visible."
+              "description": "Draw it (true, the default) or keep it loaded but hidden (false); ignored when shouldBeLoaded is false."
             },
             "streamOp": {
               "type": "string",
@@ -75367,7 +75448,11 @@
           "required": [
             "action"
           ],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "requiredOneOf": [
+            "levelPath",
+            "levelName"
+          ]
         },
         "output": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -75385,6 +75470,39 @@
               "type": "object",
               "x-unreal-reflection-boundary": true,
               "description": "Additional handler result fields not named by the contract."
+            },
+            "levelName": {
+              "type": "string",
+              "description": "The name asked for, read as a package."
+            },
+            "levelPath": {
+              "type": "string",
+              "description": "The package path of the sublevel that matched."
+            },
+            "world": {
+              "type": "string",
+              "enum": [
+                "play",
+                "editor"
+              ],
+              "description": "play: a Play session ran and the level streamed in the running game. editor: it was shown or hidden in the editor."
+            },
+            "loaded": {
+              "type": "boolean",
+              "description": "Whether the level is loaded now; always true in the editor, which keeps every sublevel loaded."
+            },
+            "visible": {
+              "type": "boolean",
+              "description": "Whether the level is drawn now."
+            },
+            "streamingState": {
+              "type": "string",
+              "enum": [
+                "Loaded",
+                "Unloaded",
+                "Pending"
+              ],
+              "description": "Loaded or Unloaded, or Pending while the game is still streaming it."
             }
           },
           "required": [
@@ -75395,7 +75513,7 @@
       },
       "examples": [
         {
-          "title": "Stream a sublevel in or out, or unload it.",
+          "title": "Stream in a sublevel of the open level (streamOp stream, the default) or stream it out (unload). During Play it streams in the running game, as the Load and Unload Stream Level nodes do, and settles before the reply; otherwise the editor, which keeps every sublevel loaded, shows or hides it as the Levels panel does, and unload hides it with a warning. The reply says which world it acted on (play or editor) and whether the level is loaded and visible now. levelPath is the full package path or the part after its last slash; STREAMING_LEVEL_NOT_FOUND means it is not a sublevel yet (add_sublevel), AMBIGUOUS_LEVEL that two sublevels share the name (listed in matches), LEVEL_NOT_LOADED that its map failed to load.",
           "input": {
             "action": "stream",
             "levelPath": "/Game/Maps/Sub01",
@@ -75450,8 +75568,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "06e85fda2d24aac67cdb385d486a9e83d7d202f3fc2f439562a4725123798bb3",
-        "content": "c56a1f8bc19d0e08bfe432b52f7e9e46fb53599f6ba97162d4d4555dde52604b"
+        "schema": "f6d31aac5f9d0a2b282ba5562c3b31cf29625bc49bdf5aaa1474357a86dded92",
+        "content": "0a6544e251c555f603017fc0b4062729bfdf8ccde52dea4249cab25f36ebcfbd"
       }
     },
     {
@@ -75469,9 +75587,9 @@
         "topics": [
           "unload_level"
         ],
-        "summary": "Unload a streaming level via the manage_level parent (alias of unload).",
+        "summary": "Stream a sublevel out (alias of unload): unloaded during Play, hidden with a warning in the editor.",
         "whenToUse": [
-          "A streaming level must be unloaded using the unload_level verb."
+          "A sublevel must be streamed out using the unload_level verb."
         ],
         "whenNotToUse": [
           "Prefer the shorter unload verb."
@@ -75488,18 +75606,21 @@
             },
             "levelPath": {
               "type": "string",
-              "description": "Level asset path (e.g. /Game/Maps/Demo)."
+              "description": "The sublevel: its full package path (/Game/Maps/Sub01; an object path or .umap name is cut to the package) or the part after its last slash (Sub01). A name two sublevels share is refused (AMBIGUOUS_LEVEL, listing them in matches)."
             },
             "levelName": {
               "type": "string",
-              "description": "Level name identifier."
+              "description": "Alias of levelPath, read first when both are given."
             }
           },
           "required": [
-            "action",
-            "levelPath"
+            "action"
           ],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "requiredOneOf": [
+            "levelPath",
+            "levelName"
+          ]
         },
         "output": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -75517,6 +75638,39 @@
               "type": "object",
               "x-unreal-reflection-boundary": true,
               "description": "Additional handler result fields not named by the contract."
+            },
+            "levelName": {
+              "type": "string",
+              "description": "The name asked for, read as a package."
+            },
+            "levelPath": {
+              "type": "string",
+              "description": "The package path of the sublevel that matched."
+            },
+            "world": {
+              "type": "string",
+              "enum": [
+                "play",
+                "editor"
+              ],
+              "description": "play: a Play session ran and the level streamed in the running game. editor: it was shown or hidden in the editor."
+            },
+            "loaded": {
+              "type": "boolean",
+              "description": "Whether the level is loaded now; always true in the editor, which keeps every sublevel loaded."
+            },
+            "visible": {
+              "type": "boolean",
+              "description": "Whether the level is drawn now."
+            },
+            "streamingState": {
+              "type": "string",
+              "enum": [
+                "Loaded",
+                "Unloaded",
+                "Pending"
+              ],
+              "description": "Loaded or Unloaded, or Pending while the game is still streaming it."
             }
           },
           "required": [
@@ -75527,7 +75681,7 @@
       },
       "examples": [
         {
-          "title": "Unload a streaming level via the manage_level parent (alias of unload).",
+          "title": "Stream a sublevel out (alias of unload): unloaded during Play, hidden with a warning in the editor.",
           "input": {
             "action": "unload_level",
             "levelPath": "/Game/Maps/Sub01"
@@ -75564,8 +75718,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "1b32f02e578d0e1f3760b4fb4fe2693eb7b2b91b43bcf89ab8e46da01fdcffb6",
-        "content": "e59bec5ea7cc115d2938199b929a0e74841d639cf157d4deecbe61e5e917344f"
+        "schema": "a5fd503405d46f2b39d3aebcb624252918229bdaab66786c88e213c2606e91ab",
+        "content": "a93c39c8df51556b3fe074cb24579045404669e785fac6ab6ec4eda315bb2cdd"
       }
     },
     {

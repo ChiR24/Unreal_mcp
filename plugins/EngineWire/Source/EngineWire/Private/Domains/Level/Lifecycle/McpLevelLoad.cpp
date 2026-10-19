@@ -1,5 +1,6 @@
 #include "Domains/Level/McpLevelActions.h"
 #include "Domains/Level/Lifecycle/McpLevelDirtyPackageLoad.h"
+#include "Domains/Level/Lifecycle/McpLevelPathSafety.h"
 #include "Domains/ControlEditor/McpEditorSupport.h"
 
 #include "Editor.h"
@@ -45,7 +46,8 @@ bool HandleLoadLevelAction(UEngineWireSubsystem& Subsystem, const FString& Reque
                             TEXT("SECURITY_VIOLATION"));
         return true;
       }
-      LevelPath = SanitizedLevelPath;
+      // An object path (/Game/Maps/Demo.Demo) or a .umap name reads as its package; it answered FILE_NOT_FOUND.
+      LevelPath = NormalizeLevelPackagePath(SanitizedLevelPath);
 
       if (!LevelPath.StartsWith(TEXT("/")) && !FPaths::FileExists(LevelPath)) {
         FString TryPath = FString::Printf(TEXT("/Game/Maps/%s"), *LevelPath);

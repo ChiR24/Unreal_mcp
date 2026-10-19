@@ -15356,7 +15356,7 @@
           },
           "levelName": {
             "type": "string",
-            "description": "Level name identifier."
+            "description": "Alias of levelPath, read first when both are given."
           },
           "levelOp": {
             "type": "string",
@@ -15369,7 +15369,7 @@
           },
           "levelPath": {
             "type": "string",
-            "description": "Folder the new level goes in (e.g. /Game/Maps, combined with levelName), or its full path; omitted, the level lands in /Game/Maps."
+            "description": "Alias of subLevelPath, read when subLevelPath is absent."
           },
           "lightClass": {
             "type": "string",
@@ -15446,11 +15446,11 @@
           },
           "shouldBeLoaded": {
             "type": "boolean",
-            "description": "Whether the level should be loaded."
+            "description": "Load it (true, the default) or stream it out (false). In the editor false hides it instead, with a warning; a sublevel added AlwaysLoaded stays loaded in the game and is hidden."
           },
           "shouldBeVisible": {
             "type": "boolean",
-            "description": "Whether the level should be visible."
+            "description": "Draw it (true, the default) or keep it loaded but hidden (false); ignored when shouldBeLoaded is false."
           },
           "sourcePath": {
             "type": "string",
@@ -15471,11 +15471,15 @@
           },
           "streamingMethod": {
             "type": "string",
-            "description": "Streaming method: Blueprint or AlwaysLoaded."
+            "description": "Blueprint (default): the game streams it in and out, and it starts unloaded. AlwaysLoaded: loaded whenever the open level is.",
+            "enum": [
+              "Blueprint",
+              "AlwaysLoaded"
+            ]
           },
           "subLevelPath": {
             "type": "string",
-            "description": "Sub-level asset path to add as a streaming child."
+            "description": "The level map to add, by /Game package path (an object path or .umap name is cut to the package); it must exist."
           },
           "targetPath": {
             "type": "string",

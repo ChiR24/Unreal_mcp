@@ -20837,7 +20837,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "levelName": {
           "type": "string",
-          "description": "Level name identifier."
+          "description": "Alias of levelPath, read first when both are given."
         },
         "levelOp": {
           "type": "string",
@@ -20850,7 +20850,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "levelPath": {
           "type": "string",
-          "description": "Folder the new level goes in (e.g. /Game/Maps, combined with levelName), or its full path; omitted, the level lands in /Game/Maps."
+          "description": "Alias of subLevelPath, read when subLevelPath is absent."
         },
         "lightClass": {
           "type": "string",
@@ -20927,11 +20927,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "shouldBeLoaded": {
           "type": "boolean",
-          "description": "Whether the level should be loaded."
+          "description": "Load it (true, the default) or stream it out (false). In the editor false hides it instead, with a warning; a sublevel added AlwaysLoaded stays loaded in the game and is hidden."
         },
         "shouldBeVisible": {
           "type": "boolean",
-          "description": "Whether the level should be visible."
+          "description": "Draw it (true, the default) or keep it loaded but hidden (false); ignored when shouldBeLoaded is false."
         },
         "sourcePath": {
           "type": "string",
@@ -20952,11 +20952,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "streamingMethod": {
           "type": "string",
-          "description": "Streaming method: Blueprint or AlwaysLoaded."
+          "description": "Blueprint (default): the game streams it in and out, and it starts unloaded. AlwaysLoaded: loaded whenever the open level is.",
+          "enum": [
+            "Blueprint",
+            "AlwaysLoaded"
+          ]
         },
         "subLevelPath": {
           "type": "string",
-          "description": "Sub-level asset path to add as a streaming child."
+          "description": "The level map to add, by /Game package path (an object path or .umap name is cut to the package); it must exist."
         },
         "targetPath": {
           "type": "string",
@@ -21032,6 +21036,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Number of map assets in the asset registry."
         },
+        "alreadyExists": {
+          "type": "boolean",
+          "description": "True when a level was already at that path: it was opened, nothing was created."
+        },
         "alreadyLoaded": {
           "type": "boolean",
           "description": "True when levelPath was already the open level: nothing was loaded or reloaded, its unsaved changes were kept and a running Play In Editor session was left alone."
@@ -21050,6 +21058,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "assetName": {
           "type": "string",
           "description": "Asset name (asset-registry lookup)."
+        },
+        "currentLevelPath": {
+          "type": "string",
+          "description": "The level open in the editor after the call."
         },
         "currentMap": {
           "type": "string",
@@ -21140,7 +21152,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "loaded": {
           "type": "boolean",
-          "description": "Whether the level is loaded in the editor."
+          "description": "Whether it is now the level open in the editor."
         },
         "message": {
           "type": "string",
@@ -21158,6 +21170,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether this call loaded the level from disk (false when alreadyLoaded)."
         },
+        "saved": {
+          "type": "boolean",
+          "description": "Whether the new level was written to disk."
+        },
         "savedDirtyPackagesBeforeLoad": {
           "type": "boolean",
           "description": "Whether saveDirtyPackages saved every dirty package before the load."
@@ -21169,6 +21185,27 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "settledSeconds": {
           "type": "number",
           "description": "How long the reply waited for the level to settle (its water, streamed textures and effects drawn), so a screenshot right after shows the level as it looks."
+        },
+        "streamingMethod": {
+          "type": "string",
+          "enum": [
+            "Blueprint",
+            "AlwaysLoaded"
+          ],
+          "description": "How it streams: the method asked for, or for alreadyExists the one it already had."
+        },
+        "streamingState": {
+          "type": "string",
+          "enum": [
+            "Loaded",
+            "Unloaded",
+            "Pending"
+          ],
+          "description": "Loaded or Unloaded, or Pending while the game is still streaming it."
+        },
+        "subLevelPath": {
+          "type": "string",
+          "description": "The sublevel package that was added, or was already there."
         },
         "success": {
           "type": "boolean",
@@ -21214,6 +21251,22 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             }
           ],
           "description": "Every level and asset package with unsaved changes, levels first (the first 100)."
+        },
+        "visible": {
+          "type": "boolean",
+          "description": "Whether the level is drawn now."
+        },
+        "world": {
+          "type": "string",
+          "description": "Name of the open level it belongs to."
+        },
+        "worldPartitionEnabled": {
+          "type": "boolean",
+          "description": "Whether the new level uses World Partition."
+        },
+        "worldPartitionRequested": {
+          "type": "boolean",
+          "description": "Whether useWorldPartition asked for World Partition."
         }
       },
       "additionalProperties": true

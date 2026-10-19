@@ -11,40 +11,59 @@ import { P } from './properties.js';
 export const D = 'level';
 export const NR = 'Distinct manage_level operation verb and target; no cross-tool duplicate.';
 
+// stream, unload and unload_level share one handler (McpLevelStream.cpp) and its reply.
+const STREAM_LEVEL_PATH = { ...P.levelPath, description: 'The sublevel: its full package path (/Game/Maps/Sub01; an object path or .umap name is cut to the package) or the part after its last slash (Sub01). A name two sublevels share is refused (AMBIGUOUS_LEVEL, listing them in matches).' };
+const STREAM_LEVEL_NAME = { ...P.levelName, description: 'Alias of levelPath, read first when both are given.' };
+const STREAM_OUT = {
+  levelName: { type: 'string', description: 'The name asked for, read as a package.' },
+  levelPath: { type: 'string', description: 'The package path of the sublevel that matched.' },
+  world: { type: 'string', enum: ['play', 'editor'], description: 'play: a Play session ran and the level streamed in the running game. editor: it was shown or hidden in the editor.' },
+  loaded: { type: 'boolean', description: 'Whether the level is loaded now; always true in the editor, which keeps every sublevel loaded.' },
+  visible: { type: 'boolean', description: 'Whether the level is drawn now.' },
+  streamingState: { type: 'string', enum: ['Loaded', 'Unloaded', 'Pending'], description: 'Loaded or Unloaded, or Pending while the game is still streaming it.' },
+};
+
 export const OPERATIONS_POWER_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'manage_level', action: 'stream', dispatchAction: 'stream_level',
     domain: D, family: 'streaming',
-    summary: 'Stream a level in or out of the world, controlling load and visibility state.',
-    whenToUse: ['A streaming level must be loaded, unloaded, or toggled visible.'],
-    whenNotToUse: ['The level should be permanently loaded; use load.'],
+    summary: 'Stream a sublevel of the open level in or out: during Play in the running game (settled before the reply), otherwise shown or hidden in the editor, which keeps every sublevel loaded.',
+    whenToUse: ['A sublevel must be streamed in or out while the game plays, or shown or hidden in the editor.'],
+    whenNotToUse: ['The level is not a sublevel of the open level yet (STREAMING_LEVEL_NOT_FOUND): add it with add_sublevel first.', 'The level should replace the open one; use load.'],
     inputProps: {
-      levelPath: P.levelPath, levelName: P.levelName,
-      shouldBeLoaded: P.shouldBeLoaded, shouldBeVisible: P.shouldBeVisible,
+      levelPath: STREAM_LEVEL_PATH, levelName: STREAM_LEVEL_NAME,
+      shouldBeLoaded: { ...P.shouldBeLoaded, description: 'Load it (true, the default) or stream it out (false). In the editor false hides it instead, with a warning; a sublevel added AlwaysLoaded stays loaded in the game and is hidden.' },
+      shouldBeVisible: { ...P.shouldBeVisible, description: 'Draw it (true, the default) or keep it loaded but hidden (false); ignored when shouldBeLoaded is false.' },
     },
-    required: ['shouldBeLoaded'],
+    required: [],
+    requiredOneOf: ['levelPath', 'levelName'],
+    outputProps: STREAM_OUT,
     effect: 'write', behavior: { idempotency: 'idempotent' }, costLatency: 'interactive',
     exampleInput: { action: 'stream', levelPath: '/Game/Maps/Sub01', shouldBeLoaded: true, shouldBeVisible: true },
   }),
   buildCoreRecord({
     parentTool: 'manage_level', action: 'unload', dispatchAction: 'stream_level',
     domain: D, family: 'streaming',
-    summary: 'Unload a streaming level (force stream-out with load and visibility false).',
-    whenToUse: ['A streaming level must be removed from the world.'],
-    whenNotToUse: ['The level asset should be deleted; use delete.'],
-    inputProps: { levelPath: P.levelPath, levelName: P.levelName },
-    required: ['levelPath'],
+    summary: 'Stream a sublevel of the open level out: during Play it unloads in the running game; in the editor, which keeps every sublevel loaded, it is hidden instead and the reply warns.',
+    whenToUse: ['A sublevel must stop being drawn: unloaded while the game plays, hidden in the editor.'],
+    whenNotToUse: ['The level asset should be deleted; use delete.', 'The open level itself: open another one with load.'],
+    inputProps: { levelPath: STREAM_LEVEL_PATH, levelName: STREAM_LEVEL_NAME },
+    required: [],
+    requiredOneOf: ['levelPath', 'levelName'],
+    outputProps: STREAM_OUT,
     effect: 'write', behavior: { idempotency: 'idempotent' }, costLatency: 'interactive',
     exampleInput: { action: 'unload', levelPath: '/Game/Maps/Sub01' },
   }),
   buildCoreRecord({
     parentTool: 'manage_level', action: 'unload_level', dispatchAction: 'unload_level',
     domain: D, family: 'streaming',
-    summary: 'Unload a streaming level via the manage_level parent (alias of unload).',
-    whenToUse: ['A streaming level must be unloaded using the unload_level verb.'],
+    summary: 'Stream a sublevel out (alias of unload): unloaded during Play, hidden with a warning in the editor.',
+    whenToUse: ['A sublevel must be streamed out using the unload_level verb.'],
     whenNotToUse: ['Prefer the shorter unload verb.'],
-    inputProps: { levelPath: P.levelPath, levelName: P.levelName },
-    required: ['levelPath'],
+    inputProps: { levelPath: STREAM_LEVEL_PATH, levelName: STREAM_LEVEL_NAME },
+    required: [],
+    requiredOneOf: ['levelPath', 'levelName'],
+    outputProps: STREAM_OUT,
     effect: 'write', behavior: { idempotency: 'idempotent' }, costLatency: 'interactive',
     exampleInput: { action: 'unload_level', levelPath: '/Game/Maps/Sub01' },
   }),
