@@ -41,10 +41,10 @@ export const CONTROL_ACTOR_FOLDS: readonly FoldSpec[] = [
     summary: 'Add a tag to an actor, or remove one.',
     members: { add: 'add_tag', remove: 'remove_tag' },
   },
-  { primary: 'find_by_tag', summary: 'Find actors carrying a tag.', members: ['find_actors_by_tag'] },
+  { primary: 'find_by_tag', summary: 'Find the actors in the level whose Tags list holds a tag (the whole tag, case-insensitive), each with name, path and class: the first limit of them (default 200), with truncated and totalCount when more match. The Play-In-Editor world is searched while a session runs.', members: ['find_actors_by_tag'] },
   { primary: 'set_material', summary: 'Apply a material to an actor\'s mesh component(s).', members: ['apply_material', 'set_actor_material'] },
   { primary: 'attach', summary: 'Attach an actor to a parent actor.', members: ['attach_actor'] },
-  { primary: 'detach', topics: ['unparent actor', 'remove actor from parent'], summary: 'Detach an actor from its parent.', members: ['detach_actor'] },
+  { primary: 'detach', topics: ['unparent actor', 'remove actor from parent'], summary: 'Detach an actor from its parent, keeping where it stands in the world (KeepWorldTransform) and clearing its owner, in one undo step. An actor attached to nothing answers success with detached false. While Play In Editor runs it detaches the playing copy, not the editor actor.', members: ['detach_actor'] },
   {
     primary: 'delete', selector: 'deleteScope',
     summary: 'Delete actors by name, or every actor carrying a tag.',

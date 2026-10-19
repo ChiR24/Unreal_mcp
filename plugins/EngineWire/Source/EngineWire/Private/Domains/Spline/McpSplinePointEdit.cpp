@@ -4,6 +4,7 @@
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 
 #include "Editor.h"
 #include "Engine/World.h"
@@ -27,6 +28,8 @@ bool HandleAddSplinePoint(
         return true;
     }
 
+    FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Add Spline Point")), EMcpMutationDurability::EditorStateOnly,
+                                            {SplineComp});
     if (Index < 0 || Index >= SplineComp->GetNumberOfSplinePoints())
     {
         SplineComp->AddSplinePoint(Position, ESplineCoordinateSpace::Local, true);
@@ -76,6 +79,8 @@ bool HandleRemoveSplinePoint(
         return true;
     }
 
+    FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Remove Spline Point")), EMcpMutationDurability::EditorStateOnly,
+                                            {SplineComp});
     SplineComp->RemoveSplinePoint(PointIndex, true);
     SplineComp->UpdateSpline();
     Actor->MarkPackageDirty();
@@ -114,6 +119,8 @@ bool HandleSetSplinePointPosition(
         return true;
     }
 
+    FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Move Spline Point")), EMcpMutationDurability::EditorStateOnly,
+                                            {SplineComp});
     SplineComp->SetLocationAtSplinePoint(PointIndex, Position, ESplineCoordinateSpace::Local, true);
     SplineComp->UpdateSpline();
     Actor->MarkPackageDirty();

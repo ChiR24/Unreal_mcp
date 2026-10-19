@@ -13,19 +13,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <summary><b>✨ Added</b></summary>
 
 - **Blueprint runtime errors name their node** (`nodeId`, graph, Blueprint, hits) in frame steps and motion reads; `runtime_report` adds the object's variables.
-- **MCP 2026-07-28 on both transports**: sessionless requests and consent asked through the client; native adds header checks and the tasks extension. Older clients are unchanged.
-- **`get_editor_state` `focus`**: open asset editors, the front Blueprint graph and its selected nodes, selected actors, recent warnings and runtime errors.
-- **`describe_view` `points`, `labels` and `coveredBy`**: the actor and world point under a spot; the frame with listed actors boxed and numbered; what partly covers a named actor.
+- **MCP 2026-07-28 on both transports**: sessionless requests and consent asked through the client (native adds the tasks extension); older clients are unchanged.
+- **`get_editor_state` `focus`**: open editors, the front Blueprint graph and its selected nodes, selected actors, recent errors.
+- **`describe_view` `points`, `labels` and `coveredBy`**: what is under a spot, the frame with listed actors numbered, what covers a named actor.
 - **Large results come in pages** instead of `RESULT_TOO_LARGE`; `page.nextCall` reads the next one without rerunning the call.
 - **Search hands over a clear first hit** with `signature` and `executeCall` when it needs no consent, so describe can be skipped.
-- **`get_stats` `frame`**: the thread bounding the frame and what in view weighs on it (shadowed movable lights, non-Nanite meshes, translucency, ticking actors).
+- **`get_stats` `frame`**: the thread bounding the frame and what in view weighs on it.
 - **`nanite_rebuild_mesh` `assetPaths`**: several meshes under one consent; translucent ones are left alone and the materials get the Nanite flag.
 - **`inspect_asset` `diff`**: a Blueprint, DataTable or data asset against its saved file or another asset.
 - **`get_niagara_info` values**: each user parameter's default, and with `actorName` a placed effect's own values.
-- **Whole parts in one `edit_dynamic_mesh` call**: `append_cuboids` (boxes in rows, grids, stacks), `append_loft` (skinned sections), `append_mesh` (a static mesh at placements), `delete_triangles`.
+- **Whole parts in one `edit_dynamic_mesh` call**: `append_cuboids`, `append_loft`, `append_mesh` and `delete_triangles`.
 - **Movie Render Queue**: `cancel_render` stops a render; `configure_render_camera` sets shutter timing (FrameOpen), overscan and rendering every camera.
 - **Sequences and animations**: `set_section` `playRate`; `get_properties` `tracks` lists each track's clips; `get_animation_info` the bones a sequence keys.
-- **Every call that spawns, moves or re-meshes actors checks them**, a Blueprint edit its placed copies: warnings name one sunk, floating, intersecting or z-fighting, a default grid material, a label still reading "Text" or a pasted duplicate; `audit_placement` finds that content level-wide.
+- **Every call that spawns, moves or re-meshes actors checks them** (a Blueprint edit, its placed copies): its warnings name one sunk, floating, intersecting or z-fighting, on the default material, labelled "Text" or pasted twice; `audit_placement` finds these level-wide.
 
 </details>
 
@@ -40,7 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`edit_scs` keeps `save: false`** for every edit; the Blueprint was saved anyway.
 - **A refusal keeps the details it names**, such as the unsaved packages of a refused close.
 - **`get_stats` `performance`** counts the RHI thread in `busiestThreadMs`.
-- **A level viewport screenshot waits for streaming** (no coarse blobs for a new Nanite mesh) and names video memory over budget; `set_viewport_realtime` reports the state it reached.
+- **A level viewport screenshot waits for streaming** and names video memory over budget; `set_viewport_realtime` reports the state it reached.
 - **A deprecated property is refused**, naming where its replacement lives; the write had answered success and changed nothing.
 - **`set_property` inside a Niagara system restarts its placed effects**, so a renderer change shows.
 - **`audit_placement` counts simulated bodies as surfaces**, judges a player start by its capsule and skips undersides lying on a floor; **`fix_coplanar` brings a piece laid across several neighbours forward**.
@@ -50,10 +50,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Large batches pass the pre-queue checks** (past 4096 values they were refused).
 - **A rate-limited request says when to retry** (`RATE_LIMITED`, `retryAfterSeconds`, a `Retry-After` header).
 - **Environment settings take object and soft references** (a volumetric cloud's material), as `edit_component` does.
-- **Undo takes back** `set_property` moves, `set_volume_bounds` and spline mesh edits and scatters.
+- **Undo takes back** `set_property` moves, `detach`, light channels (not even marked unsaved before), spline points, spline mesh edits and scatters, and `set_volume_bounds`.
 - **Class, name and tag finds stop at `limit`** (default 200) and say how many matched.
-- **Every SCS edit declares `save`**: a `save: false` drew a warning that it was ignored.
-- **`setup_movement` refuses a non-Character Blueprint**; `play_montage` outside play says nothing moves; skeleton, AI controller and MetaHuman creation report `saved`.
+- **Records and replies say what happens**: about forty records name their defaults, replies and refusals and declare what their handlers read (`save` on every SCS edit, `autoActivate`, the paths `export_level`, `import_level` and `remove_niagara_node` need); `setup_movement` refuses a non-Character Blueprint, `play_montage` outside play says nothing moves, and creators report `saved`.
+- **`open_level` takes an object path**, a relative `.t3d` export lands in the project, and local player refusals carry codes.
 
 </details>
 

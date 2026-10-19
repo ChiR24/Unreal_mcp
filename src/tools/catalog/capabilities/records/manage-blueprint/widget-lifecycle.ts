@@ -105,7 +105,7 @@ export const WIDGET_LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
     family: FAMILY,
     domain: DOMAIN,
     topics: ['delete widget', 'remove widget', 'delete button', 'remove button', 'remove label'],
-    summary: 'Remove a widget from the widget tree of a Widget Blueprint.',
+    summary: 'Remove a widget and everything inside it from a Widget Blueprint, then save and recompile it, so Blueprints bound to it refresh too (except while Play In Editor runs). The reply echoes the name sent.',
     whenToUse: ['A widget must be deleted from a Widget Blueprint layout.'],
     whenNotToUse: ['The widget should stay but be hidden (use set_visibility).'],
     inputProps: { widgetPath: P.widgetPath, slotName: P.slotName },

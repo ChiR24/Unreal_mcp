@@ -39,10 +39,10 @@ export const SPLINE_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'build_environment.remove_spline_point', action: 'remove_spline_point', family: F,
-    summary: 'Remove a point from a spline by index.',
+    summary: 'Remove the point at pointIndex from an actor\'s first spline component, in one undo step; the points after it move down one index. Not saved.',
     whenToUse: WU, whenNotToUse: ['The spline should be recreated without the point.'],
     inputProps: { actorName: P.actorName, actorPath: ACTOR_PATH, pointIndex: P.pointIndex },
-    required: [], effect: 'destructive', latency: 'interactive', resources: 'low',
+    required: ['pointIndex'], requiredOneOf: ['actorName', 'actorPath'], effect: 'destructive', latency: 'interactive', resources: 'low',
     exampleInput: { action: 'remove_spline_point', actorName: 'Spline_1', pointIndex: 2 },
   }),
   buildRecord({

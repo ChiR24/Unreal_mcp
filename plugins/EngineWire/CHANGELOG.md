@@ -9,18 +9,18 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 ### Added
 - **Blueprint runtime errors** in Play name their node, graph and Blueprint in frame steps and motion reads; `runtime_report` lists the session's errors with the object's variables.
 - **`get_editor_focus`**: open asset editors newest first, each Blueprint editor's focused graph and selected nodes, the selected actors, the last minute's distinct warnings and the script errors.
-- **`describe_view` `points` and `labels`**: per spot, the hit-proxy actor and the Visibility trace through it; a PNG of the frame (at most 960 px) with listed actors boxed and numbered; `coveredBy`, nearer actors over at least 5% of a named actor's box.
+- **`describe_view` `points` and `labels`**: per spot, the hit-proxy actor and a Visibility trace; a PNG (at most 960 px) with listed actors numbered; `coveredBy`, nearer actors over 5% of a named actor's box.
 - **MCP 2026-07-28 on `/mcp`**: per-request version with no session, `Mcp-Method`/`Mcp-Name` checks, `resultType` and cache hints, consent through client elicitation (signed `requestState`), and the tasks extension.
-- **Result pages**: a result over 100k chars that is one top-level array goes a page at a time; the rest waits 5 minutes (8 kept) for `options.pageCursor` from the same principal, capability and params; a cursor names its offset and an `imageBase64` goes with the first page.
+- **Result pages**: a result over 100k chars that is one top-level array goes a page at a time; the rest waits 5 minutes (8 kept) for `options.pageCursor` from the same principal, capability and params.
 - **Search signature**: a first hit whose runner-up scores at most 90% of it (`McpSearchConfidentRatioPercent`) and that needs no consent carries `signature` and `executeCall`.
 - **`get_frame_cost`**: the busiest of game, render, RHI and GPU against the frame, plus shadowed movable lights, non-Nanite meshes by LOD 0 triangles, translucent primitives and ticking actors by class.
 - **`nanite_rebuild_mesh` `assetPaths`**: one row per mesh; a slot neither opaque nor masked refuses the mesh first (`NANITE_UNSUPPORTED_MATERIAL`), and each material's flag owner gets `MATUSAGE_Nanite`, saved after the build.
 - **`get_niagara_info` values**: `userParameters` carry the default; `actorName` reads the component's `GetOverrideParameters()` into `placed`.
-- **`edit_dynamic_mesh` `append_cuboids`, `append_loft`, `append_mesh`, `delete_triangles`**: boxes and lofts build `append_polygons` input; `append_mesh` appends a static mesh per placement (`FDynamicMeshEditor::AppendMesh`, `lod: "render"` for the Nanite fallback).
-- **`diff_asset`**: a saved copy loaded with `LOAD_ForDiff` (then released) or another asset, compared property by property; `NewVariables`, components by variable name, graphs through `FGraphDiffControl::DiffGraphs`, rows by name.
-- **`cancel_render`** (`CancelAllJobs()` on the active executor, `MRQ_NOT_RENDERING` when none) and **`configure_render_camera`** (`ShutterTiming`, `OverscanPercentage`; `bOverrideCameraOverscan` and `bRenderAllCameras` found by name, as newer engines add them).
+- **`edit_dynamic_mesh` `append_cuboids`, `append_loft`, `append_mesh`, `delete_triangles`**: boxes and lofts build `append_polygons` input; `append_mesh` goes through `FDynamicMeshEditor::AppendMesh`.
+- **`diff_asset`**: a saved copy loaded with `LOAD_ForDiff` or another asset, compared property by property, graphs through `FGraphDiffControl::DiffGraphs`.
+- **`cancel_render`** (`CancelAllJobs()`, `MRQ_NOT_RENDERING` when idle) and **`configure_render_camera`** (`ShutterTiming`, `OverscanPercentage`; newer fields found by name).
 - **`set_section` `playRate`**: a float to 5.4, `FMovieSceneTimeWarpVariant` from 5.5; the range rescales by old over new rate unless `endFrame` is given. **Reads**: list_tracks `animations`, get_animation_info `boneTracks`.
-- **Change watch** (`McpChangeWatch`): editor actors a request spawns (`OnLevelActorAdded`) or modifies (`OnObjectModified`) are fingerprinted, an edited Blueprint's placed copies by path (its compile replaces them), and a reply's `warnings` get their placement and content findings (64 checked, 12 listed); `audit_placement` kinds `default_material`, `placeholder_text`, `duplicate`.
+- **Change watch** (`McpChangeWatch`): actors a request spawns (`OnLevelActorAdded`) or modifies (`OnObjectModified`), and an edited Blueprint's placed copies by path, are fingerprinted; the reply's `warnings` get their placement and content findings. `audit_placement` kinds `default_material`, `placeholder_text`, `duplicate`.
 
 ### Fixed
 - **`runtime_report` `filter`** matches an actor's path only whole.
@@ -28,23 +28,22 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **Diagnostics records replace their files** (`IFileManager::Move` with replace).
 - **The native request timeout reads `renderTimeoutMs`**, whose schema maximum is a day now, with `MaxMovieRenderTimeoutMs` the limit.
 - **Task results match their principal case-sensitively.**
-- **`edit_scs` reads `save`** for every action, not only `modify`.
+- **`edit_scs` reads `save`** for every action, and every SCS edit declares it.
 - **Refusal details survive reply compaction** when the message and code repeat the reply's.
 - **`get_performance_stats` `busiestThreadMs`** includes the RHI thread.
-- **Editor viewport captures settle across ticks** (0.3 s retries, five passes, until two frames match) and warn on `GDemotedLocalMemorySize`; `set_viewport_realtime` overrides other holds and names the background one re-added every tick (`heldBy`).
+- **Editor viewport captures settle across ticks** until two frames match and warn on `GDemotedLocalMemorySize`; `set_viewport_realtime` names the background hold (`heldBy`).
 - **The property resolver refuses `CPF_Deprecated`** (UHT registers `X_DEPRECATED` as `X`) and names the member that holds it.
 - **`set_property` in a Niagara system** re-inits it with `FNiagaraSystemUpdateContext`.
-- **The placement ground trace queries `ECC_PhysicsBody`**; an `ANavigationObjectBase` (player start) is measured by its capsule; **`fix_coplanar` sums a face's overlaps** over all its pairs; two down-facing faces with something solid within 2 cm below are skipped.
+- **The placement ground trace queries `ECC_PhysicsBody`**; a player start is measured by its capsule; **`fix_coplanar` sums a face's overlaps**; undersides on a floor are skipped.
 - **Track lookups prefer a whole name**: `FindTrackByName` tries whole names first; `CollectTracksByName` keeps only whole matches when any.
 - **`McpMovieRenderRunning()`** refuses save_all and restart_editor with `RENDER_IN_PROGRESS`; validateOnly reports `renderRunning`.
 - **`set_bone_key` defaults** read the track's key at the frame (`GetBoneTrackTransform` from 5.2, the raw keys before) or the reference pose.
 - **Pre-queue scans** walk up to `McpMaxPayloadScanNodes` (262144) values; command keys compare in place.
 - **Rate limit replies** name the cap, its setting and the wait, with `data.errorCode` `RATE_LIMITED`, `retryAfterSeconds` and `Retry-After`.
 - **`McpApplyPayloadSettings`** writes through the full `ApplyJsonValueToProperty` (objects, soft references, arrays).
-- **Undoable** in an `FMcpScopedEditorTransaction`: `set_property` actor transforms, `set_volume_bounds`, spline mesh asset/material, `scatter_meshes_along_spline`.
+- **Undoable** in an `FMcpScopedEditorTransaction`: `set_property` actor transforms, `detach` (with its old parent), light channels, spline point add/remove/move, spline mesh asset/material, `scatter_meshes_along_spline`, `set_volume_bounds`.
 - **`McpCapFindRows`** cuts class, name and tag finds at `limit` with `truncated` and `totalCount`.
-- **`save` is declared on every SCS edit**: `FSCSHandlers::bSaveScsChanges` reads it for all of them.
-- **Honest creators**: `setup_movement` answers `INVALID_TARGET` without a `CharacterMovement`; `play_montage` sets `playing` from the play world; skeleton, AI controller and MetaHuman creation report `saved` and mark an unsaved package dirty.
+- **Honest replies**: `setup_movement` answers `INVALID_TARGET` without a `CharacterMovement`; `play_montage` sets `playing` from the play world; skeleton, AI controller, MetaHuman and widget-animation edits report `saved` (an unsaved new package is marked dirty); local player refusals carry codes; native `reset` answers `enabled`; `open_level` takes an object path (`ObjectPathToPackageName`); a relative `.t3d` resolves against `ProjectDir()`; Niagara `scriptType` matches in any case; search rows render fractions.
 
 ## [0.6.0-beta-f] - 2026-10-16
 

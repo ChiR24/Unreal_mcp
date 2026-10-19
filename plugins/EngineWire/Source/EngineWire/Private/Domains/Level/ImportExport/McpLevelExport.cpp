@@ -83,7 +83,8 @@ bool HandleExportLevelAction(UEngineWireSubsystem& Subsystem, const FString& Req
     // the engine's T3D level exporter; it must stay inside the project
     // directory (Saved/... is fine). Anything else is a /Game package copy.
     if (ExportPath.EndsWith(TEXT(".t3d"), ESearchCase::IgnoreCase)) {
-      const FString FullT3D = FPaths::ConvertRelativePathToFull(ExportPath);
+      // A relative path is the project's: resolved against the engine binaries, the example below was refused.
+      const FString FullT3D = FPaths::ConvertRelativePathToFull(FPaths::ProjectDir(), ExportPath);
       const FString ProjectRoot = FPaths::ConvertRelativePathToFull(FPaths::ProjectDir());
       if (!FullT3D.StartsWith(ProjectRoot, ESearchCase::IgnoreCase) || FullT3D.Contains(TEXT(".."))) {
         Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,

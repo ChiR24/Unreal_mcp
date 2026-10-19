@@ -15,7 +15,7 @@ export const MANAGE_LEVEL_FOLDS: readonly FoldSpec[] = [
     summary: 'Duplicate a level to a new path, or rename it.',
     members: { duplicate: 'duplicate_level', rename: 'rename_level' },
   },
-  { primary: 'delete', summary: 'Delete one or more level assets.', members: ['delete_level'] },
+  { primary: 'delete', summary: 'Delete one level map for good: its .umap, built data and external actor and object files, after taking it out of the open level\'s streaming list. The open level, or one still loaded, is refused (LEVEL_LOADED): open another map first. No undo and no backup; deleted says whether every file went.', members: ['delete_level'] },
   {
     primary: 'get_summary', selector: 'info',
     summary: 'Read a level (path, name, actor count, asset data) or the one open in the editor, and whether it has unsaved changes, with every unsaved level and asset listed.',

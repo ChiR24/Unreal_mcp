@@ -1,4 +1,5 @@
 #include "Domains/ControlActor/McpActorSupport.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 
 bool UEngineWireSubsystem::HandleControlActorAttach(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
@@ -118,14 +119,16 @@ bool UEngineWireSubsystem::HandleControlActorDetach(
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("actorName"), McpActorRef(Found));
+    Resp->SetBoolField(TEXT("detached"), false);
     Resp->SetStringField(TEXT("note"), TEXT("Actor was not attached"));
     SendAutomationResponse(Socket, RequestId, true,
                            TEXT("Actor already detached"), Resp, FString());
     return true;
   }
 
-  Found->Modify();
-  RootComp->Modify();
+  // Modify alone left nothing for undo to take back: the detach now records its actor, root and old parent.
+  FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Detach Actor")), EMcpMutationDurability::EditorStateOnly,
+                                          {Found, RootComp, RootComp->GetAttachParent()});
   RootComp->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
   Found->SetOwner(nullptr);
   Found->MarkPackageDirty();

@@ -164,7 +164,7 @@ export const LIGHTING_RECORDS: readonly CapabilityRecordSource[] = [
   buildRecord({
     id: 'build_environment.build_lighting', action: 'build_lighting', family: F,
     topics: ['bake lighting', 'lightmass', 'build lights', 'rebuild lighting', 'bake lightmaps'],
-    summary: 'Build static lighting for the current level.',
+    summary: 'Build the level\'s static lighting (Lightmass) at quality (default Production; Preview, Medium, High). Reflection captures are not rebuilt, a level that forces no precomputed lighting answers skipped, and a failed build lists its reasons (no static lights, no Lightmass importance volume). Can take minutes; nothing is saved.',
     whenToUse: ['Static lighting must be built.'],
     whenNotToUse: ['Dynamic lighting is used exclusively.'],
     inputProps: { quality: P.quality },

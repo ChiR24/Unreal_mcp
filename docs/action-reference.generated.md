@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `e71f9f941d6e19d2`
+Catalog revision: `81d2efee9af6bd64`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -37,7 +37,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | Parent tool | Capabilities | read | write | destructive | Domains |
 | --- | --- | --- | --- | --- | --- |
 | `animation_physics` | 31 | 5 | 24 | 2 | animation physics |
-| `build_environment` | 40 | 5 | 32 | 3 | environment |
+| `build_environment` | 40 | 4 | 33 | 3 | environment |
 | `control_actor` | 25 | 8 | 15 | 2 | actor |
 | `control_editor` | 24 | 9 | 12 | 3 | editor |
 | `inspect` | 21 | 16 | 4 | 1 | inspect |
@@ -247,7 +247,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `build_environment.delete` | `build_environment` | `delete` | destructive | destructive | explicit | `build_environment.delete` |
 | `build_environment.edit_landscape` | `build_environment` | `paint_landscape` | write | write | none | `build_environment.edit_landscape` `build_environment.paint_landscape` `build_environment.paint_landscape_layer` `build_environment.import_heightmap` `build_environment.configure_landscape_lod` `build_environment.configure_landscape_material` `build_environment.configure_landscape_splines` `build_environment.generate_lods` |
 | `build_environment.edit_spline` | `build_environment` | `add_spline_point` | write | write | none | `build_environment.edit_spline` `build_environment.add_spline_point` `build_environment.set_spline_point_position` `build_environment.set_spline_point_rotation` `build_environment.set_spline_point_scale` `build_environment.set_spline_point_tangents` `build_environment.set_spline_type` |
-| `build_environment.export_heightmap` | `build_environment` | `export_heightmap` | read | read | none | `build_environment.export_heightmap` |
+| `build_environment.export_heightmap` | `build_environment` | `export_heightmap` | write | write | none | `build_environment.export_heightmap` |
 | `build_environment.export_snapshot` | `build_environment` | `export_snapshot` | read | read | none | `build_environment.export_snapshot` |
 | `build_environment.get_foliage_instances` | `build_environment` | `get_foliage_instances` | read | read | none | `build_environment.get_foliage_instances` |
 | `build_environment.get_splines_info` | `build_environment` | `get_splines_info` | read | read | none | `build_environment.get_splines_info` |

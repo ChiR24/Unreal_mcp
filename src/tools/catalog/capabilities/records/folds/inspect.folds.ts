@@ -28,7 +28,7 @@ export const INSPECT_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'create_snapshot', selector: 'snapshotOp',
-    summary: 'Create a snapshot of an object\'s state, or restore one.',
+    summary: 'Remember or put back an actor\'s transform (location, rotation and scale only) under a snapshot name, in editor memory: create stores it, restore sets it again (transformChanged says whether anything moved). A name used again replaces the old snapshot; snapshots last until the editor closes.',
     members: { create: 'create_snapshot', restore: 'restore_snapshot' },
   },
   {

@@ -3631,3 +3631,32 @@ describe('native search renders a signature with fractions', () => {
     expect(search).toContain('McpCanonicalJsonObject(View, Rendered, /*bAllowFractions=*/true)');
   });
 });
+
+describe('edits that skipped undo, and replies that said too little', () => {
+  const priv = (...segments: readonly string[]): string =>
+    readFileSync(join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', ...segments), 'utf8');
+
+  // Modify alone recorded nothing: detach, light channels and spline points could not be undone, and a light channel
+  // set without Modify was not even unsaved, so a save left it out.
+  it('detach, light channels and spline point edits run in a transaction', () => {
+    expect(code('ControlActor', 'McpActorAttachment.cpp')).toContain('FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Detach Actor"))');
+    const lighting = code('Render', 'McpRenderLighting.cpp');
+    expect(lighting).toContain('TEXT("Set Light Channel")');
+    expect(lighting).toContain('TEXT("Set Actor Light Channel")');
+    const spline = code('Spline', 'McpSplinePointEdit.cpp');
+    for (const title of ['Add Spline Point', 'Remove Spline Point', 'Move Spline Point']) expect(spline).toContain(`TEXT("${title}")`);
+  });
+
+  it('open_level takes an object path, and a relative .t3d export is the project\'s', () => {
+    expect(code('ControlEditor', 'McpEditorLevel.cpp')).toContain('LevelPath = FPackageName::ObjectPathToPackageName(LevelPath);');
+    expect(code('Level', 'ImportExport', 'McpLevelExport.cpp')).toContain('FPaths::ConvertRelativePathToFull(FPaths::ProjectDir(), ExportPath)');
+  });
+
+  it('local player refusals carry codes, native reset answers enabled and a widget animation delete reports saved', () => {
+    const players = code('Sessions', 'McpSessionsLocalPlayers.cpp');
+    for (const errorCode of ['NOT_IN_PLAY', 'PRIMARY_PLAYER', 'PLAYER_NOT_FOUND', 'ADD_PLAYER_FAILED']) expect(players).toContain(`TEXT("${errorCode}")`);
+    expect(priv('MCP', 'DynamicTools', 'McpDynamicToolManagerQueries.cpp')).toContain('Result->SetNumberField(TEXT("enabled"), Enabled);');
+    expect(code('WidgetAuthoring', 'Animation', 'McpWidgetAnimQueries.cpp')).toContain('ResultJson->SetBoolField(TEXT("saved"), bSaved);');
+    expect(code('NiagaraGraph', 'McpNiagaraGraphHandlers.cpp')).toContain('.Equals(TEXT("Update"), ESearchCase::IgnoreCase)');
+  });
+});

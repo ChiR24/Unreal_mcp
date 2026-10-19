@@ -5919,6 +5919,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "True once closing the editor (relaunch false) has been scheduled."
         },
+        "command": {
+          "type": "string",
+          "description": "The console command that ran."
+        },
         "compensation": {
           "type": "object",
           "description": "Compensating-cleanup receipt. Present on every outcome including the all-succeeded one, because each package lands independently and a completed save is already durable: non-atomic is a property of the operation, not of one result.",
@@ -6193,7 +6197,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "True when the tab manager returned a live tab."
         },
         "output": {
-          "x-unreal-reflection-boundary": true,
+          "oneOf": [
+            {
+              "type": "string",
+              "description": "What the command printed, at most 4096 characters."
+            },
+            {
+              "x-unreal-reflection-boundary": true,
+              "description": "The tool's own result: its JSON output parsed, or the raw text when it is not JSON."
+            }
+          ],
           "description": "The tool's own result: its JSON output parsed, or the raw text when it is not JSON."
         },
         "outputs": {
@@ -6375,7 +6388,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "width": {
           "type": "number",
-          "description": "Viewport width in pixels."
+          "description": "Width in pixels of the PNG actually returned."
         },
         "window": {
           "type": "string",
@@ -16957,7 +16970,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "autoActivate": {
           "type": "boolean",
-          "description": "false places the effect switched off so it waits for its cue (a particle track trigger key, Activate); default true, which also fires it when the level starts."
+          "description": "Start the effect at once (default true); false places it switched off until a particle track or Activate starts it."
         },
         "autoConnect": {
           "type": "boolean",

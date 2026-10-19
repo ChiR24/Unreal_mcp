@@ -90,12 +90,12 @@ export const LANDSCAPE_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'build_environment.export_heightmap', action: 'export_heightmap', family: F,
-    summary: 'Export a landscape heightmap to a file.',
+    summary: 'Write a landscape\'s heights (the level\'s first landscape when none is named) to a raw file: 16-bit samples, no header, machine byte order, for its whole extent or region (clamped to it). The path is relative to the project folder (Saved/Heightmaps/terrain.raw); the reply gives width, height and sampleCount, which reading it back with import_heightmap needs.',
     whenToUse: ['A landscape heightmap must be exported for external editing.'],
     whenNotToUse: ['The heightmap should be modified in the editor.'],
     inputProps: { outputPath: P.outputPath, ...LANDSCAPE, path: P.path, region: P.region },
-    effect: 'read', latency: 'interactive', resources: 'low',
-    exampleInput: { action: 'export_heightmap', landscapeName: 'Landscape_1', path: '/Game/Heightmaps/export.raw' },
+    effect: 'write', latency: 'interactive', resources: 'low',
+    exampleInput: { action: 'export_heightmap', landscapeName: 'Landscape_1', path: 'Saved/Heightmaps/terrain.raw' },
   }),
   buildRecord({
     id: 'build_environment.create_landscape_layer_info', action: 'create_landscape_layer_info', family: F,

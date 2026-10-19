@@ -34,7 +34,7 @@ export const CONTROL_EDITOR_FOLDS: readonly FoldSpec[] = [
     topics: ['view mode', 'editor mode', 'game view', 'immersive mode', 'realtime viewport', 'viewport stats', 'show stats'],
     members: { view_mode: 'set_view_mode', editor_mode: 'set_editor_mode', game_view: 'set_game_view', immersive_mode: 'set_immersive_mode', realtime: 'set_viewport_realtime', show_stats: 'show_stats', hide_stats: 'hide_stats' },
   },
-  { primary: 'console_command', summary: 'Run a validated console command in the editor.', members: ['execute_command'] },
+  { primary: 'console_command', summary: 'Run one console command against the editor world, or through the first player while Play In Editor runs, and return what it printed (output, at most 4096 characters). A command the engine does not recognise fails (EXEC_FAILED); one holding ;, |, &&, a backtick or several lines, or a blocked name (quit, exit, py, crash and the like), is refused (COMMAND_BLOCKED). Success means the engine ran it, not that it had the effect wanted.', members: ['execute_command'] },
   {
     primary: 'configure_editor', selector: 'setting',
     summary: 'Open an editor tab, set editor preferences, or restore or minimize the main editor window without focus (restoring unthrottles Play In Editor).',

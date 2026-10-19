@@ -5,6 +5,7 @@
 
 #include "Domains/Lighting/McpLightingPrivate.h"
 #include "EngineWireSubsystem.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 
 #include "Components/LightComponent.h"
 #include "Components/PrimitiveComponent.h"
@@ -115,6 +116,9 @@ bool HandleRenderLightingAction(
                 RequestingSocket, RequestId, TEXT("Actor has no light component."), TEXT("COMPONENT_NOT_FOUND"));
             return true;
         }
+        // Set with no Modify, the change was not even unsaved: a save left it out and a close dropped it.
+        FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Set Light Channel")), EMcpMutationDurability::EditorStateOnly,
+                                                {Light});
         FLightingChannels Channels = Light->LightingChannels;
         SetLightChannels(Channels, ChannelList, GetJsonBoolField(Payload, TEXT("enabled"), true));
         Light->SetLightingChannels(Channels.bChannel0, Channels.bChannel1, Channels.bChannel2);
@@ -143,6 +147,13 @@ bool HandleRenderLightingAction(
         {
             return true;
         }
+        TArray<UObject*> Targets;
+        for (UPrimitiveComponent* Component : Components)
+        {
+            Targets.Add(Component);
+        }
+        FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Set Actor Light Channel")),
+                                                EMcpMutationDurability::EditorStateOnly, Targets);
         for (UPrimitiveComponent* Component : Components)
         {
             FLightingChannels Channels = Component->LightingChannels;

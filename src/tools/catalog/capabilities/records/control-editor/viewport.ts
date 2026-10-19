@@ -25,7 +25,7 @@ export const VIEWPORT_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_editor', action: 'set_viewport_resolution', dispatchAction: 'console_command',
     domain: D, family: F,
-    summary: 'Set the viewport resolution via the r.SetRes console command.',
+    summary: 'Set the game window resolution through the console (r.SetRes <width>x<height>, fractions dropped); it does not resize an editor viewport. The reply is the console command\'s: command and output.',
     whenToUse: ['The viewport resolution must be changed.'],
     whenNotToUse: ['The default resolution is acceptable.'],
     inputProps: { width: P.width, height: P.height },
@@ -33,8 +33,8 @@ export const VIEWPORT_RECORDS: readonly CapabilityRecordSource[] = [
     effect: 'read',
    
     exampleInput: { action: 'set_viewport_resolution', width: 1920, height: 1080 },
-    exampleOutput: { success: true, message: 'Resolution set', width: 1920, height: 1080 },
-    outputProps: { width: P.width, height: P.height },
+    exampleOutput: { success: true, message: 'Command executed: r.SetRes 1920x1080' },
+    outputProps: { command: { type: 'string', description: 'The console command that ran.' }, output: { type: 'string', description: 'What the command printed, at most 4096 characters.' } },
   }),
   buildCoreRecord({
     parentTool: 'control_editor', action: 'set_viewport_realtime', domain: D, family: F,

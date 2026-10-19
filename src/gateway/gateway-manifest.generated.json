@@ -12012,7 +12012,7 @@
           },
           "autoActivate": {
             "type": "boolean",
-            "description": "false places the effect switched off so it waits for its cue (a particle track trigger key, Activate); default true, which also fires it when the level starts."
+            "description": "Start the effect at once (default true); false places it switched off until a particle track or Activate starts it."
           },
           "autoConnect": {
             "type": "boolean",

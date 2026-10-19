@@ -105,7 +105,7 @@ export const COMPONENT_ACTOR_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'inspect', action: 'create_snapshot', dispatchAction: 'control_actor', domain: D, family: 'snapshot',
-    summary: 'Create a property snapshot of a world actor (cross-parent to control_actor).',
+    summary: 'Remember a world actor\'s transform (location, rotation and scale only) under snapshotName, in editor memory, for restore_snapshot to set again.',
     whenToUse: ['An actor\'s state must be captured for later restore.'],
     whenNotToUse: ['No restore is planned.'],
     inputProps: { objectPath: P.objectPath, actorName: P.actorName, name: P.name, snapshotName: P.snapshotName },
@@ -115,7 +115,7 @@ export const COMPONENT_ACTOR_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'inspect', action: 'restore_snapshot', dispatchAction: 'control_actor', domain: D, family: 'snapshot',
-    summary: 'Restore a previously created property snapshot onto a world actor (cross-parent to control_actor).',
+    summary: 'Set a world actor back to the transform a snapshot remembered (create_snapshot); transformChanged says whether anything moved.',
     whenToUse: ['An actor\'s state must be restored from a snapshot.'],
     whenNotToUse: ['No snapshot exists for the actor.'],
     inputProps: { objectPath: P.objectPath, actorName: P.actorName, name: P.name, snapshotName: P.snapshotName },

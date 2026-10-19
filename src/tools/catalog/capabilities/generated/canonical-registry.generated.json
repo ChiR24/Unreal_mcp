@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "e71f9f941d6e19d2",
+  "catalogRevision": "81d2efee9af6bd64",
   "recordCount": 416,
   "records": [
     {
@@ -17128,7 +17128,7 @@
         "topics": [
           "delete_animation"
         ],
-        "summary": "Delete a named animation from a Widget Blueprint.",
+        "summary": "Delete a named animation (matched in any case) from a Widget Blueprint, its tracks with it, and save the Blueprint; saved says whether the save worked.",
         "whenToUse": [
           "An animation is obsolete and must be removed from the Widget Blueprint."
         ],
@@ -17202,7 +17202,7 @@
       },
       "examples": [
         {
-          "title": "Delete a named animation from a Widget Blueprint.",
+          "title": "Delete a named animation (matched in any case) from a Widget Blueprint, its tracks with it, and save the Blueprint; saved says whether the save worked.",
           "input": {
             "action": "delete_animation",
             "widgetPath": "/Game/UI/WBP_MainUI",
@@ -17247,7 +17247,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "22c1018ca50ca9073eb3a823b7fa1bbcac214cb23998294f29c548e7f74a58f2",
-        "content": "dea44dd9212fb3eb665478ce723e3b557bb80c1f4701a24a71705be099c84daf"
+        "content": "8ddc694f2309285cd0e3646a11b7059e68893421f537d53be23bcba85f72462f"
       }
     },
     {
@@ -22587,7 +22587,7 @@
           "remove button",
           "remove label"
         ],
-        "summary": "Remove a widget from the widget tree of a Widget Blueprint.",
+        "summary": "Remove a widget and everything inside it from a Widget Blueprint, then save and recompile it, so Blueprints bound to it refresh too (except while Play In Editor runs). The reply echoes the name sent.",
         "whenToUse": [
           "A widget must be deleted from a Widget Blueprint layout."
         ],
@@ -22656,7 +22656,7 @@
       },
       "examples": [
         {
-          "title": "Remove a widget from the widget tree of a Widget Blueprint.",
+          "title": "Remove a widget and everything inside it from a Widget Blueprint, then save and recompile it, so Blueprints bound to it refresh too (except while Play In Editor runs). The reply echoes the name sent.",
           "input": {
             "action": "remove_widget",
             "widgetPath": "/Game/UI/WBP_MainUI",
@@ -22700,7 +22700,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "f793a1304e70c73d90aa35e0c773ba07ea24cbe66ba5f5980d8d3cfa1e723f03",
-        "content": "3cf77cc78f4a4579f9ce87978184616096119f5af833322e356f5a9c33e88e7e"
+        "content": "d5df8f4e171d56d0969470a515627eb3928821183c5d166dae3c28fd8cdc9d53"
       }
     },
     {
@@ -23959,7 +23959,7 @@
         "topics": [
           "bake_lightmap"
         ],
-        "summary": "Bake lightmaps for the current level.",
+        "summary": "Build the level's static lighting (Lightmass) at quality (default Preview; Medium, High, Production): the same build as build_lighting, which defaults to Production. Reflection captures are not rebuilt, and a level that forces no precomputed lighting answers skipped. Can take minutes; nothing is saved.",
         "whenToUse": [
           "Lightmaps must be baked for static lighting."
         ],
@@ -24012,7 +24012,7 @@
       },
       "examples": [
         {
-          "title": "Bake lightmaps for the current level.",
+          "title": "Build the level's static lighting (Lightmass) at quality (default Preview; Medium, High, Production): the same build as build_lighting, which defaults to Production. Reflection captures are not rebuilt, and a level that forces no precomputed lighting answers skipped. Can take minutes; nothing is saved.",
           "input": {
             "action": "bake_lightmap",
             "quality": "Preview"
@@ -24050,7 +24050,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "a10f74ed675679247d7a9cf126e8120acaa401aedcf9b80453c4e33f58cbd8ce",
-        "content": "51453629952fbf3a03f30ca7fc7d0bf98c62cf204cdb40a06b127d6b04c50158"
+        "content": "a6719b238e1ae1dc3199a9aaf02b866e628bbfa1ead713d33f02be285fd31fa7"
       }
     },
     {
@@ -24073,7 +24073,7 @@
           "rebuild lighting",
           "bake lightmaps"
         ],
-        "summary": "Build static lighting for the current level.",
+        "summary": "Build the level's static lighting (Lightmass) at quality (default Production; Preview, Medium, High). Reflection captures are not rebuilt, a level that forces no precomputed lighting answers skipped, and a failed build lists its reasons (no static lights, no Lightmass importance volume). Can take minutes; nothing is saved.",
         "whenToUse": [
           "Static lighting must be built."
         ],
@@ -24126,7 +24126,7 @@
       },
       "examples": [
         {
-          "title": "Build static lighting for the current level.",
+          "title": "Build the level's static lighting (Lightmass) at quality (default Production; Preview, Medium, High). Reflection captures are not rebuilt, a level that forces no precomputed lighting answers skipped, and a failed build lists its reasons (no static lights, no Lightmass importance volume). Can take minutes; nothing is saved.",
           "input": {
             "action": "build_lighting",
             "quality": "Preview"
@@ -24164,7 +24164,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "a10f74ed675679247d7a9cf126e8120acaa401aedcf9b80453c4e33f58cbd8ce",
-        "content": "1a8d963f2ce873f5560bda37fa579419e16791dffff8b781e9c57ee1e5d6d347"
+        "content": "c8d33e182c423aafb00b3be7bd61f7ab582e5b7ab9d38d2baa19680c1ca8fcfa"
       }
     },
     {
@@ -27154,7 +27154,7 @@
           "add snow",
           "add rain, snow, wind or lightning"
         ],
-        "summary": "Configure weather effects: rain, snow, lightning, wind.",
+        "summary": "Configure a weather actor: rain, snow or lightning set a Cascade particle system (particleSystemPath) on an Emitter labelled WeatherEmitter, SnowEmitter or LightningEmitter; wind spawns or tunes a WindDirectionalSource (direction as its rotation, speed and other settings by property name). Nothing is simulated beyond what those actors do; not saved.",
         "whenToUse": [
           "A weather system or weather particle effect must be configured."
         ],
@@ -27292,7 +27292,7 @@
       },
       "examples": [
         {
-          "title": "Configure weather effects: rain, snow, lightning, wind.",
+          "title": "Configure a weather actor: rain, snow or lightning set a Cascade particle system (particleSystemPath) on an Emitter labelled WeatherEmitter, SnowEmitter or LightningEmitter; wind spawns or tunes a WindDirectionalSource (direction as its rotation, speed and other settings by property name). Nothing is simulated beyond what those actors do; not saved.",
           "input": {
             "action": "configure_weather",
             "particleSystemPath": "/Game/Weather/P_Rain",
@@ -27358,7 +27358,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "70144df29b59f864013625bec87b580227e4a1fa257903ecc4f965a69c70d59f",
-        "content": "1077a8c82aeaebe0c4a0e25e51fdd6d55f2f6bd5a6b8896e51fc442b8b2e4db5"
+        "content": "4e6179b2d1994861cada22958245a5d8095e199fa03f255ef48ea926a69e6227"
       }
     },
     {
@@ -29221,7 +29221,7 @@
         "topics": [
           "create_procedural_terrain"
         ],
-        "summary": "Create a procedural terrain mesh actor.",
+        "summary": "Create a procedural-mesh terrain actor (not a Landscape, so no sculpting or painting applies): a grid of sizeX by sizeY cells of spacing units each (default 100 x 100 of 100), subdivisions per side (2-200, default 50), raised by a fixed wave pattern whose peaks reach about 0.7 of heightScale (default 500), with collision and an optional material. Placed in the editor level, unsaved.",
         "whenToUse": [
           "A procedural terrain mesh must be generated."
         ],
@@ -29340,7 +29340,7 @@
       },
       "examples": [
         {
-          "title": "Create a procedural terrain mesh actor.",
+          "title": "Create a procedural-mesh terrain actor (not a Landscape, so no sculpting or painting applies): a grid of sizeX by sizeY cells of spacing units each (default 100 x 100 of 100), subdivisions per side (2-200, default 50), raised by a fixed wave pattern whose peaks reach about 0.7 of heightScale (default 500), with collision and an optional material. Placed in the editor level, unsaved.",
           "input": {
             "action": "create_procedural_terrain",
             "name": "PTerrain_1",
@@ -29380,7 +29380,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "90c2cb83742b90570515d520853921110aa95c21bd7c62b219242ff42ebff9b7",
-        "content": "fa71e467d7da04479908c4d75e4acf7017da1950e1635ddde1fdcc86b3bb6ce4"
+        "content": "af108b29bb33cf369cec97fc615e177be7b2a790360d1a354feae61bdbce5e9d"
       }
     },
     {
@@ -30384,7 +30384,7 @@
         "topics": [
           "create_weather_system"
         ],
-        "summary": "Create a weather system actor with particle effects.",
+        "summary": "Find or spawn an Emitter actor (default label WeatherEmitter, the one configure_weather rain uses) and give it the Cascade particle system particleSystemPath. It is one emitter, not a weather simulation; a path that does not load is reported in particleSystemError while the call still succeeds.",
         "whenToUse": [
           "A weather system or weather particle effect must be configured."
         ],
@@ -30479,7 +30479,7 @@
       },
       "examples": [
         {
-          "title": "Create a weather system actor with particle effects.",
+          "title": "Find or spawn an Emitter actor (default label WeatherEmitter, the one configure_weather rain uses) and give it the Cascade particle system particleSystemPath. It is one emitter, not a weather simulation; a path that does not load is reported in particleSystemError while the call still succeeds.",
           "input": {
             "action": "create_weather_system",
             "name": "Weather_1"
@@ -30517,7 +30517,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "66de386bbc002934958d2c85b5f28564c0f9594ac83a972d687fc070b8bdad6a",
-        "content": "7c5efd4dea41ff76f7493088c9d7970c705cf59180c169b7179d3cc10614a56b"
+        "content": "ee0ebed5b2cd2a17ba23d8f17abee77c7a3432dedb526db1a3c784aa06abe04e"
       }
     },
     {
@@ -30536,7 +30536,7 @@
           "delete",
           "delete water, ocean, lake, river or landscape"
         ],
-        "summary": "Delete environment actors by name or path.",
+        "summary": "Delete actors from the editor level by label, name or path (names, or one of actorPath, name, actorName, targetActor): any actor, not only environment ones. Every name must match exactly one actor or nothing is deleted (ACTOR_NOT_FOUND; AMBIGUOUS_ACTOR for a label several actors share), and a failed delete is rolled back. Not saved.",
         "whenToUse": [
           "Environment actors must be permanently removed."
         ],
@@ -30609,7 +30609,7 @@
       },
       "examples": [
         {
-          "title": "Delete environment actors by name or path.",
+          "title": "Delete actors from the editor level by label, name or path (names, or one of actorPath, name, actorName, targetActor): any actor, not only environment ones. Every name must match exactly one actor or nothing is deleted (ACTOR_NOT_FOUND; AMBIGUOUS_ACTOR for a label several actors share), and a failed delete is rolled back. Not saved.",
           "input": {
             "action": "delete",
             "names": [
@@ -30649,7 +30649,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "99e571e30c698ad86c604bdc6c93eaa544f327ba407e20ebd65a76d8a7740863",
-        "content": "b4320fd5b61dc83e3576bea671c954cbd01f7dc9f5ff9cfc38463d24901143eb"
+        "content": "03a4c58f6d6dfe187582beeec26d075988419d9df74b3af910f0ad3b764f5fd2"
       }
     },
     {
@@ -31556,7 +31556,7 @@
         "topics": [
           "export_heightmap"
         ],
-        "summary": "Export a landscape heightmap to a file.",
+        "summary": "Write a landscape's heights (the level's first landscape when none is named) to a raw file: 16-bit samples, no header, machine byte order, for its whole extent or region (clamped to it). The path is relative to the project folder (Saved/Heightmaps/terrain.raw); the reply gives width, height and sampleCount, which reading it back with import_heightmap needs.",
         "whenToUse": [
           "A landscape heightmap must be exported for external editing."
         ],
@@ -31648,11 +31648,11 @@
       },
       "examples": [
         {
-          "title": "Export a landscape heightmap to a file.",
+          "title": "Write a landscape's heights (the level's first landscape when none is named) to a raw file: 16-bit samples, no header, machine byte order, for its whole extent or region (clamped to it). The path is relative to the project folder (Saved/Heightmaps/terrain.raw); the reply gives width, height and sampleCount, which reading it back with import_heightmap needs.",
           "input": {
             "action": "export_heightmap",
             "landscapeName": "Landscape_1",
-            "path": "/Game/Heightmaps/export.raw"
+            "path": "Saved/Heightmaps/terrain.raw"
           },
           "output": {
             "success": true
@@ -31666,15 +31666,15 @@
         ]
       },
       "behavior": {
-        "effect": "read",
-        "idempotency": "idempotent",
+        "effect": "write",
+        "idempotency": "non-idempotent",
         "longRunning": false,
-        "safeToRetry": true
+        "safeToRetry": false
       },
       "policy": {
-        "requiredScope": "read",
+        "requiredScope": "write",
         "consent": "none",
-        "dataAccess": "project-read"
+        "dataAccess": "project-write"
       },
       "cost": {
         "latency": "interactive",
@@ -31687,7 +31687,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "de768cc7715c03613e8bcf900187aabdb2ce37dc106cf09fbcba9aaa579b5939",
-        "content": "c6d137730c670ac4deee07f4e9c65a2e50b26d80bfb43f8ab7cb97501aefad09"
+        "content": "a841094a288ad736ec4913e6ff0fdd5b3e19e40d52863f079215b675bf828529"
       }
     },
     {
@@ -31706,7 +31706,7 @@
           "export_snapshot",
           "save environment snapshot"
         ],
-        "summary": "Export an environment snapshot to a file.",
+        "summary": "Write the sun's rotation and intensity and the sky light's intensity (time of day included) to a snapshot file, for import_snapshot to apply again.",
         "whenToUse": [
           "An environment state must be exported for later restoration."
         ],
@@ -31725,7 +31725,7 @@
             },
             "path": {
               "type": "string",
-              "description": "Canonical /Game asset or directory path."
+              "description": "Snapshot file, or a folder for env_snapshot.json, relative to the project and under Saved/unreal-mcp or tmp/unreal-mcp; a file must end .json (default tmp/unreal-mcp/env_snapshot.json)."
             },
             "filename": {
               "type": "string",
@@ -31779,10 +31779,10 @@
       },
       "examples": [
         {
-          "title": "Export an environment snapshot to a file.",
+          "title": "Write the sun's rotation and intensity and the sky light's intensity (time of day included) to a snapshot file, for import_snapshot to apply again.",
           "input": {
             "action": "export_snapshot",
-            "path": "/Game/Snapshots",
+            "path": "Saved/unreal-mcp",
             "filename": "env.json",
             "directionalLightActorPath": "/Game/Maps/Main.Main:PersistentLevel.DirectionalLight_0"
           },
@@ -31821,8 +31821,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "c6abef1d71e41e99ae1c840d14a0570bba8d6e843773f3e4fb71dadd5e789a66",
-        "content": "2e4b6dd06fc59ae7a6e089380e236f15a1b8a4531c63c9c705c1c225aabb9316"
+        "schema": "9a1e9aa012a7fa047f0fc30f51218433a101ef5eea2dfa9f0c4ec1037b073978",
+        "content": "2c51d21d220fd5580ea9d1df058261927ea93dd7b38208ed31e7b8a2504adb6b"
       }
     },
     {
@@ -32092,7 +32092,7 @@
           "import_snapshot",
           "load an environment snapshot"
         ],
-        "summary": "Import an environment snapshot from a file.",
+        "summary": "Apply a snapshot file export_snapshot wrote: the sun's rotation and intensity and the sky light's intensity, on the lights the file names. The file lives under Saved/unreal-mcp (or tmp/unreal-mcp) in the project and must end .json; one that is not there still answers success, applying nothing, so check the path.",
         "whenToUse": [
           "A previously exported environment snapshot must be restored."
         ],
@@ -32111,7 +32111,7 @@
             },
             "path": {
               "type": "string",
-              "description": "Canonical /Game asset or directory path."
+              "description": "Snapshot file, or a folder for env_snapshot.json, relative to the project and under Saved/unreal-mcp or tmp/unreal-mcp; a file must end .json (default tmp/unreal-mcp/env_snapshot.json)."
             },
             "filename": {
               "type": "string",
@@ -32157,10 +32157,10 @@
       },
       "examples": [
         {
-          "title": "Import an environment snapshot from a file.",
+          "title": "Apply a snapshot file export_snapshot wrote: the sun's rotation and intensity and the sky light's intensity, on the lights the file names. The file lives under Saved/unreal-mcp (or tmp/unreal-mcp) in the project and must end .json; one that is not there still answers success, applying nothing, so check the path.",
           "input": {
             "action": "import_snapshot",
-            "path": "/Game/Snapshots",
+            "path": "Saved/unreal-mcp",
             "filename": "env.json"
           },
           "output": {
@@ -32198,8 +32198,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "4d0decc48a77fa43f89ec29aefeac68592ba7a3fecd939cc67d9a7cfe015c9dc",
-        "content": "b9586b31c16ab8af69eecfe079b93b1d412fb303bde1a4316ad4056f57cc6864"
+        "schema": "23f60eb4c0f1cce74c77a40ad9554e46a9f5d9932bc1afc41e26f80fb847a0fc",
+        "content": "642edfa66b3f5b58bcbeedf0e05ba78b7c606721ee138eebab685cabc1717432"
       }
     },
     {
@@ -32811,7 +32811,7 @@
         "topics": [
           "remove_spline_point"
         ],
-        "summary": "Remove a point from a spline by index.",
+        "summary": "Remove the point at pointIndex from an actor's first spline component, in one undo step; the points after it move down one index. Not saved.",
         "whenToUse": [
           "A spline actor or spline mesh must be created or modified."
         ],
@@ -32842,9 +32842,14 @@
             }
           },
           "required": [
-            "action"
+            "action",
+            "pointIndex"
           ],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "requiredOneOf": [
+            "actorName",
+            "actorPath"
+          ]
         },
         "output": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -32872,7 +32877,7 @@
       },
       "examples": [
         {
-          "title": "Remove a point from a spline by index.",
+          "title": "Remove the point at pointIndex from an actor's first spline component, in one undo step; the points after it move down one index. Not saved.",
           "input": {
             "action": "remove_spline_point",
             "actorName": "Spline_1",
@@ -32910,8 +32915,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "8ad2f4bc4f2609d9677a240403986598edc0fbd736f34519c5ba7fc7d8498ef8",
-        "content": "fcc94def2721dad71214a872ec20dd02d524142a19895a02edf0972a79e45030"
+        "schema": "8149b4df35ada757a9e4231233a3d985671a3f421116b5dfeb50bf27bb4c9ca6",
+        "content": "5e6d5374caf6c6bb81725f7100109598de1774030aedd7e5adb22ff21f356696"
       }
     },
     {
@@ -33257,7 +33262,7 @@
         "topics": [
           "set_light_channel"
         ],
-        "summary": "Set lighting channels on a light or on an actor's primitives.",
+        "summary": "Turn lighting channels 0-2 (channels, or one channel) on or off (enabled, default true): on a light, which then lights only primitives sharing a channel with it, or on every primitive of an actor. One undo step; the playing actor while Play In Editor runs.",
         "whenToUse": [
           "Render or lighting quality settings must be configured."
         ],
@@ -33339,7 +33344,7 @@
       },
       "examples": [
         {
-          "title": "Set lighting channels on a light or on an actor's primitives.",
+          "title": "Turn lighting channels 0-2 (channels, or one channel) on or off (enabled, default true): on a light, which then lights only primitives sharing a channel with it, or on every primitive of an actor. One undo step; the playing actor while Play In Editor runs.",
           "input": {
             "action": "set_light_channel",
             "channelTarget": "light"
@@ -33389,7 +33394,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "fc7d89ce125e4a209c47f52e765a1bd9acdbfbfd8dbfa8aab65c6e6bd07bb73d",
-        "content": "4cf04a39c0223fbf73c0c89323d2287156daae73b24275fc1432eb1716297611"
+        "content": "343067f94a0bd8f33a7eb9ce704bca9a650abdc83d703aa2bdf6500aff234d85"
       }
     },
     {
@@ -34223,12 +34228,13 @@
         "topics": [
           "create_snapshot"
         ],
-        "summary": "Capture a named snapshot of actor state for later comparison.",
+        "summary": "Remember an actor's transform (location, rotation and scale only) under snapshotName, in editor memory, to put back later (inspect create_snapshot with snapshotOp restore). A name used again replaces the old snapshot; snapshots last until the editor closes.",
         "whenToUse": [
-          "Actor state must be recorded before a mutation."
+          "An actor's placement must be kept before trying a move, to put it back exactly."
         ],
         "whenNotToUse": [
-          "No later comparison or restore is planned."
+          "Other state (properties, visibility, tags) must come back too: only the transform is kept.",
+          "A recorded change should be reverted: control_editor undo takes it back."
         ]
       },
       "schemas": {
@@ -34282,7 +34288,7 @@
       },
       "examples": [
         {
-          "title": "Capture a named snapshot of actor state for later comparison.",
+          "title": "Remember an actor's transform (location, rotation and scale only) under snapshotName, in editor memory, to put back later (inspect create_snapshot with snapshotOp restore). A name used again replaces the old snapshot; snapshots last until the editor closes.",
           "input": {
             "action": "create_snapshot",
             "actorName": "Cube1",
@@ -34321,7 +34327,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "0d9a2418acf0e7b14efc255c21db676292a943b092336d01971d5c8f79fbfff8",
-        "content": "23f976a2d9c384ddd6f95a7f31059e8ff2c8d18768716fb55e81072f8c2cd94a"
+        "content": "8da1fe4567443a4b8812ed6ecfb1c1c018e76d5e0ff12df927b64e0d3944354c"
       }
     },
     {
@@ -34542,12 +34548,12 @@
           "unparent actor",
           "remove actor from parent"
         ],
-        "summary": "Detach an actor from its parent.",
+        "summary": "Detach an actor from its parent, keeping where it stands in the world (KeepWorldTransform) and clearing its owner, in one undo step. An actor attached to nothing answers success with detached false. While Play In Editor runs it detaches the playing copy, not the editor actor.",
         "whenToUse": [
-          "An actor must be released from attachment."
+          "An actor must stop following its parent (a picked-up item dropped, a part taken off a vehicle)."
         ],
         "whenNotToUse": [
-          "The actor is not attached (no-op)."
+          "The actor is attached to nothing: the call answers detached false."
         ]
       },
       "schemas": {
@@ -34596,7 +34602,7 @@
       },
       "examples": [
         {
-          "title": "Detach an actor from its parent.",
+          "title": "Detach an actor from its parent, keeping where it stands in the world (KeepWorldTransform) and clearing its owner, in one undo step. An actor attached to nothing answers success with detached false. While Play In Editor runs it detaches the playing copy, not the editor actor.",
           "input": {
             "action": "detach",
             "actorName": "Sword"
@@ -34634,7 +34640,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "ea63b39e71dd13ee31676e630dbb486e164e8eaa1daedc52c2ff90652f44174c",
-        "content": "16f49f51240cfc106cef3407ace07e2a0936ed6b82ba9db1cf113c21e9014c71"
+        "content": "33aebf03f2713c1cae6252ef09197a55797147422060378b5e153a0b5eceb2f0"
       }
     },
     {
@@ -35364,7 +35370,7 @@
         "topics": [
           "find_by_tag"
         ],
-        "summary": "Find actors carrying a tag.",
+        "summary": "Find the actors in the level whose Tags list holds a tag (the whole tag, case-insensitive), each with name, path and class: the first limit of them (default 200), with truncated and totalCount when more match. The Play-In-Editor world is searched while a session runs.",
         "whenToUse": [
           "Actors sharing a tag must be located.",
           "Preferred when callers use the explicit find_actors_by_tag verb."
@@ -35463,7 +35469,7 @@
       },
       "examples": [
         {
-          "title": "Find actors carrying a tag.",
+          "title": "Find the actors in the level whose Tags list holds a tag (the whole tag, case-insensitive), each with name, path and class: the first limit of them (default 200), with truncated and totalCount when more match. The Play-In-Editor world is searched while a session runs.",
           "input": {
             "action": "find_by_tag",
             "tag": "Pickup"
@@ -35509,7 +35515,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "952ffe50ddf18b4bf3dba79aa9758af10334033b39ad20cf8df3ded96b5b09ff",
-        "content": "fe5397d8be2763324284ede51efc1088ddbd5c53468c381ff286b1ec36aeba5e"
+        "content": "7e0a39c6ea043a46d2de25c285c557c85e6e6f10f82d33990660d703908837b5"
       }
     },
     {
@@ -39543,7 +39549,7 @@
           "cheat command",
           "type a cheat code"
         ],
-        "summary": "Run a validated console command in the editor.",
+        "summary": "Run one console command against the editor world, or through the first player while Play In Editor runs, and return what it printed (output, at most 4096 characters). A command the engine does not recognise fails (EXEC_FAILED); one holding ;, |, &&, a backtick or several lines, or a blocked name (quit, exit, py, crash and the like), is refused (COMMAND_BLOCKED). Success means the engine ran it, not that it had the effect wanted.",
         "whenToUse": [
           "A console command must be run from the editor context."
         ],
@@ -39597,7 +39603,7 @@
       },
       "examples": [
         {
-          "title": "Run a validated console command in the editor.",
+          "title": "Run one console command against the editor world, or through the first player while Play In Editor runs, and return what it printed (output, at most 4096 characters). A command the engine does not recognise fails (EXEC_FAILED); one holding ;, |, &&, a backtick or several lines, or a blocked name (quit, exit, py, crash and the like), is refused (COMMAND_BLOCKED). Success means the engine ran it, not that it had the effect wanted.",
           "input": {
             "action": "console_command",
             "command": "r.SetRes 1920x1080"
@@ -39637,7 +39643,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "a0a3d862a77ce05433d1e54cb53f6c2ca70ac88330e6fb6cfc99ac292231e6c4",
-        "content": "f78255829239b1929b559fa4963e7ed6a05be6e8c61786c993ca3ee9fd5443e6"
+        "content": "c9218e4238cbc61eb2e09e3b6591d5058cc56d1860d403af3ef66068f23d1cf0"
       }
     },
     {
@@ -40499,9 +40505,9 @@
           "open asset editor",
           "open in editor"
         ],
-        "summary": "Open an asset in the appropriate editor by asset path.",
+        "summary": "Open an asset's editor (a Blueprint, a material, a widget, a sequence) by asset path, loading the asset first; it must be known to the asset registry (ASSET_NOT_FOUND). Under -NullRHI it loads the asset and opens no window, and says so.",
         "whenToUse": [
-          "An asset must be opened for editing or inspection."
+          "An asset must be opened for the user to look at or edit by hand, or so focus reads what is open."
         ],
         "whenNotToUse": [
           "The asset is already open."
@@ -40553,7 +40559,7 @@
       },
       "examples": [
         {
-          "title": "Open an asset in the appropriate editor by asset path.",
+          "title": "Open an asset's editor (a Blueprint, a material, a widget, a sequence) by asset path, loading the asset first; it must be known to the asset registry (ASSET_NOT_FOUND). Under -NullRHI it loads the asset and opens no window, and says so.",
           "input": {
             "action": "open_asset",
             "assetPath": "/Game/Materials/M_Base"
@@ -40596,7 +40602,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "34aba8ae7de2a9142900e274781de5e7a335678b7322804a69856b571585e7bc",
-        "content": "908c9b92b9377e96cc9878274e41c66ae9191680019e45d5a03e081733bf6eca"
+        "content": "b592b5a12b19084ba6d207162f7d456d851d50f4ad7af434b8d8f7e5f7769baa"
       }
     },
     {
@@ -40616,7 +40622,7 @@
           "open map",
           "open level asset"
         ],
-        "summary": "Open a level by asset path, loading it as the current level.",
+        "summary": "Open a level from disk by its path (/Game/Maps/Demo; an object path such as /Game/Maps/Demo.Demo, or a bare name read as /Game/<name>, works too), replacing the open level: Play In Editor is stopped and asset editors close. Unsaved levels are refused, never saved (DIRTY_PACKAGES); the reply waits for the level to settle (settledSeconds).",
         "whenToUse": [
           "A different level must be loaded into the editor."
         ],
@@ -40679,7 +40685,7 @@
       },
       "examples": [
         {
-          "title": "Open a level by asset path, loading it as the current level.",
+          "title": "Open a level from disk by its path (/Game/Maps/Demo; an object path such as /Game/Maps/Demo.Demo, or a bare name read as /Game/<name>, works too), replacing the open level: Play In Editor is stopped and asset editors close. Unsaved levels are refused, never saved (DIRTY_PACKAGES); the reply waits for the level to settle (settledSeconds).",
           "input": {
             "action": "open_level",
             "levelPath": "/Game/Maps/EntryMap"
@@ -40717,7 +40723,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "2d26f9eb5c1c7a01f4e40ae4ac9a8a7368ba514ebc09f829f28f1918432016d4",
-        "content": "d98ac0e345cfde67c9fd36e1efd66827636305b52913f4829d27e384977b859d"
+        "content": "fb90add350d91a3a0167e29b127b6ded1329e7900aaf78aa3aa84e6013103e4d"
       }
     },
     {
@@ -42256,7 +42262,7 @@
         "topics": [
           "set_viewport_resolution"
         ],
-        "summary": "Set the viewport resolution via the r.SetRes console command.",
+        "summary": "Set the game window resolution through the console (r.SetRes <width>x<height>, fractions dropped); it does not resize an editor viewport. The reply is the console command's: command and output.",
         "whenToUse": [
           "The viewport resolution must be changed."
         ],
@@ -42306,13 +42312,13 @@
               "x-unreal-reflection-boundary": true,
               "description": "Additional handler result fields not named by the contract."
             },
-            "width": {
-              "type": "number",
-              "description": "Viewport width in pixels."
+            "command": {
+              "type": "string",
+              "description": "The console command that ran."
             },
-            "height": {
-              "type": "number",
-              "description": "Viewport height in pixels."
+            "output": {
+              "type": "string",
+              "description": "What the command printed, at most 4096 characters."
             }
           },
           "required": [
@@ -42323,7 +42329,7 @@
       },
       "examples": [
         {
-          "title": "Set the viewport resolution via the r.SetRes console command.",
+          "title": "Set the game window resolution through the console (r.SetRes <width>x<height>, fractions dropped); it does not resize an editor viewport. The reply is the console command's: command and output.",
           "input": {
             "action": "set_viewport_resolution",
             "width": 1920,
@@ -42331,9 +42337,7 @@
           },
           "output": {
             "success": true,
-            "message": "Resolution set",
-            "width": 1920,
-            "height": 1080
+            "message": "Command executed: r.SetRes 1920x1080"
           }
         }
       ],
@@ -42364,8 +42368,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "0f7a559decf41761cf8e5a6de1e43ef588ee412dd8d0d78eea2fe539ed5b4906",
-        "content": "848ed24310b004189a6c77cacbe273e186510f9c516bc2df459cd2edcb2d18a7"
+        "schema": "d08cb1a2d88736e2ca208b2f7d49d7b54e8335798add6a0c64652e0beb6fe927",
+        "content": "d484aa7682e5606c62942773ff78c46115f9fabf7d08a63d992bb1a34f38dc69"
       }
     },
     {
@@ -44739,7 +44743,7 @@
         "topics": [
           "create_snapshot"
         ],
-        "summary": "Create a snapshot of an object's state, or restore one.",
+        "summary": "Remember or put back an actor's transform (location, rotation and scale only) under a snapshot name, in editor memory: create stores it, restore sets it again (transformChanged says whether anything moved). A name used again replaces the old snapshot; snapshots last until the editor closes.",
         "whenToUse": [
           "snapshotOp=create: An actor's state must be captured for later restore.",
           "snapshotOp=restore: An actor's state must be restored from a snapshot."
@@ -44815,7 +44819,7 @@
       },
       "examples": [
         {
-          "title": "Create a snapshot of an object's state, or restore one.",
+          "title": "Remember or put back an actor's transform (location, rotation and scale only) under a snapshot name, in editor memory: create stores it, restore sets it again (transformChanged says whether anything moved). A name used again replaces the old snapshot; snapshots last until the editor closes.",
           "input": {
             "action": "create_snapshot",
             "actorName": "PlayerStart_1",
@@ -44862,7 +44866,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "1cf0f6ae281448609498e9080b85a033d40c998b199d07703dc9c4abe80d5a61",
-        "content": "ecb3d97454f93284273121b905f5898c11ba9d78f0d5c885cdd3dc00567e86e5"
+        "content": "4f9ee272cc7d61a268e55e1ff252dc1d03e7f0a131ce2730ded8fb30648d8b38"
       }
     },
     {
@@ -62140,12 +62144,12 @@
           "draw a debug line",
           "draw debug line"
         ],
-        "summary": "Spawn a debug shape in the editor viewport.",
+        "summary": "Draw a temporary debug shape in the editor viewport (sphere, box, circle, line, point, coordinate, cylinder, cone, capsule, arrow or plane) at location, for duration seconds (default 5). Nothing is spawned or saved, and nothing shows in Play In Editor or a packaged game.",
         "whenToUse": [
-          "Visualize a region/volume."
+          "A point, a reach or a region must be shown in the viewport while checking a layout."
         ],
         "whenNotToUse": [
-          "Use spawn_niagara."
+          "An effect players should see (use spawn_niagara)."
         ]
       },
       "schemas": {
@@ -62234,7 +62238,9 @@
               "description": "Capsule half height (default the radius)."
             }
           },
-          "required": [],
+          "required": [
+            "location"
+          ],
           "additionalProperties": false
         },
         "output": {
@@ -62263,7 +62269,7 @@
       },
       "examples": [
         {
-          "title": "Spawn a debug shape in the editor viewport.",
+          "title": "Draw a temporary debug shape in the editor viewport (sphere, box, circle, line, point, coordinate, cylinder, cone, capsule, arrow or plane) at location, for duration seconds (default 5). Nothing is spawned or saved, and nothing shows in Play In Editor or a packaged game.",
           "input": {
             "action": "debug_shape",
             "shape": "Sphere",
@@ -62308,8 +62314,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "4ef3dfe8c4873bd88660477314b70d0d5fe85c8b3aa0332f99f291c485e7eb40",
-        "content": "71b23ff444afb433f8af8bb5212aa4438eb791a398a323de39e02aac4d2390e0"
+        "schema": "700129d171e562a1f13afc010dd0e6d1d3a16821f3ba6d6b20b2ca9080de799a",
+        "content": "cb51dd94974e14961cbd3da58279a85516b90183693a218b500444142c8a2071"
       }
     },
     {
@@ -63191,9 +63197,9 @@
         "topics": [
           "remove_niagara_node"
         ],
-        "summary": "Remove a Niagara graph node.",
+        "summary": "Remove a node (nodeId, its GUID) from a Niagara system's or emitter's spawn or update script graph (scriptType Update, any case; spawn when absent), reconnecting the parameter map around it; a stack boundary or a branched module is refused. The script recompiles in the background and the system is saved unless save is false.",
         "whenToUse": [
-          "Node must be removed."
+          "A module or node must come out of a Niagara script graph."
         ],
         "whenNotToUse": [
           "Use connect_niagara_pins."
@@ -63230,9 +63236,13 @@
             }
           },
           "required": [
-            "assetPath"
+            "nodeId"
           ],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "requiredOneOf": [
+            "assetPath",
+            "systemPath"
+          ]
         },
         "output": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -63260,7 +63270,7 @@
       },
       "examples": [
         {
-          "title": "Remove a Niagara graph node.",
+          "title": "Remove a node (nodeId, its GUID) from a Niagara system's or emitter's spawn or update script graph (scriptType Update, any case; spawn when absent), reconnecting the parameter map around it; a stack boundary or a branched module is refused. The script recompiles in the background and the system is saved unless save is false.",
           "input": {
             "action": "remove_niagara_node",
             "assetPath": "/Game/NS_Fire",
@@ -63300,8 +63310,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "bd68eed699308c3b29a02bfdda9f08e82691c2edbe0dab8b791a75fc34015e72",
-        "content": "a9d5b56ec08ce0e28e8c304805db5f8f5c3f00d6cdfcc394d8b06ee73313f5ad"
+        "schema": "bcf0c810dc1b879c3415a47bef48b4d1ed8402cf26d04bac0ed68f6b46465ab9",
+        "content": "b9e1221a74b66f1a7815151a1d80efffd9eb499dc5ad72bdec99bccf32e660bf"
       }
     },
     {
@@ -63326,9 +63336,9 @@
           "spawn explosion effect",
           "spawn effect at location"
         ],
-        "summary": "Spawn a Niagara system instance at runtime (PIE).",
+        "summary": "Spawn a Niagara system (systemPath, system or assetPath) as a new actor at location, rotation and scale (scale sizes the effect component), into the Play-In-Editor world while a session runs or else the editor level, optionally attached to attachToActor; autoActivate (default true) starts it at once. Not saved.",
         "whenToUse": [
-          "A Niagara effect must play on a live actor."
+          "An effect (an explosion, a fire, a sparkle) must appear at a place or on an actor."
         ],
         "whenNotToUse": [
           "Author the system."
@@ -63379,6 +63389,10 @@
             },
             "scale": {
               "description": "Scale of the spawned system: one uniform number, or [x, y, z] (an {x, y, z} object is accepted). Default 1."
+            },
+            "autoActivate": {
+              "type": "boolean",
+              "description": "Start the effect at once (default true); false places it switched off until a particle track or Activate starts it."
             }
           },
           "required": [],
@@ -63410,7 +63424,7 @@
       },
       "examples": [
         {
-          "title": "Spawn a Niagara system instance at runtime (PIE).",
+          "title": "Spawn a Niagara system (systemPath, system or assetPath) as a new actor at location, rotation and scale (scale sizes the effect component), into the Play-In-Editor world while a session runs or else the editor level, optionally attached to attachToActor; autoActivate (default true) starts it at once. Not saved.",
           "input": {
             "action": "spawn_niagara",
             "system": "/Game/NS_Explosion",
@@ -63456,8 +63470,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "c9fc3e35ba08cb638dff146f4c7df5061e9083e036d23ac7df8c92be11b63ba8",
-        "content": "62413b8f0541749f3bcbe51faf8ae8d90ea64c7854c76148c35e5502980cb202"
+        "schema": "48c75cd428d7d8ba89527d485f086900b4ac36f79eb7055c54ef5c42a00e2dba",
+        "content": "9a5ff33993be3a7e009bd6f975902c617e0594cc0c0b8958a9cdd21832691feb"
       }
     },
     {
@@ -73712,7 +73726,7 @@
           "delete sublevel",
           "delete map file"
         ],
-        "summary": "Delete one or more level assets.",
+        "summary": "Delete one level map for good: its .umap, built data and external actor and object files, after taking it out of the open level's streaming list. The open level, or one still loaded, is refused (LEVEL_LOADED): open another map first. No undo and no backup; deleted says whether every file went.",
         "whenToUse": [
           "A level asset must be permanently removed.",
           "A level asset must be permanently removed using the delete_level verb."
@@ -73772,7 +73786,7 @@
       },
       "examples": [
         {
-          "title": "Delete one or more level assets.",
+          "title": "Delete one level map for good: its .umap, built data and external actor and object files, after taking it out of the open level's streaming list. The open level, or one still loaded, is refused (LEVEL_LOADED): open another map first. No undo and no backup; deleted says whether every file went.",
           "input": {
             "action": "delete",
             "levelPath": "/Game/Maps/OldDemo"
@@ -73812,7 +73826,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "733157395aa0d9c95f6ab4c7e9ce2d4b45d97c6857ecc3260ee87c9e00ddc0e5",
-        "content": "ef739e5bfeca0ea49f80c468ff0621d031bb99da39f587ba74dc4099bbe24ce8"
+        "content": "dd1a7fbc08e5e975a1a81720b22afd256bb7cdb6fd9a28bac9d6448f611fce2a"
       }
     },
     {
@@ -73991,12 +74005,13 @@
         "topics": [
           "export_level"
         ],
-        "summary": "Export a level asset to a file.",
+        "summary": "Export the open level: as a .t3d text file inside the project folder (exportPath ending .t3d, relative to the project, e.g. Saved/Exports/Demo.t3d), or as a copy saved to another /Game map path. levelPath, when given, must be the open level (LEVEL_NOT_LOADED otherwise); a /Game copy refuses a destination that already holds another level.",
         "whenToUse": [
-          "A level must be serialized to an external file."
+          "The open level must be written out as text (.t3d) for a diff or another tool, or copied to a second map."
         ],
         "whenNotToUse": [
-          "The level should be saved as a new asset; use save_as."
+          "The level should be saved as a new asset; use save_as.",
+          "A level that is not open (open it first, or copy its files with import_level)."
         ]
       },
       "schemas": {
@@ -74022,10 +74037,13 @@
             }
           },
           "required": [
-            "action",
-            "levelPath"
+            "action"
           ],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "requiredOneOf": [
+            "exportPath",
+            "destinationPath"
+          ]
         },
         "output": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -74053,11 +74071,10 @@
       },
       "examples": [
         {
-          "title": "Export a level asset to a file.",
+          "title": "Export the open level: as a .t3d text file inside the project folder (exportPath ending .t3d, relative to the project, e.g. Saved/Exports/Demo.t3d), or as a copy saved to another /Game map path. levelPath, when given, must be the open level (LEVEL_NOT_LOADED otherwise); a /Game copy refuses a destination that already holds another level.",
           "input": {
             "action": "export_level",
-            "levelPath": "/Game/Maps/Demo",
-            "exportPath": "/Temp/Demo.export"
+            "exportPath": "Saved/Exports/Demo.t3d"
           },
           "output": {
             "success": true
@@ -74091,8 +74108,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "6263966dc3134f208ae281295a86887abb24945257295e815d7eaf52a81535cd",
-        "content": "34d3b3dea5896f5a4b77305944d16eb3f2ce54ad86454405ae8f70f9e2ff0c46"
+        "schema": "3c9248f90a6522d6123ecbed054d953ccbec99903b670cb25831dcf2cd62e74d",
+        "content": "4af73cff5a285d5f56344ad95e6add9221bbb0785f3da79ddfc9f792fd18d0c2"
       }
     },
     {
@@ -74319,12 +74336,13 @@
         "topics": [
           "import_level"
         ],
-        "summary": "Import a level asset from a package or source file.",
+        "summary": "Copy a level map from one /Game package path to another (sourcePath or packagePath to destinationPath or targetPath): the .umap, its built data and its external actor and object files, backing up and restoring the destination if a step fails. A destination that exists is refused unless overwrite is true, and a .t3d file cannot be imported (NOT_SUPPORTED). The copy is not opened.",
         "whenToUse": [
-          "A level must be imported from an external file."
+          "A level must be duplicated to another map path, files and all, without opening it."
         ],
         "whenNotToUse": [
-          "A new empty level is needed; use create_level."
+          "A new empty level is needed; use create_level.",
+          "The open level should be saved under a second name (use manage_level save_as)."
         ]
       },
       "schemas": {
@@ -74358,10 +74376,13 @@
             }
           },
           "required": [
-            "action",
-            "packagePath"
+            "action"
           ],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "requiredOneOf": [
+            "sourcePath",
+            "packagePath"
+          ]
         },
         "output": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -74389,11 +74410,11 @@
       },
       "examples": [
         {
-          "title": "Import a level asset from a package or source file.",
+          "title": "Copy a level map from one /Game package path to another (sourcePath or packagePath to destinationPath or targetPath): the .umap, its built data and its external actor and object files, backing up and restoring the destination if a step fails. A destination that exists is refused unless overwrite is true, and a .t3d file cannot be imported (NOT_SUPPORTED). The copy is not opened.",
           "input": {
             "action": "import_level",
-            "packagePath": "/Temp/Demo.export",
-            "destinationPath": "/Game/Maps/Imported"
+            "sourcePath": "/Game/Maps/Demo",
+            "destinationPath": "/Game/Maps/Demo_Copy"
           },
           "output": {
             "success": true
@@ -74427,8 +74448,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "7932a11d6eacf7461d61cdd04446347ea820795478e602e05264c6c7aa1bce80",
-        "content": "845fbbe856e5e7cd5a70e65f63d90a5414559d22b560445d8ea73cfdc25ab626"
+        "schema": "e6da98960110e5f75d7d58f35d7cbe33d30c2c7423df03623e7595cb171740a9",
+        "content": "fb675edf9acdeec875985ac4e328f047e1973cd5979baec03b35ee27acc645df"
       }
     },
     {
@@ -74452,7 +74473,7 @@
           "what maps exist",
           "what levels exist"
         ],
-        "summary": "List all levels available in the project.",
+        "summary": "List the open level and its streaming sublevels (each with loaded, visible and streamingState) and every map the asset registry knows (allMaps, which can be long and comes in pages past 100k characters). Read from the editor world even while Play In Editor runs; the persistent level's name is short, a sublevel's is its package path.",
         "whenToUse": [
           "The set of available level assets must be enumerated."
         ],
@@ -74573,7 +74594,7 @@
       },
       "examples": [
         {
-          "title": "List all levels available in the project.",
+          "title": "List the open level and its streaming sublevels (each with loaded, visible and streamingState) and every map the asset registry knows (allMaps, which can be long and comes in pages past 100k characters). Read from the editor world even while Play In Editor runs; the persistent level's name is short, a sublevel's is its package path.",
           "input": {
             "action": "list_levels"
           },
@@ -74631,7 +74652,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "35e030b0fa049b6a8a1ba36cf9eb2507b2d3aad96df964454a22c8a1a2bde6a4",
-        "content": "ca026cbac56624ac1b69fa8364aea53fb3063893bc1536759ccfbcb67f9e4601"
+        "content": "b81274988b58b078f9aa77be02ec3e778a36bb6f98a3eaca3105c8f749f540a0"
       }
     },
     {
@@ -77757,7 +77778,7 @@
           "remove_volume",
           "remove trigger volume"
         ],
-        "summary": "Remove a volume actor from the level.",
+        "summary": "Delete a volume or trigger actor from the editor level by its label (any case). Saved only with save true, which also writes the level's other unsaved changes and cannot be undone; without it the removal is one undo step and the level stays unsaved.",
         "whenToUse": [
           "A volume actor must be permanently removed."
         ],
@@ -77815,7 +77836,7 @@
       },
       "examples": [
         {
-          "title": "Remove a volume actor from the level.",
+          "title": "Delete a volume or trigger actor from the editor level by its label (any case). Saved only with save true, which also writes the level's other unsaved changes and cannot be undone; without it the removal is one undo step and the level stays unsaved.",
           "input": {
             "action": "remove_volume",
             "volumeName": "PP_01"
@@ -77853,7 +77874,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "c9e0cfda6bd3f8da49f7fbe92e6807fa326e1cdb438882af8f9de6fe88271a65",
-        "content": "92612b52ff2c538caf3e98451230c34b205954c445ced01223d4d3eb6ac03918"
+        "content": "418669382b20f10dd281b1006b6d3831540415cd80b0fb3a9c2bcc2958204027"
       }
     },
     {
@@ -78333,9 +78354,9 @@
         "topics": [
           "add_local_player"
         ],
-        "summary": "Add a local player and return its player state.",
+        "summary": "Add a local (split-screen) player to the running game for a gamepad controllerId, spawning a player controller for it; the reply gives its playerIndex. Needs Play In Editor (NOT_IN_PLAY); local players end when play stops.",
         "whenToUse": [
-          "Use it to add a local player and return its player state."
+          "Use it to add a local (split-screen) player to the running game for a gamepad controllerId, spawning a player controller for it; the reply gives its playerIndex. Needs Play In Editor (NOT_IN_PLAY); local players end when play stops."
         ],
         "whenNotToUse": []
       },
@@ -78390,7 +78411,7 @@
       },
       "examples": [
         {
-          "title": "Add a local player and return its player state.",
+          "title": "Add a local (split-screen) player to the running game for a gamepad controllerId, spawning a player controller for it; the reply gives its playerIndex. Needs Play In Editor (NOT_IN_PLAY); local players end when play stops.",
           "input": {
             "action": "add_local_player",
             "controllerId": 0
@@ -78433,7 +78454,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "4b44ad05a5f7c16c01074dd3bcda84369f732c90d8935fd2f27c98444bc7de5f",
-        "content": "e294004f87aaeb53b3989075a4e785063798ab6db5faa73e327b49408b748764"
+        "content": "f6ec9303615a0199925758f6b2ca48226bfe29cedfc902a98b9a3ffc250dfe12"
       }
     },
     {
@@ -81999,9 +82020,9 @@
         "topics": [
           "remove_local_player"
         ],
-        "summary": "Remove a local player.",
+        "summary": "Remove a local player from the running game by playerIndex; the first player (index 0) cannot be removed (PRIMARY_PLAYER), and the players after it move down one index. Needs Play In Editor (NOT_IN_PLAY).",
         "whenToUse": [
-          "Use it to remove a local player."
+          "Use it to remove a local player from the running game by playerIndex; the first player (index 0) cannot be removed (PRIMARY_PLAYER), and the players after it move down one index. Needs Play In Editor (NOT_IN_PLAY)."
         ],
         "whenNotToUse": []
       },
@@ -82051,7 +82072,7 @@
       },
       "examples": [
         {
-          "title": "Remove a local player.",
+          "title": "Remove a local player from the running game by playerIndex; the first player (index 0) cannot be removed (PRIMARY_PLAYER), and the players after it move down one index. Needs Play In Editor (NOT_IN_PLAY).",
           "input": {
             "action": "remove_local_player",
             "playerIndex": 1
@@ -82093,7 +82114,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "436cbece9b527ef863aabe63691af6e57bf5f6f4c074c70a44ab9d04f0015c95",
-        "content": "67832ed1307b652f7955409dc4d8a02cac037e86f96135a5ea6de71e7c96a2bf"
+        "content": "9d1f69c11693d39044148ba78e18e9f721736fd2973acafb8e408d46edb2e745"
       }
     },
     {
@@ -83392,7 +83413,7 @@
         "topics": [
           "disable_category"
         ],
-        "summary": "Disable all tools in a category.",
+        "summary": "Disable a category (world, gameplay, utility, or all, which leaves core on): its tools stay in search, but execute refuses them (TOOL_DISABLED). core cannot be disabled.",
         "whenToUse": [
           "Hide an entire non-essential category from the tool list."
         ],
@@ -83471,7 +83492,7 @@
       },
       "examples": [
         {
-          "title": "Disable all tools in a category.",
+          "title": "Disable a category (world, gameplay, utility, or all, which leaves core on): its tools stay in search, but execute refuses them (TOOL_DISABLED). core cannot be disabled.",
           "input": {
             "action": "disable_category",
             "category": "utility"
@@ -83519,7 +83540,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "d750f800e2c346a6582891e5cdbf7587bfe341ebad2de3178627e5c54452fbe4",
-        "content": "6af11cf8306415c99e7a2dfca2be03013378a781c841c4a3c3f9f5ea9819c166"
+        "content": "bd63f28d41dc9c79fd0173619071184086d050c74f9caba474e06bfc686bee48"
       }
     },
     {
@@ -83537,7 +83558,7 @@
         "topics": [
           "disable_tools"
         ],
-        "summary": "Disable specific tools by name.",
+        "summary": "Disable parent tools by name (tools): their capabilities stay in search, marked unavailable, and execute refuses them (TOOL_DISABLED). manage_tools and inspect cannot be disabled (listed under protected); names that are no parent tool come back under notFound. Each door keeps its own setting until restart.",
         "whenToUse": [
           "Hide non-essential tools from the MCP tool list."
         ],
@@ -83614,7 +83635,7 @@
       },
       "examples": [
         {
-          "title": "Disable specific tools by name.",
+          "title": "Disable parent tools by name (tools): their capabilities stay in search, marked unavailable, and execute refuses them (TOOL_DISABLED). manage_tools and inspect cannot be disabled (listed under protected); names that are no parent tool come back under notFound. Each door keeps its own setting until restart.",
           "input": {
             "action": "disable_tools",
             "tools": [
@@ -83662,7 +83683,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "2424e5f4c97a68bf4803cd40981926899019be66efa4d883b234620a80cbdd5f",
-        "content": "80e7b38b1cefaf965bd9bbeff9b8ba17d072ae0aca9f76344f53c2ba5e01ba7c"
+        "content": "a4069947d40c59be74dae6c8cbed0f5452a090649b5282db8b1f582b59c06bb5"
       }
     },
     {
@@ -83680,7 +83701,7 @@
         "topics": [
           "enable_category"
         ],
-        "summary": "Enable all tools in a category.",
+        "summary": "Enable a category of parent tools (core, world, gameplay, utility, or all) and every tool in it; enabled lists the tools that were off.",
         "whenToUse": [
           "Re-enable an entire category or all categories at once."
         ],
@@ -83752,7 +83773,7 @@
       },
       "examples": [
         {
-          "title": "Enable all tools in a category.",
+          "title": "Enable a category of parent tools (core, world, gameplay, utility, or all) and every tool in it; enabled lists the tools that were off.",
           "input": {
             "action": "enable_category",
             "category": "world"
@@ -83805,7 +83826,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "3ed47f28e445df4fa9d8168dbb05c74c17658ce33afa22a4cc167ed6ec0123b6",
-        "content": "49a051700b9e81521630ac28e2304ff0386f119d6cbca3c93d79684bcecf68eb"
+        "content": "12765b5eaeaad76fcc15942a14fdbaef34fe47b22fca1dbf2c1ec380b4b46bda"
       }
     },
     {
@@ -83823,7 +83844,7 @@
         "topics": [
           "enable_tools"
         ],
-        "summary": "Enable specific tools by name.",
+        "summary": "Enable parent tools by name (tools), reopening their categories, so their capabilities run again; names that are no parent tool come back under notFound. The setting lasts until the server restarts and each door (the stdio server, the editor endpoint) keeps its own.",
         "whenToUse": [
           "Re-enable tools that were previously disabled."
         ],
@@ -83893,7 +83914,7 @@
       },
       "examples": [
         {
-          "title": "Enable specific tools by name.",
+          "title": "Enable parent tools by name (tools), reopening their categories, so their capabilities run again; names that are no parent tool come back under notFound. The setting lasts until the server restarts and each door (the stdio server, the editor endpoint) keeps its own.",
           "input": {
             "action": "enable_tools",
             "tools": [
@@ -83945,7 +83966,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "5f226be1a7e7bbc0406bf786b8c87cae200c880c68d83531d2ab64fcde4cf470",
-        "content": "6692284c7d9d541cb2537d4663fa859484f5fa12a636a927e6e9671c06c49586"
+        "content": "76a374dbe6b0307510d3b8785439d44f5dc407357cc6b6339e8e8eac2f5c374c"
       }
     },
     {
@@ -84418,7 +84439,7 @@
           "tool list",
           "capabilities"
         ],
-        "summary": "List all canonical tools with their enabled state and category.",
+        "summary": "List the 23 parent tools, each with its category and whether it is enabled now (its own flag and its category both on), with enabled and disabled counts. Tool groups only decide what execute runs: the one public tool stays listed and search keeps every capability.",
         "whenToUse": [
           "Enumerate every registered tool and its current visibility."
         ],
@@ -84498,7 +84519,7 @@
       },
       "examples": [
         {
-          "title": "List all canonical tools with their enabled state and category.",
+          "title": "List the 23 parent tools, each with its category and whether it is enabled now (its own flag and its category both on), with enabled and disabled counts. Tool groups only decide what execute runs: the one public tool stays listed and search keeps every capability.",
           "input": {
             "action": "list_tools"
           },
@@ -84548,7 +84569,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "f7b732c4ac9d9aa47edc95c06d8bf3440fc1231fb206ebfafcdb6cc6b0de82a5",
-        "content": "9f2c8adad641e144793779936ce55d859a121010c70bc9955826dfe5201f0b89"
+        "content": "d86a85d25d5ce15d8285d7dade5fe9df705fd9a81ff28daf93c9eeab05e32d49"
       }
     },
     {
@@ -84566,7 +84587,7 @@
         "topics": [
           "reset"
         ],
-        "summary": "Reset all tools and categories to their default enabled state.",
+        "summary": "Put every tool and category back: the stdio server turns all of them on, the editor endpoint returns to the state it started with (only core when it loads tools on demand). enabled counts the tools switched back on.",
         "whenToUse": [
           "Restore the full default tool set after disabling tools or categories."
         ],
@@ -84619,7 +84640,7 @@
       },
       "examples": [
         {
-          "title": "Reset all tools and categories to their default enabled state.",
+          "title": "Put every tool and category back: the stdio server turns all of them on, the editor endpoint returns to the state it started with (only core when it loads tools on demand). enabled counts the tools switched back on.",
           "input": {
             "action": "reset"
           },
@@ -84660,7 +84681,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "7fa450f4749de1294acf9e794acbf0d0f528c9ce8916fba4e9cd5b776e11f0f2",
-        "content": "a345bd2794c8da6effba5bfbefd30031386b87f4c94177d12239ea28d5b7b386"
+        "content": "eaded066764a238dd321a6b770e2c3c190a04f7716fe8fad2ba185dd897d4021"
       }
     },
     {
@@ -93487,7 +93508,7 @@
         "topics": [
           "set_metadata"
         ],
-        "summary": "Write metadata key-value pairs to a Level Sequence asset and save it.",
+        "summary": "Write metadata tags to a Level Sequence asset's package (metadata object, or one key with value) and save it; values are kept as text, and only strings, numbers and booleans are written. The reply lists the keys set and the whole stored map; saved says whether the save worked.",
         "whenToUse": [
           "Sequence asset metadata must be written."
         ],
@@ -93563,7 +93584,7 @@
       },
       "examples": [
         {
-          "title": "Write metadata key-value pairs to a Level Sequence asset and save it.",
+          "title": "Write metadata tags to a Level Sequence asset's package (metadata object, or one key with value) and save it; values are kept as text, and only strings, numbers and booleans are written. The reply lists the keys set and the whole stored map; saved says whether the save worked.",
           "input": {
             "action": "set_metadata",
             "path": "/Game/Cinematics/SEQ_Master",
@@ -93606,7 +93627,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "f1064e3e6ba331b223b2f11235c7fe42a58116bb3f81d24a1a0b216bd416a404",
-        "content": "ce368b44ab3b8577d67a5bc56b97f2a638333f0d6be6cc6dd0efe3063931ff3c"
+        "content": "606550a1fcdbf525ff7bf7be5a4c537af1352634c9e625b07fe20d5b0ab533cb"
       }
     },
     {
@@ -96149,7 +96170,7 @@
           "recompile code",
           "hot reload"
         ],
-        "summary": "Run a validated console command.",
+        "summary": "Run one console command against the editor world, or through the first player while Play In Editor runs, and return what it printed (output, at most 4096 characters). A command the engine does not recognise fails (EXEC_FAILED); one holding ;, |, &&, a backtick or several lines, or a blocked name (quit, exit, py, crash and the like), is refused (COMMAND_BLOCKED). Success means the engine ran it, not that it had the effect wanted.",
         "whenToUse": [
           "A console command must be run with explicit empty-input rejection.",
           "The sounds playing right now must be listed (is the music still on, did a loop stop): au.DumpActiveSounds puts each one with its asset, owner and volume in output.",
@@ -96217,7 +96238,7 @@
       },
       "examples": [
         {
-          "title": "Run a validated console command.",
+          "title": "Run one console command against the editor world, or through the first player while Play In Editor runs, and return what it printed (output, at most 4096 characters). A command the engine does not recognise fails (EXEC_FAILED); one holding ;, |, &&, a backtick or several lines, or a blocked name (quit, exit, py, crash and the like), is refused (COMMAND_BLOCKED). Success means the engine ran it, not that it had the effect wanted.",
           "input": {
             "action": "console_command",
             "command": "r.ScreenPercentage 100"
@@ -96260,7 +96281,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "60f83cf067f4f83dc8a574e8e06158c13fab777b793f916986a18de69d179b39",
-        "content": "23fee7a1aa9b6d80c4330af2e4b90ca73da158479448b49b43a4365e2a60ebfa"
+        "content": "b01a0bfd265707a18b3155a8926929b3fe91637e9e641a3847b2493d0aba8de4"
       }
     },
     {
@@ -98339,7 +98360,7 @@
         "topics": [
           "lumen_update_scene"
         ],
-        "summary": "Trigger a Lumen scene update via the manage_render bridge action.",
+        "summary": "Ask Lumen to recapture its scene (r.Lumen.Scene.Recapture) in the editor world, after big changes to lighting or geometry; nothing checks that Lumen is on, so executed only means the command ran.",
         "whenToUse": [
           "Lumen GI must refresh the scene capture."
         ],
@@ -98388,7 +98409,7 @@
       },
       "examples": [
         {
-          "title": "Trigger a Lumen scene update via the manage_render bridge action.",
+          "title": "Ask Lumen to recapture its scene (r.Lumen.Scene.Recapture) in the editor world, after big changes to lighting or geometry; nothing checks that Lumen is on, so executed only means the command ran.",
           "input": {
             "action": "lumen_update_scene"
           },
@@ -98425,7 +98446,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "431102c1785e41c994ba7daafce599c789989807b88bb80e437d3c61cb0ea569",
-        "content": "b5ca54da46c34d3a25d318424c669aad76ade1a3b6467f120436d4becfd5513b"
+        "content": "d2a0fad477fea6e7f114d47df0b8540428a3137e4293cca075a9ea4a48e718ab"
       }
     },
     {

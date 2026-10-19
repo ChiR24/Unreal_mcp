@@ -68,8 +68,8 @@ export const ASSET_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_editor', action: 'open_asset', domain: D, family: F,
     topics: ['open blueprint editor', 'open asset editor', 'open in editor'],
-    summary: 'Open an asset in the appropriate editor by asset path.',
-    whenToUse: ['An asset must be opened for editing or inspection.'],
+    summary: 'Open an asset\'s editor (a Blueprint, a material, a widget, a sequence) by asset path, loading the asset first; it must be known to the asset registry (ASSET_NOT_FOUND). Under -NullRHI it loads the asset and opens no window, and says so.',
+    whenToUse: ['An asset must be opened for the user to look at or edit by hand, or so focus reads what is open.'],
     whenNotToUse: ['The asset is already open.'],
     inputProps: { assetPath: P.assetPath },
     required: ['assetPath'],
@@ -91,7 +91,7 @@ export const ASSET_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_editor', action: 'open_level', domain: D, family: F,
     topics: ['open map', 'open level asset'],
-    summary: 'Open a level by asset path, loading it as the current level.',
+    summary: 'Open a level from disk by its path (/Game/Maps/Demo; an object path such as /Game/Maps/Demo.Demo, or a bare name read as /Game/<name>, works too), replacing the open level: Play In Editor is stopped and asset editors close. Unsaved levels are refused, never saved (DIRTY_PACKAGES); the reply waits for the level to settle (settledSeconds).',
     whenToUse: ['A different level must be loaded into the editor.'],
     whenNotToUse: ['The level is already loaded.',
       'Open levels have unsaved changes: opening another level would drop them, so the call is refused with DIRTY_PACKAGES, listing them in unsavedPackages. Save first (manage_level save), or use manage_level load, which takes saveDirtyPackages or discardUnsaved.'],

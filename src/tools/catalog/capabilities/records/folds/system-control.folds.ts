@@ -2,7 +2,7 @@
 import type { FoldSpec } from '../shared/fold-types.js';
 
 export const SYSTEM_CONTROL_FOLDS: readonly FoldSpec[] = [
-  { primary: 'console_command', summary: 'Run a validated console command.', members: ['execute_command'] },
+  { primary: 'console_command', summary: 'Run one console command against the editor world, or through the first player while Play In Editor runs, and return what it printed (output, at most 4096 characters). A command the engine does not recognise fails (EXEC_FAILED); one holding ;, |, &&, a backtick or several lines, or a blocked name (quit, exit, py, crash and the like), is refused (COMMAND_BLOCKED). Success means the engine ran it, not that it had the effect wanted.', members: ['execute_command'] },
   {
     primary: 'configure_display', selector: 'setting',
     summary: 'Configure display and rendering variables: resolution, fullscreen, quality, a console variable, FPS counter, profiling overlay.',

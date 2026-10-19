@@ -156,7 +156,7 @@ export const LEVEL_VOLUME_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildWorldRecord({
     parentTool: 'manage_level_structure', action: 'remove_volume', topics: ['remove trigger volume'], dispatchAction: 'remove_volume',
-    family: F, summary: 'Remove a volume actor from the level.',
+    family: F, summary: 'Delete a volume or trigger actor from the editor level by its label (any case). Saved only with save true, which also writes the level\'s other unsaved changes and cannot be undone; without it the removal is one undo step and the level stays unsaved.',
     whenToUse: ['A volume actor must be permanently removed.'], whenNotToUse: ['The volume should be disabled; use set_volume_properties.'],
     inputProps: { volumeName: P.volumeName, save: P.levelEditSave },
     required: ['volumeName'], effect: 'destructive', costLatency: 'interactive', costResources: 'low',

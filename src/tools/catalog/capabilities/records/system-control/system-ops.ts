@@ -632,7 +632,7 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'lumen_update_scene',
     domain: 'render',
     family: 'render',
-    summary: 'Trigger a Lumen scene update via the manage_render bridge action.',
+    summary: 'Ask Lumen to recapture its scene (r.Lumen.Scene.Recapture) in the editor world, after big changes to lighting or geometry; nothing checks that Lumen is on, so executed only means the command ran.',
     whenToUse: ['Lumen GI must refresh the scene capture.'],
     whenNotToUse: ['A full lighting build is needed (use build_lighting via build_environment).'],
     inputProps: {},

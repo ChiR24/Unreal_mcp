@@ -139,7 +139,7 @@ export const OPERATIONS_POWER_RECORDS: readonly CapabilityRecordSource[] = [
     parentTool: 'manage_level', action: 'list_levels', dispatchAction: 'list_levels',
     domain: D, family: 'query',
     topics: ['all levels', 'maps in project', 'list maps', 'available levels', 'what maps exist', 'what levels exist'],
-    summary: 'List all levels available in the project.',
+    summary: 'List the open level and its streaming sublevels (each with loaded, visible and streamingState) and every map the asset registry knows (allMaps, which can be long and comes in pages past 100k characters). Read from the editor world even while Play In Editor runs; the persistent level\'s name is short, a sublevel\'s is its package path.',
     whenToUse: ['The set of available level assets must be enumerated.'],
     whenNotToUse: ['A single level summary is needed; use get_summary.'],
     inputProps: {},

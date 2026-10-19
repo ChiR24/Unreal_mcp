@@ -76,7 +76,7 @@ bool UEngineWireSubsystem::HandleNiagaraGraphAction(
     UNiagaraScript* TargetScript = nullptr;
 
     // Spawn script by default; scriptType "Update" selects the update script.
-    const bool bUpdateScript = GetJsonStringField(Payload, TEXT("scriptType")) == TEXT("Update");
+    const bool bUpdateScript = GetJsonStringField(Payload, TEXT("scriptType")).Equals(TEXT("Update"), ESearchCase::IgnoreCase);
     if (EmitterName.IsEmpty())
     {
         TargetScript = bUpdateScript ? System->GetSystemUpdateScript() : System->GetSystemSpawnScript();

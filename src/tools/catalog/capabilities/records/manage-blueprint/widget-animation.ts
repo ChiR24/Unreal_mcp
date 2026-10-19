@@ -115,7 +115,7 @@ export const WIDGET_ANIMATION_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'delete_animation',
     family: FAMILY,
     domain: DOMAIN,
-    summary: 'Delete a named animation from a Widget Blueprint.',
+    summary: 'Delete a named animation (matched in any case) from a Widget Blueprint, its tracks with it, and save the Blueprint; saved says whether the save worked.',
     whenToUse: ['An animation is obsolete and must be removed from the Widget Blueprint.'],
     whenNotToUse: ['The animation should only stop playing (change its loop or play mode instead).'],
     inputProps: { widgetPath: P.widgetPath, animationName: P.animationName },

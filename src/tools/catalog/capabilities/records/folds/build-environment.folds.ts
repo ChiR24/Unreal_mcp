@@ -114,7 +114,7 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'set_light_channel', selector: 'channelTarget',
-    summary: 'Set lighting channels on a light or on an actor\'s primitives.',
+    summary: 'Turn lighting channels 0-2 (channels, or one channel) on or off (enabled, default true): on a light, which then lights only primitives sharing a channel with it, or on every primitive of an actor. One undo step; the playing actor while Play In Editor runs.',
     members: { light: 'set_light_channel', actor: 'set_actor_light_channel' },
   },
   // spline
@@ -159,7 +159,7 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
   // weather
   {
     primary: 'configure_weather', selector: 'setting',
-    summary: 'Configure weather effects: rain, snow, lightning, wind.',
+    summary: 'Configure a weather actor: rain, snow or lightning set a Cascade particle system (particleSystemPath) on an Emitter labelled WeatherEmitter, SnowEmitter or LightningEmitter; wind spawns or tunes a WindDirectionalSource (direction as its rotation, speed and other settings by property name). Nothing is simulated beyond what those actors do; not saved.',
     topics: ['rain', 'snow', 'lightning', 'wind', 'weather', 'add snow', 'add rain, snow, wind or lightning'],
     members: { rain: 'configure_rain_particles', snow: 'configure_snow_particles', lightning: 'configure_lightning', wind: 'configure_wind' },
   },
