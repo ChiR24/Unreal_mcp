@@ -120,6 +120,18 @@ export type CapabilityDispatchBy = {
    * runs the one variant its parameters point to (see inferSelector).
    */
   readonly declaredBy?: { readonly [param: string]: readonly string[] };
+  /**
+   * Dispatched action -> what that action's own record requires beyond the
+   * union schema, which keeps only what every variant requires: a draw
+   * without location passed the gateway and failed in the engine.
+   */
+  readonly requires?: { readonly [action: string]: CapabilityVariantRequirement };
+};
+
+export type CapabilityVariantRequirement = {
+  readonly required?: readonly string[];
+  /** At least one of these must be sent, as in requiredOneOf. */
+  readonly oneOf?: readonly string[];
 };
 
 export type CapabilityRouting = {

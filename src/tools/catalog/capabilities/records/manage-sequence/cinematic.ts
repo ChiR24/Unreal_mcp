@@ -70,8 +70,14 @@ export const CINEMATIC_RECORDS: readonly CapabilityRecordSource[] = [
     // (:120-121), and endFrame through GetDuration when durationFrames is
     // absent. masterSequencePath and mapPath are never read; the sequence
     // is saved unconditionally (McpSafeAssetSave :122), so save is dead too.
-    inputProps: { name: P.name, sequencePath: P.sequencePath, path: P.path, assetPath: P.assetPath, frameRate: P.frameRate, startFrame: P.startFrame, durationFrames: A.durationFrames, endFrame: int('Playback range end frame (exclusive); used when durationFrames is absent.') },
-    required: ['name', 'sequencePath'],
+    inputProps: {
+      name: { ...P.name, description: 'Name of the new sequence; alone, it is created in path (default /Game/Cinematics).' },
+      sequencePath: { ...P.sequencePath, description: 'Full asset path of the new sequence (/Game/Cinematics/SEQ_Master), or, sent with name, the folder it goes in.' },
+      path: { ...P.path, description: 'Folder for name (default /Game/Cinematics).' },
+      assetPath: { ...P.assetPath, description: 'Alias of sequencePath.' },
+      frameRate: P.frameRate, startFrame: P.startFrame, durationFrames: A.durationFrames, endFrame: int('Playback range end frame (exclusive); used when durationFrames is absent.'),
+    },
+    required: [], requiredOneOf: ['name', 'sequencePath', 'assetPath'],
     outputProps: { sequencePath: P.sequencePath },
     outputRequired: ['sequencePath'],
     effect: 'write', latency: 'interactive', resources: 'medium', plugins: SEQ_PLUGINS,
@@ -238,6 +244,6 @@ export const CINEMATIC_RECORDS: readonly CapabilityRecordSource[] = [
     { actorName: P.actorName, bindingGuid: A.bindingGuid, ...SECTION_RANGE }),
   trackRecord('sequence.cinematic.add_property_track', 'add_property_track',
     'Add a property track to animate a specific property on a bound actor.',
-    { property: P.property, actorName: P.actorName, bindingGuid: A.bindingGuid, propertyName: A.propertyName, propertyPath: A.propertyPath, propertyType: A.propertyType, ...SECTION_RANGE },
-    { required: ['path', 'property'], example: { actorName: 'CineCameraActor_1', property: 'Transform' }, requiredOneOf: ['actorName', 'bindingGuid'] }),
+    { property: { ...P.property, description: 'Property to animate, by name (Transform, Intensity...); required, or send it as propertyName (refused with INVALID_ARGUMENT when neither is sent).' }, actorName: P.actorName, bindingGuid: A.bindingGuid, propertyName: A.propertyName, propertyPath: A.propertyPath, propertyType: A.propertyType, ...SECTION_RANGE },
+    { required: ['path'], example: { actorName: 'CineCameraActor_1', property: 'Transform' }, requiredOneOf: ['actorName', 'bindingGuid'] }),
 ];

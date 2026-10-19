@@ -4,6 +4,7 @@
 #include "EdGraph/EdGraph.h"
 #include "Engine/Blueprint.h"
 #include "K2Node_CallFunction.h"
+#include "K2Node_Variable.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 
 // The nodes that call Member of this Blueprint (on itself, or on another object of its class), outside Except, each
@@ -24,4 +25,23 @@ inline TArray<FString> McpBlueprintCallersOf(UBlueprint* Blueprint, FName Member
         }
     }
     return Callers;
+}
+
+// The get and set nodes of this Blueprint's own member variable Name, each as "Graph (node <guid>)": the ones
+// FBlueprintEditorUtils::RemoveMemberVariable deletes with the variable (RemoveVariableNodes, self only), which
+// leaves whatever they were wired to unwired.
+inline TArray<FString> McpBlueprintVariableUsers(UBlueprint* Blueprint, FName Name)
+{
+    TArray<UK2Node_Variable*> Nodes;
+    FBlueprintEditorUtils::GetAllNodesOfClass(Blueprint, Nodes);
+    TArray<FString> Users;
+    for (UK2Node_Variable* Node : Nodes)
+    {
+        UClass* Self = Blueprint->GeneratedClass;
+        if (Node->GetVarName() == Name && Node->VariableReference.GetMemberParentClass(Self) == Self)
+        {
+            Users.Add(FString::Printf(TEXT("%s (node %s)"), *Node->GetGraph()->GetName(), *Node->NodeGuid.ToString()));
+        }
+    }
+    return Users;
 }

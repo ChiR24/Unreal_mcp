@@ -88,7 +88,7 @@ export const MEDIA_RECORDS: readonly CapabilityRecordSource[] = [
     // Native HandleCreateMediaSoundComponent (MediaComponents.cpp) adds the
     // component to a level actor; it creates no asset, so there is no path.
     inputProps: { name: P.name, mediaPlayerPath: P.mediaPlayerPath, actorName: P.actorName, targetActor: A.targetActor, componentName: A.componentName, activate: A.activate },
-    required: ['actorName', 'mediaPlayerPath'],
+    required: ['mediaPlayerPath'], requiredOneOf: ['actorName', 'targetActor'],
     effect: 'write', latency: 'interactive', resources: 'low', plugins: MEDIA_PLUGINS,
     exampleInput: { action: 'create_media_sound_component', actorName: 'MediaScreen', mediaPlayerPath: '/Game/Media/MP_Cinematics', componentName: 'MediaSound' },
   }),

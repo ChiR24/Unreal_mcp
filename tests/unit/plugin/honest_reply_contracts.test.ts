@@ -60,6 +60,49 @@ describe('handlers answer what they did', () => {
     expect(source).not.toContain('bShowConfirmation)');
   });
 
+  // Without the dialog the engine deletes nothing when any asset of the batch is still referenced, and
+  // bulk_delete said only BULK_DELETE_FAILED: one used mesh kept a whole folder. It keeps the used ones,
+  // with the same outside-referencer check delete uses, and names them.
+  // Renumbering an enum by hand (SetEnums with fresh values) left every stored value after a removed or moved
+  // entry reading as another one. The engine's own remove and move remap loaded data and pins by name.
+  it('enum value removal and reorder go through the enum editor, and a refused delete names its users', () => {
+    const values = code('AssetWorkflow', 'Enums', 'Values.cpp');
+    const removal = values.slice(values.indexOf('TEXT("remove_enum_value")'), values.indexOf('TEXT("rename_enum_value")'));
+    expect(removal).toContain('FEnumEditorUtils::RemoveEnumeratorFromUserDefinedEnum(Enum, Index);');
+    expect(removal).not.toContain('MCP_SET_ENUMS');
+    const reorder = values.slice(values.indexOf('TEXT("reorder_enum_values")'), values.indexOf('TEXT("set_enum_value_metadata")'));
+    expect(reorder).toContain('FEnumEditorUtils::MoveEnumeratorInUserDefinedEnum(Enum, From, Target);');
+    expect(reorder).not.toContain('MCP_SET_ENUMS');
+    expect(code('AssetWorkflow', 'Enums', 'LifecycleEnums.cpp')).toContain('OutResult->SetArrayField(TEXT("referencedBy"), McpHandlerUtils::ToJsonStringArray(Users));');
+  });
+
+  it('remove_variable names the get/set nodes the engine deletes with it', () => {
+    const source = code('Blueprint', 'Variables', 'McpBPVariableRemovalRename.cpp');
+    expect(source.indexOf('McpBlueprintVariableUsers(Blueprint, FName(*Name))'))
+      .toBeLessThan(source.indexOf('FBlueprintEditorUtils::RemoveMemberVariable(Blueprint, FName(*Name));'));
+    expect(source).toContain('Result->SetArrayField(TEXT("removedNodes"), McpHandlerUtils::ToJsonStringArray(RemovedNodes));');
+  });
+
+  // UEditorAssetLibrary::DeleteAsset is a force delete; remove_track and remove_keyframe called Modify() with no
+  // transaction open, so neither could be undone; a key removal naming no track cleared the whole sequence.
+  it('sequence removals refuse a sequence in use, open a transaction, and need a track or binding', () => {
+    const library = code('Sequence', 'McpSeqAssetLibrary.cpp');
+    expect(library.indexOf('TEXT("SEQUENCE_IN_USE")')).toBeLessThan(library.indexOf('UEditorAssetLibrary::DeleteAsset(Path)'));
+    expect(code('Sequence', 'McpSeqTrackState.cpp')).toContain('FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Remove Sequence Track"))');
+    const keys = code('Sequence', 'Metadata', 'McpSeqKeyRemoval.cpp');
+    expect(keys).toContain('FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Remove Sequence Keys"))');
+    expect(keys).toContain('TEXT("TRACK_REQUIRED")');
+  });
+
+  it('bulk_delete keeps an asset others use and names it, and deletes the rest', () => {
+    const source = code('AssetWorkflow', 'Operations', 'McpAssetBulkDelete.cpp');
+    expect(source).toContain('McpOutsideReferencers(DeleteSet[Index], DeleteSet)');
+    expect(source).toContain('Row->SetArrayField(TEXT("referencedBy"), McpHandlerUtils::ToJsonStringArray(Users));');
+    expect(source).toContain('TEXT("ASSETS_REFERENCED")');
+    expect(source).not.toContain('SetNumberField(TEXT("deleted")');
+    expect(code('AssetWorkflow', 'Operations', 'McpAssetAssetMutation.cpp')).toContain('return McpOutsideReferencers(PackageName, DeleteSet);');
+  });
+
   // Five failed saves of a texture were reported saved: true because an older file was still on
   // disk. And the first overwrite of an existing texture in a session built a new object over the
   // unloaded asset, whose source the editor then refused to save.

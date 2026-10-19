@@ -460,7 +460,8 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
     whenToUse: ['A class\'s hierarchy and defaults must be read.'],
     whenNotToUse: ['A specific instance is in scope; use inspect_object.'],
     inputProps: { className: P.className, classPath: P.classPath },
-    required: ['className'],
+    // Read as className, else classPath.
+    required: [], requiredOneOf: ['className', 'classPath'],
     effect: 'read',
     exampleInput: { action: 'inspect_class', className: 'PointLight' },
     exampleOutput: { success: true, message: 'Class inspected', className: 'PointLight', classPath: '/Script/Engine.PointLight', parentClass: 'Light' },

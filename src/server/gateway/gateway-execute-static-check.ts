@@ -13,7 +13,9 @@ import { buildNextCall, closestMatches, MAX_SUGGESTIONS } from './gateway-guidan
 import type { ExecuteTarget } from './gateway-execute-resolve.js';
 import { capabilityIndex } from './gateway-capability-index.js';
 import { primaryLegacyPair } from './gateway-execute-lookup.js';
-import { applyFoldedPins, inferSelector, requestedAction, unreadVariantParams } from './gateway-dispatch-by.js';
+import {
+  applyFoldedPins, inferSelector, missingVariantRequirement, requestedAction, resolveDispatchAction, unreadVariantParams
+} from './gateway-dispatch-by.js';
 import { applyDeclaredDefaults, coerceVectorShapes, validateAgainstCapabilitySchema, VIOLATION_GATEWAY_CODES } from './gateway-schema-validate.js';
 import { findControlKeyInParams, validateExecutionOptions } from './gateway-option-validate.js';
 import type { ResolvedFailure } from './gateway-execute-envelope.js';
@@ -38,7 +40,10 @@ function validateInput(target: ExecuteTarget, params: Record<string, unknown>): 
     ? { ...params, action: record.routing.dispatchAction }
     : params;
 
-  const violation = validateAgainstCapabilitySchema(candidate, record.schemas.input);
+  // A folded family's union schema keeps only what every variant requires; the variant that will
+  // run is held to its own record's requirements as well.
+  const violation = validateAgainstCapabilitySchema(candidate, record.schemas.input)
+    ?? missingVariantRequirement(record, resolveDispatchAction(target, params) ?? '', params);
   if (violation === undefined) return undefined;
 
   const declared = declaredParameterNames(record.schemas.input);

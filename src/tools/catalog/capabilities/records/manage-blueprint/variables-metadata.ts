@@ -40,9 +40,9 @@ export const VARIABLES_METADATA_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'remove_variable',
     family: FAMILY,
     domain: DOMAIN,
-    summary: 'Permanently remove one or more member variables from a Blueprint.',
+    summary: 'Permanently remove one or more member variables from a Blueprint, then compile and save it. Every get and set node of the variable is deleted with it, as the editor does once you confirm, leaving what they were wired to unwired; removedNodes names them. A name the Blueprint lacks removes nothing (NOT_FOUND, listing its variables).',
     whenToUse: ['A member variable must be permanently deleted.', 'Several variables must go at once: variableNames removes them under one consent, with one compile and save.'],
-    whenNotToUse: ['The variable should be renamed rather than removed.'],
+    whenNotToUse: ['The variable should be renamed rather than removed (use edit_variable rename_variable: its nodes follow the new name).', 'Logic still reads the variable: find its nodes first (inspect_graph) and rewire them, or they are deleted and their pins left unwired.'],
     inputProps: {
       blueprintPath: P.blueprintPath, variableName: P.variableName,
       variableNames: {
@@ -55,6 +55,7 @@ export const VARIABLES_METADATA_RECORDS: readonly CapabilityRecordSource[] = [
     outputProps: {
       variableName: P.variableName,
       variableNames: { type: 'array', items: { type: 'string' }, description: 'Every variable removed, in the Blueprint\'s own spelling.' },
+      removedNodes: { type: 'array', items: { type: 'string' }, description: 'The get and set nodes deleted with the variables, each "Graph (node <guid>)".' },
     },
     effect: 'destructive',
     behavior: { safeToRetry: false },

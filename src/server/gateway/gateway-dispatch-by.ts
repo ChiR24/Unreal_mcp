@@ -12,6 +12,7 @@
 
 import type { CapabilityRecord, LegacyCapabilityId } from '../../tools/catalog/capabilities/model.js';
 import type { ExecuteTarget } from './gateway-execute-resolve.js';
+import type { SchemaViolation } from './gateway-schema-validate.js';
 
 /** The action the caller actually named: the legacy pair, or the alias id's action segment. */
 export function requestedAction(target: ExecuteTarget): string | undefined {
@@ -101,6 +102,59 @@ export function unreadVariantParams(
       ? []
       : [`${name} is read only when ${dispatchBy.param} is ${owners.join(' or ')}; this ${dispatchBy.param}=${selected} call did not use it.`];
   });
+}
+
+/**
+ * What the dispatched variant's own record requires beyond the union schema (mirror of
+ * McpCheckVariantRequirements in McpFoldVariantRules.cpp). The union keeps only what every variant
+ * requires, so debugOp=draw without location reached the engine and failed there.
+ */
+export function missingVariantRequirement(
+  record: CapabilityRecord,
+  action: string,
+  params: Record<string, unknown>
+): SchemaViolation | undefined {
+  const dispatchBy = record.routing.dispatchBy;
+  const requirement = dispatchBy?.requires !== undefined && Object.hasOwn(dispatchBy.requires, action)
+    ? dispatchBy.requires[action]
+    : undefined;
+  if (dispatchBy === undefined || requirement === undefined) return undefined;
+  const value = params[dispatchBy.param];
+  const when = typeof value === 'string' ? `when ${dispatchBy.param} is ${value}` : `when action is ${action}`;
+  const missing = (requirement.required ?? []).filter((name) => !Object.hasOwn(params, name));
+  if (missing.length > 0) {
+    return {
+      reason: 'missing-required',
+      pointer: `/${missing[0]}`,
+      message: missing.length === 1
+        ? `Missing required parameter '${missing[0]}' ${when}`
+        : `Missing required parameters ${when}: ${missing.join(', ')}`
+    };
+  }
+  const group = requirement.oneOf ?? [];
+  return group.length > 0 && !group.some((name) => Object.hasOwn(params, name))
+    ? { reason: 'required-one-of', pointer: '/requiredOneOf', message: `At least one of [${group.join(', ')}] must be provided ${when}` }
+    : undefined;
+}
+
+/** Selector value -> what its variant requires beyond the union schema; a one-of group reads 'a|b'. */
+export function variantRequired(record: CapabilityRecord): Record<string, string[]> | undefined {
+  const dispatchBy = record.routing.dispatchBy;
+  if (dispatchBy?.requires === undefined) return undefined;
+  const out: Record<string, string[]> = {};
+  for (const [value, action] of Object.entries(dispatchBy.actions)) {
+    const requirement = Object.hasOwn(dispatchBy.requires, action) ? dispatchBy.requires[action] : undefined;
+    if (requirement === undefined) continue;
+    out[value] = [...(requirement.required ?? []), ...(requirement.oneOf === undefined ? [] : [requirement.oneOf.join('|')])];
+  }
+  return Object.keys(out).length === 0 ? undefined : out;
+}
+
+/** The selector values whose variant requires this parameter though the union schema does not. */
+export function variantsRequiring(record: CapabilityRecord, name: string): string[] | undefined {
+  const required = variantRequired(record);
+  const values = required === undefined ? [] : Object.keys(required).filter((value) => required[value]?.includes(name));
+  return values.length === 0 ? undefined : values;
 }
 
 /**

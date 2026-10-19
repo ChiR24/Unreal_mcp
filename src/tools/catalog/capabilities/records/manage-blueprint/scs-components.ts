@@ -49,7 +49,8 @@ export const SCS_COMPONENTS_RECORDS: readonly CapabilityRecordSource[] = [
       blueprintPath: P.blueprintPath, componentClass: P.componentClass, componentType: P.componentType, componentName: P.componentName, parentComponent: P.parentComponent, attachTo: P.attachTo, properties: P.properties,
       meshPath: P.meshPath, materialPath: P.materialPath, location: P.location, rotation: P.rotation, scale: P.scale, save: SCS_SAVE,
     },
-    required: ['blueprintPath', 'componentClass', 'componentName'],
+    // The class is read as componentClass, else componentType.
+    required: ['blueprintPath', 'componentName'], requiredOneOf: ['componentClass', 'componentType'],
     outputProps: { componentName: P.componentName, partWarnings: PART_WARNINGS },
     outputRequired: ['componentName'],
     effect: 'write',
@@ -73,7 +74,8 @@ export const SCS_COMPONENTS_RECORDS: readonly CapabilityRecordSource[] = [
       blueprintPath: P.blueprintPath, componentClass: P.componentClass, componentType: P.componentType, componentName: P.componentName, parentComponent: P.parentComponent, attachTo: P.attachTo, meshPath: P.meshPath, materialPath: P.materialPath,
       location: P.location, rotation: P.rotation, scale: P.scale, properties: P.properties, save: SCS_SAVE,
     },
-    required: ['blueprintPath', 'componentClass', 'componentName'],
+    // The class is read as componentClass, else componentType.
+    required: ['blueprintPath', 'componentName'], requiredOneOf: ['componentClass', 'componentType'],
     outputProps: {
       componentName: P.componentName,
       componentClass: P.componentClass,

@@ -14,6 +14,7 @@
 #include "Domains/Sequence/McpSeqFrameRate.h"
 #include "Domains/Sequence/McpSeqEditorSupport.h"
 #include "Domains/Sequence/Validation/McpSeqFrameMath.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 
 #include "Channels/MovieSceneBoolChannel.h"
 #include "Channels/MovieSceneByteChannel.h"
@@ -82,6 +83,13 @@ bool HandleRemoveKeyframe(UEngineWireSubsystem *Subsystem,
       GetJsonStringField(LocalPayload, TEXT("trackName"));
   const FString BindingFilter =
       GetJsonStringField(LocalPayload, TEXT("bindingId"));
+  // With neither filter every track matched, so a call naming only the sequence cleared every key in it.
+  if (TrackFilter.IsEmpty() && BindingFilter.IsEmpty()) {
+    Subsystem->SendAutomationResponse(RequestingSocket, RequestId, false,
+                                      TEXT("Name the track (trackName) or the binding (bindingId) whose keys go; nothing was removed."),
+                                      nullptr, TEXT("TRACK_REQUIRED"));
+    return true;
+  }
   // frame removes the keys on one frame, frames those on each listed frame; neither clears the track. An empty
   // frames list is refused rather than read as "clear everything".
   TArray<double> FrameValues;
@@ -128,6 +136,9 @@ bool HandleRemoveKeyframe(UEngineWireSubsystem *Subsystem,
   TArray<UMovieSceneTrack *> Candidates;
   CollectTracksByName(MovieScene, TrackFilter, BindingFilter, Candidates);
 
+  // No transaction was open, so the Modify() calls below recorded nothing and the removal had no undo.
+  FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Remove Sequence Keys")),
+                                          EMcpMutationDurability::EditorStateOnly, {Sequence, MovieScene});
   int32 MatchedTracks = 0;
   int32 RemovedKeys = 0;
   for (UMovieSceneTrack *Track : Candidates) {

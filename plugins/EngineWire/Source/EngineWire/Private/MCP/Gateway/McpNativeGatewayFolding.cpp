@@ -89,6 +89,11 @@ bool ParseDispatchBy(const TSharedPtr<FJsonObject>& Record, FMcpCapabilityRecord
 		// on a conversion that no longer exists.
 		Out.DispatchByActions.Add(FString(*Entry.Key), Action);
 	}
+	const TSharedPtr<FJsonObject>* Requires = nullptr;
+	if ((*DispatchBy)->TryGetObjectField(TEXT("requires"), Requires) && Requires)
+	{
+		Out.DispatchByRequires = *Requires;
+	}
 	// declaredBy: parameter -> the selector values whose variant declares it.
 	const TSharedPtr<FJsonObject>* DeclaredBy = nullptr;
 	if (!(*DispatchBy)->TryGetObjectField(TEXT("declaredBy"), DeclaredBy) || !DeclaredBy)
@@ -123,6 +128,7 @@ bool McpParseRecordFolding(
 	Out.DispatchBySelector.Reset();
 	Out.DispatchByActions.Reset();
 	Out.DispatchByDeclaredBy.Reset();
+	Out.DispatchByRequires.Reset();
 	return ParseLegacyPairs(Record, Out, OutError) && ParseDispatchBy(Record, Out, OutError);
 }
 

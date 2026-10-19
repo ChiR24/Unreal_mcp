@@ -18,19 +18,19 @@ export const GEOMETRY_DEFORM_RECORDS: readonly CapabilityRecordSource[] = [
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'bend', plugins: PLUGIN,
     family: F, summary: 'Bend a dynamic mesh along an axis.', whenToUse: ['A mesh must be bent.'], whenNotToUse: ['A twist is needed; use twist.'],
-    inputProps: { actorName: P.actorName, targetActor: P.targetActor, axis: P.axis, strength: P.strength }, required: ['axis'], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'low',
+    inputProps: { actorName: P.actorName, targetActor: P.targetActor, axis: { ...P.axis, description: 'Axis to deform along: X, Y or Z (default Z).' }, strength: P.strength }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'bend', targetActor: 'DM_A', axis: 'X', strength: 30 },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'twist', plugins: PLUGIN,
     family: F, summary: 'Twist a dynamic mesh along an axis.', whenToUse: ['A mesh must be twisted.'], whenNotToUse: ['A bend is needed; use bend.'],
-    inputProps: { actorName: P.actorName, targetActor: P.targetActor, axis: P.axis, strength: P.strength }, required: ['axis'], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'low',
+    inputProps: { actorName: P.actorName, targetActor: P.targetActor, axis: { ...P.axis, description: 'Axis to deform along: X, Y or Z (default Z).' }, strength: P.strength }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'twist', targetActor: 'DM_A', axis: 'Z', strength: 45 },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'taper', plugins: PLUGIN,
     family: F, summary: 'Taper a dynamic mesh along an axis.', whenToUse: ['A mesh must be tapered.'], whenNotToUse: ['A stretch is needed; use stretch.'],
-    inputProps: { actorName: P.actorName, targetActor: P.targetActor, axis: P.axis, strength: P.strength }, required: ['axis'], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'low',
+    inputProps: { actorName: P.actorName, targetActor: P.targetActor, axis: { ...P.axis, description: 'Axis to deform along: X, Y or Z (default Z).' }, strength: P.strength }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'taper', targetActor: 'DM_A', axis: 'Y', strength: 20 },
   }),
   buildWorldRecord({
@@ -54,7 +54,7 @@ export const GEOMETRY_DEFORM_RECORDS: readonly CapabilityRecordSource[] = [
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'stretch', plugins: PLUGIN,
     family: F, summary: 'Stretch a dynamic mesh along an axis.', whenToUse: ['A mesh must be stretched.'], whenNotToUse: ['A taper is needed; use taper.'],
-    inputProps: { actorName: P.actorName, targetActor: P.targetActor, axis: P.axis, strength: P.strength }, required: ['axis'], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'low',
+    inputProps: { actorName: P.actorName, targetActor: P.targetActor, axis: { ...P.axis, description: 'Axis to deform along: X, Y or Z (default Z).' }, strength: P.strength }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'stretch', targetActor: 'DM_A', axis: 'Z', strength: 1.5 },
   }),
   buildWorldRecord({

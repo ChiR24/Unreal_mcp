@@ -335,7 +335,7 @@ describe('folded family: an omitted selector follows the parameters', () => {
     await execute({
       tool: 'manage_asset',
       action: 'add_material_node',
-      params: { materialPath: MATERIAL, operations: [], code: 'return 1;' },
+      params: { materialPath: MATERIAL, nodeType: 'Lerp', operations: [], code: 'return 1;' },
       consent: GRANT
     });
     await execute({

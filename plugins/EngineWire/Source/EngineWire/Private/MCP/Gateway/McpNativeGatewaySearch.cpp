@@ -5,6 +5,7 @@
 #include "MCP/Gateway/McpNativeGatewayCapabilityStore.h"
 #include "MCP/Gateway/McpNativeGatewayGuidance.h"
 #include "MCP/Gateway/McpNativeGatewaySearchMatch.h"
+#include "MCP/Execute/Request/McpFoldVariantRules.h"
 
 namespace
 {
@@ -64,6 +65,8 @@ TSharedPtr<FJsonObject> SearchSignature(const FMcpCapabilityRecord& Record)
 	Signature->SetObjectField(TEXT("required"), Required);
 	const TArray<TSharedPtr<FJsonValue>>* OneOf = nullptr;
 	if (Input->TryGetArrayField(TEXT("requiredOneOf"), OneOf) && OneOf) Signature->SetArrayField(TEXT("oneOf"), *OneOf);
+	const TSharedPtr<FJsonObject> VariantRequired = McpVariantRequired(Record);
+	if (VariantRequired.IsValid()) Signature->SetObjectField(TEXT("variantRequired"), VariantRequired);
 	if (!Record.DispatchBySelector.IsEmpty())
 	{
 		auto Selector = MakeShared<FJsonObject>();

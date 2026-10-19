@@ -1,6 +1,7 @@
 #include "Domains/Blueprint/McpBPActionContext.h"
 #include "Foundation/BridgeHelpers/Assets/McpAssetSaveRegistry.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPAssetLoad.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpBPCallers.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPCompileHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
@@ -63,8 +64,12 @@ bool HandleBlueprintRemoveRenameVariable(const FBlueprintActionContext &Context)
       return true;
     }
 
+    // The engine deletes the variable's get and set nodes with it, as the editor does once you confirm; the
+    // reply named none of them, so logic they fed went unwired without a word. removedNodes lists them.
     TArray<TSharedPtr<FJsonValue>> Removed;
+    TArray<FString> RemovedNodes;
     for (const FString &Name : VarNames) {
+      RemovedNodes.Append(McpBlueprintVariableUsers(Blueprint, FName(*Name)));
       FBlueprintEditorUtils::RemoveMemberVariable(Blueprint, FName(*Name));
       Removed.Add(MakeShared<FJsonValueString>(Name));
     }
@@ -79,11 +84,14 @@ bool HandleBlueprintRemoveRenameVariable(const FBlueprintActionContext &Context)
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("variableName"), VarNames[0]);
     Result->SetArrayField(TEXT("variableNames"), Removed);
+    Result->SetArrayField(TEXT("removedNodes"), McpHandlerUtils::ToJsonStringArray(RemovedNodes));
     Result->SetStringField(TEXT("blueprintPath"), LocalNormalized);
     // Add verification data for the blueprint asset
     McpHandlerUtils::AddVerification(Result, Blueprint);
+    const TCHAR* Them = VarNames.Num() > 1 ? TEXT("them") : TEXT("it");
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
-                           FString::Printf(TEXT("Removed %s."), *FString::Join(VarNames, TEXT(", "))), Result);
+                           FString::Printf(TEXT("Removed %s and the %d get/set nodes that used %s (removedNodes)."),
+                                           *FString::Join(VarNames, TEXT(", ")), RemovedNodes.Num(), Them), Result);
     return true;
   }
 

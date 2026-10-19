@@ -17,7 +17,8 @@ export const CAMERA_RECORDS: readonly CapabilityRecordSource[] = [
     whenToUse: ['The camera must follow or focus on a specific actor in PIE.'],
     whenNotToUse: ['A fixed camera position is preferred (use set_camera).'],
     inputProps: { actorName: P.actorName, name: P.name, objectPath: P.objectPath, location: P.location, rotation: P.rotation, blendTime: P.blendTime },
-    required: ['actorName'],
+    // The handler takes the actor as actorName, objectPath or name, in that order.
+    required: [], requiredOneOf: ['actorName', 'objectPath', 'name'],
     effect: 'read',
    
     exampleInput: { action: 'set_view_target', actorName: 'BP_CameraTarget' },
@@ -30,7 +31,8 @@ export const CAMERA_RECORDS: readonly CapabilityRecordSource[] = [
     whenToUse: ['The camera view target must be set using the set_game_view_target alias.'],
     whenNotToUse: ['A fixed camera position is preferred (use set_camera).'],
     inputProps: { actorName: P.actorName, name: P.name, objectPath: P.objectPath, location: P.location, rotation: P.rotation, blendTime: P.blendTime },
-    required: ['actorName'],
+    // The handler takes the actor as actorName, objectPath or name, in that order.
+    required: [], requiredOneOf: ['actorName', 'objectPath', 'name'],
     effect: 'read',
    
     exampleInput: { action: 'set_game_view_target', actorName: 'BP_CameraTarget' },

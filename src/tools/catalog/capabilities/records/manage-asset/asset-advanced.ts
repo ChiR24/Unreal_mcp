@@ -11,6 +11,15 @@ import { schema } from '../shared/record-presets.js';
 const ASSET_PATH = str('Canonical /Game asset path.');
 const OK = schema({ success: bool('Operation succeeded.'), details: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Operation details.' } }, ['success']);
 
+const BULK_DELETE_OUT = schema({
+  success: bool('False when nothing was deleted: every asset is used by others (ASSETS_REFERENCED), none of the paths exists (NO_VALID_ASSETS), or something loaded still holds them (BULK_DELETE_FAILED).'),
+  deleted: arr('The paths actually gone after the delete (an empty folder replies an empty list).'),
+  requested: num('Assets found to delete, the kept ones included.'),
+  remaining: arr('Paths the engine left on disk although they were not referenced.'),
+  referenced: arrObj('Assets kept because others use them, each {path, referencedBy: the packages that use it}.'),
+  details: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Operation details.' },
+}, ['success']);
+
 const MESH_MATERIAL_ENTRY: JsonObject = {
   type: 'object',
   properties: {
@@ -227,16 +236,16 @@ export const ASSET_ADVANCED_RECORDS: readonly RecordSpec[] = [
       whenNotToUse: ['One asset or one folder gets a new name (use asset.rename).'],
       examples: [ex('Re-prefix every mesh in a folder', { folderPath: '/Game/Meshes', searchText: 'Mesh_', replaceText: 'SM_', checkoutFiles: true }, { success: true })] }
   ),
-  r('bulk_delete', 'asset', 'Delete multiple assets by folder or explicit paths.',
-    schema({ folderPath: str('Folder path for bulk operation.'), assetPaths: arr('Explicit asset paths to delete.'), fixupRedirectors: bool('Default true. After a delete that removed something, resolve the redirectors that already exist in the folders the assets were deleted from, subfolders included: their referencers are re-pointed and re-saved, then the redirectors nothing points at any more are removed. Deleting creates no redirectors, so this only cleans older ones.') }, [], ['assetPaths', 'folderPath']),
-    OK, DESTRUCTIVE, DESTRUCTIVE_POLICY, HIGH,
+  r('bulk_delete', 'asset', 'Delete every asset under folderPath (subfolders included; the folders stay) or the listed assetPaths, then resolve old redirectors there. An asset something outside the delete still uses is kept and listed in referenced with what uses it; deleted lists the paths actually gone.',
+    schema({ folderPath: str('Folder whose assets are deleted, subfolders included; the folders themselves stay. Used when assetPaths is absent; only assets the registry has already indexed are found.'), assetPaths: arr('Assets to delete (/Game paths); one that does not exist is skipped.'), fixupRedirectors: bool('Default true. After a delete that removed something, resolve the redirectors that already exist in the folders the assets were deleted from, subfolders included: their referencers are re-pointed and re-saved, then the redirectors nothing points at any more are removed. Deleting creates no redirectors, so this only cleans older ones.') }, [], ['assetPaths', 'folderPath']),
+    BULK_DELETE_OUT, DESTRUCTIVE, DESTRUCTIVE_POLICY, HIGH,
     { dispatchAction: 'bulk_delete',
       whenToUse: [
         'Every asset under a folder, or a long list of assets, must be deleted in one call.',
         'Old redirectors in the folders the assets are deleted from must be resolved in the same call (on by default).',
       ],
       whenNotToUse: [
-        'Assets that other assets still use must be kept, with the blocked ones reported (use asset.delete).',
+        'An asset others still use must go anyway, breaking what uses it (use asset.delete with force).',
         'The folder itself must be removed as well as its assets (use asset.delete with the folder path).',
       ],
       examples: [ex('Delete two obsolete assets and clean redirectors', { assetPaths: ['/Game/MCPTest/OldA', '/Game/MCPTest/OldB'], fixupRedirectors: true }, { success: true })] }

@@ -7198,8 +7198,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Faces with no area (slivers or a repeated corner)."
         },
         "deleted": {
-          "type": "string",
-          "description": "Name of the deleted actor."
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The deleted actors."
+        },
+        "deletedCount": {
+          "type": "number",
+          "description": "How many actors were deleted."
         },
         "deltaSeconds": {
           "type": "number",
@@ -7600,11 +7607,23 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "With labels: image/png."
         },
         "missing": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "actorNames: the names that matched no actor."
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Names no actor answered to."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "actorNames: the names that matched no actor."
+            }
+          ],
+          "description": "Names no actor answered to."
         },
         "missingComponents": {
           "type": "array",
@@ -9516,7 +9535,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "items": {
                 "type": "string"
               },
-              "description": "Explicit asset paths to delete."
+              "description": "Assets to delete (/Game paths); one that does not exist is skipped."
             },
             {
               "type": "array",
@@ -10322,7 +10341,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "nodeId": {
           "type": "string",
-          "description": "Node ID to delete."
+          "description": "A node, by the id the graph lists: material and function report only the connections touching it; node_details, node_properties and node_connections describe it; node_chain and subgraph start from it (node_chain also takes it as startNodeId; subgraph needs it unless orphansOnly is true)."
         },
         "nodeIds": {
           "oneOf": [
@@ -10378,7 +10397,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "nodeType": {
           "type": "string",
-          "description": "Node type to find."
+          "description": "Material expression to add: its class name without the MaterialExpression prefix (Constant, Lerp, TextureSample, ScalarParameter, Multiply...) or the full class name; Float, Color, TexCoord and StaticSwitch are accepted as short names. An unknown type adds nothing (UNKNOWN_TYPE)."
         },
         "noiseType": {
           "type": "string",
@@ -11007,7 +11026,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "varGuid": {
           "type": "string",
-          "description": "Stable member GUID."
+          "description": "Stable member GUID, as get_struct lists it; pass this or memberName."
         },
         "vectors": {
           "type": "array",
@@ -11351,6 +11370,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "null"
           ],
           "description": "Opaque cursor for the current page, or null when the page was requested without one."
+        },
+        "deleted": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The paths actually gone after the delete (an empty folder replies an empty list)."
         },
         "description": {
           "type": "string",
@@ -12073,6 +12099,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "\"preserved\" when the source layout was reproduced under /Game, \"at-risk\" when destinationPath relocated it."
         },
+        "referenced": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Assets kept because others use them, each {path, referencedBy: the packages that use it}."
+        },
         "refused": {
           "type": "array",
           "items": {
@@ -12089,6 +12123,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "What the relocation did not do, and why: a folder or name already taken (nothing moves then), an assetName with no single asset to name, or content left where Fab put it. Absent when everything asked for was done."
         },
+        "remaining": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Paths the engine left on disk although they were not referenced."
+        },
         "removed": {
           "type": "array",
           "items": {
@@ -12099,6 +12140,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "removedCount": {
           "type": "number",
           "description": "How many nodes were deleted."
+        },
+        "requested": {
+          "type": "number",
+          "description": "Assets found to delete, the kept ones included."
         },
         "results": {
           "type": "array",
@@ -12216,7 +12261,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "success": {
           "type": "boolean",
-          "description": "Listing was described."
+          "description": "False when nothing was deleted: every asset is used by others (ASSETS_REFERENCED), none of the paths exists (NO_VALID_ASSETS), or something loaded still holds them (BULK_DELETE_FAILED)."
         },
         "supportsRunningEngine": {
           "type": "boolean",
@@ -13716,11 +13761,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "fromNodeId": {
           "type": "string",
-          "description": "Source node identifier for a pin connection."
+          "description": "Node the wire leaves (its nodeGuid, an 8+ hex prefix of it, or its node name); required, or send sourceNode."
         },
         "fromPinName": {
           "type": "string",
-          "description": "Source pin name for a pin connection."
+          "description": "Output pin it leaves from; required, or send sourcePin."
         },
         "functionName": {
           "type": "string",
@@ -14302,11 +14347,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "posX": {
           "type": "number",
-          "description": "X coordinate for node placement."
+          "description": "X position of the new node in the graph (default 0, the origin). add_node and create_node move a node given no position right past any node at the origin, and refuse a given spot another node covers (NODE_OVERLAP, with a suggestedPosition)."
         },
         "posY": {
           "type": "number",
-          "description": "Y coordinate for node placement."
+          "description": "Y position of the new node in the graph (default 0)."
         },
         "position": {
           "type": "object",
@@ -14533,7 +14578,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "sourcePin": {
           "type": "string",
-          "description": "Source pin name on the originating node."
+          "description": "Output pin name accepted in place of fromPinName."
         },
         "spawnClass": {
           "type": "string",
@@ -14599,7 +14644,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "targetPin": {
           "type": "string",
-          "description": "Target pin name on the destination node."
+          "description": "Input pin name accepted in place of toPinName."
         },
         "text": {
           "type": "string",
@@ -14636,11 +14681,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "toNodeId": {
           "type": "string",
-          "description": "Target node identifier for a pin connection."
+          "description": "Node the wire enters; required, or send targetNode."
         },
         "toPinName": {
           "type": "string",
-          "description": "Target pin name for a pin connection."
+          "description": "Input pin it enters; required, or send targetPin."
         },
         "top": {
           "type": "number",
@@ -15828,6 +15873,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "removedCount": {
           "type": "number",
           "description": "How many nodes were deleted."
+        },
+        "removedNodes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The get and set nodes deleted with the variables, each \"Graph (node <guid>)\"."
         },
         "removedWidget": {
           "type": "string",
@@ -18180,7 +18232,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "axis": {
           "type": "string",
-          "description": "Axis: X, Y, or Z."
+          "description": "Axis to deform along: X, Y or Z (default Z)."
         },
         "b": {
           "type": "number",
@@ -19701,7 +19753,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "steps": {
           "type": "integer",
-          "description": "Number of steps."
+          "description": "Number of steps (default 8; numSteps wins when both are sent)."
         },
         "strength": {
           "type": "number",
@@ -22839,7 +22891,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "assetPath": {
           "type": "string",
-          "description": "Canonical /Game asset path."
+          "description": "Alias of graphPath."
         },
         "classPath": {
           "type": "string",
@@ -22949,7 +23001,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "path": {
           "type": "string",
-          "description": "Canonical /Game directory path."
+          "description": "Folder for name (default /Game/PCG)."
         },
         "posX": {
           "type": "number",
@@ -23141,7 +23193,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "assetPath": {
           "type": "string",
-          "description": "Canonical /Game asset path."
+          "description": "Alias of sequencePath."
         },
         "audioOutput": {
           "type": "boolean",
@@ -23161,7 +23213,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "bindingId": {
           "type": "string",
-          "description": "Camera binding GUID for a camera cut section (required on a camera cut track)."
+          "description": "Binding GUID (get_properties bindings): only the tracks of that bound object; with trackName, only those of its tracks the name picks."
         },
         "burnIn": {
           "type": "object",
@@ -23798,7 +23850,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "property": {
           "type": "string",
-          "description": "Property name to keyframe (Transform, Location, Rotation, Scale)."
+          "description": "Property to animate, by name (Transform, Intensity...); required, or send it as propertyName (refused with INVALID_ARGUMENT when neither is sent)."
         },
         "propertyName": {
           "type": "string",

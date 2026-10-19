@@ -20,8 +20,10 @@ export const GRAPH_PINS_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Connect two graph pins (exec or data) by nodeGuid and pin name. A pin the editor adds on demand is added: a Sequence\'s then_2, a Make Array\'s [2], a Switch on Int\'s case 7 (a new switch has only Default).',
     whenToUse: ['An exec or data link between two existing nodes must be created.'],
     whenNotToUse: ['Links must be broken (use break_pin_links).'],
-    inputProps: { blueprintPath: P.blueprintPath, graphName: P.graphName, fromNodeId: P.fromNodeId, fromPinName: P.fromPinName, toNodeId: P.toNodeId, toPinName: P.toPinName, sourceNode: P.sourceNode, targetNode: P.targetNode, sourcePin: P.sourcePin, targetPin: P.targetPin },
-    required: ['blueprintPath', 'fromNodeId', 'fromPinName', 'toNodeId', 'toPinName'],
+    // Each endpoint is also read under its alias (sourceNode, sourcePin, targetNode, targetPin), which one
+    // requiredOneOf group cannot express, so the four are checked by the handler (NODE_NOT_FOUND names the end that missed).
+    inputProps: { blueprintPath: P.blueprintPath, graphName: P.graphName, fromNodeId: { ...P.fromNodeId, description: 'Node the wire leaves (its nodeGuid, an 8+ hex prefix of it, or its node name); required, or send sourceNode.' }, fromPinName: { ...P.fromPinName, description: 'Output pin it leaves from; required, or send sourcePin.' }, toNodeId: { ...P.toNodeId, description: 'Node the wire enters; required, or send targetNode.' }, toPinName: { ...P.toPinName, description: 'Input pin it enters; required, or send targetPin.' }, sourceNode: P.sourceNode, targetNode: P.targetNode, sourcePin: { ...P.sourcePin, description: 'Output pin name accepted in place of fromPinName.' }, targetPin: { ...P.targetPin, description: 'Input pin name accepted in place of toPinName.' } },
+    required: ['blueprintPath'],
     // The handler already reported which pins it resolved and whether the asset
     // was saved, but the default closed output schema stripped all of it, so a
     // successful link was indistinguishable from a no-op: "Pin connection

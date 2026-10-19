@@ -76,9 +76,30 @@ function minimalValidObject(schema: JsonRecord): JsonRecord {
   return out;
 }
 
-/** The smallest params payload that satisfies a capability's declared contract. */
+/**
+ * The smallest params payload that satisfies a capability's declared contract, including what the
+ * folded variant it selects requires beyond the union schema (routing.dispatchBy.requires).
+ */
 export function minimalValidParams(record: CapabilityRecord): JsonRecord {
-  return minimalValidObject(record.schemas.input);
+  const params = minimalValidObject(record.schemas.input);
+  const properties = record.schemas.input.properties;
+  const requirement = selectedRequirement(record, params);
+  for (const name of requirement?.required ?? []) {
+    if (!(name in params)) params[name] = validValueFor(properties[name]);
+  }
+  const first = requirement?.oneOf?.[0];
+  if (first !== undefined && !requirement?.oneOf?.some((name) => name in params)) params[first] = validValueFor(properties[first]);
+  return params;
+}
+
+/** What the variant a payload selects (its selector, else the selector's default) requires beyond the union. */
+export function selectedRequirement(record: CapabilityRecord, params: JsonRecord): { required?: readonly string[]; oneOf?: readonly string[] } | undefined {
+  const dispatchBy = record.routing.dispatchBy;
+  if (dispatchBy?.requires === undefined) return undefined;
+  const selector = record.schemas.input.properties[dispatchBy.param];
+  const value = params[dispatchBy.param] ?? (isRecord(selector) ? selector.default : undefined);
+  const action = typeof value === 'string' && Object.hasOwn(dispatchBy.actions, value) ? dispatchBy.actions[value] : undefined;
+  return action !== undefined && Object.hasOwn(dispatchBy.requires, action) ? dispatchBy.requires[action] : undefined;
 }
 
 /** Lets a fixture reach the output stage instead of failing on a stand-in payload. */
@@ -155,7 +176,9 @@ export function invalidVariants(record: CapabilityRecord): readonly InvalidVaria
   );
   const [firstRequired] = requiredNames(schema).filter((name) => !declaresDefault.has(name));
   if (firstRequired !== undefined) {
-    const withoutRequired = { ...base };
+    // From the union-only payload: a variant's own parameters would name the variant, and an omitted
+    // selector is inferred from them, so the call would not be missing anything.
+    const withoutRequired = minimalValidObject(schema);
     delete withoutRequired[firstRequired];
     variants.push({
       rule: 'missing-required',

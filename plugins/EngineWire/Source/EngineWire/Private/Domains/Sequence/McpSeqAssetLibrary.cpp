@@ -2,6 +2,7 @@
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
 #include "Domains/Sequence/McpSeqEditorSupport.h"
 #include "Domains/Sequence/Metadata/McpSeqMetadata.h"
+#include "Domains/AssetWorkflow/Operations/McpAssetBulkSelection.h"
 
 bool UEngineWireSubsystem::HandleSequenceList(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
@@ -195,6 +196,19 @@ bool UEngineWireSubsystem::HandleSequenceDelete(
     return true;
   }
 
+  // UEditorAssetLibrary::DeleteAsset is a force delete: it never checked what plays the sequence (a Level
+  // Sequence Actor kept a broken reference) and may clear the undo history. Refuse while anything uses it.
+  const FString Package = FPackageName::ObjectPathToPackageName(Path);
+  const TArray<FString> Users = McpOutsideReferencers(Package, {Package});
+  if (Users.Num() > 0) {
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+    Resp->SetArrayField(TEXT("referencedBy"), McpHandlerUtils::ToJsonStringArray(Users));
+    SendAutomationResponse(Socket, RequestId, false,
+                           FString::Printf(TEXT("Sequence %s is still used by %d asset(s) (referencedBy): remove those uses first, or delete it anyway with manage_asset delete and force."),
+                                           *Path, Users.Num()),
+                           Resp, TEXT("SEQUENCE_IN_USE"));
+    return true;
+  }
   if (UEditorAssetLibrary::DeleteAsset(Path)) {
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetStringField(TEXT("deletedPath"), Path);

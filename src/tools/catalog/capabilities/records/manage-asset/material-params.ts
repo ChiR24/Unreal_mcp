@@ -18,7 +18,7 @@ const SAVE = bool('Save the asset afterwards. Defaults to true; pass false to ke
 // A material info read can narrow its output: which sections, and which nodes' connections.
 const INFO_FILTERS = {
   filter: str('Which sections to return: parameters, expressions, connections, or all (default).'),
-  nodeId: str('Only report connections touching this node.'),
+  nodeId: str('A node, by the id the graph lists: material and function report only the connections touching it; node_details, node_properties and node_connections describe it; node_chain and subgraph start from it (node_chain also takes it as startNodeId; subgraph needs it unless orphansOnly is true).'),
   nodeIds: arr('Only report connections touching these nodes.'),
 };
 const OK = schema({ success: bool('Operation succeeded.'), details: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Operation details.' } }, ['success']);

@@ -1,5 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/Sequence/McpSeqEditorSupport.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 #include "Sections/MovieSceneSkeletalAnimationSection.h"
 
 namespace {
@@ -217,13 +218,11 @@ bool UEngineWireSubsystem::HandleSequenceRemoveTrack(
   if (!Track)
     return true;
   const FString RemovedTrackName = Track->GetName();
-  // Modify() has to precede the mutation or the transaction records the
-  // post-change state and undo cannot bring the track back. MarkPackageDirty
-  // is what makes the removal reach disk at all: without it the editor never
-  // even offers to save, so a restart resurrected every removed track --
-  // the same defect sequence_remove_actor already documents.
-  Sequence->Modify();
-  MovieScene->Modify();
+  // The Modify() calls recorded nothing: no transaction was open, so undo could not bring the track back.
+  // The scope opens one and captures both before the change. MarkPackageDirty is what makes the removal
+  // reach disk at all: without it the editor never offered to save, and a restart resurrected the track.
+  FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Remove Sequence Track")),
+                                          EMcpMutationDurability::EditorStateOnly, {Sequence, MovieScene});
   // RemoveTrack only searches the Tracks array, so it silently fails on the
   // camera cut track, which lives in its own member and needs its own call.
   if (Track == MovieScene->GetCameraCutTrack()) {

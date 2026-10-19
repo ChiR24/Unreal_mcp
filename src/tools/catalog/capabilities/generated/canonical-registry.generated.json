@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "6975550b0add0a32",
+  "catalogRevision": "4cd02be45848fdb0",
   "recordCount": 416,
   "records": [
     {
@@ -821,13 +821,25 @@
             "value": [
               "set_value"
             ]
+          },
+          "requires": {
+            "set_anim_graph_node_value": {
+              "required": [
+                "propertyName",
+                "value"
+              ],
+              "oneOf": [
+                "nodeName",
+                "nodeId"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "ca04dba7da327667c2f9759d4a91abf57ef3c59ac9939056b27b2ad40adc9c12",
-        "content": "3f4c8c39e5ed1d68b730bc29ddcbd24204fe094c66af5fc4e55d39ca2ea90fef"
+        "content": "f6841e3093805a9a083fad1108d8a20662f6d7a1acc939e253dac9f4014cf81d"
       }
     },
     {
@@ -1674,13 +1686,37 @@
             "boneTracks": [
               "procedural"
             ]
+          },
+          "requires": {
+            "create_animation_asset": {
+              "required": [
+                "skeletonPath"
+              ]
+            },
+            "create_montage": {
+              "oneOf": [
+                "skeletonPath",
+                "animationPath"
+              ]
+            },
+            "create_pose_library": {
+              "required": [
+                "sourceAnimationPath"
+              ]
+            },
+            "create_procedural_anim": {
+              "required": [
+                "skeletonPath",
+                "boneTracks"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "1986d95ad40086f81feced740dfc98727fd520cc603ee6c7cecbbb80f00d9556",
-        "content": "beb52b4879719785d0ff50dce3d3bddc1c626ef4e7b7bfddc4ead54340bccb8c"
+        "content": "cd5fe03f334e706c82b0c7dfbea8763445f6ecad650742cc913338d7c2e2b953"
       }
     },
     {
@@ -2810,13 +2846,54 @@
             "connectToOutput": [
               "create_blend_tree"
             ]
+          },
+          "requires": {
+            "add_cached_pose": {
+              "required": [
+                "cacheName"
+              ]
+            },
+            "add_slot_node": {
+              "required": [
+                "slotName"
+              ]
+            },
+            "add_state": {
+              "required": [
+                "stateName"
+              ]
+            },
+            "add_transition": {
+              "required": [
+                "fromState",
+                "toState"
+              ]
+            },
+            "set_transition_rules": {
+              "required": [
+                "fromState",
+                "toState"
+              ]
+            },
+            "delete_transition": {
+              "required": [
+                "fromState",
+                "toState"
+              ]
+            },
+            "create_blend_tree": {
+              "oneOf": [
+                "name",
+                "treeName"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "de92c8a8ddd6f559eddb1cc7b64ccae8e3cb51afc043f1f370840861cf72245e",
-        "content": "d26dad78d504c8c66a3742a532ae41fb501f649a46dcd7758efc8fa3616afa51"
+        "content": "649ad00d1a70dd75a84ba907fe3ce97293945f9046aa2b8405025b4f35b6ffe6"
       }
     },
     {
@@ -3295,13 +3372,53 @@
             "pitch": [
               "add_aim_offset_sample"
             ]
+          },
+          "requires": {
+            "add_bone_track": {
+              "required": [
+                "boneName"
+              ]
+            },
+            "set_bone_key": {
+              "required": [
+                "boneName"
+              ]
+            },
+            "set_curve_key": {
+              "required": [
+                "curveName"
+              ]
+            },
+            "add_notify": {
+              "oneOf": [
+                "notifyClass",
+                "notifyName"
+              ]
+            },
+            "add_notify_state": {
+              "oneOf": [
+                "notifyClass",
+                "notifyName"
+              ]
+            },
+            "set_sequence_length": {
+              "oneOf": [
+                "numFrames",
+                "length"
+              ]
+            },
+            "add_aim_offset_sample": {
+              "required": [
+                "assetPath"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "383976b855fd7c843cdd32c21056f2c8dee2dde6c5a092aabb377ba6a42f2986",
-        "content": "30df2982b338f9fc946a5cea78ec7e75a7ee1fe641af26739d39e3d0af9a4507"
+        "content": "b66151346d0ef1c876363861a56c4e3fca8c9eee4e757d96a929c5f1f287fa11"
       }
     },
     {
@@ -3578,13 +3695,20 @@
             "rebuildBlendParameters": [
               "rebuild"
             ]
+          },
+          "requires": {
+            "add_blend_sample": {
+              "required": [
+                "animationPath"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "e89732af7575efdd98675ffbaf8cbef42dfe790c7aa999b173a1e768c7b0b99c",
-        "content": "63a76614d50b0b2131fc24256ce92bb5801b16ee868cf3a3d0743f79c1f4a5b8"
+        "content": "2272353e3cc15f87270839e63014bed66ee85e422cd8f41e813cd2c276caae5e"
       }
     },
     {
@@ -4210,13 +4334,36 @@
               "set_blend_in",
               "set_blend_out"
             ]
+          },
+          "requires": {
+            "add_montage_notify": {
+              "oneOf": [
+                "notifyClass",
+                "notifyName"
+              ]
+            },
+            "add_montage_section": {
+              "required": [
+                "sectionName"
+              ]
+            },
+            "add_montage_slot": {
+              "required": [
+                "animationPath"
+              ]
+            },
+            "set_section_timing": {
+              "required": [
+                "sectionName"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "7d8363e77dad40c89a00bd721505ff0840935cecaf667d11f754416b5edd5d9f",
-        "content": "3055c5d16d966f9bd3001cc958aaa30fdeab5399e9182d32714b49c5d2647894"
+        "content": "892ca98fcaae042b38c03a7d6d54b52f9c613ad39401a66ea4027c05dcda033d"
       }
     },
     {
@@ -4558,13 +4705,39 @@
             "addMissing": [
               "set_value"
             ]
+          },
+          "requires": {
+            "create_morph_target": {
+              "required": [
+                "skeletalMeshPath",
+                "morphTargetName"
+              ]
+            },
+            "set_morph_target_deltas": {
+              "required": [
+                "skeletalMeshPath",
+                "morphTargetName"
+              ]
+            },
+            "import_morph_targets": {
+              "required": [
+                "skeletalMeshPath",
+                "sourceMeshPath"
+              ]
+            },
+            "set_morph_target_value": {
+              "required": [
+                "actorName",
+                "morphTargetName"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "07610052e16d1cb24beb51dc71dcabd89df89a4002cf0d97a66407113fde21f3",
-        "content": "7e7206387fa27aa07c75246098ae1dc80c0f4044d29d832da824ad00c1ed35c0"
+        "content": "d72e06fc136536c2775d1485d4c1cf332025f66ae9a386307ce0f1e0793aec78"
       }
     },
     {
@@ -5074,13 +5247,63 @@
             "meshPath": [
               "assign"
             ]
+          },
+          "requires": {
+            "add_physics_body": {
+              "required": [
+                "physicsAssetPath",
+                "boneName"
+              ]
+            },
+            "configure_physics_body": {
+              "required": [
+                "physicsAssetPath",
+                "boneName"
+              ]
+            },
+            "modify_physics_body": {
+              "required": [
+                "physicsAssetPath",
+                "boneName"
+              ]
+            },
+            "add_physics_constraint": {
+              "required": [
+                "physicsAssetPath",
+                "bodyA",
+                "bodyB"
+              ]
+            },
+            "set_physics_constraint": {
+              "required": [
+                "physicsAssetPath",
+                "bodyA",
+                "bodyB"
+              ]
+            },
+            "configure_constraint_limits": {
+              "required": [
+                "physicsAssetPath",
+                "bodyA",
+                "bodyB"
+              ]
+            },
+            "set_physics_asset": {
+              "required": [
+                "physicsAssetPath"
+              ],
+              "oneOf": [
+                "skeletalMeshPath",
+                "meshPath"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "39d71a1d53ddc235c3afb0963341e97170f329bc9a8eb1938b47f5ac4211099e",
-        "content": "36124800b46bb8e9c6720a00f3de6105307c937b2c5809db970e4edd5fcf3b9f"
+        "content": "7188db34de34b1e6ebebf6364a23fa4a40a89ba899dde99160d26ab4bd07e98e"
       }
     },
     {
@@ -5346,13 +5569,45 @@
             "targetBoneName": [
               "create_virtual_bone"
             ]
+          },
+          "requires": {
+            "add_bone": {
+              "required": [
+                "skeletonPath",
+                "boneName"
+              ]
+            },
+            "rename_bone": {
+              "required": [
+                "skeletonPath",
+                "boneName"
+              ]
+            },
+            "set_bone_parent": {
+              "required": [
+                "skeletonPath",
+                "boneName",
+                "parentBoneName"
+              ]
+            },
+            "set_bone_transform": {
+              "required": [
+                "boneName"
+              ]
+            },
+            "create_virtual_bone": {
+              "required": [
+                "skeletonPath",
+                "sourceBoneName"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "b10235ae6dc1ce1582a70039603b9ad0d42b93232be76450cd43831594bfe26c",
-        "content": "17d56f4614944c8eaf70becd901c0433bc8304158d3235e95fcaf410ced3808e"
+        "content": "3e90406fc187cef062e2f688bebd36f21e5617216299cd46afd4ddd861d2abca"
       }
     },
     {
@@ -5698,13 +5953,41 @@
             "threshold": [
               "prune"
             ]
+          },
+          "requires": {
+            "auto_skin_weights": {
+              "required": [
+                "skeletalMeshPath"
+              ]
+            },
+            "set_vertex_weights": {
+              "required": [
+                "skeletalMeshPath"
+              ]
+            },
+            "copy_weights": {
+              "required": [
+                "sourceMeshPath",
+                "targetMeshPath"
+              ]
+            },
+            "mirror_weights": {
+              "required": [
+                "skeletalMeshPath"
+              ]
+            },
+            "prune_weights": {
+              "required": [
+                "skeletalMeshPath"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "8c17667891218dcaa20349a480258dd1bd3c310ae43d61160ebd77bb60983e9a",
-        "content": "6e56ab8b295fe3068a6f969f7447d9fb811fa6018d5d6681d84ac3adb3daf83f"
+        "content": "6ba5c201cb0af721a75ce97b30206dedff0aa14666a1dd267f49dc17b4967043"
       }
     },
     {
@@ -6507,13 +6790,66 @@
               "physics_asset",
               "physics_bodies"
             ]
+          },
+          "requires": {
+            "get_skeleton_info": {
+              "oneOf": [
+                "skeletonPath",
+                "skeletalMeshPath"
+              ]
+            },
+            "list_bones": {
+              "oneOf": [
+                "skeletonPath",
+                "skeletalMeshPath"
+              ]
+            },
+            "list_sockets": {
+              "oneOf": [
+                "skeletonPath",
+                "skeletalMeshPath"
+              ]
+            },
+            "list_virtual_bones": {
+              "oneOf": [
+                "skeletonPath",
+                "skeletalMeshPath"
+              ]
+            },
+            "get_bone_transform": {
+              "required": [
+                "boneName"
+              ],
+              "oneOf": [
+                "skeletonPath",
+                "skeletalMeshPath"
+              ]
+            },
+            "list_morph_targets": {
+              "oneOf": [
+                "skeletalMeshPath",
+                "meshPath"
+              ]
+            },
+            "get_physics_asset_info": {
+              "oneOf": [
+                "physicsAssetPath",
+                "skeletalMeshPath"
+              ]
+            },
+            "list_physics_bodies": {
+              "oneOf": [
+                "physicsAssetPath",
+                "skeletalMeshPath"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "aee94e29d7d00f4b817197e625376a84c94a2a6774c250662aba7ea38c65f67b",
-        "content": "3ab8308b4f97801c9580a9d3e20b4d1fa649c3e635b75f6869deab786b5a0199"
+        "content": "74ae3255d8d1ed097c6a2c882e532d8573d4e6d9eb99a0e91467a43f602157e8"
       }
     },
     {
@@ -7010,13 +7346,36 @@
             "physicsAssetPath": [
               "physics_body"
             ]
+          },
+          "requires": {
+            "remove_bone": {
+              "required": [
+                "skeletonPath",
+                "boneName"
+              ]
+            },
+            "remove_socket": {
+              "required": [
+                "socketName"
+              ],
+              "oneOf": [
+                "skeletonPath",
+                "skeletalMeshPath"
+              ]
+            },
+            "remove_physics_body": {
+              "required": [
+                "physicsAssetPath",
+                "boneName"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "d14b8d8892ac5325a63d5cedbf49bfc93b5d0bbad48f17fa4b94791aac6b987d",
-        "content": "a839517cf449503cc759f3fd445c4d68a1503a6d8ee25cfb2fad5c4dbe9e9559"
+        "content": "d2f95cc1b1c26f0819238ed62bbba031daa921c59384dd5a37b962ab5e018e74"
       }
     },
     {
@@ -7285,13 +7644,36 @@
             "autoMap": [
               "chain_mapping"
             ]
+          },
+          "requires": {
+            "setup_ik": {
+              "required": [
+                "name",
+                "skeletonPath"
+              ]
+            },
+            "create_ik_rig": {
+              "required": [
+                "name"
+              ]
+            },
+            "create_ik_retargeter": {
+              "required": [
+                "name"
+              ]
+            },
+            "set_retarget_chain_mapping": {
+              "required": [
+                "assetPath"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "30cab5c53492a4cd94f7ba226aa424ccdc232e492948a408831866e66a01159c",
-        "content": "00490e3381426644f5d4a0dfff108576441f579271d3316790b92ac139fe821d"
+        "content": "a883e1766409ba105c68ce842d1776e4386e506b3e7bc5e0d0f5f3f7e3b7f149"
       }
     },
     {
@@ -7934,13 +8316,13 @@
         "topics": [
           "bulk_delete"
         ],
-        "summary": "Delete multiple assets by folder or explicit paths.",
+        "summary": "Delete every asset under folderPath (subfolders included; the folders stay) or the listed assetPaths, then resolve old redirectors there. An asset something outside the delete still uses is kept and listed in referenced with what uses it; deleted lists the paths actually gone.",
         "whenToUse": [
           "Every asset under a folder, or a long list of assets, must be deleted in one call.",
           "Old redirectors in the folders the assets are deleted from must be resolved in the same call (on by default)."
         ],
         "whenNotToUse": [
-          "Assets that other assets still use must be kept, with the blocked ones reported (use asset.delete).",
+          "An asset others still use must go anyway, breaking what uses it (use asset.delete with force).",
           "The folder itself must be removed as well as its assets (use asset.delete with the folder path)."
         ]
       },
@@ -7951,14 +8333,14 @@
           "properties": {
             "folderPath": {
               "type": "string",
-              "description": "Folder path for bulk operation."
+              "description": "Folder whose assets are deleted, subfolders included; the folders themselves stay. Used when assetPaths is absent; only assets the registry has already indexed are found."
             },
             "assetPaths": {
               "type": "array",
               "items": {
                 "type": "string"
               },
-              "description": "Explicit asset paths to delete."
+              "description": "Assets to delete (/Game paths); one that does not exist is skipped."
             },
             "fixupRedirectors": {
               "type": "boolean",
@@ -7978,7 +8360,33 @@
           "properties": {
             "success": {
               "type": "boolean",
-              "description": "Operation succeeded."
+              "description": "False when nothing was deleted: every asset is used by others (ASSETS_REFERENCED), none of the paths exists (NO_VALID_ASSETS), or something loaded still holds them (BULK_DELETE_FAILED)."
+            },
+            "deleted": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "The paths actually gone after the delete (an empty folder replies an empty list)."
+            },
+            "requested": {
+              "type": "number",
+              "description": "Assets found to delete, the kept ones included."
+            },
+            "remaining": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Paths the engine left on disk although they were not referenced."
+            },
+            "referenced": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Assets kept because others use them, each {path, referencedBy: the packages that use it}."
             },
             "details": {
               "type": "object",
@@ -8036,8 +8444,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "ad60c8609021ec94b6323150452cf3e014775468d8cb713caa27dc70568131c7",
-        "content": "3517be76b2f6e2769af66e19a3d37c77d7509d728d234adae66afa25b9a35f52"
+        "schema": "d3a6d79f2f7bda5eb2471f95ff57fd7dfd96d3521fb3c6a592645efbcf5dd5c0",
+        "content": "271fc826994c3f8b30888156a409112fab69c0681ac892095f7e8683f4ff3d0a"
       }
     },
     {
@@ -8748,13 +9156,20 @@
             "value": [
               "add_parameter"
             ]
+          },
+          "requires": {
+            "add_material_parameter": {
+              "required": [
+                "parameterName"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "10b5148d6f265a22d412238397b7ae000bba962663d889d864e6f16bdf55b13c",
-        "content": "0e9679efa8ac114df0f98c6f8ad69fd2cc06c5faf5ba9cbd68500f74385006b7"
+        "content": "978eacc35c61fbaa148ccd3069ae49654a0c3e1ad6cffc84de16fbe198d57f9a"
       }
     },
     {
@@ -9534,13 +9949,31 @@
             "name": [
               "megascans"
             ]
+          },
+          "requires": {
+            "add_fab_asset_to_project": {
+              "required": [
+                "listingId"
+              ]
+            },
+            "cancel_fab_import": {
+              "required": [
+                "operationId"
+              ]
+            },
+            "download_fab_asset": {
+              "required": [
+                "assetId",
+                "downloadUrl"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "3507da32efa0ac1c07a3f20e58a8c03d39213a6612bb0c0a645086c16872c957",
-        "content": "f3f00e55cc6bf78edf09f4733e335d1ee64505da391deaaace1f3105443bbcc4"
+        "content": "e64e3567b72f99d88475b1c9620dd23a194180a44d1c63bcaa391645c420482f"
       }
     },
     {
@@ -9866,13 +10299,40 @@
             "againstPath": [
               "diff"
             ]
+          },
+          "requires": {
+            "get_metadata": {
+              "required": [
+                "assetPath"
+              ]
+            },
+            "get_dependencies": {
+              "required": [
+                "assetPath"
+              ]
+            },
+            "get_asset_graph": {
+              "required": [
+                "assetPath"
+              ]
+            },
+            "validate": {
+              "required": [
+                "assetPath"
+              ]
+            },
+            "diff_asset": {
+              "required": [
+                "assetPath"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "9351f444d5fa023cccfa1722a4d4357f191a59cee12d0a8b2c05eeee665e5c7e",
-        "content": "dcc57993f3a7cc00878f3d14984ef207507388e4d39ed20d65d59b18557a765d"
+        "content": "bb3cbcfad5d57385c0081367bdad1725c9341d555f463e8e4ce4d51ba7efad61"
       }
     },
     {
@@ -10206,13 +10666,25 @@
             "assetPath": [
               "material_instances"
             ]
+          },
+          "requires": {
+            "list": {
+              "required": [
+                "path"
+              ]
+            },
+            "list_instances": {
+              "required": [
+                "assetPath"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "9d1a473aa2b9f3157816b1b44cd7f5828633cd8b9ca2074e89dd8269d91ac461",
-        "content": "b73ae91402da7ecff56b88af0a9893ce966c006a6908e78e57e197286864439d"
+        "content": "1a24d55435be813c9fbd3346cf9c3dca96388d4af2c4f4211cadaf500c3129e3"
       }
     },
     {
@@ -10593,13 +11065,39 @@
             "maxPackages": [
               "migrate"
             ]
+          },
+          "requires": {
+            "bulk_rename": {
+              "oneOf": [
+                "assetPaths",
+                "folderPath",
+                "renames"
+              ]
+            },
+            "fixup_redirectors": {
+              "oneOf": [
+                "directoryPath",
+                "path"
+              ]
+            },
+            "refresh_blueprints": {
+              "oneOf": [
+                "assetPaths",
+                "folderPath"
+              ]
+            },
+            "migrate_assets": {
+              "required": [
+                "sourceRoot"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "490c047e3d1ed249206d54c879a25421e944b101f7839a7f3ee04bee8699a66d",
-        "content": "f4e6c6a5a0e6a5f1bd180ab3fab296b774c11c06e0e0460e82f3060197e6ce66"
+        "content": "a71c590f267ebb154c59ef87fe2d5a46f6b9d8d7a2d47d857e17ca945e0e541b"
       }
     },
     {
@@ -11220,13 +11718,41 @@
             "collisionType": [
               "mesh_collision"
             ]
+          },
+          "requires": {
+            "create_thumbnail": {
+              "required": [
+                "assetPath"
+              ]
+            },
+            "generate_lods": {
+              "oneOf": [
+                "assetPath",
+                "assetPaths"
+              ]
+            },
+            "set_mesh_materials": {
+              "required": [
+                "materials"
+              ],
+              "oneOf": [
+                "assetPath",
+                "assetPaths"
+              ]
+            },
+            "set_mesh_collision": {
+              "required": [
+                "assetPath",
+                "collisionType"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "00968496d1ade57e1578d0e7cb04c7dbe04d5197d65195478f1cc7caef4f2d3e",
-        "content": "e657b68dc4f0f8ce852ac69df570a00c82231d269a7ff1013ea99076ce1e9e03"
+        "content": "d00fb8e487f39b3155c0aca69b0a866598c1a43f8269ad502e3c84ee5274d709"
       }
     },
     {
@@ -11724,13 +12250,47 @@
             "recursive": [
               "source_control_state"
             ]
+          },
+          "requires": {
+            "exists": {
+              "oneOf": [
+                "assetPath",
+                "assetPaths"
+              ]
+            },
+            "find_by_tag": {
+              "required": [
+                "tag"
+              ]
+            },
+            "find_text": {
+              "required": [
+                "searchText"
+              ]
+            },
+            "analyze_graph": {
+              "required": [
+                "assetPath"
+              ]
+            },
+            "get_material_stats": {
+              "required": [
+                "assetPath"
+              ]
+            },
+            "get_source_control_state": {
+              "oneOf": [
+                "assetPath",
+                "assetPaths"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "3d4ff7c734139c1db40706a40c3b341e43180f132a49de387d56c7e7e97909b0",
-        "content": "a9da7c896f2aebd96a9dc1a3e6da8b0c2283a981753e31f4671e8ec92436d578"
+        "content": "a84ee3ae5d162a761f2fb83646ff32a782eb3abff7f327e65a5c72affc591787"
       }
     },
     {
@@ -12423,13 +12983,20 @@
             "operationId": [
               "fab_import_status"
             ]
+          },
+          "requires": {
+            "get_fab_listing_details": {
+              "required": [
+                "listingId"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "f3f9c6a47f02b1850e5903484dfedadcde841b1968b467ea5222f5185577590c",
-        "content": "caf8c99e87f9586f860ecb7c14d1096793fdde75653301a467083e0d6fd6b054"
+        "content": "0442c1515ddb0dd24ecfdb49ba84e190b661ea536eadd5ef443db00347dd729d"
       }
     },
     {
@@ -12712,13 +13279,25 @@
             "tags": [
               "tags"
             ]
+          },
+          "requires": {
+            "set_metadata": {
+              "required": [
+                "metadata"
+              ]
+            },
+            "set_tags": {
+              "required": [
+                "tags"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "017fb775355b2f930ddcd44a77e116483d8977bfcd1d2e3a167bf88ecdd095b2",
-        "content": "cec74e4fa5694963ba3c7ac484723f5e212f0790e2c85f93f20d97f6c136c92d"
+        "content": "3f72f344f2900df429db71d5e4930014c056f9012a8938c8e5930ea5fc7cd039"
       }
     },
     {
@@ -12952,13 +13531,25 @@
               "init",
               "commit_all"
             ]
+          },
+          "requires": {
+            "source_control_submit": {
+              "required": [
+                "description"
+              ]
+            },
+            "source_control_commit_all": {
+              "required": [
+                "description"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "15648921044528f7a056a0b40b148acebc5401b5808a141ab91f159fbfe9f34f",
-        "content": "5a23afe482c09488f9ec35618296da3abd6c617b59529d42c6b8b6706384fb23"
+        "content": "b5043af0feee0f76ee4591097f02ad079e74c9fc97a3beff3c50bef864af5698"
       }
     },
     {
@@ -14000,13 +14591,40 @@
             "restartDelay": [
               "game_over"
             ]
+          },
+          "requires": {
+            "add_shoot": {
+              "required": [
+                "projectileClass"
+              ]
+            },
+            "add_turret": {
+              "required": [
+                "projectileClass"
+              ]
+            },
+            "add_spawner": {
+              "required": [
+                "spawnClass"
+              ]
+            },
+            "add_counter_hud": {
+              "required": [
+                "variableName"
+              ]
+            },
+            "add_hint": {
+              "required": [
+                "message"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "4c1fffc4f741399dddf81ff6f7ead0e40f7dd9f31dfd23eed034f5e4287b6737",
-        "content": "eb17970c6d2b9976bb6cd1c74bdaef6f32afff08d8fadb29cae3d5358be20e61"
+        "content": "933f703f786ef7bb7b41429da53d009c1e180ec653c45a930890f64839903da9"
       }
     },
     {
@@ -14523,13 +15141,20 @@
             "componentType": [
               "component"
             ]
+          },
+          "requires": {
+            "add_widget_component": {
+              "required": [
+                "componentType"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "0f827e182691a366f3a28bebb505f1f9527a00165d97222b1d45438576fcd0a4",
-        "content": "b68496aea840fe50415cf1a7d4dea205c5370c8160035c5108b0909f1125b6d1"
+        "content": "d61ae5b44ee285913f78aca12112e36cf48861fb3dede8097b1e449425b7db40"
       }
     },
     {
@@ -14634,11 +15259,11 @@
             },
             "posX": {
               "type": "number",
-              "description": "X coordinate for node placement."
+              "description": "X position of the new node in the graph (default 0, the origin). add_node and create_node move a node given no position right past any node at the origin, and refuse a given spot another node covers (NODE_OVERLAP, with a suggestedPosition)."
             },
             "posY": {
               "type": "number",
-              "description": "Y coordinate for node placement."
+              "description": "Y position of the new node in the graph (default 0)."
             },
             "parameters": {
               "type": "array",
@@ -14824,13 +15449,20 @@
             "componentName": [
               "event"
             ]
+          },
+          "requires": {
+            "add_function": {
+              "required": [
+                "functionName"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "d0748c85861697161d07c09edfec5b9a265bdec34ff11f43c4b23e29b4cc357c",
-        "content": "b39a94393c34cc1f69206eeed0ec5d19fd2ab96687879729ab9df837f3ca180f"
+        "schema": "a21ae47cfdeef7c9f039d5c8c21e5e667f2a38c9fef50bfba231e1a5eb1c8a74",
+        "content": "204c48bbb20c66c615d0e415d6dd708bd4c7765a341c52f1d6c2cc7a0fce8bdd"
       }
     },
     {
@@ -15883,13 +16515,20 @@
             "tree": [
               "widget_tree"
             ]
+          },
+          "requires": {
+            "add_widget_tree": {
+              "required": [
+                "tree"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "6db4ddc68b19035e216f87c5da984ea3faa9c20dc2b8844c898f0b3387963e62",
-        "content": "a55b4270d4700dfc6998ddbef80a0f5496b562acddfa99d586d0c569cba30534"
+        "content": "8d7bb3ba944c1dbb60652a1316ada35a674e8dcf4ebec6e746568cd9973fe345"
       }
     },
     {
@@ -16254,13 +16893,66 @@
             "namespace": [
               "localization_key"
             ]
+          },
+          "requires": {
+            "bind_text": {
+              "required": [
+                "bindingSource"
+              ]
+            },
+            "bind_color": {
+              "required": [
+                "bindingSource"
+              ]
+            },
+            "bind_enabled": {
+              "required": [
+                "bindingSource"
+              ]
+            },
+            "bind_percent": {
+              "required": [
+                "bindingSource"
+              ]
+            },
+            "bind_visibility": {
+              "required": [
+                "bindingSource"
+              ]
+            },
+            "bind_on_clicked": {
+              "required": [
+                "bindingSource"
+              ]
+            },
+            "bind_on_hovered": {
+              "required": [
+                "onHoveredFunction"
+              ]
+            },
+            "bind_on_value_changed": {
+              "required": [
+                "bindingSource"
+              ]
+            },
+            "bind_localized_text": {
+              "required": [
+                "stringTableId",
+                "stringKey"
+              ]
+            },
+            "set_localization_key": {
+              "required": [
+                "key"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "7022fed02084967d7cc4d952b90a6a2456e2a6a77413088c235916fa65193615",
-        "content": "c793df0fd417d90d3f30cbfa84262e398701567d51e57395df49d4d0faf1eb0e"
+        "content": "1be346cd79afc04c900805094cccb85b31f6ce61de8c6d0c8e784662a2981401"
       }
     },
     {
@@ -16664,13 +17356,32 @@
             "createIfMissing": [
               "ensure"
             ]
+          },
+          "requires": {
+            "create": {
+              "oneOf": [
+                "parentClass",
+                "blueprintType"
+              ]
+            },
+            "create_blueprint": {
+              "oneOf": [
+                "parentClass",
+                "blueprintType"
+              ]
+            },
+            "ensure_exists": {
+              "required": [
+                "parentClass"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "3b5b2f9168f97b345a91c9b63fd5080c189651f1d95b85f9207dd06db8401b6b",
-        "content": "beaee51fadd95474c1d5a0ff6f7e4c625db858d17b95f82b084ef3906b04b01c"
+        "content": "2f59d42aed7bb914fb9a83cc1c9393f968aea130c0487bbe28f8f833e9b24adf"
       }
     },
     {
@@ -17473,13 +18184,24 @@
             "pinName": [
               "pin_links"
             ]
+          },
+          "requires": {
+            "break_pin_links": {
+              "required": [
+                "pinName"
+              ],
+              "oneOf": [
+                "nodeId",
+                "nodeGuid"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "f712852d4f1423e3bbe408a6d3122533b45ecb472cc5e3462c69fc68387a3e63",
-        "content": "3b56646861d99570fcef7007a40da263def941d25194cf9712404db69749bb47"
+        "content": "ae990a2edd1d113c0c32d41ee63d30a931bc56f36999db6aaf1e261f21ccb73b"
       }
     },
     {
@@ -17867,11 +18589,11 @@
             },
             "posX": {
               "type": "number",
-              "description": "X coordinate for node placement."
+              "description": "X position of the new node in the graph (default 0, the origin). add_node and create_node move a node given no position right past any node at the origin, and refuse a given spot another node covers (NODE_OVERLAP, with a suggestedPosition)."
             },
             "posY": {
               "type": "number",
-              "description": "Y coordinate for node placement."
+              "description": "Y position of the new node in the graph (default 0)."
             },
             "memberName": {
               "type": "string",
@@ -17949,19 +18671,19 @@
             },
             "fromNodeId": {
               "type": "string",
-              "description": "Source node identifier for a pin connection."
+              "description": "Node the wire leaves (its nodeGuid, an 8+ hex prefix of it, or its node name); required, or send sourceNode."
             },
             "fromPinName": {
               "type": "string",
-              "description": "Source pin name for a pin connection."
+              "description": "Output pin it leaves from; required, or send sourcePin."
             },
             "toNodeId": {
               "type": "string",
-              "description": "Target node identifier for a pin connection."
+              "description": "Node the wire enters; required, or send targetNode."
             },
             "toPinName": {
               "type": "string",
-              "description": "Target pin name for a pin connection."
+              "description": "Input pin it enters; required, or send targetPin."
             },
             "sourceNode": {
               "type": "string",
@@ -17973,11 +18695,11 @@
             },
             "sourcePin": {
               "type": "string",
-              "description": "Source pin name on the originating node."
+              "description": "Output pin name accepted in place of fromPinName."
             },
             "targetPin": {
               "type": "string",
-              "description": "Target pin name on the destination node."
+              "description": "Input pin name accepted in place of toPinName."
             },
             "nodeId": {
               "type": "string",
@@ -18574,13 +19296,60 @@
             "operations": [
               "batch"
             ]
+          },
+          "requires": {
+            "add_node": {
+              "required": [
+                "nodeType"
+              ]
+            },
+            "create_node": {
+              "required": [
+                "nodeType"
+              ]
+            },
+            "create_struct_make_break_nodes": {
+              "required": [
+                "structPath",
+                "nodeType"
+              ]
+            },
+            "set_node_property": {
+              "required": [
+                "propertyName",
+                "propertyValue"
+              ],
+              "oneOf": [
+                "nodeId",
+                "nodeGuid"
+              ]
+            },
+            "set_pin_default_value": {
+              "required": [
+                "pinName"
+              ],
+              "oneOf": [
+                "nodeId",
+                "nodeGuid"
+              ]
+            },
+            "arrange_nodes": {
+              "required": [
+                "nodeIds"
+              ]
+            },
+            "build_graph": {
+              "required": [
+                "operations"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "493a24ff1d8dba67bf7e84ddf54249f34c5f7364140df83042705669668a14cc",
-        "content": "68f858e9c2f36b3be3e2d7e8ed557c7cb2ac1706fc126db00e42b1dc8c1640a3"
+        "schema": "4be643b3adb96937a4b5c6aebd65e52b63299df03c14a6fd229e26e9df0a45dd",
+        "content": "5b60a1c01a2a2e66e98fa4474bd8a30d14d2a7c6666ccd5401b4ee916d7ff632"
       }
     },
     {
@@ -18997,13 +19766,57 @@
             "propertyValue": [
               "set_property"
             ]
+          },
+          "requires": {
+            "add_scs_component": {
+              "required": [
+                "componentName"
+              ],
+              "oneOf": [
+                "componentClass",
+                "componentType"
+              ]
+            },
+            "add_component": {
+              "required": [
+                "componentName"
+              ],
+              "oneOf": [
+                "componentClass",
+                "componentType"
+              ]
+            },
+            "modify_scs": {
+              "oneOf": [
+                "operations",
+                "componentName"
+              ]
+            },
+            "reparent_scs_component": {
+              "required": [
+                "componentName",
+                "newParent"
+              ]
+            },
+            "set_scs_property": {
+              "required": [
+                "componentName",
+                "propertyName",
+                "propertyValue"
+              ]
+            },
+            "set_scs_transform": {
+              "required": [
+                "componentName"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "05283ae89944e8654017bea869806f0f98649d840ceb0e2750809e1b034bbf42",
-        "content": "3046d8363e92602c95ecc20a525c2a80a9a43384117ee94b760ba6cfca434aed"
+        "content": "c8619cf753ff94d6a713dbe318342642fe7aa3c8ea168d1743049fedc7256b03"
       }
     },
     {
@@ -19534,13 +20347,43 @@
             "propertyValue": [
               "set_default"
             ]
+          },
+          "requires": {
+            "add_variable": {
+              "required": [
+                "variableName",
+                "variableType"
+              ]
+            },
+            "rename_variable": {
+              "required": [
+                "oldName",
+                "newName"
+              ]
+            },
+            "set_variable_metadata": {
+              "oneOf": [
+                "variableName",
+                "variableNames"
+              ]
+            },
+            "set_metadata": {
+              "required": [
+                "metadata"
+              ]
+            },
+            "set_default": {
+              "required": [
+                "propertyName"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "ce9af8dcadc103377b4d7a72c7497d5faa031646790ba167ba42e2790cc67f72",
-        "content": "de19578a32c8af6bc51418111417ff61f44ae7248376366e19d67bd2e71801eb"
+        "content": "c10958a7c8553ee6bc3de7b38c023bb6a390501c65c5f56164fc086b427ce0f6"
       }
     },
     {
@@ -19860,13 +20703,20 @@
             "keys": [
               "add_keyframe"
             ]
+          },
+          "requires": {
+            "add_animation_track": {
+              "required": [
+                "trackType"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "14264c3adc18880c0bfbdf5b76849cd75d98896ea9825d1eebed5bddebfea201",
-        "content": "72b5aacd45712da209469b78ebeb9def6c796fa4d2fcba2ce97619849909adcd"
+        "content": "36f748b9c976b5332ce89ee6c7d6217474342fb32273f8bb388b4cb603fc9c2f"
       }
     },
     {
@@ -20145,13 +20995,41 @@
             "index": [
               "reparent_widget"
             ]
+          },
+          "requires": {
+            "create_widget_blueprint": {
+              "oneOf": [
+                "name",
+                "widgetPath"
+              ]
+            },
+            "set_widget_parent_class": {
+              "required": [
+                "widgetPath",
+                "parentClass"
+              ]
+            },
+            "rename_widget": {
+              "required": [
+                "widgetPath",
+                "slotName",
+                "newName"
+              ]
+            },
+            "reparent_widget": {
+              "required": [
+                "widgetPath",
+                "slotName",
+                "newParent"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "5878abcf216bd80470da11ceb1b9a248c7575cdbd5b0a01fdfd59aa6e587d852",
-        "content": "739a33199bbb9651629cf53df858de6f161101bfad3c31dc60a1cca20bb0e702"
+        "content": "0fbd1d56f170d7d623f9e2666bfd888b22a4a8852ba18427ced7167be62b303b"
       }
     },
     {
@@ -20217,7 +21095,7 @@
             },
             "propertyName": {
               "type": "string",
-              "description": "A variable or CDO property (Health, MaxWalkSpeed), or Component.Property for a component the Blueprint adds (Shield.bVisible, Mesh.RelativeLocation)."
+              "description": "A variable or CDO property (Health, MaxWalkSpeed), or Component.Property for a component the Blueprint adds (Shield.bVisible, Mesh.RelativeLocation). One it finds nowhere is refused with PROPERTY_NOT_FOUND, listing the variables. Omitted, the reply is the whole Blueprint summary, as get_blueprint gives."
             },
             "info": {
               "type": "string",
@@ -20399,8 +21277,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "ac6b679c311f9fff3b019fa7ef2df177cbc89277fa30a491726d61d0b47cae05",
-        "content": "e7e5c125a076096c91245d1fcece128c7e038b16dca11188ec6370d49b034fe0"
+        "schema": "389bb91bb53afc2d7868c54404fd4c95676bfe6641c0e211752f3ff70b3e014a",
+        "content": "e68747aaf14764e40358743cc3018066dfceda3651b3ab365d301da9d8852fb9"
       }
     },
     {
@@ -21148,13 +22026,20 @@
             "slotName": [
               "slot"
             ]
+          },
+          "requires": {
+            "get_widget_slot_info": {
+              "required": [
+                "slotName"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "b9aa334dfde18107695d6157528909655eec8b061466888a0145a924d7922a46",
-        "content": "e213d44965e8163d1b60a43cd5712e447fd48a13bf97a783903f7604e64f0c94"
+        "content": "c357ae96fb57ba5a24c18cbf43511d3ef7dc50e3f97500e860373e950877632e"
       }
     },
     {
@@ -21827,13 +22712,43 @@
             "memberClass": [
               "functions"
             ]
+          },
+          "requires": {
+            "get_graph_details": {
+              "required": [
+                "blueprintPath"
+              ]
+            },
+            "get_node_details": {
+              "required": [
+                "blueprintPath"
+              ],
+              "oneOf": [
+                "nodeId",
+                "nodeGuid"
+              ]
+            },
+            "get_pin_details": {
+              "required": [
+                "blueprintPath"
+              ],
+              "oneOf": [
+                "nodeId",
+                "nodeGuid"
+              ]
+            },
+            "find_functions": {
+              "required": [
+                "words"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "4d318a4129a5018f35c6323878c46da787fbebcc8859c80ee91abb0c522bdc59",
-        "content": "e41bb3d2d9a1fc7458e7d564ab71d90932c752ba2c93b89eee818ad7911b3ce4"
+        "content": "83fb98c875106c57f642d48df70f4590ca6065b5938280e57ccf527bfcc6592e"
       }
     },
     {
@@ -22306,13 +23221,26 @@
             "eventName": [
               "event"
             ]
+          },
+          "requires": {
+            "remove_function": {
+              "required": [
+                "functionName"
+              ]
+            },
+            "remove_event": {
+              "oneOf": [
+                "nodeId",
+                "eventName"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "304494047febc1ac2c28d2476ccbebc002a248de59a68769fa18a6741128db67",
-        "content": "a5b3aa8a2454e75d031dd24b5fc14de89276dfda67a29422bd3dc5fb5151af22"
+        "content": "16ba8aaa5fa9555e48cf60f50a9dbd14372a615c60338eac51123254247bebd7"
       }
     },
     {
@@ -22474,13 +23402,14 @@
         "topics": [
           "remove_variable"
         ],
-        "summary": "Permanently remove one or more member variables from a Blueprint.",
+        "summary": "Permanently remove one or more member variables from a Blueprint, then compile and save it. Every get and set node of the variable is deleted with it, as the editor does once you confirm, leaving what they were wired to unwired; removedNodes names them. A name the Blueprint lacks removes nothing (NOT_FOUND, listing its variables).",
         "whenToUse": [
           "A member variable must be permanently deleted.",
           "Several variables must go at once: variableNames removes them under one consent, with one compile and save."
         ],
         "whenNotToUse": [
-          "The variable should be renamed rather than removed."
+          "The variable should be renamed rather than removed (use edit_variable rename_variable: its nodes follow the new name).",
+          "Logic still reads the variable: find its nodes first (inspect_graph) and rewire them, or they are deleted and their pins left unwired."
         ]
       },
       "schemas": {
@@ -22545,6 +23474,13 @@
                 "type": "string"
               },
               "description": "Every variable removed, in the Blueprint's own spelling."
+            },
+            "removedNodes": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "The get and set nodes deleted with the variables, each \"Graph (node <guid>)\"."
             }
           },
           "required": [
@@ -22555,7 +23491,7 @@
       },
       "examples": [
         {
-          "title": "Permanently remove one or more member variables from a Blueprint.",
+          "title": "Permanently remove one or more member variables from a Blueprint, then compile and save it. Every get and set node of the variable is deleted with it, as the editor does once you confirm, leaving what they were wired to unwired; removedNodes names them. A name the Blueprint lacks removes nothing (NOT_FOUND, listing its variables).",
           "input": {
             "action": "remove_variable",
             "blueprintPath": "/Game/Blueprints/BP_Test",
@@ -22595,8 +23531,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "0f4d7ba182372b914e1da53f5cced062d63d909f7cea78db5a3ec9b9bd8551f3",
-        "content": "2d2cbedb27bf56d36346ab6b2cdc1b54f67b7aae08747b2b027fa1302914c992"
+        "schema": "b1cd3aea1912a733a25ab35aebb92393312bc57b23df34d5467dbe2fc7d2af98",
+        "content": "0247c4dc61a30a8d6eaab4d2e32c4cd374700536ba09e9399d1cc222ec9417fc"
       }
     },
     {
@@ -23527,13 +24463,45 @@
             "copyStyleFrom": [
               "style"
             ]
+          },
+          "requires": {
+            "set_position": {
+              "required": [
+                "position"
+              ]
+            },
+            "set_alignment": {
+              "required": [
+                "alignment"
+              ]
+            },
+            "set_padding": {
+              "required": [
+                "padding"
+              ]
+            },
+            "set_z_order": {
+              "required": [
+                "zOrder"
+              ]
+            },
+            "set_visibility": {
+              "required": [
+                "visibility"
+              ]
+            },
+            "set_clipping": {
+              "required": [
+                "clipping"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "b6a9ec25769c59bd6de821faf00bedd7cb78a07e652bf9013a41042b77908a39",
-        "content": "4eed55fde685623c850659f51901fb6f1cc7cc251e98afa9b82a974a73e0a7f8"
+        "content": "dead5ff099a01b357f0b30077794404c62ae70ff95ce8f59b601d273dab85d12"
       }
     },
     {
@@ -25273,13 +26241,20 @@
             "viewDistance": [
               "volumetric_fog"
             ]
+          },
+          "requires": {
+            "setup_global_illumination": {
+              "required": [
+                "method"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "1a07d7857fe583d5fbb8cb4fdaf06d8edd114d21f2c25a8f0485e99697deded4",
-        "content": "744a290529603559f52ecd40ac564c2bc87dc170e0bc68254ec8d60a928d7561"
+        "content": "cae1ee835321582ca8b8457105b950867a8e25af11ffe716aa1f83fd8713291e"
       }
     },
     {
@@ -25458,13 +26433,20 @@
             "enabled": [
               "indirect_lighting_cache"
             ]
+          },
+          "requires": {
+            "configure_indirect_lighting_cache": {
+              "required": [
+                "actorName"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "8ac34aef13a24699b3f41d590ba8937028ee8e16cc396b3530fc51e7d2465cce",
-        "content": "bfb0ca9ad77cbe88bcc8b822be6a326357b7eb693cfb865dc80d2fc2d8b1468d"
+        "content": "42ce50191e099aafd8fbe6413dddf33f6ad5d18b2dde47920223c83cc0832284"
       }
     },
     {
@@ -26570,13 +27552,20 @@
             "settings": [
               "planar_reflection"
             ]
+          },
+          "requires": {
+            "configure_capture_source": {
+              "required": [
+                "captureSource"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "78ca749a039cf31b819741befd37c64134c7c23989d6ab109906dd72cf12fa1e",
-        "content": "54df000a68ebca8fa92da17f896b42a49886790c8c2c147cd24d6b7673721765"
+        "content": "1b5baef56d973ef37124a1ed6a963330fb408ba1e53379b630a829fd7ffc7292"
       }
     },
     {
@@ -27960,13 +28949,33 @@
               "sphere_reflection",
               "box_reflection"
             ]
+          },
+          "requires": {
+            "create_sphere_reflection_capture": {
+              "oneOf": [
+                "name",
+                "actorName"
+              ]
+            },
+            "create_box_reflection_capture": {
+              "oneOf": [
+                "name",
+                "actorName"
+              ]
+            },
+            "create_planar_reflection": {
+              "oneOf": [
+                "name",
+                "actorName"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "fe77fba6a4f30b30a70c29b5c3fdc24fa5243daf941ef5b2a7f04acadfe39ed2",
-        "content": "30db59f34396c500a1e6a0e7c9124a59a8e0532872f196e2ec2fc623f144662f"
+        "content": "fb3694bc1402e37e2fb5f60fd9f437de10a609190a847e2076764dff12e28ab4"
       }
     },
     {
@@ -28509,13 +29518,21 @@
             "path": [
               "grass_type"
             ]
+          },
+          "requires": {
+            "create_landscape": {
+              "oneOf": [
+                "name",
+                "landscapeName"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "b7018f018fa2b27b651061c1ec11863c92725d64d99dba9b1a1b914234bd251d",
-        "content": "39f6cdd65fee47ecc1d2a5afa8e91669be574bf316f691a8afd68a524c625245"
+        "content": "617eb34ee08c9af65819f2f0a8a4f3f08eba4713e7b88698f4c58d2881ce5604"
       }
     },
     {
@@ -33611,13 +34628,26 @@
             "actorNames": [
               "add"
             ]
+          },
+          "requires": {
+            "add_tag": {
+              "oneOf": [
+                "actorName",
+                "actorNames"
+              ]
+            },
+            "remove_tag": {
+              "required": [
+                "actorName"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "21120507b0c7ddee3d25aedd482e09d3d56557682a3c42609a35f489d67202ec",
-        "content": "dd63882985deac69cf52a7b2ab110d95ccc40f8cd542367d52320f63b677668b"
+        "content": "7ad9bb026803f26e3e79dde5a5f6c935883206cd188fd427012d1b6af5d22bb4"
       }
     },
     {
@@ -34576,13 +35606,33 @@
             "tags": [
               "by_tag"
             ]
+          },
+          "requires": {
+            "delete": {
+              "oneOf": [
+                "actorName",
+                "actorNames"
+              ]
+            },
+            "delete_by_tag": {
+              "oneOf": [
+                "tag",
+                "tags"
+              ]
+            },
+            "destroy_actor": {
+              "oneOf": [
+                "actorName",
+                "actorNames"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "5e073932f61f951d025af198cd957884495756fa64bd6894d2c6e964bef6fa84",
-        "content": "ff036168506c564020c4c6f0ce734c180986d460e6fa2835b818ddff3a837b23"
+        "content": "edc35bf5a2666f32377c6716299902e0e4fb0efc10bd41ecf2d8d7d070938f6d"
       }
     },
     {
@@ -35091,13 +36141,45 @@
               "set_property",
               "set_properties"
             ]
+          },
+          "requires": {
+            "add_component": {
+              "required": [
+                "actorName",
+                "componentType"
+              ]
+            },
+            "remove_component": {
+              "required": [
+                "actorName",
+                "componentName"
+              ]
+            },
+            "set_component_property": {
+              "required": [
+                "componentName"
+              ],
+              "oneOf": [
+                "actorName",
+                "actorNames"
+              ]
+            },
+            "set_component_properties": {
+              "required": [
+                "componentName"
+              ],
+              "oneOf": [
+                "actorName",
+                "actorNames"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "a7b8c3d8565d3f8b5e493d6d58d8a13d9719b3c6056efdbf3e8aa31f987fb8fd",
-        "content": "d2bc30b96ee0e64ed3879c6d24e6e16c08835cfc4201fb3b923113e0e3a93033"
+        "content": "349cdf668366c61b1d389ffd25e66e2c2295063694604cb5d3f2139145aba571"
       }
     },
     {
@@ -35400,13 +36482,49 @@
             "materialPath": [
               "material"
             ]
+          },
+          "requires": {
+            "find_by_class": {
+              "oneOf": [
+                "className",
+                "class",
+                "classPath"
+              ]
+            },
+            "find_by_name": {
+              "required": [
+                "name"
+              ]
+            },
+            "find_by_mesh": {
+              "required": [
+                "meshPath"
+              ]
+            },
+            "find_by_material": {
+              "required": [
+                "materialPath"
+              ]
+            },
+            "find_actors_by_class": {
+              "oneOf": [
+                "className",
+                "class",
+                "classPath"
+              ]
+            },
+            "find_actors_by_name": {
+              "required": [
+                "name"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "783e85c1b31e1661efbfe717abd013aefd8a420d83725e37c617c07a0c31b3c7",
-        "content": "e2bd84f01786f3a4f93ef3474886475492c8f3d73f62bd7d1b9d2e15f21b9004"
+        "content": "a207a078d6f5d3497d210ef5380bd03f3c2562df2ad1db6ed2ce53635033fc34"
       }
     },
     {
@@ -36590,13 +37708,25 @@
             "startWhen": [
               "motion"
             ]
+          },
+          "requires": {
+            "get_transform": {
+              "oneOf": [
+                "actorName"
+              ]
+            },
+            "get_actor_transform": {
+              "oneOf": [
+                "actorName"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "7d96ed101d8625f016eff067111a05a73eff8265f1572b8015e07320894c276e",
-        "content": "e2ffef7324ee3c4bf936961b6caee60dd5dd8ba010d18dc23e08543b6a407482"
+        "content": "a984aad01c5b0554cac0a9b3dedf513ff8936c40c01bef55c57e2a926d5c2528"
       }
     },
     {
@@ -38712,13 +39842,45 @@
             "report": [
               "batch"
             ]
+          },
+          "requires": {
+            "spawn": {
+              "oneOf": [
+                "classPath",
+                "actorClass",
+                "meshPath"
+              ]
+            },
+            "spawn_blueprint": {
+              "required": [
+                "blueprintPath"
+              ],
+              "oneOf": [
+                "blueprintPath"
+              ]
+            },
+            "spawn_batch": {
+              "required": [
+                "actors"
+              ],
+              "oneOf": [
+                "actors"
+              ]
+            },
+            "spawn_actor": {
+              "oneOf": [
+                "classPath",
+                "actorClass",
+                "meshPath"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "2fdc87d08a2ef1e5f6f94086fdd06d38334e3f376aacfd4cd623990749df5a35",
-        "content": "f51ac8a81d3a8a91b87def53292e731719ed74c56528e2d6b7b8c5fe9528b3eb"
+        "content": "4dcd762dd625573560ffe8285fe14fb52a57e35fa7ace063cb6a4ca7505ca2a1"
       }
     },
     {
@@ -39323,13 +40485,26 @@
             "unthrottle": [
               "window"
             ]
+          },
+          "requires": {
+            "open_editor_tab": {
+              "required": [
+                "tabId"
+              ]
+            },
+            "set_preferences": {
+              "required": [
+                "category",
+                "preferences"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "f01bacaf3907b8a4284120670a7a23fd9b92f2ce08a97224b269f8c1c3b7793d",
-        "content": "f1969ef9551c8f3d5d50fd8e4bceb3e6c784614340384b72c62e3ed338bb8004"
+        "content": "77dcc95bc8826fe115214a8a810c6e271c4b5efa3ea28b60ef609f261886c790"
       }
     },
     {
@@ -39573,13 +40748,25 @@
               "show_stats",
               "hide_stats"
             ]
+          },
+          "requires": {
+            "set_view_mode": {
+              "required": [
+                "viewMode"
+              ]
+            },
+            "set_editor_mode": {
+              "required": [
+                "mode"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "60a97085918a840db26b8580e532b49bf142c40a1a65c99f1aac3672b78d4620",
-        "content": "bb5bb0287c9c358903586e0f68a50f2b3e45d5bfd5bdcc107f223c74fe786a25"
+        "content": "4b4f22d5a6c0fe176772790e27effb3c661a329e58a4d6867b370c0117df962e"
       }
     },
     {
@@ -42102,13 +43289,52 @@
             "blendTime": [
               "view_target"
             ]
+          },
+          "requires": {
+            "set_camera": {
+              "required": [
+                "location",
+                "rotation"
+              ]
+            },
+            "set_camera_fov": {
+              "required": [
+                "fov"
+              ]
+            },
+            "set_view_target": {
+              "oneOf": [
+                "actorName",
+                "objectPath",
+                "name"
+              ]
+            },
+            "set_camera_position": {
+              "required": [
+                "location",
+                "rotation"
+              ]
+            },
+            "set_viewport_camera": {
+              "required": [
+                "location",
+                "rotation"
+              ]
+            },
+            "set_game_view_target": {
+              "oneOf": [
+                "actorName",
+                "objectPath",
+                "name"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "8a3bf8b14f9cddcdfb5a4128e9b71c6b1c4c67ce452fa966ad9395ebacddf8eb",
-        "content": "2096946a6e400d2419805bed9fd83cf5ace5f21c21cbc639ee9f9e08abdf615c"
+        "content": "59d0f9e70fd93ba22e7934351118ce41fd99045fad6312bf1e61040c40ec4179"
       }
     },
     {
@@ -42299,13 +43525,25 @@
             "steps": [
               "step_frame"
             ]
+          },
+          "requires": {
+            "set_game_speed": {
+              "required": [
+                "speed"
+              ]
+            },
+            "set_fixed_delta_time": {
+              "required": [
+                "deltaTime"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "63aa2d000fe9fa86cd5e7c030a7608f416b73151a27885f11fe8087089b52db4",
-        "content": "a022212a58b2adc018fc5dcbe5833ba0da2abd6c4625cd6e98c50af8948f8877"
+        "content": "157f6b4bc69b7ab0d4ebb7ede5ce90aa3e79eb219552f59192066683d0f1457d"
       }
     },
     {
@@ -43093,13 +44331,20 @@
             "rowName": [
               "row"
             ]
+          },
+          "requires": {
+            "delete_data_table_row": {
+              "required": [
+                "rowName"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "f7eec703239bb22a0905f29081c159c4d459ed28d7a49d8ad1459a0871a78e79",
-        "content": "fc469aaa3e53647d4178146503924d56760ba1616ca2e842653db32f7bcd8700"
+        "content": "63e65ac77ca9c7e41f6329908dee607613329f9b13a02fcbf8f3833283ab9502"
       }
     },
     {
@@ -43394,13 +44639,62 @@
               "set_row_struct",
               "set_struct_as_row_struct"
             ]
+          },
+          "requires": {
+            "create_data_table": {
+              "required": [
+                "rowStructPath"
+              ],
+              "oneOf": [
+                "name",
+                "dataTablePath"
+              ]
+            },
+            "create_row_struct": {
+              "oneOf": [
+                "name",
+                "rowStructPath"
+              ]
+            },
+            "add_data_table_row": {
+              "required": [
+                "dataTablePath",
+                "rowName",
+                "rowData"
+              ]
+            },
+            "update_data_table_row": {
+              "required": [
+                "dataTablePath",
+                "rowName",
+                "rowData"
+              ]
+            },
+            "import_data_table_rows": {
+              "required": [
+                "dataTablePath",
+                "rows"
+              ]
+            },
+            "set_data_table_row_struct": {
+              "required": [
+                "dataTablePath",
+                "rowStructPath"
+              ]
+            },
+            "set_struct_as_row_struct": {
+              "required": [
+                "dataTablePath",
+                "rowStructPath"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "58d62bc784f48329c1fbd19cf5fd0d84f555251114193c3642645f5c1926b6ea",
-        "content": "ec119f560fc21dc269cfb8b7409e0584e694139704e2624a32a5cfaef96be8d8"
+        "content": "43f559b28b74ae5b67eb253f0251ec008f911363ea1f843c6c22836146fcd792"
       }
     },
     {
@@ -43560,13 +44854,20 @@
             "rowName": [
               "row"
             ]
+          },
+          "requires": {
+            "get_data_table_row": {
+              "required": [
+                "rowName"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "440c5c932cbc2ff3d969f8d54e137f873821a1e2b6d519b05cd769edb7f6ff6e",
-        "content": "4e8f81ec7363828aadb9b91b9ff279d42f12984af89ac92b4406b272374673ee"
+        "content": "6f0896faf340c2a80d89e655a6499f1558c8f24b40ab0ac78ea7582550b21a9b"
       }
     },
     {
@@ -43593,10 +44894,10 @@
         "topics": [
           "delete_enum"
         ],
-        "summary": "Delete an enum asset or remove one of its values.",
+        "summary": "Delete an enum asset (deleteScope enum, the default; refused with DELETE_FAILED, naming referencedBy, while anything still uses it) or remove one of its values (value: the later values move up one while loaded Blueprints and assets holding them keep their entries, remapped by name as the enum editor does, and pins set to the removed one are reset to the first entry). Saved unless save is false.",
         "whenToUse": [
-          "deleteScope=enum: An obsolete enum asset must be deleted from the project; a blocked delete is reported as DELETE_FAILED.",
-          "deleteScope=value: One entry must be dropped from an enum; the entries after it are renumbered."
+          "deleteScope=enum: An obsolete enum asset must be deleted from the project; while anything still uses it the delete is refused (DELETE_FAILED) and referencedBy names what does.",
+          "deleteScope=value: One entry must be dropped from an enum. The entries after it move up one, as in the enum editor: loaded Blueprints and assets holding them keep their entries (remapped by name), graph pins set to the dropped entry are reset to the first one, and nodes that list the entries are rebuilt."
         ],
         "whenNotToUse": [
           "deleteScope=enum: Assets that still use the enum must be found first (use asset.inspect_asset with lookup=dependencies and referencers=true).",
@@ -43658,7 +44959,7 @@
       },
       "examples": [
         {
-          "title": "Delete an enum asset or remove one of its values.",
+          "title": "Delete an enum asset (deleteScope enum, the default; refused with DELETE_FAILED, naming referencedBy, while anything still uses it) or remove one of its values (value: the later values move up one while loaded Blueprints and assets holding them keep their entries, remapped by name as the enum editor does, and pins set to the removed one are reset to the first entry). Saved unless save is false.",
           "input": {
             "enumPath": "/Game/Enums/E_Deprecated",
             "action": "delete_enum",
@@ -43708,13 +45009,20 @@
             "save": [
               "value"
             ]
+          },
+          "requires": {
+            "remove_enum_value": {
+              "required": [
+                "valueName"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "e3e213ae32f450a21849d0f36090c37b2c3c4d5efedd0b8cd8b08be19609793b",
-        "content": "dbc769bd0a2017038fdf9d66c2f2b98570380f0cbdecfa1b8fb9042ce38ab6b6"
+        "content": "32b1247aef2aff64bf6337b5fa829ce96969d0fe013e6c3dab50fb30d6b36724"
       }
     },
     {
@@ -43793,7 +45101,7 @@
           "edit=create: A new Blueprint enum is needed for a fixed set of named choices; pass values for its entries. It is saved unless save is false.",
           "edit=add_value: One more named entry must be appended to the end of an existing enum.",
           "edit=rename_value: An enum entry needs a new name while keeping its place in the order.",
-          "edit=reorder_values: The order of entries must change; the order list must name every current value and numeric values follow the new order.",
+          "edit=reorder_values: The order of entries must change; the order list must name every current value and numeric values follow the new order, while loaded Blueprints and assets holding the entries keep them (remapped by name, as the enum editor does).",
           "edit=set_value_metadata: A metadata key such as ToolTip must be stored against one enum entry.",
           "edit=split: Chosen entries must be copied into a new enum, by name or from an index on; the source enum is left unchanged."
         ],
@@ -43992,13 +45300,53 @@
             "index": [
               "split"
             ]
+          },
+          "requires": {
+            "create_enum": {
+              "oneOf": [
+                "name",
+                "enumPath"
+              ]
+            },
+            "add_enum_value": {
+              "required": [
+                "enumPath",
+                "valueName"
+              ]
+            },
+            "rename_enum_value": {
+              "required": [
+                "enumPath",
+                "valueName",
+                "newValueName"
+              ]
+            },
+            "reorder_enum_values": {
+              "required": [
+                "enumPath",
+                "order"
+              ]
+            },
+            "set_enum_value_metadata": {
+              "required": [
+                "enumPath",
+                "valueName",
+                "key"
+              ]
+            },
+            "split_enum": {
+              "required": [
+                "enumPath",
+                "newEnumName"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "3956b64c267832810139adbf7b9b8dbe6cc7a182e3bba6b67b4d633bd2d2d975",
-        "content": "55b0ab5018d1025d778b9f0cfb14c5c553ed48d30e885cf2e7d9a9eb736151bc"
+        "content": "9a3490fd2436ca2aade2a19b5d06d9a5fd1b8e425ca120fe821bb5a1872b9292"
       }
     },
     {
@@ -44982,12 +46330,13 @@
         "topics": [
           "delete_object"
         ],
-        "summary": "Delete a world actor by name (cross-parent to control_actor; dispatches action delete).",
+        "summary": "Delete placed actors by exact name, as control_actor delete does: actorName (or name, or objectPath), or several with actorNames, in one undo step. Names not found refuse with NOT_FOUND, or DELETE_PARTIAL when some went, both listing what was deleted and what was missing.",
         "whenToUse": [
           "A world actor must be permanently removed from the level."
         ],
         "whenNotToUse": [
-          "The target is an asset path; use manage_asset delete (TS returns a NOT_FOUND hint)."
+          "The target is an asset, not a placed actor (use manage_asset delete).",
+          "Every actor carrying a tag must go (use control_actor delete with deleteScope by_tag)."
         ]
       },
       "schemas": {
@@ -45041,9 +46390,23 @@
               "x-unreal-reflection-boundary": true,
               "description": "Additional handler result fields not named by the contract."
             },
+            "deletedCount": {
+              "type": "number",
+              "description": "How many actors were deleted."
+            },
             "deleted": {
-              "type": "string",
-              "description": "Name of the deleted actor."
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "The deleted actors."
+            },
+            "missing": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Names no actor answered to."
             }
           },
           "required": [
@@ -45054,15 +46417,18 @@
       },
       "examples": [
         {
-          "title": "Delete a world actor by name (cross-parent to control_actor; dispatches action delete).",
+          "title": "Delete placed actors by exact name, as control_actor delete does: actorName (or name, or objectPath), or several with actorNames, in one undo step. Names not found refuse with NOT_FOUND, or DELETE_PARTIAL when some went, both listing what was deleted and what was missing.",
           "input": {
             "action": "delete_object",
             "actorName": "PlayerStart_1"
           },
           "output": {
             "success": true,
-            "message": "Actor deleted",
-            "deleted": "PlayerStart_1"
+            "message": "Actors deleted",
+            "deletedCount": 1,
+            "deleted": [
+              "PlayerStart_1"
+            ]
           }
         }
       ],
@@ -45093,8 +46459,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "dd1011039be7613c19ad1a55154a8b03708a24d87f68bb868f2de724ada562d0",
-        "content": "1fa25add7e937c562e132db9601d5f120a8ea8326e43aa6c31f5107423c09387"
+        "schema": "fa3097c7cf2801360ac26cdecc925ff956c833a7330471ca474d3dbfdc0d26c7",
+        "content": "4b4178df69f19eb9be6ab0d37ba7ede13900f5328ab5a285956e8e0800238b62"
       }
     },
     {
@@ -45889,13 +47255,21 @@
             "propertyPath": [
               "property"
             ]
+          },
+          "requires": {
+            "get_component_property": {
+              "oneOf": [
+                "propertyName",
+                "propertyPath"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "c3a91d7febf742cd23c329b62e0340833c76a26be6835e5d05bfa94609508b71",
-        "content": "c1c9687e8973a8df211d41ac9174a56458f03fa625b7fdf61c7b40d4154e21d1"
+        "content": "49c2425bcd83344c93981f68a9894907e2ee8b96b33df9eaa0561729533d5fb5"
       }
     },
     {
@@ -47409,13 +48783,31 @@
             "componentNames": [
               "cdo"
             ]
+          },
+          "requires": {
+            "inspect_class": {
+              "oneOf": [
+                "className",
+                "classPath"
+              ]
+            },
+            "inspect_struct": {
+              "required": [
+                "structPath"
+              ]
+            },
+            "inspect_cdo": {
+              "required": [
+                "blueprintPath"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "d41542ecf3f852cf1367d19b8c8db86b041aeebf978e7ee90539b32a5af2861e",
-        "content": "8a8d7acc9a5a0078168067ffde59d6fff14bb1a7a1af22f42dda2c35b29dee05"
+        "content": "0e38a6a35c54721c27ec5ba7983a26d5f8732ae39920505693761e36cb2800a4"
       }
     },
     {
@@ -48810,7 +50202,7 @@
         "topics": [
           "set_component_property"
         ],
-        "summary": "Write a property on a world actor component (cross-parent to control_actor).",
+        "summary": "Write one or more properties of a component on a placed actor, as control_actor edit_component set_property does: propertyName or a dotted propertyPath with value, or properties for several. One undo step, the level left unsaved; while Play runs it changes the playing copy. The actor is named by actorName, name or objectPath.",
         "whenToUse": [
           "A single component property value must be written."
         ],
@@ -48898,7 +50290,7 @@
       },
       "examples": [
         {
-          "title": "Write a property on a world actor component (cross-parent to control_actor).",
+          "title": "Write one or more properties of a component on a placed actor, as control_actor edit_component set_property does: propertyName or a dotted propertyPath with value, or properties for several. One undo step, the level left unsaved; while Play runs it changes the playing copy. The actor is named by actorName, name or objectPath.",
           "input": {
             "action": "set_component_property",
             "actorName": "PlayerStart_1",
@@ -48939,7 +50331,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "fb66ab0586f62d2a80696f2a98065f4e18197e7c54a00eff103298368af3a65b",
-        "content": "f87aa41579c19627ded9c95f2fe8432fffec31c70b5045678823349fd9ccc395"
+        "content": "7f005f67c0623527d55a088e7cabd7b7d8d04b91a18800c0aef205a3aea01504"
       }
     },
     {
@@ -49662,13 +51054,41 @@
             "obstacleOffset": [
               "smart_link_behavior"
             ]
+          },
+          "requires": {
+            "configure_nav_area_cost": {
+              "required": [
+                "areaClass"
+              ]
+            },
+            "set_nav_area_class": {
+              "required": [
+                "actorName",
+                "areaClass"
+              ]
+            },
+            "configure_nav_link": {
+              "required": [
+                "actorName"
+              ]
+            },
+            "set_nav_link_type": {
+              "required": [
+                "actorName"
+              ]
+            },
+            "configure_smart_link_behavior": {
+              "required": [
+                "actorName"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "efde91a9cabfb8569fb2d5a302d91bde215ffd6478ec2ac16aa9725ff3bc3521",
-        "content": "a74f353a21338b37fd683ec15cd0866e0ed510ee3c2f82717bb396e818ed4ffc"
+        "content": "26c07b28b4da4d2e042b4a7e020d7e0a4d8b5a9e8ba43cf4aa2c9c997963ac2d"
       }
     },
     {
@@ -50336,13 +51756,21 @@
             "save": [
               "modifier_component"
             ]
+          },
+          "requires": {
+            "create_nav_modifier_component": {
+              "oneOf": [
+                "blueprintPath",
+                "actorName"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "4541a58c55adffbd7ebe32769e69283d7c607011a2051a3a4e6d66093f3c7d1c",
-        "content": "89ea95be6d5f8f28351be84cddf354c215b73d3a834d9975c7de589c8609f8bb"
+        "content": "7dfb4b429c87090bf2906026a26851abcfe6a543c0f15124bd0598a2f5a0abe7"
       }
     },
     {
@@ -50782,13 +52210,86 @@
             "comment": [
               "set_node_properties"
             ]
+          },
+          "requires": {
+            "add_composite_node": {
+              "required": [
+                "behaviorTreePath",
+                "compositeType"
+              ]
+            },
+            "add_task_node": {
+              "required": [
+                "behaviorTreePath",
+                "taskType"
+              ]
+            },
+            "add_decorator": {
+              "required": [
+                "behaviorTreePath",
+                "decoratorType"
+              ]
+            },
+            "add_service": {
+              "required": [
+                "behaviorTreePath",
+                "serviceType"
+              ]
+            },
+            "add_node": {
+              "oneOf": [
+                "assetPath",
+                "behaviorTreePath"
+              ]
+            },
+            "add_subnode": {
+              "required": [
+                "parentNodeId",
+                "subnodeType",
+                "nodeClass"
+              ],
+              "oneOf": [
+                "assetPath",
+                "behaviorTreePath"
+              ]
+            },
+            "connect_nodes": {
+              "oneOf": [
+                "assetPath",
+                "behaviorTreePath"
+              ]
+            },
+            "break_connections": {
+              "oneOf": [
+                "assetPath",
+                "behaviorTreePath"
+              ]
+            },
+            "configure_bt_node": {
+              "required": [
+                "behaviorTreePath",
+                "nodeId"
+              ]
+            },
+            "set_node_properties": {
+              "oneOf": [
+                "assetPath",
+                "behaviorTreePath"
+              ]
+            },
+            "remove_node": {
+              "oneOf": [
+                "assetPath",
+                "behaviorTreePath"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "38033c07cf28e73a9264761aa23843caad7e4fc03d924b5ec467bc1b04a23e98",
-        "content": "37a26a6404ff38a91f899cb4bd914b4e616f698bf3849305f40f30061f1a7048"
+        "content": "433b76da9425dcc63b61e90c2127ed46898b8d7fcbe232a9ba664ab5217cb489"
       }
     },
     {
@@ -50990,13 +52491,20 @@
             "value": [
               "set_value"
             ]
+          },
+          "requires": {
+            "add_blackboard_key": {
+              "required": [
+                "keyType"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "3658ed3b93e5a0bcc15a0d64f8ea45e6b3c5b80254a77c822077f2e7f4c81cb5",
-        "content": "e199b48ee1b3de686bb1ea720d0bfa2701615affac7c0c9c69a9e1699adf8e92"
+        "content": "f54b67953505af6a08f369eb8d35a6d2cbb50e801b83e6fa4c08c57590372dee"
       }
     },
     {
@@ -51320,13 +52828,43 @@
             "testSettings": [
               "configure_test_scoring"
             ]
+          },
+          "requires": {
+            "create_eqs_query": {
+              "required": [
+                "name"
+              ]
+            },
+            "add_eqs_generator": {
+              "required": [
+                "queryPath",
+                "generatorType"
+              ]
+            },
+            "add_eqs_test": {
+              "required": [
+                "queryPath",
+                "testType"
+              ]
+            },
+            "add_eqs_context": {
+              "required": [
+                "queryPath",
+                "contextType"
+              ]
+            },
+            "configure_test_scoring": {
+              "required": [
+                "queryPath"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "10861af4807efb7e3c8080f154be8ab639e5f05d63eece2114c475934fa4faa9",
-        "content": "47d9182dcde7a3b872576b974f71a71a206653b4a8ea3bddd5facf236b16eaaa"
+        "content": "a28c3588af9900dc5d9053675d166717ead66f298e665477190405cafee9de2b"
       }
     },
     {
@@ -51553,13 +53091,30 @@
             "spawnCount": [
               "add_spawner"
             ]
+          },
+          "requires": {
+            "create_mass_entity_config": {
+              "required": [
+                "name"
+              ]
+            },
+            "configure_mass_entity": {
+              "required": [
+                "configPath"
+              ]
+            },
+            "add_mass_spawner": {
+              "required": [
+                "blueprintPath"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "dfeb8d9967159197fd64e17baba23716d9fb7063b3f8d51110fbffe8ddc857ce",
-        "content": "20736ada796cacdf32a75e2fb83433baf1796877844ad873eb9836369bef72a8"
+        "content": "53629e2dc9f649096b841a7590c217143892c96b1506f9f25fcb7ab19680989f"
       }
     },
     {
@@ -51825,13 +53380,35 @@
             "componentName": [
               "add_component"
             ]
+          },
+          "requires": {
+            "create_smart_object_definition": {
+              "required": [
+                "name"
+              ]
+            },
+            "add_smart_object_slot": {
+              "required": [
+                "definitionPath"
+              ]
+            },
+            "configure_slot_behavior": {
+              "required": [
+                "definitionPath"
+              ]
+            },
+            "add_smart_object_component": {
+              "required": [
+                "blueprintPath"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "591981debe5418ed3036f4f6336100efe5f0d9630d9202af4c20b69c6cda8d64",
-        "content": "1f0f9ef8f24889d1cef0f0bda3b54c1b6346d3178611ec75daaace3065cb6e8f"
+        "content": "bf60558d91c7065900c8125925e57eff712ff4f52d5be2f06497b07ade8438b8"
       }
     },
     {
@@ -52092,13 +53669,39 @@
             "properties": [
               "configure_task"
             ]
+          },
+          "requires": {
+            "create_state_tree": {
+              "required": [
+                "name"
+              ]
+            },
+            "add_state_tree_state": {
+              "required": [
+                "stateTreePath",
+                "stateName"
+              ]
+            },
+            "add_state_tree_transition": {
+              "required": [
+                "stateTreePath",
+                "fromState",
+                "toState"
+              ]
+            },
+            "configure_state_tree_task": {
+              "required": [
+                "stateTreePath",
+                "stateName"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "1c703ae2b61e3a9a020fc2d7e06831639a9b522ba9230c32cee79712dcd88ce2",
-        "content": "9cd59ff6660a39874a20184e160e4ac91d0098bb1313dc4752a342ef594b2407"
+        "content": "67a3cf49fa47251352092a19cf6e408153e6cf4220de411c6002efa9069ca2bf"
       }
     },
     {
@@ -52614,13 +54217,27 @@
             "keyName": [
               "blackboard_value"
             ]
+          },
+          "requires": {
+            "get_tree": {
+              "oneOf": [
+                "assetPath",
+                "behaviorTreePath"
+              ]
+            },
+            "get_blackboard_value": {
+              "required": [
+                "blackboardPath",
+                "keyName"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "1774b526fa1da64dc19a57a3bb9b1c1de66b7e39cb556750e3d184599c5d93e4",
-        "content": "cb04da6c13ce158a5f6742b18ca65c39d985e3062055e36b55487c28a2f8296d"
+        "content": "8229d3f20cb4900b19ddb435c72d4ef051d32eef888cf6c538464e8d1973e8ea"
       }
     },
     {
@@ -52848,13 +54465,37 @@
             "blackboardPath": [
               "assign_blackboard"
             ]
+          },
+          "requires": {
+            "run_behavior_tree": {
+              "required": [
+                "controllerPath",
+                "behaviorTreePath"
+              ]
+            },
+            "stop_behavior_tree": {
+              "required": [
+                "controllerPath"
+              ]
+            },
+            "assign_behavior_tree": {
+              "required": [
+                "controllerPath",
+                "behaviorTreePath"
+              ]
+            },
+            "assign_blackboard": {
+              "required": [
+                "blackboardPath"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "594b70ef4944dfaf59340fa4ccc37fde7fea292d34b66fdc990b521b7155758d",
-        "content": "1f197210420b634faa07bd41d1ba8449886ea41dfb484d847008ec06af2f45af"
+        "content": "0a958f296cfb1211e7707e19afd9eaac6c2c42e1d5df22abb2cd9bb6d2ff9dd3"
       }
     },
     {
@@ -53226,13 +54867,21 @@
             "focusTag": [
               "set"
             ]
+          },
+          "requires": {
+            "set_focus": {
+              "oneOf": [
+                "focusPlayer",
+                "focusTag"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "52aae567768f6e17d764c31a1ff411bf20a059495c2b7a6a0f2e39f042f33fa3",
-        "content": "2a428e70c8557b1b39611fea304358ec64e24ed8220a7aea54da5724825b21f7"
+        "content": "0f5ad735e55026eaeeb02d3607f5247d2c5fdb19b7425c1e938739fc16ac5948"
       }
     },
     {
@@ -53624,13 +55273,50 @@
             "controllerPath": [
               "controller"
             ]
+          },
+          "requires": {
+            "setup_perception": {
+              "required": [
+                "blueprintPath"
+              ]
+            },
+            "add_ai_perception_component": {
+              "required": [
+                "blueprintPath"
+              ]
+            },
+            "configure_sight_config": {
+              "required": [
+                "blueprintPath"
+              ]
+            },
+            "configure_hearing_config": {
+              "required": [
+                "blueprintPath"
+              ]
+            },
+            "configure_damage_sense_config": {
+              "required": [
+                "blueprintPath"
+              ]
+            },
+            "set_perception_team": {
+              "required": [
+                "blueprintPath"
+              ]
+            },
+            "set_ai_perception": {
+              "required": [
+                "controllerPath"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "54e7f626238bc0ec374aea51ce9ca1d70862d4cf52711496b21fd1b436728bb2",
-        "content": "880bce32b5a661ae1d0e1ef9faf22e5801128d0b34fd94be97bf57a1c6786d36"
+        "content": "f6e529ff13950df4cdbf449fa28a95493c0628682420a0b766f1914bc4c8061a"
       }
     },
     {
@@ -54038,13 +55724,45 @@
             "falloffMode": [
               "preset"
             ]
+          },
+          "requires": {
+            "configure_distance_attenuation": {
+              "required": [
+                "assetPath"
+              ]
+            },
+            "configure_spatialization": {
+              "required": [
+                "assetPath"
+              ]
+            },
+            "configure_occlusion": {
+              "required": [
+                "assetPath"
+              ]
+            },
+            "configure_reverb_send": {
+              "required": [
+                "assetPath"
+              ]
+            },
+            "set_audio_occlusion": {
+              "required": [
+                "soundPath"
+              ]
+            },
+            "set_sound_attenuation": {
+              "required": [
+                "name"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "e064f3107471a4d0b9b41721fc5888bcca13777381ac155dc32e1c8f044b6060",
-        "content": "6f577a8868d3d1ca10b13cc4aeb50aa423b926e00a887595f8f29d8cc6f43f72"
+        "content": "cd03c9df9a1d0683da7d54764a1566c9807ffb9c1f1579570a79934dc39bac1b"
       }
     },
     {
@@ -54379,13 +56097,20 @@
             "highGain": [
               "mix_eq"
             ]
+          },
+          "requires": {
+            "add_mix_modifier": {
+              "required": [
+                "soundClassPath"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "3424b7cb0c12cad5e140c609467a3c1ca2d5671bf6fe3904ae664fe76b80f8ec",
-        "content": "4e6a82e76773cc2f90c1017558058207d1642891322e8586baf28bc2e2bae94e"
+        "content": "97f2dd2e4ece22e3b514493788614fc13c5d7c2e5fb9eb5a88453b2f66eec5e6"
       }
     },
     {
@@ -54601,13 +56326,25 @@
             "fadeOutTime": [
               "clear_class_override"
             ]
+          },
+          "requires": {
+            "set_sound_mix_class_override": {
+              "required": [
+                "soundClassName"
+              ]
+            },
+            "clear_sound_mix_class_override": {
+              "required": [
+                "soundClassName"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "97d8ac7cfd0899e14e86c94bb8467f2bd79ed0e32ebfe540a18f1c782644f78a",
-        "content": "3393b20645bf588e0580716082564c0ecee0ad2781d9112b3fa48f9f9d7f68d7"
+        "content": "571b2be5e963c637e6f049fe1c287e08fd0a2cdf2252052931736fd304309722"
       }
     },
     {
@@ -54877,13 +56614,30 @@
             "fadeTime": [
               "reverb_zone"
             ]
+          },
+          "requires": {
+            "create_ambient_sound": {
+              "required": [
+                "soundPath"
+              ]
+            },
+            "create_audio_component": {
+              "required": [
+                "soundPath"
+              ]
+            },
+            "create_reverb_zone": {
+              "required": [
+                "name"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "7ca565077c1d3023e9beb02b3964739bd23ccc91ae32cf162896cbd5398af913",
-        "content": "056cb984d6b6d600fe889d7aa92015c3eb4ea977627c999e83cab79d8f89be0e"
+        "content": "0d3b7e0de37387e0559ebebbdd2ebc48d62bf9774dc95be63b2f00eb87750079"
       }
     },
     {
@@ -55253,13 +57007,20 @@
             "effectType": [
               "submix_effect"
             ]
+          },
+          "requires": {
+            "create_submix_effect": {
+              "required": [
+                "effectType"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "1b635564a7ac35793079826e889baa0e9a1598db99ee1364d314e6d67dc4b6f8",
-        "content": "4322c88b9f87fe8bcc9c71ace5050a25f09d591b41c4e18a0c6d4c0a7b546a03"
+        "content": "a344ab5a9f43fd3fc91a84738d58c681183eeb752260295d2f2226de7fc5dbf0"
       }
     },
     {
@@ -55672,13 +57433,84 @@
             "operations": [
               "batch"
             ]
+          },
+          "requires": {
+            "create_metasound": {
+              "oneOf": [
+                "name",
+                "assetPath"
+              ]
+            },
+            "add_metasound_input": {
+              "required": [
+                "assetPath",
+                "inputName",
+                "inputType"
+              ]
+            },
+            "add_metasound_output": {
+              "required": [
+                "assetPath",
+                "outputName",
+                "outputType"
+              ]
+            },
+            "add_metasound_node": {
+              "required": [
+                "assetPath"
+              ],
+              "oneOf": [
+                "nodeClassName",
+                "nodeType"
+              ]
+            },
+            "connect_metasound_nodes": {
+              "required": [
+                "assetPath",
+                "sourceNodeId",
+                "sourceOutputName",
+                "targetNodeId",
+                "targetInputName"
+              ]
+            },
+            "disconnect_metasound_nodes": {
+              "required": [
+                "assetPath"
+              ],
+              "oneOf": [
+                "targetNodeId",
+                "sourceNodeId"
+              ]
+            },
+            "remove_metasound_node": {
+              "required": [
+                "assetPath"
+              ],
+              "oneOf": [
+                "nodeId",
+                "nodeIds"
+              ]
+            },
+            "set_metasound_default": {
+              "required": [
+                "assetPath",
+                "inputName",
+                "defaultValue"
+              ]
+            },
+            "build_metasound": {
+              "required": [
+                "assetPath",
+                "operations"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "70196189050053d9d2cd6e6640b103f00a49c9960c04209ccffd0ba8ffe63d35",
-        "content": "09b83162d565cb277dcc0a4a043a88e4c52ea8cf83964051a318c48a2bff2a46"
+        "content": "86686c923031bcd4d487576b2d8c79f0e907d67a3560744dca5f661c3a3eb3d7"
       }
     },
     {
@@ -56027,13 +57859,32 @@
             "bypass": [
               "add_source_effect"
             ]
+          },
+          "requires": {
+            "add_cue_node": {
+              "required": [
+                "nodeType"
+              ]
+            },
+            "connect_cue_nodes": {
+              "required": [
+                "sourceNodeId",
+                "targetNodeId"
+              ]
+            },
+            "add_source_effect": {
+              "oneOf": [
+                "effectType",
+                "effectPresetPath"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "77ab96f66cc7db6f5a4994361d48cf99ef9c775783f9502fc1d9e74cac288b7f",
-        "content": "abda9a12976d49989bb8bd4f08ac89fd9261df3b0c92ebdb01aa48bbffb2140b"
+        "content": "b6b083514a066356ed0dbca3542209fb7de1092968531314e831495018fcd2d0"
       }
     },
     {
@@ -57147,13 +58998,20 @@
             "maxSeconds": [
               "measure"
             ]
+          },
+          "requires": {
+            "play_sound_attached": {
+              "required": [
+                "actorName"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "5a15db6eda3d6892a99e9122abce96bfeb692004006237f52d28ca1f16c91dcc",
-        "content": "46d1077238c17988d722e81bcc064d92d1ed94f8dc4b741487dbb460c7212e09"
+        "content": "1823827e293a87763b40c9a6f83ffe671e9b6ddcd86e2104c54fc6a19a949fa6"
       }
     },
     {
@@ -59262,13 +61120,40 @@
             "brakingDeceleration": [
               "braking_deceleration"
             ]
+          },
+          "requires": {
+            "set_walk_speed": {
+              "required": [
+                "walkSpeed"
+              ]
+            },
+            "set_jump_height": {
+              "required": [
+                "jumpHeight"
+              ]
+            },
+            "set_gravity_scale": {
+              "required": [
+                "gravityScale"
+              ]
+            },
+            "set_ground_friction": {
+              "required": [
+                "groundFriction"
+              ]
+            },
+            "set_braking_deceleration": {
+              "required": [
+                "brakingDeceleration"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "4099d095fe39c8d6dd1ddc33d1920aa21439cb38bb323682f61b18eddc0f9a8c",
-        "content": "bee1d0c0d49885453d88056237e2a109dacb8fc2fca76532a4c864c117c378b3"
+        "content": "e97f92273c8ed2bd7af31f68c5470ae02c19cd43f225f65263dae67c26ffb4f5"
       }
     },
     {
@@ -60013,13 +61898,20 @@
             "homingAcceleration": [
               "homing"
             ]
+          },
+          "requires": {
+            "configure_projectile": {
+              "required": [
+                "projectileClass"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "70d62891706a15bcef23d50235085dbe6e1f3bd4644ebb1b230659650a60d600",
-        "content": "8b14dcd53315a77dd3191af304b75a9c0dc886a06c780467e924901626bc2ae6"
+        "content": "5641674172a5f0680e5f5d048aa074c04a0aeb65aed938624c10fb9b69efbf9e"
       }
     },
     {
@@ -60225,13 +62117,20 @@
             "attachmentSlots": [
               "attachments"
             ]
+          },
+          "requires": {
+            "configure_weapon_mesh": {
+              "required": [
+                "weaponMeshPath"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "aac6d960da7754f2f005757a2da3cd14bb798c13b15cce861303f54025a77d8e",
-        "content": "e36acc8620438ac80f0f81a6bb705879ae78acb8b6f9616344962c7bcaa42260"
+        "content": "5110ebee2399c97399ef6885ebc8069e94e49638d5469738c320758d42c4906e"
       }
     },
     {
@@ -60837,13 +62736,37 @@
             "systemName": [
               "effect"
             ]
+          },
+          "requires": {
+            "activate": {
+              "required": [
+                "actorName"
+              ]
+            },
+            "deactivate": {
+              "required": [
+                "actorName"
+              ]
+            },
+            "reset": {
+              "required": [
+                "actorName"
+              ]
+            },
+            "activate_effect": {
+              "oneOf": [
+                "actorName",
+                "assetPath",
+                "systemName"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "a9a6f0572cd99b432ce7eb6ad6106bc1a852a4994ddd4c413d82bf6124e3d842",
-        "content": "08ea7718c42f2dd2ae88abe57803c9066875c19281cd20bf9ef0b1740662fa7a"
+        "content": "11fd4ec111193ca3ff8ff0935d19b5685221726069422237e5776c3195230789"
       }
     },
     {
@@ -61522,13 +63445,111 @@
             "eventSpawnCount": [
               "event_receiver"
             ]
+          },
+          "requires": {
+            "add_spawn_burst_module": {
+              "required": [
+                "emitterName"
+              ]
+            },
+            "add_spawn_per_unit_module": {
+              "required": [
+                "emitterName"
+              ]
+            },
+            "add_initialize_particle_module": {
+              "required": [
+                "emitterName"
+              ]
+            },
+            "add_velocity_module": {
+              "required": [
+                "emitterName"
+              ]
+            },
+            "add_acceleration_module": {
+              "required": [
+                "emitterName"
+              ]
+            },
+            "add_force_module": {
+              "required": [
+                "emitterName",
+                "forceType"
+              ]
+            },
+            "add_color_module": {
+              "required": [
+                "emitterName"
+              ]
+            },
+            "add_size_module": {
+              "required": [
+                "emitterName"
+              ]
+            },
+            "add_collision_module": {
+              "required": [
+                "emitterName"
+              ]
+            },
+            "add_kill_particles_module": {
+              "required": [
+                "emitterName"
+              ]
+            },
+            "add_camera_offset_module": {
+              "required": [
+                "emitterName"
+              ]
+            },
+            "add_particle_state_module": {
+              "required": [
+                "emitterName"
+              ]
+            },
+            "add_sprite_renderer_module": {
+              "required": [
+                "emitterName"
+              ]
+            },
+            "add_mesh_renderer_module": {
+              "required": [
+                "emitterName"
+              ]
+            },
+            "add_ribbon_renderer_module": {
+              "required": [
+                "emitterName"
+              ]
+            },
+            "add_light_renderer_module": {
+              "required": [
+                "emitterName"
+              ]
+            },
+            "add_simulation_stage": {
+              "required": [
+                "emitterName"
+              ]
+            },
+            "add_event_generator": {
+              "required": [
+                "emitterName"
+              ]
+            },
+            "add_event_receiver": {
+              "required": [
+                "emitterName"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "6bb60d4cfd96dcae86c1f31e0934f95787bc228cce45c35ffc6cc2aa6200456b",
-        "content": "9791ac66a1c3823465d1092c22e07bfbf23ff14bb432ecab22695b04dd70f4ed"
+        "content": "98a16ccc07f0a4e2a67faf90a9d175ae1758ff8618918145cdd4adccbcd85b9b"
       }
     },
     {
@@ -62301,13 +64322,61 @@
             "preset": [
               "particle"
             ]
+          },
+          "requires": {
+            "create_niagara_system": {
+              "required": [
+                "name"
+              ]
+            },
+            "create_niagara_emitter": {
+              "required": [
+                "name"
+              ]
+            },
+            "create_niagara_ribbon": {
+              "required": [
+                "name"
+              ]
+            },
+            "create_particle_trail": {
+              "required": [
+                "name"
+              ]
+            },
+            "create_impact_effect": {
+              "required": [
+                "name"
+              ]
+            },
+            "create_environment_effect": {
+              "required": [
+                "name"
+              ]
+            },
+            "create_volumetric_fog": {
+              "required": [
+                "name"
+              ]
+            },
+            "niagara": {
+              "required": [
+                "systemPath"
+              ]
+            },
+            "particle": {
+              "oneOf": [
+                "preset",
+                "systemPath"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "f797424be69822caec5b4cbe3eb68a6b9dbc2e1370a34820ed8ff5d7bdda6ac7",
-        "content": "c62fa8f23394a2664572bf950443b63507e8581f6f2631fd558ab0815e53ebde"
+        "content": "f2440ab88682c2177ba663d691bbe96fa221cd0e3be26c96d5628ef4ad04991a"
       }
     },
     {
@@ -62562,13 +64631,20 @@
             "halfHeight": [
               "draw"
             ]
+          },
+          "requires": {
+            "debug_shape": {
+              "required": [
+                "location"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "1d0a79e1de69d0fd63c865d7cca9a6458ef32c22e387b4594eed94e620dd699a",
-        "content": "32b08fc3c19a2e1a398241f6f6908f346648f95fdb94a4a0ac30f9fd548d06d2"
+        "content": "c2a028f07c6eae028fc8e9fd3044dab12e62236124f405f1ed530fa18419480a"
       }
     },
     {
@@ -63081,13 +65157,87 @@
             "autoConnect": [
               "connect_pins"
             ]
+          },
+          "requires": {
+            "add_emitter_to_system": {
+              "oneOf": [
+                "systemPath",
+                "assetPath"
+              ]
+            },
+            "add_user_parameter": {
+              "required": [
+                "parameterName"
+              ],
+              "oneOf": [
+                "systemPath",
+                "assetPath"
+              ]
+            },
+            "bind_parameter_to_source": {
+              "required": [
+                "parameterName",
+                "sourceBinding"
+              ],
+              "oneOf": [
+                "systemPath",
+                "assetPath"
+              ]
+            },
+            "set_parameter_value": {
+              "oneOf": [
+                "parameterName",
+                "parameters"
+              ]
+            },
+            "set_niagara_parameter": {
+              "oneOf": [
+                "actorName",
+                "assetPath",
+                "systemPath"
+              ]
+            },
+            "set_niagara_dynamic_input": {
+              "required": [
+                "inputName"
+              ],
+              "oneOf": [
+                "systemPath",
+                "assetPath"
+              ]
+            },
+            "set_emitter_properties": {
+              "required": [
+                "emitterName",
+                "emitterProperties"
+              ],
+              "oneOf": [
+                "systemPath",
+                "assetPath"
+              ]
+            },
+            "enable_gpu_simulation": {
+              "required": [
+                "emitterName"
+              ],
+              "oneOf": [
+                "systemPath",
+                "assetPath"
+              ]
+            },
+            "connect_niagara_pins": {
+              "oneOf": [
+                "systemPath",
+                "assetPath"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "ccea52373871959889c7c04de28dbc0b6ad7ba3bae73e0f165cde7fa21293728",
-        "content": "a0fcec14b1cb4a2182ba5ff68299fc57ad8e5ff83c59871d1b5fc965c4496541"
+        "content": "616ace672447760aae5a8e82a675107eea291f4b58a03560b76354fdf6dfa707"
       }
     },
     {
@@ -63315,13 +65465,22 @@
             "componentName": [
               "info"
             ]
+          },
+          "requires": {
+            "validate_niagara_system": {
+              "oneOf": [
+                "systemPath",
+                "assetPath",
+                "system"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "b33bf502c32968f1a526cc0502e16790ba73f9435aacff1a82d517a7ff00418a",
-        "content": "e7a35eae29103ae4a266f0b5f5f135a96e8f729876f3c8a235b17bd7b4e43b60"
+        "content": "52db8921ee717c36d4ece948c6caeadde350438fd2f190ace00710c27dbdce2b"
       }
     },
     {
@@ -64033,13 +66192,51 @@
             "abilityClass": [
               "add_to_set"
             ]
+          },
+          "requires": {
+            "set_ability_tags": {
+              "required": [
+                "abilityPath"
+              ]
+            },
+            "set_ability_cooldown": {
+              "required": [
+                "abilityPath",
+                "cooldownEffectPath"
+              ]
+            },
+            "set_ability_costs": {
+              "required": [
+                "abilityPath",
+                "costEffectPath"
+              ]
+            },
+            "set_activation_policy": {
+              "required": [
+                "abilityPath"
+              ]
+            },
+            "set_instancing_policy": {
+              "required": [
+                "abilityPath"
+              ]
+            },
+            "add_ability": {
+              "required": [
+                "setPath"
+              ],
+              "oneOf": [
+                "abilityPath",
+                "abilityClass"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "2bc4edbf45b240afa176e8f85b380c05ecc0b9c069c59f577da9dfe593b0cca3",
-        "content": "50a9987f57875b5f4d6c08e5021e6310df02635979276f1cec89685d1f56b6b1"
+        "content": "69377dd2fa62e526b2d9fb4b90a78cde2257589a7a55d7b284a4baf079039541"
       }
     },
     {
@@ -64188,13 +66385,20 @@
             "replicationMode": [
               "configure"
             ]
+          },
+          "requires": {
+            "configure_asc": {
+              "required": [
+                "replicationMode"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "738ac4ac4c9ac589f16fcd3f8fde9280cea97244789ed037e9d29ef440ebe473",
-        "content": "ab7e1c18ec2ef529a8223d1382340211179bd59b4ee5b5e56631356da8734e7f"
+        "content": "2bd08c58e8b8163abd0e44d77dcea42c917c63f838a47aaf32de7d08befb2632"
       }
     },
     {
@@ -64761,13 +66965,30 @@
             "cueTag": [
               "add_cue"
             ]
+          },
+          "requires": {
+            "add_effect_modifier": {
+              "required": [
+                "attributeName"
+              ]
+            },
+            "add_effect_execution_calculation": {
+              "required": [
+                "calculationClass"
+              ]
+            },
+            "add_effect_cue": {
+              "required": [
+                "cueTag"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "4e827b292fbe9c2893a6c673bf54ae05a383670d916dcc1c38c0027235aa2761",
-        "content": "ec15c527b1b0896314c0b1605c120044cde47e2cbcbc39bf7b7ac0bf7175093f"
+        "content": "62e75bb3dca83d320dfba017a7de47db8717a67b0873ceb33b138b4d8f188082"
       }
     },
     {
@@ -65015,13 +67236,20 @@
             "cueTag": [
               "gameplay_cue_notify"
             ]
+          },
+          "requires": {
+            "create_gameplay_cue_notify": {
+              "required": [
+                "cueType"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "337ebf0eb6f943ca9093c7695eeb251fb74e3ef443c5f041fa63740f5a72d40f",
-        "content": "1eee1809bc568a31e68aaf9d1df544c62f76b39156177ce13037346252e6bb02"
+        "content": "4c4c2d3f6b9b8e5d01f701f4b080108a66b361dd4215157a850ff718b9ab2865"
       }
     },
     {
@@ -65626,13 +67854,48 @@
             "keepInside": [
               "trim"
             ]
+          },
+          "requires": {
+            "boolean_union": {
+              "required": [
+                "targetActor",
+                "toolActor"
+              ]
+            },
+            "boolean_subtract": {
+              "required": [
+                "targetActor",
+                "toolActor"
+              ]
+            },
+            "boolean_intersection": {
+              "required": [
+                "targetActor",
+                "toolActor"
+              ]
+            },
+            "boolean_trim": {
+              "required": [
+                "trimActorName"
+              ],
+              "oneOf": [
+                "actorName",
+                "targetActor"
+              ]
+            },
+            "self_union": {
+              "oneOf": [
+                "actorName",
+                "targetActor"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "c94f97e71f46888d70dde858c2e93bc9ea8dbcd0236b0d44ab399eaa7729ff22",
-        "content": "834e1621b7c43a012b2a8efd3c19f4d8a1b669c387121a95e6f183cf8c12a05c"
+        "content": "b590098673f1c2e437cd13ea6225ee0fe9e3a84f4cd9f84f1fc6a435acb8e93f"
       }
     },
     {
@@ -66792,7 +69055,7 @@
             },
             "steps": {
               "type": "integer",
-              "description": "Number of steps."
+              "description": "Number of steps (default 8; numSteps wins when both are sent)."
             },
             "numSteps": {
               "type": "integer",
@@ -67342,13 +69605,20 @@
             "resolution": [
               "sdf"
             ]
+          },
+          "requires": {
+            "create_sdf": {
+              "required": [
+                "shapes"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "74292ef3184cbd077486438e8e2066edcca5ae5451c8492c9a5cb4f3a00c3d1e",
-        "content": "4fc2cc2d75b8b5de1210d713d8c5609ae9f1c8426805b0e1276c1a238e7511ec"
+        "schema": "c3f40ead24cc381e6cac8e5dde0eb3dd950b0614bc7f4d490df33ae1228879d9",
+        "content": "a89054e4109470777bd9a98d8902e67aa8c51b7177f3e17f73bfd5c03deff7a4"
       }
     },
     {
@@ -67498,7 +69768,7 @@
             },
             "axis": {
               "type": "string",
-              "description": "Axis: X, Y, or Z."
+              "description": "Axis to deform along: X, Y or Z (default Z)."
             },
             "strength": {
               "type": "number",
@@ -67705,13 +69975,20 @@
             "midpoint": [
               "displace_by_texture"
             ]
+          },
+          "requires": {
+            "displace_by_texture": {
+              "required": [
+                "texturePath"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "79db5c89d50290cca5383ee4077f9d045ba6f9f6301cdfcfeca32d3ec5553c0b",
-        "content": "a9204fd8aac38ddcab290e4e6ebbbf0bd4392996f068c68162ba56ef1f5c7e26"
+        "schema": "be12ba53d1e6f1b107f3cd7e16c3e2c369a05c49807d5e22d92974c44c85ed83",
+        "content": "a2e469bc73938abb17e5bcadfd63aa9ca85620259fc39886a0f6c0c50fbeefe6"
       }
     },
     {
@@ -69276,13 +71553,99 @@
             "keepTool": [
               "difference"
             ]
+          },
+          "requires": {
+            "append_vertex": {
+              "required": [
+                "actorName"
+              ]
+            },
+            "append_triangle": {
+              "required": [
+                "actorName"
+              ]
+            },
+            "append_polygons": {
+              "required": [
+                "actorName",
+                "vertices",
+                "faces"
+              ]
+            },
+            "append_cuboids": {
+              "required": [
+                "actorName",
+                "boxes"
+              ]
+            },
+            "append_loft": {
+              "required": [
+                "actorName",
+                "sections"
+              ]
+            },
+            "append_mesh": {
+              "required": [
+                "actorName",
+                "meshPath",
+                "placements"
+              ]
+            },
+            "delete_triangles": {
+              "required": [
+                "actorName"
+              ]
+            },
+            "set_vertex_position": {
+              "required": [
+                "actorName",
+                "vertexIndex"
+              ]
+            },
+            "set_vertex_color": {
+              "required": [
+                "actorName"
+              ]
+            },
+            "bake_vertex_colors": {
+              "required": [
+                "actorName"
+              ]
+            },
+            "set_material_id": {
+              "required": [
+                "actorName",
+                "materialId"
+              ]
+            },
+            "set_uvs": {
+              "required": [
+                "actorName"
+              ]
+            },
+            "split_normals": {
+              "required": [
+                "actorName"
+              ]
+            },
+            "translate_mesh": {
+              "required": [
+                "actorName"
+              ]
+            },
+            "difference": {
+              "required": [
+                "targetActor",
+                "toolActor"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "23270d448e9abeec7442049de5ff41dd2c857fe95d5314780ca3eb9ed9e5e682",
-        "content": "985951004be252bae2c6de42f0be52f45932f76ad35b063daf788f310a35d088"
+        "content": "d6d2b50a44b2b4ea2079389e4c552b085077f23358fd07ddb99f0e93266da6c8"
       }
     },
     {
@@ -70716,13 +73079,120 @@
             "count": [
               "duplicate_along_spline"
             ]
+          },
+          "requires": {
+            "extrude": {
+              "oneOf": [
+                "actorName",
+                "targetActor"
+              ]
+            },
+            "inset": {
+              "oneOf": [
+                "actorName",
+                "targetActor"
+              ]
+            },
+            "outset": {
+              "oneOf": [
+                "actorName",
+                "targetActor"
+              ]
+            },
+            "offset_faces": {
+              "oneOf": [
+                "actorName",
+                "targetActor"
+              ]
+            },
+            "bevel": {
+              "oneOf": [
+                "actorName",
+                "targetActor"
+              ]
+            },
+            "chamfer": {
+              "oneOf": [
+                "actorName",
+                "targetActor"
+              ]
+            },
+            "bridge": {
+              "oneOf": [
+                "actorName",
+                "targetActor"
+              ]
+            },
+            "loft": {
+              "oneOf": [
+                "actorName",
+                "targetActor"
+              ]
+            },
+            "sweep": {
+              "oneOf": [
+                "actorName",
+                "targetActor"
+              ]
+            },
+            "shell": {
+              "oneOf": [
+                "actorName",
+                "targetActor"
+              ]
+            },
+            "loop_cut": {
+              "oneOf": [
+                "actorName",
+                "targetActor"
+              ]
+            },
+            "edge_split": {
+              "required": [
+                "edges"
+              ],
+              "oneOf": [
+                "actorName",
+                "targetActor"
+              ]
+            },
+            "poke": {
+              "oneOf": [
+                "actorName",
+                "targetActor"
+              ]
+            },
+            "quadrangulate": {
+              "oneOf": [
+                "actorName",
+                "targetActor"
+              ]
+            },
+            "extrude_along_spline": {
+              "required": [
+                "splineActorName"
+              ],
+              "oneOf": [
+                "actorName",
+                "targetActor"
+              ]
+            },
+            "duplicate_along_spline": {
+              "required": [
+                "splineActorName"
+              ],
+              "oneOf": [
+                "actorName",
+                "targetActor"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "9c038de08de72a7a6d92266127b7ad71103a03713d7bd7b57b4996888ed131fa",
-        "content": "20691dff6d8d9e18699a8ad855583bf228b4cc495ec03e09f2e88313e5fbfe0f"
+        "content": "c48d4b1f954edaf775af217a067f9c7d66c45bd7c39f66691825f9cbd7b931a2"
       }
     },
     {
@@ -71617,13 +74087,35 @@
             "traceRadius": [
               "trace"
             ]
+          },
+          "requires": {
+            "configure_door_properties": {
+              "required": [
+                "doorPath"
+              ]
+            },
+            "configure_chest_properties": {
+              "required": [
+                "chestPath"
+              ]
+            },
+            "configure_switch_properties": {
+              "required": [
+                "switchPath"
+              ]
+            },
+            "configure_interaction_trace": {
+              "required": [
+                "blueprintPath"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "8f3465a285eaefa630d10b246380c294ff0500d395bedff47187c9f663455932",
-        "content": "0f9cbb4d20c5d0ec3d19225fc6e8532204245c9220f44694130aaee5b3721eaa"
+        "content": "491cec4407b5cf14395beb422aa4ea80ffb2c55903ff2907b0cf876f63812a79"
       }
     },
     {
@@ -71945,13 +74437,50 @@
             "traceDistance": [
               "component"
             ]
+          },
+          "requires": {
+            "create_door_actor": {
+              "required": [
+                "name"
+              ]
+            },
+            "create_chest_actor": {
+              "required": [
+                "name"
+              ]
+            },
+            "create_switch_actor": {
+              "required": [
+                "name"
+              ]
+            },
+            "create_lever_actor": {
+              "required": [
+                "name"
+              ]
+            },
+            "create_trigger_actor": {
+              "required": [
+                "name"
+              ]
+            },
+            "create_interactable_interface": {
+              "required": [
+                "name"
+              ]
+            },
+            "create_interaction_component": {
+              "required": [
+                "blueprintPath"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "50961ef71f7f42e763b2cbf8cf89d65cf4bed6d5c1192ed65313e4ed85b1f0f9",
-        "content": "bbcb5666b5ad867d722e525e6926ef3adc9ae06b4809a6331fbb05942667f958"
+        "content": "aea68d233c1ba56cbe9f65a5aca3657ea38f7f7c73cd6f0da63d7759f6cbfa2f"
       }
     },
     {
@@ -72309,13 +74838,20 @@
             "requiredStation": [
               "recipe_requirements"
             ]
+          },
+          "requires": {
+            "add_recipe_ingredient": {
+              "required": [
+                "ingredientItemPath"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "fb29f4a5cce2961fcf8aecdea16f04d14545348baa1335e7fc70b4b16aee3c53",
-        "content": "6202f309387d337c91f58f7503b51e0dc7b3f68ce56f4b3ba0c5e44992ff522d"
+        "content": "d6c147029c2cdafbde1fd0bdc6ff910c7d739a1daeb8db64ff52a9f7f33c1943"
       }
     },
     {
@@ -72540,13 +75076,20 @@
             "categoryPath": [
               "category"
             ]
+          },
+          "requires": {
+            "assign_item_category": {
+              "required": [
+                "categoryPath"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "139925576f73ffd8feb756d8ee9b26fe37460d0e5a875cfbf2223e6f2587db63",
-        "content": "9cf6242b691ec5c1d32c8fc39e6ab6063bd35cf41fc2607b6077214424ae06fe"
+        "content": "f2cdc124eb9cb3d4b52db706161b874c56407c4ace46a5ae042f8c431e6abbc3"
       }
     },
     {
@@ -72770,13 +75313,26 @@
             "tiers": [
               "quality_tiers"
             ]
+          },
+          "requires": {
+            "add_loot_entry": {
+              "required": [
+                "itemPath"
+              ]
+            },
+            "remove_loot_entry": {
+              "oneOf": [
+                "entryIndex",
+                "itemPath"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "6de57ef25a5f5c2d14f60602c509de4a29c594332e34aac8b439b7b07ef2c03b",
-        "content": "6fe5b45f281a03d03894aa84a7b36df9e3209fbfdbd498e2edd9a9e41f5bbaee"
+        "content": "3fe7ab4b584f072ee2b66f6f9868930f13776aadefda56b17eac25c5d2156cb4"
       }
     },
     {
@@ -72997,13 +75553,20 @@
             "stationType": [
               "crafting_station"
             ]
+          },
+          "requires": {
+            "create_crafting_recipe": {
+              "required": [
+                "outputItemPath"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "b472a55cea71eeef835537252f883b734bbc62e7e088a3e320c3193678bdadd3",
-        "content": "5bb7eafc35bfd419561248058992360eac2e550248c448c80bbeb31d526ae1c0"
+        "content": "5e9cb5e69e650b2945e22551256bd5f978200faded3d7a7d6357cc5315bd1849"
       }
     },
     {
@@ -74292,13 +76855,26 @@
             "newName": [
               "rename"
             ]
+          },
+          "requires": {
+            "duplicate_level": {
+              "required": [
+                "destinationPath"
+              ]
+            },
+            "rename_level": {
+              "oneOf": [
+                "newName",
+                "destinationPath"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "fe13039535f4b2a75881962f7c881a23520f115abb1701baf5b0dbf5da28fa7d",
-        "content": "beb7405513d6d36260239a26728e1c499f1ca06fa346a9b1a61565b22cb7f89a"
+        "content": "1eeedff9f0cc1e9d8f53ac87a4b5638b9c9351403a627ad361ba2b21a3f6fda4"
       }
     },
     {
@@ -75314,13 +77890,25 @@
           "actions": {
             "save": "save",
             "as": "save_as"
+          },
+          "requires": {
+            "save_as": {
+              "required": [
+                "savePath"
+              ]
+            },
+            "save_level_as": {
+              "required": [
+                "savePath"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "3c69e90da92ade17cf705416bd2d88af80046ddcbc6646e4152a3739c55dc7b7",
-        "content": "165786722f668d0ce28be0652f6302bedb2f8bfef2a3263f86ba425187e05ce8"
+        "content": "ac64210862499dfa80fe34d7a98571d9f73688e7e1787391d6a456a837c94665"
       }
     },
     {
@@ -76486,13 +79074,40 @@
             "dataLayerName": [
               "data_layer_assignment"
             ]
+          },
+          "requires": {
+            "configure_level_streaming": {
+              "required": [
+                "levelName"
+              ]
+            },
+            "set_streaming_distance": {
+              "required": [
+                "levelName",
+                "streamingDistance"
+              ]
+            },
+            "configure_hlod_layer": {
+              "required": [
+                "hlodLayerName"
+              ]
+            },
+            "assign_actor_to_data_layer": {
+              "required": [
+                "dataLayerName"
+              ],
+              "oneOf": [
+                "actorName",
+                "actorPath"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "a06970e4ff787f734f5726736dc2895b845ff81765ec0f71f02012b9e2555554",
-        "content": "cde344b6323e896eb32c7b138864f08cf9b79f31baedf825cfa3dc01cc3c1df2"
+        "content": "dd4ed9dd608cb344fdf7321835a27fa3b70f1165e2637580f27bfa127622b553"
       }
     },
     {
@@ -76995,13 +79610,45 @@
             "extent": [
               "minimap_volume"
             ]
+          },
+          "requires": {
+            "create_level": {
+              "required": [
+                "levelName"
+              ]
+            },
+            "create_sublevel": {
+              "required": [
+                "sublevelName"
+              ]
+            },
+            "create_level_instance": {
+              "required": [
+                "levelAssetPath"
+              ]
+            },
+            "create_packed_level_actor": {
+              "required": [
+                "levelAssetPath"
+              ]
+            },
+            "create_data_layer": {
+              "required": [
+                "dataLayerName"
+              ]
+            },
+            "create_minimap_volume": {
+              "required": [
+                "location"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "74a72acbeef5243a4cfda4dbfd5ce468b410a2c8b34d82f89e6e559c5f22ab96",
-        "content": "cd6f389dce571923911b057ffe248c59611295c57ebe35180a3e7767098a8816"
+        "content": "80f9f8c34900bfd70e6faac8f27aae0c9948667cb90027d3fc99ec1794b5a51b"
       }
     },
     {
@@ -77893,13 +80540,33 @@
             "propertyValue": [
               "set_pin_default_value"
             ]
+          },
+          "requires": {
+            "add_level_blueprint_node": {
+              "required": [
+                "nodeClass"
+              ]
+            },
+            "connect_level_blueprint_nodes": {
+              "required": [
+                "sourceNodeName",
+                "targetNodeName"
+              ]
+            },
+            "set_level_blueprint_pin_default": {
+              "required": [
+                "nodeId",
+                "pinName",
+                "propertyValue"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "aa20e53f8effd12ce1bf411e36c3096dddaf5339c059491c5a33279df505151a",
-        "content": "b81e750799ae84f9857fc145e10fb1111da6bfde453a04dda26ff32a53f5cd39"
+        "content": "0788a99bf9545474e2dc5061f2f21efcc1bf19874bc34e06338a13d442e71039"
       }
     },
     {
@@ -78538,13 +81205,25 @@
             "bounds": [
               "bounds"
             ]
+          },
+          "requires": {
+            "set_volume_extent": {
+              "required": [
+                "extent"
+              ]
+            },
+            "set_volume_bounds": {
+              "required": [
+                "bounds"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "81b1546c0e137873908a54e7ff4224f37075f6f9311aa37bb4d4a5d9c57d1bbc",
-        "content": "cb1ab27b3363d6f6d0ff76e4b961e5cba60b774c19defd9a77a8a85403e3561f"
+        "content": "3e8034f63cf4cc2b5ce6a1bae5aa0c049bc7b1983768df760f6a8b4d75cb2764"
       }
     },
     {
@@ -79337,13 +82016,55 @@
             "spectatorClass": [
               "spectating"
             ]
+          },
+          "requires": {
+            "set_default_pawn_class": {
+              "required": [
+                "pawnClass"
+              ]
+            },
+            "set_player_controller_class": {
+              "required": [
+                "playerControllerClass"
+              ]
+            },
+            "set_game_state_class": {
+              "required": [
+                "gameStateClass"
+              ]
+            },
+            "set_player_state_class": {
+              "required": [
+                "playerStateClass"
+              ]
+            },
+            "set_hud_class": {
+              "required": [
+                "hudClass"
+              ]
+            },
+            "configure_game_rules": {
+              "required": [
+                "bDelayedStart"
+              ]
+            },
+            "set_respawn_rules": {
+              "required": [
+                "respawnDelay"
+              ]
+            },
+            "configure_spectating": {
+              "required": [
+                "spectatorClass"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "ab349f5200da8ed5b92947cc37e4fd2892821f5964930501cf7057dfc352bc0d",
-        "content": "0288442c91ade769c5f99ab1c07de62d9ed4460f94203d31b9b81f92feb671ef"
+        "content": "23531642c8b14eae9c126c7b1b8dbc6f8ad4a137284ec9d7747d86973b55aa7f"
       }
     },
     {
@@ -79642,13 +82363,58 @@
             "priority": [
               "enable_mapping"
             ]
+          },
+          "requires": {
+            "create_input_action": {
+              "required": [
+                "name",
+                "path"
+              ]
+            },
+            "create_input_mapping_context": {
+              "required": [
+                "name",
+                "path"
+              ]
+            },
+            "add_mapping": {
+              "required": [
+                "contextPath",
+                "actionPath",
+                "key"
+              ]
+            },
+            "map_input_action": {
+              "required": [
+                "contextPath",
+                "actionPath",
+                "key"
+              ]
+            },
+            "set_input_trigger": {
+              "required": [
+                "actionPath",
+                "triggerType"
+              ]
+            },
+            "set_input_modifier": {
+              "required": [
+                "actionPath",
+                "modifierType"
+              ]
+            },
+            "enable_input_mapping": {
+              "required": [
+                "contextPath"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "da1433c50e7d8500faf44a92e5bbe6d0f83112cb0b4e3c9429530cc6581735b3",
-        "content": "e95359edf317ce7193793a6dbad86b9c3cd1fe2fad1d8037834795be1f6d29d5"
+        "content": "a85a118c10b060c0357c6719d1dac3ec1dc4239bdf0100c4a8fec0f613c63aec"
       }
     },
     {
@@ -80038,13 +82804,30 @@
             "variableName": [
               "add_data"
             ]
+          },
+          "requires": {
+            "configure_client_prediction": {
+              "required": [
+                "enablePrediction"
+              ]
+            },
+            "configure_server_correction": {
+              "required": [
+                "smoothingRate"
+              ]
+            },
+            "add_network_prediction_data": {
+              "required": [
+                "dataType"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "4a9064debc6c032cf3ea057ab744fc380298c23b5650c6c5bc99ee81197a5979",
-        "content": "01517a6c0e2e0db292e92c2ef728abebad6d4e4a924fc03e68f5c6816c9ae6a0"
+        "content": "63540ec7f95940c0c65ec9ccbf9346dc5dae09a6a1aeef1b0864f8a34306db11"
       }
     },
     {
@@ -80510,13 +83293,92 @@
             "netServerMaxTickRate": [
               "net_driver"
             ]
+          },
+          "requires": {
+            "set_property_replicated": {
+              "required": [
+                "blueprintPath",
+                "propertyName"
+              ]
+            },
+            "set_replication_condition": {
+              "required": [
+                "blueprintPath",
+                "propertyName",
+                "condition"
+              ]
+            },
+            "set_replicated_using": {
+              "required": [
+                "blueprintPath",
+                "propertyName",
+                "repNotifyFunc"
+              ]
+            },
+            "set_net_role": {
+              "required": [
+                "blueprintPath",
+                "role"
+              ]
+            },
+            "set_net_dormancy": {
+              "required": [
+                "blueprintPath",
+                "dormancy"
+              ]
+            },
+            "set_always_relevant": {
+              "required": [
+                "blueprintPath"
+              ]
+            },
+            "set_only_relevant_to_owner": {
+              "required": [
+                "blueprintPath"
+              ]
+            },
+            "set_autonomous_proxy": {
+              "required": [
+                "blueprintPath"
+              ]
+            },
+            "configure_net_priority": {
+              "required": [
+                "blueprintPath"
+              ]
+            },
+            "configure_net_update_frequency": {
+              "required": [
+                "blueprintPath"
+              ]
+            },
+            "configure_net_cull_distance": {
+              "required": [
+                "blueprintPath"
+              ]
+            },
+            "configure_push_model": {
+              "required": [
+                "blueprintPath"
+              ]
+            },
+            "configure_replicated_movement": {
+              "required": [
+                "blueprintPath"
+              ]
+            },
+            "configure_replication_graph": {
+              "required": [
+                "blueprintPath"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "78fb182af861d370b237889d6add8728d172edc1c164406fca92924cea057693",
-        "content": "de79b79a65b1d7c6329f7d339cf7a94d55fff625c01d224731b0208367b83a4d"
+        "content": "0203e65b52c7e481b94736410ecd6a5d5e4042401eee50719e38c4975d75e25c"
       }
     },
     {
@@ -80705,13 +83567,25 @@
             "withValidation": [
               "validation"
             ]
+          },
+          "requires": {
+            "create_rpc_function": {
+              "required": [
+                "rpcType"
+              ]
+            },
+            "set_rpc_reliability": {
+              "required": [
+                "reliable"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "e50307054c12c339f873c12fcc1f36172e6798bd924d668def6d75dbe5b75f79",
-        "content": "f295d30a812c9fe80976b0e2dca848d9f0264f53feed7627391f93dd31f33b30"
+        "content": "31ad851e6302f15ac2bc5114a7f564c8f455c14293807191097bee1137cff47e"
       }
     },
     {
@@ -80959,13 +83833,36 @@
             "splitScreenType": [
               "split_screen"
             ]
+          },
+          "requires": {
+            "configure_lan_play": {
+              "required": [
+                "serverPort"
+              ]
+            },
+            "configure_session_interface": {
+              "required": [
+                "interfaceType"
+              ]
+            },
+            "configure_split_screen": {
+              "oneOf": [
+                "enabled",
+                "splitScreenType"
+              ]
+            },
+            "set_split_screen_type": {
+              "required": [
+                "splitScreenType"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "efb3447cae3af875aba78261273685cd2546484595c8330b99f6d089c473761e",
-        "content": "7a4353faa2072d804e3e9a1fd451e599b0a2650851fc85dc0251d44e8db699af"
+        "content": "ba26c5e15617bbe6205d6fdc1ee3edafe5935a08dda76b5c82a7d21bc608cbe9"
       }
     },
     {
@@ -81213,13 +84110,35 @@
             "systemWide": [
               "mute_player"
             ]
+          },
+          "requires": {
+            "enable_voice_chat": {
+              "required": [
+                "voiceEnabled"
+              ]
+            },
+            "configure_voice_settings": {
+              "oneOf": [
+                "voiceEnabled",
+                "micInputGain",
+                "noiseGateThreshold",
+                "silenceDetectionThreshold",
+                "sampleRate"
+              ]
+            },
+            "mute_player": {
+              "oneOf": [
+                "playerName",
+                "targetPlayerId"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "8fbc0e0352a0a452ba685853b25c4348c2051ef99a2558ba7127d28850f513c9",
-        "content": "13e2e540ca048eed59370a28be17c896e41a7851545dd167e9ec47944d581953"
+        "content": "fc3980da33e76340e5598a6edc7b9ee9334306890712f873e52a6a3c815cfb6e"
       }
     },
     {
@@ -82204,13 +85123,25 @@
             "serverPort": [
               "join"
             ]
+          },
+          "requires": {
+            "host_lan_server": {
+              "required": [
+                "mapName"
+              ]
+            },
+            "join_lan_server": {
+              "required": [
+                "serverAddress"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "9c94012d0f5288fa052141c2f048368fe2a494bc67787cf4c9508fcd1eb25fcd",
-        "content": "b2185f49ce5a3ca82a8fa6ccb57e791e4e3d290bb7497e86f1206d3e528ba250"
+        "content": "47ae379e122ff440bf6f4f41fe345556e8a6527bcc420398a65d85c2a4e29d6f"
       }
     },
     {
@@ -83057,7 +85988,7 @@
             },
             "meshPath": {
               "type": "string",
-              "description": "Canonical /Game static mesh asset path."
+              "description": "Static mesh (/Game path): the one mesh_sampler samples, or the one static_mesh_spawner places. Omitted, the node is added with no mesh, to be set later."
             },
             "classPath": {
               "type": "string",
@@ -83065,7 +85996,7 @@
             },
             "actorClass": {
               "type": "string",
-              "description": "Actor class path/name."
+              "description": "Actor class the spawner places (classPath is read in its place). Omitted, the spawner is added with no template, to be set later."
             },
             "texturePath": {
               "type": "string",
@@ -83233,13 +86164,21 @@
             "texturePath": [
               "texture_data_node"
             ]
+          },
+          "requires": {
+            "add_pcg_node": {
+              "oneOf": [
+                "nodeType",
+                "settingsClass"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "51b32cde8a9f33e3a11050d91e75b0d047718e93f209515e683807223160e1cf",
-        "content": "7755050b5d03e367ad5600a445662a0f026cf6f0904830327f146e97d048584d"
+        "schema": "e895d906d22c64c85487139e679632f2ed5cfd7215a5bf3fc5d1c872e20a5918",
+        "content": "fbb4ce57af4fe817b7164f6a5917962b79dc9292110090e0b1e09d60fd1ad5bb"
       }
     },
     {
@@ -83330,11 +86269,11 @@
             },
             "assetPath": {
               "type": "string",
-              "description": "Canonical /Game asset path."
+              "description": "Alias of graphPath."
             },
             "path": {
               "type": "string",
-              "description": "Canonical /Game directory path."
+              "description": "Folder for name (default /Game/PCG)."
             },
             "overwrite": {
               "type": "boolean",
@@ -83346,7 +86285,7 @@
             },
             "name": {
               "type": "string",
-              "description": "Name for the new asset or node."
+              "description": "Name of the new graph, created in path; used when graphPath and assetPath are absent."
             },
             "save": {
               "type": "boolean",
@@ -83650,13 +86589,45 @@
             "componentPath": [
               "set_partition_grid_size"
             ]
+          },
+          "requires": {
+            "create_pcg_graph": {
+              "oneOf": [
+                "graphPath",
+                "assetPath",
+                "name"
+              ]
+            },
+            "create_pcg_subgraph": {
+              "required": [
+                "subgraphPath"
+              ]
+            },
+            "connect_pcg_pins": {
+              "required": [
+                "graphPath",
+                "sourceNodeId",
+                "targetNodeId"
+              ]
+            },
+            "set_pcg_node_settings": {
+              "required": [
+                "graphPath",
+                "nodeId"
+              ]
+            },
+            "set_pcg_partition_grid_size": {
+              "required": [
+                "gridSize"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "6164561824d2b553f79eb48a85feac3c661c6d1edcee8b3ce3bc22a600fa1288",
-        "content": "6f529bc9bdfa918255dc2e5b209f1af268b1e4b9c0b049fd25a56c2a1fca4643"
+        "schema": "12903f49823c4961fe37a5690a386774d02ebfda799c9c333f99ca4bf8517e48",
+        "content": "f8912a3c987ee9482fb9bec4e848054396a4854dbafd12037948d9dfdfb08d8a"
       }
     },
     {
@@ -85518,7 +88489,7 @@
             },
             "nodeType": {
               "type": "string",
-              "description": "Node type."
+              "description": "Material expression to add: its class name without the MaterialExpression prefix (Constant, Lerp, TextureSample, ScalarParameter, Multiply...) or the full class name; Float, Color, TexCoord and StaticSwitch are accepted as short names. An unknown type adds nothing (UNKNOWN_TYPE)."
             },
             "type": {
               "type": "string",
@@ -86062,13 +89033,61 @@
             "operations": [
               "batch"
             ]
+          },
+          "requires": {
+            "add_material_node": {
+              "oneOf": [
+                "nodeType",
+                "type"
+              ]
+            },
+            "add_custom_expression": {
+              "required": [
+                "code"
+              ]
+            },
+            "add_math_node": {
+              "required": [
+                "operation"
+              ]
+            },
+            "add_scalar_parameter": {
+              "required": [
+                "parameterName"
+              ]
+            },
+            "add_static_switch_parameter": {
+              "required": [
+                "parameterName"
+              ]
+            },
+            "add_vector_parameter": {
+              "required": [
+                "parameterName"
+              ]
+            },
+            "use_material_function": {
+              "required": [
+                "functionPath"
+              ]
+            },
+            "add_landscape_layer": {
+              "required": [
+                "layerName"
+              ]
+            },
+            "build_material_graph": {
+              "required": [
+                "operations"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "70c99b5539c8fe1e6e7b8f174f19b06a85c6c82ef76d51a873445ee4b6f734a0",
-        "content": "13a79ffa5b8cbcad18332ca499a525e0045d3ad5bcbe713977dbfd9eba902f15"
+        "schema": "f1fa68f49511b7df73784aa1d046b8d13e99aa7882b0b62fc1d4a418ee665229",
+        "content": "e7b106e000978488a9a4c7781f1cc60b5998cb70fc4ba95c6922c3ca45812fdc"
       }
     },
     {
@@ -86227,13 +89246,21 @@
           "actions": {
             "compile": "compile_material",
             "rebuild": "rebuild_material"
+          },
+          "requires": {
+            "rebuild_material": {
+              "oneOf": [
+                "materialPath",
+                "assetPath"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "a9e8398a7bc3d6a5d85ef4236978546480515f1ac01931c1b8cd195a1e93c9da",
-        "content": "820eefc4e7872eb8445befa20f5925471b519b2a5af18d327eb5847ab6d20ab3"
+        "content": "759eed2da4eb2ed7182f6251abe0a6bc71a0720487cc36a5dd782310cc81796c"
       }
     },
     {
@@ -87449,7 +90476,7 @@
             },
             "nodeId": {
               "type": "string",
-              "description": "Only report connections touching this node."
+              "description": "A node, by the id the graph lists: material and function report only the connections touching it; node_details, node_properties and node_connections describe it; node_chain and subgraph start from it (node_chain also takes it as startNodeId; subgraph needs it unless orphansOnly is true)."
             },
             "nodeIds": {
               "type": "array",
@@ -87766,13 +90793,57 @@
             "orphansOnly": [
               "subgraph"
             ]
+          },
+          "requires": {
+            "find_node": {
+              "oneOf": [
+                "materialPath",
+                "assetPath"
+              ]
+            },
+            "get_material_node_details": {
+              "oneOf": [
+                "materialPath",
+                "assetPath"
+              ]
+            },
+            "get_node_properties": {
+              "required": [
+                "nodeId"
+              ],
+              "oneOf": [
+                "materialPath",
+                "assetPath"
+              ]
+            },
+            "get_node_connections": {
+              "required": [
+                "nodeId"
+              ],
+              "oneOf": [
+                "materialPath",
+                "assetPath"
+              ]
+            },
+            "get_node_chain": {
+              "oneOf": [
+                "materialPath",
+                "assetPath"
+              ]
+            },
+            "get_connected_subgraph": {
+              "oneOf": [
+                "materialPath",
+                "assetPath"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "5a3c7d7e69cda3c39242bb59b6c5f33eae94dcd81e9f2973a2b6b388d010924a",
-        "content": "63bd59df48e676f8095fde4e5522956481048cdb7f5201fe9dbb222ef29987fb"
+        "schema": "a0bd6741f65b371b633880a2793dd71c05214f221ff7c6822b7a6fef45c7878d",
+        "content": "c5534fd6e276102f0a10079a72baf62e3f2ea3c6771b96af05f31343f7079623"
       }
     },
     {
@@ -88011,13 +91082,49 @@
             "assets": [
               "parameter"
             ]
+          },
+          "requires": {
+            "set_material_parameter": {
+              "oneOf": [
+                "assetPath",
+                "assets"
+              ]
+            },
+            "set_scalar_parameter_value": {
+              "required": [
+                "assetPath",
+                "parameterName",
+                "value"
+              ]
+            },
+            "set_vector_parameter_value": {
+              "required": [
+                "assetPath",
+                "parameterName",
+                "value"
+              ]
+            },
+            "set_texture_parameter_value": {
+              "required": [
+                "assetPath",
+                "parameterName",
+                "texturePath"
+              ]
+            },
+            "set_static_switch_parameter_value": {
+              "required": [
+                "assetPath",
+                "parameterName",
+                "value"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "7b8212bca2f165d7e24722d624c833f93a6fbd4c2c978042c563134d71971b89",
-        "content": "a28d3ef149e1f78f023cb3dd21e093e128a903e3964d924aff984c72ee061ca0"
+        "content": "13f2298f8a13964fbb1fee2c1844ab638373960928e9900cf9b9be6ae73b46de"
       }
     },
     {
@@ -88215,13 +91322,35 @@
             "value": [
               "two_sided"
             ]
+          },
+          "requires": {
+            "set_blend_mode": {
+              "required": [
+                "blendMode"
+              ]
+            },
+            "set_material_domain": {
+              "required": [
+                "materialDomain"
+              ]
+            },
+            "set_shading_model": {
+              "required": [
+                "shadingModel"
+              ]
+            },
+            "set_two_sided": {
+              "required": [
+                "value"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "3646e0a9c3f7b0dc97f7228835da49b076572fcdf8aca8ec93cb4fc1449883bf",
-        "content": "e6ea6fec5b31c0aa51d7ccdb6fa107d1eadf771ade6a792068a17ff085cf969d"
+        "content": "78f9f495bca8e46f6900f92debfe667f886dd671ee5f58ae67a606e7fea82554"
       }
     },
     {
@@ -88757,7 +91886,7 @@
             },
             "property": {
               "type": "string",
-              "description": "Property name to keyframe (Transform, Location, Rotation, Scale)."
+              "description": "Property to animate, by name (Transform, Intensity...); required, or send it as propertyName (refused with INVALID_ARGUMENT when neither is sent)."
             },
             "propertyName": {
               "type": "string",
@@ -89105,13 +92234,59 @@
             "subsequencePath": [
               "subsequence"
             ]
+          },
+          "requires": {
+            "add_transform_track": {
+              "oneOf": [
+                "actorName",
+                "bindingGuid"
+              ]
+            },
+            "add_property_track": {
+              "oneOf": [
+                "actorName",
+                "bindingGuid"
+              ]
+            },
+            "add_skeletal_animation_track": {
+              "oneOf": [
+                "actorName",
+                "bindingGuid"
+              ]
+            },
+            "add_material_parameter_track": {
+              "required": [
+                "parameterName",
+                "value"
+              ],
+              "oneOf": [
+                "actorName",
+                "bindingGuid"
+              ]
+            },
+            "add_particle_track": {
+              "oneOf": [
+                "actorName",
+                "bindingGuid"
+              ]
+            },
+            "add_shot_track": {
+              "required": [
+                "shotSequencePath"
+              ]
+            },
+            "add_subsequence": {
+              "required": [
+                "subsequencePath"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "5f037c87f2dfc922a70d96e483c84e79adb80c3951dbfd9bd4ca39a7780736ec",
-        "content": "9c2c3c68e756cb7921ad69c09ba436a515822b85036ca969cf84b49f7b8ad8bb"
+        "schema": "30fc52fdf4c7d0a3903e262a112336c04098c285726746f8a9afe49047608ed5",
+        "content": "0b3dc0a3ff214e30421495eb9e14089ac28d697ce3b930453d2a8937e285206c"
       }
     },
     {
@@ -89530,13 +92705,26 @@
             "save": [
               "shot"
             ]
+          },
+          "requires": {
+            "configure_camera_settings": {
+              "oneOf": [
+                "actorName",
+                "cameraName"
+              ]
+            },
+            "configure_shot_settings": {
+              "required": [
+                "path"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "3abd1407aefb2d499932f2f15c7de8832f4119dc2e1180d8d79489988e9560be",
-        "content": "595bfebf0449a420b1126d406d5838d9287daea81fbf801bfab7236c49239929"
+        "content": "4f0e8fc259197e960267e8ee82b28cee9481e81797f5cbb444b14769ba80561c"
       }
     },
     {
@@ -89725,15 +92913,15 @@
             },
             "name": {
               "type": "string",
-              "description": "Name for the new sequence or asset."
+              "description": "Name of the new sequence; alone, it is created in path (default /Game/Cinematics)."
             },
             "sequencePath": {
               "type": "string",
-              "description": "Canonical /Game sequence asset path."
+              "description": "Full asset path of the new sequence (/Game/Cinematics/SEQ_Master), or, sent with name, the folder it goes in."
             },
             "assetPath": {
               "type": "string",
-              "description": "Canonical /Game asset path."
+              "description": "Alias of sequencePath."
             },
             "frameRate": {
               "type": [
@@ -89922,13 +93110,27 @@
             "endFrame": [
               "master_sequence"
             ]
+          },
+          "requires": {
+            "create_cine_camera_actor": {
+              "required": [
+                "path"
+              ]
+            },
+            "create_master_sequence": {
+              "oneOf": [
+                "name",
+                "sequencePath",
+                "assetPath"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "b438273d6821f024050496f79a8b4f91e14ac490529b1c7a12d19a439c30eb0c",
-        "content": "8f49bccba8824c73b854aaa8e4c50f8509e6bc2f9e928ee128a1b963cbcd7dff"
+        "schema": "31c72eacd2da2e290a297a6fc1438db819cb262509821c0b91bdc35a4c7a44ac",
+        "content": "f8bacbd6c1855fdbc670ef4a60d8f878d982cc236bc7078cae639723eade1ceb"
       }
     },
     {
@@ -90139,13 +93341,34 @@
               "duplicate",
               "rename"
             ]
+          },
+          "requires": {
+            "create": {
+              "oneOf": [
+                "name",
+                "path"
+              ]
+            },
+            "duplicate": {
+              "required": [
+                "path",
+                "destinationPath",
+                "newName"
+              ]
+            },
+            "rename": {
+              "required": [
+                "path",
+                "newName"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "2c66347f71ca4c5ebbd035e67653203e37e92a268e2c018f304d6a69e5fb2280",
-        "content": "1c2a73f13aeea2de404b503b9ed92184c9a90cada6c75ec25fdc67a37e07c5b1"
+        "content": "f92943865b2c4fb0c4f05c03eff4aa47e4dc72d234a5fb0430b0876876d4e3e7"
       }
     },
     {
@@ -90182,7 +93405,7 @@
           "delete level sequence",
           "delete cutscene"
         ],
-        "summary": "Delete a level sequence, remove one of its tracks, or remove keyframes from a track.",
+        "summary": "Delete a level sequence (deleteScope sequence, the default: refused with SEQUENCE_IN_USE, naming referencedBy, while a level or asset still uses it; its editors close and the undo history may be cleared), remove one track by name (track, one undo step), or remove keys (keyframe: from the tracks trackName or bindingId picks, on frame or frames, else every key on them; one undo step; replies removedKeys).",
         "whenToUse": [
           "deleteScope=sequence: A sequence asset must be permanently removed.",
           "deleteScope=track: A track must be permanently removed from the sequence.",
@@ -90213,7 +93436,7 @@
             },
             "bindingId": {
               "type": "string",
-              "description": "Sequencer binding GUID to key against."
+              "description": "Binding GUID (get_properties bindings): only the tracks of that bound object; with trackName, only those of its tracks the name picks."
             },
             "frame": {
               "type": "integer",
@@ -90296,7 +93519,7 @@
       },
       "examples": [
         {
-          "title": "Delete a level sequence, remove one of its tracks, or remove keyframes from a track.",
+          "title": "Delete a level sequence (deleteScope sequence, the default: refused with SEQUENCE_IN_USE, naming referencedBy, while a level or asset still uses it; its editors close and the undo history may be cleared), remove one track by name (track, one undo step), or remove keys (keyframe: from the tracks trackName or bindingId picks, on frame or frames, else every key on them; one undo step; replies removedKeys).",
           "input": {
             "action": "delete",
             "path": "/Game/Cinematics/SEQ_Disposable",
@@ -90354,13 +93577,26 @@
             "frames": [
               "keyframe"
             ]
+          },
+          "requires": {
+            "remove_track": {
+              "required": [
+                "trackName"
+              ]
+            },
+            "remove_keyframe": {
+              "oneOf": [
+                "trackName",
+                "bindingId"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "ea1e91967153cbe1ea77e4a84594e1cfdaa2f8458f56626c7b389999d6a307ad",
-        "content": "99a3c91eda5e9f96301eadbccc3d6fe72879459e99bdc6d02bf16e7e230c47f5"
+        "schema": "4a2443111bee007b02463f5cd7d66f0c2a2d82ac3bbea67f791dc8eb3714a73f",
+        "content": "2e8729522415d800f1556aaae3cc19a2827b29442eafd2b8969494c6e006da69"
       }
     },
     {
@@ -90606,13 +93842,35 @@
             "className": [
               "add_spawnable"
             ]
+          },
+          "requires": {
+            "add_actor": {
+              "required": [
+                "actorName"
+              ]
+            },
+            "add_actors": {
+              "required": [
+                "actorNames"
+              ]
+            },
+            "add_spawnable_from_class": {
+              "required": [
+                "className"
+              ]
+            },
+            "remove_actors": {
+              "required": [
+                "actorNames"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "75091bf1ee2fcb177e0beb1e3d3d32c154f25e1276755a40b5a77714c427bb3c",
-        "content": "70877f125dc9ec79ccf19f1d8b2ae06188b608e01f4378ece722ef618d525646"
+        "content": "d45fb9c13b1d23721633a2207a7e565910776fee7bde29abb925566f1fadb7e8"
       }
     },
     {
@@ -91068,13 +94326,46 @@
             "playRate": [
               "set_section"
             ]
+          },
+          "requires": {
+            "add_track": {
+              "required": [
+                "trackType"
+              ]
+            },
+            "add_keyframe": {
+              "oneOf": [
+                "bindingId",
+                "actorName"
+              ]
+            },
+            "set_track_locked": {
+              "required": [
+                "trackName"
+              ]
+            },
+            "set_track_muted": {
+              "required": [
+                "trackName"
+              ]
+            },
+            "set_track_solo": {
+              "required": [
+                "trackName"
+              ]
+            },
+            "set_section": {
+              "required": [
+                "trackName"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "d9284181080e6ac936c5b7ce87220ed252ff1bf5dcb7a0192fba0c6afca06519",
-        "content": "93dfe7e5ead1504763c13e95f6f4a602bd5cdb3966e298fcb08cac2ce11d180c"
+        "content": "2614a7c95523a290efa96f3a1ccf7f00dcfb5dbf67645ec593191c3b93b21d26"
       }
     },
     {
@@ -91704,13 +94995,40 @@
             "trackName": [
               "keys"
             ]
+          },
+          "requires": {
+            "get_properties": {
+              "required": [
+                "path"
+              ]
+            },
+            "get_bindings": {
+              "required": [
+                "path"
+              ]
+            },
+            "list_tracks": {
+              "required": [
+                "path"
+              ]
+            },
+            "list_track_keys": {
+              "required": [
+                "path"
+              ]
+            },
+            "open": {
+              "required": [
+                "path"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "6b48ff28deb65e59e13f75f15aa5a81c168b1e0f7d5269dce8e0b3dc5c535d04",
-        "content": "cdf0ebba7f723830a6fd57a7ba51a01f8b8a8d295bacdfa6afca00280e2c21d9"
+        "content": "daae8efec2c1ddd47662cfffad9358856dbe47dc47bfd6e219214fce59c67640"
       }
     },
     {
@@ -92135,13 +95453,48 @@
             "activate": [
               "sound_component"
             ]
+          },
+          "requires": {
+            "create_media_source": {
+              "required": [
+                "name",
+                "path"
+              ]
+            },
+            "create_media_player": {
+              "required": [
+                "name",
+                "path"
+              ]
+            },
+            "create_media_playlist": {
+              "required": [
+                "name",
+                "path"
+              ]
+            },
+            "create_media_texture": {
+              "required": [
+                "name",
+                "path"
+              ]
+            },
+            "create_media_sound_component": {
+              "required": [
+                "mediaPlayerPath"
+              ],
+              "oneOf": [
+                "actorName",
+                "targetActor"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "4f467303258d789ec26d1f488ddb7b799f8fab5ad064639087c499eccb4b167e",
-        "content": "9c9fc0d9e29a22f746eb248f45353c65b26e09c7098ec390c3add7a5b6d44b1b"
+        "content": "a097fe92d82fcdcb2f1dba61af37a2600cb3689d679d883e3934c5aeaf150f52"
       }
     },
     {
@@ -92369,13 +95722,20 @@
             "time": [
               "seek"
             ]
+          },
+          "requires": {
+            "seek_media": {
+              "required": [
+                "seekTime"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "ccbb9d6802af262ae9cab7ec9e26822b18f8115dcccf7c8b84cea09ff781e9ef",
-        "content": "300061ad1a5d69142d00e852a8e590c4955c4a348d7e81359a870854c25f02e6"
+        "content": "2fc21deb039c2b38be4fed468ec2549b5fd5caccf4e5c789d5074616870c1984"
       }
     },
     {
@@ -92838,13 +96198,20 @@
             "renderAllCameras": [
               "camera"
             ]
+          },
+          "requires": {
+            "configure_console_variables": {
+              "required": [
+                "consoleVariables"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "f1ff1e580a5b13e36de8ff4f942c304411526ef08e4e6c9047d476374b9f5fbe",
-        "content": "d9d0ae27b1ae1e4f4bfb348ff42c038236fbbc367ad36bc560cc9c0f7dfda4e4"
+        "content": "7e1ea3f5cb8b4a55c0a28a23e20cb1347ef510abdc5181a2bc2cba0119ba34b7"
       }
     },
     {
@@ -93234,13 +96601,39 @@
             "allJobs": [
               "remove"
             ]
+          },
+          "requires": {
+            "create_render_job": {
+              "required": [
+                "sequencePath"
+              ]
+            },
+            "queue_render": {
+              "oneOf": [
+                "jobId",
+                "renderJobName"
+              ]
+            },
+            "start_render": {
+              "oneOf": [
+                "jobId",
+                "renderJobName"
+              ]
+            },
+            "remove_render_job": {
+              "oneOf": [
+                "jobId",
+                "renderJobName",
+                "allJobs"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "b8ff966a69940d136fd49869ae6914989b88e0e22e2797701f8fdbaff7c1c45e",
-        "content": "7b28c2f5a4fc4236953fc3d3110bf1fa95776c9fc23a57fb668da3fcebacc51a"
+        "content": "aed3fda5bb26725d914645b97b982c135b2d76a90c080d684154fef2671bfb56"
       }
     },
     {
@@ -93625,13 +97018,20 @@
             "durationSeconds": [
               "killcam_duration"
             ]
+          },
+          "requires": {
+            "configure_killcam_duration": {
+              "required": [
+                "durationSeconds"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "ee2329241ddcd6368da62828b985e047ac297ae4cee5f980ca807340c85f3274",
-        "content": "67feb1f78b3cf61bde069c15c6cb42c82c42585e0ea4442a38fa02ac33dcce27"
+        "content": "3039b6871f792e1e440b324770191353a7446f7fb666be3d543bdf6f1c5c836d"
       }
     },
     {
@@ -94315,13 +97715,36 @@
               "view_range",
               "work_range"
             ]
+          },
+          "requires": {
+            "set_display_rate": {
+              "required": [
+                "frameRate"
+              ]
+            },
+            "set_tick_resolution": {
+              "required": [
+                "resolution"
+              ]
+            },
+            "set_playback_speed": {
+              "required": [
+                "speed"
+              ]
+            },
+            "set_work_range": {
+              "required": [
+                "start",
+                "end"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "c2e46aae20cfec15dfa42de024309d3a546459156454f4502719d707d3c79a67",
-        "content": "f78dc6ce9a656b5c82d024dcd1fff94e3ae9957d7dd561205f71806b59224886"
+        "content": "08dd7ec58e43e7b83f50036930dafac532f2fd052c5f45375f0b946d1a08fb2b"
       }
     },
     {
@@ -94779,7 +98202,7 @@
             },
             "varGuid": {
               "type": "string",
-              "description": "Stable member GUID."
+              "description": "Stable member GUID, as get_struct lists it; pass this or memberName."
             },
             "save": {
               "type": "boolean",
@@ -94878,13 +98301,21 @@
             "save": [
               "member"
             ]
+          },
+          "requires": {
+            "remove_struct_member": {
+              "oneOf": [
+                "memberName",
+                "varGuid"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "7005c671bbe943338f489f20ec4cb44425302327688b58c443d250917fc11e83",
-        "content": "5e3d6eed2cb85b9e5c63b8d1b444bad8f298cccd6915a479effe81ddab3733b4"
+        "schema": "91198299ccefd79da697ec2a93186d6eb207dc7398556bf526afdc645f099ce8",
+        "content": "516f17224540aff43fee765576e5befd60135ddd334c0f8a40f0168c8eadfe42"
       }
     },
     {
@@ -95103,7 +98534,7 @@
             },
             "varGuid": {
               "type": "string",
-              "description": "Stable member GUID."
+              "description": "Stable member GUID, as get_struct lists it; pass this or memberName."
             },
             "position": {
               "type": "string",
@@ -95378,13 +98809,120 @@
             "structValues": [
               "set_instanced_struct_property"
             ]
+          },
+          "requires": {
+            "create_struct": {
+              "oneOf": [
+                "name",
+                "structPath"
+              ]
+            },
+            "add_struct_member": {
+              "required": [
+                "structPath"
+              ],
+              "oneOf": [
+                "memberName",
+                "members"
+              ]
+            },
+            "rename_struct_member": {
+              "required": [
+                "structPath",
+                "newMemberName"
+              ],
+              "oneOf": [
+                "memberName",
+                "varGuid"
+              ]
+            },
+            "reorder_struct_members": {
+              "required": [
+                "structPath",
+                "position"
+              ],
+              "oneOf": [
+                "memberName",
+                "varGuid"
+              ]
+            },
+            "set_struct_member_default": {
+              "required": [
+                "structPath",
+                "defaultValue"
+              ],
+              "oneOf": [
+                "memberName",
+                "varGuid"
+              ]
+            },
+            "set_struct_member_metadata": {
+              "required": [
+                "structPath"
+              ],
+              "oneOf": [
+                "memberName",
+                "varGuid"
+              ]
+            },
+            "set_struct_member_type": {
+              "required": [
+                "structPath",
+                "memberType"
+              ],
+              "oneOf": [
+                "memberName",
+                "varGuid"
+              ]
+            },
+            "rename_struct": {
+              "required": [
+                "structPath"
+              ],
+              "oneOf": [
+                "newName",
+                "newStructPath"
+              ]
+            },
+            "duplicate_struct": {
+              "required": [
+                "structPath"
+              ],
+              "oneOf": [
+                "destinationPath",
+                "destinationName"
+              ]
+            },
+            "import_struct": {
+              "oneOf": [
+                "structPath",
+                "name"
+              ]
+            },
+            "recompile_struct": {
+              "required": [
+                "structPath"
+              ]
+            },
+            "refresh_struct_dependencies": {
+              "required": [
+                "structPath"
+              ]
+            },
+            "set_instanced_struct_property": {
+              "required": [
+                "assetPath",
+                "propertyName",
+                "structType"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "b002fc46c708ed2fe0a4266089a6e5b472914fcd90521c84609c0229c2cdeeda",
-        "content": "717706f3d04dd7b5a2b2512c8333f9026ef58d5508943ef547290404ec680454"
+        "schema": "7db8b289a8f63d30198a2bfa391a6b9c62c91c060ce5ba97103fac54693613a8",
+        "content": "f29315e0ac88a5cc2747fd148a7865deb0603b01c386974a5ccd801ad3f3edf3"
       }
     },
     {
@@ -95626,13 +99164,52 @@
             "propertyName": [
               "instanced_property"
             ]
+          },
+          "requires": {
+            "get_struct": {
+              "required": [
+                "structPath"
+              ]
+            },
+            "read_struct": {
+              "required": [
+                "structPath"
+              ]
+            },
+            "list_struct_members": {
+              "required": [
+                "structPath"
+              ]
+            },
+            "search_struct_usage": {
+              "required": [
+                "structPath"
+              ]
+            },
+            "compare_structs": {
+              "required": [
+                "structPath",
+                "otherStructPath"
+              ]
+            },
+            "export_struct": {
+              "required": [
+                "structPath"
+              ]
+            },
+            "get_instanced_struct_property": {
+              "required": [
+                "assetPath",
+                "propertyName"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "0fdd4e06e7138904bb3f40e63152b0b8c9c1bbe5918da9fa152065f696015df5",
-        "content": "3bd9f697c102e62a56ca90126f2d100c4bec117b884a32b78eec956e424d84e0"
+        "content": "d4f0eea95f2425a4c8688a6df3c443928b6bbe3f045e0ad8fc4682639a98b577"
       }
     },
     {
@@ -96348,13 +99925,25 @@
             "profile": [
               "baseline"
             ]
+          },
+          "requires": {
+            "set_frame_rate_limit": {
+              "required": [
+                "maxFPS"
+              ]
+            },
+            "set_resolution_scale": {
+              "required": [
+                "scale"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "2dcd8535745c0025281e9251cbd80675ac21838c8a2d2373edaecfda4f995425",
-        "content": "7a008b08c31c61359eb0bab0472602cfb4ba698ec72a7da21a6a169ff2663cea"
+        "content": "3ef6a55e00437fc1863cf4689c4fcc47e3b3e3a70e434539ac8c27aef03b76c2"
       }
     },
     {
@@ -97109,13 +100698,21 @@
             "duration": [
               "show"
             ]
+          },
+          "requires": {
+            "add_widget_child": {
+              "required": [
+                "widgetPath",
+                "childClass"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "ce45b00d4825d402d452dc55a771c49f7333b233ee1e3cdf29a9f177228b2279",
-        "content": "fb507c73e8f81263fada4510ee970d2ede9094fd3e9fff231db09e6d1c14b4ce"
+        "content": "4a7dc7637f23c6ca097ac0ac9b7dd2fac1130cbcf78a23075b17efe55ca229d0"
       }
     },
     {
@@ -100158,13 +103755,20 @@
             "arguments": [
               "ubt"
             ]
+          },
+          "requires": {
+            "run_ubt": {
+              "required": [
+                "target"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "d801f23e5ae85c043971788577a8cdf9a30373b7cc3c888936b3483067d6ea13",
-        "content": "c09db1a5b3a0b013b0f31c245c6f8f0e5468339a31dc0aa48232caf05021bc95"
+        "content": "7e30f2f75dbc6e82c779bc125658f0c33a2ddb6e342c53f8ac8f03b1345c7a52"
       }
     },
     {
@@ -101585,13 +105189,30 @@
             "virtualTextureStreaming": [
               "virtual_texture"
             ]
+          },
+          "requires": {
+            "set_compression_settings": {
+              "required": [
+                "compressionSettings"
+              ]
+            },
+            "set_lod_bias": {
+              "required": [
+                "lodBias"
+              ]
+            },
+            "set_texture_group": {
+              "required": [
+                "textureGroup"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "d32c5e45e536acff5310e75333b1ecc717b74e3cb42c647e59454b58bf8f1ea5",
-        "content": "e399c8b8f8610e0461c9daad1cc4148de7734fd35fb19f5caeb6e81c4aeb45bf"
+        "content": "90aee98c2c9d63de41255fb82f49025cf0369dfdb2cbd9c17cc76e79217fa04e"
       }
     },
     {
@@ -102284,13 +105905,81 @@
             "opacity": [
               "combined"
             ]
+          },
+          "requires": {
+            "create_gradient_texture": {
+              "oneOf": [
+                "name",
+                "outputPath"
+              ]
+            },
+            "create_noise_texture": {
+              "oneOf": [
+                "name",
+                "outputPath"
+              ]
+            },
+            "create_pattern_texture": {
+              "oneOf": [
+                "name",
+                "outputPath"
+              ]
+            },
+            "create_text_texture": {
+              "required": [
+                "text"
+              ],
+              "oneOf": [
+                "name",
+                "outputPath"
+              ]
+            },
+            "create_ao_from_mesh": {
+              "required": [
+                "meshPath"
+              ],
+              "oneOf": [
+                "name",
+                "outputPath"
+              ]
+            },
+            "create_normal_from_height": {
+              "required": [
+                "sourceTexture"
+              ]
+            },
+            "resize_texture": {
+              "required": [
+                "sourcePath"
+              ]
+            },
+            "channel_pack": {
+              "oneOf": [
+                "redTexture",
+                "greenTexture",
+                "blueTexture",
+                "alphaTexture"
+              ]
+            },
+            "channel_extract": {
+              "required": [
+                "assetPath",
+                "channel"
+              ]
+            },
+            "combine_textures": {
+              "required": [
+                "baseTexture",
+                "blendTexture"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "f1144a00af9cf38f642f8a62c4f78cf33cf3351d45dd6746b4582737e3f5080b",
-        "content": "3e30d5bf7a977dd4fbcfdacd0012917449379e815deeec7bf8fe98da27cce78c"
+        "content": "fefd480b7879159779f53004d5eeaa3d684f65f86be8caf54da716bc15a8df0c"
       }
     },
     {

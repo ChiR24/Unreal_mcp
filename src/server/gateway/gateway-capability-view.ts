@@ -10,6 +10,7 @@ import { isRecord } from '../../utils/validation/type-guards.js';
 import type { CapabilityRecord } from '../../tools/catalog/capabilities/model.js';
 import { capabilityAvailability, isRunnable, type CapabilityAvailability } from './gateway-availability.js';
 import { getParentToolMetadata } from '../../tools/catalog/capabilities/records/parent-metadata.js';
+import { variantRequired, variantsRequiring } from './gateway-dispatch-by.js';
 
 export type CapabilityNextCall = Record<string, unknown>;
 
@@ -130,6 +131,20 @@ export function parameterVariants(record: CapabilityRecord, name: string): reado
   return declaredBy !== undefined && Object.hasOwn(declaredBy, name) ? declaredBy[name] : undefined;
 }
 
+/**
+ * A parameter only some variants require shows `required: false` in the union schema, so it carries
+ * requiredFor (those variants), and the selector carries variantRequired for every variant at once.
+ * Mirrored by McpSetVariantRequirementViews in McpFoldVariantRules.cpp.
+ */
+export function variantRequirementViews(record: CapabilityRecord, name: string): Record<string, unknown> {
+  if (name === record.routing.dispatchBy?.param) {
+    const required = variantRequired(record);
+    return required === undefined ? {} : { variantRequired: required };
+  }
+  const requiredFor = variantsRequiring(record, name);
+  return requiredFor === undefined ? {} : { requiredFor };
+}
+
 export function parameterSummaries(record: CapabilityRecord): Array<Record<string, unknown>> {
   const required = requiredSet(record);
   return declaredParameterNames(record).map((name) => {
@@ -143,6 +158,7 @@ export function parameterSummaries(record: CapabilityRecord): Array<Record<strin
     if (Array.isArray(schema.enum)) summary.enum = schema.enum;
     const variants = parameterVariants(record, name);
     if (variants !== undefined) summary.variants = [...variants];
+    Object.assign(summary, variantRequirementViews(record, name));
     return summary;
   });
 }
@@ -167,9 +183,11 @@ export function capabilitySignature(record: CapabilityRecord): Record<string, un
   const example = record.examples[0]?.input ?? {};
   const pins = record.legacyIds.find((pair) => pair.folded !== undefined && pair.action === example.action)?.folded;
   const oneOf = record.schemas.input.requiredOneOf;
+  const perVariant = variantRequired(record);
   return {
     required,
     ...(oneOf === undefined ? {} : { oneOf }),
+    ...(perVariant === undefined ? {} : { variantRequired: perVariant }),
     ...(selector === undefined ? {} : {
       selector: { name: selector, values, ...(selectorSchema?.default === undefined ? {} : { default: selectorSchema.default }) }
     }),

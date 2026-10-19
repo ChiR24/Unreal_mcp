@@ -16,7 +16,8 @@ import {
   isRequiredParameter,
   parameterSchema,
   parameterVariants,
-  primaryExecutableAction
+  primaryExecutableAction,
+  variantRequirementViews
 } from './gateway-capability-view.js';
 import { closestMatches, MAX_SUGGESTIONS } from './gateway-guidance.js';
 import { gatewayError } from './gateway-shared.js';
@@ -85,6 +86,7 @@ export function describeCapabilityParameter(
     required: isRequiredParameter(record, param),
     schema: parameterSchema(record, param) ?? {},
     ...(variants === undefined ? {} : { variants: [...variants] }),
+    ...variantRequirementViews(record, param),
     perActionSchemas: true,
     ...origin,
     message: 'Single parameter schema for this capability. Pass it with the exact casing shown.'

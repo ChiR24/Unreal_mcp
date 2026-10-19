@@ -21,7 +21,7 @@ export const PCG_GRAPH_RECORDS: readonly CapabilityRecordSource[] = [
     parentTool: 'manage_pcg', action: 'create_pcg_graph', plugins: PLUGIN,
     topics: ['pcg graph', 'procedural generation', 'pcg asset', 'new pcg graph'],
     family: F, summary: 'Create a new PCG graph asset.', whenToUse: ['A PCG graph asset must be created.'], whenNotToUse: ['A subgraph is needed; use create_pcg_subgraph.'],
-    inputProps: { assetPath: P.assetPath, path: P.path, overwrite: P.overwrite, graphPath: P.graphPath, name: P.name, save: PCG_SAVE }, required: ['graphPath'], effect: 'write', costLatency: 'interactive', costResources: 'medium',
+    inputProps: { assetPath: { ...P.assetPath, description: 'Alias of graphPath.' }, path: { ...P.path, description: 'Folder for name (default /Game/PCG).' }, overwrite: P.overwrite, graphPath: P.graphPath, name: { ...P.name, description: 'Name of the new graph, created in path; used when graphPath and assetPath are absent.' }, save: PCG_SAVE }, required: [], requiredOneOf: ['graphPath', 'assetPath', 'name'], effect: 'write', costLatency: 'interactive', costResources: 'medium',
     exampleInput: { action: 'create_pcg_graph', graphPath: '/Game/PCG/PCG_MyGraph' }, exampleOutput: { success: true, message: 'PCG graph created', graphPath: '/Game/PCG/PCG_MyGraph' },
     outputProps: { graphPath: { type: 'string', description: 'Created PCG graph asset path.' } },
   }),
@@ -34,7 +34,7 @@ export const PCG_GRAPH_RECORDS: readonly CapabilityRecordSource[] = [
   buildWorldRecord({
     parentTool: 'manage_pcg', action: 'add_pcg_node', plugins: PLUGIN,
     family: F, summary: 'Add a node to a PCG graph by settings class or alias.', whenToUse: ['A node must be added to a PCG graph.'], whenNotToUse: ['Pins must be connected; use connect_pcg_pins.'],
-    inputProps: { nodeName: P.nodeName, x: P.x, y: P.y, posX: P.posX, posY: P.posY, settings: P.settings, graphPath: P.graphPath, nodeType: P.nodeType, settingsClass: P.settingsClass, name: P.name, save: PCG_SAVE }, required: ['graphPath', 'nodeType'], effect: 'write', costLatency: 'interactive', costResources: 'low',
+    inputProps: { nodeName: P.nodeName, x: P.x, y: P.y, posX: P.posX, posY: P.posY, settings: P.settings, graphPath: P.graphPath, nodeType: P.nodeType, settingsClass: P.settingsClass, name: P.name, save: PCG_SAVE }, required: ['graphPath'], requiredOneOf: ['nodeType', 'settingsClass'], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'add_pcg_node', graphPath: '/Game/PCG/PCG_MyGraph', nodeType: 'PCGStaticMeshSpawner' }, exampleOutput: { success: true, message: 'PCG node added', nodeId: 'Node_3' },
     outputProps: { nodeId: { type: 'string', description: 'Created PCG node identifier.' } },
   }),
@@ -89,7 +89,7 @@ export const PCG_GRAPH_RECORDS: readonly CapabilityRecordSource[] = [
   buildWorldRecord({
     parentTool: 'manage_pcg', action: 'add_mesh_sampler', plugins: PLUGIN,
     family: F, summary: 'Add a Mesh sampler node to a PCG graph.', whenToUse: ['Points must be sampled on a mesh.'], whenNotToUse: ['A surface sampler is needed; use add_surface_sampler.'],
-    inputProps: { nodeName: P.nodeName, x: P.x, y: P.y, settings: P.settings, save: PCG_SAVE, graphPath: P.graphPath, name: P.name, meshPath: P.meshPath }, required: ['graphPath'], effect: 'write', costLatency: 'interactive', costResources: 'low',
+    inputProps: { nodeName: P.nodeName, x: P.x, y: P.y, settings: P.settings, save: PCG_SAVE, graphPath: P.graphPath, name: P.name, meshPath: { ...P.meshPath, description: 'Static mesh (/Game path): the one mesh_sampler samples, or the one static_mesh_spawner places. Omitted, the node is added with no mesh, to be set later.' } }, required: ['graphPath'], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'add_mesh_sampler', graphPath: '/Game/PCG/PCG_MyGraph', meshPath: '/Game/Meshes/SM_Rock' },
   }),
   buildWorldRecord({
@@ -173,13 +173,13 @@ export const PCG_GRAPH_RECORDS: readonly CapabilityRecordSource[] = [
   buildWorldRecord({
     parentTool: 'manage_pcg', action: 'add_static_mesh_spawner', plugins: PLUGIN,
     family: F, summary: 'Add a Static Mesh spawner node to a PCG graph.', whenToUse: ['Static meshes must be spawned at points.'], whenNotToUse: ['An actor spawner is needed; use add_actor_spawner.'],
-    inputProps: { nodeName: P.nodeName, x: P.x, y: P.y, settings: P.settings, save: PCG_SAVE, graphPath: P.graphPath, name: P.name, meshPath: P.meshPath }, required: ['graphPath', 'meshPath'], effect: 'write', costLatency: 'interactive', costResources: 'low',
+    inputProps: { nodeName: P.nodeName, x: P.x, y: P.y, settings: P.settings, save: PCG_SAVE, graphPath: P.graphPath, name: P.name, meshPath: { ...P.meshPath, description: 'Static mesh the spawner places. Omitted, the spawner is added with no mesh, to be set later.' } }, required: ['graphPath'], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'add_static_mesh_spawner', graphPath: '/Game/PCG/PCG_MyGraph', meshPath: '/Game/Meshes/SM_Rock' },
   }),
   buildWorldRecord({
     parentTool: 'manage_pcg', action: 'add_actor_spawner', plugins: PLUGIN,
     family: F, summary: 'Add an Actor spawner node to a PCG graph.', whenToUse: ['Actors must be spawned at points.'], whenNotToUse: ['A static mesh spawner is needed; use add_static_mesh_spawner.'],
-    inputProps: { nodeName: P.nodeName, x: P.x, y: P.y, settings: P.settings, save: PCG_SAVE, classPath: P.classPath, graphPath: P.graphPath, name: P.name, actorClass: P.actorClass }, required: ['graphPath', 'actorClass'], effect: 'write', costLatency: 'interactive', costResources: 'low',
+    inputProps: { nodeName: P.nodeName, x: P.x, y: P.y, settings: P.settings, save: PCG_SAVE, classPath: P.classPath, graphPath: P.graphPath, name: P.name, actorClass: { ...P.actorClass, description: 'Actor class the spawner places (classPath is read in its place). Omitted, the spawner is added with no template, to be set later.' } }, required: ['graphPath'], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'add_actor_spawner', graphPath: '/Game/PCG/PCG_MyGraph', actorClass: '/Game/Blueprints/BP_Tree' },
   }),
   buildWorldRecord({

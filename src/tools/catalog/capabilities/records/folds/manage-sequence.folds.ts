@@ -35,7 +35,7 @@ export const MANAGE_SEQUENCE_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'delete', topics: ['delete level sequence', 'delete cutscene'], selector: 'deleteScope',
-    summary: 'Delete a level sequence, remove one of its tracks, or remove keyframes from a track.',
+    summary: 'Delete a level sequence (deleteScope sequence, the default: refused with SEQUENCE_IN_USE, naming referencedBy, while a level or asset still uses it; its editors close and the undo history may be cleared), remove one track by name (track, one undo step), or remove keys (keyframe: from the tracks trackName or bindingId picks, on frame or frames, else every key on them; one undo step; replies removedKeys).',
     members: { sequence: 'delete', track: 'remove_track', keyframe: 'remove_keyframe' },
   },
   {

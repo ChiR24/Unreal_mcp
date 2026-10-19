@@ -39,7 +39,7 @@ export const TIMELINE_TRACKS_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'sequence.remove_track', action: 'remove_track', family: F, domain: D,
-    summary: 'Remove a track by name from a Level Sequence.',
+    summary: 'Remove one track from a Level Sequence, in one undo step: the track whose name is trackName (case ignored), else the first whose name contains it; the camera cut track too. The sequence is left unsaved.',
     whenToUse: ['A track must be permanently removed from the sequence.'],
     whenNotToUse: ['The track should be muted instead.'],
     inputProps: { path: P.path, trackName: P.trackName },
@@ -146,12 +146,12 @@ export const TIMELINE_TRACKS_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'sequence.remove_keyframe', action: 'remove_keyframe', family: F, domain: D,
-    summary: 'Remove keyframes from a sequence track: the keys on one frame or on several, or every key on the track.',
+    summary: 'Remove keyframes from the tracks trackName or bindingId picks: the keys on one frame or on several, or every key on them, of every key type, in one undo step. Naming neither track nor binding is refused (TRACK_REQUIRED); a filter that matches no track is TRACK_NOT_FOUND.',
     whenToUse: ['A track must be cleanly re-authored rather than added to.',
       'A single bad key must be deleted.'],
     whenNotToUse: ['The whole track should go; use delete with deleteScope track.'],
-    inputProps: { path: P.path, trackName: P.trackName, bindingId: P.bindingId, frame: P.frame, frames: { type: 'array', minItems: 1, maxItems: 500, items: { type: 'integer', description: 'Frame number.' }, description: 'Remove the keys on each of these frames in one call, of every key type (transform, float, Visibility, particle). Without frame and frames every key on the track goes.' } },
-    required: ['path'],
+    inputProps: { path: P.path, trackName: P.trackName, bindingId: { ...P.bindingId, description: 'Binding GUID (get_properties bindings): only the tracks of that bound object; with trackName, only those of its tracks the name picks.' }, frame: P.frame, frames: { type: 'array', minItems: 1, maxItems: 500, items: { type: 'integer', description: 'Frame number.' }, description: 'Remove the keys on each of these frames in one call, of every key type (transform, float, Visibility, particle). Without frame and frames every key on the track goes.' } },
+    required: ['path'], requiredOneOf: ['trackName', 'bindingId'],
     // Omitting `frame` clears every key on the matching track, which is the
     // operation wanted before re-authoring. removedKeys is reported because
     // "removed 0" and "removed 12" must not read the same.

@@ -69,25 +69,24 @@ bool HandleEnumValueActions(
         FString ValueName = GetJsonStringField(Params, TEXT("valueName"));
         if (ValueName.IsEmpty()) { SetEnumResultFields(OutResult, false, TEXT("Missing required parameter: valueName"), TEXT("MISSING_PARAMETER")); return true; }
 
-        Enum->Modify();
-        TArray<TPair<FName, int64>> Names = GetEnumDisplayNamePairs(Enum);
-        const int32 Removed = Names.RemoveAll([&ValueName](const TPair<FName, int64>& Pair)
-        {
-            return MatchesEnumShortName(Pair.Key, ValueName);
-        });
-        if (Removed == 0)
+        // The engine's own remove renumbers the later values AND remaps every loaded object and graph pin
+        // holding them, by name (FEnumEditorUtils::BroadcastChanges). Renumbering by hand left a stored
+        // value reading as whichever entry now sat at its number.
+        const TArray<TPair<FName, int64>> Names = GetEnumDisplayNamePairs(Enum);
+        const int32 Index = Names.IndexOfByPredicate([&ValueName](const TPair<FName, int64>& Pair)
+            { return MatchesEnumShortName(Pair.Key, ValueName); });
+        if (Index == INDEX_NONE)
         {
             SetEnumResultFields(OutResult, false, FString::Printf(TEXT("Enum value '%s' not found."), *ValueName), TEXT("NOT_FOUND"));
             return true;
         }
-        for (int32 i = 0; i < Names.Num(); ++i) { Names[i].Value = i; }
-        MCP_SET_ENUMS(Enum, Names, Enum->GetCppForm());
+        FEnumEditorUtils::RemoveEnumeratorFromUserDefinedEnum(Enum, Index);
         FinalizeEnum(Enum, EnumSaveRequested(Params));
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("valueName"), ValueName);
         Result->SetBoolField(TEXT("removed"), true);
-        Result->SetNumberField(TEXT("valueCount"), Names.Num());
+        Result->SetNumberField(TEXT("valueCount"), Names.Num() - 1);
         OutResult = Result;
         return true;
     }
@@ -142,9 +141,7 @@ bool HandleEnumValueActions(
         TArray<FString> RequestedOrder;
         for (const TSharedPtr<FJsonValue>& V : *OrderArr) { RequestedOrder.Add(V->AsString()); }
 
-        Enum->Modify();
-        TArray<TPair<FName, int64>> OldNames = GetEnumDisplayNamePairs(Enum);
-        TArray<TPair<FName, int64>> Current = OldNames;
+        const TArray<TPair<FName, int64>> Current = GetEnumDisplayNamePairs(Enum);
 
         TArray<TPair<FName, int64>> NewNames;
         for (const FString& Req : RequestedOrder)
@@ -181,8 +178,14 @@ bool HandleEnumValueActions(
             return true;
         }
 
-        for (int32 i = 0; i < NewNames.Num(); ++i) { NewNames[i].Value = i; }
-        MCP_SET_ENUMS(Enum, NewNames, Enum->GetCppForm());
+        // One engine move per misplaced value: each move remaps the loaded objects and pins holding the moved
+        // values by name, where renumbering by hand changed what every stored value meant.
+        for (int32 Target = 0; Target < NewNames.Num(); ++Target)
+        {
+            const int32 From = GetEnumDisplayNamePairs(Enum).IndexOfByPredicate(
+                [&NewNames, Target](const TPair<FName, int64>& Pair) { return Pair.Key == NewNames[Target].Key; });
+            if (From != Target) { FEnumEditorUtils::MoveEnumeratorInUserDefinedEnum(Enum, From, Target); }
+        }
         FinalizeEnum(Enum, EnumSaveRequested(Params));
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();

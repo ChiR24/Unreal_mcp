@@ -133,7 +133,7 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'delete_enum', selector: 'deleteScope',
-    summary: 'Delete an enum asset or remove one of its values.',
+    summary: 'Delete an enum asset (deleteScope enum, the default; refused with DELETE_FAILED, naming referencedBy, while anything still uses it) or remove one of its values (value: the later values move up one while loaded Blueprints and assets holding them keep their entries, remapped by name as the enum editor does, and pins set to the removed one are reset to the first entry). Saved unless save is false.',
     members: { enum: 'delete_enum', value: 'remove_enum_value' },
   },
   // material authoring

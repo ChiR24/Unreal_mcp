@@ -40,7 +40,7 @@ export const GRAPH_NODES_RECORDS: readonly CapabilityRecordSource[] = [
     // handler always read it; the contract never declared it, so the gateway
     // refused the one way to make an event that takes arguments.
     inputProps: { blueprintPath: P.blueprintPath, graphName: P.graphName, nodeType: P.nodeType, memberName: P.memberName, posX: P.posX, posY: P.posY, functionName: P.nodeFunctionName, pure: P.pure, eventName: P.eventName, customEventName: P.customEventName, memberClass: P.memberClass, targetClass: P.targetClass, actorName: { type: 'string', description: 'For nodeType K2Node_ActorBoundEvent or K2Node_Literal, which belong in a level Blueprint: the placed actor of its level (label, name or object path) the event fires for, with eventName one of its event dispatchers (OnActorBeginOverlap), or the node references. Without it, or outside a level Blueprint, the node is refused.' }, inputAxisName: P.inputAxisName, inputActionPath: P.inputActionPath, inputActionAssetPath: P.inputActionAssetPath, actionPath: P.actionPath, timelineName: { type: 'string', description: 'For nodeType Timeline: the timeline it plays, which edit_timeline keys; a name the Blueprint lacks makes one (omitted, a new Timeline_N). One node plays a timeline, in the event graph of an Actor Blueprint.' }, structPath: { ...P.structPath, description: 'For MakeStruct or BreakStruct: the struct, a Blueprint Struct asset (/Game/Data/F_Item) or a native one (/Script/SlateCore.SlateColor, /Script/CoreUObject.Vector); without it the node is refused.' }, enumPath: { type: 'string', description: 'For SwitchOnEnum, ForEachElementInEnum, GetNumEnumEntries, EnumLiteral and CastByteToEnum: the enum whose values become the node\'s pins (a Switch on Enum\'s outputs are named after them), a Blueprint enum asset (/Game/Data/E_Phase) or a native one (/Script/Engine.ECollisionChannel); without it the node is refused.' },parameters: { ...P.parameters, description: 'CustomEvent inputs, each {name, type}: float, double, int, int64, bool, byte, string, name, text, object, class, softobject, an enum or struct name (Vector, Rotator, Transform, /Script/CoreUObject.Vector) or a class name (Actor) for an object of that class. An array, set or map parameter needs add_event. A nameless entry or another type is refused (TYPE_RESOLUTION_FAILED) before anything changes.' } },
-    required: ['blueprintPath', 'nodeType', 'posX', 'posY'],
+    required: ['blueprintPath', 'nodeType'],
     outputProps: {
       nodeGuid: { type: 'string', description: 'Unique node identifier for subsequent graph operations.' },
       graphName: P.graphName,
@@ -166,7 +166,7 @@ export const GRAPH_NODES_RECORDS: readonly CapabilityRecordSource[] = [
     whenToUse: ['Wire paths need a reroute node for cleaner layout.'],
     whenNotToUse: ['A functional node is needed (use create_node).'],
     inputProps: { blueprintPath: P.blueprintPath, graphName: P.graphName, posX: P.posX, posY: P.posY },
-    required: ['blueprintPath', 'posX', 'posY'],
+    required: ['blueprintPath'],
     outputProps: {
       nodeGuid: { type: 'string', description: 'Reroute node identifier.' },
     },

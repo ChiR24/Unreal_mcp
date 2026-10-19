@@ -1,4 +1,5 @@
 #include "Domains/AssetWorkflow/Enums/Shared.h"
+#include "Domains/AssetWorkflow/Operations/McpAssetBulkSelection.h"
 #include "Async/Async.h"
 #include "Kismet2/EnumEditorUtils.h"
 #include "Misc/ScopedEvent.h"
@@ -175,6 +176,7 @@ bool HandleEnumLifecycleActions(
         // game thread. Capture the path BEFORE deletion: the pointer is dangling
         // once the delete succeeds.
         const FString EnumPath = Enum->GetPathName();
+        const FString EnumPackage = Enum->GetOutermost()->GetName();
         TArray<UObject*> ObjectsToDelete = { Enum };
 
         // ObjectTools::DeleteObjects returns the number of objects actually removed.
@@ -183,9 +185,14 @@ bool HandleEnumLifecycleActions(
 
         if (DeletedCount == 0)
         {
-            SetEnumResultFields(OutResult, false, FString::Printf(TEXT("Enum %s was not deleted; the delete was refused or cancelled (check what still references it)."), *EnumPath), TEXT("DELETE_FAILED"));
+            // The engine refuses while anything references the enum; name what does, so the caller can fix it.
+            const TArray<FString> Users = McpOutsideReferencers(EnumPackage, {EnumPackage});
+            const TCHAR* Why = Users.Num() > 0 ? TEXT("assets still use it (referencedBy); change or delete them first")
+                                               : TEXT("something loaded still holds it");
+            SetEnumResultFields(OutResult, false, FString::Printf(TEXT("Enum %s was not deleted: %s."), *EnumPath, Why), TEXT("DELETE_FAILED"));
             OutResult->SetStringField(TEXT("enumPath"), EnumPath);
             OutResult->SetBoolField(TEXT("deleted"), false);
+            OutResult->SetArrayField(TEXT("referencedBy"), McpHandlerUtils::ToJsonStringArray(Users));
             return true;
         }
 

@@ -90,8 +90,8 @@ export const P = {
   fromPinName: S('Source pin name for a pin connection.'),
   toNodeId: S('Target node identifier for a pin connection.'),
   toPinName: S('Target pin name for a pin connection.'),
-  posX: N('X coordinate for node placement.'),
-  posY: N('Y coordinate for node placement.'),
+  posX: N('X position of the new node in the graph (default 0, the origin). add_node and create_node move a node given no position right past any node at the origin, and refuse a given spot another node covers (NODE_OVERLAP, with a suggestedPosition).'),
+  posY: N('Y position of the new node in the graph (default 0).'),
   includePins: B('When true, graph details include per-node pins and links.'),
   structPath: S('Blueprint Struct asset path (UserDefinedStruct or native UScriptStruct).'),
   // Functions / events

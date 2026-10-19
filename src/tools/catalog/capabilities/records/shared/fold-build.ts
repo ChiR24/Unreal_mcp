@@ -6,6 +6,7 @@
 
 import type {
   CapabilityRecordSource,
+  CapabilityVariantRequirement,
   Draft202012ObjectSchema,
   JsonObject,
   JsonValue,
@@ -18,7 +19,7 @@ import {
   LegacyToolNameSchema,
 } from '../../identifiers.js';
 import type { FoldSpec, MemberEntry } from './fold-types.js';
-import { unique } from './fold-support.js';
+import { sameJson, unique } from './fold-support.js';
 import { intersectRequired, mergeProperties } from './fold-widen.js';
 
 const LATENCY_RANK: Readonly<Record<string, number>> = { instant: 0, interactive: 1, 'long-running': 2 };
@@ -57,6 +58,29 @@ function declaredBy(
   });
   const distinct = Object.entries(owners).filter(([, values]) => values.length < variants);
   return distinct.length === 0 ? undefined : Object.fromEntries(distinct);
+}
+
+// What each member action's own record requires beyond the union schema, which
+// keeps only what every member requires: 592 variants lost a requirement, so a
+// draw without location passed the gateway and failed in the engine.
+function requires(
+  entries: readonly MemberEntry[],
+  members: readonly CapabilityRecordSource[],
+  folded: Draft202012ObjectSchema,
+): Record<string, CapabilityVariantRequirement> | undefined {
+  const out: Record<string, CapabilityVariantRequirement> = {};
+  entries.forEach((entry, index) => {
+    const input = members[index]?.schemas.input;
+    if (input === undefined) return;
+    const required = input.required.filter((name) => name !== 'action' && !folded.required.includes(name));
+    const oneOf = input.requiredOneOf !== undefined && !sameJson(input.requiredOneOf, folded.requiredOneOf)
+      ? input.requiredOneOf
+      : undefined;
+    if (required.length > 0 || oneOf !== undefined) {
+      out[entry.action] = { ...(required.length > 0 ? { required } : {}), ...(oneOf === undefined ? {} : { oneOf: [...oneOf] }) };
+    }
+  });
+  return Object.keys(out).length === 0 ? undefined : out;
 }
 
 function objectSchema(
@@ -193,6 +217,7 @@ export function buildFolded(
   };
 
   const owners = selector === undefined ? undefined : declaredBy(entries, members);
+  const variantRequires = selector === undefined ? undefined : requires(entries, members, input);
 
   return {
     id,
@@ -230,6 +255,7 @@ export function buildFolded(
             param: selector,
             actions: Object.fromEntries(selected.map((entry) => [entry.value, LegacyActionNameSchema.parse(entry.action)])),
             ...(owners === undefined ? {} : { declaredBy: owners }),
+            ...(variantRequires === undefined ? {} : { requires: variantRequires }),
           },
         }),
     },
