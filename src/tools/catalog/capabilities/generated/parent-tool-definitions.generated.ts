@@ -17263,7 +17263,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "emitterName": {
           "type": "string",
-          "description": "Emitter name within the target Niagara system."
+          "description": "Emitter within the system, by the name get_niagara_info lists. Module, renderer, data interface, event, parameter and simulation edits also read emitter, and with neither use the system's only emitter (a system with several refuses with EMITTER_NOT_FOUND, listing them); graph edits without one edit the system's own script."
         },
         "emitterPath": {
           "type": "string",
@@ -17663,7 +17663,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "emitterName": {
           "type": "string",
-          "description": "Emitter name within the target Niagara system."
+          "description": "Emitter within the system, by the name get_niagara_info lists. Module, renderer, data interface, event, parameter and simulation edits also read emitter, and with neither use the system's only emitter (a system with several refuses with EMITTER_NOT_FOUND, listing them); graph edits without one edit the system's own script."
         },
         "errors": {
           "type": "array",
@@ -22405,7 +22405,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "pawnClass": {
           "type": "string",
-          "description": "Pawn class."
+          "description": "The default pawn class (a class path or Blueprint path); required, or send it as defaultPawnClass."
         },
         "playerControllerClass": {
           "type": "string",
@@ -22946,7 +22946,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "nodeId": {
           "type": "string",
-          "description": "PCG node identifier."
+          "description": "The node to change; required, or send it as nodeName."
         },
         "nodeKind": {
           "type": "string",
@@ -24004,7 +24004,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "sequencePath": {
           "type": "string",
-          "description": "Canonical /Game sequence asset path."
+          "description": "Alias of path."
         },
         "sequenceProperty": {
           "type": "string",
@@ -24179,7 +24179,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "subsequencePath": {
           "type": "string",
-          "description": "Canonical /Game subsequence path."
+          "description": "Alias of shotSequencePath."
         },
         "takePresetPath": {
           "type": "string",

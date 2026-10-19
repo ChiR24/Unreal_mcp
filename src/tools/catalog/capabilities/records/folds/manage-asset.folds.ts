@@ -212,7 +212,7 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'delete_struct', selector: 'deleteScope',
-    summary: 'Delete a struct asset or remove one of its members.',
+    summary: 'Delete a Blueprint Struct asset (deleteScope struct, the default: refused with STRUCT_IN_USE, naming referencers, while other assets use it, unless force deletes it anyway and recompiles the loaded Blueprints that used it; NOT_FOUND when there is none) or remove one member (member: by memberName or varGuid; the assets using the struct are refreshed, and it is saved unless save is false).',
     members: { struct: 'delete_struct', member: 'remove_struct_member' },
   },
   // texture

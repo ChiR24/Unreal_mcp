@@ -83,7 +83,7 @@ export const STRUCT_RECORDS: readonly RecordSpec[] = [
     { examples: [ex('Fork a struct for a second revision', { structPath: S, destinationPath: '/Game/Structs', destinationName: 'S_WeaponRow_V2' }, DONE)],
       whenToUse: ['A struct must be forked into a new asset with the same members, for example to try a second revision.'],
       whenNotToUse: ['An asset that is not a struct must be copied (use asset.duplicate).'] }),
-  r('delete_struct', 'struct', 'Delete a Blueprint Struct asset.', schema({ structPath: STRUCT_PATH, force: bool('Delete even when other assets still reference the struct (their references break). Default false, which refuses and lists the referencers.') }, ['structPath']), OK, { ...DESTRUCTIVE, longRunning: false }, DESTRUCTIVE_POLICY, MEDIUM,
+  r('delete_struct', 'struct', 'Delete a Blueprint Struct asset.', schema({ structPath: STRUCT_PATH, force: bool('Delete even when other assets use the struct, breaking them: the loaded Blueprints among them recompile, and the engine removes their variables of it (the reply\'s warnings name them). Default false: refused with STRUCT_IN_USE, listing the referencers.') }, ['structPath']), OK, { ...DESTRUCTIVE, longRunning: false }, DESTRUCTIVE_POLICY, MEDIUM,
     { examples: [ex('Delete an unreferenced struct', { structPath: '/Game/Structs/S_Deprecated' }, DONE)],
       whenToUse: ['An unused struct asset must be deleted; a struct still referenced is refused, with its referencers listed, unless force is set.'],
       whenNotToUse: ['The struct should be renamed or moved instead of removed (use struct.edit_struct).', 'The assets that use the struct must be found first (use struct.get_struct with info=usage).'] }),

@@ -41,13 +41,13 @@ export const PCG_GRAPH_RECORDS: readonly CapabilityRecordSource[] = [
   buildWorldRecord({
     parentTool: 'manage_pcg', action: 'connect_pcg_pins', plugins: PLUGIN,
     family: F, summary: 'Connect an output pin of one PCG node to an input pin of another.', whenToUse: ['Two PCG nodes must be wired together.'], whenNotToUse: ['A node must be added; use add_pcg_node.'],
-    inputProps: { inputName: P.inputName, outputName: P.outputName, graphPath: P.graphPath, sourceNodeId: P.sourceNodeId, sourcePin: P.sourcePin, targetNodeId: P.targetNodeId, targetPin: P.targetPin, save: PCG_SAVE }, required: ['graphPath', 'sourceNodeId', 'targetNodeId'], effect: 'write', costLatency: 'interactive', costResources: 'low',
+    inputProps: { inputName: P.inputName, outputName: P.outputName, graphPath: P.graphPath, assetPath: { ...P.assetPath, description: 'Alias of graphPath.' }, sourceNodeId: P.sourceNodeId, sourcePin: P.sourcePin, targetNodeId: P.targetNodeId, targetPin: P.targetPin, save: PCG_SAVE }, required: ['sourceNodeId', 'targetNodeId'], requiredOneOf: ['graphPath', 'assetPath'], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'connect_pcg_pins', graphPath: '/Game/PCG/PCG_MyGraph', sourceNodeId: 'Node_1', targetNodeId: 'Node_2' },
   }),
   buildWorldRecord({
     parentTool: 'manage_pcg', action: 'set_pcg_node_settings', plugins: PLUGIN,
     family: F, summary: 'Set settings on an existing PCG node.', whenToUse: ['A PCG node settings must be updated.'], whenNotToUse: ['The node must be created; use add_pcg_node.'],
-    inputProps: { nodeName: P.nodeName, title: P.title, classPath: P.classPath, texturePath: P.texturePath, meshPath: P.meshPath, actorClass: P.actorClass, x: P.x, y: P.y, settings: P.settings, graphPath: P.graphPath, nodeId: P.nodeId, save: PCG_SAVE }, required: ['graphPath', 'nodeId'], effect: 'write', behavior: { idempotency: 'idempotent' }, costLatency: 'interactive', costResources: 'low',
+    inputProps: { nodeName: P.nodeName, title: P.title, classPath: P.classPath, texturePath: P.texturePath, meshPath: P.meshPath, actorClass: P.actorClass, x: P.x, y: P.y, settings: P.settings, graphPath: P.graphPath, assetPath: { ...P.assetPath, description: 'Alias of graphPath.' }, nodeId: { ...P.nodeId, description: 'The node to change; required, or send it as nodeName.' }, save: PCG_SAVE }, required: [], requiredOneOf: ['graphPath', 'assetPath'], effect: 'write', behavior: { idempotency: 'idempotent' }, costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'set_pcg_node_settings', graphPath: '/Game/PCG/PCG_MyGraph', nodeId: 'Node_3' },
   }),
   buildWorldRecord({

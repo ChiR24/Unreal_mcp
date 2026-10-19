@@ -106,8 +106,9 @@ export const CINEMATIC_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['The master sequence already has a shot track.'],
     // Native HandleAddShotTrack (Assets.cpp) loads the master from path and
     // requires the shot sequence it adds as a section.
-    inputProps: { path: masterPath, shotSequencePath: P.shotSequencePath, displayName: A.displayName, ...SECTION_RANGE, save: A.save },
-    required: ['path', 'shotSequencePath'],
+    inputProps: { path: masterPath, shotSequencePath: P.shotSequencePath, subsequencePath: { ...P.subsequencePath, description: 'Alias of shotSequencePath.' }, displayName: A.displayName, ...SECTION_RANGE, save: A.save },
+    // The handler reads the shot as shotSequencePath, else subsequencePath.
+    required: ['path'], requiredOneOf: ['shotSequencePath', 'subsequencePath'],
     outputProps: { sectionName: sectionNameOutput },
     outputRequired: [],
     effect: 'write', latency: 'interactive', resources: 'low', plugins: SEQ_PLUGINS,
@@ -137,8 +138,8 @@ export const CINEMATIC_RECORDS: readonly CapabilityRecordSource[] = [
     // never read. ApplyCameraSettings (:73-84) reads the lens, filmback and
     // focus fields. Emits actorName/actorPath (+bindingGuid when a sequence is
     // supplied) on success, so they are declared as receipt-visible outputs.
-    inputProps: { ...CAMERA_SETTINGS, path: P.path, actorName: P.actorName, label: A.label, location: { type: 'object', description: 'Camera location.', additionalProperties: false, properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }, required: ['x', 'y', 'z'] }, rotation: { type: 'object', description: 'Camera rotation as {pitch, yaw, roll} (x/y/z are accepted as aliases).', additionalProperties: false, properties: { pitch: { type: 'number' }, yaw: { type: 'number' }, roll: { type: 'number' }, x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } } } },
-    required: ['path'],
+    inputProps: { ...CAMERA_SETTINGS, path: { ...P.path, description: 'Level Sequence to bind the new camera to (sequencePath is read in its place); left out, the camera is placed unbound.' }, sequencePath: { ...P.sequencePath, description: 'Alias of path.' }, actorName: P.actorName, label: A.label, location: { type: 'object', description: 'Camera location.', additionalProperties: false, properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }, required: ['x', 'y', 'z'] }, rotation: { type: 'object', description: 'Camera rotation as {pitch, yaw, roll} (x/y/z are accepted as aliases).', additionalProperties: false, properties: { pitch: { type: 'number' }, yaw: { type: 'number' }, roll: { type: 'number' }, x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } } } },
+    required: [],
     outputProps: {
       actorName: { type: 'string', description: 'Label of the created camera actor.' },
       actorPath: { type: 'string', description: 'Path to the created camera actor.' },

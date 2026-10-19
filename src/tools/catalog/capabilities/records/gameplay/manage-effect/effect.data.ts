@@ -17,11 +17,12 @@ const SAVE = bool('Persist the asset to disk (default true); false leaves the ch
 const F = 'effect';
 const W = ['A particle, Niagara or debug effect must be authored or run.'];
 const NIAGARA = ['Niagara'];
-const EMITTER_REQUIRED = ['systemPath', 'emitterName'];
+// emitterName is never required: LoadSystemAndEmitter reads it or emitter, and a system with one emitter needs neither.
+const EMITTER_REQUIRED = ['systemPath'];
 // Every Niagara system edit and module resolves the system from systemPath, else assetPath (FActionContext::SystemPath; the graph
 // route reads assetPath, then systemPath). A variant that declared one spelling only made the other look like a parameter of its
 // siblings, so a call was told it ignored a path it had read: each declares both, and one is required.
-const EMITTER_ONLY = ['emitterName'];
+const EMITTER_ONLY: string[] = [];
 const SYSTEM_ONE_OF = ['systemPath', 'assetPath'];
 // Tuning one emitter took a call per value; set_parameter_value writes a list and saves the system once.
 const PARAMETER_LIST: JsonObject = {
@@ -102,7 +103,8 @@ export const EFFECT_RECORDS: readonly CapabilityRecordSource[] = [
     exampleInput: { action: 'create_niagara_ribbon', name: 'NR_Slash' } }),
   buildRecord({ parentTool: T, id: `${T}.activate`, action: 'activate', family: F,
     summary: 'Activate a placed Niagara component, in the level editor or a running game; reset restarts it from age 0.', whenToUse: ['Effect must turn on.'], whenNotToUse: ['Author the effect.'],
-    inputProps: { actorName: P.actorName, reset: E.reset }, required: ['actorName'],
+    // The lifecycle handler takes the placed effect as actorName, else systemName.
+    inputProps: { actorName: P.actorName, systemName: E.systemName, reset: E.reset }, required: [], requiredOneOf: ['actorName', 'systemName'],
     effect: 'write', editorStates: ANY_EDITOR_STATE, behavior: { idempotency: 'idempotent' }, latency: 'instant', resources: 'low', plugins: NIAGARA,
     exampleInput: { action: 'activate', actorName: 'FX_1', reset: false } }),
   buildRecord({ parentTool: T, id: `${T}.activate_effect`, action: 'activate_effect', family: F,
@@ -112,12 +114,12 @@ export const EFFECT_RECORDS: readonly CapabilityRecordSource[] = [
     exampleInput: { action: 'activate_effect', systemName: 'FX_1' } }),
   buildRecord({ parentTool: T, id: `${T}.deactivate`, action: 'deactivate', family: F,
     summary: 'Deactivate a placed Niagara component, in the level editor or a running game.', whenToUse: ['Effect must turn off.'], whenNotToUse: ['Use activate.'],
-    inputProps: { actorName: P.actorName }, required: ['actorName'],
+    inputProps: { actorName: P.actorName, systemName: E.systemName }, required: [], requiredOneOf: ['actorName', 'systemName'],
     effect: 'write', editorStates: ANY_EDITOR_STATE, behavior: { idempotency: 'idempotent' }, latency: 'instant', resources: 'low', plugins: NIAGARA,
     exampleInput: { action: 'deactivate', actorName: 'FX_1' } }),
   buildRecord({ parentTool: T, id: `${T}.reset`, action: 'reset', family: F,
     summary: 'Restart a placed Niagara component from age 0, in the level editor or a running game.', whenToUse: ['Effect must restart.'], whenNotToUse: ['Use deactivate.'],
-    inputProps: { actorName: P.actorName }, required: ['actorName'],
+    inputProps: { actorName: P.actorName, systemName: E.systemName }, required: [], requiredOneOf: ['actorName', 'systemName'],
     effect: 'write', editorStates: ANY_EDITOR_STATE, behavior: { safeToRetry: true }, latency: 'instant', resources: 'low', plugins: NIAGARA,
     exampleInput: { action: 'reset', actorName: 'FX_1' } }),
   // An effect could be judged at a chosen age only by starting Play In Editor and stepping frames.
@@ -196,7 +198,7 @@ export const EFFECT_RECORDS: readonly CapabilityRecordSource[] = [
     exampleInput: { action: 'add_emitter_to_system', systemPath: '/Game/NS_Fire', emitterPath: '/Game/NE_Spark', save: false }, exampleOutput: { success: true, message: 'Emitter added', emitterName: 'NE_Spark' } }),
   buildRecord({ parentTool: T, id: `${T}.set_emitter_properties`, action: 'set_emitter_properties', family: F,
     summary: 'Enable or disable an emitter in a Niagara system (emitterProperties.enabled).', whenToUse: ['Emitter config must change.'], whenNotToUse: ['Use add_emitter_to_system.'],
-    inputProps: { systemPath: E.systemPath, assetPath: P.assetPath, emitterName: E.emitterName, emitterProperties: E.emitterProperties, save: SAVE }, required: ['emitterName', 'emitterProperties'], requiredOneOf: SYSTEM_ONE_OF,
+    inputProps: { systemPath: E.systemPath, assetPath: P.assetPath, emitterName: E.emitterName, emitterProperties: E.emitterProperties, save: SAVE }, required: ['emitterProperties'], requiredOneOf: SYSTEM_ONE_OF,
     effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'interactive', resources: 'low', plugins: NIAGARA,
     exampleInput: { action: 'set_emitter_properties', systemPath: '/Game/NS_Fire', emitterName: 'Spark', emitterProperties: { enabled: true } } }),
   buildRecord({ parentTool: T, id: `${T}.add_spawn_rate_module`, action: 'add_spawn_rate_module', family: F,
@@ -206,47 +208,47 @@ export const EFFECT_RECORDS: readonly CapabilityRecordSource[] = [
     exampleInput: { action: 'add_spawn_rate_module', systemPath: '/Game/NS_Fire', emitterName: 'Spark' } }),
   buildRecord({ parentTool: T, id: `${T}.add_spawn_burst_module`, action: 'add_spawn_burst_module', family: F,
     summary: 'Insert the SpawnBurst_Instantaneous module with its default inputs; tune them with set_parameter_value (parameterName "<Module>.<Input>").', whenToUse: ['Burst spawn needed.'], whenNotToUse: ['Use add_spawn_rate_module.'],
-    inputProps: { systemPath: E.systemPath, assetPath: P.assetPath, emitterName: E.emitterName, save: SAVE }, required: ['emitterName'], requiredOneOf: SYSTEM_ONE_OF,
+    inputProps: { systemPath: E.systemPath, assetPath: P.assetPath, emitterName: E.emitterName, save: SAVE }, required: [], requiredOneOf: SYSTEM_ONE_OF,
     effect: 'write', latency: 'interactive', resources: 'low', plugins: NIAGARA,
     exampleInput: { action: 'add_spawn_burst_module', systemPath: '/Game/NS_Fire', emitterName: 'Spark' } }),
   buildRecord({ parentTool: T, id: `${T}.add_spawn_per_unit_module`, action: 'add_spawn_per_unit_module', family: F,
     summary: 'Insert the SpawnPerUnit module with its default inputs; tune them with set_parameter_value (parameterName "<Module>.<Input>").', whenToUse: ['Spawn along a path/unit.'], whenNotToUse: ['Use add_spawn_rate_module.'],
-    inputProps: { systemPath: E.systemPath, assetPath: P.assetPath, emitterName: E.emitterName, save: SAVE }, required: ['emitterName'], requiredOneOf: SYSTEM_ONE_OF,
+    inputProps: { systemPath: E.systemPath, assetPath: P.assetPath, emitterName: E.emitterName, save: SAVE }, required: [], requiredOneOf: SYSTEM_ONE_OF,
     effect: 'write', latency: 'interactive', resources: 'low', plugins: NIAGARA,
     exampleInput: { action: 'add_spawn_per_unit_module', systemPath: '/Game/NS_Fire', emitterName: 'Spark' } }),
   buildRecord({ parentTool: T, id: `${T}.add_initialize_particle_module`, action: 'add_initialize_particle_module', family: F,
     summary: 'Insert the InitializeParticle module with its default inputs; tune them with set_parameter_value (parameterName "<Module>.<Input>").', whenToUse: ['Particle init needed.'], whenNotToUse: ['Use add_particle_state_module.'],
-    inputProps: { systemPath: E.systemPath, assetPath: P.assetPath, emitterName: E.emitterName, save: SAVE }, required: ['emitterName'], requiredOneOf: SYSTEM_ONE_OF,
+    inputProps: { systemPath: E.systemPath, assetPath: P.assetPath, emitterName: E.emitterName, save: SAVE }, required: [], requiredOneOf: SYSTEM_ONE_OF,
     effect: 'write', latency: 'interactive', resources: 'low', plugins: NIAGARA,
     exampleInput: { action: 'add_initialize_particle_module', systemPath: '/Game/NS_Fire', emitterName: 'Spark' } }),
   buildRecord({ parentTool: T, id: `${T}.add_particle_state_module`, action: 'add_particle_state_module', family: F,
     summary: 'Add a particle-state module.', whenToUse: ['Particle lifecycle state needed.'], whenNotToUse: ['Use add_initialize_particle_module.'],
-    inputProps: { systemPath: E.systemPath, assetPath: P.assetPath, emitterName: E.emitterName, save: SAVE }, required: ['emitterName'], requiredOneOf: SYSTEM_ONE_OF,
+    inputProps: { systemPath: E.systemPath, assetPath: P.assetPath, emitterName: E.emitterName, save: SAVE }, required: [], requiredOneOf: SYSTEM_ONE_OF,
     effect: 'write', latency: 'interactive', resources: 'low', plugins: NIAGARA,
     exampleInput: { action: 'add_particle_state_module', systemPath: '/Game/NS_Fire', emitterName: 'Spark' } }),
   buildRecord({ parentTool: T, id: `${T}.add_force_module`, action: 'add_force_module', family: F,
     summary: 'Insert the the chosen force module with its default inputs; tune them with set_parameter_value (parameterName "<Module>.<Input>").', whenToUse: ['Particles need force.'], whenNotToUse: ['Use add_velocity_module.'],
-    inputProps: { systemPath: E.systemPath, assetPath: P.assetPath, emitterName: E.emitterName, forceType: E.forceType, save: SAVE }, required: ['emitterName', 'forceType'], requiredOneOf: SYSTEM_ONE_OF,
+    inputProps: { systemPath: E.systemPath, assetPath: P.assetPath, emitterName: E.emitterName, forceType: E.forceType, save: SAVE }, required: ['forceType'], requiredOneOf: SYSTEM_ONE_OF,
     effect: 'write', latency: 'interactive', resources: 'low', plugins: NIAGARA,
     exampleInput: { action: 'add_force_module', systemPath: '/Game/NS_Fire', emitterName: 'Spark', forceType: 'Gravity' } }),
   buildRecord({ parentTool: T, id: `${T}.add_velocity_module`, action: 'add_velocity_module', family: F,
     summary: 'Add a velocity module.', whenToUse: ['Particles need velocity.'], whenNotToUse: ['Use add_force_module.'],
-    inputProps: { systemPath: E.systemPath, assetPath: P.assetPath, emitterName: E.emitterName, velocityMode: E.velocityMode, save: SAVE }, required: ['emitterName'], requiredOneOf: SYSTEM_ONE_OF,
+    inputProps: { systemPath: E.systemPath, assetPath: P.assetPath, emitterName: E.emitterName, velocityMode: E.velocityMode, save: SAVE }, required: [], requiredOneOf: SYSTEM_ONE_OF,
     effect: 'write', latency: 'interactive', resources: 'low', plugins: NIAGARA,
     exampleInput: { action: 'add_velocity_module', systemPath: '/Game/NS_Fire', emitterName: 'Spark', velocityMode: 'Linear' } }),
   buildRecord({ parentTool: T, id: `${T}.add_acceleration_module`, action: 'add_acceleration_module', family: F,
     summary: 'Insert the AccelerationForce module with its default inputs; tune them with set_parameter_value (parameterName "<Module>.<Input>").', whenToUse: ['Particles need acceleration.'], whenNotToUse: ['Use add_velocity_module.'],
-    inputProps: { systemPath: E.systemPath, assetPath: P.assetPath, emitterName: E.emitterName, save: SAVE }, required: ['emitterName'], requiredOneOf: SYSTEM_ONE_OF,
+    inputProps: { systemPath: E.systemPath, assetPath: P.assetPath, emitterName: E.emitterName, save: SAVE }, required: [], requiredOneOf: SYSTEM_ONE_OF,
     effect: 'write', latency: 'interactive', resources: 'low', plugins: NIAGARA,
     exampleInput: { action: 'add_acceleration_module', systemPath: '/Game/NS_Fire', emitterName: 'Spark' } }),
   buildRecord({ parentTool: T, id: `${T}.add_size_module`, action: 'add_size_module', family: F,
     summary: 'Insert the ScaleSpriteSize module with its default inputs; tune them with set_parameter_value (parameterName "<Module>.<Input>").', whenToUse: ['Particle size must change.'], whenNotToUse: ['Use add_color_module.'],
-    inputProps: { systemPath: E.systemPath, assetPath: P.assetPath, emitterName: E.emitterName, save: SAVE }, required: ['emitterName'], requiredOneOf: SYSTEM_ONE_OF,
+    inputProps: { systemPath: E.systemPath, assetPath: P.assetPath, emitterName: E.emitterName, save: SAVE }, required: [], requiredOneOf: SYSTEM_ONE_OF,
     effect: 'write', latency: 'interactive', resources: 'low', plugins: NIAGARA,
     exampleInput: { action: 'add_size_module', systemPath: '/Game/NS_Fire', emitterName: 'Spark' } }),
   buildRecord({ parentTool: T, id: `${T}.add_color_module`, action: 'add_color_module', family: F,
     summary: 'Insert the Color module with its default inputs; tune them with set_parameter_value (parameterName "<Module>.<Input>").', whenToUse: ['Particle color must change.'], whenNotToUse: ['Use add_size_module.'],
-    inputProps: { systemPath: E.systemPath, assetPath: P.assetPath, emitterName: E.emitterName, save: SAVE }, required: ['emitterName'], requiredOneOf: SYSTEM_ONE_OF,
+    inputProps: { systemPath: E.systemPath, assetPath: P.assetPath, emitterName: E.emitterName, save: SAVE }, required: [], requiredOneOf: SYSTEM_ONE_OF,
     effect: 'write', latency: 'interactive', resources: 'low', plugins: NIAGARA,
     exampleInput: { action: 'add_color_module', systemPath: '/Game/NS_Fire', emitterName: 'Spark' } }),
   buildRecord({ parentTool: T, id: `${T}.add_user_parameter`, action: 'add_user_parameter', family: F,

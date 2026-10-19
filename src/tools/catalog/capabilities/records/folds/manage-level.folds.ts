@@ -8,7 +8,7 @@ export const MANAGE_LEVEL_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'save', selector: 'saveMode',
-    summary: 'Save the current or a named level, or save it under a new path.',
+    summary: 'Save the open level in place (saveMode save, the default; a levelPath naming another level is refused with LEVEL_NOT_LOADED, an unsaved new level with TRANSIENT_LEVEL) or under a new /Game path (as: savePath, refused with ASSET_ALREADY_EXISTS where something already is). It writes the level\'s own package: sublevels and changed assets are separate packages it leaves unsaved (control_editor save_all writes everything dirty). Not undoable.',
     topics: [],
     members: { save: 'save', as: 'save_as' },
     aliasMembers: ['save_level', 'save_level_as'],

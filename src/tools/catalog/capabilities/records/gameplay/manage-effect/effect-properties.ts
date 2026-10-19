@@ -21,7 +21,7 @@ export const E: PropertyMap = {
   systemPath: str('Canonical /Game Niagara System asset path.'),
   systemName: str('Runtime Niagara system/component name on the target actor.'),
   system: str('Niagara system path; alias normalized to systemPath.'),
-  emitterName: str('Emitter name within the target Niagara system.'),
+  emitterName: str('Emitter within the system, by the name get_niagara_info lists. Module, renderer, data interface, event, parameter and simulation edits also read emitter, and with neither use the system\'s only emitter (a system with several refuses with EMITTER_NOT_FOUND, listing them); graph edits without one edit the system\'s own script.'),
   emitter: str('Emitter name; alias normalized to emitterName.'),
   emitterProperties: {
     type: 'object',

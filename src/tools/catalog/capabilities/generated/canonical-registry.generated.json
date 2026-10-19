@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "4cd02be45848fdb0",
+  "catalogRevision": "9f70a6ee8d2dc1ff",
   "recordCount": 416,
   "records": [
     {
@@ -42452,7 +42452,7 @@
           "save asset",
           "save one asset"
         ],
-        "summary": "Save all dirty assets and levels in the editor, or only the ones listed in assetPaths.",
+        "summary": "Save every level and asset with unsaved changes, or only the packages named in assetPaths (the other dirty ones stay unsaved and are listed in leftDirtyPackages). Temporary packages are skipped; one that fails to save (read-only, not checked out) is listed in failedPackages and fails the call with SAVE_FAILED while the rest stay written. Refused during a Movie Render Queue render (RENDER_IN_PROGRESS). Not undoable.",
         "whenToUse": [
           "All unsaved changes must be persisted.",
           "Only the assets this task changed should be saved (assetPaths), leaving other unsaved work alone."
@@ -42642,7 +42642,7 @@
       },
       "examples": [
         {
-          "title": "Save all dirty assets and levels in the editor, or only the ones listed in assetPaths.",
+          "title": "Save every level and asset with unsaved changes, or only the packages named in assetPaths (the other dirty ones stay unsaved and are listed in leftDirtyPackages). Temporary packages are skipped; one that fails to save (read-only, not checked out) is listed in failedPackages and fails the call with SAVE_FAILED while the rest stay written. Refused during a Movie Render Queue render (RENDER_IN_PROGRESS). Not undoable.",
           "input": {
             "action": "save_all"
           },
@@ -42697,7 +42697,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "87a41e8aa358d75918a48115cfc07c6df04f15b3b2d3e3d78c35ea069da76b9a",
-        "content": "0b7c438a3335d5d569095258d130015c5b377e0a0ea08384288899c45ca466cc"
+        "content": "1986d036f97ae99aba92ae6e26b6c120805390b9093215c6ddb30a46d2f58d56"
       }
     },
     {
@@ -62624,6 +62624,10 @@
               "type": "string",
               "description": "Target actor name in the current level."
             },
+            "systemName": {
+              "type": "string",
+              "description": "Runtime Niagara system/component name on the target actor."
+            },
             "reset": {
               "type": "boolean",
               "description": "Whether the effect restarts from its initial state."
@@ -62631,10 +62635,6 @@
             "assetPath": {
               "type": "string",
               "description": "Niagara system asset the component plays; picks that component on actorName, or the first one in the world without actorName."
-            },
-            "systemName": {
-              "type": "string",
-              "description": "Runtime Niagara system/component name on the target actor."
             },
             "control": {
               "type": "string",
@@ -62649,7 +62649,12 @@
             }
           },
           "required": [],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "requiredOneOf": [
+            "actorName",
+            "systemName",
+            "assetPath"
+          ]
         },
         "output": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -62732,25 +62737,25 @@
             ],
             "assetPath": [
               "effect"
-            ],
-            "systemName": [
-              "effect"
             ]
           },
           "requires": {
             "activate": {
-              "required": [
-                "actorName"
+              "oneOf": [
+                "actorName",
+                "systemName"
               ]
             },
             "deactivate": {
-              "required": [
-                "actorName"
+              "oneOf": [
+                "actorName",
+                "systemName"
               ]
             },
             "reset": {
-              "required": [
-                "actorName"
+              "oneOf": [
+                "actorName",
+                "systemName"
               ]
             },
             "activate_effect": {
@@ -62765,8 +62770,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "a9a6f0572cd99b432ce7eb6ad6106bc1a852a4994ddd4c413d82bf6124e3d842",
-        "content": "11fd4ec111193ca3ff8ff0935d19b5685221726069422237e5776c3195230789"
+        "schema": "e1c23a0a1af4292c2324bfbcd4b85dc6a3e61e31497efed503498302fa5c2d9e",
+        "content": "7e3f3bef0c60615dfbed51442934699e4cd8e3637144f2164f407b3b2ac46e2e"
       }
     },
     {
@@ -62853,7 +62858,7 @@
             },
             "emitterName": {
               "type": "string",
-              "description": "Emitter name within the target Niagara system."
+              "description": "Emitter within the system, by the name get_niagara_info lists. Module, renderer, data interface, event, parameter and simulation edits also read emitter, and with neither use the system's only emitter (a system with several refuses with EMITTER_NOT_FOUND, listing them); graph edits without one edit the system's own script."
             },
             "parameterName": {
               "type": "string",
@@ -62877,8 +62882,7 @@
           },
           "required": [
             "interfaceKind",
-            "systemPath",
-            "emitterName"
+            "systemPath"
           ],
           "additionalProperties": false
         },
@@ -62960,8 +62964,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "676015720a2f150e4595e1306e5daff46291035e7b379276074e9989fd4f075c",
-        "content": "95d14cab5fe699d56548f4eeb3e0aa5cd29269c2aebff7287c3b1ee40b296d8f"
+        "schema": "7d8c1bce8aaa3f35a549018949f645594c5f0a7570c659a43ee36ff426627881",
+        "content": "1b148c10e80065f96f58038319dbe9b14e0b771a6a6cab73e6f9bfd52e9d5230"
       }
     },
     {
@@ -63194,7 +63198,7 @@
             },
             "emitterName": {
               "type": "string",
-              "description": "Emitter name within the target Niagara system."
+              "description": "Emitter within the system, by the name get_niagara_info lists. Module, renderer, data interface, event, parameter and simulation edits also read emitter, and with neither use the system's only emitter (a system with several refuses with EMITTER_NOT_FOUND, listing them); graph edits without one edit the system's own script."
             },
             "modulePath": {
               "type": "string",
@@ -63447,100 +63451,9 @@
             ]
           },
           "requires": {
-            "add_spawn_burst_module": {
-              "required": [
-                "emitterName"
-              ]
-            },
-            "add_spawn_per_unit_module": {
-              "required": [
-                "emitterName"
-              ]
-            },
-            "add_initialize_particle_module": {
-              "required": [
-                "emitterName"
-              ]
-            },
-            "add_velocity_module": {
-              "required": [
-                "emitterName"
-              ]
-            },
-            "add_acceleration_module": {
-              "required": [
-                "emitterName"
-              ]
-            },
             "add_force_module": {
               "required": [
-                "emitterName",
                 "forceType"
-              ]
-            },
-            "add_color_module": {
-              "required": [
-                "emitterName"
-              ]
-            },
-            "add_size_module": {
-              "required": [
-                "emitterName"
-              ]
-            },
-            "add_collision_module": {
-              "required": [
-                "emitterName"
-              ]
-            },
-            "add_kill_particles_module": {
-              "required": [
-                "emitterName"
-              ]
-            },
-            "add_camera_offset_module": {
-              "required": [
-                "emitterName"
-              ]
-            },
-            "add_particle_state_module": {
-              "required": [
-                "emitterName"
-              ]
-            },
-            "add_sprite_renderer_module": {
-              "required": [
-                "emitterName"
-              ]
-            },
-            "add_mesh_renderer_module": {
-              "required": [
-                "emitterName"
-              ]
-            },
-            "add_ribbon_renderer_module": {
-              "required": [
-                "emitterName"
-              ]
-            },
-            "add_light_renderer_module": {
-              "required": [
-                "emitterName"
-              ]
-            },
-            "add_simulation_stage": {
-              "required": [
-                "emitterName"
-              ]
-            },
-            "add_event_generator": {
-              "required": [
-                "emitterName"
-              ]
-            },
-            "add_event_receiver": {
-              "required": [
-                "emitterName"
               ]
             }
           }
@@ -63548,8 +63461,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "6bb60d4cfd96dcae86c1f31e0934f95787bc228cce45c35ffc6cc2aa6200456b",
-        "content": "98a16ccc07f0a4e2a67faf90a9d175ae1758ff8618918145cdd4adccbcd85b9b"
+        "schema": "1306e7857eb32bb25cb90a28d8c3a94fc7862669dc346a65af16e768d9878b17",
+        "content": "dcad4274913db38145ab4b343021eb04cee508a2268ba522866c9b03ef7b4fa5"
       }
     },
     {
@@ -64956,7 +64869,7 @@
             },
             "emitterName": {
               "type": "string",
-              "description": "Emitter name within the target Niagara system."
+              "description": "Emitter within the system, by the name get_niagara_info lists. Module, renderer, data interface, event, parameter and simulation edits also read emitter, and with neither use the system's only emitter (a system with several refuses with EMITTER_NOT_FOUND, listing them); graph edits without one edit the system's own script."
             },
             "userParametersAdded": {
               "type": "array",
@@ -65208,7 +65121,6 @@
             },
             "set_emitter_properties": {
               "required": [
-                "emitterName",
                 "emitterProperties"
               ],
               "oneOf": [
@@ -65217,9 +65129,6 @@
               ]
             },
             "enable_gpu_simulation": {
-              "required": [
-                "emitterName"
-              ],
               "oneOf": [
                 "systemPath",
                 "assetPath"
@@ -65236,8 +65145,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "ccea52373871959889c7c04de28dbc0b6ad7ba3bae73e0f165cde7fa21293728",
-        "content": "616ace672447760aae5a8e82a675107eea291f4b58a03560b76354fdf6dfa707"
+        "schema": "4268bf7968bbcf4d82c6981feecc68c2e38357ec38b371e6b2d9e68db9647495",
+        "content": "e537148147b842daa6387c6df277bf02d4efd859aae21f786097b4c36f50c38a"
       }
     },
     {
@@ -65632,7 +65541,7 @@
             },
             "emitterName": {
               "type": "string",
-              "description": "Emitter name within the target Niagara system."
+              "description": "Emitter within the system, by the name get_niagara_info lists. Module, renderer, data interface, event, parameter and simulation edits also read emitter, and with neither use the system's only emitter (a system with several refuses with EMITTER_NOT_FOUND, listing them); graph edits without one edit the system's own script."
             },
             "scriptType": {
               "type": "string",
@@ -65722,8 +65631,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "bcf0c810dc1b879c3415a47bef48b4d1ed8402cf26d04bac0ed68f6b46465ab9",
-        "content": "b9e1221a74b66f1a7815151a1d80efffd9eb499dc5ad72bdec99bccf32e660bf"
+        "schema": "6caa5272eeeab16dd1cdf0e87c327684ba0e8a2348d895c92376bdc5a5e6120f",
+        "content": "ecbde9e833817ea5c1f67da4e23250d79484cb9c64b800ae0c672f40158e44d6"
       }
     },
     {
@@ -77782,7 +77691,7 @@
           "save current level",
           "persist level"
         ],
-        "summary": "Save the current or a named level, or save it under a new path.",
+        "summary": "Save the open level in place (saveMode save, the default; a levelPath naming another level is refused with LEVEL_NOT_LOADED, an unsaved new level with TRANSIENT_LEVEL) or under a new /Game path (as: savePath, refused with ASSET_ALREADY_EXISTS where something already is). It writes the level's own package: sublevels and changed assets are separate packages it leaves unsaved (control_editor save_all writes everything dirty). Not undoable.",
         "whenToUse": [
           "saveMode=save: The current level must be persisted.",
           "saveMode=as: The current level must be saved to a new asset path.",
@@ -77850,7 +77759,7 @@
       },
       "examples": [
         {
-          "title": "Save the current or a named level, or save it under a new path.",
+          "title": "Save the open level in place (saveMode save, the default; a levelPath naming another level is refused with LEVEL_NOT_LOADED, an unsaved new level with TRANSIENT_LEVEL) or under a new /Game path (as: savePath, refused with ASSET_ALREADY_EXISTS where something already is). It writes the level's own package: sublevels and changed assets are separate packages it leaves unsaved (control_editor save_all writes everything dirty). Not undoable.",
           "input": {
             "action": "save",
             "levelPath": "/Game/Maps/Demo",
@@ -77908,7 +77817,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "3c69e90da92ade17cf705416bd2d88af80046ddcbc6646e4152a3739c55dc7b7",
-        "content": "ac64210862499dfa80fe34d7a98571d9f73688e7e1787391d6a456a837c94665"
+        "content": "a96b9ccbd8fa4c5974872e5cd9827fa50742c6f5bb7edb9eaa4074dc186c0625"
       }
     },
     {
@@ -81830,7 +81739,7 @@
             },
             "pawnClass": {
               "type": "string",
-              "description": "Pawn class."
+              "description": "The default pawn class (a class path or Blueprint path); required, or send it as defaultPawnClass."
             },
             "defaultPawnClass": {
               "type": "string",
@@ -81889,10 +81798,13 @@
           },
           "required": [
             "action",
-            "setting",
-            "gameModeBlueprint"
+            "setting"
           ],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "requiredOneOf": [
+            "gameModeBlueprint",
+            "blueprintPath"
+          ]
         },
         "output": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -81936,7 +81848,6 @@
           "input": {
             "action": "configure_game_mode",
             "gameModeBlueprint": "/Game/Blueprints/Framework/BP_ArenaGameMode",
-            "pawnClass": "/Game/Blueprints/BP_PlayerCharacter",
             "setting": "default_pawn_class"
           },
           "output": {
@@ -82018,11 +81929,6 @@
             ]
           },
           "requires": {
-            "set_default_pawn_class": {
-              "required": [
-                "pawnClass"
-              ]
-            },
             "set_player_controller_class": {
               "required": [
                 "playerControllerClass"
@@ -82063,8 +81969,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "ab349f5200da8ed5b92947cc37e4fd2892821f5964930501cf7057dfc352bc0d",
-        "content": "23531642c8b14eae9c126c7b1b8dbc6f8ad4a137284ec9d7747d86973b55aa7f"
+        "schema": "abd2cfa8c517a8f8d7cc4375bff090ee9873b693845b20a34152d17b9aac76de",
+        "content": "ef8293f0583f3735dcd52114441ed3927011ddc5a35ebf7982e389078a65db4d"
       }
     },
     {
@@ -86363,7 +86269,7 @@
             },
             "nodeId": {
               "type": "string",
-              "description": "PCG node identifier."
+              "description": "The node to change; required, or send it as nodeName."
             },
             "scope": {
               "type": "string",
@@ -86499,7 +86405,9 @@
           },
           "declaredBy": {
             "assetPath": [
-              "create"
+              "create",
+              "connect_pins",
+              "set_node_settings"
             ],
             "path": [
               "create"
@@ -86605,15 +86513,18 @@
             },
             "connect_pcg_pins": {
               "required": [
-                "graphPath",
                 "sourceNodeId",
                 "targetNodeId"
+              ],
+              "oneOf": [
+                "graphPath",
+                "assetPath"
               ]
             },
             "set_pcg_node_settings": {
-              "required": [
+              "oneOf": [
                 "graphPath",
-                "nodeId"
+                "assetPath"
               ]
             },
             "set_pcg_partition_grid_size": {
@@ -86626,8 +86537,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "12903f49823c4961fe37a5690a386774d02ebfda799c9c333f99ca4bf8517e48",
-        "content": "f8912a3c987ee9482fb9bec4e848054396a4854dbafd12037948d9dfdfb08d8a"
+        "schema": "534e4c9beded50a17409e6e0c0a0f9c4eccb3e97f7ebc110bfece8174a1e08ee",
+        "content": "0c7a29e3ec60832af1d0043e77fda88c8628731d1232a34b64687f79a9d12a9f"
       }
     },
     {
@@ -88848,7 +88759,10 @@
               "node"
             ],
             "name": [
-              "node"
+              "node",
+              "scalar_parameter",
+              "static_switch_parameter",
+              "vector_parameter"
             ],
             "collectionPath": [
               "node"
@@ -89052,18 +88966,21 @@
               ]
             },
             "add_scalar_parameter": {
-              "required": [
-                "parameterName"
+              "oneOf": [
+                "parameterName",
+                "name"
               ]
             },
             "add_static_switch_parameter": {
-              "required": [
-                "parameterName"
+              "oneOf": [
+                "parameterName",
+                "name"
               ]
             },
             "add_vector_parameter": {
-              "required": [
-                "parameterName"
+              "oneOf": [
+                "parameterName",
+                "name"
               ]
             },
             "use_material_function": {
@@ -89087,7 +89004,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "f1fa68f49511b7df73784aa1d046b8d13e99aa7882b0b62fc1d4a418ee665229",
-        "content": "e7b106e000978488a9a4c7781f1cc60b5998cb70fc4ba95c6922c3ca45812fdc"
+        "content": "5c38f7be78d1de61c46dca2cf020af22caba48ca9b5093bfee80f9f3df1b32bc"
       }
     },
     {
@@ -91974,13 +91891,13 @@
               "type": "string",
               "description": "Canonical /Game shot sequence path."
             },
+            "subsequencePath": {
+              "type": "string",
+              "description": "Alias of shotSequencePath."
+            },
             "displayName": {
               "type": "string",
               "description": "Shot display name (alias of shotName)."
-            },
-            "subsequencePath": {
-              "type": "string",
-              "description": "Canonical /Game subsequence path."
             },
             "trackKind": {
               "type": "string",
@@ -92228,11 +92145,12 @@
             "shotSequencePath": [
               "shot"
             ],
+            "subsequencePath": [
+              "shot",
+              "subsequence"
+            ],
             "displayName": [
               "shot"
-            ],
-            "subsequencePath": [
-              "subsequence"
             ]
           },
           "requires": {
@@ -92271,8 +92189,9 @@
               ]
             },
             "add_shot_track": {
-              "required": [
-                "shotSequencePath"
+              "oneOf": [
+                "shotSequencePath",
+                "subsequencePath"
               ]
             },
             "add_subsequence": {
@@ -92285,8 +92204,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "30fc52fdf4c7d0a3903e262a112336c04098c285726746f8a9afe49047608ed5",
-        "content": "0b3dc0a3ff214e30421495eb9e14089ac28d697ce3b930453d2a8937e285206c"
+        "schema": "97334560de91d9c884a1652958f2b02fc4ca5af87210b47af5fe52986f8d2ca7",
+        "content": "78714c018dd4ff61e100031d44975142ae992089224b5fa633a4e9d5aa432eba"
       }
     },
     {
@@ -92855,7 +92774,11 @@
             },
             "path": {
               "type": "string",
-              "description": "Canonical /Game sequence asset path."
+              "description": "Level Sequence to bind the new camera to (sequencePath is read in its place); left out, the camera is placed unbound."
+            },
+            "sequencePath": {
+              "type": "string",
+              "description": "Alias of path."
             },
             "actorName": {
               "type": "string",
@@ -92914,10 +92837,6 @@
             "name": {
               "type": "string",
               "description": "Name of the new sequence; alone, it is created in path (default /Game/Cinematics)."
-            },
-            "sequencePath": {
-              "type": "string",
-              "description": "Full asset path of the new sequence (/Game/Cinematics/SEQ_Master), or, sent with name, the folder it goes in."
             },
             "assetPath": {
               "type": "string",
@@ -93092,9 +93011,6 @@
             "name": [
               "master_sequence"
             ],
-            "sequencePath": [
-              "master_sequence"
-            ],
             "assetPath": [
               "master_sequence"
             ],
@@ -93112,11 +93028,6 @@
             ]
           },
           "requires": {
-            "create_cine_camera_actor": {
-              "required": [
-                "path"
-              ]
-            },
             "create_master_sequence": {
               "oneOf": [
                 "name",
@@ -93129,8 +93040,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "31c72eacd2da2e290a297a6fc1438db819cb262509821c0b91bdc35a4c7a44ac",
-        "content": "f8bacbd6c1855fdbc670ef4a60d8f878d982cc236bc7078cae639723eade1ceb"
+        "schema": "d45fd248ac51e1560c64763a26cccc4ac4c233f5a908c704c1f5809f08540f10",
+        "content": "1c271311d80e841f7fbf8896b4360a9d0e741acf221e257c8849856e91d9a6d6"
       }
     },
     {
@@ -95436,7 +95347,8 @@
               "sound_component"
             ],
             "playerPath": [
-              "texture"
+              "texture",
+              "sound_component"
             ],
             "autoClear": [
               "texture"
@@ -95480,9 +95392,6 @@
               ]
             },
             "create_media_sound_component": {
-              "required": [
-                "mediaPlayerPath"
-              ],
               "oneOf": [
                 "actorName",
                 "targetActor"
@@ -95494,7 +95403,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "4f467303258d789ec26d1f488ddb7b799f8fab5ad064639087c499eccb4b167e",
-        "content": "a097fe92d82fcdcb2f1dba61af37a2600cb3689d679d883e3934c5aeaf150f52"
+        "content": "6772ab99e43e5e358ed9889b15ab8045039a45bcafbfc74cde6e78b302ee0921"
       }
     },
     {
@@ -98172,7 +98081,7 @@
         "topics": [
           "delete_struct"
         ],
-        "summary": "Delete a struct asset or remove one of its members.",
+        "summary": "Delete a Blueprint Struct asset (deleteScope struct, the default: refused with STRUCT_IN_USE, naming referencers, while other assets use it, unless force deletes it anyway and recompiles the loaded Blueprints that used it; NOT_FOUND when there is none) or remove one member (member: by memberName or varGuid; the assets using the struct are refreshed, and it is saved unless save is false).",
         "whenToUse": [
           "deleteScope=struct: An unused struct asset must be deleted; a struct still referenced is refused, with its referencers listed, unless force is set.",
           "deleteScope=member: One field must be removed from a struct; referencing Blueprints and DataTables are refreshed afterwards."
@@ -98194,7 +98103,7 @@
             },
             "force": {
               "type": "boolean",
-              "description": "Delete even when other assets still reference the struct (their references break). Default false, which refuses and lists the referencers."
+              "description": "Delete even when other assets use the struct, breaking them: the loaded Blueprints among them recompile, and the engine removes their variables of it (the reply's warnings name them). Default false: refused with STRUCT_IN_USE, listing the referencers."
             },
             "memberName": {
               "type": "string",
@@ -98245,7 +98154,7 @@
       },
       "examples": [
         {
-          "title": "Delete a struct asset or remove one of its members.",
+          "title": "Delete a Blueprint Struct asset (deleteScope struct, the default: refused with STRUCT_IN_USE, naming referencers, while other assets use it, unless force deletes it anyway and recompiles the loaded Blueprints that used it; NOT_FOUND when there is none) or remove one member (member: by memberName or varGuid; the assets using the struct are refreshed, and it is saved unless save is false).",
           "input": {
             "structPath": "/Game/Structs/S_Deprecated",
             "action": "delete_struct",
@@ -98314,8 +98223,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "91198299ccefd79da697ec2a93186d6eb207dc7398556bf526afdc645f099ce8",
-        "content": "516f17224540aff43fee765576e5befd60135ddd334c0f8a40f0168c8eadfe42"
+        "schema": "502ff6f33d661ee2d1a998896adfd94e51aeea968b3afd19d808ca0d09370924",
+        "content": "83f2b32dc221ec037b9ea493e323a262d43e647f906724f52e1bdb3eef340601"
       }
     },
     {

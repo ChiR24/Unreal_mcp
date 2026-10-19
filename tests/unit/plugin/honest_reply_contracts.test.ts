@@ -76,6 +76,18 @@ describe('handlers answer what they did', () => {
     expect(code('AssetWorkflow', 'Enums', 'LifecycleEnums.cpp')).toContain('OutResult->SetArrayField(TEXT("referencedBy"), McpHandlerUtils::ToJsonStringArray(Users));');
   });
 
+  // A missing struct answered success, and force:true went through ObjectTools::DeleteObjects, which deletes
+  // nothing while anything references the asset: a forced delete of a used struct always failed.
+  it('delete_struct refuses a missing struct, names its users, and force really deletes', () => {
+    const source = code('AssetWorkflow', 'Structs', 'McpAssetStructsAssetOpsDelete.cpp');
+    expect(source).toContain('TEXT("NOT_FOUND")');
+    expect(source).not.toContain('Struct deleted (or did not exist)');
+    expect(source).toContain('McpOutsideReferencers(Package, {Package})');
+    expect(source).toContain('TEXT("STRUCT_IN_USE")');
+    expect(source).toContain('McpSafeOperations::McpDeleteAssetAndFile(StructPath)');
+    expect(source).not.toContain('ObjectTools::DeleteObjects(');
+  });
+
   it('remove_variable names the get/set nodes the engine deletes with it', () => {
     const source = code('Blueprint', 'Variables', 'McpBPVariableRemovalRename.cpp');
     expect(source.indexOf('McpBlueprintVariableUsers(Blueprint, FName(*Name))'))

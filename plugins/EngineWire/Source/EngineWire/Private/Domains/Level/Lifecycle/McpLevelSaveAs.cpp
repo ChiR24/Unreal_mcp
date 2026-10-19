@@ -45,6 +45,17 @@ bool HandleSaveLevelAsAction(UEngineWireSubsystem& Subsystem, const FString& Req
                              nullptr, TEXT("SECURITY_VIOLATION"));
       return true;
     }
+    // McpSafeLevelSave never overwrites another package, but its refusal reached only the log and the reply
+    // said "check Output Log for details". Name it here.
+    const FString SavePackage = FPackageName::ObjectPathToPackageName(SavePath);
+    const UWorld *OpenWorld = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    if (FPackageName::DoesPackageExist(SavePackage) &&
+        !(OpenWorld && OpenWorld->GetOutermost()->GetName().Equals(SavePackage, ESearchCase::IgnoreCase))) {
+      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
+          FString::Printf(TEXT("Something already exists at %s, and save_as never overwrites it: pick another savePath."), *SavePackage),
+          nullptr, TEXT("ASSET_ALREADY_EXISTS"));
+      return true;
+    }
 
     // CRITICAL: Validate path length BEFORE attempting save to prevent silent hangs
     // McpSafeLevelSave validates internally but may not send error response in all code paths
