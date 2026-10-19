@@ -60,7 +60,7 @@ export const MANAGE_BLUEPRINT_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'remove_function', selector: 'kind',
-    summary: 'Remove a function the Blueprint defines (kind function: functionName), recompiled and saved; one still called is refused with FUNCTION_IN_USE naming each call node to delete first, and inherited or engine functions are NOT_FOUND. Or remove an event (event: a custom event by eventName, or any event node by nodeId, on graphName or the first event graph page); calls to a removed custom event are left calling nothing, so delete those too.',
+    summary: 'Remove a function the Blueprint defines (kind function: functionName), recompiled and saved; one still called is refused with FUNCTION_IN_USE naming each call node to delete first, and inherited or engine functions are NOT_FOUND. Or remove an event (event: a custom event by eventName, or any event node by nodeId, on graphName or the first event graph page), recompiled and saved; a custom event still called is refused with EVENT_IN_USE naming the call nodes.',
     members: { function: 'remove_function', event: 'remove_event' },
   },
   {

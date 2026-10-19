@@ -22,7 +22,7 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'set_metadata', topics: ['tag asset', 'tag an asset', 'asset metadata', 'add asset tag'], selector: 'kind',
-    summary: 'Set asset metadata key/values or asset tags.',
+    summary: 'Write package metadata on an asset (kind metadata: key/value pairs, numbers and booleans as text, objects and arrays as JSON text, null skipped; updatedKeys counts them) or tag it (tags: each tag becomes a metadata key set to true; appliedTags). The asset is marked unsaved, not saved (save_all keeps it). Package metadata is editor-only: cooking strips it, so the running game cannot read it.',
     members: { metadata: 'set_metadata', tags: 'set_tags' },
   },
   {
@@ -115,7 +115,7 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'delete_data_table_row', selector: 'deleteScope',
-    summary: 'Delete one data table row, or clear every row.',
+    summary: 'Delete one data table row by rowName (deleteScope row, the default; ROW_NOT_FOUND names a missing one) or every row (all; rowsCleared counts them), and save the table unless save is false (saved says whether it was written). Logic that looks a row up by name gets nothing back for a deleted one.',
     members: { row: 'delete_data_table_row', all: 'clear_data_table_rows' },
   },
   {

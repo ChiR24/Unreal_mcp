@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "49bfa2accc68a160",
+  "catalogRevision": "a4eb8045d6fc50bb",
   "recordCount": 416,
   "records": [
     {
@@ -12587,7 +12587,7 @@
           "asset metadata",
           "add asset tag"
         ],
-        "summary": "Set asset metadata key/values or asset tags.",
+        "summary": "Write package metadata on an asset (kind metadata: key/value pairs, numbers and booleans as text, objects and arrays as JSON text, null skipped; updatedKeys counts them) or tag it (tags: each tag becomes a metadata key set to true; appliedTags). The asset is marked unsaved, not saved (save_all keeps it). Package metadata is editor-only: cooking strips it, so the running game cannot read it.",
         "whenToUse": [
           "kind=metadata: Key and value notes such as author or revision must be attached to an asset; the change stays unsaved until the asset is saved.",
           "kind=tags: Simple labels such as Reviewed or Prop must be attached to an asset as package metadata; the change stays unsaved until the asset is saved."
@@ -12658,7 +12658,7 @@
       },
       "examples": [
         {
-          "title": "Set asset metadata key/values or asset tags.",
+          "title": "Write package metadata on an asset (kind metadata: key/value pairs, numbers and booleans as text, objects and arrays as JSON text, null skipped; updatedKeys counts them) or tag it (tags: each tag becomes a metadata key set to true; appliedTags). The asset is marked unsaved, not saved (save_all keeps it). Package metadata is editor-only: cooking strips it, so the running game cannot read it.",
           "input": {
             "assetPath": "/Game/Meshes/SM_Crate",
             "metadata": {
@@ -12718,7 +12718,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "017fb775355b2f930ddcd44a77e116483d8977bfcd1d2e3a167bf88ecdd095b2",
-        "content": "f57585bb4aa8ccc1b16b9a539a9f921649fec5453dbd9baefea68187854e34da"
+        "content": "cec74e4fa5694963ba3c7ac484723f5e212f0790e2c85f93f20d97f6c136c92d"
       }
     },
     {
@@ -22168,7 +22168,7 @@
         "topics": [
           "remove_function"
         ],
-        "summary": "Remove a function the Blueprint defines (kind function: functionName), recompiled and saved; one still called is refused with FUNCTION_IN_USE naming each call node to delete first, and inherited or engine functions are NOT_FOUND. Or remove an event (event: a custom event by eventName, or any event node by nodeId, on graphName or the first event graph page); calls to a removed custom event are left calling nothing, so delete those too.",
+        "summary": "Remove a function the Blueprint defines (kind function: functionName), recompiled and saved; one still called is refused with FUNCTION_IN_USE naming each call node to delete first, and inherited or engine functions are NOT_FOUND. Or remove an event (event: a custom event by eventName, or any event node by nodeId, on graphName or the first event graph page), recompiled and saved; a custom event still called is refused with EVENT_IN_USE naming the call nodes.",
         "whenToUse": [
           "kind=function: A function must be permanently deleted from the Blueprint.",
           "kind=event: An event node must be permanently removed from the graph."
@@ -22249,7 +22249,7 @@
       },
       "examples": [
         {
-          "title": "Remove a function the Blueprint defines (kind function: functionName), recompiled and saved; one still called is refused with FUNCTION_IN_USE naming each call node to delete first, and inherited or engine functions are NOT_FOUND. Or remove an event (event: a custom event by eventName, or any event node by nodeId, on graphName or the first event graph page); calls to a removed custom event are left calling nothing, so delete those too.",
+          "title": "Remove a function the Blueprint defines (kind function: functionName), recompiled and saved; one still called is refused with FUNCTION_IN_USE naming each call node to delete first, and inherited or engine functions are NOT_FOUND. Or remove an event (event: a custom event by eventName, or any event node by nodeId, on graphName or the first event graph page), recompiled and saved; a custom event still called is refused with EVENT_IN_USE naming the call nodes.",
           "input": {
             "action": "remove_function",
             "blueprintPath": "/Game/Blueprints/BP_Test",
@@ -22312,7 +22312,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "304494047febc1ac2c28d2476ccbebc002a248de59a68769fa18a6741128db67",
-        "content": "83395cf8a010a7ecdb1c8c3d887be7b606efff8466817766cb6f5408f0adfc65"
+        "content": "a5b3aa8a2454e75d031dd24b5fc14de89276dfda67a29422bd3dc5fb5151af22"
       }
     },
     {
@@ -42979,7 +42979,7 @@
         "topics": [
           "delete_data_table_row"
         ],
-        "summary": "Delete one data table row, or clear every row.",
+        "summary": "Delete one data table row by rowName (deleteScope row, the default; ROW_NOT_FOUND names a missing one) or every row (all; rowsCleared counts them), and save the table unless save is false (saved says whether it was written). Logic that looks a row up by name gets nothing back for a deleted one.",
         "whenToUse": [
           "deleteScope=row: One named row must be removed from a table; a rowName that does not exist is reported as ROW_NOT_FOUND.",
           "deleteScope=all: Every row must go while the table asset and its row struct stay, with nothing loaded afterwards."
@@ -43045,7 +43045,7 @@
       },
       "examples": [
         {
-          "title": "Delete one data table row, or clear every row.",
+          "title": "Delete one data table row by rowName (deleteScope row, the default; ROW_NOT_FOUND names a missing one) or every row (all; rowsCleared counts them), and save the table unless save is false (saved says whether it was written). Logic that looks a row up by name gets nothing back for a deleted one.",
           "input": {
             "dataTablePath": "/Game/DataTables/DT_Weapons",
             "rowName": "Musket",
@@ -43099,7 +43099,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "f7eec703239bb22a0905f29081c159c4d459ed28d7a49d8ad1459a0871a78e79",
-        "content": "3c31e8450ca3897fa1d0817aab6c96f393ad94d24a7f59845a8bc6c098c387fe"
+        "content": "fc469aaa3e53647d4178146503924d56760ba1616ca2e842653db32f7bcd8700"
       }
     },
     {

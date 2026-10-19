@@ -2,12 +2,12 @@
 #include "Domains/BlueprintGraph/McpBPGraphCompatibility.h"
 #include "Foundation/BridgeHelpers/Assets/McpAssetSaveRegistry.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPAssetLoad.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpBPCallers.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPCompileHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
 #include "Engine/Blueprint.h"
 #include "Kismet2/BlueprintEditorUtils.h"
-#include "K2Node_CallFunction.h"
 
 namespace McpBlueprintHandlers {
 // Delete a user-defined Blueprint function graph. Counterpart to add_function:
@@ -94,16 +94,7 @@ bool HandleBlueprintRemoveFunction(const FBlueprintActionContext &Context) {
 
     // A function still called would leave every call calling nothing: the Blueprint stopped compiling while the
     // reply said removed and saved. The calls are named instead, to delete first.
-    TArray<UK2Node_CallFunction *> Calls;
-    FBlueprintEditorUtils::GetAllNodesOfClass(Blueprint, Calls);
-    TArray<FString> Callers;
-    for (UK2Node_CallFunction *Call : Calls) {
-      const UClass *Owner = Call->FunctionReference.GetMemberParentClass();
-      if (Call->GetGraph() != Target && Call->FunctionReference.GetMemberName() == Target->GetFName() &&
-          (Call->FunctionReference.IsSelfContext() || (Owner && Owner->ClassGeneratedBy == Blueprint))) {
-        Callers.Add(FString::Printf(TEXT("%s (node %s)"), *Call->GetGraph()->GetName(), *Call->NodeGuid.ToString()));
-      }
-    }
+    const TArray<FString> Callers = McpBlueprintCallersOf(Blueprint, Target->GetFName(), Target);
     if (Callers.Num() > 0) {
       TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
       Resp->SetStringField(TEXT("functionName"), FuncName);
