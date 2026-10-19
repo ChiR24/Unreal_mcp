@@ -13,8 +13,9 @@
  *   executor, starts the render, and blocks until completion/fatal/timeout.
  *   Only start_render supports advisory cancellation (notifications/cancelled
  *   -> CancelStartRender) and takes a render deadline.
- * - Timeout: renderTimeoutMs defaults to and is capped at 300000ms (5min) by the
- *   record; TRANSPORT_GRACE 35000ms (cancel wait clamped to 30000ms). It was
+ * - Timeout: renderTimeoutMs defaults to 300000ms (5min); the plugin refuses more than its
+ *   MaxMovieRenderTimeoutMs (one hour by default), so the record allows up to a day;
+ *   TRANSPORT_GRACE 35000ms (cancel wait clamped to 30000ms). It was
  *   named timeoutMs, which both gateways keep for options, so it never arrived.
  * - MRQ cancellation is ADVISORY: it requests executor stop but cannot
  *   interrupt an already-executing render frame. A second concurrent render
@@ -145,13 +146,13 @@ export const MRQ_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'sequence.mrq.start_render', action: 'start_render', family: F, domain: D,
-    summary: 'Start MRQ render execution. Blocks until completion, fatal error, or timeout. Supports advisory cancellation. renderTimeoutMs (how long the render may run before it is cancelled) defaults to and is capped at 300000 (5 minutes); the transport waits 35000ms longer for the reply.',
+    summary: 'Start MRQ render execution. Blocks until completion, fatal error, or timeout. Supports advisory cancellation. renderTimeoutMs (how long the render may run before it is cancelled) defaults to 300000 (5 minutes) and may be as long as the plugin\'s MaxMovieRenderTimeoutMs (one hour by default); the native transport waits that long plus the cancellation wait for the reply.',
     whenToUse: ['The MRQ queue must be executed to produce rendered output files.'],
     whenNotToUse: ['A render is already in progress (MRQ_ALREADY_RENDERING).'],
     // ExecuteStartRender (Execution.cpp) selects the job by jobId or
-    // renderJobName, honours onlyJob, and takes a render deadline no longer
-    // than the 300000ms the transport waits for (it waits 335000ms in all).
-    inputProps: { jobId: P.jobId, renderJobName: P.renderJobName, onlyJob: { type: 'boolean', description: 'Render only this job; every other queued job is disabled for this render.' }, renderTimeoutMs: { type: 'integer', minimum: 1, maximum: 300000, description: 'How long the render may run before it is cancelled, in milliseconds (default and maximum 300000). options.timeoutMs is the gateway deadline for the call and never reaches the render.' }, executorClass: P.executorClass, useCurrentLevel: P.useCurrentLevel },
+    // renderJobName, honours onlyJob, and takes a render deadline up to the
+    // configured MaxMovieRenderTimeoutMs; the native transport waits that long plus the cancellation wait.
+    inputProps: { jobId: P.jobId, renderJobName: P.renderJobName, onlyJob: { type: 'boolean', description: 'Render only this job; every other queued job is disabled for this render.' }, renderTimeoutMs: { type: 'integer', minimum: 1, maximum: 86400000, description: 'How long the render may run before it is cancelled, in milliseconds (default 300000). More than the plugin setting MaxMovieRenderTimeoutMs (3600000, one hour, by default) is refused with RESOURCE_LIMIT_EXCEEDED. options.timeoutMs is the gateway deadline for the call and never reaches the render.' }, executorClass: P.executorClass, useCurrentLevel: P.useCurrentLevel },
     requiredOneOf: JOB_SELECTOR,
     outputProps: {
       outputDirectory: P.outputDirectory,

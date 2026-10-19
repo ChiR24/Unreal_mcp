@@ -23,7 +23,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **`runtime_report` `filter`** matches an actor's path only whole, not every actor of a level named like the filter.
 - **Links on UE 5.0 again**: the graph module add is guarded like the stack one, and the emitter copy avoids the inline `CopyParameterData` on 5.0 and 5.1.
 - **Diagnostics records replace their files** (`IFileManager::Move` with replace; `IPlatformFile::MoveFile` refuses an existing target on Windows).
-- **The native request timeout reads `renderTimeoutMs`**, the name `start_render` declares, so a long render is not cut off at 335 s.
+- **The native request timeout reads `renderTimeoutMs`**, the name `start_render` declares, so a long render is not cut off at 335 s; its schema maximum (300000) is a day now, with `MaxMovieRenderTimeoutMs` the limit.
 - **Task results match their principal case-sensitively** (`FString::operator!=` ignores case).
 - **`edit_scs` reads `save`** for every action: `FinalizeBlueprintSCSChange` saved the Blueprint after each add, remove, reparent or edit, and a `modify` batch's own save step decides.
 - **Refusal details survive reply compaction**: `SendStandardErrorResponse` merges a handler's details into `error`, and the whole object went when its message and code repeated the reply's.

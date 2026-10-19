@@ -23587,8 +23587,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "renderTimeoutMs": {
           "type": "integer",
           "minimum": 1,
-          "maximum": 300000,
-          "description": "How long the render may run before it is cancelled, in milliseconds (default and maximum 300000). options.timeoutMs is the gateway deadline for the call and never reaches the render."
+          "maximum": 86400000,
+          "description": "How long the render may run before it is cancelled, in milliseconds (default 300000). More than the plugin setting MaxMovieRenderTimeoutMs (3600000, one hour, by default) is refused with RESOURCE_LIMIT_EXCEEDED. options.timeoutMs is the gateway deadline for the call and never reaches the render."
         },
         "replayName": {
           "type": "string",

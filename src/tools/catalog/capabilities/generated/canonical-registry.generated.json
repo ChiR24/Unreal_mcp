@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "bf999a7769077bbc",
+  "catalogRevision": "9b89097d71ee1823",
   "recordCount": 416,
   "records": [
     {
@@ -92430,8 +92430,8 @@
             "renderTimeoutMs": {
               "type": "integer",
               "minimum": 1,
-              "maximum": 300000,
-              "description": "How long the render may run before it is cancelled, in milliseconds (default and maximum 300000). options.timeoutMs is the gateway deadline for the call and never reaches the render."
+              "maximum": 86400000,
+              "description": "How long the render may run before it is cancelled, in milliseconds (default 300000). More than the plugin setting MaxMovieRenderTimeoutMs (3600000, one hour, by default) is refused with RESOURCE_LIMIT_EXCEEDED. options.timeoutMs is the gateway deadline for the call and never reaches the render."
             },
             "executorClass": {
               "type": "string",
@@ -92632,8 +92632,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "a1505524590acbc6fc26b6434b2660b221606d4e1a2d3da4b6b094fc9d0a3240",
-        "content": "7a8e7f2ee25250c3420f6d8555c8d2e19474f737aff8d31274d0dd627c405b11"
+        "schema": "1c40f42f61936908d274f586b393a7b785feb12805a4afd91209afb41655c499",
+        "content": "7a05af13354383b6cf47015aa6d1ae8cd759fb75ac2d84ed8a39e8aeaa93ad8e"
       }
     },
     {

@@ -32,7 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`runtime_report` `filter`** matches an actor's path only whole, so a filter that names the level no longer lists every actor in it.
 - **The plugin links on UE 5.0 again**: the Niagara module add refuses there (the engine does not export it) and the emitter copy carries user parameters without a call 5.0 and 5.1 cannot link.
 - **Crash diagnostics are rewritten on Windows**: the session records replace their files instead of keeping the first one written.
-- **A long render keeps its native request open** for the `renderTimeoutMs` it asked for, not 335 s.
+- **A long render keeps its native request open** for the `renderTimeoutMs` it asked for, not 335 s, and asks for more than 5 minutes (up to the project's `MaxMovieRenderTimeoutMs`, an hour by default).
 - **`get_task_result` on the native transport** matches the sender's principal exactly; the match ignored case.
 - **`edit_scs` keeps `save: false`**: adding, removing, reparenting or editing a part saved the Blueprint anyway while the reply said it had not.
 - **A refusal keeps the details it names**, such as the unsaved packages of a refused close; the reply dropped them along with its repeated message.
