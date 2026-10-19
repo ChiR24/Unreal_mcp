@@ -32,14 +32,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details>
 <summary><b>🔧 Fixed</b></summary>
 
-- **`runtime_report` `filter`** matches an actor's path only whole.
-- **The plugin links on UE 5.0 again** (the Niagara module add and the emitter copy).
-- **Crash diagnostics are rewritten on Windows** instead of keeping the first file written.
+- **Small fixes**: `runtime_report` `filter` matches a whole path; the plugin links on UE 5.0 again; crash diagnostics are rewritten on Windows; native `get_task_result` matches the principal exactly; `get_stats` `performance` counts the RHI thread.
 - **A long render keeps its native request open** for its `renderTimeoutMs` (past 5 minutes, up to `MaxMovieRenderTimeoutMs`).
-- **`get_task_result` on the native transport** matches the principal exactly.
 - **`edit_scs` keeps `save: false`** for every edit; the Blueprint was saved anyway.
 - **A refusal keeps the details it names**, such as the unsaved packages of a refused close.
-- **`get_stats` `performance`** counts the RHI thread in `busiestThreadMs`.
 - **A level viewport screenshot waits for streaming** and names video memory over budget; `set_viewport_realtime` reports the state it reached.
 - **A deprecated property is refused**, naming where its replacement lives; the write had answered success and changed nothing.
 - **`set_property` inside a Niagara system restarts its placed effects**, so a renderer change shows.
@@ -54,6 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Class, name and tag finds stop at `limit`** (default 200) and say how many matched.
 - **Records and replies say what happens**: about fifty records name their defaults, replies and refusals and declare what their handlers read; `setup_movement` refuses a non-Character Blueprint, `play_montage` outside play says nothing moves, creators report `saved`, `create_level` warns when World Partition could not be made, `duplicate` takes `newName` alone, `add_tag` refuses when no name matched (it said 0 actors were tagged), and `delete_node` lists what it removed.
 - **`stream` and `unload` act**: in Play the sublevel streams in the game, in the editor (which keeps sublevels loaded) it is shown or hidden; both answered "updated" and changed nothing. `add_sublevel` refuses an unknown streaming method instead of using Blueprint, and a map that does not load leaves no entry behind.
+- **The AI controller actions write real logic**: `run_behavior_tree` runs the tree on possess, `set_focus` keeps the player (`focusPlayer`) or a tagged actor (`focusTag`) in focus, `assign_behavior_tree` sets the variable's default, and `stop_behavior_tree` and `clear_focus` take that logic out; they added an empty variable and said done (`focusActorName`, which nothing used, is gone).
 - **`open_level`, `load` and `add_sublevel` take an object path**, a relative `.t3d` export lands in the project, and local player refusals carry codes.
 
 </details>

@@ -57,7 +57,8 @@ const testCases = [
     expected: 'success',
     captureResult: { key: 'behaviorTreePath', fromField: 'result.assetPath' }
   },
-  { scenario: 'CONNECT: assign_behavior_tree', toolName: 'manage_ai', arguments: { action: 'assign_behavior_tree', controllerPath: '${captured:controllerPath}', behaviorTreePath: '${captured:behaviorTreePath}' }, expected: 'success' },
+  // The controller actions write engine nodes into the Blueprint; they used to add an empty variable and say done.
+  { scenario: 'CONNECT: assign_behavior_tree', toolName: 'manage_ai', arguments: { action: 'assign_behavior_tree', controllerPath: '${captured:controllerPath}', behaviorTreePath: '${captured:behaviorTreePath}' }, expected: 'success', assertions: [{ path: 'structuredContent.result.compiled', equals: true, label: 'the variable compiles with its default' }, { path: 'structuredContent.result.variable', equals: 'DefaultBehaviorTree', label: 'a new variable, as the controller had none' }] },
   { scenario: 'CONNECT: assign_blackboard', toolName: 'manage_ai', arguments: { action: 'assign_blackboard', controllerPath: '${captured:controllerPath}', blackboardPath: '${captured:blackboardPath}' }, expected: 'success' },
 
   // === BLACKBOARD ===
@@ -77,8 +78,10 @@ const testCases = [
   { scenario: 'CONFIG: configure_bt_node sets a key selector by key name', toolName: 'manage_ai', arguments: { action: 'configure_bt_node', behaviorTreePath: '${captured:behaviorTreePath}', nodeId: '${captured:moveToNodeId}', properties: { BlackboardKey: moveGoalKeyName } }, expected: 'success' },
   { scenario: 'ADD: add_service', toolName: 'manage_ai', arguments: { action: 'add_service', behaviorTreePath: '${captured:behaviorTreePath}', serviceType: 'DefaultFocus' }, expected: 'success' },
   { scenario: 'CONFIG: configure_bt_node', toolName: 'manage_ai', arguments: { action: 'configure_bt_node', behaviorTreePath: '${captured:behaviorTreePath}', nodeId: 'Root' }, expected: 'success' },
-  { scenario: 'ACTION: run_behavior_tree', toolName: 'manage_ai', arguments: { action: 'run_behavior_tree', controllerPath: '${captured:controllerPath}', behaviorTreePath: '${captured:behaviorTreePath}' }, expected: 'success' },
-  { scenario: 'PLAYBACK: stop_behavior_tree', toolName: 'manage_ai', arguments: { action: 'stop_behavior_tree', controllerPath: '${captured:controllerPath}' }, expected: 'success' },
+  { scenario: 'ACTION: run_behavior_tree', toolName: 'manage_ai', arguments: { action: 'run_behavior_tree', controllerPath: '${captured:controllerPath}', behaviorTreePath: '${captured:behaviorTreePath}' }, expected: 'success', assertions: [{ path: 'structuredContent.result.compiled', equals: true, label: 'On Possess runs the tree and the Blueprint compiles' }, { path: 'structuredContent.result.variable', equals: 'DefaultBehaviorTree', label: 'it reads the variable assign_behavior_tree set' }] },
+  { scenario: 'PLAYBACK: stop_behavior_tree', toolName: 'manage_ai', arguments: { action: 'stop_behavior_tree', controllerPath: '${captured:controllerPath}' }, expected: 'success', assertions: [{ path: 'structuredContent.result.removed', equals: true, label: 'the run logic came out' }] },
+  { scenario: 'PLAYBACK: stop_behavior_tree again finds nothing to take out', toolName: 'manage_ai', arguments: { action: 'stop_behavior_tree', controllerPath: '${captured:controllerPath}' }, expected: 'success', assertions: [{ path: 'structuredContent.result.removed', equals: false, label: 'nothing was installed, and it says so' }] },
+  { scenario: 'ERROR: run_behavior_tree refuses a Blueprint that is not an AI controller', toolName: 'manage_ai', arguments: { action: 'run_behavior_tree', controllerPath: '${captured:blueprintPath}', behaviorTreePath: '${captured:behaviorTreePath}' }, expected: 'error|NOT_AI_CONTROLLER' },
 
   // === EQS ===
   {
@@ -166,8 +169,10 @@ const testCases = [
     expected: 'success',
     captureResult: { key: 'navLinkPath', fromField: 'result.actorPath' }
   },
-  { scenario: 'CONFIG: set_focus', toolName: 'manage_ai', arguments: { action: 'set_focus', controllerPath: '${captured:controllerPath}', focusActorName: testActorName }, expected: 'success' },
-  { scenario: 'DELETE: clear_focus', toolName: 'manage_ai', arguments: { action: 'clear_focus', controllerPath: '${captured:controllerPath}' }, expected: 'success' },
+  { scenario: 'CONFIG: set_focus on the player', toolName: 'manage_ai', arguments: { action: 'set_focus', controllerPath: '${captured:controllerPath}', focusPlayer: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.compiled', equals: true, label: 'the Tick logic compiles' }, { path: 'structuredContent.result.focusTarget', equals: 'player', label: 'the player is the target' }] },
+  { scenario: 'CONFIG: set_focus on a tag replaces the player target', toolName: 'manage_ai', arguments: { action: 'set_focus', controllerPath: '${captured:controllerPath}', focusTag: 'FocusTarget' }, expected: 'success', assertions: [{ path: 'structuredContent.result.previousRemoved', gte: 1, label: 'the player logic was taken out first' }] },
+  { scenario: 'ERROR: set_focus refuses two targets', toolName: 'manage_ai', arguments: { action: 'set_focus', controllerPath: '${captured:controllerPath}', focusPlayer: true, focusTag: 'FocusTarget' }, expected: 'error|INVALID_ARGUMENT' },
+  { scenario: 'DELETE: clear_focus', toolName: 'manage_ai', arguments: { action: 'clear_focus', controllerPath: '${captured:controllerPath}' }, expected: 'success', assertions: [{ path: 'structuredContent.result.removed', equals: true, label: 'the focus logic came out' }] },
 
   // === CLEANUP ===
   { scenario: 'Cleanup: delete test actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: testActorName }, expected: 'success|not found' },

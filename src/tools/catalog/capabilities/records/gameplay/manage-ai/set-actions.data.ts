@@ -14,6 +14,26 @@ import { NAV } from './properties-navigation.js';
 import { AI } from './properties.js';
 
 const A = AI;
+
+// What the controller actions answer: McpBlueprintBehaviour::Author's report (McpAIControllerFocus.cpp).
+export const CONTROLLER_LOGIC_OUT = {
+  controllerPath: { type: 'string', description: 'The AIController Blueprint edited.' },
+  compiled: { type: 'boolean', description: 'Whether the Blueprint compiled with the logic.' },
+  saved: { type: 'boolean', description: 'Whether the Blueprint was saved.' },
+  rolledBack: { type: 'boolean', description: 'A step failed and the Blueprint was put back as it was.' },
+  previousRemoved: { type: 'number', description: 'Nodes an earlier run of the same action had made, taken out first.' },
+  variables: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Variables the logic uses: {name, status added, redefaulted or kept}.' },
+  hooks: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'The events the logic hangs on (On Possess, Tick), each made when the Blueprint lacked it.' },
+} as const;
+const TREE_OUT = {
+  ...CONTROLLER_LOGIC_OUT,
+  behaviorTreePath: { type: 'string', description: 'The Behavior Tree, by object path.' },
+  variable: { type: 'string', description: 'The BehaviorTree variable that holds it: one the controller declared, else DefaultBehaviorTree.' },
+} as const;
+export const REMOVED_OUT = {
+  ...CONTROLLER_LOGIC_OUT,
+  removed: { type: 'boolean', description: 'Whether there was logic to take out; false changes nothing.' },
+} as const;
 const N = NAV;
 
 const OUT_STR = (d: string) => ({ type: 'string', description: d });
@@ -39,12 +59,12 @@ export const AI_SET_RECORDS: readonly CapabilityRecordSource[] = [
     example: { assetPath: '/Game/AI/BT_Enemy', nodeId: 'Node_1' }, result: 'Node removed',
   }),
   aiRecord({
-    action: 'run_behavior_tree', summary: 'Author the run-on-start Behavior Tree of an AIController asset.',
-    use: 'A controller asset should start a Behavior Tree when it possesses a pawn.',
+    action: 'run_behavior_tree', summary: 'Make an AIController Blueprint run a Behavior Tree whenever it possesses a pawn: its On Possess event calls Run Behavior Tree (which also starts the Blackboard) with its BehaviorTree variable, set to behaviorTreePath as assign_behavior_tree does. Engine nodes in the Blueprint, compiled and saved, so it works in a packaged game, for every pawn whose AI Controller Class is this one and whose Auto Possess AI covers how it enters the level. Re-running replaces it; stop_behavior_tree takes it out. NOT_AI_CONTROLLER for another Blueprint, NOT_FOUND for a missing tree, and refused during Play.',
+    use: 'A controller should start a Behavior Tree whenever it possesses a pawn.',
     avoid: 'Use control_editor to start a PIE session; this edits the asset only.',
     props: { controllerPath: A.controllerPath, behaviorTreePath: A.behaviorTreePath },
     required: ['controllerPath', 'behaviorTreePath'], plugins: BT,
-    out: { assetPath: A.assetPath },
+    out: TREE_OUT,
     example: { controllerPath: '/Game/AI/AIC_Enemy', behaviorTreePath: '/Game/AI/BT_Enemy' },
     result: 'Behavior Tree run configured',
   }),
@@ -62,14 +82,14 @@ export const AI_SET_RECORDS: readonly CapabilityRecordSource[] = [
     result: 'Blackboard value set',
   }),
   aiRecord({
-    action: 'set_focus', summary: 'Author the focus target on an AIController asset.',
-    use: 'A controller asset should focus a named actor.',
-    avoid: 'Use clear_focus to remove the target.',
-    props: { controllerPath: A.controllerPath, focusActorName: A.focusActorName },
-    required: ['controllerPath'],
-    out: { assetPath: A.assetPath },
-    example: { controllerPath: '/Game/AI/AIC_Enemy', focusActorName: 'PlayerStart' },
-    result: 'Focus set',
+    action: 'set_focus', summary: 'Make an AIController Blueprint keep its focus on a target: the player 0 pawn (focusPlayer) or the first actor carrying focusTag. Each frame it has no focus actor, its Tick finds the target and calls Set Focus, so a target that spawns after the AI, or respawns, is picked up again; a pawn that uses its controller rotation turns to face it. Engine nodes in the Blueprint, compiled and saved; re-running replaces the target and clear_focus takes it out. Exactly one of focusPlayer and focusTag (INVALID_ARGUMENT); NOT_AI_CONTROLLER for another Blueprint.',
+    use: 'An AI should face and track the player, or an actor marked with a tag.',
+    avoid: 'Use clear_focus to take the focus logic out.',
+    props: { controllerPath: A.controllerPath, focusPlayer: A.focusPlayer, focusTag: A.focusTag },
+    required: ['controllerPath'], requiredOneOf: ['focusPlayer', 'focusTag'],
+    out: { ...CONTROLLER_LOGIC_OUT, focusTarget: { type: 'string', description: 'What it focuses: player, or tag and the tag.' } },
+    example: { controllerPath: '/Game/AI/AIC_Enemy', focusPlayer: true },
+    result: 'Focus written',
   }),
   aiRecord({
     action: 'set_key_instance_synced', summary: 'Set Blackboard key instance synchronization.',
@@ -155,12 +175,12 @@ export const AI_SET_RECORDS: readonly CapabilityRecordSource[] = [
     result: 'Perception set up',
   }),
   aiRecord({
-    action: 'stop_behavior_tree', summary: 'Clear the run-on-start Behavior Tree of an AIController asset.',
-    use: 'A controller asset should no longer start a Behavior Tree.',
+    action: 'stop_behavior_tree', summary: 'Take out the Run Behavior Tree logic run_behavior_tree wrote into an AIController Blueprint, so possessing a pawn no longer starts a tree (its BehaviorTree variable and On Possess event stay), compiled and saved; removed false, and nothing changed, when there was none.',
+    use: 'A controller should no longer start a Behavior Tree when it possesses a pawn.',
     avoid: 'Use control_editor to stop a PIE session; this edits the asset only.',
     props: { controllerPath: A.controllerPath },
     required: ['controllerPath'], plugins: BT,
-    out: { assetPath: A.assetPath },
+    out: REMOVED_OUT,
       example: { controllerPath: '/Game/AI/AIC_Enemy' }, result: 'Behavior Tree run cleared',
     }),
     aiRecord({

@@ -12,18 +12,19 @@ import type { CapabilityRecordSource } from '../../../model.js';
 import { BT, EQS, MASS_AI, SMART_OBJECTS, STATE_TREE, aiRecord } from './builder.js';
 import { NAV } from './properties-navigation.js';
 import { AI } from './properties.js';
+import { CONTROLLER_LOGIC_OUT, REMOVED_OUT } from './set-actions.data.js';
 
 const A = AI;
 const N = NAV;
 
 export const AI_CONFIGURE_RECORDS: readonly CapabilityRecordSource[] = [
   aiRecord({
-    action: 'assign_behavior_tree', summary: 'Store a Behavior Tree reference variable on an AIController asset (run it from BeginPlay with RunBehaviorTree).',
-    use: 'A controller asset should run a specific Behavior Tree.',
-    avoid: 'Use assign_blackboard to bind the Blackboard.',
+    action: 'assign_behavior_tree', summary: 'Put a Behavior Tree in an AIController Blueprint: its BehaviorTree variable (one it declares, else a new instance-editable DefaultBehaviorTree) holds behaviorTreePath by default, compiled and saved. Nothing runs the tree until run_behavior_tree writes Run Behavior Tree on possess, or the controller calls it itself. NOT_AI_CONTROLLER for another Blueprint, NOT_FOUND for a missing tree.',
+    use: 'A controller should hold a Behavior Tree that its own logic runs.',
+    avoid: 'The tree should run whenever the controller possesses a pawn; run_behavior_tree sets the variable too.',
     props: { controllerPath: A.controllerPath, behaviorTreePath: A.behaviorTreePath },
     required: ['controllerPath', 'behaviorTreePath'], plugins: BT,
-    out: { assetPath: A.assetPath },
+    out: { ...CONTROLLER_LOGIC_OUT, behaviorTreePath: { type: 'string', description: 'The Behavior Tree, by object path.' }, variable: { type: 'string', description: 'The BehaviorTree variable that holds it.' } },
     example: { controllerPath: '/Game/AI/AIC_Enemy', behaviorTreePath: '/Game/AI/BT_Enemy' },
     result: 'Behavior Tree assigned',
   }),
@@ -50,11 +51,11 @@ export const AI_CONFIGURE_RECORDS: readonly CapabilityRecordSource[] = [
     example: { assetPath: '/Game/AI/BT_Enemy', nodeId: 'Node_0' }, result: 'Connections broken',
   }),
   aiRecord({
-    action: 'clear_focus', summary: 'Clear the authored focus target on an AIController asset.',
-    use: 'A controller asset should stop targeting a focus actor.',
-    avoid: 'Use set_focus to assign a target.',
+    action: 'clear_focus', summary: 'Take out the focus logic set_focus wrote into an AIController Blueprint, so it stops seeking a target each frame (a focus already set in a running game stays until something clears it), compiled and saved; removed false, and nothing changed, when there was none.',
+    use: 'A controller should stop tracking its focus target.',
+    avoid: 'Use set_focus to give it a target.',
     props: { controllerPath: A.controllerPath }, required: ['controllerPath'],
-    out: { assetPath: A.assetPath },
+    out: REMOVED_OUT,
     example: { controllerPath: '/Game/AI/AIC_Enemy' }, result: 'Focus cleared',
   }),
   aiRecord({

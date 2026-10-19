@@ -1,0 +1,24 @@
+{
+  "description": "The AI controller keeps its focus on the player's pawn: every frame it has no focus actor, it takes player 0's pawn and focuses it (Set Focus), so a pawn that spawns after the AI, or respawns, is picked up again. A focused AI pawn that uses its controller's rotation turns to face the focus.",
+  "tag": "MCP AI focus",
+  "hooks": [
+    { "id": "focusTick", "event": "Tick" }
+  ],
+  "eventGraph": [
+    { "edit": "create_node", "id": "focusCurrent", "nodeType": "CallFunction", "memberName": "GetFocusActor", "memberClass": "/Script/AIModule.AIController" },
+    { "edit": "create_node", "id": "focusHas", "nodeType": "CallFunction", "memberName": "IsValid", "memberClass": "/Script/Engine.KismetSystemLibrary" },
+    { "edit": "create_node", "id": "focusNeeded", "nodeType": "Branch" },
+    { "edit": "create_node", "id": "focusTarget", "nodeType": "CallFunction", "memberName": "GetPlayerPawn", "memberClass": "/Script/Engine.GameplayStatics", "pinDefaults": { "PlayerIndex": 0 } },
+    { "edit": "create_node", "id": "focusFound", "nodeType": "CallFunction", "memberName": "IsValid", "memberClass": "/Script/Engine.KismetSystemLibrary" },
+    { "edit": "create_node", "id": "focusFoundBranch", "nodeType": "Branch" },
+    { "edit": "create_node", "id": "focusSet", "nodeType": "CallFunction", "memberName": "K2_SetFocus", "memberClass": "/Script/AIModule.AIController" },
+    { "edit": "connect_pins", "from": "$focusTick.then", "to": "$focusNeeded.execute" },
+    { "edit": "connect_pins", "from": "$focusCurrent.ReturnValue", "to": "$focusHas.Object" },
+    { "edit": "connect_pins", "from": "$focusHas.ReturnValue", "to": "$focusNeeded.Condition" },
+    { "edit": "connect_pins", "from": "$focusNeeded.else", "to": "$focusFoundBranch.execute" },
+    { "edit": "connect_pins", "from": "$focusTarget.ReturnValue", "to": "$focusFound.Object" },
+    { "edit": "connect_pins", "from": "$focusFound.ReturnValue", "to": "$focusFoundBranch.Condition" },
+    { "edit": "connect_pins", "from": "$focusFoundBranch.then", "to": "$focusSet.execute" },
+    { "edit": "connect_pins", "from": "$focusTarget.ReturnValue", "to": "$focusSet.NewFocus" }
+  ]
+}

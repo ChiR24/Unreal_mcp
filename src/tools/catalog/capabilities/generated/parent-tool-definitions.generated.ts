@@ -8469,10 +8469,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Flat cost added once when a path enters the area; left unchanged when omitted."
         },
-        "focusActorName": {
-          "type": "string",
-          "description": "Actor the controller should focus on."
-        },
         "focusOp": {
           "type": "string",
           "enum": [
@@ -8481,6 +8477,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Which set focus variant to run; omit for 'set'.",
           "default": "set"
+        },
+        "focusPlayer": {
+          "type": "boolean",
+          "description": "Focus the pawn of player 0, picked up again when it spawns late or respawns."
+        },
+        "focusTag": {
+          "type": "string",
+          "description": "Focus the first actor carrying this tag (mark the target with control_actor add_tag)."
         },
         "fromState": {
           "type": "string",
@@ -9239,6 +9243,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Canonical /Game Blueprint asset path."
         },
+        "compiled": {
+          "type": "boolean",
+          "description": "Whether the Blueprint compiled with the logic."
+        },
         "componentName": {
           "type": "string",
           "description": "Name of the component to add."
@@ -9267,6 +9275,19 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "dominantSense": {
           "type": "string",
           "description": "Sense the component treats as dominant."
+        },
+        "focusTarget": {
+          "type": "string",
+          "description": "What it focuses: player, or tag and the tag."
+        },
+        "hooks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "The events the logic hangs on (On Possess, Tick), each made when the Blueprint lacked it."
         },
         "isRoot": {
           "type": "boolean",
@@ -9343,6 +9364,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether the component orients rotation to movement."
         },
+        "previousRemoved": {
+          "type": "number",
+          "description": "Nodes an earlier run of the same action had made, taken out first."
+        },
         "propertiesSet": {
           "type": "array",
           "items": {
@@ -9354,9 +9379,21 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "How many movement properties were changed."
         },
+        "removed": {
+          "type": "boolean",
+          "description": "Whether there was logic to take out; false changes nothing."
+        },
+        "rolledBack": {
+          "type": "boolean",
+          "description": "A step failed and the Blueprint was put back as it was."
+        },
         "rotationRateYaw": {
           "type": "number",
           "description": "Yaw component of the resulting rotation rate."
+        },
+        "saved": {
+          "type": "boolean",
+          "description": "Whether the Blueprint was saved."
         },
         "sensesConfigured": {
           "type": "array",
@@ -9385,6 +9422,19 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "valueAvailable": {
           "type": "boolean",
           "description": "Whether the typed default value was available to read (false on UE 5.0-5.4)."
+        },
+        "variable": {
+          "type": "string",
+          "description": "The BehaviorTree variable that holds it: one the controller declared, else DefaultBehaviorTree."
+        },
+        "variables": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Variables the logic uses: {name, status added, redefaulted or kept}."
         }
       },
       "additionalProperties": true

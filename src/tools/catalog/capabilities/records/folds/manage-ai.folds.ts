@@ -26,7 +26,7 @@ export const MANAGE_AI_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'run_behavior_tree', selector: 'control',
-    summary: 'Run or stop a Behavior Tree on an AI controller, or assign a tree or blackboard to it.',
+    summary: 'Make an AIController Blueprint run a Behavior Tree whenever it possesses a pawn (control run, the default: On Possess calls Run Behavior Tree with its BehaviorTree variable), take that out again (stop), only set the variable that holds the tree (assign_tree), or bind a Blackboard to a controller or tree (assign_blackboard). The run logic is engine nodes in the Blueprint, compiled and saved, so it works in a packaged game; a Blueprint that is not an AIController is refused (NOT_AI_CONTROLLER).',
     topics: ['run behavior tree', 'stop behavior tree', 'assign behavior tree', 'assign blackboard'],
     members: { run: 'run_behavior_tree', stop: 'stop_behavior_tree', assign_tree: 'assign_behavior_tree', assign_blackboard: 'assign_blackboard' },
   },
@@ -62,7 +62,7 @@ export const MANAGE_AI_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'set_focus', topics: ['make look player'], selector: 'focusOp',
-    summary: 'Set or clear an AI controller\'s focus actor.',
+    summary: 'Make an AIController Blueprint keep its focus on the player 0 pawn (focusPlayer) or the first actor carrying focusTag, finding it again each frame it has none (focusOp set, the default), or take that logic out (clear). Written into the Blueprint as engine nodes, compiled and saved, so it works in a packaged game.',
     members: { set: 'set_focus', clear: 'clear_focus' },
   },
   {

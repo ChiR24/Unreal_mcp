@@ -5555,8 +5555,9 @@
         "failsafeExtent",
         "failsafeToDefaultNavmesh",
         "fixedAreaEnteringCost",
-        "focusActorName",
         "focusOp",
+        "focusPlayer",
+        "focusTag",
         "fromState",
         "generatorSettings",
         "generatorType",
@@ -5938,10 +5939,6 @@
             "type": "number",
             "description": "Flat cost added once when a path enters the area; left unchanged when omitted."
           },
-          "focusActorName": {
-            "type": "string",
-            "description": "Actor the controller should focus on."
-          },
           "focusOp": {
             "type": "string",
             "enum": [
@@ -5950,6 +5947,14 @@
             ],
             "description": "Which set focus variant to run; omit for 'set'.",
             "default": "set"
+          },
+          "focusPlayer": {
+            "type": "boolean",
+            "description": "Focus the pawn of player 0, picked up again when it spawns late or respawns."
+          },
+          "focusTag": {
+            "type": "string",
+            "description": "Focus the first actor carrying this tag (mark the target with control_actor add_tag)."
           },
           "fromState": {
             "type": "string",

@@ -124,7 +124,8 @@ export const AI = {
   loseSightRadius: num('Radius at which sight is lost.'),
   peripheralVisionAngle: num('Peripheral vision half-angle in degrees.'),
   hearingRange: num('Hearing range in world units.'),
-  focusActorName: str('Actor the controller should focus on.'),
+  focusPlayer: bool('Focus the pawn of player 0, picked up again when it spawns late or respawns.'),
+  focusTag: str('Focus the first actor carrying this tag (mark the target with control_actor add_tag).'),
 
   // --- state tree ---
   parentStateName: str('Parent state name for the added state.'),

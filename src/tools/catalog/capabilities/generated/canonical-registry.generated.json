@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "e04a5ca3029a77e0",
+  "catalogRevision": "d4b8ab3183d1fc3c",
   "recordCount": 416,
   "records": [
     {
@@ -52666,11 +52666,11 @@
           "assign behavior tree",
           "assign blackboard"
         ],
-        "summary": "Run or stop a Behavior Tree on an AI controller, or assign a tree or blackboard to it.",
+        "summary": "Make an AIController Blueprint run a Behavior Tree whenever it possesses a pawn (control run, the default: On Possess calls Run Behavior Tree with its BehaviorTree variable), take that out again (stop), only set the variable that holds the tree (assign_tree), or bind a Blackboard to a controller or tree (assign_blackboard). The run logic is engine nodes in the Blueprint, compiled and saved, so it works in a packaged game; a Blueprint that is not an AIController is refused (NOT_AI_CONTROLLER).",
         "whenToUse": [
-          "control=run: A controller asset should start a Behavior Tree when it possesses a pawn.",
-          "control=stop: A controller asset should no longer start a Behavior Tree.",
-          "control=assign_tree: A controller asset should run a specific Behavior Tree.",
+          "control=run: A controller should start a Behavior Tree whenever it possesses a pawn.",
+          "control=stop: A controller should no longer start a Behavior Tree when it possesses a pawn.",
+          "control=assign_tree: A controller should hold a Behavior Tree that its own logic runs.",
           "control=assign_blackboard: A controller or Behavior Tree needs its Blackboard bound."
         ],
         "whenNotToUse": [
@@ -52728,6 +52728,56 @@
               "x-unreal-reflection-boundary": true,
               "description": "Additional handler result fields not named by the contract."
             },
+            "controllerPath": {
+              "type": "string",
+              "description": "The AIController Blueprint edited."
+            },
+            "compiled": {
+              "type": "boolean",
+              "description": "Whether the Blueprint compiled with the logic."
+            },
+            "saved": {
+              "type": "boolean",
+              "description": "Whether the Blueprint was saved."
+            },
+            "rolledBack": {
+              "type": "boolean",
+              "description": "A step failed and the Blueprint was put back as it was."
+            },
+            "previousRemoved": {
+              "type": "number",
+              "description": "Nodes an earlier run of the same action had made, taken out first."
+            },
+            "variables": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Variables the logic uses: {name, status added, redefaulted or kept}."
+            },
+            "hooks": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "The events the logic hangs on (On Possess, Tick), each made when the Blueprint lacked it."
+            },
+            "behaviorTreePath": {
+              "type": "string",
+              "description": "The Behavior Tree, by object path."
+            },
+            "variable": {
+              "type": "string",
+              "description": "The BehaviorTree variable that holds it: one the controller declared, else DefaultBehaviorTree."
+            },
+            "removed": {
+              "type": "boolean",
+              "description": "Whether there was logic to take out; false changes nothing."
+            },
             "assetPath": {
               "type": "string",
               "description": "Canonical /Game asset path."
@@ -52741,7 +52791,7 @@
       },
       "examples": [
         {
-          "title": "Run or stop a Behavior Tree on an AI controller, or assign a tree or blackboard to it.",
+          "title": "Make an AIController Blueprint run a Behavior Tree whenever it possesses a pawn (control run, the default: On Possess calls Run Behavior Tree with its BehaviorTree variable), take that out again (stop), only set the variable that holds the tree (assign_tree), or bind a Blackboard to a controller or tree (assign_blackboard). The run logic is engine nodes in the Blueprint, compiled and saved, so it works in a packaged game; a Blueprint that is not an AIController is refused (NOT_AI_CONTROLLER).",
           "input": {
             "action": "run_behavior_tree",
             "controllerPath": "/Game/AI/AIC_Enemy",
@@ -52802,8 +52852,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "9cc65c83aba0104aee89aedaf1fefbfb3bb653c6d67b7e3d851e86e0a1e6e0f5",
-        "content": "ee90c12dc0caec6f2df5317de00fa0bf0945c80cdccea2fc810884b11992cbac"
+        "schema": "594b70ef4944dfaf59340fa4ccc37fde7fea292d34b66fdc990b521b7155758d",
+        "content": "1f197210420b634faa07bd41d1ba8449886ea41dfb484d847008ec06af2f45af"
       }
     },
     {
@@ -53014,10 +53064,10 @@
           "set_focus",
           "make look player"
         ],
-        "summary": "Set or clear an AI controller's focus actor.",
+        "summary": "Make an AIController Blueprint keep its focus on the player 0 pawn (focusPlayer) or the first actor carrying focusTag, finding it again each frame it has none (focusOp set, the default), or take that logic out (clear). Written into the Blueprint as engine nodes, compiled and saved, so it works in a packaged game.",
         "whenToUse": [
-          "focusOp=set: A controller asset should focus a named actor.",
-          "focusOp=clear: A controller asset should stop targeting a focus actor."
+          "focusOp=set: An AI should face and track the player, or an actor marked with a tag.",
+          "focusOp=clear: A controller should stop tracking its focus target."
         ],
         "whenNotToUse": []
       },
@@ -53030,9 +53080,13 @@
               "type": "string",
               "description": "Canonical /Game AI controller asset path."
             },
-            "focusActorName": {
+            "focusPlayer": {
+              "type": "boolean",
+              "description": "Focus the pawn of player 0, picked up again when it spawns late or respawns."
+            },
+            "focusTag": {
               "type": "string",
-              "description": "Actor the controller should focus on."
+              "description": "Focus the first actor carrying this tag (mark the target with control_actor add_tag)."
             },
             "focusOp": {
               "type": "string",
@@ -53066,9 +53120,51 @@
               "x-unreal-reflection-boundary": true,
               "description": "Additional handler result fields not named by the contract."
             },
-            "assetPath": {
+            "controllerPath": {
               "type": "string",
-              "description": "Canonical /Game asset path."
+              "description": "The AIController Blueprint edited."
+            },
+            "compiled": {
+              "type": "boolean",
+              "description": "Whether the Blueprint compiled with the logic."
+            },
+            "saved": {
+              "type": "boolean",
+              "description": "Whether the Blueprint was saved."
+            },
+            "rolledBack": {
+              "type": "boolean",
+              "description": "A step failed and the Blueprint was put back as it was."
+            },
+            "previousRemoved": {
+              "type": "number",
+              "description": "Nodes an earlier run of the same action had made, taken out first."
+            },
+            "variables": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Variables the logic uses: {name, status added, redefaulted or kept}."
+            },
+            "hooks": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "The events the logic hangs on (On Possess, Tick), each made when the Blueprint lacked it."
+            },
+            "focusTarget": {
+              "type": "string",
+              "description": "What it focuses: player, or tag and the tag."
+            },
+            "removed": {
+              "type": "boolean",
+              "description": "Whether there was logic to take out; false changes nothing."
             }
           },
           "required": [
@@ -53079,16 +53175,16 @@
       },
       "examples": [
         {
-          "title": "Set or clear an AI controller's focus actor.",
+          "title": "Make an AIController Blueprint keep its focus on the player 0 pawn (focusPlayer) or the first actor carrying focusTag, finding it again each frame it has none (focusOp set, the default), or take that logic out (clear). Written into the Blueprint as engine nodes, compiled and saved, so it works in a packaged game.",
           "input": {
             "action": "set_focus",
             "controllerPath": "/Game/AI/AIC_Enemy",
-            "focusActorName": "PlayerStart",
+            "focusPlayer": true,
             "focusOp": "set"
           },
           "output": {
             "success": true,
-            "message": "Focus set"
+            "message": "Focus written"
           }
         }
       ],
@@ -53123,7 +53219,10 @@
             "clear": "clear_focus"
           },
           "declaredBy": {
-            "focusActorName": [
+            "focusPlayer": [
+              "set"
+            ],
+            "focusTag": [
               "set"
             ]
           }
@@ -53131,8 +53230,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "714d7395dd6ecb62fbdecb2c894b76dac396f84e68b3d6555bfc60a6675ed0f2",
-        "content": "1c2a6bc533cb8a424d58be8841870c7d454f702f7f5a799944fb8c751503a9fc"
+        "schema": "52aae567768f6e17d764c31a1ff411bf20a059495c2b7a6a0f2e39f042f33fa3",
+        "content": "2a428e70c8557b1b39611fea304358ec64e24ed8220a7aea54da5724825b21f7"
       }
     },
     {

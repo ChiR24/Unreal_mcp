@@ -1,0 +1,4 @@
+{
+  "description": "Takes out what run_behavior_tree authored, so the controller no longer runs a Behavior Tree when it possesses a pawn. Its Behavior Tree variable and the possess event stay.",
+  "tag": "MCP run behavior tree"
+}
