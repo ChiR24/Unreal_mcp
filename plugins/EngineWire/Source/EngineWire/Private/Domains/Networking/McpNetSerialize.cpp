@@ -2,17 +2,35 @@
 
 namespace McpNetworkingHandlers
 {
+namespace
+{
+// A RepNotify function must take no parameters and return nothing: the compiler clears RepNotifyFunc on a
+// variable whose function is missing or has either (BlueprintClassFlagUtils), and the notify never fires.
+bool HasParametersOrResult(UEdGraph* Graph)
+{
+    for (UEdGraphNode* Node : Graph->Nodes)
+    {
+        const UK2Node_EditablePinBase* Terminator = Cast<UK2Node_EditablePinBase>(Node);
+        if (Terminator && Terminator->UserDefinedPins.Num() > 0)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+}
+
 bool HandleSetReplicatedUsing(FNetworkingActionContext& Context)
 {
     const TSharedPtr<FJsonObject>& Payload = Context.Payload;
     TSharedPtr<FJsonObject>& ResultJson = Context.ResultJson;
-    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
-    FString PropertyName = GetJsonStringField(Payload, TEXT("propertyName"));
-    FString RepNotifyFunc = GetJsonStringField(Payload, TEXT("repNotifyFunc"));
+    const FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
+    const FString PropertyName = GetJsonStringField(Payload, TEXT("propertyName"));
+    const FString RepNotifyFunc = GetJsonStringField(Payload, TEXT("repNotifyFunc")).TrimStartAndEnd();
 
     if (BlueprintPath.IsEmpty() || PropertyName.IsEmpty() || RepNotifyFunc.IsEmpty())
     {
-        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Missing required parameters"), TEXT("INVALID_PARAMS"));
+        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("blueprintPath, propertyName and repNotifyFunc are required"), TEXT("INVALID_PARAMS"));
         return true;
     }
 
@@ -22,32 +40,49 @@ bool HandleSetReplicatedUsing(FNetworkingActionContext& Context)
         Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Blueprint not found"), TEXT("NOT_FOUND"));
         return true;
     }
-
-    bool bFound = false;
-    for (FBPVariableDescription& VarDesc : Blueprint->NewVariables)
-    {
-        if (VarDesc.VarName == FName(*PropertyName))
-        {
-            VarDesc.PropertyFlags |= CPF_Net | CPF_RepNotify;
-            VarDesc.RepNotifyFunc = FName(*RepNotifyFunc);
-            bFound = true;
-            break;
-        }
-    }
-
-    if (!bFound)
+    FBPVariableDescription* Variable = Blueprint->NewVariables.FindByPredicate(
+        [&PropertyName](const FBPVariableDescription& Each) { return Each.VarName == FName(*PropertyName); });
+    if (!Variable)
     {
         Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, FString::Printf(TEXT("Property '%s' not found"), *PropertyName), TEXT("NOT_FOUND"));
         return true;
     }
 
+    // The function the variable names used to be stored unchecked; a missing one compiled away silently. It is
+    // the Blueprint's own, an inherited one, or created empty here as the editor's RepNotify setting does.
+    const FName FuncName(*RepNotifyFunc);
+    UEdGraph* FuncGraph = FindFunctionGraph(Blueprint, FuncName);
+    const UFunction* Inherited = FuncGraph || !Blueprint->ParentClass ? nullptr : Blueprint->ParentClass->FindFunctionByName(FuncName);
+    if ((FuncGraph && HasParametersOrResult(FuncGraph)) || (Inherited && (Inherited->NumParms > 0 || Inherited->GetReturnProperty())))
+    {
+        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId,
+            FString::Printf(TEXT("'%s' takes parameters or returns a value; a RepNotify function takes none and returns nothing (the compiler drops any other). Name a different function. Nothing was changed."), *RepNotifyFunc),
+            TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+    const bool bCreate = !FuncGraph && !Inherited;
+    if (bCreate && !CheckFreeMemberNameOrReply(Context, Blueprint, RepNotifyFunc, TEXT("repNotifyFunc")))
+    {
+        return true;
+    }
+
     Blueprint->Modify();
-    FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-    McpSafeCompileBlueprint(Blueprint);
-    McpSafeAssetSave(Blueprint);
+    if (bCreate)
+    {
+        FuncGraph = FBlueprintEditorUtils::CreateNewGraph(Blueprint, FuncName, UEdGraph::StaticClass(), UEdGraphSchema_K2::StaticClass());
+        FBlueprintEditorUtils::AddFunctionGraph<UClass>(Blueprint, FuncGraph, false, nullptr);
+    }
+    Variable->PropertyFlags |= CPF_Net | CPF_RepNotify;
+    Variable->RepNotifyFunc = FuncName;
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
+    ResultJson->SetBoolField(TEXT("compiled"), McpSafeCompileBlueprint(Blueprint));
+    ResultJson->SetBoolField(TEXT("saved"), McpSafeAssetSave(Blueprint));
 
     ResultJson->SetBoolField(TEXT("success"), true);
-    ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("ReplicatedUsing set to %s for property %s"), *RepNotifyFunc, *PropertyName));
+    ResultJson->SetStringField(TEXT("repNotifyFunc"), RepNotifyFunc);
+    ResultJson->SetBoolField(TEXT("functionCreated"), bCreate);
+    ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("%s replicates and calls %s on clients when a new value arrives%s"), *PropertyName, *RepNotifyFunc,
+        bCreate ? TEXT("; the function was created empty, so give it a body") : TEXT("")));
     McpHandlerUtils::AddVerification(ResultJson, Blueprint);
     Context.Bridge.SendAutomationResponse(Context.RequestingSocket, Context.RequestId, true, TEXT("ReplicatedUsing configured"), ResultJson);
     return true;

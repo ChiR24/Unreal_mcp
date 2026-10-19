@@ -22,7 +22,7 @@ export const MANAGE_NETWORKING_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'configure_rpc', selector: 'setting',
-    summary: 'Create an RPC function, or set its validation or reliability.',
+    summary: 'Blueprint RPCs, chosen by setting. create makes a function graph named functionName (a free name: NAME_TAKEN otherwise) in an Actor or ActorComponent Blueprint (INVALID_TARGET otherwise) whose calls run where rpcType says: Server, Client or NetMulticast. inputs are its parameters ({name, type}); reliable defaults to true. The function body is the graph of that name, built with manage_blueprint edit_graph, and it is called like any function. The Blueprint compiles and saves, and actorReplicates says whether it replicates, without which no RPC leaves the machine. reliability makes an existing RPC (that function, or a custom event set to replicate) reliable or not; a non-replicating one is NOT_AN_RPC. validation true is refused (NOT_SUPPORTED): only C++ RPCs validate, so check the parameters at the start of the body. changed false means the flag already had that value and nothing was compiled or saved.',
     topics: ['rpc', 'remote procedure call', 'rpc reliability', 'rpc validation'],
     members: { create: 'create_rpc_function', validation: 'configure_rpc_validation', reliability: 'set_rpc_reliability' },
   },

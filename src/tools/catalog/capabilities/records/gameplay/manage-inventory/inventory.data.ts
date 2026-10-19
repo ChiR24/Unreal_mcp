@@ -65,7 +65,7 @@ export const INVENTORY_RECORDS: readonly CapabilityRecordSource[] = [
     whenToUse: ['An item must be filed under an existing item category asset.'],
     whenNotToUse: [
       'The item asset does not exist yet (use manage_inventory.create_inventory_asset).',
-      'The category asset does not exist yet, and its path is stored without a check (use manage_inventory.create_inventory_asset, kind=item_category).',
+      'The category asset does not exist yet: it is refused with ASSET_NOT_FOUND (create it with manage_inventory.create_inventory_asset, kind=item_category).',
     ],
     inputProps: { itemPath: IP.itemPath, categoryPath: IP.categoryPath, save: IP.save },
     required: ['itemPath', 'categoryPath'],
@@ -81,7 +81,7 @@ export const INVENTORY_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Configure persistent item stacking rules.',
     whenToUse: [
       'An item must be marked stackable with a maximum stack size, or flagged as unique.',
-      'All three stacking fields should be given together, since an omitted one resets to stackable, 99 or not unique.',
+      'Only the stacking fields sent are written, so one can change without the others; sending none is refused.',
     ],
     whenNotToUse: [
       'The item asset does not exist yet (use manage_inventory.create_inventory_asset).',
@@ -107,7 +107,7 @@ export const INVENTORY_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Configure persistent crafting requirements.',
     whenToUse: [
       'A recipe must require a minimum character level or a named crafting station.',
-      'Level and station should be given together, since an omitted one resets to level 0 or station None.',
+      'Only the requirement fields sent are written, so level and station change independently; sending neither is refused.',
     ],
     whenNotToUse: [
       'The recipe asset does not exist yet (use manage_inventory.create_inventory_asset).',
@@ -260,7 +260,7 @@ export const INVENTORY_RECORDS: readonly CapabilityRecordSource[] = [
   inventoryRecord({
     action: 'set_inventory_replication',
     topics: ['replicate inventory'],
-    summary: 'Set inventory component replication metadata.',
+    summary: 'Make a Blueprint\'s inventory variables (InventorySlots, MaxSlots, CurrentWeight and MaxWeight, whichever it has) replicate under replicationCondition, or stop (replicated, default false). A RepNotify function already on them is kept; a Blueprint with none of them is NOT_FOUND, and modifiedVariables lists what changed. Saved unless save is false (saved).',
     whenToUse: [
       'A Blueprint with InventorySlots, MaxSlots, CurrentWeight and MaxWeight variables must replicate them to clients, or stop (replicated defaults to false).',
       'Those variables need a replication condition such as OwnerOnly, SkipOwner, SimulatedOnly or InitialOnly.',
@@ -320,7 +320,7 @@ export const INVENTORY_RECORDS: readonly CapabilityRecordSource[] = [
   inventoryRecord({
     action: 'set_loot_quality_tiers',
     summary: 'Set quality tiers on a loot table asset.',
-    whenToUse: ['A loot table needs quality tiers with drop weights; the tier list is replaced whole, and five default tiers apply if none are given.'],
+    whenToUse: ['A loot table needs quality tiers with drop weights; the tier list is replaced whole, and the five default tiers are written when tiers is omitted (an empty or malformed list is refused).'],
     whenNotToUse: [
       'The loot table asset does not exist yet (use manage_inventory.create_inventory_asset).',
       'The table only needs to be read (use manage_inventory.get_inventory_info).',

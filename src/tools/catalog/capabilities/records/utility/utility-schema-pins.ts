@@ -64,7 +64,7 @@ export const OBJECT_FIELDS = new Set(['properties', 'settings', 'voiceSettings',
 export const VECTOR_FIELDS = new Set(['location', 'rotation', 'size']);
 
 /** Field names whose JSON-Schema type is `array`. */
-export const ARRAY_FIELDS = new Set(['states', 'sessions', 'players', 'mappings', 'targetVoices']);
+export const ARRAY_FIELDS = new Set(['states', 'sessions', 'players', 'mappings', 'targetVoices', 'inputs']);
 
 /**
  * Real descriptions for fields whose bare names read as placeholder text.
@@ -240,6 +240,7 @@ export const FIELD_DESCRIPTIONS: Readonly<Record<string, string>> = {
   rpcType: 'Rpc type.',
   reliable: 'Reliable.',
   withValidation: 'With validation.',
+  inputs: 'RPC parameters, each {name, type}.',
   ownerActorName: 'Owner actor name.',
   isAutonomousProxy: 'Whether autonomous proxy applies.',
   netCullDistanceSquared: 'Net cull distance squared.',

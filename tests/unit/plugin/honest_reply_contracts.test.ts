@@ -3924,3 +3924,28 @@ describe('texture edits in place leave engine content alone and say whether they
     }
   });
 });
+
+describe('RPCs are made where they can be called, and only flags a Blueprint runs are set', () => {
+  it('create checks the name and the class before it makes an editable function graph', () => {
+    const create = code('Networking', 'McpNetRpcCreation.cpp');
+    expect(create.indexOf('CheckFreeMemberNameOrReply(Context, Blueprint, FunctionName')).toBeLessThan(create.indexOf('FBlueprintEditorUtils::CreateNewGraph('));
+    expect(create).toContain('TEXT("INVALID_TARGET")');
+    expect(create).toContain('AddFunctionGraph<UFunction>(Blueprint, NewGraph, true,');
+    expect(create).toContain('McpBlueprintUtils::DescribeInvalidParam(Inputs, TEXT("inputs"))');
+  });
+
+  it('flags reach replicated custom events, refuse a non-RPC, report no change, and validation is refused', () => {
+    const flags = code('Networking', 'McpNetRpcFlags.cpp');
+    expect(flags).toContain('Cast<UK2Node_CustomEvent>(Node)');
+    expect(flags).toContain('TEXT("NOT_AN_RPC")');
+    expect(flags).toMatch(/if \(!bChanged\)\s*\{\s*McpHandlerUtils::MarkNoAssetsChanged\(ResultJson\);/u);
+    expect(flags.indexOf('TEXT("NOT_SUPPORTED")')).toBeLessThan(flags.indexOf('return SetRpcFlag(Context, FUNC_NetValidate'));
+  });
+
+  it('a RepNotify function is created when missing, and one with parameters is refused', () => {
+    const repNotify = code('Networking', 'McpNetSerialize.cpp');
+    expect(repNotify).toContain('(FuncGraph && HasParametersOrResult(FuncGraph))');
+    expect(repNotify).toContain('AddFunctionGraph<UClass>(Blueprint, FuncGraph, false, nullptr);');
+    expect(repNotify).toContain('ResultJson->SetBoolField(TEXT("functionCreated"), bCreate);');
+  });
+});

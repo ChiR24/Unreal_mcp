@@ -20659,11 +20659,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "categoryPath": {
           "type": "string",
-          "description": "Canonical /Game item category asset path."
+          "description": "Item category asset, as create_inventory_asset kind=item_category makes it; one that names no asset is refused (ASSET_NOT_FOUND)."
         },
         "craftTime": {
           "type": "number",
-          "description": "Craft duration in seconds."
+          "description": "Craft duration in seconds (default 1)."
         },
         "entryIndex": {
           "type": "number",
@@ -20671,11 +20671,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "iconPath": {
           "type": "string",
-          "description": "Canonical /Game texture or material path used as the item icon."
+          "description": "Texture or material asset used as the item icon; it must exist (ASSET_NOT_FOUND). An empty string clears the icon."
         },
         "ingredientItemPath": {
           "type": "string",
-          "description": "Canonical /Game ingredient item asset path."
+          "description": "Ingredient item asset; one that names no asset is refused (ASSET_NOT_FOUND)."
         },
         "itemPath": {
           "type": "string",
@@ -20698,19 +20698,19 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "lootWeight": {
           "type": "number",
-          "description": "Relative selection weight for the loot entry."
+          "description": "Chance of this entry relative to the others in the table, 0 or more (default 1)."
         },
         "maxQuantity": {
           "type": "number",
-          "description": "Maximum quantity granted by the loot entry."
+          "description": "Most the entry grants, at least minQuantity (default minQuantity, or 1)."
         },
         "maxStackSize": {
           "type": "number",
-          "description": "Maximum stack size."
+          "description": "Most items one stack holds, 1 or more. Only the stacking fields sent are written."
         },
         "minQuantity": {
           "type": "number",
-          "description": "Minimum quantity granted by the loot entry."
+          "description": "Fewest the entry grants, 0 or more (default 1)."
         },
         "name": {
           "type": "string",
@@ -20718,11 +20718,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "outputItemPath": {
           "type": "string",
-          "description": "Canonical /Game item asset path produced by the recipe."
+          "description": "Item asset the recipe produces; one that names no asset is refused (ASSET_NOT_FOUND)."
         },
         "outputQuantity": {
           "type": "number",
-          "description": "Quantity produced per craft."
+          "description": "Items produced per craft (default 1)."
         },
         "path": {
           "type": "string",
@@ -20740,7 +20740,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "quantity": {
           "type": "number",
-          "description": "Ingredient quantity consumed per craft."
+          "description": "How many of the ingredient one craft consumes, 1 or more (default 1)."
         },
         "recipePath": {
           "type": "string",
@@ -20748,19 +20748,19 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "replicated": {
           "type": "boolean",
-          "description": "Whether the inventory component replicates."
+          "description": "true: the inventory variables replicate under replicationCondition. false, the default when omitted: they stop replicating."
         },
         "replicationCondition": {
           "type": "string",
-          "description": "Replication condition name applied to inventory state."
+          "description": "When they replicate: an ELifetimeCondition name with or without COND_ (None, the default, OwnerOnly, SkipOwner, SimulatedOnly, InitialOnly ...). Ignored when replicated is false; an unknown name is refused."
         },
         "requiredLevel": {
           "type": "number",
-          "description": "Minimum character level required to craft."
+          "description": "Minimum character level to craft, 0 or more. Only the requirement fields sent are written."
         },
         "requiredStation": {
           "type": "string",
-          "description": "Crafting station type required by the recipe."
+          "description": "Crafting station the recipe needs, stored as given (a station type such as Forge). Only the requirement fields sent are written."
         },
         "save": {
           "type": "boolean",
@@ -20783,7 +20783,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "stackable": {
           "type": "boolean",
-          "description": "Whether the item stacks."
+          "description": "Whether the item stacks. Only the stacking fields sent are written."
         },
         "stationType": {
           "type": "string",
@@ -20809,11 +20809,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "dropWeight"
             ]
           },
-          "description": "Quality tiers, each with a name and a dropWeight."
+          "description": "Quality tiers, each {name, dropWeight}: a name without commas or equals signs and a weight of 0 or more. A malformed entry or an empty list is refused; omitted, the five defaults are written (Common 60, Uncommon 25, Rare 10, Epic 4, Legendary 1). Replaces the tiers already there."
         },
         "uniqueItems": {
           "type": "boolean",
-          "description": "Whether duplicate instances of the item are disallowed."
+          "description": "Whether duplicate instances of the item are disallowed (bUniqueItem). Only the stacking fields sent are written."
         },
         "action": {
           "type": "string",
@@ -20867,7 +20867,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "craftTime": {
           "type": "number",
-          "description": "Craft duration in seconds."
+          "description": "Craft duration in seconds (default 1)."
         },
         "details": {
           "type": "object",
@@ -20876,7 +20876,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "icon": {
           "type": "string",
-          "description": "Canonical /Game texture or material path used as the item icon."
+          "description": "Texture or material asset used as the item icon; it must exist (ASSET_NOT_FOUND). An empty string clears the icon."
         },
         "ingredients": {
           "type": "array",
@@ -20910,7 +20910,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "maxStackSize": {
           "type": "number",
-          "description": "Maximum stack size."
+          "description": "Most items one stack holds, 1 or more. Only the stacking fields sent are written."
         },
         "message": {
           "type": "string",
@@ -20922,7 +20922,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "outputQuantity": {
           "type": "number",
-          "description": "Quantity produced per craft."
+          "description": "Items produced per craft (default 1)."
         },
         "pickupPath": {
           "type": "string",
@@ -20951,15 +20951,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "requiredLevel": {
           "type": "number",
-          "description": "Minimum character level required to craft."
+          "description": "Minimum character level to craft, 0 or more. Only the requirement fields sent are written."
         },
         "requiredStation": {
           "type": "string",
-          "description": "Crafting station type required by the recipe."
+          "description": "Crafting station the recipe needs, stored as given (a station type such as Forge). Only the requirement fields sent are written."
         },
         "stackable": {
           "type": "boolean",
-          "description": "Whether the item stacks."
+          "description": "Whether the item stacks. Only the stacking fields sent are written."
         },
         "success": {
           "type": "boolean",
@@ -20985,7 +20985,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "dropWeight"
             ]
           },
-          "description": "Quality tiers, each with a name and a dropWeight."
+          "description": "Quality tiers, each {name, dropWeight}: a name without commas or equals signs and a weight of 0 or more. A malformed entry or an empty list is refused; omitted, the five defaults are written (Common 60, Uncommon 25, Rare 10, Epic 4, Legendary 1). Replaces the tiers already there."
         },
         "unsupportedFields": {
           "type": "array",
@@ -22288,7 +22288,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "functionName": {
           "type": "string",
-          "description": "Function name."
+          "description": "The RPC. For setting=create, a new name that no function, variable, event or other member of the Blueprint or its parent class holds (NAME_TAKEN). For validation and reliability, an existing RPC: a function create made, or a custom event set to replicate in the editor (NOT_FOUND, or NOT_AN_RPC for one that does not replicate)."
         },
         "gameModeBlueprint": {
           "type": "string",
@@ -22301,6 +22301,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "hudClass": {
           "type": "string",
           "description": "Hud class."
+        },
+        "inputs": {
+          "type": "array",
+          "description": "RPC parameters, each {name, type}, with the types add_function inputs take (Float, Vector, Actor, Array<Int> ...), sent with every call. A nameless entry or a type no pin takes is refused (TYPE_RESOLUTION_FAILED) before anything changes. Default none.",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "x-unreal-reflection-boundary": true
         },
         "interfaceType": {
           "type": "string",
@@ -22468,11 +22478,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "reliable": {
           "type": "boolean",
-          "description": "Reliable."
+          "description": "Reliable: resent until it arrives, in order. Unreliable calls can be dropped under load, which suits frequent cosmetic updates. Creating defaults to true."
         },
         "repNotifyFunc": {
           "type": "string",
-          "description": "Rep notify func."
+          "description": "Function clients call when the variable's new value arrives; the variable also becomes replicated. It must take no parameters and return nothing: the Blueprint's own or an inherited one is used, a missing one is created empty (functionCreated), one with parameters or a return value is refused (the compiler drops it), and a name another member holds is NAME_TAKEN."
         },
         "replaceKey": {
           "type": "string",
@@ -22496,7 +22506,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "rpcType": {
           "type": "string",
-          "description": "Server, Client or NetMulticast (Multicast is accepted too); anything else is refused."
+          "description": "Where the call runs: Server (called on a client, on an actor its player owns, and run on the server), Client (called on the server, run on the owning player client) or NetMulticast (called on the server, run there and on every client). Multicast is accepted too, in any case; anything else is refused."
         },
         "sampleRate": {
           "type": "number",
@@ -22642,7 +22652,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "withValidation": {
           "type": "boolean",
-          "description": "With validation."
+          "description": "true is refused (NOT_SUPPORTED): only C++ RPCs have a validation step, so check the parameters at the start of the RPC body instead. false clears a validation flag an earlier call stored (changed says whether one was there)."
         },
         "action": {
           "type": "string",
@@ -22682,7 +22692,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
       "properties": {
         "actorReplicates": {
           "type": "boolean",
-          "description": "Whether the Blueprint itself replicates; a COND_AutonomousOnly variable reaches no client until it does."
+          "description": "Whether the Blueprint itself replicates (Replicates in its class defaults). Its replicated variables and RPCs reach no other machine until it does; nothing here turns it on."
         },
         "assetClass": {
           "type": "string",
@@ -22695,6 +22705,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "assetPath": {
           "type": "string",
           "description": "Full /Game path of the asset that was created, modified or inspected."
+        },
+        "changed": {
+          "type": "boolean",
+          "description": "Whether the call changed anything. false: the flag already had the value asked for, so nothing was compiled or saved."
         },
         "compiled": {
           "type": "boolean",
@@ -22737,9 +22751,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether the asset still resolved after the action completed."
         },
+        "functionCreated": {
+          "type": "boolean",
+          "description": "Whether repNotifyFunc did not exist and was created empty (it needs a body to do anything)."
+        },
         "functionName": {
           "type": "string",
-          "description": "Name of the Blueprint RPC function that was created."
+          "description": "The RPC the call created or changed: its function graph, or the replicated custom event."
         },
         "gameFrameworkInfo": {
           "type": "object",
@@ -22832,6 +22850,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "PlayerStartTag before the change (None when it had none)."
         },
+        "reliable": {
+          "type": "boolean",
+          "description": "Whether the RPC is reliable: resent until it arrives, in order. An unreliable call can be dropped under load."
+        },
+        "repNotifyFunc": {
+          "type": "string",
+          "description": "The function clients call when the variable's new value arrives."
+        },
         "requiresRestart": {
           "type": "boolean",
           "description": "Whether a written setting is only read at startup, so the running editor keeps the old value until it restarts."
@@ -22839,6 +22865,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "role": {
           "type": "string",
           "description": "Network role of the actor, such as ROLE_Authority."
+        },
+        "rpcType": {
+          "type": "string",
+          "description": "Server, Client or NetMulticast: where the call runs (the server, the owning player client, or the server and every client)."
         },
         "saved": {
           "type": "boolean",
@@ -22889,6 +22919,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "variableName": {
           "type": "string",
           "description": "Name of the prediction data variable."
+        },
+        "withValidation": {
+          "type": "boolean",
+          "description": "The validation flag asked for; only false gets this far, since a Blueprint RPC has no validation step."
         },
         "written": {
           "type": "array",

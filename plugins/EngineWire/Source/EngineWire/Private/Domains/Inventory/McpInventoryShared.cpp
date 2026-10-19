@@ -2,31 +2,34 @@
 
 #include "Core/Compatibility/McpVersionCompatibility.h"
 
-UPackage* CreateValidatedInventoryAssetPackage(const FString& Path, const FString& Name, FString& OutError)
+UPackage* CreateInventoryAssetPackage(const FString& Path, const FString& Name, FString& OutError, FString& OutCode)
 {
   FString PackageName;
-  FString SanitizedName = SanitizeAssetName(Name);
-
-  if (!ValidateAssetCreationPath(Path, SanitizedName, PackageName, OutError)) {
+  const FString SanitizedName = SanitizeAssetName(Name);
+  const FString Folder = Path.IsEmpty() ? FString(TEXT("/Game/Items")) : Path;
+  if (!ValidateAssetCreationPath(Folder, SanitizedName, PackageName, OutError)) {
+    OutCode = TEXT("PACKAGE_CREATE_FAILED");
     return nullptr;
   }
-
+  // CreatePackage hands back a package already holding an asset, and the NewObject or factory after it replaced
+  // that asset (its entries, ingredients and fields gone) or, for another class, brought the editor down.
+  if (McpAssetExists(PackageName) || FindObject<UObject>(nullptr, *(PackageName + TEXT(".") + SanitizedName))) {
+    OutError = FString::Printf(TEXT("%s already exists; pick another name or folder, or change it with the configure actions. Nothing was created."), *PackageName);
+    OutCode = TEXT("ASSET_ALREADY_EXISTS");
+    return nullptr;
+  }
   return CreatePackage(*PackageName);
 }
 
-UPackage* CreateInventoryAssetPackage(const FString& Path, const FString& Name)
+bool RequireReferencedAsset(UEngineWireSubsystem& Bridge, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
+                            const FString& Path, const TCHAR* Field)
 {
-  FString PackagePath = Path.IsEmpty() ? TEXT("/Game/Items") : Path;
-
-  FString PackageName;
-  FString PathError;
-  FString SanitizedName = SanitizeAssetName(Name);
-  if (!ValidateAssetCreationPath(PackagePath, SanitizedName, PackageName, PathError)) {
-    UE_LOG(LogEngineWireSubsystem, Warning, TEXT("CreateAssetPackage: %s"), *PathError);
-    return nullptr;
+  if (McpAssetExists(Path)) {
+    return true;
   }
-
-  return CreatePackage(*PackageName);
+  Bridge.SendAutomationError(RequestingSocket, RequestId,
+      FString::Printf(TEXT("%s '%s' names no asset; nothing was changed."), Field, *Path), TEXT("ASSET_NOT_FOUND"));
+  return false;
 }
 
 int32 NextIndexedPropertyIndex(const TMap<FString, FString>& Properties, const FString& Prefix)

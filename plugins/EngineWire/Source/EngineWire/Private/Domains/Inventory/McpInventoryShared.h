@@ -27,8 +27,14 @@
 #include "EditorAssetLibrary.h"
 
 
-UPackage* CreateValidatedInventoryAssetPackage(const FString& Path, const FString& Name, FString& OutError);
-UPackage* CreateInventoryAssetPackage(const FString& Path, const FString& Name);
+// The package for a new inventory asset Name in folder Path (/Game/Items when empty), or null with OutError and
+// OutCode: PACKAGE_CREATE_FAILED for a path outside the allowed roots, ASSET_ALREADY_EXISTS for an occupied one.
+UPackage* CreateInventoryAssetPackage(const FString& Path, const FString& Name, FString& OutError, FString& OutCode);
+
+// False after replying ASSET_NOT_FOUND when Path, a reference the action stores (item, category, icon,
+// ingredient), names no asset. Those paths used to be stored unchecked, so a typo saved a dead reference.
+bool RequireReferencedAsset(UEngineWireSubsystem& Bridge, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
+                            const FString& Path, const TCHAR* Field);
 
 // The number after the highest "<Prefix><n>" key in Properties (0 when none). Properties.Num() is not
 // that number once a key has been removed, and using it as the next key overwrote a surviving entry.

@@ -73,23 +73,27 @@ const testCases = [
   {
     scenario: 'CREATE: create_rpc_function',
     toolName: 'manage_networking',
-    arguments: { action: 'create_rpc_function', blueprintPath: ACTOR_BP_PATH, functionName: RPC_FUNCTION, rpcType: 'Server', reliable: true },
+    arguments: { action: 'create_rpc_function', blueprintPath: ACTOR_BP_PATH, functionName: RPC_FUNCTION, rpcType: 'server', reliable: true, inputs: [{ name: 'Amount', type: 'Float' }] },
     expected: 'success',
     assertions: [
       ...blueprintAssertion(EXPECTED_ACTOR_BP_ASSET_PATH, 'create_rpc_function'),
       { path: 'structuredContent.result.functionName', equals: RPC_FUNCTION, label: 'RPC function name returned' },
-      { path: 'structuredContent.result.rpcType', equals: 'Server', label: 'RPC type returned' },
-      { path: 'structuredContent.result.reliable', equals: true, label: 'RPC reliability returned at creation' }
+      { path: 'structuredContent.result.rpcType', equals: 'Server', label: 'RPC type returned in its canonical spelling' },
+      { path: 'structuredContent.result.reliable', equals: true, label: 'RPC reliability returned at creation' },
+      { path: 'structuredContent.result.compiled', equals: true, label: 'RPC with an input compiles' }
     ]
   },
+  { scenario: 'CREATE: create_rpc_function refuses a name already taken', toolName: 'manage_networking', arguments: { action: 'create_rpc_function', blueprintPath: ACTOR_BP_PATH, functionName: RPC_FUNCTION, rpcType: 'Client' }, expected: 'error|NAME_TAKEN' },
+  { scenario: 'CREATE: create_rpc_function refuses a nameless input', toolName: 'manage_networking', arguments: { action: 'create_rpc_function', blueprintPath: ACTOR_BP_PATH, functionName: `Bad_Input_RPC_${ts}`, rpcType: 'Server', inputs: [{ type: 'Float' }] }, expected: 'error|TYPE_RESOLUTION_FAILED' },
+  { scenario: 'CONFIG: configure_rpc_validation refuses validation a Blueprint RPC cannot run', toolName: 'manage_networking', arguments: { action: 'configure_rpc_validation', blueprintPath: ACTOR_BP_PATH, functionName: RPC_FUNCTION, withValidation: true }, expected: 'error|NOT_SUPPORTED' },
   {
-    scenario: 'CONFIG: configure_rpc_validation',
+    scenario: 'CONFIG: configure_rpc_validation off on an RPC without it changes nothing',
     toolName: 'manage_networking',
-    arguments: { action: 'configure_rpc_validation', blueprintPath: ACTOR_BP_PATH, functionName: RPC_FUNCTION, withValidation: true },
+    arguments: { action: 'configure_rpc_validation', blueprintPath: ACTOR_BP_PATH, functionName: RPC_FUNCTION, withValidation: false },
     expected: 'success',
     assertions: [
-      ...blueprintAssertion(EXPECTED_ACTOR_BP_ASSET_PATH, 'configure_rpc_validation'),
-      { path: 'structuredContent.result.withValidation', equals: true, label: 'RPC validation flag returned' }
+      { path: 'structuredContent.result.withValidation', equals: false, label: 'RPC validation flag returned' },
+      { path: 'structuredContent.result.changed', equals: false, label: 'no validation flag was there to clear' }
     ]
   },
   {
@@ -99,8 +103,16 @@ const testCases = [
     expected: 'success',
     assertions: [
       ...blueprintAssertion(EXPECTED_ACTOR_BP_ASSET_PATH, 'set_rpc_reliability'),
-      { path: 'structuredContent.result.reliable', equals: false, label: 'RPC reliability updated' }
+      { path: 'structuredContent.result.reliable', equals: false, label: 'RPC reliability updated' },
+      { path: 'structuredContent.result.changed', equals: true, label: 'RPC reliability changed' }
     ]
+  },
+  {
+    scenario: 'CONFIG: set_rpc_reliability to the value it has changes nothing',
+    toolName: 'manage_networking',
+    arguments: { action: 'set_rpc_reliability', blueprintPath: ACTOR_BP_PATH, functionName: RPC_FUNCTION, reliable: false },
+    expected: 'success',
+    assertions: [{ path: 'structuredContent.result.changed', equals: false, label: 'RPC already unreliable' }]
   },
 
   // === AUTHORITY / OWNERSHIP ===
@@ -123,7 +135,17 @@ const testCases = [
   { scenario: 'CONFIG: configure_net_cull_distance', toolName: 'manage_networking', arguments: { action: 'configure_net_cull_distance', blueprintPath: ACTOR_BP_PATH, netCullDistanceSquared: 640000, useOwnerNetRelevancy: true }, expected: 'success', assertions: blueprintAssertion(EXPECTED_ACTOR_BP_ASSET_PATH, 'configure_net_cull_distance') },
   { scenario: 'CONFIG: set_always_relevant', toolName: 'manage_networking', arguments: { action: 'set_always_relevant', blueprintPath: ACTOR_BP_PATH, alwaysRelevant: true }, expected: 'success', assertions: blueprintAssertion(EXPECTED_ACTOR_BP_ASSET_PATH, 'set_always_relevant') },
   { scenario: 'CONFIG: set_only_relevant_to_owner', toolName: 'manage_networking', arguments: { action: 'set_only_relevant_to_owner', blueprintPath: ACTOR_BP_PATH, onlyRelevantToOwner: false }, expected: 'success', assertions: blueprintAssertion(EXPECTED_ACTOR_BP_ASSET_PATH, 'set_only_relevant_to_owner') },
-  { scenario: 'CONFIG: set_replicated_using', toolName: 'manage_networking', arguments: { action: 'set_replicated_using', blueprintPath: ACTOR_BP_PATH, propertyName: 'RepNotifyValue', repNotifyFunc: REP_NOTIFY_FUNCTION }, expected: 'success', assertions: blueprintAssertion(EXPECTED_ACTOR_BP_ASSET_PATH, 'set_replicated_using') },
+  {
+    scenario: 'CONFIG: set_replicated_using',
+    toolName: 'manage_networking',
+    arguments: { action: 'set_replicated_using', blueprintPath: ACTOR_BP_PATH, propertyName: 'RepNotifyValue', repNotifyFunc: REP_NOTIFY_FUNCTION },
+    expected: 'success',
+    assertions: [
+      ...blueprintAssertion(EXPECTED_ACTOR_BP_ASSET_PATH, 'set_replicated_using'),
+      { path: 'structuredContent.result.functionCreated', equals: true, label: 'missing RepNotify function created' }
+    ]
+  },
+  { scenario: 'CONFIG: set_rpc_reliability refuses a function that is not an RPC', toolName: 'manage_networking', arguments: { action: 'set_rpc_reliability', blueprintPath: ACTOR_BP_PATH, functionName: REP_NOTIFY_FUNCTION, reliable: true }, expected: 'error|NOT_AN_RPC' },
   {
     scenario: 'CONFIG: configure_push_model',
     toolName: 'manage_networking',
