@@ -32,27 +32,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details>
 <summary><b>🔧 Fixed</b></summary>
 
-- **Small fixes**: `runtime_report` `filter` matches a whole path; the plugin links on UE 5.0 again; crash diagnostics are rewritten on Windows; native `get_task_result` matches the principal exactly; `get_stats` `performance` counts the RHI thread.
-- **A long render keeps its native request open** for its `renderTimeoutMs` (past 5 minutes, up to `MaxMovieRenderTimeoutMs`).
-- **`edit_scs` keeps `save: false`** for every edit; the Blueprint was saved anyway.
-- **A refusal keeps the details it names**, such as the unsaved packages of a refused close.
+- **Small fixes**: `runtime_report` `filter` matches a whole path; the plugin links on UE 5.0 again; crash diagnostics are rewritten on Windows; native `get_task_result` matches the principal exactly; `get_stats` `performance` counts the RHI thread; `edit_scs` keeps `save: false`; a refusal keeps the details it names; large batches pass the pre-queue checks; a rate-limited request says when to retry (`Retry-After`).
+- **Renders**: a long render keeps its native request open for its `renderTimeoutMs`, and `save_all` and `restart_editor` wait for it (`RENDER_IN_PROGRESS`).
 - **A level viewport screenshot waits for streaming** and names video memory over budget; `set_viewport_realtime` reports the state it reached.
-- **A deprecated property is refused**, naming where its replacement lives; the write had answered success and changed nothing.
-- **`set_property` inside a Niagara system restarts its placed effects**, so a renderer change shows.
-- **`audit_placement` counts simulated bodies as surfaces**, judges a player start by its capsule and skips undersides lying on a floor; **`fix_coplanar` brings a piece laid across several neighbours forward**.
-- **A whole track name picks only that track** (`..._1` also matched `_10` to `_19`, in reads and `remove_track`).
-- **`save_all` and `restart_editor` wait for a running render** (`RENDER_IN_PROGRESS`) instead of saving its temporary state or cutting it off.
-- **`set_bone_key` keeps what it is not given** (a key with no location put the bone on its parent).
-- **Large batches pass the pre-queue checks** (past 4096 values they were refused).
-- **A rate-limited request says when to retry** (`RATE_LIMITED`, `retryAfterSeconds`, a `Retry-After` header).
-- **Environment settings take object and soft references** (a volumetric cloud's material), as `edit_component` does.
-- **Undo takes back** `set_property` moves, `attach`, `detach`, `add_component`, light channels (not even marked unsaved before), spline points, spline mesh edits and scatters, and `set_volume_bounds`.
+- **Property writes**: a deprecated property is refused, naming its replacement (the write answered success and changed nothing); `set_property` in a Niagara system restarts its placed effects; environment settings take object and soft references.
+- **`audit_placement`** counts simulated bodies as surfaces, judges a player start by its capsule and skips undersides on a floor; **`fix_coplanar`** brings a piece across several neighbours forward.
+- **A whole track name picks only that track** (`..._1` also matched `_10` to `_19`), and **`set_bone_key` keeps what it is not given**.
+- **Undo takes back** `set_property` moves, `attach`, `detach`, `add_component`, light channels, spline points and meshes, scatters and `set_volume_bounds`.
 - **Class, name and tag finds stop at `limit`** (default 200) and say how many matched.
-- **Records and replies say what happens**: about fifty records name their defaults, replies and refusals and declare what their handlers read; `setup_movement` refuses a non-Character Blueprint, `play_montage` outside play says nothing moves, creators report `saved`, `create_level` warns when World Partition could not be made, `duplicate` takes `newName` alone, `add_tag` refuses when no name matched (it said 0 actors were tagged), `delete_node` lists what it removed, and `compile_material` says whether it really saved.
-- **`stream` and `unload` act**: in Play the sublevel streams in the game, in the editor (which keeps sublevels loaded) it is shown or hidden; both answered "updated" and changed nothing. `add_sublevel` refuses an unknown streaming method instead of using Blueprint, and a map that does not load leaves no entry behind.
-- **`remove_component` removes only the component it names, and only one added to the actor** (a prefix took the first match, and a class's own came back), undoably and saved; `remove_function` refuses a function still called (it left the Blueprint uncompilable); `stop_recording` refuses when nothing records.
-- **The AI controller actions write real logic**: `run_behavior_tree` runs the tree on possess, `set_focus` keeps the player (`focusPlayer`) or a tagged actor (`focusTag`) in focus, `assign_behavior_tree` sets the variable's default, and `stop_behavior_tree` and `clear_focus` take that logic out; they added an empty variable and said done (`focusActorName`, which nothing used, is gone).
-- **`open_level`, `load` and `add_sublevel` take an object path**, a relative `.t3d` export lands in the project, and local player refusals carry codes.
+- **Records and replies say what happens**: about seventy records name their defaults, replies and refusals; `setup_movement` refuses a non-Character Blueprint, `play_montage` outside play says nothing moves, creators report `saved`, `duplicate` takes `newName` alone, `add_tag` refuses when no name matched, and `compile_material` says whether it saved.
+- **Successes that did nothing now act**: `stream` and `unload` stream in the game during Play and show or hide the sublevel in the editor (both answered "updated"); the AI controller actions write real logic (`run_behavior_tree` on possess, `set_focus` on `focusPlayer` or `focusTag`, `assign_behavior_tree`; stop and clear take it out); `stop_recording` refuses when nothing records.
+- **Removals that broke things**: `remove_component` takes the exact name and only a component added to the actor (a prefix took the first match, a class's own came back), undoably and saved; `remove_function` refuses a function still called; `add_sublevel` refuses an unknown streaming method and leaves nothing behind when the map does not load.
+- **Object paths** work in `open_level`, `load` and `add_sublevel`; a relative `.t3d` export lands in the project; local player refusals carry codes.
 
 </details>
 

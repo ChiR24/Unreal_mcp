@@ -7,46 +7,36 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 ## [Unreleased]
 
 ### Added
-- **Blueprint runtime errors** in Play name their node, graph and Blueprint in frame steps and motion reads; `runtime_report` lists the session's errors with the object's variables.
-- **`get_editor_focus`**: open asset editors newest first, each Blueprint editor's focused graph and selected nodes, the selected actors, the last minute's distinct warnings and the script errors.
-- **`describe_view` `points` and `labels`**: per spot, the hit-proxy actor and a Visibility trace; a PNG (at most 960 px) with listed actors numbered; `coveredBy`, nearer actors over 5% of a named actor's box.
-- **MCP 2026-07-28 on `/mcp`**: per-request version with no session, `Mcp-Method`/`Mcp-Name` checks, `resultType` and cache hints, consent through client elicitation (signed `requestState`), and the tasks extension.
-- **Result pages**: a result over 100k chars that is one top-level array goes a page at a time; the rest waits 5 minutes (8 kept) for `options.pageCursor` from the same principal, capability and params.
-- **Search signature**: a first hit whose runner-up scores at most 90% of it (`McpSearchConfidentRatioPercent`) and that needs no consent carries `signature` and `executeCall`.
-- **`get_frame_cost`**: the busiest of game, render, RHI and GPU against the frame, plus shadowed movable lights, non-Nanite meshes by LOD 0 triangles, translucent primitives and ticking actors by class.
-- **`nanite_rebuild_mesh` `assetPaths`**: one row per mesh; a slot neither opaque nor masked refuses the mesh first (`NANITE_UNSUPPORTED_MATERIAL`), and each material's flag owner gets `MATUSAGE_Nanite`, saved after the build.
-- **`get_niagara_info` values**: `userParameters` carry the default; `actorName` reads the component's `GetOverrideParameters()` into `placed`.
-- **`edit_dynamic_mesh` `append_cuboids`, `append_loft`, `append_mesh`, `delete_triangles`**: boxes and lofts build `append_polygons` input; `append_mesh` goes through `FDynamicMeshEditor::AppendMesh`.
-- **`diff_asset`**: a saved copy loaded with `LOAD_ForDiff` or another asset, compared property by property, graphs through `FGraphDiffControl::DiffGraphs`.
-- **`cancel_render`** (`CancelAllJobs()`, `MRQ_NOT_RENDERING` when idle) and **`configure_render_camera`** (`ShutterTiming`, `OverscanPercentage`; newer fields found by name).
-- **`set_section` `playRate`**: a float to 5.4, `FMovieSceneTimeWarpVariant` from 5.5; the range rescales by old over new rate unless `endFrame` is given. **Reads**: list_tracks `animations`, get_animation_info `boneTracks`.
-- **Change watch** (`McpChangeWatch`): actors a request spawns (`OnLevelActorAdded`) or modifies (`OnObjectModified`), and an edited Blueprint's placed copies by path, are fingerprinted; the reply's `warnings` get their placement and content findings. `audit_placement` kinds `default_material`, `placeholder_text`, `duplicate`.
+- **Blueprint runtime errors** in Play name their node, graph and Blueprint in frame steps and motion reads; `runtime_report` adds the object's variables.
+- **`get_editor_focus`**: open editors newest first, the focused graph and selected nodes, selected actors, recent warnings and script errors.
+- **`describe_view` `points`, `labels`, `coveredBy`**: the hit-proxy actor and a trace per spot; a numbered PNG (at most 960 px); nearer actors over 5% of a named actor's box.
+- **MCP 2026-07-28 on `/mcp`**: sessionless requests, `Mcp-Method`/`Mcp-Name` checks, `resultType` and cache hints, consent by elicitation (signed `requestState`), the tasks extension.
+- **Result pages**: an oversized top-level array goes a page at a time; the rest waits 5 minutes (8 kept) for `options.pageCursor` from the same principal and call.
+- **Search signature** on a first hit at least 10% ahead (`McpSearchConfidentRatioPercent`) that needs no consent.
+- **`get_frame_cost`**: the busiest thread against the frame, and what in view costs most (shadowed movable lights, non-Nanite triangles, translucency, ticking classes).
+- **`nanite_rebuild_mesh` `assetPaths`**: one row per mesh; a translucent slot refuses its mesh (`NANITE_UNSUPPORTED_MATERIAL`); materials get `MATUSAGE_Nanite`.
+- **`get_niagara_info` values**: defaults in `userParameters`, a placed effect's overrides in `placed`.
+- **`edit_dynamic_mesh`** `append_cuboids`, `append_loft`, `append_mesh` (`FDynamicMeshEditor::AppendMesh`) and `delete_triangles`.
+- **`diff_asset`**: against the saved copy (`LOAD_ForDiff`) or another asset; graphs through `FGraphDiffControl::DiffGraphs`.
+- **`cancel_render`** (`CancelAllJobs()`) and **`configure_render_camera`** (`ShutterTiming`, `OverscanPercentage`).
+- **`set_section` `playRate`** (`FMovieSceneTimeWarpVariant` from 5.5); reads gain `animations` and `boneTracks`.
+- **Change watch** (`McpChangeWatch`): what a request spawns or modifies, and an edited Blueprint's placed copies, are checked; findings go in `warnings`. `audit_placement` kinds `default_material`, `placeholder_text`, `duplicate`.
 
 ### Fixed
-- **`runtime_report` `filter`** matches an actor's path only whole.
+- **Small fixes**: `runtime_report` `filter` matches a whole path; diagnostics records replace their files (`IFileManager::Move`); task results match their principal case-sensitively; `busiestThreadMs` includes the RHI thread; refusal details survive reply compaction; Niagara `scriptType` matches in any case; search rows render fractions.
 - **Links on UE 5.0 again**: the graph module add is guarded, and the emitter copy avoids the inline `CopyParameterData` on 5.0 and 5.1.
-- **Diagnostics records replace their files** (`IFileManager::Move` with replace).
-- **The native request timeout reads `renderTimeoutMs`**, whose schema maximum is a day now, with `MaxMovieRenderTimeoutMs` the limit.
-- **Task results match their principal case-sensitively.**
-- **`edit_scs` reads `save`** for every action, and every SCS edit declares it.
-- **Refusal details survive reply compaction** when the message and code repeat the reply's.
-- **`get_performance_stats` `busiestThreadMs`** includes the RHI thread.
+- **Renders**: the native request timeout reads `renderTimeoutMs` (schema maximum a day, `MaxMovieRenderTimeoutMs` the limit); `McpMovieRenderRunning()` refuses save_all and restart_editor with `RENDER_IN_PROGRESS`.
 - **Editor viewport captures settle across ticks** until two frames match and warn on `GDemotedLocalMemorySize`; `set_viewport_realtime` names the background hold (`heldBy`).
-- **The property resolver refuses `CPF_Deprecated`** (UHT registers `X_DEPRECATED` as `X`) and names the member that holds it.
-- **`set_property` in a Niagara system** re-inits it with `FNiagaraSystemUpdateContext`.
-- **The placement ground trace queries `ECC_PhysicsBody`**; a player start is measured by its capsule; **`fix_coplanar` sums a face's overlaps**; undersides on a floor are skipped.
-- **Track lookups prefer a whole name**: `FindTrackByName` tries whole names first; `CollectTracksByName` keeps only whole matches when any.
-- **`McpMovieRenderRunning()`** refuses save_all and restart_editor with `RENDER_IN_PROGRESS`; validateOnly reports `renderRunning`.
-- **`set_bone_key` defaults** read the track's key at the frame (`GetBoneTrackTransform` from 5.2, the raw keys before) or the reference pose.
-- **Pre-queue scans** walk up to `McpMaxPayloadScanNodes` (262144) values; command keys compare in place.
-- **Rate limit replies** name the cap, its setting and the wait, with `data.errorCode` `RATE_LIMITED`, `retryAfterSeconds` and `Retry-After`.
-- **`McpApplyPayloadSettings`** writes through the full `ApplyJsonValueToProperty` (objects, soft references, arrays).
-- **Undoable** in an `FMcpScopedEditorTransaction`: `set_property` actor transforms, `detach` (with its old parent), light channels, spline point add/remove/move, spline mesh asset/material, `scatter_meshes_along_spline`, `set_volume_bounds`.
-- **`McpCapFindRows`** cuts class, name and tag finds at `limit` with `truncated` and `totalCount`.
-- **`remove_component`** takes an exact name and only an `EComponentCreationMethod::Instance` component that is not the root (`COMPONENT_NOT_REMOVABLE`), in a transaction with the package dirtied; `attach` and `add_component` run in a transaction; `stop_recording` answers `NOT_RECORDING` without a `DemoNetDriver`; `remove_function` answers `FUNCTION_IN_USE` with the call nodes (self or own-class `FunctionReference`).
-- **AI controller actions** author recipes `AI/*` through `McpBlueprintBehaviour::Author`: RunBehaviorTree on `ReceivePossess` reading the controller's BehaviorTree variable (assign sets its default), Set Focus on Tick while `GetFocusActor` is invalid (player 0 or `GetAllActorsWithTag`); stop and clear take the tag out and answer `removed: false` when nothing was there; a non-AIController Blueprint is `NOT_AI_CONTROLLER`.
-- **`stream_level`** acts on `GEditor->PlayWorld` in Play (then `FlushLevelStreaming`), else through `UEditorLevelUtils::SetLevelVisibility` in a transaction, only on a change: the editor world ignores streaming state. A name matches a whole path or `/Name` (`AMBIGUOUS_LEVEL`). `add_sublevel` validates `streamingMethod`, removes the entry when the map does not load, and drops a 100 ms sleep.
-- **Honest replies**: `setup_movement` answers `INVALID_TARGET` without a `CharacterMovement`; `play_montage` sets `playing` from the play world; skeleton, AI controller, MetaHuman and widget-animation edits report `saved` (an unsaved new package is marked dirty); local player refusals carry codes; native `reset` answers `enabled`; `open_level`, level `load` and `add_sublevel` take an object path; a relative `.t3d` resolves against `ProjectDir()`; `create_level`'s World Partition note is a warning; asset `duplicate` copies beside the source with `newName` alone and a folder copy reports `assetCount`; `add_tag` with no `actorNames` found answers `ACTOR_NOT_FOUND`; `compile_material` `saved` is the save result; Niagara `scriptType` matches in any case; search rows render fractions.
+- **Properties**: the resolver refuses `CPF_Deprecated` (UHT registers `X_DEPRECATED` as `X`) and names the holder; `set_property` in a Niagara system re-inits it (`FNiagaraSystemUpdateContext`); `McpApplyPayloadSettings` writes through `ApplyJsonValueToProperty`.
+- **Placement**: the ground trace queries `ECC_PhysicsBody`, a player start is measured by its capsule, undersides on a floor are skipped, and `fix_coplanar` sums a face's overlaps.
+- **Tracks and bones**: `FindTrackByName` and `CollectTracksByName` prefer whole names; `set_bone_key` defaults read the track's key at the frame (`GetBoneTrackTransform` from 5.2) or the reference pose.
+- **Pre-queue scans** walk up to `McpMaxPayloadScanNodes` (262144) values; **rate limit replies** carry `RATE_LIMITED`, `retryAfterSeconds` and `Retry-After`.
+- **In an `FMcpScopedEditorTransaction`**: `set_property` transforms, `attach`, `detach`, `add_component`, `remove_component`, light channels, spline points, spline meshes, scatters, `set_volume_bounds`.
+- **`McpCapFindRows`** cuts class, name and tag finds at `limit` with `truncated` and `totalCount`; `edit_scs` reads `save` for every action.
+- **Removals**: `remove_component` takes an exact name and only a non-root `EComponentCreationMethod::Instance` component (`COMPONENT_NOT_REMOVABLE`), dirtying the package; `remove_function` answers `FUNCTION_IN_USE` with the call nodes; `stop_recording` answers `NOT_RECORDING` without a `DemoNetDriver`.
+- **AI controller actions** author recipes `AI/*` (`McpBlueprintBehaviour::Author`): Run Behavior Tree on `ReceivePossess` from the BehaviorTree variable assign sets, Set Focus on Tick while `GetFocusActor` is invalid (player 0 or `GetAllActorsWithTag`); stop and clear take the tag out (`removed: false` when absent); `NOT_AI_CONTROLLER` otherwise.
+- **`stream_level`** acts on `GEditor->PlayWorld` in Play (then `FlushLevelStreaming`), else `UEditorLevelUtils::SetLevelVisibility` in a transaction on a change; a name matches a whole path or `/Name` (`AMBIGUOUS_LEVEL`). `add_sublevel` validates `streamingMethod`, removes an entry whose map did not load, and drops a 100 ms sleep.
+- **Honest replies**: `setup_movement` answers `INVALID_TARGET` without a `CharacterMovement`; `play_montage` sets `playing` from the play world; creators report `saved` (an unsaved new package is marked dirty); local player refusals carry codes; native `reset` answers `enabled`; object paths work in `open_level`, `load` and `add_sublevel`; a relative `.t3d` resolves against `ProjectDir()`; `create_level` warns when World Partition fails; asset `duplicate` takes `newName` alone and reports `assetCount`; `add_tag` answers `ACTOR_NOT_FOUND` when no name matched; `compile_material` `saved` is the save result.
 
 ## [0.6.0-beta-f] - 2026-10-16
 
