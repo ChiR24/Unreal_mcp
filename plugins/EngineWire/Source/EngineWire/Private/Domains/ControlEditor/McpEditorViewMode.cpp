@@ -1,4 +1,6 @@
 #include "Domains/ControlEditor/McpEditorSupport.h"
+#include "Editor/EditorPerformanceSettings.h"
+#include "Misc/App.h"
 
 #include "Camera/PlayerCameraManager.h"
 #include "Engine/GameViewportClient.h"
@@ -191,14 +193,31 @@ bool UEngineWireSubsystem::HandleControlEditorSetViewportRealtime(
   if (ActiveViewport.IsValid()) {
     FEditorViewportClient& ViewportClient = ActiveViewport->GetAssetViewportClient();
     ViewportClient.SetRealtime(bRealtime);
+    // Another system's override wins over the setting: the reply said enabled while every capture still found the
+    // viewport not realtime. This request's own override goes on top of it, taken off again by the next call. Not the
+    // background one: the editor re-adds that on every tick while it is in the background with "Use Less CPU when in
+    // Background" on, so no override outlasts the frame and the reply says what holds it instead.
+    static const FText McpOverride = NSLOCTEXT("EngineWire", "McpRealtimeOverride", "EngineWire request");
+    ViewportClient.RemoveRealtimeOverride(McpOverride, false);
+    const UEditorPerformanceSettings *Performance = GetDefault<UEditorPerformanceSettings>();
+    const bool bBackgroundHold = bRealtime && !FApp::HasFocus() && Performance && Performance->bThrottleCPUWhenNotForeground;
+    FString Held;
+    if (ViewportClient.IsRealtime() != bRealtime) {
+      Held = ViewportClient.GetRealtimeOverrideMessage().ToString();
+      if (!bBackgroundHold) ViewportClient.AddRealtimeOverride(bRealtime, McpOverride);
+    }
+    const bool bReached = !bBackgroundHold && ViewportClient.IsRealtime();
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
-    Resp->SetBoolField(TEXT("realtime"), bRealtime);
-    Resp->SetStringField(TEXT("message"), bRealtime ? TEXT("Viewport realtime enabled") : TEXT("Viewport realtime disabled"));
+    Resp->SetBoolField(TEXT("realtime"), bReached);
+    if (!Held.IsEmpty()) Resp->SetStringField(bBackgroundHold ? TEXT("heldBy") : TEXT("overrode"), Held);
+    const TCHAR *Message = bBackgroundHold
+        ? TEXT("Realtime is set, but the editor is in the background with Use Less CPU when in Background on, which holds every viewport off realtime until the editor is in front: control_editor configure_editor setting=window unthrottle lifts it for this session.")
+        : bReached ? TEXT("Viewport realtime enabled") : TEXT("Viewport realtime disabled");
+    Resp->SetStringField(TEXT("message"), Message);
 
-    SendAutomationResponse(Socket, RequestId, true,
-                           TEXT("Viewport realtime updated"), Resp, FString());
+    SendAutomationResponse(Socket, RequestId, true, Message, Resp, FString());
     return true;
   }
 

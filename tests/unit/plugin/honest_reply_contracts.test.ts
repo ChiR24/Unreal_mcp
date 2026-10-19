@@ -3508,3 +3508,19 @@ describe('describe_view names what covers part of a named actor', () => {
     expect(unseen).toContain('McpNearerCovers(Actor, Client, Size, Ids, Proxies, 5.0, InFrame, Covers);');
   });
 });
+
+describe('set_viewport_realtime takes effect over another override', () => {
+  // A minimized editor holds the viewport off realtime: the toggle said enabled while every capture still found it not.
+  it('puts its own override on top when another system holds the viewport, and reports the state reached', () => {
+    const mode = code('ControlEditor', 'McpEditorViewMode.cpp');
+    expect(mode).toContain('ViewportClient.RemoveRealtimeOverride(McpOverride, false);');
+    expect(mode).toContain('if (!bBackgroundHold) ViewportClient.AddRealtimeOverride(bRealtime, McpOverride);');
+    expect(mode).toContain('Resp->SetBoolField(TEXT("realtime"), bReached);');
+  });
+
+  // The editor re-adds its background override on every tick, so an override of ours was buried on the next frame.
+  it('says the background throttle holds the viewport instead of claiming realtime', () => {
+    expect(code('ControlEditor', 'McpEditorViewMode.cpp'))
+      .toContain('const bool bBackgroundHold = bRealtime && !FApp::HasFocus() && Performance && Performance->bThrottleCPUWhenNotForeground;');
+  });
+});

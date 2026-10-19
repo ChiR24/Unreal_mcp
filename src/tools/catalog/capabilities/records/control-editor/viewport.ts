@@ -38,8 +38,8 @@ export const VIEWPORT_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'control_editor', action: 'set_viewport_realtime', domain: D, family: F,
-    summary: 'Toggle realtime rendering in the editor viewport.',
-    whenToUse: ['Realtime rendering must be enabled or disabled.'],
+    summary: 'Toggle realtime rendering in the editor viewport: particles and animated materials move only in a realtime viewport. When another system holds the viewport off realtime the request is put on top of it (overrode names it); while the editor is in the background with Use Less CPU when in Background on, realtime stays off (heldBy, realtime false) until control_editor configure_editor setting=window unthrottle lifts the throttle.',
+    whenToUse: ['Realtime rendering must be enabled or disabled.', 'A screenshot warned that the level viewport is not realtime, so effects stood still in it.'],
     whenNotToUse: ['The current realtime state is acceptable.'],
     inputProps: { enabled: P.enabled, realtime: P.realtime },
     required: [],

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "7099e60f18c0214d",
+  "catalogRevision": "5b0a9b72c6feaebd",
   "recordCount": 416,
   "records": [
     {
@@ -39324,6 +39324,7 @@
           "setting=game_view: The viewport must show or hide the game view.",
           "setting=immersive_mode: The viewport must enter or exit immersive fullscreen.",
           "setting=realtime: Realtime rendering must be enabled or disabled.",
+          "setting=realtime: A screenshot warned that the level viewport is not realtime, so effects stood still in it.",
           "setting=show_stats: A debug stat must be displayed.",
           "setting=hide_stats: A debug stat must be hidden."
         ],
@@ -39484,7 +39485,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "60a97085918a840db26b8580e532b49bf142c40a1a65c99f1aac3672b78d4620",
-        "content": "66103416f1221cfd569159874f70a042f9c3d3c7060305c23c2a34ca6a076637"
+        "content": "bb5bb0287c9c358903586e0f68a50f2b3e45d5bfd5bdcc107f223c74fe786a25"
       }
     },
     {
