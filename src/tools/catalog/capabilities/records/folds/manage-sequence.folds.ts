@@ -62,7 +62,7 @@ export const MANAGE_SEQUENCE_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'create_cinematic_asset', selector: 'kind',
-    summary: 'Create a cine camera actor or a master sequence.',
+    summary: 'Create a cinematic piece, chosen by kind. master_sequence makes a level sequence (name in path, default /Game/Cinematics, or sequencePath) at frameRate (default 24 fps) playing from startFrame (default 0) for durationFrames (default 240) or to endFrame, and saves it; it starts with no tracks, so add shots with add_shot_track and sub-sequences with add_subsequence. A level sequence already there is kept (alreadyExists); another asset there is ASSET_TYPE_MISMATCH. cine_camera_actor places a Cine Camera Actor named actorName (or label) at location and rotation with the lens, filmback and focus settings given (appliedProperties) and, with path or sequencePath, binds it to that sequence (bindingGuid); during Play it goes into the running game.',
     topics: ['cine camera actor', 'master sequence'],
     members: { cine_camera_actor: 'create_cine_camera_actor', master_sequence: 'create_master_sequence' },
   },
@@ -97,7 +97,7 @@ export const MANAGE_SEQUENCE_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'configure_demo_settings', selector: 'setting',
-    summary: 'Configure replay demo settings or the killcam duration.',
+    summary: 'Set how this editor session records and plays demo replays, chosen by setting. demo stores the default replayName and friendlyName, extra additionalOptions, maxRecordTimeSeconds (up to 86400), checkpointSaveMaxMSPerFrame (up to 1000 ms; also written to the engine config and the demo driver defaults), playbackSpeed, prioritizeActors and loadDefaultMapOnStop; a recording or playback running now takes them at once (appliedToRuntime), and the reply lists everything stored. killcam_duration sets how many seconds start_killcam replays (up to 600). All but the checkpoint budget last until the editor closes.',
     members: { demo: 'configure_demo_settings', killcam_duration: 'configure_killcam_duration' },
   },
   {

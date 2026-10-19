@@ -92,7 +92,7 @@ export const OPERATIONS_POWER_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'manage_level', action: 'build_lighting', dispatchAction: 'manage_lighting',
     domain: D, family: 'lighting',
-    summary: 'Build baked lighting for the current level (long-running; cannot be cancelled mid-bake).',
+    summary: 'Build the open level static lighting (Lightmass) at quality (default Production; Preview, Medium, High), the same build as build_environment.build_lighting. Reflection captures are not rebuilt, a level that forces no precomputed lighting answers skipped, and a failed build lists its reasons; it takes minutes, cannot be cancelled once started, and saves nothing.',
     whenToUse: ['Baked lighting must be (re)computed for the level.'],
     whenNotToUse: ['Dynamic lighting is in use and no bake is required.'],
     inputProps: {
@@ -106,7 +106,7 @@ export const OPERATIONS_POWER_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'manage_level', action: 'set_metadata', dispatchAction: 'set_metadata',
     domain: D, family: 'metadata',
-    summary: 'Write metadata key/value pairs to a level asset via the shared metadata bridge route.',
+    summary: 'Write key/value pairs into the editor metadata of a /Game level (levelPath; NOT_FOUND when no such map, SECURITY_VIOLATION outside /Game): text as given, numbers and booleans as text, objects and arrays as JSON text; null and empty values are skipped, and an empty metadata object is refused. updatedKeys counts the keys written, and the level is left unsaved. The metadata is editor-only and not kept in a packaged game.',
     whenToUse: ['Level asset metadata must be written.'],
     whenNotToUse: ['The target is not a /Game level asset path.'],
     inputProps: { levelPath: P.levelPath, metadata: P.metadata },

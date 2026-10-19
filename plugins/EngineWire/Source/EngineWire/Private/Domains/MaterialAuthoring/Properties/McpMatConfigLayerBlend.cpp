@@ -53,6 +53,11 @@ bool HandleConfigureLayerBlend(UEngineWireSubsystem* Bridge, const FString& Requ
       if (Text.Contains(TEXT("Alpha"), ESearchCase::IgnoreCase)) { return LB_AlphaBlend; }
       return LB_WeightBlend;
     };
+    // A type naming none of the three became a weight blend without a word.
+    auto IsKnownBlendType = [](const FString& Text) {
+      return Text.IsEmpty() || Text.Contains(TEXT("Weight"), ESearchCase::IgnoreCase) ||
+             Text.Contains(TEXT("Height"), ESearchCase::IgnoreCase) || Text.Contains(TEXT("Alpha"), ESearchCase::IgnoreCase);
+    };
     UMaterialExpressionLandscapeLayerBlend *BlendNode = NewObject<UMaterialExpressionLandscapeLayerBlend>(
         Material, UMaterialExpressionLandscapeLayerBlend::StaticClass(), NAME_None, RF_Transactional);
     BlendNode->MaterialExpressionEditorX = BaseX;
@@ -71,6 +76,12 @@ bool HandleConfigureLayerBlend(UEngineWireSubsystem* Bridge, const FString& Requ
         McpHandlerUtils::TryGetJsonValueString((*LayersArray)[i], LayerName); // plain layer names are accepted too
       }
       if (LayerName.IsEmpty()) { continue; }
+      if (!IsKnownBlendType(BlendType)) {
+        Bridge->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("Unknown blendType '%s' for layer '%s'; use LB_WeightBlend, LB_HeightBlend or LB_AlphaBlend (Weight, Height, Alpha)."), *BlendType, *LayerName),
+            TEXT("INVALID_ARGUMENT"));
+        return true;
+      }
       FLayerBlendInput Input;
       Input.LayerName = FName(*LayerName);
       Input.BlendType = ParseBlendType(BlendType);
@@ -88,12 +99,11 @@ bool HandleConfigureLayerBlend(UEngineWireSubsystem* Bridge, const FString& Requ
 
     bool bSave = true;
     Payload->TryGetBoolField(TEXT("save"), bSave);
-    if (bSave) {
-      McpSafeAssetSave(Material);
-    }
+    const bool bSaved = bSave && McpSafeAssetSave(Material);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("assetPath"), AssetPath);
+    Result->SetBoolField(TEXT("saved"), bSaved);
     Result->SetNumberField(TEXT("layerCount"), BlendNode->Layers.Num());
     Result->SetStringField(TEXT("blendNodeId"), MCP_NODE_ID(BlendNode));
     Result->SetStringField(TEXT("expressionClass"), TEXT("MaterialExpressionLandscapeLayerBlend"));

@@ -169,8 +169,15 @@ bool HandleWidgetAuthoringAdvancedStyling(
         else if (URichTextBlock* RichText = Cast<URichTextBlock>(TargetWidget))
         {
             // Unstyled runs use the widget's default text style; its override takes the font
-            // (rows of a TextStyleSet still style their own tagged runs).
+            // (rows of a TextStyleSet still style their own tagged runs). An override already set is
+            // the start, read by reflection (its accessors differ across 5.x): a font-only call reset it to 18.
             FSlateFontInfo FontInfo = FCoreStyle::GetDefaultFontStyle("Regular", 18);
+            const FBoolProperty* OverrideFlag = FindFProperty<FBoolProperty>(URichTextBlock::StaticClass(), TEXT("bOverrideDefaultStyle"));
+            const FStructProperty* OverrideStyle = FindFProperty<FStructProperty>(URichTextBlock::StaticClass(), TEXT("DefaultTextStyleOverride"));
+            if (OverrideFlag && OverrideStyle && OverrideStyle->Struct == FTextBlockStyle::StaticStruct() && OverrideFlag->GetPropertyValue_InContainer(RichText))
+            {
+                FontInfo = OverrideStyle->ContainerPtrToValuePtr<FTextBlockStyle>(RichText)->Font;
+            }
             ApplyFont(FontInfo);
             RichText->SetDefaultFont(FontInfo);
             bFontApplied = true;
@@ -179,7 +186,7 @@ bool HandleWidgetAuthoringAdvancedStyling(
         if (!bFontApplied)
         {
             Subsystem.SendAutomationError(RequestingSocket, RequestId,
-                FString::Printf(TEXT("Widget '%s' is a %s; set_font applies to TextBlock, EditableText and EditableTextBox widgets"),
+                FString::Printf(TEXT("Widget '%s' is a %s; set_font applies to TextBlock, RichTextBlock, EditableText and EditableTextBox widgets"),
                     *SlotName, *TargetWidget->GetClass()->GetName()),
                 TEXT("UNSUPPORTED_WIDGET"));
             return true;
@@ -262,8 +269,7 @@ bool HandleWidgetAuthoringAdvancedStyling(
                 TEXT("INVALID_SLOT"));
             return true;
         }
-        WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
-
+        ResultJson->SetBoolField(TEXT("saved"), WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP));
         ResultJson->SetBoolField(TEXT("success"), bMarginApplied);
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
         ResultJson->SetStringField(TEXT("slotName"), SlotName);

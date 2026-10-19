@@ -82,7 +82,9 @@ bool HandleCreateMasterSequence(const TSharedPtr<FJsonObject> &Params,
     OutResult = MakeResult(true, TEXT("create_master_sequence"),
                            TEXT("Master sequence already exists"));
     OutResult->SetStringField(TEXT("sequencePath"), FullPath);
+    OutResult->SetBoolField(TEXT("alreadyExists"), true);
     McpHandlerUtils::AddVerification(OutResult, ExistingSequence);
+    McpHandlerUtils::MarkNoAssetsChanged(OutResult);
     return true;
   }
   ULevelSequence *Sequence = McpSequence::CreateSequenceAsset(Name, Folder);

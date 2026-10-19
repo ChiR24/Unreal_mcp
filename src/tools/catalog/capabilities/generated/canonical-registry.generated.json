@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "178f50b52cd638cf",
+  "catalogRevision": "a8f40cf44fd71bf6",
   "recordCount": 416,
   "records": [
     {
@@ -1752,7 +1752,7 @@
           "anim graph",
           "animbp"
         ],
-        "summary": "Create an Animation Blueprint for a skeleton.",
+        "summary": "Create an Animation Blueprint named name in path (default /Game/Blueprints) for the skeleton at skeletonPath, or the one skeletalMeshPath is built on (SKELETON_NOT_FOUND when that does not load; without either it has no skeleton), from parentClass (default AnimInstance; a class that is no AnimInstance is INVALID_PARENT_CLASS). An Animation Blueprint already there is kept and answered with existingAsset; any other asset there is ASSET_TYPE_MISMATCH and is left alone. It is compiled and saved unless save is false (saved).",
         "whenToUse": [
           "An animation asset or graph must be authored.",
           "Caller uses the create_anim_blueprint verb.",
@@ -1827,7 +1827,7 @@
       },
       "examples": [
         {
-          "title": "Create an Animation Blueprint for a skeleton.",
+          "title": "Create an Animation Blueprint named name in path (default /Game/Blueprints) for the skeleton at skeletonPath, or the one skeletalMeshPath is built on (SKELETON_NOT_FOUND when that does not load; without either it has no skeleton), from parentClass (default AnimInstance; a class that is no AnimInstance is INVALID_PARENT_CLASS). An Animation Blueprint already there is kept and answered with existingAsset; any other asset there is ASSET_TYPE_MISMATCH and is left alone. It is compiled and saved unless save is false (saved).",
           "input": {
             "action": "create_animation_blueprint",
             "name": "ABP_Char",
@@ -1872,7 +1872,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "f8ff792e1e5f579faa7d846e2902c37ec0ffdcf55341996628685047d44e4b9a",
-        "content": "7263f333ec8a79daa2d120758a87b76d0752658d22eb36e654978e0fe48eb439"
+        "content": "7e187250ceeaca0f44657d8249bcdfa4cf66039f747fd830aa5abb3364c24311"
       }
     },
     {
@@ -23706,14 +23706,14 @@
         "topics": [
           "set_font"
         ],
-        "summary": "Set the font or the margin of a widget slot.",
+        "summary": "Style one widget of a Widget Blueprint (widgetPath; slotName is the widget name), chosen by textStyle. font sets the font asset (font, a Font asset path) and the fontSize of a Text Block, Rich Text Block (its default text), Editable Text or Editable Text Box; what is left out keeps its current value, and another widget type is UNSUPPORTED_WIDGET. margin sets left, top, right and bottom (each 0 when left out) as the padding of a widget in a Horizontal Box, Vertical Box or Overlay slot, or of a Border; any other slot, such as a Canvas Panel one, is INVALID_SLOT. The Blueprint is compiled and saved (saved says whether it was written).",
         "whenToUse": [
           "textStyle=font: A text widget needs a specific font face or size.",
           "textStyle=margin: A widget needs spacing applied through its parent slot."
         ],
         "whenNotToUse": [
-          "textStyle=font: The target is not a text widget; the call reports success false.",
-          "textStyle=margin: The parent slot type carries no margin; the call reports success false."
+          "textStyle=font: The target is not a text widget (UNSUPPORTED_WIDGET).",
+          "textStyle=margin: The parent slot carries no margin, as a Canvas Panel slot (INVALID_SLOT): position it with set_widget_layout instead."
         ]
       },
       "schemas": {
@@ -23803,6 +23803,10 @@
               "type": "number",
               "description": "Font size."
             },
+            "saved": {
+              "type": "boolean",
+              "description": "Whether the Widget Blueprint was saved after the change."
+            },
             "left": {
               "type": "number",
               "description": "Left margin in slate units."
@@ -23830,7 +23834,7 @@
       },
       "examples": [
         {
-          "title": "Set the font or the margin of a widget slot.",
+          "title": "Style one widget of a Widget Blueprint (widgetPath; slotName is the widget name), chosen by textStyle. font sets the font asset (font, a Font asset path) and the fontSize of a Text Block, Rich Text Block (its default text), Editable Text or Editable Text Box; what is left out keeps its current value, and another widget type is UNSUPPORTED_WIDGET. margin sets left, top, right and bottom (each 0 when left out) as the padding of a widget in a Horizontal Box, Vertical Box or Overlay slot, or of a Border; any other slot, such as a Canvas Panel one, is INVALID_SLOT. The Blueprint is compiled and saved (saved says whether it was written).",
           "input": {
             "action": "set_font",
             "widgetPath": "/Game/UI/WBP_MainUI",
@@ -23903,8 +23907,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "bc4d779f81e74aa77a37fd6fe07d7de7fc0e4cea35cec65d3e9360f8da97bc91",
-        "content": "645d19a6c4bb84d534178827d83573a8d147629b494600a73c5f4f84910d7526"
+        "schema": "1fc7f9be764ce4ec0fe1b92d0f9434371d7eb9e0d66c158180b30ee462379108",
+        "content": "0d06a1b8095c76cc640119bfa3c34e96041baf89791b3860b24e76c48aea8587"
       }
     },
     {
@@ -48490,7 +48494,7 @@
           "class properties",
           "uclass"
         ],
-        "summary": "Inspect a class, a struct, or a Blueprint's class default object.",
+        "summary": "Read reflection data, chosen by kind. class (className or classPath) gives the class path, parent and ancestors, module, flags (abstract, blueprintable, actor, component and more), every property it declares or inherits (name, type, category, where declared, editable, Blueprint-visible; at most 200 listed, propertyCount the total), the default value of each on its class default object, and its function count. cdo reads a Blueprint class default object without spawning anything (blueprintPath): its default values (propertyNames picks some) and its default components (componentName or componentNames narrows them). struct reads the members of a user struct (structPath): name, type, default and tooltip.",
         "whenToUse": [
           "kind=class: A class's hierarchy and defaults must be read.",
           "kind=struct: A Blueprint Struct's member layout must be read.",
@@ -48725,7 +48729,7 @@
       },
       "examples": [
         {
-          "title": "Inspect a class, a struct, or a Blueprint's class default object.",
+          "title": "Read reflection data, chosen by kind. class (className or classPath) gives the class path, parent and ancestors, module, flags (abstract, blueprintable, actor, component and more), every property it declares or inherits (name, type, category, where declared, editable, Blueprint-visible; at most 200 listed, propertyCount the total), the default value of each on its class default object, and its function count. cdo reads a Blueprint class default object without spawning anything (blueprintPath): its default values (propertyNames picks some) and its default components (componentName or componentNames narrows them). struct reads the members of a user struct (structPath): name, type, default and tooltip.",
           "input": {
             "action": "inspect_class",
             "className": "PointLight",
@@ -48820,7 +48824,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "d41542ecf3f852cf1367d19b8c8db86b041aeebf978e7ee90539b32a5af2861e",
-        "content": "0e38a6a35c54721c27ec5ba7983a26d5f8732ae39920505693761e36cb2800a4"
+        "content": "051ff333fa2c1799d6694e4b6a7f70deeb52b9db68164e109f8427740cefcd99"
       }
     },
     {
@@ -49275,7 +49279,7 @@
           "world objects",
           "enumerate objects"
         ],
-        "summary": "Query objects: list them, find by tag, read metadata or a bounding box, or export one.",
+        "summary": "Read placed actors, chosen by lookup. list pages through the actors of the level (the running game during Play): filter narrows by name, limit (default 100) and offset page through them, with totalCount and isPieWorld; control_actor list adds class, tag, folder, near and property filters. by_tag lists the actors carrying tag (name, path, class), stopping at limit (default 200) with the total. metadata gives one actor name, label, path, class, tags and location. bounding_box gives its world bounds as origin and extent (half the size on each axis), every component counted. export writes it as T3D text (exportedText), and also to outputPath inside the project when given.",
         "whenToUse": [
           "lookup=list: All actors in the current level must be enumerated.",
           "lookup=by_tag: All actors with a given tag must be enumerated.",
@@ -49404,7 +49408,7 @@
       },
       "examples": [
         {
-          "title": "Query objects: list them, find by tag, read metadata or a bounding box, or export one.",
+          "title": "Read placed actors, chosen by lookup. list pages through the actors of the level (the running game during Play): filter narrows by name, limit (default 100) and offset page through them, with totalCount and isPieWorld; control_actor list adds class, tag, folder, near and property filters. by_tag lists the actors carrying tag (name, path, class), stopping at limit (default 200) with the total. metadata gives one actor name, label, path, class, tags and location. bounding_box gives its world bounds as origin and extent (half the size on each axis), every component counted. export writes it as T3D text (exportedText), and also to outputPath inside the project when given.",
           "input": {
             "action": "query_object",
             "lookup": "list"
@@ -49489,7 +49493,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "9e63dc514540de6db766715471c0df8d311947b3a057e69c547bc58cce632b8f",
-        "content": "d129d7cc29e73e6892130f2a4d8bc57f5161b52879a470d1c6c6846c3a628d10"
+        "content": "1afc06490477d0a9b7fbb34b9f857f547b66efe0d152cde4bdfb10e1605eef1c"
       }
     },
     {
@@ -56403,7 +56407,7 @@
           "audio component",
           "reverb zone"
         ],
-        "summary": "Create an ambient sound actor, an audio component on an actor, or a reverb zone.",
+        "summary": "Place sound in the level being edited, chosen by kind. ambient_sound spawns an Ambient Sound actor playing soundPath at location (default 0,0,0), labelled name, at volume and pitch, with attenuationPath and concurrencyPath when given; it plays in the editor now and when the game starts. audio_component adds an audio component with soundPath to actorName, or to a new actor at location when actorName is left out (the reply names the actor), playing at once unless autoPlay is false. reverb_zone spawns an Audio Volume named name (DUPLICATE_NAME when taken) as a box of size (default 500 on each axis) around location, applying reverbEffect at volume (default 1) with fadeTime (default 2 s). A sound, attenuation, concurrency or reverb path that does not load is ASSET_NOT_FOUND before anything spawns; the ambient sound and the reverb zone are one undo step each.",
         "whenToUse": [
           "kind=ambient_sound: Use it to create an ambient sound actor.",
           "kind=audio_component: Use it to create an audio component on an actor, or on a new actor at location when actorName is omitted.",
@@ -56541,7 +56545,7 @@
       },
       "examples": [
         {
-          "title": "Create an ambient sound actor, an audio component on an actor, or a reverb zone.",
+          "title": "Place sound in the level being edited, chosen by kind. ambient_sound spawns an Ambient Sound actor playing soundPath at location (default 0,0,0), labelled name, at volume and pitch, with attenuationPath and concurrencyPath when given; it plays in the editor now and when the game starts. audio_component adds an audio component with soundPath to actorName, or to a new actor at location when actorName is left out (the reply names the actor), playing at once unless autoPlay is false. reverb_zone spawns an Audio Volume named name (DUPLICATE_NAME when taken) as a box of size (default 500 on each axis) around location, applying reverbEffect at volume (default 1) with fadeTime (default 2 s). A sound, attenuation, concurrency or reverb path that does not load is ASSET_NOT_FOUND before anything spawns; the ambient sound and the reverb zone are one undo step each.",
           "input": {
             "action": "create_audio_actor",
             "soundPath": "/Game/Audio/Waves/SW_FootstepConcrete",
@@ -56650,7 +56654,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "bb23d421ca34194924a6a63e92061794e3bb0af45ec46fa9a6176a83f5333494",
-        "content": "94e2192dd0c157ce8f3cd9e69f773adfadb3b271755c1f08b07a24abc2976c91"
+        "content": "e3e4f0970f0072491ffef6ebc10530905f7e1448ee707f42d0bd5617e16da8f2"
       }
     },
     {
@@ -76089,7 +76093,7 @@
         "topics": [
           "build_lighting"
         ],
-        "summary": "Build baked lighting for the current level (long-running; cannot be cancelled mid-bake).",
+        "summary": "Build the open level static lighting (Lightmass) at quality (default Production; Preview, Medium, High), the same build as build_environment.build_lighting. Reflection captures are not rebuilt, a level that forces no precomputed lighting answers skipped, and a failed build lists its reasons; it takes minutes, cannot be cancelled once started, and saves nothing.",
         "whenToUse": [
           "Baked lighting must be (re)computed for the level."
         ],
@@ -76142,7 +76146,7 @@
       },
       "examples": [
         {
-          "title": "Build baked lighting for the current level (long-running; cannot be cancelled mid-bake).",
+          "title": "Build the open level static lighting (Lightmass) at quality (default Production; Preview, Medium, High), the same build as build_environment.build_lighting. Reflection captures are not rebuilt, a level that forces no precomputed lighting answers skipped, and a failed build lists its reasons; it takes minutes, cannot be cancelled once started, and saves nothing.",
           "input": {
             "action": "build_lighting",
             "quality": "Preview"
@@ -76180,7 +76184,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "e76038a80aca6ce80d30d2309088f215d86b0312fa0d5a70f3620c63224e9a9c",
-        "content": "4e7fc2e625b3911b0cdd1856ab7d376117be24bf574efc57868fe20d6c8fc6b0"
+        "content": "e7d3341fdfdb837f6f683703c42147f1dd2ee06f803e6aca42838276ce4f6aa7"
       }
     },
     {
@@ -77868,7 +77872,7 @@
         "topics": [
           "set_metadata"
         ],
-        "summary": "Write metadata key/value pairs to a level asset via the shared metadata bridge route.",
+        "summary": "Write key/value pairs into the editor metadata of a /Game level (levelPath; NOT_FOUND when no such map, SECURITY_VIOLATION outside /Game): text as given, numbers and booleans as text, objects and arrays as JSON text; null and empty values are skipped, and an empty metadata object is refused. updatedKeys counts the keys written, and the level is left unsaved. The metadata is editor-only and not kept in a packaged game.",
         "whenToUse": [
           "Level asset metadata must be written."
         ],
@@ -77929,7 +77933,7 @@
       },
       "examples": [
         {
-          "title": "Write metadata key/value pairs to a level asset via the shared metadata bridge route.",
+          "title": "Write key/value pairs into the editor metadata of a /Game level (levelPath; NOT_FOUND when no such map, SECURITY_VIOLATION outside /Game): text as given, numbers and booleans as text, objects and arrays as JSON text; null and empty values are skipped, and an empty metadata object is refused. updatedKeys counts the keys written, and the level is left unsaved. The metadata is editor-only and not kept in a packaged game.",
           "input": {
             "action": "set_metadata",
             "levelPath": "/Game/Maps/Demo",
@@ -77970,7 +77974,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "391542f47d98205803d88e61c30678bef618145e98a728ed081543c828e5253c",
-        "content": "4176f7d3a94313da92179141f8d20643126e3e3f7e67ae5435f5c9d4d44497bf"
+        "content": "27cc338b2bb375d80634734d503f2bfab5620ba122ad13616ffd60cdffc28a24"
       }
     },
     {
@@ -80929,7 +80933,7 @@
           "volume properties",
           "resize volume"
         ],
-        "summary": "Set a volume's properties, its extent, or its bounds.",
+        "summary": "Change a volume found by its label (volumeName), chosen by volumeProperty. properties sets what its class carries: a Physics Volume bWaterVolume, fluidFriction, terminalVelocity and priority; a Pain Causing Volume bPainCausing and damagePerSec; an Audio Volume bEnabled, reverbVolume and fadeTime; a Post Process Volume priority, blendWeight and bEnabled. The reply lists propertiesSet and propertiesIgnored (what this class lacks), and is NO_PROPERTIES_APPLIED when nothing applied. extent sets its half-size (default 100 on each axis); bounds moves and sizes it from a min and a max corner. The level is saved only with save true, which also writes its other unsaved changes.",
         "whenToUse": [
           "volumeProperty=properties: Volume properties must be updated without recreating it.",
           "volumeProperty=extent: A volume must be resized.",
@@ -81067,7 +81071,7 @@
       },
       "examples": [
         {
-          "title": "Set a volume's properties, its extent, or its bounds.",
+          "title": "Change a volume found by its label (volumeName), chosen by volumeProperty. properties sets what its class carries: a Physics Volume bWaterVolume, fluidFriction, terminalVelocity and priority; a Pain Causing Volume bPainCausing and damagePerSec; an Audio Volume bEnabled, reverbVolume and fadeTime; a Post Process Volume priority, blendWeight and bEnabled. The reply lists propertiesSet and propertiesIgnored (what this class lacks), and is NO_PROPERTIES_APPLIED when nothing applied. extent sets its half-size (default 100 on each axis); bounds moves and sizes it from a min and a max corner. The level is saved only with save true, which also writes its other unsaved changes.",
           "input": {
             "action": "set_volume_properties",
             "volumeName": "PP_01",
@@ -81165,7 +81169,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "81b1546c0e137873908a54e7ff4224f37075f6f9311aa37bb4d4a5d9c57d1bbc",
-        "content": "3e8034f63cf4cc2b5ce6a1bae5aa0c049bc7b1983768df760f6a8b4d75cb2764"
+        "content": "69e35eeb4c7485e6d4fff31b22be14b69675b957c95ce5e1e1c4230a527b2ec2"
       }
     },
     {
@@ -81200,7 +81204,7 @@
         "topics": [
           "add_legacy_mapping"
         ],
-        "summary": "Add a legacy input action or axis mapping.",
+        "summary": "Bind a key to a legacy (Project Settings, Input) mapping, chosen by mapping: action takes actionName (or name), key and the shift, ctrl, alt and cmd modifiers; axis takes axisName (or name), key and scale (default 1, -1 for the reverse direction). key is the engine key name (SpaceBar, W, LeftMouseButton, Gamepad_LeftX); an unknown one is INVALID_ARGUMENT. A binding already there is kept (alreadyPresent), and the project DefaultInput.ini is written (defaultConfigUpdated). Projects on Enhanced Input map keys with manage_networking configure_input instead.",
         "whenToUse": [
           "mapping=action: Use it to add a legacy action mapping.",
           "mapping=axis: Use it to add a legacy axis mapping."
@@ -81294,7 +81298,7 @@
       },
       "examples": [
         {
-          "title": "Add a legacy input action or axis mapping.",
+          "title": "Bind a key to a legacy (Project Settings, Input) mapping, chosen by mapping: action takes actionName (or name), key and the shift, ctrl, alt and cmd modifiers; axis takes axisName (or name), key and scale (default 1, -1 for the reverse direction). key is the engine key name (SpaceBar, W, LeftMouseButton, Gamepad_LeftX); an unknown one is INVALID_ARGUMENT. A binding already there is kept (alreadyPresent), and the project DefaultInput.ini is written (defaultConfigUpdated). Projects on Enhanced Input map keys with manage_networking configure_input instead.",
           "input": {
             "action": "add_legacy_mapping",
             "key": "SpaceBar",
@@ -81364,7 +81368,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "ed4d870c1f55b679bbcfcee2287f0303fe354f01e712e3470ff9a35124264e2c",
-        "content": "47da200f9c601cb28338d4bdf5d6807f63eeb7812305525b0e57005c13a147bc"
+        "content": "2d3e83ad4128c492a791cf1f37ecc643c27c4b75a99a65219e779fa589df399d"
       }
     },
     {
@@ -85115,7 +85119,7 @@
         "topics": [
           "remove_legacy_mapping"
         ],
-        "summary": "Remove a legacy input action or axis mapping.",
+        "summary": "Remove the binding of key from a legacy action or axis mapping, chosen by mapping (actionName, axisName or name): every binding of that name and key goes, removedCount says how many, and a pair that is not bound is NOT_FOUND with nothing written. The project DefaultInput.ini is written (defaultConfigUpdated).",
         "whenToUse": [
           "mapping=action: Use it to remove a legacy action mapping.",
           "mapping=axis: Use it to remove a legacy axis mapping."
@@ -85209,7 +85213,7 @@
       },
       "examples": [
         {
-          "title": "Remove a legacy input action or axis mapping.",
+          "title": "Remove the binding of key from a legacy action or axis mapping, chosen by mapping (actionName, axisName or name): every binding of that name and key goes, removedCount says how many, and a pair that is not bound is NOT_FOUND with nothing written. The project DefaultInput.ini is written (defaultConfigUpdated).",
           "input": {
             "action": "remove_legacy_mapping",
             "key": "SpaceBar",
@@ -85279,7 +85283,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "4c4523f3f7cfa89283ff10a7d339b6a95d212295b1f837a64460dcdf9d6f0dc9",
-        "content": "defded00090a3e50bae91e1889fdc077977fc8d8023571ed9fe0cb73ba997ff8"
+        "content": "ab54b7f3c05fceead5dd2a194f3f985d77cdc7e6b2584c687c0a261cea6399fc"
       }
     },
     {
@@ -88040,7 +88044,7 @@
           "material function input",
           "material function output"
         ],
-        "summary": "Add an input or output pin to a material function.",
+        "summary": "Add a pin to a material function (assetPath), chosen by io: input adds a Function Input named inputName of inputType (default Vector3; an unknown type is refused) that callers wire into; output adds a Function Output named inputName that carries out whatever is wired into it, of that type. A name the function already has is NAME_TAKEN. The node lands at x, y (default 0, 0), the function recompiles and is left unsaved; the reply gives its nodeId for connect_nodes.",
         "whenToUse": [
           "io=input: A material function needs an input pin (scalar, vector, Texture2D, TextureCube, Bool or MaterialAttributes) that callers wire into.",
           "io=output: A material function needs a named result pin so a graph can wire its result out."
@@ -88061,11 +88065,11 @@
             },
             "inputName": {
               "type": "string",
-              "description": "Input name."
+              "description": "Name of the new pin: an input (input) or output (output); a name the function already has is NAME_TAKEN."
             },
             "inputType": {
               "type": "string",
-              "description": "Input type."
+              "description": "input only: Scalar, Vector2, Vector3 (default), Vector4, Texture2D, TextureCube, Bool or MaterialAttributes (Float1 to Float4 work too); another type is refused. An output takes the type of what is wired into it."
             },
             "x": {
               "type": "number",
@@ -88113,7 +88117,7 @@
       },
       "examples": [
         {
-          "title": "Add an input or output pin to a material function.",
+          "title": "Add a pin to a material function (assetPath), chosen by io: input adds a Function Input named inputName of inputType (default Vector3; an unknown type is refused) that callers wire into; output adds a Function Output named inputName that carries out whatever is wired into it, of that type. A name the function already has is NAME_TAKEN. The node lands at x, y (default 0, 0), the function recompiles and is left unsaved; the reply gives its nodeId for connect_nodes.",
           "input": {
             "assetPath": "/Game/Materials/Functions/MF_HeightBlend",
             "inputName": "Height",
@@ -88159,13 +88163,18 @@
           "actions": {
             "input": "add_function_input",
             "output": "add_function_output"
+          },
+          "declaredBy": {
+            "inputType": [
+              "input"
+            ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "b2ee4511325c3b2a60f56e1f3139edc5951ac844fd712c654e669bf0c8b946b9",
-        "content": "35e49e24767b10e1ce06c17b5f2ce70f93d78d27e0531066b197957eadb4a304"
+        "schema": "c95de2baa97a71fc6c1969428b2da7a46cf0c0a5b16234ff234236c092d50908",
+        "content": "56a364b3a071a1e90bb9105ba7f72c1735e6211ff2961a2f17979375ffa6a879"
       }
     },
     {
@@ -89228,7 +89237,7 @@
         "topics": [
           "configure_layer_blend"
         ],
-        "summary": "Configure layer blend settings on a landscape material.",
+        "summary": "Add a Landscape Layer Blend node to a landscape material, listing the paint layers in order (layers; the first previews at full weight), each with its blend: weight, height or alpha. Every call adds a new node, at x, y (default 0, 0); wire its output with connect_nodes (blendNodeId). An unknown blend type is refused. The material recompiles and is saved unless save is false (saved).",
         "whenToUse": [
           "A landscape material needs a Landscape Layer Blend node listing its paint layers, each with a weight, height or alpha blend.",
           "All named layers must be added to one blend node in one call (layers takes [{name, blendType}] or plain names)."
@@ -89253,11 +89262,11 @@
                 "type": "object",
                 "x-unreal-reflection-boundary": true
               },
-              "description": "Layer blend definitions."
+              "description": "The paint layers, in order, each { name } or { name, blendType } to give that layer its own blend."
             },
             "blendType": {
               "type": "string",
-              "description": "Blend type."
+              "description": "Blend for the layers that do not name one: LB_WeightBlend (default), LB_HeightBlend or LB_AlphaBlend (Weight, Height or Alpha work too)."
             },
             "x": {
               "type": "number",
@@ -89273,7 +89282,8 @@
             }
           },
           "required": [
-            "materialPath"
+            "materialPath",
+            "layers"
           ],
           "additionalProperties": false
         },
@@ -89302,6 +89312,18 @@
           "title": "Weight-blend the landscape layers",
           "input": {
             "materialPath": "/Game/Materials/Landscape/M_Landscape",
+            "layers": [
+              {
+                "name": "Grass"
+              },
+              {
+                "name": "Rock"
+              },
+              {
+                "name": "Snow",
+                "blendType": "LB_HeightBlend"
+              }
+            ],
             "blendType": "LB_WeightBlend"
           },
           "output": {
@@ -89338,8 +89360,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "2307970b1d42e0f25c4b799327a32805647f2d4eae026b0da9563ac005cd719e",
-        "content": "e02aa457691ba2ba1a871087ef6a83bbf529f2becf43934fd3876f05171774d4"
+        "schema": "b77f44cbb0785528995121d3b937b5dbf14c9083b4a871d1b738192cd31934aa",
+        "content": "a598a49674160f04e13ba11391ec31f694a3d0aff6a220bf3f30f95335a76b7e"
       }
     },
     {
@@ -92714,7 +92736,7 @@
           "cine camera actor",
           "master sequence"
         ],
-        "summary": "Create a cine camera actor or a master sequence.",
+        "summary": "Create a cinematic piece, chosen by kind. master_sequence makes a level sequence (name in path, default /Game/Cinematics, or sequencePath) at frameRate (default 24 fps) playing from startFrame (default 0) for durationFrames (default 240) or to endFrame, and saves it; it starts with no tracks, so add shots with add_shot_track and sub-sequences with add_subsequence. A level sequence already there is kept (alreadyExists); another asset there is ASSET_TYPE_MISMATCH. cine_camera_actor places a Cine Camera Actor named actorName (or label) at location and rotation with the lens, filmback and focus settings given (appliedProperties) and, with path or sequencePath, binds it to that sequence (bindingGuid); during Play it goes into the running game.",
         "whenToUse": [
           "kind=cine_camera_actor: A cinematic camera actor must be created for a shot.",
           "kind=master_sequence: A new cinematic with shots must be scaffolded."
@@ -92959,7 +92981,7 @@
       },
       "examples": [
         {
-          "title": "Create a cine camera actor or a master sequence.",
+          "title": "Create a cinematic piece, chosen by kind. master_sequence makes a level sequence (name in path, default /Game/Cinematics, or sequencePath) at frameRate (default 24 fps) playing from startFrame (default 0) for durationFrames (default 240) or to endFrame, and saves it; it starts with no tracks, so add shots with add_shot_track and sub-sequences with add_subsequence. A level sequence already there is kept (alreadyExists); another asset there is ASSET_TYPE_MISMATCH. cine_camera_actor places a Cine Camera Actor named actorName (or label) at location and rotation with the lens, filmback and focus settings given (appliedProperties) and, with path or sequencePath, binds it to that sequence (bindingGuid); during Play it goes into the running game.",
           "input": {
             "action": "create_cinematic_asset",
             "path": "/Game/Cinematics/SEQ_Master",
@@ -93075,7 +93097,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "d45fd248ac51e1560c64763a26cccc4ac4c233f5a908c704c1f5809f08540f10",
-        "content": "1c271311d80e841f7fbf8896b4360a9d0e741acf221e257c8849856e91d9a6d6"
+        "content": "cf10ce8d69125138b5011063517c8f5ace8d949bb9dcb268de77151e3fa44e4a"
       }
     },
     {
@@ -96788,7 +96810,7 @@
         "topics": [
           "configure_demo_settings"
         ],
-        "summary": "Configure replay demo settings or the killcam duration.",
+        "summary": "Set how this editor session records and plays demo replays, chosen by setting. demo stores the default replayName and friendlyName, extra additionalOptions, maxRecordTimeSeconds (up to 86400), checkpointSaveMaxMSPerFrame (up to 1000 ms; also written to the engine config and the demo driver defaults), playbackSpeed, prioritizeActors and loadDefaultMapOnStop; a recording or playback running now takes them at once (appliedToRuntime), and the reply lists everything stored. killcam_duration sets how many seconds start_killcam replays (up to 600). All but the checkpoint budget last until the editor closes.",
         "whenToUse": [
           "setting=demo: Replay recording settings must be configured before recording.",
           "setting=killcam_duration: Killcam duration must be set for replay-based kill cameras."
@@ -96888,7 +96910,7 @@
       },
       "examples": [
         {
-          "title": "Configure replay demo settings or the killcam duration.",
+          "title": "Set how this editor session records and plays demo replays, chosen by setting. demo stores the default replayName and friendlyName, extra additionalOptions, maxRecordTimeSeconds (up to 86400), checkpointSaveMaxMSPerFrame (up to 1000 ms; also written to the engine config and the demo driver defaults), playbackSpeed, prioritizeActors and loadDefaultMapOnStop; a recording or playback running now takes them at once (appliedToRuntime), and the reply lists everything stored. killcam_duration sets how many seconds start_killcam replays (up to 600). All but the checkpoint budget last until the editor closes.",
           "input": {
             "action": "configure_demo_settings",
             "maxRecordTimeSeconds": 300,
@@ -96974,7 +96996,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "ee2329241ddcd6368da62828b985e047ac297ae4cee5f980ca807340c85f3274",
-        "content": "3039b6871f792e1e440b324770191353a7446f7fb666be3d543bdf6f1c5c836d"
+        "content": "00348013e7e57205a0d274aaa0458887ae667eb9bb8b89a8e9f2c38c0346c09c"
       }
     },
     {
@@ -100460,7 +100482,7 @@
           "add widget to viewport",
           "display widget"
         ],
-        "summary": "Create a runtime widget, add a child to it, or show it.",
+        "summary": "Make a Widget Blueprint and fill it, or raise an editor notification, chosen by widgetOp. create makes a Widget Blueprint asset (name and savePath, default /Game/UI/Widgets, or widgetPath) from UserWidget or a subclass (widgetType). add_child adds a widget of childClass (TextBlock, Button, Image and so on) under parentName (default the root panel; PARENT_NOT_FOUND for a name that is no panel), named name, with text for one that shows text. show only raises an editor toast with message for duration seconds (default 4): it puts nothing on screen in the game. To show a Widget Blueprint in the game, give a Blueprint Create Widget and Add to Viewport nodes (blueprint.edit_graph), or use blueprint.add_behaviour for a HUD piece.",
         "whenToUse": [
           "widgetOp=create: A new UMG widget asset must be created.",
           "widgetOp=add_child: A child component must be added to an existing widget.",
@@ -100569,7 +100591,7 @@
       },
       "examples": [
         {
-          "title": "Create a runtime widget, add a child to it, or show it.",
+          "title": "Make a Widget Blueprint and fill it, or raise an editor notification, chosen by widgetOp. create makes a Widget Blueprint asset (name and savePath, default /Game/UI/Widgets, or widgetPath) from UserWidget or a subclass (widgetType). add_child adds a widget of childClass (TextBlock, Button, Image and so on) under parentName (default the root panel; PARENT_NOT_FOUND for a name that is no panel), named name, with text for one that shows text. show only raises an editor toast with message for duration seconds (default 4): it puts nothing on screen in the game. To show a Widget Blueprint in the game, give a Blueprint Create Widget and Add to Viewport nodes (blueprint.edit_graph), or use blueprint.add_behaviour for a HUD piece.",
           "input": {
             "action": "create_widget",
             "name": "WBP_Menu",
@@ -100655,7 +100677,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "ce45b00d4825d402d452dc55a771c49f7333b233ee1e3cdf29a9f177228b2279",
-        "content": "4a7dc7637f23c6ca097ac0ac9b7dd2fac1130cbcf78a23075b17efe55ca229d0"
+        "content": "fc3c4d831d46fe41b76a33c52ee9229bb85351e25ab79e91da5d52b9295f4bd0"
       }
     },
     {

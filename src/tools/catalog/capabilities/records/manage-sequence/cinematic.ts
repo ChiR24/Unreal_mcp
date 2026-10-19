@@ -61,7 +61,7 @@ function trackRecord(id: string, action: string, summary: string, extraProps: Re
 export const CINEMATIC_RECORDS: readonly CapabilityRecordSource[] = [
   buildRecord({
     id: 'sequence.cinematic.create_master_sequence', action: 'create_master_sequence', family: F, domain: D,
-    summary: 'Create a master cinematic sequence with sub-sequence and shot track structure.',
+    summary: 'Create the master level sequence of a cinematic: an empty sequence at frameRate (default 24 fps) with its playback range, saved; shots and sub-sequences are added to it afterwards.',
     whenToUse: ['A new cinematic with shots must be scaffolded.'],
     whenNotToUse: ['A flat sequence without shots is sufficient.'],
     // Native HandleCreateMasterSequence (Cinematics/Assets.cpp:45-141) resolves

@@ -7014,7 +7014,7 @@
           },
           "blendType": {
             "type": "string",
-            "description": "Blend mode."
+            "description": "Blend for the layers that do not name one: LB_WeightBlend (default), LB_HeightBlend or LB_AlphaBlend (Weight, Height or Alpha work too)."
           },
           "blueTexture": {
             "type": "string",
@@ -7425,11 +7425,11 @@
           },
           "inputName": {
             "type": "string",
-            "description": "Input name."
+            "description": "Input pin name."
           },
           "inputType": {
             "type": "string",
-            "description": "Input type."
+            "description": "input only: Scalar, Vector2, Vector3 (default), Vector4, Texture2D, TextureCube, Bool or MaterialAttributes (Float1 to Float4 work too); another type is refused. An output takes the type of what is wired into it."
           },
           "inputs": {
             "oneOf": [
@@ -7521,7 +7521,7 @@
               "type": "object",
               "x-unreal-reflection-boundary": true
             },
-            "description": "Layer blend definitions."
+            "description": "The paint layers, in order, each { name } or { name, blendType } to give that layer its own blend."
           },
           "letterSpacing": {
             "type": "number",

@@ -25,7 +25,7 @@ export const MANAGE_LEVEL_STRUCTURE_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'set_volume_properties', selector: 'volumeProperty',
-    summary: 'Set a volume\'s properties, its extent, or its bounds.',
+    summary: 'Change a volume found by its label (volumeName), chosen by volumeProperty. properties sets what its class carries: a Physics Volume bWaterVolume, fluidFriction, terminalVelocity and priority; a Pain Causing Volume bPainCausing and damagePerSec; an Audio Volume bEnabled, reverbVolume and fadeTime; a Post Process Volume priority, blendWeight and bEnabled. The reply lists propertiesSet and propertiesIgnored (what this class lacks), and is NO_PROPERTIES_APPLIED when nothing applied. extent sets its half-size (default 100 on each axis); bounds moves and sizes it from a min and a max corner. The level is saved only with save true, which also writes its other unsaved changes.',
     topics: ['volume extent', 'volume bounds', 'volume properties', 'resize volume'],
     members: { properties: 'set_volume_properties', extent: 'set_volume_extent', bounds: 'set_volume_bounds' },
   },

@@ -3,6 +3,7 @@
 #include "EngineUtils.h"
 #include "Domains/Audio/McpAudioPrivate.h"
 #include "Domains/Volume/McpVolumeGeometry.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 
 namespace McpAudioHandlers
 {
@@ -228,9 +229,12 @@ bool HandleFadeAndReverbActions(
         return true;
       }
 
-      // Spawn AudioVolume actor
+      // Spawn AudioVolume actor, as one undo step with its brush and reverb settings.
+      FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Create Reverb Zone")), EMcpMutationDurability::EditorStateOnly,
+                                              TArray<UObject*>());
       FActorSpawnParameters SpawnParams;
       SpawnParams.Name = FName(*ZoneName);
+      SpawnParams.ObjectFlags = RF_Transactional;
       AAudioVolume *AudioVolume = World->SpawnActor<AAudioVolume>(Location, FRotator::ZeroRotator, SpawnParams);
      if (!AudioVolume) {
        Self->SendAutomationError(RequestingSocket, RequestId,
@@ -263,6 +267,7 @@ bool HandleFadeAndReverbActions(
      Resp->SetStringField(TEXT("actorName"), AudioVolume->GetName());
      Resp->SetObjectField(TEXT("location"), McpHandlerUtils::VectorToJson(Location));
      McpHandlerUtils::AddVerification(Resp, AudioVolume);
+     Transaction.DescribeInto(Resp);
      Self->SendAutomationResponse(RequestingSocket, RequestId, true,
                             TEXT("Reverb zone created"), Resp);
      return true;

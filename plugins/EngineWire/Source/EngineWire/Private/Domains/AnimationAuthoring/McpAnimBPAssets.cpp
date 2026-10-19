@@ -64,47 +64,25 @@ TSharedPtr<FJsonObject> HandleBlueprintAssetActions(const FString& SubAction, co
                     // Same type - return success with existing asset info
                     Response->SetStringField(TEXT("assetPath"), ObjectPath);
                     Response->SetBoolField(TEXT("existingAsset"), true);
+                    McpHandlerUtils::MarkNoAssetsChanged(Response);
                     ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Animation Blueprint '%s' already exists - reusing existing asset"), *Name));
                     return Response;
                 }
                 else
                 {
+                    // Any other asset is refused. A plain Blueprint here used to be force-deleted and replaced, which
+                    // destroyed whatever Blueprint shared the name, without consent.
                     UBlueprint* ExistingBlueprint = Cast<UBlueprint>(ExistingAsset);
-                    const bool bLegacyPlainBlueprint =
-                        ExistingBlueprint && ExistingAsset->GetClass() == UBlueprint::StaticClass();
-
-                    if (bLegacyPlainBlueprint)
-                    {
-                        const FString ExistingParentClassName =
-                            ExistingBlueprint->ParentClass ? ExistingBlueprint->ParentClass->GetPathName() : TEXT("<none>");
-                        UE_LOG(LogEngineWireSubsystem, Warning,
-                            TEXT("create_anim_blueprint: Replacing legacy plain Blueprint at '%s' (parent=%s)"),
-                            *ObjectPath,
-                            *ExistingParentClassName);
-
-                        const bool bDeletedLegacyAsset = UEditorAssetLibrary::DeleteAsset(ObjectPath);
-                        if (!bDeletedLegacyAsset || McpAssetExists(ObjectPath))
-                        {
-                            ANIM_ERROR_RESPONSE(
-                                FString::Printf(TEXT("Failed to replace legacy plain Blueprint at '%s' before creating AnimBlueprint"), *ObjectPath),
-                                TEXT("LEGACY_ASSET_DELETE_FAILED")
-                            );
-                        }
-                    }
-                    else
-                    {
-                        // Different type - return error to prevent assertion crash
-                        FString ExistingClassName = ExistingAsset->GetClass()->GetName();
-                        FString ExistingParentClassName =
-                            (ExistingBlueprint && ExistingBlueprint->ParentClass)
-                                ? ExistingBlueprint->ParentClass->GetPathName()
-                                : TEXT("<none>");
-                        ANIM_ERROR_RESPONSE(
-                            FString::Printf(TEXT("Cannot create AnimBlueprint: asset '%s' already exists as type '%s' (parent=%s)"),
-                                *ObjectPath, *ExistingClassName, *ExistingParentClassName),
-                            TEXT("ASSET_TYPE_MISMATCH")
-                        );
-                    }
+                    FString ExistingClassName = ExistingAsset->GetClass()->GetName();
+                    FString ExistingParentClassName =
+                        (ExistingBlueprint && ExistingBlueprint->ParentClass)
+                            ? ExistingBlueprint->ParentClass->GetPathName()
+                            : TEXT("<none>");
+                    ANIM_ERROR_RESPONSE(
+                        FString::Printf(TEXT("Cannot create AnimBlueprint: asset '%s' already exists as type '%s' (parent=%s); choose another name or delete it first"),
+                            *ObjectPath, *ExistingClassName, *ExistingParentClassName),
+                        TEXT("ASSET_TYPE_MISMATCH")
+                    );
                 }
             }
         }
@@ -132,10 +110,11 @@ TSharedPtr<FJsonObject> HandleBlueprintAssetActions(const FString& SubAction, co
         // Compile the blueprint
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(NewAnimBP);
 
-        SaveAnimAsset(NewAnimBP, bSave);
+        const bool bSaved = SaveAnimAsset(NewAnimBP, bSave);
 
         FString FullPath = Path / Name;
         Response->SetStringField(TEXT("assetPath"), FullPath);
+        Response->SetBoolField(TEXT("saved"), bSaved);
         Response->SetStringField(TEXT("parentClass"), ParentAnimClass->GetName());
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Animation Blueprint '%s' created"), *Name));
         return Response;

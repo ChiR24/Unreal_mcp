@@ -94,7 +94,7 @@ export const MANAGE_BLUEPRINT_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'set_font', selector: 'textStyle',
-    summary: 'Set the font or the margin of a widget slot.',
+    summary: 'Style one widget of a Widget Blueprint (widgetPath; slotName is the widget name), chosen by textStyle. font sets the font asset (font, a Font asset path) and the fontSize of a Text Block, Rich Text Block (its default text), Editable Text or Editable Text Box; what is left out keeps its current value, and another widget type is UNSUPPORTED_WIDGET. margin sets left, top, right and bottom (each 0 when left out) as the padding of a widget in a Horizontal Box, Vertical Box or Overlay slot, or of a Border; any other slot, such as a Canvas Panel one, is INVALID_SLOT. The Blueprint is compiled and saved (saved says whether it was written).',
     members: { font: 'set_font', margin: 'set_margin' },
   },
   {

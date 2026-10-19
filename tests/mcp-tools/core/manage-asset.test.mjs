@@ -284,7 +284,7 @@ const testCases = [
     // === MATERIAL FUNCTIONS ===
     { scenario: 'CREATE: create_material_function', toolName: 'manage_asset', arguments: { action: 'create_material_function', name: FUNCTION_NAME, path: TEST_FOLDER, description: 'MCP material function test', exposeToLibrary: true }, expected: 'success|already exists' },
     { scenario: 'ADD: add_function_input', toolName: 'manage_asset', arguments: { action: 'add_function_input', assetPath: FUNCTION_PATH, inputName: 'InputColor', inputType: 'Vector3', x: -250, y: 0 }, expected: 'success|already exists' },
-    { scenario: 'ADD: add_function_output', toolName: 'manage_asset', arguments: { action: 'add_function_output', assetPath: FUNCTION_PATH, inputName: 'OutputColor', inputType: 'Vector3', x: 250, y: 0 }, expected: 'success|already exists' },
+    { scenario: 'ADD: add_function_output', toolName: 'manage_asset', arguments: { action: 'add_function_output', assetPath: FUNCTION_PATH, inputName: 'OutputColor', x: 250, y: 0 }, expected: 'success|already exists' },
     { scenario: 'INFO: get_material_function_info', toolName: 'manage_asset', arguments: { action: 'get_material_function_info', assetPath: FUNCTION_PATH }, expected: 'success' },
     { scenario: 'ACTION: use_material_function', toolName: 'manage_asset', arguments: { action: 'use_material_function', materialPath: MATERIAL_PATH, functionPath: FUNCTION_PATH, x: 350, y: 250 }, expected: 'success' },
 

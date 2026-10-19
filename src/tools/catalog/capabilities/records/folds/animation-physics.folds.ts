@@ -90,7 +90,7 @@ export const ANIMATION_PHYSICS_FOLDS: readonly FoldSpec[] = [
     summary: 'Bind or assign a cloth asset to a skeletal mesh section.',
     members: { bind: 'bind_cloth_to_skeletal_mesh', assign: 'assign_cloth_asset_to_mesh' },
   },
-  { primary: 'create_animation_blueprint', summary: 'Create an Animation Blueprint for a skeleton.', members: ['create_anim_blueprint', 'create_animation_bp'] },
+  { primary: 'create_animation_blueprint', summary: 'Create an Animation Blueprint named name in path (default /Game/Blueprints) for the skeleton at skeletonPath, or the one skeletalMeshPath is built on (SKELETON_NOT_FOUND when that does not load; without either it has no skeleton), from parentClass (default AnimInstance; a class that is no AnimInstance is INVALID_PARENT_CLASS). An Animation Blueprint already there is kept and answered with existingAsset; any other asset there is ASSET_TYPE_MISMATCH and is left alone. It is compiled and saved unless save is false (saved).', members: ['create_anim_blueprint', 'create_animation_bp'] },
   {
     primary: 'setup_ik', selector: 'kind',
     summary: 'Set up IK: create an IK rig or IK retargeter, a Control Rig for IK solvers, or set which source chain drives each target chain of a retargeter.',

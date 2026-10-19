@@ -10,7 +10,7 @@ export const INSPECT_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'inspect_class', selector: 'kind',
-    summary: 'Inspect a class, a struct, or a Blueprint\'s class default object.',
+    summary: 'Read reflection data, chosen by kind. class (className or classPath) gives the class path, parent and ancestors, module, flags (abstract, blueprintable, actor, component and more), every property it declares or inherits (name, type, category, where declared, editable, Blueprint-visible; at most 200 listed, propertyCount the total), the default value of each on its class default object, and its function count. cdo reads a Blueprint class default object without spawning anything (blueprintPath): its default values (propertyNames picks some) and its default components (componentName or componentNames narrows them). struct reads the members of a user struct (structPath): name, type, default and tooltip.',
     topics: ['class reflection', 'inspect struct', 'class default object', 'cdo'],
     members: { class: 'inspect_class', struct: 'inspect_struct', cdo: 'inspect_cdo' },
   },
@@ -22,7 +22,7 @@ export const INSPECT_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'query_object', selector: 'lookup',
-    summary: 'Query objects: list them, find by tag, read metadata or a bounding box, or export one.',
+    summary: 'Read placed actors, chosen by lookup. list pages through the actors of the level (the running game during Play): filter narrows by name, limit (default 100) and offset page through them, with totalCount and isPieWorld; control_actor list adds class, tag, folder, near and property filters. by_tag lists the actors carrying tag (name, path, class), stopping at limit (default 200) with the total. metadata gives one actor name, label, path, class, tags and location. bounding_box gives its world bounds as origin and extent (half the size on each axis), every component counted. export writes it as T3D text (exportedText), and also to outputPath inside the project when given.',
     topics: ['list objects', 'find by tag', 'metadata', 'bounding box', 'export'],
     members: { list: 'list_objects', by_tag: 'find_by_tag', metadata: 'get_metadata', bounding_box: 'get_bounding_box', export: 'export' },
   },

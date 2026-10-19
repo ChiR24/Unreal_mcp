@@ -29,7 +29,7 @@ export const MANAGE_AUDIO_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'create_audio_actor', selector: 'kind',
-    summary: 'Create an ambient sound actor, an audio component on an actor, or a reverb zone.',
+    summary: 'Place sound in the level being edited, chosen by kind. ambient_sound spawns an Ambient Sound actor playing soundPath at location (default 0,0,0), labelled name, at volume and pitch, with attenuationPath and concurrencyPath when given; it plays in the editor now and when the game starts. audio_component adds an audio component with soundPath to actorName, or to a new actor at location when actorName is left out (the reply names the actor), playing at once unless autoPlay is false. reverb_zone spawns an Audio Volume named name (DUPLICATE_NAME when taken) as a box of size (default 500 on each axis) around location, applying reverbEffect at volume (default 1) with fadeTime (default 2 s). A sound, attenuation, concurrency or reverb path that does not load is ASSET_NOT_FOUND before anything spawns; the ambient sound and the reverb zone are one undo step each.',
     topics: ['ambient sound', 'audio component', 'reverb zone'],
     members: { ambient_sound: 'create_ambient_sound', audio_component: 'create_audio_component', reverb_zone: 'create_reverb_zone' },
   },

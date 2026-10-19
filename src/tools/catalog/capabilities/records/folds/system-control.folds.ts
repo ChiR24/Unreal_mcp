@@ -52,7 +52,7 @@ export const SYSTEM_CONTROL_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'create_widget', selector: 'widgetOp',
-    summary: 'Create a runtime widget, add a child to it, or show it.',
+    summary: 'Make a Widget Blueprint and fill it, or raise an editor notification, chosen by widgetOp. create makes a Widget Blueprint asset (name and savePath, default /Game/UI/Widgets, or widgetPath) from UserWidget or a subclass (widgetType). add_child adds a widget of childClass (TextBlock, Button, Image and so on) under parentName (default the root panel; PARENT_NOT_FOUND for a name that is no panel), named name, with text for one that shows text. show only raises an editor toast with message for duration seconds (default 4): it puts nothing on screen in the game. To show a Widget Blueprint in the game, give a Blueprint Create Widget and Add to Viewport nodes (blueprint.edit_graph), or use blueprint.add_behaviour for a HUD piece.',
     topics: ['show widget on screen', 'add widget to viewport', 'display widget'],
     members: { create: 'create_widget', add_child: 'add_widget_child', show: 'show_widget' },
   },

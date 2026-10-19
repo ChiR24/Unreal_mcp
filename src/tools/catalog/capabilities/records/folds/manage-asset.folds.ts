@@ -153,7 +153,7 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'add_function_io', selector: 'io',
-    summary: 'Add an input or output pin to a material function.',
+    summary: 'Add a pin to a material function (assetPath), chosen by io: input adds a Function Input named inputName of inputType (default Vector3; an unknown type is refused) that callers wire into; output adds a Function Output named inputName that carries out whatever is wired into it, of that type. A name the function already has is NAME_TAKEN. The node lands at x, y (default 0, 0), the function recompiles and is left unsaved; the reply gives its nodeId for connect_nodes.',
     topics: ['material function input', 'material function output'],
     members: { input: 'add_function_input', output: 'add_function_output' },
   },

@@ -3871,3 +3871,44 @@ describe('an import replaces what is at its destination only when told to', () =
     expect(importer).toMatch(/if \(SetupError\.IsEmpty\(\)\) \{\s*McpClearImportTarget\(DestPath, DestName, ResolvedSourcePath,\s*bOverwrite, SetupError, SetupCode, ImportData->Factory != nullptr\);/u);
   });
 });
+
+describe('audio spawns undo, a used sound is no change, widget style edits keep what they are not given', () => {
+  it('the ambient sound and the reverb zone spawn inside a transaction', () => {
+    const ambient = code('Audio', 'McpAudioAmbient.cpp');
+    expect(ambient).toMatch(/FMcpScopedEditorTransaction Transaction\(FText::FromString\(TEXT\("Create Ambient Sound"\)\)[\s\S]*?SpawnActor<AAmbientSound>/u);
+    expect(ambient).toContain('McpHandlerUtils::MarkNoAssetsChanged(Resp);');
+    expect(code('Audio', 'McpAudioFadeAndReverb.cpp')).toMatch(/FMcpScopedEditorTransaction Transaction\(FText::FromString\(TEXT\("Create Reverb Zone"\)\)[\s\S]*?SpawnActor<AAudioVolume>/u);
+  });
+
+  it('a Rich Text font starts from its own override, and set_margin reports the save', () => {
+    const styling = code('WidgetAuthoring', 'Styling', 'McpWidgetAdvancedStyling.cpp');
+    expect(styling).toContain('FindFProperty<FStructProperty>(URichTextBlock::StaticClass(), TEXT("DefaultTextStyleOverride"))');
+    expect(styling.match(/SetBoolField\(TEXT\("saved"\), WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave\(WidgetBP\)\)/gu)).toHaveLength(2);
+  });
+});
+
+describe('material function pins refuse what would break the function', () => {
+  it('an unknown input type and a taken pin name are refused, not swapped for Vector3 or duplicated', () => {
+    const io = code('MaterialAuthoring', 'Nodes', 'McpMatFunctionInputsOutputs.cpp');
+    expect(io).toContain('TEXT("NAME_TAKEN")');
+    expect(io).toMatch(/if \(!InputType\.IsEmpty\(\) && !Type\) \{[\s\S]*?TEXT\("INVALID_ARGUMENT"\)/u);
+    expect(io).toContain('MCP_GET_FUNCTION_EXPRESSIONS(Func)');
+  });
+});
+
+describe('creating an Animation Blueprint never deletes what is in the way', () => {
+  it('any asset other than an Animation Blueprint at the path is refused, not force-deleted', () => {
+    const assets = code('AnimationAuthoring', 'McpAnimBPAssets.cpp');
+    expect(assets).not.toContain('UEditorAssetLibrary::DeleteAsset');
+    expect(assets).not.toContain('LEGACY_ASSET_DELETE_FAILED');
+    expect(assets).toContain('Response->SetBoolField(TEXT("saved"), bSaved);');
+  });
+});
+
+describe('a landscape layer blend refuses a blend type it does not know', () => {
+  it('an unknown blendType is refused before the node joins the material, and saved is the save result', () => {
+    const blend = code('MaterialAuthoring', 'Properties', 'McpMatConfigLayerBlend.cpp');
+    expect(blend.indexOf('if (!IsKnownBlendType(BlendType))')).toBeLessThan(blend.indexOf('MCP_GET_MATERIAL_EXPRESSIONS(Material).Add(BlendNode);'));
+    expect(blend).toContain('Result->SetBoolField(TEXT("saved"), bSaved);');
+  });
+});
