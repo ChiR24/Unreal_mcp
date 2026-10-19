@@ -5,6 +5,8 @@
 #include "Domains/ControlActor/Placement/McpPlacementMount.h"
 #include "Domains/ControlActor/Placement/McpPlacementShapes.h"
 
+#include "Components/CapsuleComponent.h"
+#include "Engine/NavigationObjectBase.h"
 #include "GameFramework/Volume.h"
 
 // A spawn or a transform write used to answer nothing but "success" and the
@@ -127,13 +129,22 @@ void DescribePlacement(AActor *Actor, const TSharedPtr<FJsonObject> &Data) {
   // level-spanning debug-draw proxy reported itself as sunk into the geometry it
   // was drawn over, and led the list every time. An actor of overlap bodies alone
   // can neither interpenetrate nor rest on anything, so it has nothing to report.
-  if (IsBoundsOnlyActor(Actor) || McpPlacementAccepted(Actor) || McpIsOverlapOnly(Actor) || McpIsWaterBody(Actor)) {
+  // A player start collides with nothing (its capsule only tests where a pawn fits), so it was skipped like a volume and
+  // one buried in the floor or a wall, where the player then spawns, read as fine: its capsule is what it occupies.
+  const ANavigationObjectBase *Start = Cast<ANavigationObjectBase>(Actor);
+  const UCapsuleComponent *StartCapsule = Start ? Start->GetCapsuleComponent() : nullptr;
+  if ((!StartCapsule && IsBoundsOnlyActor(Actor)) || McpPlacementAccepted(Actor) ||
+      McpIsOverlapOnly(Actor) || McpIsWaterBody(Actor)) {
     return;
   }
 
   FVector Origin = FVector::ZeroVector;
   FVector Extent = FVector::ZeroVector;
   Actor->GetActorBounds(true, Origin, Extent);
+  if (StartCapsule) {
+    Origin = StartCapsule->Bounds.Origin;
+    Extent = StartCapsule->Bounds.BoxExtent;
+  }
   if (!McpHasUsableBounds(Extent)) {
     return;
   }

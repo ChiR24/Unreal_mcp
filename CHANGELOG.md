@@ -43,7 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **A level viewport screenshot waits for streaming** (no coarse blobs for a new Nanite mesh) and names video memory over budget; `set_viewport_realtime` reports the state it reached.
 - **A deprecated property is refused**, naming where its replacement lives; the write had answered success and changed nothing.
 - **`set_property` inside a Niagara system restarts its placed effects**, so a renderer change shows.
-- **`audit_placement` counts simulated bodies as surfaces** and skips undersides lying on a floor; **`fix_coplanar` brings a piece laid across several neighbours forward**.
+- **`audit_placement` counts simulated bodies as surfaces**, judges a player start by its capsule and skips undersides lying on a floor; **`fix_coplanar` brings a piece laid across several neighbours forward**.
 - **A whole track name picks only that track** (`..._1` also matched `_10` to `_19`, in reads and `remove_track`).
 - **`save_all` and `restart_editor` wait for a running render** (`RENDER_IN_PROGRESS`) instead of saving its temporary state or cutting it off.
 - **`set_bone_key` keeps what it is not given** (a key with no location put the bone on its parent).

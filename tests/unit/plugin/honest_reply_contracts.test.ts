@@ -3587,3 +3587,13 @@ describe('every find stops at its limit', () => {
     expect(code('ControlActor', 'McpActorTags.cpp')).toContain('McpCapFindRows(Payload, Matches, Data)');
   });
 });
+
+describe('a player start is judged where a pawn spawns', () => {
+  // Its capsule collides with nothing, so a start buried in the floor or a wall was skipped like a volume.
+  it('measures a player start by its capsule instead of skipping it', () => {
+    const check = code('ControlActor', 'McpActorPlacementCheck.cpp');
+    expect(check).toContain('const ANavigationObjectBase *Start = Cast<ANavigationObjectBase>(Actor);');
+    expect(check).toContain('if ((!StartCapsule && IsBoundsOnlyActor(Actor))');
+    expect(check).toContain('Extent = StartCapsule->Bounds.BoxExtent;');
+  });
+});
