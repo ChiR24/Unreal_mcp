@@ -7,14 +7,16 @@
 
 #include "Domains/ControlActor/Placement/McpChangeWatch.h"
 
-#include "Components/MeshComponent.h"
-#include "Components/StaticMeshComponent.h"
-#include "Components/TextRenderComponent.h"
 #include "Domains/ControlActor/McpActorSupport.h"
 #include "Domains/ControlActor/Placement/McpAuditFinding.h"
 #include "Domains/ControlActor/Placement/McpCoplanarFaces.h"
+#include "Editor.h"
+#include "Engine/Blueprint.h"
 #include "Engine/Engine.h"
+#include "Engine/SCS_Node.h"
+#include "Engine/SimpleConstructionScript.h"
 #include "Engine/World.h"
+#include "EngineUtils.h"
 #include "GameFramework/Actor.h"
 #include "UObject/UObjectGlobals.h"
 
@@ -34,40 +36,11 @@ constexpr int32 WatchMaxListed = 12;
 FString GWatchRequestId;
 TMap<TWeakObjectPtr<AActor>, FWatchBefore> GWatchTouched;
 TSet<const AActor*> GWatchReported; // compared, never read: a request does not outlive its actors
+// Every placed copy of a Blueprint the request edits, by path: the compile that follows replaces each copy with a new
+// object of the same name, so a part moved in the Blueprint moved in every copy with no actor of the level modified.
+TMap<FString, FWatchBefore> GWatchCopies;
 FDelegateHandle GWatchModifiedHandle;
 FDelegateHandle GWatchAddedHandle;
-
-// Where every part stands (a part moved inside its actor counts, and its bounds catch a new mesh) and what each draws:
-// assets, not component objects, summed per part, so a construction script rebuilding the same parts reads unchanged.
-void WatchFingerprint(const AActor* Actor, uint32& OutWhere, uint32& OutDrawn)
-{
-    OutWhere = GetTypeHash(Actor->GetActorLocation());
-    OutDrawn = 0;
-    TInlineComponentArray<UPrimitiveComponent*> Parts(Actor);
-    for (const UPrimitiveComponent* Part : Parts)
-    {
-        const FTransform& Transform = Part->GetComponentTransform();
-        uint32 Where = HashCombine(GetTypeHash(Transform.GetLocation()), GetTypeHash(Transform.Rotator().Euler()));
-        OutWhere += HashCombine(HashCombine(Where, GetTypeHash(Transform.GetScale3D())), GetTypeHash(Part->Bounds.BoxExtent));
-        uint32 Drawn = (Part->IsVisible() ? 2u : 0u) | (Part->bHiddenInGame ? 1u : 0u);
-        if (const UStaticMeshComponent* Static = Cast<UStaticMeshComponent>(Part))
-        {
-            Drawn = HashCombine(Drawn, PointerHash(Static->GetStaticMesh()));
-        }
-        if (const UMeshComponent* Mesh = Cast<UMeshComponent>(Part))
-        {
-            for (int32 Slot = 0; Slot < Mesh->GetNumMaterials(); ++Slot)
-            {
-                Drawn = HashCombine(Drawn, PointerHash(Mesh->GetMaterial(Slot)));
-            }
-        }
-        if (const UTextRenderComponent* Text = Cast<UTextRenderComponent>(Part))
-        {
-            Drawn = HashCombine(Drawn, GetTypeHash(Text->Text.ToString()));
-        }
-        OutDrawn += Drawn;
-    }
-}
 
 // Editor-level actors only: a play world is thrown away when play stops, and its game spawns its own actors. A
 // Blueprint compile respawns every placed instance (GIsReinstancing) and a child actor is respawned with its parent's
@@ -87,22 +60,62 @@ void WatchNote(AActor* Actor, bool bNew)
     }
     FWatchBefore& Before = GWatchTouched.Add(Actor);
     Before.bNew = bNew;
-    WatchFingerprint(Actor, Before.Where, Before.Drawn); // Modify is called before the change, so this is the old state
+    McpContentAudit::Fingerprint(Actor, Before.Where, Before.Drawn); // Modify is called before the change, so this is the old state
+}
+
+// The Blueprint an edit of Object changes: the asset, a component template, a construction-script node or its defaults.
+const UBlueprint* WatchBlueprintOf(const UObject* Object)
+{
+    if (const UBlueprint* Blueprint = Cast<UBlueprint>(Object))
+    {
+        return Blueprint;
+    }
+    if (const USCS_Node* Node = Cast<USCS_Node>(Object))
+    {
+        return Node->GetSCS() ? Node->GetSCS()->GetBlueprint() : nullptr;
+    }
+    const UClass* Class = Object->HasAnyFlags(RF_ClassDefaultObject) ? Object->GetClass() : Cast<UClass>(Object->GetOuter());
+    return Class ? UBlueprint::GetBlueprintFromClass(Class) : nullptr;
+}
+
+void WatchBlueprintCopies(const UObject* Object)
+{
+    const UBlueprint* Blueprint = GIsReinstancing ? nullptr : WatchBlueprintOf(Object);
+    UClass* Class = Blueprint ? Blueprint->GeneratedClass.Get() : nullptr;
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    if (!Class || !World || !Class->IsChildOf(AActor::StaticClass()))
+    {
+        return;
+    }
+    for (TActorIterator<AActor> It(World, Class); It; ++It)
+    {
+        const FString Path = It->GetPathName();
+        if (!GWatchCopies.Contains(Path))
+        {
+            FWatchBefore& Before = GWatchCopies.Add(Path);
+            McpContentAudit::Fingerprint(*It, Before.Where, Before.Drawn);
+        }
+    }
 }
 
 void WatchOnModified(UObject* Object)
 {
-    if (!IsInGameThread())
+    if (!IsInGameThread() || !Object)
     {
         return;
     }
+    const UActorComponent* Component = Cast<UActorComponent>(Object);
     if (AActor* Actor = Cast<AActor>(Object))
     {
         WatchNote(Actor, false);
     }
-    else if (const UActorComponent* Component = Cast<UActorComponent>(Object))
+    else if (Component && Component->GetOwner())
     {
         WatchNote(Component->GetOwner(), false);
+    }
+    else
+    {
+        WatchBlueprintCopies(Object);
     }
 }
 
@@ -143,6 +156,7 @@ void End()
     GWatchModifiedHandle.Reset();
     GWatchAddedHandle.Reset();
     GWatchTouched.Reset();
+    GWatchCopies.Reset();
     GWatchReported.Reset();
     GWatchRequestId.Reset();
 }
@@ -157,7 +171,8 @@ void NotePlacementReported(const AActor* Actor)
 
 void AddWarnings(const FString& RequestId, const TSharedPtr<FJsonObject>& Result)
 {
-    if (GWatchRequestId.IsEmpty() || RequestId != GWatchRequestId || !Result.IsValid() || GWatchTouched.Num() == 0)
+    if (GWatchRequestId.IsEmpty() || RequestId != GWatchRequestId || !Result.IsValid() ||
+        GWatchTouched.Num() + GWatchCopies.Num() == 0)
     {
         return;
     }
@@ -165,41 +180,52 @@ void AddWarnings(const FString& RequestId, const TSharedPtr<FJsonObject>& Result
     TArray<FString> Content;
     TSet<const AActor*> Doubled; // named as another's twin: one warning covers the pair
     int32 Changed = 0;
-    for (const TPair<TWeakObjectPtr<AActor>, FWatchBefore>& Pair : GWatchTouched)
-    {
-        AActor* Actor = Pair.Key.Get();
-        if (!IsValid(Actor) || Actor->IsHidden())
-        {
-            continue;
-        }
+    // Where it stands is judged when it moved, what it shows when that changed: a new material alone repeats no placement.
+    const auto Consider = [&](AActor* Actor, const FWatchBefore& Before) {
         uint32 Where = 0, Drawn = 0;
-        WatchFingerprint(Actor, Where, Drawn);
-        const bool bRedrawn = Pair.Value.bNew || Drawn != Pair.Value.Drawn;
-        if ((!bRedrawn && Where == Pair.Value.Where) || Doubled.Contains(Actor) || ++Changed > WatchMaxChecked)
+        if (!IsValid(Actor) || Actor->IsHidden() || Doubled.Contains(Actor))
         {
-            continue; // renamed, tagged, foldered: nothing it shows or where it stands moved
+            return;
+        }
+        McpContentAudit::Fingerprint(Actor, Where, Drawn);
+        const bool bMoved = Before.bNew || Where != Before.Where;
+        const bool bRedrawn = Before.bNew || Drawn != Before.Drawn;
+        if ((!bMoved && !bRedrawn) || ++Changed > WatchMaxChecked)
+        {
+            return; // renamed, tagged, foldered: nothing it shows or where it stands moved
         }
         // A copy on its original intersects it and shares every face with it; the duplicate warning says all of that.
-        const AActor* Twin = McpContentAudit::FindTwin(Actor);
+        const AActor* Twin = bMoved ? McpContentAudit::FindTwin(Actor) : nullptr;
         if (Twin)
         {
             Content.Add(McpContentAudit::DuplicateIssue(Actor, Twin));
             Doubled.Add(Twin);
         }
-        else if (!GWatchReported.Contains(Actor))
+        else if (bMoved && !GWatchReported.Contains(Actor))
         {
-            const TSharedPtr<FJsonObject> Row = MakeShared<FJsonObject>();
-            McpPlacement::DescribePlacement(Actor, Row);
-            Rows.Add(Actor, Row);
+            Rows.Add(Actor, MakeShared<FJsonObject>());
+            McpPlacement::DescribePlacement(Actor, Rows[Actor]);
         }
+        TArray<McpContentAudit::FIssue> Issues;
         if (bRedrawn)
         {
-            TArray<McpContentAudit::FIssue> Issues;
             McpContentAudit::FindUnfinished(Actor, Issues);
-            for (const McpContentAudit::FIssue& Issue : Issues)
-            {
-                Content.Add(FString::Printf(TEXT("'%s': %s"), *McpActorRef(Actor), *Issue.Issue));
-            }
+        }
+        for (const McpContentAudit::FIssue& Issue : Issues)
+        {
+            Content.Add(FString::Printf(TEXT("'%s': %s"), *McpActorRef(Actor), *Issue.Issue));
+        }
+    };
+    for (const TPair<TWeakObjectPtr<AActor>, FWatchBefore>& Pair : GWatchTouched)
+    {
+        Consider(Pair.Key.Get(), Pair.Value);
+    }
+    for (const TPair<FString, FWatchBefore>& Pair : GWatchCopies)
+    {
+        AActor* Copy = FindObject<AActor>(nullptr, *Pair.Key);
+        if (Copy && !GWatchTouched.Contains(Copy))
+        {
+            Consider(Copy, Pair.Value);
         }
     }
     McpCoplanar::AddCoplanarToRows(Rows);

@@ -25,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Whole parts in one `edit_dynamic_mesh` call**: `append_cuboids` (boxes in rows, grids, stacks), `append_loft` (skinned sections), `append_mesh` (a static mesh at placements), `delete_triangles`.
 - **Movie Render Queue**: `cancel_render` stops a render; `configure_render_camera` sets shutter timing (FrameOpen keeps motion blur off a camera cut), overscan and rendering every camera.
 - **Sequences and animations**: `set_section` `playRate` speeds a clip up or down; `get_properties` `tracks` lists each animation track's clips; `get_animation_info` lists the bones a sequence keys.
-- **Every call that spawns, moves or re-meshes actors checks them**: its warnings name one left sunk, floating, intersecting or z-fighting, a default grid material, a label still reading "Text" or a copy pasted onto its original; `audit_placement` finds that content level-wide.
+- **Every call that spawns, moves or re-meshes actors checks them**, a Blueprint edit its placed copies: warnings name one sunk, floating, intersecting or z-fighting, a default grid material, a label still reading "Text" or a pasted duplicate; `audit_placement` finds that content level-wide.
 
 </details>
 

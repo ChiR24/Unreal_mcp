@@ -38,6 +38,8 @@ struct FIssue
 void FindUnfinished(const AActor* Actor, TArray<FIssue>& Out);
 /** Another actor drawing the same meshes at the same transform as Actor (a copy pasted onto it), or null. */
 const AActor* FindTwin(const AActor* Actor);
+/** Where Actor's parts stand and what they draw, as two hashes that change when it moves or redraws. */
+void Fingerprint(const AActor* Actor, uint32& OutWhere, uint32& OutDrawn);
 /** The duplicate kind's sentence for Copy drawn on top of Original. */
 FString DuplicateIssue(const AActor* Copy, const AActor* Original);
 

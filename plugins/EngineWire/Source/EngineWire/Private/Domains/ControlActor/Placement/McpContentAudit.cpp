@@ -75,6 +75,38 @@ double ContentBoundsSize(const AActor* Actor)
 
 namespace McpContentAudit
 {
+// Where every part stands (a part moved inside its actor counts, and its bounds catch a new mesh) and what each draws:
+// assets, not component objects, summed per part, so a construction script rebuilding the same parts reads unchanged.
+void Fingerprint(const AActor* Actor, uint32& OutWhere, uint32& OutDrawn)
+{
+    OutWhere = GetTypeHash(Actor->GetActorLocation());
+    OutDrawn = 0;
+    TInlineComponentArray<UPrimitiveComponent*> Parts(Actor);
+    for (const UPrimitiveComponent* Part : Parts)
+    {
+        const FTransform& Transform = Part->GetComponentTransform();
+        uint32 Where = HashCombine(GetTypeHash(Transform.GetLocation()), GetTypeHash(Transform.Rotator().Euler()));
+        OutWhere += HashCombine(HashCombine(Where, GetTypeHash(Transform.GetScale3D())), GetTypeHash(Part->Bounds.BoxExtent));
+        uint32 Drawn = (Part->IsVisible() ? 2u : 0u) | (Part->bHiddenInGame ? 1u : 0u);
+        if (const UStaticMeshComponent* Static = Cast<UStaticMeshComponent>(Part))
+        {
+            Drawn = HashCombine(Drawn, PointerHash(Static->GetStaticMesh()));
+        }
+        if (const UMeshComponent* Mesh = Cast<UMeshComponent>(Part))
+        {
+            for (int32 Slot = 0; Slot < Mesh->GetNumMaterials(); ++Slot)
+            {
+                Drawn = HashCombine(Drawn, PointerHash(Mesh->GetMaterial(Slot)));
+            }
+        }
+        if (const UTextRenderComponent* Text = Cast<UTextRenderComponent>(Part))
+        {
+            Drawn = HashCombine(Drawn, GetTypeHash(Text->Text.ToString()));
+        }
+        OutDrawn += Drawn;
+    }
+}
+
 void FindUnfinished(const AActor* Actor, TArray<FIssue>& Out)
 {
     const UMaterial* Default = UMaterial::GetDefaultMaterial(MD_Surface);

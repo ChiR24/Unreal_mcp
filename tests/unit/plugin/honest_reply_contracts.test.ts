@@ -3551,7 +3551,7 @@ describe('every call that changes actors is checked on the spot', () => {
     const watch = code('ControlActor', 'Placement', 'McpChangeWatch.cpp');
     expect(watch).toContain('FCoreUObjectDelegates::OnObjectModified.AddStatic(&WatchOnModified)');
     expect(watch).toContain('GEngine->OnLevelActorAdded().AddStatic(&WatchOnAdded)');
-    expect(watch).toContain('McpPlacement::DescribePlacement(Actor, Row);');
+    expect(watch).toContain('McpPlacement::DescribePlacement(Actor, Rows[Actor]);');
     expect(watch).toContain('McpContentAudit::FindUnfinished(Actor, Issues);');
     expect(watch).toContain('McpContentAudit::FindTwin(Actor)');
   });
@@ -3561,7 +3561,15 @@ describe('every call that changes actors is checked on the spot', () => {
     const watch = code('ControlActor', 'Placement', 'McpChangeWatch.cpp');
     expect(watch).toContain('GIsReinstancing');
     expect(watch).toContain('Actor->IsChildActor()');
-    expect(watch).toContain('OutDrawn += Drawn;');
+    expect(code('ControlActor', 'Placement', 'McpContentAudit.cpp')).toContain('OutDrawn += Drawn;');
+  });
+
+  // A part moved in a Blueprint moved in every placed copy, and the compile replaced each copy with a new object.
+  it('fingerprints the placed copies of an edited Blueprint by path and judges what the edit changed in them', () => {
+    const watch = code('ControlActor', 'Placement', 'McpChangeWatch.cpp');
+    expect(watch).toContain('WatchBlueprintCopies(Object);');
+    expect(watch).toContain('for (TActorIterator<AActor> It(World, Class); It; ++It)');
+    expect(watch).toContain('AActor* Copy = FindObject<AActor>(nullptr, *Pair.Key);');
   });
 
   it('leaves an actor whose reply carries its placement to that reply', () => {

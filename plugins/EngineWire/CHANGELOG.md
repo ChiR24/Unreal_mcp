@@ -20,7 +20,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **`diff_asset`**: a saved copy loaded with `LOAD_ForDiff` (then released) or another asset, compared property by property; `NewVariables`, components by variable name, graphs through `FGraphDiffControl::DiffGraphs`, rows by name.
 - **`cancel_render`** (`CancelAllJobs()` on the active executor, `MRQ_NOT_RENDERING` when none) and **`configure_render_camera`** (`ShutterTiming`, `OverscanPercentage`; `bOverrideCameraOverscan` and `bRenderAllCameras` found by name, as newer engines add them).
 - **`set_section` `playRate`**: a float to 5.4, `FMovieSceneTimeWarpVariant` from 5.5; the range rescales by old over new rate unless `endFrame` is given. **Reads**: list_tracks `animations`, get_animation_info `boneTracks`.
-- **Change watch** (`McpChangeWatch`): editor actors a request spawns (`OnLevelActorAdded`) or modifies (`OnObjectModified`) are fingerprinted, and a reply's `warnings` get their placement and content findings (64 checked, 12 listed); `audit_placement` kinds `default_material`, `placeholder_text`, `duplicate`.
+- **Change watch** (`McpChangeWatch`): editor actors a request spawns (`OnLevelActorAdded`) or modifies (`OnObjectModified`) are fingerprinted, an edited Blueprint's placed copies by path (its compile replaces them), and a reply's `warnings` get their placement and content findings (64 checked, 12 listed); `audit_placement` kinds `default_material`, `placeholder_text`, `duplicate`.
 
 ### Fixed
 - **`runtime_report` `filter`** matches an actor's path only whole.
