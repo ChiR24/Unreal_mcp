@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "80790e8d9f01d239",
+  "catalogRevision": "af99c3bbefd922ed",
   "recordCount": 416,
   "records": [
     {
@@ -18707,13 +18707,13 @@
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true
             },
+            "save": {
+              "type": "boolean",
+              "description": "Save the Blueprint after the edit (default true, so it survives an editor restart). false leaves it compiled in memory and unsaved: a trial change to put back, or to save later with control_editor save_all."
+            },
             "compile": {
               "type": "boolean",
               "description": "Compile the Blueprint after the operations (default false; applyAndSave also compiles)."
-            },
-            "save": {
-              "type": "boolean",
-              "description": "Save the Blueprint after the operations (default true, so the edit survives an editor restart); applyAndSave overrides it."
             },
             "operations": {
               "type": "array",
@@ -18946,9 +18946,6 @@
             "compile": [
               "modify"
             ],
-            "save": [
-              "modify"
-            ],
             "operations": [
               "modify"
             ],
@@ -18969,8 +18966,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "3baadd9f06f47e55c0736ac9dda7779a9bde8268bfbca02aea60fc20f60c2291",
-        "content": "844beee9803b91c71131e549f3e943ddcb875b997d5ff589f81c803cf1b66ca7"
+        "schema": "05283ae89944e8654017bea869806f0f98649d840ceb0e2750809e1b034bbf42",
+        "content": "3046d8363e92602c95ecc20a525c2a80a9a43384117ee94b760ba6cfca434aed"
       }
     },
     {
@@ -22329,6 +22326,10 @@
                 "type": "string"
               },
               "description": "Several components to remove in one call, in place of componentName; each is reported, and the call fails naming any that were not removed."
+            },
+            "save": {
+              "type": "boolean",
+              "description": "Save the Blueprint after the edit (default true, so it survives an editor restart). false leaves it compiled in memory and unsaved: a trial change to put back, or to save later with control_editor save_all."
             }
           },
           "required": [
@@ -22418,8 +22419,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "083cb983ca5aa93ff969f8f3f24d85fd199179ae77db07ab034510136c2801eb",
-        "content": "5a2a1793a495dde87b8f9193dad711b245be3dead7b0e711acd42f56d7551135"
+        "schema": "3fd4ee54779e6c5c805855c9dc4a4acde967edbc73655b5540eb61871ec5b35c",
+        "content": "b4124942d1f5c3a4e1d235bd3ee58c2dca44112cd46208041d38b3928cb8fd9d"
       }
     },
     {
@@ -35148,6 +35149,12 @@
               "type": "string",
               "description": "Unreal class path (e.g. /Script/Engine.PointLight or /Game/Enemies/BP_Enemy) of the actors to find (alias of className)."
             },
+            "limit": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 1000,
+              "description": "Most actors to return (1-1000, default 200); a longer match list is cut and reports truncated and totalCount."
+            },
             "name": {
               "type": "string",
               "description": "Actor name or search query."
@@ -35155,12 +35162,6 @@
             "meshPath": {
               "type": "string",
               "description": "Static mesh asset path, with or without the object name: /Game/Meshes/SM_Rock or /Engine/BasicShapes/Cube. An actor matches when a StaticMeshComponent of it (an instanced or hierarchical one too) draws exactly this mesh."
-            },
-            "limit": {
-              "type": "number",
-              "minimum": 1,
-              "maximum": 1000,
-              "description": "Most actors to return (1-1000, default 200); a longer match list is cut and reports truncated and totalCount."
             },
             "materialPath": {
               "type": "string",
@@ -35230,13 +35231,6 @@
               "type": "number",
               "description": "Number of actors returned."
             },
-            "similar": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "description": "Only when nothing matched: up to 10 labels that contain the query once case, separators and leading zeros are ignored (\"Bug1\" finds Bug_01 and Bug_10)."
-            },
             "totalCount": {
               "type": "number",
               "description": "Present only when limit cut the list: how many actors matched in all."
@@ -35244,6 +35238,13 @@
             "truncated": {
               "type": "boolean",
               "description": "True when limit cut the list short; totalCount says how many matched."
+            },
+            "similar": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Only when nothing matched: up to 10 labels that contain the query once case, separators and leading zeros are ignored (\"Bug1\" finds Bug_01 and Bug_10)."
             },
             "worldSearched": {
               "type": "string",
@@ -35325,10 +35326,6 @@
             "meshPath": [
               "mesh"
             ],
-            "limit": [
-              "mesh",
-              "material"
-            ],
             "materialPath": [
               "material"
             ]
@@ -35338,7 +35335,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "783e85c1b31e1661efbfe717abd013aefd8a420d83725e37c617c07a0c31b3c7",
-        "content": "cbb7db40afa330fa3e75746e86a9d876d3e0d6da1651a770df6d7f619a1b7053"
+        "content": "e2bd84f01786f3a4f93ef3474886475492c8f3d73f62bd7d1b9d2e15f21b9004"
       }
     },
     {
@@ -35384,6 +35381,12 @@
             "tag": {
               "type": "string",
               "description": "Actor tag: one entry in the Tags list of an actor (not a Gameplay Tag) to add, remove, find or delete by."
+            },
+            "limit": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 1000,
+              "description": "Most actors to return (1-1000, default 200); a longer match list is cut and reports truncated and totalCount."
             }
           },
           "required": [
@@ -35438,6 +35441,14 @@
             "count": {
               "type": "number",
               "description": "Number of actors returned."
+            },
+            "totalCount": {
+              "type": "number",
+              "description": "Present only when limit cut the list: how many actors matched in all."
+            },
+            "truncated": {
+              "type": "boolean",
+              "description": "True when limit cut the list short; totalCount says how many matched."
             }
           },
           "required": [
@@ -35493,8 +35504,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "a3085ec3aaad1aae6e026dc11eddbbd27dd89f19a96b5ca7067c5e1601e58326",
-        "content": "df88c4701514d7120ac48c3744e573daf4445fd16d7e071c9a47ce046dfb6317"
+        "schema": "952ffe50ddf18b4bf3dba79aa9758af10334033b39ad20cf8df3ded96b5b09ff",
+        "content": "fe5397d8be2763324284ede51efc1088ddbd5c53468c381ff286b1ec36aeba5e"
       }
     },
     {

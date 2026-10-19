@@ -153,6 +153,23 @@ inline bool McpActorMatchesListFilters(const AActor *Actor, const FString &Tag,
 // and the names that matched no actor. False, with nothing filled, when the payload has no
 // non-empty actorNames. Find is the subsystem's FindActorByName (a private member, so each handler
 // hands it in). add_tag, set_visibility and set_actor_collision all take the list through this.
+// The first `limit` rows of a find (1-1000, default 200), with truncated and totalCount when the list was cut: a class
+// or a tag most of a level shares answered every actor, hundreds of rows, while a mesh or material find stopped at 200.
+// Returns how many matched in all.
+inline int32 McpCapFindRows(const TSharedPtr<FJsonObject> &Payload, TArray<TSharedPtr<FJsonValue>> &Rows,
+                            const TSharedPtr<FJsonObject> &Data) {
+  double Requested = 0.0;
+  const int32 Limit = Payload->TryGetNumberField(TEXT("limit"), Requested)
+                          ? FMath::Clamp(static_cast<int32>(Requested), 1, 1000) : 200;
+  const int32 Total = Rows.Num();
+  if (Total > Limit) {
+    Rows.SetNum(Limit);
+    Data->SetBoolField(TEXT("truncated"), true);
+    Data->SetNumberField(TEXT("totalCount"), Total);
+  }
+  return Total;
+}
+
 inline bool McpResolveActorNames(const TSharedPtr<FJsonObject> &Payload,
                                  TFunctionRef<AActor *(const FString &)> Find,
                                  TArray<AActor *> &OutActors, TArray<FString> &OutMissing) {

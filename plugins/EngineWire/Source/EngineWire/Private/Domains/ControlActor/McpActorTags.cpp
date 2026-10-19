@@ -47,9 +47,13 @@ bool UEngineWireSubsystem::HandleControlActorFindByTag(
   }
 
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
+  const int32 Total = McpCapFindRows(Payload, Matches, Data);
   Data->SetArrayField(TEXT("actors"), Matches);
   Data->SetNumberField(TEXT("count"), Matches.Num());
-  SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Actors found"),
+  SendStandardSuccessResponse(this, Socket, RequestId,
+                              Total > Matches.Num()
+                                  ? FString::Printf(TEXT("Found %d actors tagged %s; the first %d are listed"), Total, *TagValue, Matches.Num())
+                                  : FString::Printf(TEXT("Found %d actors tagged %s"), Total, *TagValue),
                               Data);
   return true;
 }

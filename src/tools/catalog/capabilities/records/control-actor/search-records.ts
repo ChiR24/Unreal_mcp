@@ -10,7 +10,12 @@ import { DOMAIN, P } from './properties.js';
 const FAMILY_TAGS = 'tags';
 const FAMILY_FIND = 'find';
 
-const FIND_OUTPUT = { actors: P.actors, count: P.count };
+// Every find lists the first limit matches; a cut list says how many matched in all.
+const FIND_CUT = {
+  totalCount: { type: 'number', description: 'Present only when limit cut the list: how many actors matched in all.' },
+  truncated: { type: 'boolean', description: 'True when limit cut the list short; totalCount says how many matched.' },
+};
+const FIND_OUTPUT = { actors: P.actors, count: P.count, ...FIND_CUT };
 // With no match, labels equal to the query once case, separators and leading zeros are ignored.
 const FIND_BY_NAME_OUTPUT = {
   ...FIND_OUTPUT,
@@ -41,8 +46,7 @@ const FIND_BY_ASSET_OUTPUT = {
     description: 'Matched actors, each with the components that matched.',
   },
   count: P.count,
-  totalCount: { type: 'number', description: 'Present only when limit cut the list: how many actors matched in all.' },
-  truncated: { type: 'boolean', description: 'True when limit cut the list short; totalCount says how many matched.' },
+  ...FIND_CUT,
   worldSearched: { type: 'string', description: 'The world searched: the Play-In-Editor world while a session runs, else the editor world.' },
 };
 const FIND_LIMIT = { type: 'number', minimum: 1, maximum: 1000, description: 'Most actors to return (1-1000, default 200); a longer match list is cut and reports truncated and totalCount.' };
@@ -123,10 +127,10 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'find_by_tag',
     domain: DOMAIN,
     family: FAMILY_TAGS,
-    summary: 'Find all actors in the level matching a gameplay tag.',
+    summary: 'Find the actors in the level whose Tags list holds a tag (the whole tag, case-insensitive), each with name, path and class: the first limit of them (default 200), with truncated and totalCount when more match. The Play-In-Editor world is searched while a session runs.',
     whenToUse: ['Actors sharing a tag must be located.'],
     whenNotToUse: ['A specific actor name is known (use find_by_name).'],
-    inputProps: { tag: P.tag },
+    inputProps: { tag: P.tag, limit: FIND_LIMIT },
     required: [],
     outputProps: FIND_OUTPUT,
     outputRequired: [],
@@ -142,7 +146,7 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Alias of find_by_tag. The bridge dispatches both names to the same handler.',
     whenToUse: ['Preferred when callers use the explicit find_actors_by_tag verb.'],
     whenNotToUse: ['Use find_by_tag to avoid alias normalization.'],
-    inputProps: { tag: P.tag },
+    inputProps: { tag: P.tag, limit: FIND_LIMIT },
     required: [],
     outputProps: FIND_OUTPUT,
     outputRequired: [],
@@ -156,10 +160,10 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
     domain: DOMAIN,
     family: FAMILY_FIND,
     topics: ['find actor', 'lookup actor by name', 'search actor', 'get actor by name'],
-    summary: 'Find actors in the level whose name matches a query string.',
+    summary: 'Find the actors in the level whose label, object name or path contains a query (case-insensitive; a full object path is cut to its actor name), each with label, name, path and class: the first limit (default 200), with truncated and totalCount when more match. With no match, similar offers labels that match once case, separators and leading zeros are ignored.',
     whenToUse: ['One or more actors must be located by name or substring.'],
     whenNotToUse: ['Actors should be located by tag (use find_by_tag).'],
-    inputProps: { name: P.name },
+    inputProps: { name: P.name, limit: FIND_LIMIT },
     required: ['name'],
     outputProps: FIND_BY_NAME_OUTPUT,
     outputRequired: [],
@@ -175,7 +179,7 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Alias of find_by_name. The bridge dispatches both names to the same handler.',
     whenToUse: ['Preferred when callers use the explicit find_actors_by_name verb.'],
     whenNotToUse: ['Use find_by_name to avoid alias normalization.'],
-    inputProps: { name: P.name },
+    inputProps: { name: P.name, limit: FIND_LIMIT },
     required: ['name'],
     outputProps: FIND_BY_NAME_OUTPUT,
     outputRequired: [],
@@ -189,10 +193,10 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
     domain: DOMAIN,
     family: FAMILY_FIND,
     topics: ['actors of class', 'find actors by type', 'all actors of type'],
-    summary: 'Find all actors in the level matching a Unreal class name or path.',
+    summary: 'Find the actors in the level of a class or any subclass of it (a short native name such as PointLight, /Script/Engine.PointLight, or a Blueprint asset path), each with name and path: the first limit (default 200), with truncated and totalCount when more match. A class that resolves to nothing is refused with CLASS_NOT_FOUND, naming assets of that name.',
     whenToUse: ['All instances of a class must be located.'],
     whenNotToUse: ['A tag-based lookup is more appropriate (use find_by_tag).'],
-    inputProps: { className: P.className, class: { type: 'string', description: 'Unreal class name or path (alias of className).' }, classPath: { type: 'string', description: 'Unreal class path (e.g. /Script/Engine.PointLight or /Game/Enemies/BP_Enemy) of the actors to find (alias of className).' } },
+    inputProps: { className: P.className, class: { type: 'string', description: 'Unreal class name or path (alias of className).' }, classPath: { type: 'string', description: 'Unreal class path (e.g. /Script/Engine.PointLight or /Game/Enemies/BP_Enemy) of the actors to find (alias of className).' }, limit: FIND_LIMIT },
     required: [],
     requiredOneOf: ['className', 'class', 'classPath'],
     outputProps: FIND_OUTPUT,
@@ -209,7 +213,7 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Alias of find_by_class. The bridge dispatches both names to the same handler.',
     whenToUse: ['Preferred when callers use the explicit find_actors_by_class verb.'],
     whenNotToUse: ['Use find_by_class to avoid alias normalization.'],
-    inputProps: { className: P.className, class: { type: 'string', description: 'Unreal class name or path (alias of className).' }, classPath: { type: 'string', description: 'Unreal class path (e.g. /Script/Engine.PointLight or /Game/Enemies/BP_Enemy) of the actors to find (alias of className).' } },
+    inputProps: { className: P.className, class: { type: 'string', description: 'Unreal class name or path (alias of className).' }, classPath: { type: 'string', description: 'Unreal class path (e.g. /Script/Engine.PointLight or /Game/Enemies/BP_Enemy) of the actors to find (alias of className).' }, limit: FIND_LIMIT },
     required: [],
     requiredOneOf: ['className', 'class', 'classPath'],
     outputProps: FIND_OUTPUT,

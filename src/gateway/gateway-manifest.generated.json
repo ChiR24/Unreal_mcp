@@ -10754,7 +10754,7 @@
           },
           "save": {
             "type": "boolean",
-            "description": "Save the Blueprint after the operations (default true, so the edit survives an editor restart); applyAndSave overrides it."
+            "description": "Save the Blueprint after the edit (default true, so it survives an editor restart). false leaves it compiled in memory and unsaved: a trial change to put back, or to save later with control_editor save_all."
           },
           "saveAfterCompile": {
             "type": "boolean",

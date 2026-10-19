@@ -42,6 +42,8 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **Rate limit replies** name the cap, its setting and the wait, with `data.errorCode` `RATE_LIMITED`, `retryAfterSeconds` and `Retry-After`.
 - **`McpApplyPayloadSettings`** writes through the full `ApplyJsonValueToProperty` (objects, soft references, arrays).
 - **Undoable** in an `FMcpScopedEditorTransaction`: `set_property` actor transforms, `set_volume_bounds`, spline mesh asset/material, `scatter_meshes_along_spline`.
+- **`McpCapFindRows`** cuts class, name and tag finds at `limit` with `truncated` and `totalCount`.
+- **`save` is declared on every SCS edit**: `FSCSHandlers::bSaveScsChanges` reads it for all of them.
 
 ## [0.6.0-beta-f] - 2026-10-16
 

@@ -668,11 +668,12 @@ describe('control_actor find asks which actors use a static mesh or a material',
     expect(dispatchBy?.actions).toEqual({ class: 'find_by_class', name: 'find_by_name', mesh: 'find_by_mesh', material: 'find_by_material' });
     expect(dispatchBy?.declaredBy?.meshPath).toEqual(['mesh']);
     expect(dispatchBy?.declaredBy?.materialPath).toEqual(['material']);
-    expect(dispatchBy?.declaredBy?.limit, 'limit is read by the two asset finds only').toEqual(['mesh', 'material']);
+    // Every find stops at limit: a class or tag most of a level shares listed every actor before.
+    expect(dispatchBy?.declaredBy?.limit, 'every find reads limit').toBeUndefined();
     const folded = Object.fromEntries((record()?.legacyIds ?? []).map((entry) => [entry.action, entry.folded]));
     expect(folded.find_by_mesh).toEqual({ findBy: 'mesh' });
     expect(folded.find_by_material).toEqual({ findBy: 'material' });
-    expect(unreadVariantParams(record(), ['limit'], { findBy: 'class' })).toHaveLength(1);
+    expect(unreadVariantParams(record(), ['limit'], { findBy: 'class' })).toEqual([]);
     expect(unreadVariantParams(record(), ['limit', 'meshPath'], { findBy: 'mesh' })).toEqual([]);
   });
 

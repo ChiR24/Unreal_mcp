@@ -3568,3 +3568,14 @@ describe('every call that changes actors is checked on the spot', () => {
     expect(code('ControlActor', 'McpActorPlacementCheck.cpp')).toContain('McpChangeWatch::NotePlacementReported(Actor);');
   });
 });
+
+describe('every find stops at its limit', () => {
+  // A class or tag most of a level shares answered every actor (206 rows for one tag), while mesh and material finds
+  // stopped at 200 and said so.
+  it('class, name and tag finds cut their rows at limit and say how many matched', () => {
+    expect(code('ControlActor', 'McpActorSupport.h')).toContain('inline int32 McpCapFindRows(');
+    expect(code('ControlActor', 'McpActorQueryFindByClass.cpp')).toContain('McpCapFindRows(Payload, ActorsArray, Data)');
+    expect(code('ControlActor', 'McpActorQuery.cpp')).toContain('McpCapFindRows(Payload, Matches, Data);');
+    expect(code('ControlActor', 'McpActorTags.cpp')).toContain('McpCapFindRows(Payload, Matches, Data)');
+  });
+});
