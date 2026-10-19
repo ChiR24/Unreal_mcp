@@ -280,3 +280,8 @@ wrapper flattened (top-level keys win) and the control fields `action`,
 
 Authorization refusal codes are shared verbatim with the plugin and are
 documented in [`security-and-receipts.md`](security-and-receipts.md).
+
+A request past the native transport's per-client rate limit (the plugin settings
+`MaxClientRequestsPerMinute` and `MaxClientToolCallsPerMinute`) is answered with
+JSON-RPC error `-32000`, `data.errorCode` `RATE_LIMITED` and `data.retryAfterSeconds`,
+and a `Retry-After` header.
