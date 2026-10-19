@@ -86,7 +86,7 @@ export const MANAGE_SEQUENCE_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'play_media', topics: ['play video file'], selector: 'control',
-    summary: 'Play, pause or seek a media player.',
+    summary: 'Play a media player asset (control play, the default): it opens mediaSourcePath, a playlist (playlistPath, playlistIndex) or filePath first when given, closing what it was playing, else plays what it has open, and the reply waits up to 10 s for it to open and start (openStatus, openWaitMs, isPlaying, currentUrl), failing with MEDIA_OPEN_FAILED, MEDIA_OPEN_TIMEOUT or MEDIA_PLAY_TIMEOUT. Or pause it (pause) or seek it (seek). The picture shows only where its media texture is used (a material on a mesh, or a widget), and its sound needs a media sound component.',
     members: { play: 'play_media', pause: 'pause_media', seek: 'seek_media' },
   },
   {

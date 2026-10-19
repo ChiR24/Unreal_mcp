@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "d4b8ab3183d1fc3c",
+  "catalogRevision": "49bfa2accc68a160",
   "recordCount": 416,
   "records": [
     {
@@ -22168,7 +22168,7 @@
         "topics": [
           "remove_function"
         ],
-        "summary": "Remove a function or an event from a Blueprint.",
+        "summary": "Remove a function the Blueprint defines (kind function: functionName), recompiled and saved; one still called is refused with FUNCTION_IN_USE naming each call node to delete first, and inherited or engine functions are NOT_FOUND. Or remove an event (event: a custom event by eventName, or any event node by nodeId, on graphName or the first event graph page); calls to a removed custom event are left calling nothing, so delete those too.",
         "whenToUse": [
           "kind=function: A function must be permanently deleted from the Blueprint.",
           "kind=event: An event node must be permanently removed from the graph."
@@ -22249,7 +22249,7 @@
       },
       "examples": [
         {
-          "title": "Remove a function or an event from a Blueprint.",
+          "title": "Remove a function the Blueprint defines (kind function: functionName), recompiled and saved; one still called is refused with FUNCTION_IN_USE naming each call node to delete first, and inherited or engine functions are NOT_FOUND. Or remove an event (event: a custom event by eventName, or any event node by nodeId, on graphName or the first event graph page); calls to a removed custom event are left calling nothing, so delete those too.",
           "input": {
             "action": "remove_function",
             "blueprintPath": "/Game/Blueprints/BP_Test",
@@ -22312,7 +22312,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "304494047febc1ac2c28d2476ccbebc002a248de59a68769fa18a6741128db67",
-        "content": "510867a890b1cf2d10840b7dfb21a6d7100508c1de1c7aea8f73cd94736db5b7"
+        "content": "83395cf8a010a7ecdb1c8c3d887be7b606efff8466817766cb6f5408f0adfc65"
       }
     },
     {
@@ -27436,14 +27436,14 @@
           "fog volume",
           "time of day system"
         ],
-        "summary": "Create a sky sphere, a fog volume, or a time-of-day system.",
+        "summary": "Create the sky lighting rig (kind sky_sphere: a Sky Atmosphere, a sun and a Sky Light), an Exponential Height Fog (fog_volume), or one actor carrying its own sun, sky light and atmosphere at noon (time_of_day_system; nothing animates it, set_time_of_day moves the sun). Each reuses an actor already carrying its label, but one labelled otherwise is not seen, so mixing sky_sphere and time_of_day_system, or a sun of another label, doubles the sun.",
         "whenToUse": [
           "Atmosphere, sky, fog, or time-of-day must be configured."
         ],
         "whenNotToUse": [
-          "kind=sky_sphere: A sky atmosphere is already present.",
-          "kind=fog_volume: Exponential height fog is sufficient.",
-          "kind=time_of_day_system: A static time should be set instead."
+          "kind=sky_sphere: A sky atmosphere or sun is already present under another label: configure it (configure_sky_atmosphere, configure_directional_light_atmosphere) instead of adding a second.",
+          "kind=fog_volume: The level has a height fog under another label: configure_exponential_height_fog finds the first one.",
+          "kind=time_of_day_system: The level already has a sun and sky atmosphere: set_time_of_day moves its sun."
         ]
       },
       "schemas": {
@@ -27549,7 +27549,7 @@
       },
       "examples": [
         {
-          "title": "Create a sky sphere, a fog volume, or a time-of-day system.",
+          "title": "Create the sky lighting rig (kind sky_sphere: a Sky Atmosphere, a sun and a Sky Light), an Exponential Height Fog (fog_volume), or one actor carrying its own sun, sky light and atmosphere at noon (time_of_day_system; nothing animates it, set_time_of_day moves the sun). Each reuses an actor already carrying its label, but one labelled otherwise is not seen, so mixing sky_sphere and time_of_day_system, or a sun of another label, doubles the sun.",
           "input": {
             "action": "create_atmosphere_actor",
             "name": "SkySphere_1",
@@ -27607,7 +27607,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "e57cf542ab12da292422d55b82a0e23bf0723a88719a73dc1473344c5382d451",
-        "content": "f623cb03d25193e6d96da08b8213ab90910f87cf0f7f63348ead9c817c679269"
+        "content": "40daffb310ae28d612291e188f0ce346d0cafcbb66f6503acb6b3910c039fa5c"
       }
     },
     {
@@ -33459,7 +33459,7 @@
           "untag actor",
           "delete tag"
         ],
-        "summary": "Add a tag to an actor, or remove one.",
+        "summary": "Add a tag to an actor (tagOp add, the default; with actorNames to many in one undo step) or remove one (remove), leaving its level unsaved. A tag is kept once and wasPresent says whether it was there; actorNames that match nothing come back in missing, and ACTOR_NOT_FOUND answers when none matched. Tags drive find_by_tag, delete_by_tag and the Actor Has Tag node; mcp.placement.ok makes the placement checks skip the actor.",
         "whenToUse": [
           "tagOp=add: An actor must be tagged for later lookup or grouping.",
           "tagOp=add: Many deliberate compositions must be marked mcp.placement.ok for audit_placement in one call.",
@@ -33565,7 +33565,7 @@
       },
       "examples": [
         {
-          "title": "Add a tag to an actor, or remove one.",
+          "title": "Add a tag to an actor (tagOp add, the default; with actorNames to many in one undo step) or remove one (remove), leaving its level unsaved. A tag is kept once and wasPresent says whether it was there; actorNames that match nothing come back in missing, and ACTOR_NOT_FOUND answers when none matched. Tags drive find_by_tag, delete_by_tag and the Actor Has Tag node; mcp.placement.ok makes the placement checks skip the actor.",
           "input": {
             "action": "add_tag",
             "actorName": "Cube1",
@@ -33617,7 +33617,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "21120507b0c7ddee3d25aedd482e09d3d56557682a3c42609a35f489d67202ec",
-        "content": "5339de143444865a647c42abf29875b909c4dfecd9b7b5507b36bf9c7305ee53"
+        "content": "dd63882985deac69cf52a7b2ab110d95ccc40f8cd542367d52320f63b677668b"
       }
     },
     {
@@ -33789,7 +33789,7 @@
           "attach to socket",
           "set actor parent"
         ],
-        "summary": "Attach an actor to a parent actor.",
+        "summary": "Attach childActor to parentActor, in one undo step: to its root, or to componentName (the mesh that owns a bone) at socketName (a bone or socket, SOCKET_NOT_FOUND when missing). It keeps its world placement, or with snapToTarget moves onto the socket (scale kept) and then takes relativeLocation and relativeRotation in the socket space, which is how a grip is tuned. The parent becomes its owner. ACTOR_NOT_FOUND, COMPONENT_NOT_FOUND, CYCLE_DETECTED for itself, ATTACH_FAILED when the engine refuses (a parent already under the child, or a Static child under a moving parent: make it Movable).",
         "whenToUse": [
           "An actor must follow another actor transform.",
           "A prop must ride a character's hand, head or other bone: socketName with snapToTarget, then tune the grip with relativeLocation/relativeRotation."
@@ -33879,7 +33879,7 @@
       },
       "examples": [
         {
-          "title": "Attach an actor to a parent actor.",
+          "title": "Attach childActor to parentActor, in one undo step: to its root, or to componentName (the mesh that owns a bone) at socketName (a bone or socket, SOCKET_NOT_FOUND when missing). It keeps its world placement, or with snapToTarget moves onto the socket (scale kept) and then takes relativeLocation and relativeRotation in the socket space, which is how a grip is tuned. The parent becomes its owner. ACTOR_NOT_FOUND, COMPONENT_NOT_FOUND, CYCLE_DETECTED for itself, ATTACH_FAILED when the engine refuses (a parent already under the child, or a Static child under a moving parent: make it Movable).",
           "input": {
             "action": "attach",
             "childActor": "Sword",
@@ -33918,7 +33918,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "e974f29be6e4711582c14d1298af6abb90eb5dc53b409cb58e04d592e9974999",
-        "content": "94f39b0d45739729db213d99247ce3907bd96cfc3635d2f401aab6e1a529733e"
+        "content": "18057e879e63488ebb6a3746b6c20843992428cc9722acf3c02bbb31d01721b7"
       }
     },
     {
@@ -34430,7 +34430,7 @@
           "remove actor from level",
           "delete object"
         ],
-        "summary": "Delete actors by name, or every actor carrying a tag.",
+        "summary": "Delete actors (deleteScope actors, the default: actorName or actorNames, exact names only, so TestActor never takes TestActor_Copy) or every actor carrying tag or any of tags (by_tag), in one undo step. While Play runs they leave the running game, which nothing saves or undoes. Replies deletedCount and deleted; names not found refuse with NOT_FOUND, or DELETE_PARTIAL when some went, both carrying the deleted and missing lists.",
         "whenToUse": [
           "deleteScope=actors: An actor must be permanently removed from the level.",
           "deleteScope=by_tag: All actors sharing a tag must be removed in one operation.",
@@ -34520,7 +34520,7 @@
       },
       "examples": [
         {
-          "title": "Delete actors by name, or every actor carrying a tag.",
+          "title": "Delete actors (deleteScope actors, the default: actorName or actorNames, exact names only, so TestActor never takes TestActor_Copy) or every actor carrying tag or any of tags (by_tag), in one undo step. While Play runs they leave the running game, which nothing saves or undoes. Replies deletedCount and deleted; names not found refuse with NOT_FOUND, or DELETE_PARTIAL when some went, both carrying the deleted and missing lists.",
           "input": {
             "action": "delete",
             "actorName": "Cube1",
@@ -34582,7 +34582,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "5e073932f61f951d025af198cd957884495756fa64bd6894d2c6e964bef6fa84",
-        "content": "06280b59bef17128cb6ce6f644a8c1627d9551ad58a67f9736db7e169d13b21e"
+        "content": "ff036168506c564020c4c6f0ce734c180986d460e6fa2835b818ddff3a837b23"
       }
     },
     {
@@ -34921,7 +34921,7 @@
           "add component to actor",
           "attach component to actor"
         ],
-        "summary": "Add or remove an actor component, or set one or more of its properties (a placed mesh's StaticMesh or OverrideMaterials, a light's Intensity or LightColor to turn on a light, dim it or make it brighter, a TextRender's Text).",
+        "summary": "Add a component to a placed actor (edit add: componentType, componentName, meshPath, properties; attached under its root, a light made Movable), remove one (remove), or set one or more of its properties (set_property, set_properties: a placed mesh's StaticMesh or OverrideMaterials, a light's Intensity or LightColor to turn on a light, dim it or make it brighter, a TextRender's Text). remove takes the exact name, refused with COMPONENT_NOT_FOUND naming the nearest, and only a component added to this actor: one from its class or Blueprint, or its root, is COMPONENT_NOT_REMOVABLE (a Blueprint component comes out with edit_scs). Each is one undo step and leaves the level unsaved; while Play runs they change the playing copy.",
         "whenToUse": [
           "edit=add: A component must be attached to an existing actor.",
           "edit=add: A placed actor must spin or travel by itself, like a platform: add a RotatingMovementComponent (properties RotationRate {pitch, yaw, roll} in degrees per second) or an InterpToMovementComponent (ControlPoints: two or more {PositionControlPoint {x, y, z}, bPositionIsRelative}, Duration in seconds, and BehaviourType PingPong or Loop: the default OneShot stops at the last point).",
@@ -35022,7 +35022,7 @@
       },
       "examples": [
         {
-          "title": "Add or remove an actor component, or set one or more of its properties (a placed mesh's StaticMesh or OverrideMaterials, a light's Intensity or LightColor to turn on a light, dim it or make it brighter, a TextRender's Text).",
+          "title": "Add a component to a placed actor (edit add: componentType, componentName, meshPath, properties; attached under its root, a light made Movable), remove one (remove), or set one or more of its properties (set_property, set_properties: a placed mesh's StaticMesh or OverrideMaterials, a light's Intensity or LightColor to turn on a light, dim it or make it brighter, a TextRender's Text). remove takes the exact name, refused with COMPONENT_NOT_FOUND naming the nearest, and only a component added to this actor: one from its class or Blueprint, or its root, is COMPONENT_NOT_REMOVABLE (a Blueprint component comes out with edit_scs). Each is one undo step and leaves the level unsaved; while Play runs they change the playing copy.",
           "input": {
             "action": "edit_component",
             "actorName": "Cube1",
@@ -35097,7 +35097,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "a7b8c3d8565d3f8b5e493d6d58d8a13d9719b3c6056efdbf3e8aa31f987fb8fd",
-        "content": "e181f3de9243c04d89fabb2d70934d90bd3514cd18f250f142a1cb28bd9f9acc"
+        "content": "d2bc30b96ee0e64ed3879c6d24e6e16c08835cfc4201fb3b923113e0e3a93033"
       }
     },
     {
@@ -35925,7 +35925,7 @@
           "actor bounds",
           "bounding box"
         ],
-        "summary": "List an actor's components, or read its bounds.",
+        "summary": "List an actor's components (info components, the default): each with name, class, path, relative location, rotation and scale (and worldScale when a parent scales it), attach parent and visibility; componentNames keeps only those, naming the others in missingComponents. A Blueprint asset path lists its class default, which holds only the native components, not the ones the Blueprint adds (read those with edit_scs). Or read its bounds (bounds): origin and half-size extent of every component, colliding or not. The running game copy while Play runs.",
         "whenToUse": [
           "info=components: The component composition of an actor must be inspected.",
           "info=bounds: The spatial extent of an actor must be measured."
@@ -36079,7 +36079,7 @@
       },
       "examples": [
         {
-          "title": "List an actor's components, or read its bounds.",
+          "title": "List an actor's components (info components, the default): each with name, class, path, relative location, rotation and scale (and worldScale when a parent scales it), attach parent and visibility; componentNames keeps only those, naming the others in missingComponents. A Blueprint asset path lists its class default, which holds only the native components, not the ones the Blueprint adds (read those with edit_scs). Or read its bounds (bounds): origin and half-size extent of every component, colliding or not. The running game copy while Play runs.",
           "input": {
             "action": "get_components",
             "actorName": "Cube1",
@@ -36137,7 +36137,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "b9dc812af382ae100702b254bc4aa31069b75e57dda588b9c1e751e149d54ade",
-        "content": "62936aa66a34e7c6dc697f495fa305d2b369c1b63cfcffb88929e9eb71879386"
+        "content": "1a3869c17283009f25456713b43b006bed0024596b4a25f242d390bd18c4c408"
       }
     },
     {
@@ -37599,7 +37599,7 @@
           "replace mesh material",
           "set material slot"
         ],
-        "summary": "Apply a material to an actor's mesh component(s).",
+        "summary": "Put a material on an actor: slot materialSlot (default 0) of its first mesh component that has that slot, of componentName, or of every one with allComponents; materials sets slot i from entry i (\"\" skips one), and actorNames gives many actors the same material. One undo step. Refusals: MATERIAL_NOT_FOUND, ACTOR_NOT_FOUND, COMPONENT_NOT_FOUND, MATERIAL_SLOT_NOT_FOUND (no component has the slot); a list that partly failed answers MATERIAL_BATCH_INCOMPLETE naming each failure. While Play runs it changes the playing copy, gone when play stops.",
         "whenToUse": [
           "A material must be assigned to an actor mesh component.",
           "A mesh with several material slots (an SDF part) needs a material in each: materials sets them all in one call."
@@ -37693,7 +37693,7 @@
       },
       "examples": [
         {
-          "title": "Apply a material to an actor's mesh component(s).",
+          "title": "Put a material on an actor: slot materialSlot (default 0) of its first mesh component that has that slot, of componentName, or of every one with allComponents; materials sets slot i from entry i (\"\" skips one), and actorNames gives many actors the same material. One undo step. Refusals: MATERIAL_NOT_FOUND, ACTOR_NOT_FOUND, COMPONENT_NOT_FOUND, MATERIAL_SLOT_NOT_FOUND (no component has the slot); a list that partly failed answers MATERIAL_BATCH_INCOMPLETE naming each failure. While Play runs it changes the playing copy, gone when play stops.",
           "input": {
             "action": "set_material",
             "actorName": "Cube1",
@@ -37733,7 +37733,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "e99c52e4680efc5021bcada6cf52ebcb1092ee7091e37e2eaa7d6cab87b3097c",
-        "content": "f16e53a253e46b063755037e683439fe7c18f64985faecf3d6aafd2d87f6519f"
+        "content": "2b1fce83f41c9726e338989381b1f6843b9fe44617c1d945bb222a37fb85329c"
       }
     },
     {
@@ -42675,13 +42675,14 @@
         "topics": [
           "start_recording"
         ],
-        "summary": "Start or stop an editor gameplay recording.",
+        "summary": "Record the running Play In Editor game as a replay (control start, the default: DemoRec, written by default under Saved/Demos; frameRate and durationSeconds), or stop it (stop; NOT_RECORDING when nothing records). Refused without a running game (NO_ACTIVE_SESSION). For playback, seeking or a killcam, use the sequence demo actions.",
         "whenToUse": [
-          "control=start: A demo recording must be started for replay capture.",
-          "control=stop: An in-progress demo recording must be stopped."
+          "control=start: The running game must be recorded as a replay.",
+          "control=stop: An in-progress replay recording must be stopped."
         ],
         "whenNotToUse": [
           "control=start: A recording is already in progress.",
+          "control=start: The replay must be played back, sought or used as a killcam: the sequence demo actions (start_demo_recording, play_demo) handle the whole replay.",
           "control=stop: No recording is in progress."
         ]
       },
@@ -42755,7 +42756,7 @@
       },
       "examples": [
         {
-          "title": "Start or stop an editor gameplay recording.",
+          "title": "Record the running Play In Editor game as a replay (control start, the default: DemoRec, written by default under Saved/Demos; frameRate and durationSeconds), or stop it (stop; NOT_RECORDING when nothing records). Refused without a running game (NO_ACTIVE_SESSION). For playback, seeking or a killcam, use the sequence demo actions.",
           "input": {
             "action": "start_recording",
             "filename": "TestRecording",
@@ -42817,7 +42818,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "3ff0579598dab72811add84ae15b3cb007559f636e3d08831d07c5bed98600db",
-        "content": "53da0be66e966c318fc184b973dcbdee87bb9b0ad2186a15aa27540dda1a1c15"
+        "content": "cac280d37c151f3801e2abd0fb8a1ba79e07f4ae1e3629b75878c9a8a34567b5"
       }
     },
     {
@@ -86046,7 +86047,7 @@
         "topics": [
           "compile_material"
         ],
-        "summary": "Compile a material, or rebuild it from its graph.",
+        "summary": "Recompile a material or material function from its graph (compileOp compile, the default; rebuild runs the same recompile) and wait for every shader. A material that does not compile answers compiled false with compileErrors, since it renders as the default material until fixed; saved says whether it was written (save, default true). A material function is updated without the shader check.",
         "whenToUse": [
           "compileOp=compile: The compile errors of an edited graph must be read; a material that fails to compile renders as the default material.",
           "compileOp=compile: Graph edits left the asset unsaved, so it must be compiled and saved.",
@@ -86136,7 +86137,7 @@
       },
       "examples": [
         {
-          "title": "Compile a material, or rebuild it from its graph.",
+          "title": "Recompile a material or material function from its graph (compileOp compile, the default; rebuild runs the same recompile) and wait for every shader. A material that does not compile answers compiled false with compileErrors, since it renders as the default material until fixed; saved says whether it was written (save, default true). A material function is updated without the shader check.",
           "input": {
             "assetPath": "/Game/Materials/M_Base",
             "action": "compile_material",
@@ -86184,7 +86185,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "a9e8398a7bc3d6a5d85ef4236978546480515f1ac01931c1b8cd195a1e93c9da",
-        "content": "f12379f8cc29f0428acd32dced97d98ddac664ca16beb8148fc70d3d0c0aa82d"
+        "content": "820eefc4e7872eb8445befa20f5925471b519b2a5af18d327eb5847ab6d20ab3"
       }
     },
     {
@@ -86340,7 +86341,7 @@
           "connect texture to base color",
           "connect node to base color"
         ],
-        "summary": "Connect two material graph pins.",
+        "summary": "Wire an output of sourceNodeId (sourcePin: a name, an index or channel letters such as G or RG; default its first output) into targetPin of targetNodeId, replacing whatever fed that input. targetNodeId Main is the material output (BaseColor, Roughness, Normal, EmissiveColor...), or in a material function its output named targetPin (the first when left out). The material recompiles and is left unsaved (save_all keeps it). NODE_NOT_FOUND names Main when the target id is missing; INVALID_PIN or PIN_NOT_FOUND lists the inputs the node has.",
         "whenToUse": [
           "The output of one material node must feed an input of another node in the same material or function.",
           "A node result must drive a material output such as BaseColor or Roughness (targetNodeId Main)."
@@ -86416,7 +86417,7 @@
       },
       "examples": [
         {
-          "title": "Connect two material graph pins.",
+          "title": "Wire an output of sourceNodeId (sourcePin: a name, an index or channel letters such as G or RG; default its first output) into targetPin of targetNodeId, replacing whatever fed that input. targetNodeId Main is the material output (BaseColor, Roughness, Normal, EmissiveColor...), or in a material function its output named targetPin (the first when left out). The material recompiles and is left unsaved (save_all keeps it). NODE_NOT_FOUND names Main when the target id is missing; INVALID_PIN or PIN_NOT_FOUND lists the inputs the node has.",
           "input": {
             "materialPath": "/Game/Materials/M_Base",
             "sourceNodeId": "MaterialExpressionTextureSample_0",
@@ -86460,7 +86461,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "6a278a70fabbd1a137cb3e839c8ef834c0340d90c6413d013a8b68e1a5c84c39",
-        "content": "651529b835269c522ac6cecd276927e0aca90deeba204ce8be6a7f40a3de509f"
+        "content": "3449a9a2a9e0e22bb3e294d7fe5cba39bf58f1c6ee27b66fd79f4ec84c635952"
       }
     },
     {
@@ -87171,7 +87172,7 @@
         "topics": [
           "disconnect_nodes"
         ],
-        "summary": "Disconnect a material graph pin or node.",
+        "summary": "Unplug the wire into pinName of nodeId (or with nodeId Main a material output such as BaseColor), keeping both nodes; the input falls back to its default. A pin name that matches none fails listing the inputs; a material function output node with no pinName unplugs every output. The material recompiles and is left unsaved (save_all keeps it).",
         "whenToUse": [
           "The wire into one input pin of a node must be cleared while both nodes stay.",
           "A material output such as BaseColor must be unplugged (nodeId Main with pinName BaseColor)."
@@ -87234,7 +87235,7 @@
       },
       "examples": [
         {
-          "title": "Disconnect a material graph pin or node.",
+          "title": "Unplug the wire into pinName of nodeId (or with nodeId Main a material output such as BaseColor), keeping both nodes; the input falls back to its default. A pin name that matches none fails listing the inputs; a material function output node with no pinName unplugs every output. The material recompiles and is left unsaved (save_all keeps it).",
           "input": {
             "materialPath": "/Game/Materials/M_Base",
             "nodeId": "MaterialExpressionMultiply_0",
@@ -87276,7 +87277,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "4d2535083e0767e0e3c02178d25f89ad96f371fc15bc05854de3de543534fb4c",
-        "content": "60afc07c22cefa466f507d0213769f1709e3cf604ae295893e0f9de6c847aa23"
+        "content": "90d475eedb7deefc281af142236263c26ab0e9f0924429e86c9029ea8ddadad5"
       }
     },
     {
@@ -92128,7 +92129,7 @@
           "play_media",
           "play video file"
         ],
-        "summary": "Play, pause or seek a media player.",
+        "summary": "Play a media player asset (control play, the default): it opens mediaSourcePath, a playlist (playlistPath, playlistIndex) or filePath first when given, closing what it was playing, else plays what it has open, and the reply waits up to 10 s for it to open and start (openStatus, openWaitMs, isPlaying, currentUrl), failing with MEDIA_OPEN_FAILED, MEDIA_OPEN_TIMEOUT or MEDIA_PLAY_TIMEOUT. Or pause it (pause) or seek it (seek). The picture shows only where its media texture is used (a material on a mesh, or a widget), and its sound needs a media sound component.",
         "whenToUse": [
           "control=play: Media playback must be started on an existing MediaPlayer.",
           "control=pause: Media playback must be paused.",
@@ -92243,7 +92244,7 @@
       },
       "examples": [
         {
-          "title": "Play, pause or seek a media player.",
+          "title": "Play a media player asset (control play, the default): it opens mediaSourcePath, a playlist (playlistPath, playlistIndex) or filePath first when given, closing what it was playing, else plays what it has open, and the reply waits up to 10 s for it to open and start (openStatus, openWaitMs, isPlaying, currentUrl), failing with MEDIA_OPEN_FAILED, MEDIA_OPEN_TIMEOUT or MEDIA_PLAY_TIMEOUT. Or pause it (pause) or seek it (seek). The picture shows only where its media texture is used (a material on a mesh, or a widget), and its sound needs a media sound component.",
           "input": {
             "action": "play_media",
             "playerPath": "/Game/Media/MP_Cinematics",
@@ -92326,7 +92327,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "ccbb9d6802af262ae9cab7ec9e26822b18f8115dcccf7c8b84cea09ff781e9ef",
-        "content": "8a76499dd76e60b8d6d1845dfc914b8bb48c20b0f2a5b9fed884880ce52a5d98"
+        "content": "300061ad1a5d69142d00e852a8e590c4955c4a348d7e81359a870854c25f02e6"
       }
     },
     {

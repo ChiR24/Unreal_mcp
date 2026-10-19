@@ -99,15 +99,17 @@ bool UEngineWireSubsystem::HandleControlEditorStopRecording(
     return true;
   }
 
-  // UE 5.7: TObjectPtr requires explicit cast to UWorld*
-  UWorld* World = GEditor->PlayWorld ? GEditor->PlayWorld.Get() : GEditor->GetEditorWorldContext().World();
-  if (World) {
-    GEditor->Exec(World, TEXT("DemoStop"));
+  // It answered "Recording stopped" with nothing recording, even with no game running.
+  UWorld* World = GEditor->PlayWorld.Get();
+  if (!World || !World->GetDemoNetDriver()) {
+    SendAutomationError(Socket, RequestId,
+                        TEXT("No replay is recording: start_recording starts one while Play In Editor runs"),
+                        TEXT("NOT_RECORDING"));
+    return true;
   }
+  GEditor->Exec(World, TEXT("DemoStop"));
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  Resp->SetBoolField(TEXT("success"), true);
-  Resp->SetStringField(TEXT("message"), TEXT("Recording stopped"));
 
   SendAutomationResponse(Socket, RequestId, true,
                          TEXT("Recording stopped"), Resp, FString());

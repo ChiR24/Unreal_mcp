@@ -163,12 +163,12 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
     topics: ['create material', 'decal material', 'landscape material', 'post process material', 'material function', 'material parameter collection'],
     members: { material: 'create_material', decal: 'create_decal_material', landscape: 'create_landscape_material', post_process: 'create_post_process_material', function: 'create_material_function', parameter_collection: 'create_parameter_collection' },
   },
-  { primary: 'connect_nodes', topics: ['connect texture to base color', 'connect node to base color'], summary: 'Connect two material graph pins.', members: ['connect_material_pins'] },
-  { primary: 'disconnect_nodes', summary: 'Disconnect a material graph pin or node.', members: ['break_material_connections'] },
+  { primary: 'connect_nodes', topics: ['connect texture to base color', 'connect node to base color'], summary: 'Wire an output of sourceNodeId (sourcePin: a name, an index or channel letters such as G or RG; default its first output) into targetPin of targetNodeId, replacing whatever fed that input. targetNodeId Main is the material output (BaseColor, Roughness, Normal, EmissiveColor...), or in a material function its output named targetPin (the first when left out). The material recompiles and is left unsaved (save_all keeps it). NODE_NOT_FOUND names Main when the target id is missing; INVALID_PIN or PIN_NOT_FOUND lists the inputs the node has.', members: ['connect_material_pins'] },
+  { primary: 'disconnect_nodes', summary: 'Unplug the wire into pinName of nodeId (or with nodeId Main a material output such as BaseColor), keeping both nodes; the input falls back to its default. A pin name that matches none fails listing the inputs; a material function output node with no pinName unplugs every output. The material recompiles and is left unsaved (save_all keeps it).', members: ['break_material_connections'] },
   { primary: 'delete_node', summary: 'Delete nodes from a material or material function graph: nodeId, or nodeIds for several. Every wire to a deleted node is cut, the material outputs it fed included, so what it fed falls back to its default; the material is then recompiled and saved unless save is false. Ids that match nothing come back in notFound, and NOT_FOUND answers only when none matched (read the ids with get_material_info or find_node).', members: ['remove_material_node'] },
   {
     primary: 'compile_material', selector: 'compileOp',
-    summary: 'Compile a material, or rebuild it from its graph.',
+    summary: 'Recompile a material or material function from its graph (compileOp compile, the default; rebuild runs the same recompile) and wait for every shader. A material that does not compile answers compiled false with compileErrors, since it renders as the default material until fixed; saved says whether it was written (save, default true). A material function is updated without the shader check.',
     members: { compile: 'compile_material', rebuild: 'rebuild_material' },
   },
   {

@@ -57,8 +57,14 @@ bool UEngineWireSubsystem::HandleControlActorAttach(
   bool bSnap = false;
   Payload->TryGetBoolField(TEXT("snapToTarget"), bSnap);
 
-  Child->Modify();
-  ChildRoot->Modify();
+  // Modify alone left nothing for undo to take back (detach had the same gap): the attach records the child, its
+  // root, the new parent component and any old one, whose child lists change too.
+  TArray<UObject *> Undoable{Child, ChildRoot, ParentRoot};
+  if (USceneComponent *OldParent = ChildRoot->GetAttachParent()) {
+    Undoable.AddUnique(OldParent);
+  }
+  FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Attach Actor")), EMcpMutationDurability::EditorStateOnly,
+                                          Undoable);
   ChildRoot->AttachToComponent(ParentRoot,
                                bSnap ? FAttachmentTransformRules::SnapToTargetNotIncludingScale
                                      : FAttachmentTransformRules::KeepWorldTransform,

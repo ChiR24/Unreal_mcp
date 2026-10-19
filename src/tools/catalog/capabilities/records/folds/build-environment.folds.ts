@@ -152,7 +152,7 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'create_atmosphere_actor', selector: 'kind',
-    summary: 'Create a sky sphere, a fog volume, or a time-of-day system.',
+    summary: 'Create the sky lighting rig (kind sky_sphere: a Sky Atmosphere, a sun and a Sky Light), an Exponential Height Fog (fog_volume), or one actor carrying its own sun, sky light and atmosphere at noon (time_of_day_system; nothing animates it, set_time_of_day moves the sun). Each reuses an actor already carrying its label, but one labelled otherwise is not seen, so mixing sky_sphere and time_of_day_system, or a sun of another label, doubles the sun.',
     topics: ['sky sphere', 'fog volume', 'time of day system'],
     members: { sky_sphere: 'create_sky_sphere', fog_volume: 'create_fog_volume', time_of_day_system: 'create_time_of_day_system' },
   },

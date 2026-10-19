@@ -75,13 +75,8 @@ bool HandleCompileMaterial(UEngineWireSubsystem* Bridge, const FString& RequestI
 
     bool bSave = true;
     Payload->TryGetBoolField(TEXT("save"), bSave);
-    if (bSave) {
-      if (Material) {
-        McpSafeAssetSave(Material);
-      } else {
-        McpSafeAssetSave(Function);
-      }
-    }
+    // saved echoed the request; it reports whether the save went through.
+    const bool bSaved = bSave && (Material ? McpSafeAssetSave(Material) : McpSafeAssetSave(Function));
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("assetPath"), AssetPath);
@@ -93,7 +88,7 @@ bool HandleCompileMaterial(UEngineWireSubsystem* Bridge, const FString& RequestI
       ErrorValues.Add(MakeShared<FJsonValueString>(Error));
     }
     Result->SetArrayField(TEXT("compileErrors"), ErrorValues);
-    Result->SetBoolField(TEXT("saved"), bSave);
+    Result->SetBoolField(TEXT("saved"), bSaved);
     Bridge->SendAutomationResponse(Socket, RequestId, true,
                            !Material ? FString(TEXT("Material function updated."))
                            : CompileErrors.Num() == 0 ? FString(TEXT("Material compiled."))

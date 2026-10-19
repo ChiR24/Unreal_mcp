@@ -1,4 +1,5 @@
 #include "Domains/ControlActor/McpActorSupport.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 
@@ -43,6 +44,9 @@ bool UEngineWireSubsystem::HandleControlActorAddComponent(
     ComponentName = FString::Printf(TEXT("%s_%d"), *ComponentClass->GetName(),
                                     FMath::Rand());
 
+  // One undo step, as remove_component and the property edits are: Modify alone left nothing to take back.
+  FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Add Component")), EMcpMutationDurability::EditorStateOnly,
+                                          {Found});
   FName DesiredName = FName(*ComponentName);
   UActorComponent *NewComponent = NewObject<UActorComponent>(
       Found, ComponentClass, DesiredName, RF_Transactional);
@@ -238,23 +242,44 @@ bool UEngineWireSubsystem::HandleControlActorRemoveComponent(
     return true;
   }
 
-  // CRITICAL FIX: Use FindComponentByName helper which supports fuzzy matching
+  // Only the component the caller named: the lookup also accepts a prefix or part of the path, which for a removal
+  // took "Mesh" to StaticMeshComponent0. A near miss is named back instead.
   UActorComponent* Component = FindComponentByName(Actor, ComponentName);
-  if (Component) {
-    Component->DestroyComponent();
-    TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
-    Data->SetStringField(TEXT("actorName"), ActorName);
-    Data->SetStringField(TEXT("componentName"), ComponentName);
-
-    Data->SetBoolField(TEXT("existsAfter"), false);
-    Data->SetStringField(TEXT("action"), TEXT("control_actor:deleted"));
-
-    SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Component removed"), Data);
+  const bool bExact = Component && (Component->GetName().Equals(ComponentName, ESearchCase::IgnoreCase) ||
+                                    Component->GetPathName().EndsWith(TEXT(".") + ComponentName, ESearchCase::IgnoreCase) ||
+                                    Component->GetPathName().EndsWith(TEXT(":") + ComponentName, ESearchCase::IgnoreCase));
+  if (!bExact) {
+    SendAutomationError(Socket, RequestId,
+                        Component ? FString::Printf(TEXT("No component named %s; did you mean %s?"), *ComponentName, *Component->GetName())
+                                  : FString::Printf(TEXT("Component not found: %s"), *ComponentName),
+                        TEXT("COMPONENT_NOT_FOUND"));
     return true;
   }
-
-  SendAutomationError(Socket, RequestId,
-                      FString::Printf(TEXT("Component not found: %s"), *ComponentName),
-                      TEXT("COMPONENT_NOT_FOUND"));
+  // Only a component added to this actor goes: the class or its Blueprint rebuilds the others (the construction
+  // script on the next move), which the reply used to call removed.
+  if (Component->CreationMethod != EComponentCreationMethod::Instance || Component == Actor->GetRootComponent()) {
+    SendAutomationError(Socket, RequestId,
+                        Component == Actor->GetRootComponent()
+                            ? FString::Printf(TEXT("%s is the actor's root; removing it would drop everything under it"), *Component->GetName())
+                        : Component->CreationMethod == EComponentCreationMethod::SimpleConstructionScript
+                            ? FString::Printf(TEXT("%s comes from the actor's Blueprint and would come back: remove it there with edit_scs"), *Component->GetName())
+                            : FString::Printf(TEXT("%s is part of the actor's class, not added to this actor, so it cannot be removed"), *Component->GetName()),
+                        TEXT("COMPONENT_NOT_REMOVABLE"));
+    return true;
+  }
+  // One undo step, and the level is marked unsaved: the removal was neither, so a save left the component in.
+  const FString Removed = Component->GetName();
+  {
+    FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Remove Component")),
+                                            EMcpMutationDurability::EditorStateOnly, {Actor, Component});
+    Component->DestroyComponent();
+    Actor->MarkPackageDirty();
+  }
+  TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
+  Data->SetStringField(TEXT("actorName"), McpActorRef(Actor));
+  Data->SetStringField(TEXT("componentName"), Removed);
+  Data->SetBoolField(TEXT("existsAfter"), false);
+  Data->SetStringField(TEXT("action"), TEXT("control_actor:deleted"));
+  SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Component removed"), Data);
   return true;
 }

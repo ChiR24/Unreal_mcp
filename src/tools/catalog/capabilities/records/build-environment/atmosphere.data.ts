@@ -45,8 +45,8 @@ const CURVE_KEYS = {
 export const ATMOSPHERE_RECORDS: readonly CapabilityRecordSource[] = [
   buildRecord({
     id: 'build_environment.create_sky_sphere', action: 'create_sky_sphere', family: F,
-    summary: 'Create a sky rig: a sky atmosphere, a sun (directional light) and a sky light, labelled <name>_Atmosphere, _Sun and _SkyLight.',
-    whenToUse: WU, whenNotToUse: ['A sky atmosphere is already present.'],
+    summary: 'Create the sky lighting rig in the level being edited: a Sky Atmosphere, a sun (Directional Light) and a Sky Light, labelled <name>_Atmosphere, <name>_Sun and <name>_SkyLight (SkyAtmosphere, DirectionalLight and SkyLight without a name). An actor already carrying one of those labels is reused and set up rather than doubled, but a sun or atmosphere labelled otherwise is not found, so the level gets a second one. No sky sphere mesh, clouds or fog: add those with configure_volumetric_cloud and create_fog_volume. Replies createdActorCount (0 when all three existed) and the three actor names.',
+    whenToUse: WU, whenNotToUse: ['A sky atmosphere or sun is already present under another label: configure it (configure_sky_atmosphere, configure_directional_light_atmosphere) instead of adding a second.'],
     inputProps: { name: P.name, location: P.location },
     required: [], effect: 'write', latency: 'interactive', resources: 'low',
     exampleInput: { action: 'create_sky_sphere', name: 'SkySphere_1' },
@@ -61,16 +61,16 @@ export const ATMOSPHERE_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'build_environment.create_time_of_day_system', action: 'create_time_of_day_system', family: F,
-    summary: 'Create a full time-of-day system with sun and sky curves.',
-    whenToUse: WU, whenNotToUse: ['A static time should be set instead.'],
+    summary: 'Create one actor, TimeOfDaySystem (or name), carrying its own sun (a directional light at intensity 10, the atmosphere sun), sky light (intensity 1) and sky atmosphere, all movable, with the sun at noon; an actor already labelled so gets the missing parts. Nothing animates it, no curves and no day cycle: move the sun with set_time_of_day. A level that already has a sun or sky atmosphere (create_sky_sphere, the default level template) ends up with two of each, so use one rig or the other.',
+    whenToUse: WU, whenNotToUse: ['The level already has a sun and sky atmosphere: set_time_of_day moves its sun.'],
     inputProps: { name: P.name, location: P.location },
     required: [], effect: 'write', latency: 'interactive', resources: 'medium',
     exampleInput: { action: 'create_time_of_day_system', name: 'TOD_1' },
   }),
   buildRecord({
     id: 'build_environment.create_fog_volume', action: 'create_fog_volume', family: F,
-    summary: 'Create (or find by name) an exponential height fog actor.',
-    whenToUse: WU, whenNotToUse: ['Exponential height fog is sufficient.'],
+    summary: 'Create an Exponential Height Fog actor in the level being edited, or set up the one already labelled name (default ExponentialHeightFog), with density and settings (properties of its fog component). It is height fog over the whole level, not a local volume, and a fog labelled otherwise is not found, so the level gets a second one.',
+    whenToUse: WU, whenNotToUse: ['The level has a height fog under another label: configure_exponential_height_fog finds the first one.'],
     inputProps: { name: P.name, location: P.location, rotation: P.rotation, density: FOG_DENSITY, settings: P.actorSettings },
     required: [], effect: 'write', latency: 'interactive', resources: 'low',
     exampleInput: { action: 'create_fog_volume', name: 'FogVol_1', location: { x: 0, y: 0, z: 0 } },

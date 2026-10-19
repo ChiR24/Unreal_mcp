@@ -47,7 +47,8 @@ const testCases = [
   { scenario: 'ACTION: start_recording', toolName: 'control_editor', arguments: { action: 'start_recording', name: `Recording_${ts}` }, expected: 'success' },
   { scenario: 'PLAYBACK: stop_recording', toolName: 'control_editor', arguments: { action: 'stop_recording' }, expected: 'success' },
   { scenario: 'OPTIONAL: start_recording with durationSeconds and frameRate', toolName: 'control_editor', arguments: { action: 'start_recording', name: `Recording_Opt_${ts}`, durationSeconds: 1, frameRate: 30 }, expected: 'success' },
-  { scenario: 'PLAYBACK: stop_recording after optional capture', toolName: 'control_editor', arguments: { action: 'stop_recording' }, expected: 'success' },
+  // durationSeconds 1 may already have stopped it, and stop_recording then says nothing records.
+  { scenario: 'PLAYBACK: stop_recording after optional capture', toolName: 'control_editor', arguments: { action: 'stop_recording' }, expected: 'success|no replay is recording' },
   { scenario: 'PLAYBACK: pause', toolName: 'control_editor', arguments: { action: 'pause' }, expected: 'success' },
   // A pawn teleported into a paused game floats where it was put; the reply and its receipt say why.
   { scenario: 'VERIFY: a world edit while paused says nothing will move', toolName: 'control_actor', arguments: { action: 'set_transform', actorName: PIE_PAWN, location: { x: 180, y: 0, z: 400 } }, expected: 'success', assertions: [{ path: 'structuredContent.result.details.gamePaused', equals: true, label: 'the reply flags the paused play world' }, { path: 'structuredContent.receipt.warnings.1', includes: 'The game is paused', label: 'and the receipt says nothing will move' }] },
@@ -95,6 +96,7 @@ const testCases = [
   { scenario: 'OPTIONAL: keepFile false with returnBase64 false is refused', toolName: 'control_editor', arguments: { action: 'screenshot', mode: 'editor_viewport', keepFile: false, returnBase64: false }, expected: 'error|INVALID_ARGUMENT' },
   // A replay records the running game, so outside PIE there is nothing to record.
   { scenario: 'ERROR: start_recording outside PIE', toolName: 'control_editor', arguments: { action: 'start_recording', name: `Recording_NoPie_${ts}` }, expected: 'error|NO_ACTIVE_SESSION' },
+  { scenario: 'ERROR: stop_recording with nothing recording', toolName: 'control_editor', arguments: { action: 'stop_recording' }, expected: 'error|NOT_RECORDING' },
 
   // === BOOKMARKS / PREFERENCES / ASSETS ===
   { scenario: 'CREATE: create_bookmark', toolName: 'control_editor', arguments: { action: 'create_bookmark', id: 0 }, expected: 'success' },

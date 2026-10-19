@@ -18,7 +18,7 @@ export const CONTROL_EDITOR_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'start_recording', selector: 'control',
-    summary: 'Start or stop an editor gameplay recording.',
+    summary: 'Record the running Play In Editor game as a replay (control start, the default: DemoRec, written by default under Saved/Demos; frameRate and durationSeconds), or stop it (stop; NOT_RECORDING when nothing records). Refused without a running game (NO_ACTIVE_SESSION). For playback, seeking or a killcam, use the sequence demo actions.',
     members: { start: 'start_recording', stop: 'stop_recording' },
   },
   {
