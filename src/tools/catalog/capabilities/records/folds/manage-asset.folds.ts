@@ -73,7 +73,7 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
     },
   },
   // lifecycle (tool-mode)
-  { primary: 'duplicate', summary: 'Duplicate an asset to a new path or name.', members: ['duplicate_asset'] },
+  { primary: 'duplicate', summary: 'Copy an asset, or a whole folder with its sub-folders, and save the copies. destinationPath is a folder (the copy keeps the source name, or takes newName), a full asset path, or a bare name beside the source; newName alone copies beside the source. A taken destination is refused (DESTINATION_EXISTS) and a missing source answers ASSET_NOT_FOUND; a folder copy skips assets whose destination is taken (duplicatedCount under assetCount). Each asset is copied on its own: what referred to the original, placed actors and the other copies included, still does. A copied Blueprint gets its Math Expressions rebound and a copied Niagara system is compiled, so both work at once.', members: ['duplicate_asset'] },
   {
     primary: 'move',
     summary: 'Move an asset to a new path, or a whole folder: every asset under it moves (sub-folders kept) and references, redirectors and project settings follow.',
@@ -165,7 +165,7 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
   },
   { primary: 'connect_nodes', topics: ['connect texture to base color', 'connect node to base color'], summary: 'Connect two material graph pins.', members: ['connect_material_pins'] },
   { primary: 'disconnect_nodes', summary: 'Disconnect a material graph pin or node.', members: ['break_material_connections'] },
-  { primary: 'delete_node', summary: 'Delete a node from a material graph.', members: ['remove_material_node'] },
+  { primary: 'delete_node', summary: 'Delete nodes from a material or material function graph: nodeId, or nodeIds for several. Every wire to a deleted node is cut, the material outputs it fed included, so what it fed falls back to its default; the material is then recompiled and saved unless save is false. Ids that match nothing come back in notFound, and NOT_FOUND answers only when none matched (read the ids with get_material_info or find_node).', members: ['remove_material_node'] },
   {
     primary: 'compile_material', selector: 'compileOp',
     summary: 'Compile a material, or rebuild it from its graph.',

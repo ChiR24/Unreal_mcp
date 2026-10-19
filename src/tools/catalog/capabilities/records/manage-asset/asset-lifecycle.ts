@@ -36,6 +36,24 @@ const IMPORT_OUTPUT = schema({
 }, ['success']);
 const OK_OUTPUT = schema({ success: bool('Operation succeeded.'), details: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Operation details.' } }, ['success']);
 
+// duplicate and duplicate_asset: one handler (McpAssetImportDuplicate.cpp), one asset or a whole folder.
+const DUPLICATE_INPUT = schema({
+  sourcePath: str('The asset to copy (a /Game package or object path), or a folder: every asset under it is copied, sub-folders kept.'),
+  destinationPath: str('Where the copy goes: a folder (one that exists, or ending in /) where it keeps the source name or takes newName, a full asset path, or a bare name, which lands beside the source.'),
+  newName: str('Name for the copy: in the destinationPath folder, or beside the source when destinationPath is left out.'),
+}, ['sourcePath'], ['destinationPath', 'newName']);
+const DUPLICATE_OUTPUT = schema({
+  success: bool('Operation succeeded.'),
+  assetPath: str('One asset: the copy.'),
+  saved: bool('One asset: whether the copy was saved (an unsaved copy is gone after the editor restarts).'),
+  sourcePath: str('Folder: the folder copied.'),
+  destinationPath: str('Folder: where the copies went.'),
+  assetCount: num('Folder: the assets found under it, as far as the asset registry has indexed them.'),
+  duplicatedCount: num('Folder: how many were copied; fewer than assetCount means some destinations were taken.'),
+  savedCount: num('Folder: how many copies were saved.'),
+  details: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Operation details.' },
+}, ['success']);
+
 export const ASSET_LIFECYCLE_RECORDS: readonly RecordSpec[] = [
   r('list', 'asset', 'List assets under a /Game path with bounded pagination and opaque cursor continuation.',
     schema({
@@ -70,9 +88,8 @@ export const ASSET_LIFECYCLE_RECORDS: readonly RecordSpec[] = [
       examples: [ex('Import FBX', { sourcePath: '/tmp/mesh.fbx', destinationPath: '/Game/Imports/Mesh' }, { success: true }), ex('Import a mocap take onto an existing skeleton', { sourcePath: '/Game/../Imports/Mocap.fbx', destinationPath: '/Game/Anims/A_Mocap', importAnimations: true, skeletonPath: '/Game/Chars/SK_Hero_Skeleton' }, { success: true }), ex('Import a character onto an existing skeleton', { sourcePath: '/Game/../Imports/Hero.fbx', destinationPath: '/Game/Chars/SK_Hero.SK_Hero', skeletonPath: '/Game/Chars/SK_Mannequin_Skeleton', importMesh: true, createPhysicsAsset: false }, { success: true, assetPath: '/Game/Chars/SK_Hero', skeleton: '/Game/Chars/SK_Mannequin_Skeleton.SK_Mannequin_Skeleton', physicsAsset: '', bones: 68, morphTargets: 0 })] }
   ),
 
-  r('duplicate', 'asset', 'Duplicate an existing asset to a new path.',
-    schema({ sourcePath: str('Source /Game asset path.'), destinationPath: DEST_PATH, newName: str('New asset name.') }, ['sourcePath']),
-    OK_OUTPUT, WRITE, WRITE_POLICY, MEDIUM,
+  r('duplicate', 'asset', 'Copy an asset, or a whole folder with its sub-folders, to a new path or name, and save the copies.',
+    DUPLICATE_INPUT, DUPLICATE_OUTPUT, WRITE, WRITE_POLICY, MEDIUM,
     { topics: ['copy asset', 'clone asset', 'copy material', 'copy texture', 'duplicate material', 'duplicate blueprint', 'duplicate data table', 'make copy of asset', 'copy asset to another folder'],
       whenToUse: [
         'An asset needs a copy to edit safely while the original stays unchanged.',
@@ -85,8 +102,7 @@ export const ASSET_LIFECYCLE_RECORDS: readonly RecordSpec[] = [
       examples: [ex('Duplicate a material', { sourcePath: '/Game/Materials/M_Base', destinationPath: '/Game/Materials', newName: 'M_Base_Variant' }, { success: true })] }
   ),
   r('duplicate_asset', 'asset', 'Long-form alias for duplicate.',
-    schema({ sourcePath: str('Source /Game asset path.'), destinationPath: DEST_PATH, newName: str('New asset name.') }, ['sourcePath']),
-    OK_OUTPUT, WRITE, WRITE_POLICY, MEDIUM,
+    DUPLICATE_INPUT, DUPLICATE_OUTPUT, WRITE, WRITE_POLICY, MEDIUM,
     { 
       examples: [ex('Duplicate via the long-form alias', { sourcePath: '/Game/Materials/M_Base', destinationPath: '/Game/Materials', newName: 'M_Base_Variant' }, { success: true })] }
   ),

@@ -92,6 +92,8 @@ const testCases = [
   { scenario: 'SECURITY: import rejects project traversal', toolName: 'manage_asset', arguments: { action: 'import', sourcePath: '../outside.obj', destinationPath: asset(`T_TraversalImport_${ts}`) }, expected: 'error|security violation' },
   { scenario: 'ACTION: duplicate', toolName: 'manage_asset', arguments: { action: 'duplicate', sourcePath: DUPLICATE_SOURCE, destinationPath: DUPLICATE_DEST }, expected: 'success' },
   { scenario: 'ACTION: duplicate_asset', toolName: 'manage_asset', arguments: { action: 'duplicate_asset', sourcePath: DUPLICATE_ALIAS_SOURCE, destinationPath: DUPLICATE_ALIAS_DEST }, expected: 'success' },
+  // newName alone was refused for want of a destinationPath.
+  { scenario: 'ACTION: duplicate with newName alone lands beside the source', toolName: 'manage_asset', arguments: { action: 'duplicate', sourcePath: DUPLICATE_SOURCE, newName: `M_DuplicateBeside_${ts}` }, expected: 'success', assertions: [{ path: 'structuredContent.result.assetPath', equals: asset(`M_DuplicateBeside_${ts}`), label: 'in the source folder' }] },
   { scenario: 'ACTION: rename', toolName: 'manage_asset', arguments: { action: 'rename', sourcePath: RENAME_SOURCE, newName: RENAME_DEST_NAME }, expected: 'success' },
   { scenario: 'ACTION: rename_asset', toolName: 'manage_asset', arguments: { action: 'rename_asset', sourcePath: RENAME_ALIAS_SOURCE, newName: RENAME_ALIAS_DEST_NAME }, expected: 'success' },
   { scenario: 'ACTION: move', toolName: 'manage_asset', arguments: { action: 'move', sourcePath: MOVE_SOURCE, destinationPath: MOVE_DEST }, expected: 'success' },

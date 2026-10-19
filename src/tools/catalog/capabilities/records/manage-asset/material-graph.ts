@@ -15,6 +15,15 @@ const SOURCE_PIN = str('Source output: its name, its index, or channel letters o
 const TARGET_PIN = str('Target pin name. On the material output (targetNodeId Main): BaseColor, Metallic, Specular, Roughness, Anisotropy, EmissiveColor, Opacity, OpacityMask, Normal, Tangent, WorldPositionOffset, SubsurfaceColor, ClearCoat, ClearCoatRoughness, AmbientOcclusion, Refraction, PixelDepthOffset (and SurfaceThickness, Displacement on newer engines); a Cloth material\'s Cloth and FuzzColor, and CustomData0/CustomData1, name the clear-coat and subsurface pins they share.');
 const SAVE = bool('Save the asset afterwards. Defaults to true; pass false to keep the change in memory only.');
 const OK = schema({ success: bool('Operation succeeded.'), details: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Operation details.' } }, ['success']);
+// delete_node (and its alias remove_material_node) name what went and what matched nothing.
+const DELETE_NODE_OUT = schema({
+  success: bool('Operation succeeded.'),
+  removed: arr('The node ids deleted.'),
+  removedCount: { type: 'number', description: 'How many nodes were deleted.' },
+  notFound: arr('Ids that matched no node; the call still succeeds while one matched.'),
+  saved: bool('Whether the material was saved.'),
+  details: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Operation details.' },
+}, ['success']);
 // set_node_position echoes the applied coordinates and re-runs the same overlap
 // check the node adders use, so a caller can confirm the move actually cleared
 // the collision instead of trading one overlap for another.
@@ -132,7 +141,7 @@ export const MATERIAL_GRAPH_RECORDS: readonly RecordSpec[] = [
     { whenToUse: ['A static switch parameter must be turned on or off; on an instance this rebuilds the shader permutation.'],
       whenNotToUse: ['The parameter is not on the base material yet (add it there with asset.edit_material_instance edit=add_parameter or material.add_material_node).'],
       examples: [ex('Enable a detail-map switch on an instance', { assetPath: '/Game/Materials/MI_Base_Rusty', parameterName: 'UseDetailMap', value: true }, DONE)] }),
-  r('delete_node', 'material', 'Delete one node, or several with nodeIds, from a material graph; the material is recompiled and saved.', schema({ materialPath: MAT, nodeId: str('Node ID to delete.'), nodeIds: arr('Node IDs to delete in one batch, in place of nodeId.'), save: SAVE }, ['materialPath'], ['nodeId', 'nodeIds']), OK, WRITE, WRITE_POLICY, LOW,
+  r('delete_node', 'material', 'Delete one node, or several with nodeIds, from a material graph; the material is recompiled and saved.', schema({ materialPath: { ...MAT, description: 'The material or material function /Game path.' }, nodeId: str('Node ID to delete.'), nodeIds: arr('Node IDs to delete in one batch, in place of nodeId.'), save: SAVE }, ['materialPath'], ['nodeId', 'nodeIds']), DELETE_NODE_OUT, WRITE, WRITE_POLICY, LOW,
     { whenToUse: ['An unused or wrong node must leave a material or function graph, taking its wires with it.', 'Several stray nodes must go in one call (nodeIds).'],
       whenNotToUse: ['Only the wire to a node must be cleared while the node stays (use material.disconnect_nodes).', 'Unused nodes must be found first (use material.get_material_info with info=subgraph and orphansOnly=true).'],
       examples: [ex('Delete an unused multiply node', { materialPath: M, nodeId: MULTIPLY }, DONE)] }),

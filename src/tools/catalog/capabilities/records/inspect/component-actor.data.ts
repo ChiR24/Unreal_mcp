@@ -4,6 +4,7 @@
 import type { CapabilityRecordSource } from '../../model.js';
 import { buildCoreRecord } from '../core/builder.js';
 import { P } from './properties.js';
+import { TAG_OUT } from '../control-actor/search-records.js';
 
 const D = 'inspect';
 
@@ -83,11 +84,13 @@ export const COMPONENT_ACTOR_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'inspect', action: 'add_tag', dispatchAction: 'control_actor', domain: D, family: 'actor',
-    summary: 'Add a tag to a world actor (cross-parent to control_actor).',
+    summary: 'Add a tag to an actor named by actorName, name or objectPath, or to several with actorNames: control_actor.add_tag runs it, with the same reply (wasPresent; taggedCount, affectedActors and missing for several) and the same ACTOR_NOT_FOUND when nothing matched.',
     whenToUse: ['A tag must be added to an actor for grouping or queries.'],
     whenNotToUse: ['The actor already has the tag.'],
     inputProps: { objectPath: P.objectPath, actorName: P.actorName, actorNames: P.actorNames, name: P.name, tag: P.tag },
     required: ['tag'],
+    requiredOneOf: ['actorName', 'actorNames', 'name', 'objectPath'],
+    outputProps: TAG_OUT,
     effect: 'write', behavior: { idempotency: 'idempotent' },
     exampleInput: { action: 'add_tag', actorName: 'PlayerStart_1', tag: 'Spawn' },
   }),

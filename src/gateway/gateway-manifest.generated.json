@@ -7194,6 +7194,10 @@
               {
                 "type": "string",
                 "description": "The folder the asset goes in, e.g. /Game/Imports (it keeps the source file's name), or an object path such as /Game/Chars/SK_Hero.SK_Hero to name it."
+              },
+              {
+                "type": "string",
+                "description": "Where the copy goes: a folder (one that exists, or ending in /) where it keeps the source name or takes newName, a full asset path, or a bare name, which lands beside the source."
               }
             ],
             "description": "A /Game folder to move what the import created to, for example /Game/Props/Barriers. The layout beneath the import's own folder (StaticMeshes, Materials, Textures) is kept under it. Omit to leave the import where Fab put it. The shared master materials in /Game/Fab/Materials, MaterialFunctions and Textures never move, and a unreal-engine pack is left where Fab put it."
@@ -7731,7 +7735,7 @@
           },
           "newName": {
             "type": "string",
-            "description": "New asset name."
+            "description": "Name for the copy: in the destinationPath folder, or beside the source when destinationPath is left out."
           },
           "newStructPath": {
             "type": "string",

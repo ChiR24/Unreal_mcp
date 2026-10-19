@@ -73,6 +73,11 @@ bool UEngineWireSubsystem::HandleControlActorAddTag(
   TArray<FString> Missing;
   if (!TagValue.IsEmpty() &&
       McpResolveActorNames(Payload, [this](const FString &Name) { return FindActorByName(Name); }, Actors, Missing)) {
+    // None found answered success, "Tag applied to 0 actor(s)".
+    if (Actors.Num() == 0) {
+      McpSendNoActorNamesFound(this, Socket, RequestId, Missing);
+      return true;
+    }
     const FName TagName(*TagValue);
     TArray<UObject *> Targets;
     for (AActor *Actor : Actors) {

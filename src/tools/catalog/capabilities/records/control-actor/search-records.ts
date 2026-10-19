@@ -51,6 +51,16 @@ const FIND_BY_ASSET_OUTPUT = {
 };
 const FIND_LIMIT = { type: 'number', minimum: 1, maximum: 1000, description: 'Most actors to return (1-1000, default 200); a longer match list is cut and reports truncated and totalCount.' };
 
+// add_tag's reply, which inspect.add_tag (the same handler) answers with too.
+export const TAG_OUT = {
+  actorName: { type: 'string', description: 'One actor: the actor tagged.' },
+  tag: { type: 'string', description: 'The tag added.' },
+  wasPresent: { type: 'boolean', description: 'One actor: whether it already had the tag; it is kept once.' },
+  taggedCount: { type: 'number', description: 'actorNames: how many actors were tagged.' },
+  affectedActors: { type: 'array', items: { type: 'string' }, description: 'actorNames: the actors tagged.' },
+  missing: { type: 'array', items: { type: 'string' }, description: 'actorNames: the names that matched no actor.' },
+};
+
 export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_actor',
@@ -58,12 +68,12 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
     domain: DOMAIN,
     family: FAMILY_TAGS,
     topics: ['tag actor', 'actor tag', 'label actor'],
-    summary: 'Add a gameplay tag to an actor, or to many actors at once with actorNames.',
+    summary: 'Add a tag to an actor, or with actorNames to many actors in one call and one undo step; their level is left unsaved. A tag already there is kept once (wasPresent). actorNames that match nothing come back in missing, and ACTOR_NOT_FOUND answers when none matched. Tags drive find_by_tag, delete_by_tag and the Actor Has Tag node; mcp.placement.ok makes the placement checks skip the actor.',
     whenToUse: [
       'An actor must be tagged for later lookup or grouping.',
       'Many deliberate compositions must be marked mcp.placement.ok for audit_placement in one call.',
     ],
-    whenNotToUse: ['The tag is already present (idempotent re-add is a no-op).'],
+    whenNotToUse: ['The tag should come off; use remove_tag.'],
     inputProps: {
       actorName: P.actorName,
       actorNames: { type: 'array', items: { type: 'string' }, description: 'Several actors to tag in one call and one undo step, in place of actorName; names not found are listed back under missing, and the actors tagged under affectedActors (which the receipt lists as changes, with an actor handle each).' },
@@ -71,6 +81,7 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
     },
     required: ['tag'],
     requiredOneOf: ['actorName', 'actorNames'],
+    outputProps: TAG_OUT,
     effect: 'write',
     behavior: { idempotency: 'idempotent' },
     exampleInput: { action: 'add_tag', actorName: 'Cube1', tag: 'Pickup' },

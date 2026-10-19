@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "025d9bdc61b1b94e",
+  "catalogRevision": "e04a5ca3029a77e0",
   "recordCount": 416,
   "records": [
     {
@@ -8457,7 +8457,7 @@
           "make copy of asset",
           "copy asset to another folder"
         ],
-        "summary": "Duplicate an asset to a new path or name.",
+        "summary": "Copy an asset, or a whole folder with its sub-folders, and save the copies. destinationPath is a folder (the copy keeps the source name, or takes newName), a full asset path, or a bare name beside the source; newName alone copies beside the source. A taken destination is refused (DESTINATION_EXISTS) and a missing source answers ASSET_NOT_FOUND; a folder copy skips assets whose destination is taken (duplicatedCount under assetCount). Each asset is copied on its own: what referred to the original, placed actors and the other copies included, still does. A copied Blueprint gets its Math Expressions rebound and a copied Niagara system is compiled, so both work at once.",
         "whenToUse": [
           "An asset needs a copy to edit safely while the original stays unchanged.",
           "A whole folder must be copied with its sub-folders and every asset in it."
@@ -8474,21 +8474,25 @@
           "properties": {
             "sourcePath": {
               "type": "string",
-              "description": "Source /Game asset path."
+              "description": "The asset to copy (a /Game package or object path), or a folder: every asset under it is copied, sub-folders kept."
             },
             "destinationPath": {
               "type": "string",
-              "description": "Destination /Game asset path."
+              "description": "Where the copy goes: a folder (one that exists, or ending in /) where it keeps the source name or takes newName, a full asset path, or a bare name, which lands beside the source."
             },
             "newName": {
               "type": "string",
-              "description": "New asset name."
+              "description": "Name for the copy: in the destinationPath folder, or beside the source when destinationPath is left out."
             }
           },
           "required": [
             "sourcePath"
           ],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "requiredOneOf": [
+            "destinationPath",
+            "newName"
+          ]
         },
         "output": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -8497,6 +8501,34 @@
             "success": {
               "type": "boolean",
               "description": "Operation succeeded."
+            },
+            "assetPath": {
+              "type": "string",
+              "description": "One asset: the copy."
+            },
+            "saved": {
+              "type": "boolean",
+              "description": "One asset: whether the copy was saved (an unsaved copy is gone after the editor restarts)."
+            },
+            "sourcePath": {
+              "type": "string",
+              "description": "Folder: the folder copied."
+            },
+            "destinationPath": {
+              "type": "string",
+              "description": "Folder: where the copies went."
+            },
+            "assetCount": {
+              "type": "number",
+              "description": "Folder: the assets found under it, as far as the asset registry has indexed them."
+            },
+            "duplicatedCount": {
+              "type": "number",
+              "description": "Folder: how many were copied; fewer than assetCount means some destinations were taken."
+            },
+            "savedCount": {
+              "type": "number",
+              "description": "Folder: how many copies were saved."
             },
             "details": {
               "type": "object",
@@ -8512,7 +8544,7 @@
       },
       "examples": [
         {
-          "title": "Duplicate an asset to a new path or name.",
+          "title": "Copy an asset, or a whole folder with its sub-folders, and save the copies. destinationPath is a folder (the copy keeps the source name, or takes newName), a full asset path, or a bare name beside the source; newName alone copies beside the source. A taken destination is refused (DESTINATION_EXISTS) and a missing source answers ASSET_NOT_FOUND; a folder copy skips assets whose destination is taken (duplicatedCount under assetCount). Each asset is copied on its own: what referred to the original, placed actors and the other copies included, still does. A copied Blueprint gets its Math Expressions rebound and a copied Niagara system is compiled, so both work at once.",
           "input": {
             "sourcePath": "/Game/Materials/M_Base",
             "destinationPath": "/Game/Materials",
@@ -8553,8 +8585,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "0d8e113eaa3623c033b7b1737df2ada70afa4db073171d36917c3b366690bbcc",
-        "content": "76a6dec9e66c7a265e9b4c878c260a4787860b9fd4ad18050d990332fb9ef1fc"
+        "schema": "db8a28c21810844d18b5246078a285b0c0b3a02b2a3c9ec35a1e4977fe4b67a9",
+        "content": "b563a07b422cd2b81e8ad51e640553d42118b3634acd8b200fb7499b84bdfcbb"
       }
     },
     {
@@ -33434,7 +33466,6 @@
           "tagOp=remove: A tag must be removed from an actor."
         ],
         "whenNotToUse": [
-          "tagOp=add: The tag is already present (idempotent re-add is a no-op).",
           "tagOp=remove: The tag is not present (no-op)."
         ]
       },
@@ -33494,6 +33525,36 @@
               "type": "object",
               "x-unreal-reflection-boundary": true,
               "description": "Additional handler result fields not named by the contract."
+            },
+            "actorName": {
+              "type": "string",
+              "description": "One actor: the actor tagged."
+            },
+            "tag": {
+              "type": "string",
+              "description": "The tag added."
+            },
+            "wasPresent": {
+              "type": "boolean",
+              "description": "One actor: whether it already had the tag; it is kept once."
+            },
+            "taggedCount": {
+              "type": "number",
+              "description": "actorNames: how many actors were tagged."
+            },
+            "affectedActors": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "actorNames: the actors tagged."
+            },
+            "missing": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "actorNames: the names that matched no actor."
             }
           },
           "required": [
@@ -33555,8 +33616,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "b1cef078e60136030f52192b1e2cbfd063abe76bae21a1a13459494a48fd55ec",
-        "content": "9a3b37c97916d8f6829b7bf7f319ab6e594aed7dab72f5b2d896016bd43223d9"
+        "schema": "21120507b0c7ddee3d25aedd482e09d3d56557682a3c42609a35f489d67202ec",
+        "content": "5339de143444865a647c42abf29875b909c4dfecd9b7b5507b36bf9c7305ee53"
       }
     },
     {
@@ -44061,7 +44122,7 @@
         "topics": [
           "add_tag"
         ],
-        "summary": "Add a tag to a world actor (cross-parent to control_actor).",
+        "summary": "Add a tag to an actor named by actorName, name or objectPath, or to several with actorNames: control_actor.add_tag runs it, with the same reply (wasPresent; taggedCount, affectedActors and missing for several) and the same ACTOR_NOT_FOUND when nothing matched.",
         "whenToUse": [
           "A tag must be added to an actor for grouping or queries."
         ],
@@ -44106,7 +44167,13 @@
             "action",
             "tag"
           ],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "requiredOneOf": [
+            "actorName",
+            "actorNames",
+            "name",
+            "objectPath"
+          ]
         },
         "output": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -44124,6 +44191,36 @@
               "type": "object",
               "x-unreal-reflection-boundary": true,
               "description": "Additional handler result fields not named by the contract."
+            },
+            "actorName": {
+              "type": "string",
+              "description": "One actor: the actor tagged."
+            },
+            "tag": {
+              "type": "string",
+              "description": "The tag added."
+            },
+            "wasPresent": {
+              "type": "boolean",
+              "description": "One actor: whether it already had the tag; it is kept once."
+            },
+            "taggedCount": {
+              "type": "number",
+              "description": "actorNames: how many actors were tagged."
+            },
+            "affectedActors": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "actorNames: the actors tagged."
+            },
+            "missing": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "actorNames: the names that matched no actor."
             }
           },
           "required": [
@@ -44134,7 +44231,7 @@
       },
       "examples": [
         {
-          "title": "Add a tag to a world actor (cross-parent to control_actor).",
+          "title": "Add a tag to an actor named by actorName, name or objectPath, or to several with actorNames: control_actor.add_tag runs it, with the same reply (wasPresent; taggedCount, affectedActors and missing for several) and the same ACTOR_NOT_FOUND when nothing matched.",
           "input": {
             "action": "add_tag",
             "actorName": "PlayerStart_1",
@@ -44172,8 +44269,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "747a2f225b45a47b6cebfbc00b6946eb7702e7ca69742027f8ce08cf80d261fd",
-        "content": "600166552f5a96541ee111c731232418b9fd260d3c9619452cdd43782722f407"
+        "schema": "01bbcd7ee6b4d7e225743407eb888f2ffdca6c48da54277932e74b75b6b16e5c",
+        "content": "dc2d509f9e0cc8f90d4bdcd9147f615492e2602b44131b9fa24277389db38c3a"
       }
     },
     {
@@ -61616,7 +61713,7 @@
           "create_dynamic_light",
           "add a dynamic light"
         ],
-        "summary": "Create a dynamic light actor.",
+        "summary": "Spawn a point, spot, directional or rect light (lightType, default Point) at location (default the origin), labelled name: into the running game while Play runs, where it is gone when play stops, otherwise into the level being edited. Only intensity and color are set, each only when given, and there is no rotation: a spot or directional light faces +X until control_actor set_transform aims it.",
         "whenToUse": [
           "A light must appear in the running game (PIE), or a point, spot, directional or rect light with just an intensity and a color is enough."
         ],
@@ -61675,6 +61772,14 @@
               "type": "object",
               "x-unreal-reflection-boundary": true,
               "description": "Additional handler result fields not named by the contract."
+            },
+            "actorName": {
+              "type": "string",
+              "description": "The new light, by its label."
+            },
+            "actorPath": {
+              "type": "string",
+              "description": "The new light, by object path (a UEDPIE_ path when it went into the running game)."
             }
           },
           "required": [
@@ -61685,7 +61790,7 @@
       },
       "examples": [
         {
-          "title": "Create a dynamic light actor.",
+          "title": "Spawn a point, spot, directional or rect light (lightType, default Point) at location (default the origin), labelled name: into the running game while Play runs, where it is gone when play stops, otherwise into the level being edited. Only intensity and color are set, each only when given, and there is no rotation: a spot or directional light faces +X until control_actor set_transform aims it.",
           "input": {
             "action": "create_dynamic_light",
             "name": "Light_1",
@@ -61725,8 +61830,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "ccc2e3617e8544095e128b46cbc67aa49aacac5bb8d7b17c776cc1aa90ae2370",
-        "content": "0ab1bd9d436115ba27dd10abe7a3a8dc77fff11ac632fd5973983adb2512451f"
+        "schema": "5b164f0b900d5a308501521c1374fa07764b6c5a85e9818250f260b2b22c678e",
+        "content": "fc226b7e73afe04dda102deba1f606291de87b5d98cde9caf18bf4dbd715996b"
       }
     },
     {
@@ -86813,7 +86918,7 @@
         "topics": [
           "delete_node"
         ],
-        "summary": "Delete a node from a material graph.",
+        "summary": "Delete nodes from a material or material function graph: nodeId, or nodeIds for several. Every wire to a deleted node is cut, the material outputs it fed included, so what it fed falls back to its default; the material is then recompiled and saved unless save is false. Ids that match nothing come back in notFound, and NOT_FOUND answers only when none matched (read the ids with get_material_info or find_node).",
         "whenToUse": [
           "An unused or wrong node must leave a material or function graph, taking its wires with it.",
           "Several stray nodes must go in one call (nodeIds)."
@@ -86830,7 +86935,7 @@
           "properties": {
             "materialPath": {
               "type": "string",
-              "description": "Material /Game asset path."
+              "description": "The material or material function /Game path."
             },
             "nodeId": {
               "type": "string",
@@ -86865,6 +86970,28 @@
               "type": "boolean",
               "description": "Operation succeeded."
             },
+            "removed": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "The node ids deleted."
+            },
+            "removedCount": {
+              "type": "number",
+              "description": "How many nodes were deleted."
+            },
+            "notFound": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Ids that matched no node; the call still succeeds while one matched."
+            },
+            "saved": {
+              "type": "boolean",
+              "description": "Whether the material was saved."
+            },
             "details": {
               "type": "object",
               "x-unreal-reflection-boundary": true,
@@ -86879,7 +87006,7 @@
       },
       "examples": [
         {
-          "title": "Delete a node from a material graph.",
+          "title": "Delete nodes from a material or material function graph: nodeId, or nodeIds for several. Every wire to a deleted node is cut, the material outputs it fed included, so what it fed falls back to its default; the material is then recompiled and saved unless save is false. Ids that match nothing come back in notFound, and NOT_FOUND answers only when none matched (read the ids with get_material_info or find_node).",
           "input": {
             "materialPath": "/Game/Materials/M_Base",
             "nodeId": "MaterialExpressionMultiply_0",
@@ -86919,8 +87046,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "954c5f758d7c542cf2bcefc1b827bc7afc16dd9ad93245b249320827ea0d9b66",
-        "content": "7bef4c617008b8424abb9a20da78dc938d017159f592ac992065fabf5c4c708c"
+        "schema": "0a9097ae1f1e0dd6ef3a47a578a5f845a35b6047ebaa28dabb853eec7902d939",
+        "content": "760be1ea2f8629a00ddc4ec38036bebf0b0e0caa15cdf9a47e05b61c58e66e2b"
       }
     },
     {

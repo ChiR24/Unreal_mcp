@@ -4786,6 +4786,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "items": {
                 "type": "string"
               },
+              "description": "actorNames: the actors tagged."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
               "description": "actors or actorNames: the actors that took their transform, each by name and once; the receipt lists them as changes, with an actor handle each."
             }
           ],
@@ -5075,10 +5082,22 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Smallest x, y and z sampled (the lowest point is min[2])."
         },
         "missing": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Names that matched no actor."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "actorNames: the names that matched no actor."
+            }
+          ],
           "description": "Names that matched no actor."
         },
         "missingComponents": {
@@ -5338,6 +5357,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true,
           "description": "The actor location (x, y, z) that rests the actor on the surface under it: its own location raised by the depth it is sunk, whatever its pivot. Present only when it is sunk."
         },
+        "tag": {
+          "type": "string",
+          "description": "The tag added."
+        },
+        "taggedCount": {
+          "type": "number",
+          "description": "actorNames: how many actors were tagged."
+        },
         "totalCount": {
           "type": "number",
           "description": "Listable actors matching the filter, before the limit is applied."
@@ -5387,6 +5414,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "waitedSeconds": {
           "type": "number",
           "description": "Game seconds spent waiting for startWhen before the run began, or for a spawnOf spawn that never came."
+        },
+        "wasPresent": {
+          "type": "boolean",
+          "description": "One actor: whether it already had the tag; it is kept once."
         },
         "windowRestored": {
           "type": "boolean",
@@ -6927,6 +6958,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Editor display label. Actors only."
         },
+        "actorName": {
+          "type": "string",
+          "description": "One actor: the actor tagged."
+        },
         "actors": {
           "oneOf": [
             {
@@ -6967,6 +7002,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             }
           ],
           "description": "Actor info objects."
+        },
+        "affectedActors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "actorNames: the actors tagged."
         },
         "ancestors": {
           "type": "array",
@@ -7557,6 +7599,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "With labels: image/png."
         },
+        "missing": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "actorNames: the names that matched no actor."
+        },
         "missingComponents": {
           "type": "array",
           "items": {
@@ -7900,6 +7949,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Total face area in cm²."
         },
+        "tag": {
+          "type": "string",
+          "description": "The tag added."
+        },
+        "taggedCount": {
+          "type": "number",
+          "description": "actorNames: how many actors were tagged."
+        },
         "tags": {
           "type": "array",
           "items": {
@@ -8057,6 +8114,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "volume": {
           "type": "number",
           "description": "With closed: the volume it encloses, in cm³."
+        },
+        "wasPresent": {
+          "type": "boolean",
+          "description": "One actor: whether it already had the tag; it is kept once."
         },
         "watch": {
           "type": "object",
@@ -9650,6 +9711,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             {
               "type": "string",
               "description": "The folder the asset goes in, e.g. /Game/Imports (it keeps the source file's name), or an object path such as /Game/Chars/SK_Hero.SK_Hero to name it."
+            },
+            {
+              "type": "string",
+              "description": "Where the copy goes: a folder (one that exists, or ending in /) where it keeps the source name or takes newName, a full asset path, or a bare name, which lands beside the source."
             }
           ],
           "description": "A /Game folder to move what the import created to, for example /Game/Props/Barriers. The layout beneath the import's own folder (StaticMeshes, Materials, Textures) is kept under it. Omit to leave the import where Fab put it. The shared master materials in /Game/Fab/Materials, MaterialFunctions and Textures never move, and a unreal-engine pack is left where Fab put it."
@@ -10187,7 +10252,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "newName": {
           "type": "string",
-          "description": "New asset name."
+          "description": "Name for the copy: in the destinationPath folder, or beside the source when destinationPath is left out."
         },
         "newStructPath": {
           "type": "string",
@@ -11326,6 +11391,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "True when nothing was written."
         },
+        "duplicatedCount": {
+          "type": "number",
+          "description": "Folder: how many were copied; fewer than assetCount means some destinations were taken."
+        },
         "elapsedSeconds": {
           "type": "number",
           "description": "Seconds since the add was requested; frozen once the import finished."
@@ -11766,6 +11835,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Expression class name."
         },
+        "notFound": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Ids that matched no node; the call still succeeds while one matched."
+        },
         "note": {
           "type": "string",
           "description": "Guidance on what to do next given the current state."
@@ -11963,6 +12039,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "What the relocation did not do, and why: a folder or name already taken (nothing moves then), an assetName with no single asset to name, or content left where Fab put it. Absent when everything asked for was done."
         },
+        "removed": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The node ids deleted."
+        },
+        "removedCount": {
+          "type": "number",
+          "description": "How many nodes were deleted."
+        },
         "results": {
           "type": "array",
           "items": {
@@ -12005,7 +12092,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "savedCount": {
           "type": "number",
-          "description": "Packages that were saved. A unreal-engine pack arrives on disk already and is not dirty, so it counts none."
+          "description": "Folder: how many copies were saved."
         },
         "scalarDefault": {
           "type": "number",
@@ -12060,6 +12147,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "sourceDirectory": {
           "type": "string",
           "description": "Absolute directory the packages were read from."
+        },
+        "sourcePath": {
+          "type": "string",
+          "description": "Folder: the folder copied."
         },
         "sources": {
           "type": "array",

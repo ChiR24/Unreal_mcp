@@ -52,7 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Environment settings take object and soft references** (a volumetric cloud's material), as `edit_component` does.
 - **Undo takes back** `set_property` moves, `detach`, light channels (not even marked unsaved before), spline points, spline mesh edits and scatters, and `set_volume_bounds`.
 - **Class, name and tag finds stop at `limit`** (default 200) and say how many matched.
-- **Records and replies say what happens**: about fifty records name their defaults, replies and refusals and declare what their handlers read; `setup_movement` refuses a non-Character Blueprint, `play_montage` outside play says nothing moves, creators report `saved`, and `create_level` warns when World Partition could not be made.
+- **Records and replies say what happens**: about fifty records name their defaults, replies and refusals and declare what their handlers read; `setup_movement` refuses a non-Character Blueprint, `play_montage` outside play says nothing moves, creators report `saved`, `create_level` warns when World Partition could not be made, `duplicate` takes `newName` alone, `add_tag` refuses when no name matched (it said 0 actors were tagged), and `delete_node` lists what it removed.
 - **`stream` and `unload` act**: in Play the sublevel streams in the game, in the editor (which keeps sublevels loaded) it is shown or hidden; both answered "updated" and changed nothing. `add_sublevel` refuses an unknown streaming method instead of using Blueprint, and a map that does not load leaves no entry behind.
 - **`open_level`, `load` and `add_sublevel` take an object path**, a relative `.t3d` export lands in the project, and local player refusals carry codes.
 
