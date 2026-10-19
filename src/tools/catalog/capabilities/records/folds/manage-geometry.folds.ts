@@ -51,7 +51,7 @@ export const MANAGE_GEOMETRY_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'configure_mesh_lods', selector: 'lodOp',
-    summary: 'Generate mesh LODs, or set LOD settings and screen sizes.',
+    summary: 'LODs for the meshes the geometry tools make. generate (lodOp generate, the default) bakes the dynamic mesh of actorName or targetActor into a new static mesh asset saved at outputPath (default /Game/GeneratedMeshes/<actor>_LOD) with lodCount LODs in all (default 4, LOD 0 included, each later one half the triangles of the one before) and replies assetPath, lodCount and the LOD 0 triangles; the actor keeps its dynamic mesh. set_settings and set_screen_sizes change the static mesh asset the first static mesh component of the actor draws, so every actor drawing it changes, and save it (saved says whether it was written); an engine mesh is refused with ENGINE_CONTENT (duplicate it into /Game and assign the copy first). set_settings rebuilds LOD lodIndex (default 1; INVALID_LOD_INDEX past the LODs the mesh has, so generate them first) at trianglePercent of the base triangles (default 50, or 100 minus reductionPercent; above 0 and at most 100), recomputing normals or tangents when asked. set_screen_sizes writes screenSizes, LOD 0 first, as the screen size at which each LOD takes over, and turns the automatic screen sizes off; values past the LODs the mesh has are ignored (screenSizesSet counts those written).',
     topics: ['generate lods', 'lod settings', 'lod screen size'],
     members: { generate: 'generate_lods', set_settings: 'set_lod_settings', set_screen_sizes: 'set_lod_screen_sizes' },
   },

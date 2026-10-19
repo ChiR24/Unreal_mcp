@@ -10,7 +10,7 @@ export const MANAGE_AUDIO_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'fade_sound', selector: 'fade',
-    summary: 'Fade a playing sound: to a target volume, in, or out.',
+    summary: 'Fade a sound an actor or audio component plays. soundName is an actor label or name, or an audio component name; componentName picks one of that actor\'s audio components (refused, listing the ones it has, when it names none), else the first. in (re)starts the sound from its beginning, rising from silence to targetVolume (default 1) over fadeInTime; out lowers it to targetVolume (default 0) over fadeOutTime and then stops it, whatever the level, and changes nothing when it was not playing; to_volume changes the volume of the sound playing to targetVolume over fadeTime (default 1 s), stopping it at 0 (the default), and is refused with SOUND_NOT_PLAYING when nothing plays. The engine ignores a fade out to a level at or above the current one. While a game runs in the editor, the name resolves in the game first. The reply names the actor and component, the fade time and volume used, and playing (whether the sound plays after the call).',
     topics: ['music volume', 'turn down the music', 'lower the volume', 'make the music quieter'],
     members: { to_volume: 'fade_sound', in: 'fade_sound_in', out: 'fade_sound_out' },
   },

@@ -100,6 +100,7 @@ bool UEngineWireSubsystem::HandleGenerateLODs(
   int32 SuccessCount = 0;
   TArray<FString> NotFoundPaths;
   TArray<FString> NotMeshPaths;
+  TArray<FString> EnginePaths;
   TArray<TSharedPtr<FJsonValue>> MeshDetails;
   // ProcessAutomationRequest already runs on the game thread; wrapping this in AsyncTask(GameThread)
   // queued it behind the current dispatch cycle and the reply missed the 30-second timeout.
@@ -108,6 +109,12 @@ bool UEngineWireSubsystem::HandleGenerateLODs(
     UStaticMesh *Mesh = Cast<UStaticMesh>(Obj);
     if (!Mesh) {
       (Obj ? NotMeshPaths : NotFoundPaths).Add(Path);
+      continue;
+    }
+    // Engine meshes are shared by every project on this engine and by the editor itself: the rebuild was saved into
+    // the engine's own content.
+    if (Mesh->GetOutermost()->GetName().StartsWith(TEXT("/Engine/"))) {
+      EnginePaths.Add(Path);
       continue;
     }
     if (bHeadless) {
@@ -144,6 +151,9 @@ bool UEngineWireSubsystem::HandleGenerateLODs(
     Resp->SetArrayField(TEXT("notMeshPaths"), McpHandlerUtils::ToJsonStringArray(NotMeshPaths));
     Resp->SetNumberField(TEXT("notMeshCount"), NotMeshPaths.Num());
   }
+  if (EnginePaths.Num() > 0) {
+    Resp->SetArrayField(TEXT("engineContentPaths"), McpHandlerUtils::ToJsonStringArray(EnginePaths));
+  }
 
   FString Message;
   FString ErrorCode;
@@ -151,15 +161,18 @@ bool UEngineWireSubsystem::HandleGenerateLODs(
     Message = bHeadless
         ? FString::Printf(TEXT("Verified %d mesh(es); LOD build skipped under NullRHI"), SuccessCount)
         : FString::Printf(TEXT("Generated LODs for %d mesh(es)"), SuccessCount);
-  } else if (NotMeshPaths.Num() == 0) {
+  } else if (EnginePaths.Num() > 0 && NotFoundPaths.Num() == 0 && NotMeshPaths.Num() == 0) {
+    Message = TEXT("Engine content is not changed: duplicate the mesh into /Game and generate the LODs of the copy.");
+    ErrorCode = TEXT("ENGINE_CONTENT");
+  } else if (NotMeshPaths.Num() == 0 && EnginePaths.Num() == 0) {
     Message = FString::Printf(TEXT("No assets found. %d path(s) not found."), NotFoundPaths.Num());
     ErrorCode = TEXT("ASSET_NOT_FOUND");
-  } else if (NotFoundPaths.Num() == 0) {
+  } else if (NotFoundPaths.Num() == 0 && EnginePaths.Num() == 0) {
     Message = FString::Printf(TEXT("No static meshes found. %d asset(s) are not meshes."), NotMeshPaths.Num());
     ErrorCode = TEXT("INVALID_ASSET_TYPE");
   } else {
-    Message = FString::Printf(TEXT("No LODs generated. %d not found, %d not meshes."),
-                              NotFoundPaths.Num(), NotMeshPaths.Num());
+    Message = FString::Printf(TEXT("No LODs generated. %d not found, %d not meshes, %d engine content."),
+                              NotFoundPaths.Num(), NotMeshPaths.Num(), EnginePaths.Num());
     ErrorCode = TEXT("LOD_GENERATION_FAILED");
   }
   SendAutomationResponse(RequestingSocket, RequestId, bSuccess, Message, Resp, ErrorCode);

@@ -61,8 +61,8 @@ const NANITE_OUT = schema({
 }, ['success']);
 
 export const ASSET_ADVANCED_RECORDS: readonly RecordSpec[] = [
-  r('create_render_target', 'asset', 'Create a render target texture asset.',
-    schema({ name: str('Render target name.'), packagePath: str('Package path (default /Game/Textures).'), renderTargetPath: str('Full asset path, e.g. /Game/RenderTargets/RT_Capture; replaces name and packagePath.'), width: num('Width in pixels.'), height: num('Height in pixels.'), format: str('Pixel format.'), save: bool('Save after creation. Defaults to true.') }, [], ['name', 'renderTargetPath']),
+  r('create_render_target', 'asset', 'Create a Texture Render Target 2D asset for a scene capture or a Blueprint to draw into: width and height (default 1024, at most 8192), format (default RGBA8), saved unless save is false (saved says whether it was written). A render target already at that path is kept as it is and answered with alreadyExists and its own size; another asset there is ASSET_ALREADY_EXISTS.',
+    schema({ name: str('Render target name.'), packagePath: str('Package path (default /Game/Textures).'), renderTargetPath: str('Full asset path, e.g. /Game/RenderTargets/RT_Capture; replaces name and packagePath.'), width: num('Width in pixels (default 1024; 1 to 8192).'), height: num('Height in pixels (default 1024; 1 to 8192).'), format: str('Render target format (default RGBA8): an ETextureRenderTargetFormat name such as R8, RG8, RGBA8, RGBA8_SRGB, R16f, RGBA16f, RGBA32f or RGB10A2, with or without RTF_; FloatRGBA and A2B10G10R10 are accepted too. Another name is refused.'), save: bool('Save after creation. Defaults to true.') }, [], ['name', 'renderTargetPath']),
     OK, WRITE, WRITE_POLICY, MEDIUM,
     { dispatchAction: 'manage_texture',
       topics: ['make render target'],
@@ -76,7 +76,7 @@ export const ASSET_ADVANCED_RECORDS: readonly RecordSpec[] = [
       ],
       examples: [ex('Create a 1024x1024 HDR render target', { name: 'RT_SceneCapture', packagePath: '/Game/RenderTargets', width: 1024, height: 1024, format: 'RTF_RGBA16f', save: true }, { success: true })] }
   ),
-  r('generate_lods', 'asset', 'Generate LOD levels for a static mesh asset.',
+  r('generate_lods', 'asset', 'Give one or several static mesh assets lodCount LODs in all (default 4, 1 to 50, LOD 0 included): each LOD keeps half the triangles of the one before (50%, 25%, ...), LODs past the count and the hand-tuned settings of the others are replaced, and each mesh is rebuilt and saved. Engine meshes are not changed: they are listed under engineContentPaths (ENGINE_CONTENT when nothing else was given), so duplicate one into /Game first. The reply counts processed out of requested and lists notFoundPaths and notMeshPaths; in a headless editor the build is skipped and each mesh is only checked.',
     schema({ assetPath: ASSET_PATH, assetPaths: ASSET_PATHS, lodCount: num('Number of LOD levels to generate (1-50, default 4).') }, [], ['assetPath', 'assetPaths']),
     OK, { ...WRITE, longRunning: true }, WRITE_POLICY, HIGH,
     { whenToUse: ['One or several static meshes need LOD levels generated so distant copies render cheaper.'],

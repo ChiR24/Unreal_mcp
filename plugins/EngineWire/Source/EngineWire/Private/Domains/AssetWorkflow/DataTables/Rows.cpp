@@ -20,6 +20,13 @@ bool HandleDataTableRowActions(
         TSharedPtr<FJsonObject> RowData = RowDataPtr ? *RowDataPtr : nullptr;
         if (RowName.IsEmpty() || !RowData.IsValid()) { OutResult = McpDataTableMakeError(TEXT("MISSING_PARAMETER"), TEXT("rowName and a rowData object are required.")); return true; }
         if (!Table->RowStruct) { OutResult = McpDataTableMakeError(TEXT("INVALID_OPERATION"), TEXT("This data table has no row struct; bind one with set_row_struct first.")); return true; }
+        // AddRow replaces a row of the same name, every column it leaves out back to its default: adding a name twice
+        // wiped the first row's values and still answered added.
+        if (Table->FindRowUnchecked(FName(*RowName)))
+        {
+            OutResult = McpDataTableMakeError(TEXT("ROW_ALREADY_EXISTS"), *FString::Printf(TEXT("Row '%s' already exists; update_row changes its columns, import_rows replaces it whole."), *RowName));
+            return true;
+        }
 
         uint8* RowMem = nullptr;
         FString Err;
@@ -150,12 +157,10 @@ bool HandleDataTableRowActions(
     }
 
     // === list_data_table_rows ===
-    // The listing previously carried only bare row-name strings at the reply
-    // root. Rows are now objects, bounded so a large table cannot flood the
-    // reply, with rowCount reporting the unbounded total and rowStructPath
-    // naming the row struct. The listing is also published under `details`
-    // because that is the field the declared output contract projects; the
-    // root copy keeps the raw-frame shape raw-frame consumers read.
+    // Rows are objects carrying their values, with rowCount the table's total and rowStructPath its row struct, all
+    // at the reply root, which the declared contract folds into details. A listing too large for one reply is paged
+    // there by the gateway (options.pageCursor): a second copy of the rows under details kept the rest of the reply
+    // too large to page, and the old cap of 200 rows left the others unreachable.
     if (Action == TEXT("list_data_table_rows"))
     {
         TSharedPtr<FJsonObject> R;
@@ -165,7 +170,8 @@ bool HandleDataTableRowActions(
         // UDataTable::GetRowNames() is available across the supported 5.x range.
         TArray<FName> Names = Table->GetRowNames();
 
-        constexpr int32 MaxListedRows = 200;
+        // ponytail: 10,000-row ceiling (each row is exported on the game thread); an offset param if a larger table must be read.
+        constexpr int32 MaxListedRows = 10000;
         TArray<TSharedPtr<FJsonValue>> RowsArr;
         for (const FName& N : Names)
         {
@@ -182,15 +188,15 @@ bool HandleDataTableRowActions(
 
         const FString RowStructPath = Table->RowStruct ? Table->RowStruct->GetPathName() : FString();
 
-        TSharedPtr<FJsonObject> Details = MakeShared<FJsonObject>();
-        Details->SetArrayField(TEXT("rows"), RowsArr);
-        Details->SetNumberField(TEXT("rowCount"), Names.Num());
-        Details->SetStringField(TEXT("rowStructPath"), RowStructPath);
-
         OutResult = McpHandlerUtils::CreateResultObject();
-        OutResult->SetObjectField(TEXT("details"), Details);
         OutResult->SetArrayField(TEXT("rows"), RowsArr);
         OutResult->SetNumberField(TEXT("count"), RowsArr.Num());
+        OutResult->SetNumberField(TEXT("rowCount"), Names.Num());
+        OutResult->SetStringField(TEXT("rowStructPath"), RowStructPath);
+        if (RowsArr.Num() < Names.Num())
+        {
+            OutResult->SetBoolField(TEXT("truncated"), true);
+        }
         McpHandlerUtils::AddVerification(OutResult, Table);
         return true;
     }

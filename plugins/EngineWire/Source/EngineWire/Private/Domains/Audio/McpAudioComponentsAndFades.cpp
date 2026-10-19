@@ -10,142 +10,6 @@ bool HandleComponentActions(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-	if (Lower == TEXT("fade_sound_out") ||
-		Lower == TEXT("fade_sound_in")) {
-	FString ActorName;
-	Payload->TryGetStringField(TEXT("actorName"), ActorName);
-	FString ComponentName;
-	Payload->TryGetStringField(TEXT("componentName"), ComponentName);
-	// The contract calls the target `soundName`: an actor label, or a component on actorName (dogfood #113).
-	FString SoundName;
-	Payload->TryGetStringField(TEXT("soundName"), SoundName);
-	if (ActorName.IsEmpty()) {
-		ActorName = SoundName;
-	} else if (ComponentName.IsEmpty()) {
-		ComponentName = SoundName;
-	}
-	// The records spell the duration fadeInTime and fadeOutTime; the undeclared fadeTime used to win over them.
-	const bool bFadeIn = Lower == TEXT("fade_sound_in");
-	double FadeTime = 1.0;
-	if (!Payload->TryGetNumberField(bFadeIn ? TEXT("fadeInTime") : TEXT("fadeOutTime"), FadeTime)) {
-		Payload->TryGetNumberField(TEXT("fadeTime"), FadeTime);
-	}
-	// fade_sound_out declares targetVolume too (the level it fades down to); it was read for fade-in only.
-	double TargetVol = bFadeIn ? 1.0 : 0.0;
-	Payload->TryGetNumberField(TEXT("targetVolume"), TargetVol);
-
-	if (!GEditor)
-	{
-		Self->SendAutomationError(RequestingSocket, RequestId,
-			TEXT("Editor not available"), TEXT("NO_EDITOR"));
-		return true;
-	}
-	UWorld *World = GEditor->GetEditorWorldContext().World();
-	if (!World) {
-		Self->SendAutomationError(RequestingSocket, RequestId, TEXT("No World Context"),
-			TEXT("NO_WORLD"));
-		return true;
-	}
-
-	AActor *TargetActor = FindAudioActorByName(ActorName, World);
-	if (!TargetActor) {
-		// Distinguish a missing actor from a missing component (dogfood #113b).
-		Self->SendAutomationError(RequestingSocket, RequestId,
-			FString::Printf(TEXT("Actor '%s' not found; soundName must be an actor label (or a componentName on actorName)"), *ActorName),
-			TEXT("ACTOR_NOT_FOUND"));
-		return true;
-	}
-	if (TargetActor) {
-		UAudioComponent *AudioComp = nullptr;
-
-		// Search by component name if provided
-		if (!ComponentName.IsEmpty())
-		{
-			TArray<UAudioComponent*> Components;
-			TargetActor->GetComponents<UAudioComponent>(Components);
-			for (UAudioComponent* Comp : Components)
-			{
-				if (Comp && (Comp->GetName() == ComponentName || Comp->GetFName().ToString() == ComponentName))
-				{
-					AudioComp = Comp;
-					break;
-				}
-			}
-		}
-
-		// Every AAmbientSound owns its AudioComponent as a default subobject.
-		if (!AudioComp)
-		{
-			if (AAmbientSound* Ambient = Cast<AAmbientSound>(TargetActor))
-			{
-				AudioComp = Ambient->GetAudioComponent();
-			}
-		}
-
-		// Fall back to finding any AudioComponent via FindComponentByClass
-		if (!AudioComp)
-		{
-			AudioComp = TargetActor->FindComponentByClass<UAudioComponent>();
-		}
-
-		// Fall back to iterating ALL components including transient/unregistered ones
-		// SpawnSoundAttached creates components that may not appear in
-		// FindComponentByClass results but are still owned by the actor
-		if (!AudioComp)
-		{
-			TArray<UActorComponent*> AllComps;
-			TargetActor->GetComponents(AllComps);
-			for (UActorComponent* Comp : AllComps)
-			{
-				if (Comp && Comp->IsA<UAudioComponent>())
-				{
-					AudioComp = Cast<UAudioComponent>(Comp);
-					break;
-				}
-			}
-		}
-
-	// Final fallback: search all UAudioComponent instances for one owned by this actor
-	if (!AudioComp)
-	{
-		bool bFound = false;
-		ForEachObjectOfClass(UAudioComponent::StaticClass(), [&](UObject* Obj)
-		{
-			if (bFound) return;
-			UAudioComponent* Comp = Cast<UAudioComponent>(Obj);
-			if (Comp && Comp->GetOwner() == TargetActor)
-			{
-				AudioComp = Comp;
-				bFound = true;
-			}
-		}, true, RF_ClassDefaultObject);
-	}
-
-		if (AudioComp) {
-			if (bFadeIn)
-				AudioComp->FadeIn((float)FadeTime, (float)TargetVol);
-			else
-				AudioComp->FadeOut((float)FadeTime, (float)TargetVol);
-
-			TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-			Resp->SetBoolField(TEXT("success"), true);
-			Resp->SetStringField(TEXT("actorName"), ActorName);
-			Resp->SetStringField(TEXT("componentName"), AudioComp->GetName());
-			Resp->SetNumberField(TEXT("fadeTime"), FadeTime);
-			Resp->SetNumberField(TEXT("targetVolume"), TargetVol);
-			Resp->SetStringField(TEXT("action"), Lower);
-			McpHandlerUtils::AddVerification(Resp, TargetActor);
-			Self->SendAutomationResponse(RequestingSocket, RequestId, true,
-				TEXT("Sound fading"), Resp);
-			return true;
-		}
-	}
-	Self->SendAutomationError(RequestingSocket, RequestId,
-		TEXT("Audio component not found on actor"),
-		TEXT("COMPONENT_NOT_FOUND"));
-	return true;
-}
-
   // -------------------------------------------------------------------------
   // prime_sound
   // -------------------------------------------------------------------------
@@ -245,6 +109,10 @@ bool HandleComponentActions(
       Resp->SetBoolField(TEXT("success"), true);
       Resp->SetStringField(TEXT("componentPath"), AudioComp->GetPathName());
       Resp->SetStringField(TEXT("componentName"), AudioComp->GetName());
+      // The actor it is on, which without actorName is a new one: the reply named only the component.
+      if (AActor *Owner = AudioComp->GetOwner()) {
+        Resp->SetStringField(TEXT("actorName"), McpActorRef(Owner));
+      }
       Self->SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Audio component created"), Resp, FString());
       return true;

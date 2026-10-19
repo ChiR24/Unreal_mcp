@@ -25,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Whole parts in one `edit_dynamic_mesh` call**: `append_cuboids`, `append_loft`, `append_mesh` and `delete_triangles`.
 - **Movie Render Queue**: `cancel_render` stops a render; `configure_render_camera` sets shutter timing (FrameOpen), overscan and rendering every camera.
 - **Sequences and animations**: `set_section` `playRate`; `get_properties` `tracks` lists each track's clips; `get_animation_info` the bones a sequence keys.
-- **Calls that spawn, move or re-mesh actors check them** (and a Blueprint's placed copies): warnings name one sunk, floating, intersecting, z-fighting, on the default material, labelled "Text" or pasted twice.
+- **Calls that spawn, move or re-mesh actors check them** (and a Blueprint's placed copies) and warn on one left sunk, floating, intersecting, z-fighting, untextured, labelled "Text" or pasted twice.
 
 </details>
 
@@ -33,17 +33,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <summary><b>🔧 Fixed</b></summary>
 
 - **Small fixes**: `runtime_report` `filter` matches a whole path; the plugin links on UE 5.0 again; native `get_task_result` matches the principal exactly; `get_stats` counts the RHI thread; `edit_scs` keeps `save: false`; refusals keep their details; a rate-limited request says when to retry.
-- **Removals say what they take or refuse**: `remove_component` takes only an exact, actor-added component; `remove_function` and `remove_event` refuse a member still called; `bulk_delete` keeps and names assets others use; enum value removal and reorder keep stored values on their entries; `delete_enum`, `delete_struct` and sequence `delete` name what still uses them (`delete_struct` `force` now really deletes; a missing struct is `NOT_FOUND`); `remove_variable` lists the nodes it deletes; track and key removal undo, and a key removal must name a track.
+- **Removals say what they take or refuse**: `remove_component` takes only an exact, actor-added component; `remove_function`, `remove_event`, `delete_enum`, `delete_struct` and sequence `delete` name what still uses them (`delete_struct` `force` really deletes); `bulk_delete` keeps assets others use; enum value edits keep stored values; `remove_variable` lists the nodes it deletes; track and key removal undo; `ensure_single_sky_light` names extra sky lights instead of deleting them.
 - **A family's variant needs what its action needs** (`debug_shape` without `location` reached the engine): both transports refuse it, describe and search show `requiredFor` and `variantRequired`, and over-strict records take their handlers' aliases and defaults.
 - **Renders**: a long render keeps its native request open for its `renderTimeoutMs`, and `save_all` and `restart_editor` wait for it (`RENDER_IN_PROGRESS`).
 - **A level viewport screenshot waits for streaming** and names video memory over budget; `set_viewport_realtime` reports the state it reached.
 - **Property writes**: a deprecated property is refused, naming its replacement (the write answered success and changed nothing); `set_property` in a Niagara system restarts its placed effects; environment settings take object and soft references.
 - **`audit_placement`** counts simulated bodies as surfaces, judges a player start by its capsule and skips undersides on a floor; **`fix_coplanar`** brings a piece across several neighbours forward.
 - **A whole track name picks only that track** (`..._1` also matched `_10` to `_19`), and **`set_bone_key` keeps what it is not given**.
-- **Undo takes back** `set_property` moves, `attach`, `detach`, `add_component`, light channels, spline points and meshes, scatters and `set_volume_bounds`.
+- **Undo takes back** light spawns, `set_property` moves, `attach`, `detach`, `add_component`, light channels, spline points and meshes, scatters and `set_volume_bounds`.
 - **Class, name and tag finds stop at `limit`** (default 200) and say how many matched.
-- **Records and replies say what happens**: about ninety records name their defaults, replies and refusals; `setup_movement` refuses a non-Character Blueprint, creators report `saved`, `duplicate` takes `newName` alone, `add_tag` refuses when no name matched, `compile_material` says whether it saved.
-- **Successes that did nothing now act**: `stream` and `unload` stream during Play and show or hide the sublevel in the editor; the AI controller actions write real logic (`run_behavior_tree` on possess, `set_focus` on `focusPlayer` or `focusTag`); `stop_recording` refuses when nothing records.
+- **Records and replies say what happens**: about a hundred records name their defaults, replies and refusals; `setup_movement` refuses a non-Character Blueprint, creators report `saved`, `duplicate` takes `newName` alone, `add_tag` refuses when no name matched, `add_row` refuses a row already there, LOD edits refuse engine meshes, a data table listing pages past 200 rows, `compile_material` says whether it saved.
+- **Successes that did nothing now act**: `stream` and `unload` stream during Play and show or hide the sublevel in the editor; the AI controller actions write real logic (`run_behavior_tree` on possess, `set_focus` on `focusPlayer` or `focusTag`); `fade_sound` to a volume changes the sound playing (it restarted it); a thumbnail is stored in its asset; `stop_recording` refuses when nothing records.
 - **`manage_effect cleanup` needs destructive consent**: it deletes every actor whose label starts with `filter` (required), in one undo step, refused during Play; clearing debug shapes moved to `debug_shape` `debugOp clear`.
 - **Sublevels and paths**: object paths work in `open_level`, `load` and `add_sublevel`, which refuses an unknown streaming method and leaves nothing behind when the map does not load; a relative `.t3d` export lands in the project; local player refusals carry codes.
 

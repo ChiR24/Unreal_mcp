@@ -227,13 +227,13 @@ export const GEOMETRY_OPTIMIZE_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'set_lod_settings', plugins: PLUGIN,
-    family: F, summary: 'Set LOD settings for a dynamic mesh.', whenToUse: ['LOD build settings must be configured.'], whenNotToUse: ['LODs must be generated; use generate_lods.'],
+    family: F, summary: 'Set the reduction of one LOD of the static mesh asset an actor draws.', whenToUse: ['LOD build settings must be configured.'], whenNotToUse: ['LODs must be generated; use generate_lods.'],
     inputProps: { actorName: P.actorName, lodIndex: P.lodIndex, trianglePercent: P.trianglePercent, reductionPercent: P.reductionPercent, recomputeNormals: P.recomputeNormals, recomputeTangents: P.recomputeTangents, targetActor: P.targetActor }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', behavior: { idempotency: 'idempotent' }, costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'set_lod_settings', targetActor: 'DM_A' },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'set_lod_screen_sizes', plugins: PLUGIN,
-    family: F, summary: 'Set LOD screen-size thresholds for a dynamic mesh.', whenToUse: ['LOD screen-size transitions must be tuned.'], whenNotToUse: ['LOD settings must be configured; use set_lod_settings.'],
+    family: F, summary: 'Set the screen sizes at which the LODs of the static mesh asset an actor draws take over.', whenToUse: ['LOD screen-size transitions must be tuned.'], whenNotToUse: ['LOD settings must be configured; use set_lod_settings.'],
     inputProps: { actorName: P.actorName, screenSizes: P.screenSizes, targetActor: P.targetActor }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', behavior: { idempotency: 'idempotent' }, costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'set_lod_screen_sizes', targetActor: 'DM_A' },
   }),

@@ -109,7 +109,11 @@ TSharedPtr<FJsonObject> HandleCreateRenderTarget(const TSharedPtr<FJsonObject>& 
     if (ExistingRenderTarget)
     {
         Response->SetBoolField(TEXT("success"), true);
+        // An existing one keeps its own size and format, which the reply gives: the request's are not applied.
         Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Render target already exists: %s"), *FullPath));
+        Response->SetBoolField(TEXT("alreadyExists"), true);
+        // Found, not changed: the receipt lists no change for it.
+        McpHandlerUtils::MarkNoAssetsChanged(Response);
         McpHandlerUtils::AddVerification(Response, ExistingRenderTarget);
         Response->SetNumberField(TEXT("width"), ExistingRenderTarget->SizeX);
         Response->SetNumberField(TEXT("height"), ExistingRenderTarget->SizeY);
@@ -137,6 +141,8 @@ TSharedPtr<FJsonObject> HandleCreateRenderTarget(const TSharedPtr<FJsonObject>& 
         {
             Response->SetBoolField(TEXT("success"), true);
             Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Render target already exists: %s"), *FullPath));
+            Response->SetBoolField(TEXT("alreadyExists"), true);
+            McpHandlerUtils::MarkNoAssetsChanged(Response);
             McpHandlerUtils::AddVerification(Response, InMemoryRenderTarget);
             Response->SetNumberField(TEXT("width"), InMemoryRenderTarget->SizeX);
             Response->SetNumberField(TEXT("height"), InMemoryRenderTarget->SizeY);
@@ -160,14 +166,12 @@ TSharedPtr<FJsonObject> HandleCreateRenderTarget(const TSharedPtr<FJsonObject>& 
     RenderTarget->MarkPackageDirty();
 
     FAssetRegistryModule::AssetCreated(RenderTarget);
-    if (bSave)
-    {
-        McpSafeAssetSave(RenderTarget);
-    }
+    // saved is what happened, not what was asked: a failed save answered saved true.
+    const bool bSaved = bSave && McpSafeAssetSave(RenderTarget);
 
     Response->SetBoolField(TEXT("success"), true);
     Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Render target '%s' created"), *Name));
-    Response->SetBoolField(TEXT("saved"), bSave);
+    Response->SetBoolField(TEXT("saved"), bSaved);
     McpHandlerUtils::AddVerification(Response, RenderTarget);
     Response->SetNumberField(TEXT("width"), RenderTarget->SizeX);
     Response->SetNumberField(TEXT("height"), RenderTarget->SizeY);

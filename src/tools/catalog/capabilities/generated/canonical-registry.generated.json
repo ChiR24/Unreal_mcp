@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "9f70a6ee8d2dc1ff",
+  "catalogRevision": "6f4a07bd4d9af8ee",
   "recordCount": 416,
   "records": [
     {
@@ -8466,7 +8466,7 @@
           "new folder",
           "create directory"
         ],
-        "summary": "Create a new content-browser folder under a /Game path.",
+        "summary": "Create a Content Browser folder at path (under /Game or another allowed root); one that exists already answers success with alreadyExisted true. An empty folder may be gone after an editor restart until an asset is saved in it.",
         "whenToUse": [
           "A new empty folder is wanted in the content browser, for example to organise assets before moving them in.",
           "A folder must be ensured at a path without knowing whether it exists; alreadyExisted in the reply says which it was."
@@ -8483,7 +8483,7 @@
           "properties": {
             "path": {
               "type": "string",
-              "description": "Folder path (must start with /)."
+              "description": "Folder path, e.g. /Game/Art/Props; a path outside the allowed roots is refused (INVALID_PATH)."
             }
           },
           "required": [
@@ -8551,8 +8551,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "df22aa27611628e6998c307909134f119a053dfc73c20b553e88e7a8c016a2a8",
-        "content": "15dabadbfcc0723d151ae88e10b0acba01569e54c6f235712cd1bd40993571f8"
+        "schema": "fd2524fcf67fca9bdf4d97cb5f729d94c1cd7ee830bd8682dca2e668e9c4ff29",
+        "content": "e48e2f82e01a8fc6ea2bf14ab497ac48fc9f4b0c7dc4e55caba75823ac3b6280"
       }
     },
     {
@@ -8571,7 +8571,7 @@
           "create_render_target",
           "make render target"
         ],
-        "summary": "Create a render target texture asset.",
+        "summary": "Create a Texture Render Target 2D asset for a scene capture or a Blueprint to draw into: width and height (default 1024, at most 8192), format (default RGBA8), saved unless save is false (saved says whether it was written). A render target already at that path is kept as it is and answered with alreadyExists and its own size; another asset there is ASSET_ALREADY_EXISTS.",
         "whenToUse": [
           "A scene capture, or a Blueprint that draws to a texture, needs a render target asset to render into.",
           "A render target of a chosen size and pixel format must exist at a /Game path; one already there is reported, not replaced."
@@ -8600,15 +8600,15 @@
             },
             "width": {
               "type": "number",
-              "description": "Width in pixels."
+              "description": "Width in pixels (default 1024; 1 to 8192)."
             },
             "height": {
               "type": "number",
-              "description": "Height in pixels."
+              "description": "Height in pixels (default 1024; 1 to 8192)."
             },
             "format": {
               "type": "string",
-              "description": "Pixel format."
+              "description": "Render target format (default RGBA8): an ETextureRenderTargetFormat name such as R8, RG8, RGBA8, RGBA8_SRGB, R16f, RGBA16f, RGBA32f or RGB10A2, with or without RTF_; FloatRGBA and A2B10G10R10 are accepted too. Another name is refused."
             },
             "save": {
               "type": "boolean",
@@ -8687,8 +8687,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "895ba07f1c97b6388f976c1a3df766d53308f4af27c04b55fbbb1e46e04fd34a",
-        "content": "3c2f83c361472954dae730a90bd2fe491e8dfb17a26d040a5ce0cd836c7ffff4"
+        "schema": "b19d6580ac67e1dd0ab7f5d39fb947d8c1a51ddcec7e5f6acb5e2e06d397b2ff",
+        "content": "5686de99b7d80e034edf42a20cd75f540483e49664f885ce13421d46bbe6c093"
       }
     },
     {
@@ -11451,7 +11451,7 @@
           "walk on imported mesh",
           "add collision to mesh"
         ],
-        "summary": "Process an asset: render a thumbnail, generate mesh LODs, set the materials in the slots of a static or skeletal mesh asset (mesh_materials), or set a static mesh asset's collision (mesh_collision), so every placement shows or uses them.",
+        "summary": "Process an asset, chosen by process. thumbnail renders its preview at width by height (default 512, 1 to 4096) and stores it in the asset, which is left unsaved (thumbnailCached; engine content keeps its own), writing it as a PNG as well when outputPath names a project-relative file. lods gives static meshes lodCount LODs in all (default 4, LOD 0 included, each half the triangles of the one before), replacing LODs past the count and hand-tuned settings, then rebuilds and saves each. mesh_materials sets the materials in the slots of a static or skeletal mesh asset, by slot index or name, so every placement shows them; an engine mesh changes for this session only and is never saved (saveSkippedReason). mesh_collision sets the collision of a static mesh asset (a fitted box, sphere or capsule, its render triangles, or none), rebuilds every placed copy and saves it. lods and mesh_collision refuse engine meshes (ENGINE_CONTENT): duplicate one into /Game first.",
         "whenToUse": [
           "process=thumbnail: An asset needs a preview image, optionally written as a PNG file inside the project.",
           "process=lods: One or several static meshes need LOD levels generated so distant copies render cheaper.",
@@ -11484,11 +11484,11 @@
             },
             "width": {
               "type": "number",
-              "description": "Thumbnail width."
+              "description": "Thumbnail width in pixels (default 512, 1 to 4096)."
             },
             "height": {
               "type": "number",
-              "description": "Thumbnail height."
+              "description": "Thumbnail height in pixels (default 512, 1 to 4096)."
             },
             "outputPath": {
               "type": "string",
@@ -11644,7 +11644,7 @@
       },
       "examples": [
         {
-          "title": "Process an asset: render a thumbnail, generate mesh LODs, set the materials in the slots of a static or skeletal mesh asset (mesh_materials), or set a static mesh asset's collision (mesh_collision), so every placement shows or uses them.",
+          "title": "Process an asset, chosen by process. thumbnail renders its preview at width by height (default 512, 1 to 4096) and stores it in the asset, which is left unsaved (thumbnailCached; engine content keeps its own), writing it as a PNG as well when outputPath names a project-relative file. lods gives static meshes lodCount LODs in all (default 4, LOD 0 included, each half the triangles of the one before), replacing LODs past the count and hand-tuned settings, then rebuilds and saves each. mesh_materials sets the materials in the slots of a static or skeletal mesh asset, by slot index or name, so every placement shows them; an engine mesh changes for this session only and is never saved (saveSkippedReason). mesh_collision sets the collision of a static mesh asset (a fitted box, sphere or capsule, its render triangles, or none), rebuilds every placed copy and saves it. lods and mesh_collision refuse engine meshes (ENGINE_CONTENT): duplicate one into /Game first.",
           "input": {
             "assetPath": "/Game/Meshes/SM_Crate",
             "width": 256,
@@ -11751,8 +11751,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "00968496d1ade57e1578d0e7cb04c7dbe04d5197d65195478f1cc7caef4f2d3e",
-        "content": "d00fb8e487f39b3155c0aca69b0a866598c1a43f8269ad502e3c84ee5274d709"
+        "schema": "5a058eff033396646714ea9ee10cb15ff258a3a4d0b8d0db36c9a12e5a98bc90",
+        "content": "77600fde9b8ecb795ae6b7623a7c54055db16f9da1c3d7ef52db047bbf95faa4"
       }
     },
     {
@@ -29830,7 +29830,7 @@
           "light intensity",
           "light color"
         ],
-        "summary": "Create a light actor: point, spot, directional, rect or sky (or any light class), with intensity, color and, in properties, shadow, radius and cone settings.",
+        "summary": "Create a light actor in the level being edited: point, spot, directional, rect or sky (or any light class), at location (default 0, 0, 300), made Movable, with intensity, color and, in properties, shadow, radius and cone settings. The reply lists what was applied, refused (a setting this kind of light lacks) or adjusted; the spawn is one undo step and the level is left unsaved. During Play it still goes into the edited level, not the running game.",
         "whenToUse": [
           "A point, spot, directional, rect or sky light must be added to the level being edited, with its intensity, color or shadow settings."
         ],
@@ -29969,7 +29969,7 @@
       },
       "examples": [
         {
-          "title": "Create a light actor: point, spot, directional, rect or sky (or any light class), with intensity, color and, in properties, shadow, radius and cone settings.",
+          "title": "Create a light actor in the level being edited: point, spot, directional, rect or sky (or any light class), at location (default 0, 0, 300), made Movable, with intensity, color and, in properties, shadow, radius and cone settings. The reply lists what was applied, refused (a setting this kind of light lacks) or adjusted; the spawn is one undo step and the level is left unsaved. During Play it still goes into the edited level, not the running game.",
           "input": {
             "action": "create_light",
             "lightType": "Spot",
@@ -30047,7 +30047,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "9b6d84190c55a5e3cb18427d985a4bec0689dcf9f8e749e3d86228e7b65f785d",
-        "content": "03b922ab0913749793c2faa16afa81f3e27c4c19b1e5a188c66a0f87cc59a430"
+        "content": "de601a9d077e1a59cfccb67449066a16bb5347e4cb22d67e19927587be5cf570"
       }
     },
     {
@@ -30462,14 +30462,16 @@
         "topics": [
           "create_sky_light"
         ],
-        "summary": "Create a sky light, or ensure the level has exactly one.",
+        "summary": "Create a sky light (skyLightOp create, the default), or make sure the edited level has exactly one (ensure_single). create spawns one at location (default 0,0,500) as one undo step, lit by the captured scene or by cubemapPath (refused before anything spawns when that path holds no cube texture), at intensity; recapture captures the sky again now. During Play it spawns into the running game and is gone when play stops. ensure_single spawns a sky light labelled name (default SkyLight) when the level has none and relabels the only one to name; with several it refuses with MULTIPLE_SKY_LIGHTS, naming the one to keep (keep) and the ones to delete with control_actor delete (remove), and deletes nothing itself. It refuses during Play (PIE_ACTIVE), and its reply says spawned and relabelled.",
         "whenToUse": [
           "skyLightOp=create: A light actor or lighting setting must be created or configured.",
-          "skyLightOp=ensure_single: Duplicate sky lights must be consolidated."
+          "skyLightOp=ensure_single: A level must end up lit by exactly one sky light.",
+          "skyLightOp=ensure_single: Before adding a sky light, to reuse the one the level has."
         ],
         "whenNotToUse": [
           "skyLightOp=create: A sky light already exists.",
-          "skyLightOp=ensure_single: Multiple sky lights are intentionally present."
+          "skyLightOp=ensure_single: Several sky lights are intentionally present.",
+          "skyLightOp=ensure_single: The extra sky lights must go: delete them with control_actor delete (actorNames), which this never does."
         ]
       },
       "schemas": {
@@ -30576,7 +30578,7 @@
       },
       "examples": [
         {
-          "title": "Create a sky light, or ensure the level has exactly one.",
+          "title": "Create a sky light (skyLightOp create, the default), or make sure the edited level has exactly one (ensure_single). create spawns one at location (default 0,0,500) as one undo step, lit by the captured scene or by cubemapPath (refused before anything spawns when that path holds no cube texture), at intensity; recapture captures the sky again now. During Play it spawns into the running game and is gone when play stops. ensure_single spawns a sky light labelled name (default SkyLight) when the level has none and relabels the only one to name; with several it refuses with MULTIPLE_SKY_LIGHTS, naming the one to keep (keep) and the ones to delete with control_actor delete (remove), and deletes nothing itself. It refuses during Play (PIE_ACTIVE), and its reply says spawned and relabelled.",
           "input": {
             "action": "create_sky_light",
             "name": "SkyLight_1",
@@ -30636,7 +30638,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "b9dec27e0cbccf91708ec79033dd724fbb1bdb443c92f29df759a67c19b3ef83",
-        "content": "ee3cb2a7283d5964671488ac80e8832990a6075027103a45cea12d073c6d3841"
+        "content": "d5237d302bc55ad326e0e8585d0851d4b35fb94e720a872e17904919fac0ee9b"
       }
     },
     {
@@ -31793,7 +31795,7 @@
           "edit=import_heightmap: The heightmap should be generated procedurally.",
           "edit=configure_landscape_lod: LODs should be generated rather than configured.",
           "edit=configure_landscape_splines: Standalone spline actors should be used instead.",
-          "edit=generate_lods: LODs have already been generated."
+          "edit=generate_lods: LODs have already been tuned by hand: this replaces their settings (manage_geometry.configure_mesh_lods tunes one LOD)."
         ]
       },
       "schemas": {
@@ -32240,7 +32242,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "9c2ab17adf33ffe6b21ae53a93bc3d8bf3a9173eb549bb73d7391c1640443872",
-        "content": "5e3a983a881c7bb72488666047f7eb81ea308752f7b2e049a474c2e0d3cb32da"
+        "content": "7e352e9ff5613305bfc2abb5e12fb75598489de372f74e6c743a301edf2fbd1e"
       }
     },
     {
@@ -39325,7 +39327,7 @@
           "unhide actor",
           "hide a light"
         ],
-        "summary": "Show or hide an actor, or many at once with actorNames.",
+        "summary": "Show or hide an actor in the editor and in play (visible, default true), or many actors at once with actorNames, as one undo step. Collision follows visibility: hiding turns its collision off, and showing turns it back on, even where set_actor_collision had turned it off. Showing also shows every primitive component, including one hidden on purpose. The single form replies visible as read back plus actorName; the many form replies updatedActors, affectedActors and the names not found under missing. A name that matches nothing is ACTOR_NOT_FOUND; an actor that does not read back as asked is VISIBILITY_MISMATCH.",
         "whenToUse": [
           "An actor must be shown or hidden without being deleted.",
           "Many actors must be shown or hidden together (actorNames does them in one call).",
@@ -39395,7 +39397,7 @@
       },
       "examples": [
         {
-          "title": "Show or hide an actor, or many at once with actorNames.",
+          "title": "Show or hide an actor in the editor and in play (visible, default true), or many actors at once with actorNames, as one undo step. Collision follows visibility: hiding turns its collision off, and showing turns it back on, even where set_actor_collision had turned it off. Showing also shows every primitive component, including one hidden on purpose. The single form replies visible as read back plus actorName; the many form replies updatedActors, affectedActors and the names not found under missing. A name that matches nothing is ACTOR_NOT_FOUND; an actor that does not read back as asked is VISIBILITY_MISMATCH.",
           "input": {
             "action": "set_visibility",
             "actorName": "Cube1",
@@ -39434,7 +39436,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "127a0b12e6f6500a252b87c15fadc2915c8b2428ed6cf5027ab0d09a9c8d0e79",
-        "content": "8a0e6a296bde921c1986242b1711883ccd9583681c118746cb709b763c3c553b"
+        "content": "b45f6a76ba35df1561df6c8011ddbeb7e309e6968496fb92c433798a856c18f5"
       }
     },
     {
@@ -44426,7 +44428,7 @@
           "change data table row",
           "add item to data table"
         ],
-        "summary": "Create a data table or row struct, add/update/import rows, or set the row struct.",
+        "summary": "Write a data table, chosen by edit. create makes a table (name and path, default /Game/DataTables, or dataTablePath) bound to the row struct at rowStructPath; create_row_struct makes a struct for its rows (name and path, default /Game/Structs, or rowStructPath) from members. add_row adds rowName with rowData, the columns it leaves out taking the struct defaults, and refuses a name already there (ROW_ALREADY_EXISTS); update_row changes only the columns rowData names in an existing row; import_rows loads rows of {rowName, rowData} in one call, each named row replaced whole (clearExisting drops every row first), and lists the rows that do not fit under invalidRows. set_row_struct (set_struct_as_row_struct is the same) binds another row struct and carries the rows over (migrateExistingRows, default true): a row whose values do not convert is dropped and listed under invalidRows, and a filled table is refused unless the rows are migrated or cleared. rowData keys are the struct property names, as inspect_data_table reads them back. Every edit saves the asset unless save is false (saved).",
         "whenToUse": [
           "edit=create: A new DataTable is needed to hold rows of game data such as weapon stats or item lists; the row struct must already exist.",
           "edit=create_row_struct: A new struct with named, typed columns is needed as the row type of a table.",
@@ -44451,19 +44453,19 @@
           "properties": {
             "name": {
               "type": "string",
-              "description": "DataTable name."
+              "description": "Name of the new data table (create) or row struct (create_row_struct)."
             },
             "path": {
               "type": "string",
-              "description": "Package path (default /Game/DataTables)."
+              "description": "Package path of the new asset: default /Game/DataTables for a table, /Game/Structs for a row struct."
             },
             "dataTablePath": {
               "type": "string",
-              "description": "Full asset path of the new table, e.g. /Game/DataTables/DT_Weapons; alternative to name and path."
+              "description": "Asset path of the data table: the one to create (create, in place of name and path), or the one every other edit writes, e.g. /Game/DataTables/DT_Weapons."
             },
             "rowStructPath": {
               "type": "string",
-              "description": "Asset path of the row UScriptStruct."
+              "description": "Asset path of a row struct: the one the table is bound to (create, set_row_struct), or the new struct (create_row_struct, in place of name and path)."
             },
             "save": {
               "type": "boolean",
@@ -44475,7 +44477,7 @@
                 "type": "object",
                 "x-unreal-reflection-boundary": true
               },
-              "description": "Member definitions."
+              "description": "The columns of the new row struct, each { name, type } (or memberName, memberType) with optional defaultValue, tooltip and metadata. type takes Bool, Int, Float, String, Name, Text, Vector, Rotator, Transform, Object, SoftObject, Class, SoftClass, Enum:<Name> or Struct:<Path>, or a container: Array:..., Set:..., Map:<K>,<V>. Without members the struct keeps one placeholder member."
             },
             "rowName": {
               "type": "string",
@@ -44543,7 +44545,7 @@
       },
       "examples": [
         {
-          "title": "Create a data table or row struct, add/update/import rows, or set the row struct.",
+          "title": "Write a data table, chosen by edit. create makes a table (name and path, default /Game/DataTables, or dataTablePath) bound to the row struct at rowStructPath; create_row_struct makes a struct for its rows (name and path, default /Game/Structs, or rowStructPath) from members. add_row adds rowName with rowData, the columns it leaves out taking the struct defaults, and refuses a name already there (ROW_ALREADY_EXISTS); update_row changes only the columns rowData names in an existing row; import_rows loads rows of {rowName, rowData} in one call, each named row replaced whole (clearExisting drops every row first), and lists the rows that do not fit under invalidRows. set_row_struct (set_struct_as_row_struct is the same) binds another row struct and carries the rows over (migrateExistingRows, default true): a row whose values do not convert is dropped and listed under invalidRows, and a filled table is refused unless the rows are migrated or cleared. rowData keys are the struct property names, as inspect_data_table reads them back. Every edit saves the asset unless save is false (saved).",
           "input": {
             "name": "DT_Weapons",
             "path": "/Game/DataTables",
@@ -44693,8 +44695,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "58d62bc784f48329c1fbd19cf5fd0d84f555251114193c3642645f5c1926b6ea",
-        "content": "43f559b28b74ae5b67eb253f0251ec008f911363ea1f843c6c22836146fcd792"
+        "schema": "331d4e7e0c57f5c152da49e57ebc09353f6ed3884bc4a79b02783d786993e77d",
+        "content": "a4515fc66a7c03b0bbbc3a838f39f756fa732e534788bd6f0dcf7e113205e7b4"
       }
     },
     {
@@ -44742,10 +44744,10 @@
           "look at data table",
           "view data table rows"
         ],
-        "summary": "Read a data table: one row, all rows, or its row struct.",
+        "summary": "Read a data table at dataTablePath (ASSET_NOT_FOUND when none is there). info row, the default, reads one row by rowName: found, and its rowData, each column under its property name in the form edit_data_table writes; a missing row answers found false rather than an error. rows lists every row with its values (rows of rowName and rowData), with rowCount the table total and rowStructPath; a listing too large for one reply comes a page at a time (send page.nextCall for the next), and past 10,000 rows truncated is true. row_struct answers hasRowStruct and rowStructPath (struct.get_struct reads the columns).",
         "whenToUse": [
           "info=row: One row must be read by name to check its column values; a missing row comes back as found false.",
-          "info=rows: Every row and its values must be seen at once; at most 200 rows are returned, with the full rowCount.",
+          "info=rows: Every row and its values must be seen at once; a large table comes a page at a time, and rowCount is its total.",
           "info=row_struct: The row struct behind a table must be identified before rows are added or read."
         ],
         "whenNotToUse": [
@@ -44805,7 +44807,7 @@
       },
       "examples": [
         {
-          "title": "Read a data table: one row, all rows, or its row struct.",
+          "title": "Read a data table at dataTablePath (ASSET_NOT_FOUND when none is there). info row, the default, reads one row by rowName: found, and its rowData, each column under its property name in the form edit_data_table writes; a missing row answers found false rather than an error. rows lists every row with its values (rows of rowName and rowData), with rowCount the table total and rowStructPath; a listing too large for one reply comes a page at a time (send page.nextCall for the next), and past 10,000 rows truncated is true. row_struct answers hasRowStruct and rowStructPath (struct.get_struct reads the columns).",
           "input": {
             "dataTablePath": "/Game/DataTables/DT_Weapons",
             "rowName": "Rifle",
@@ -44867,7 +44869,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "440c5c932cbc2ff3d969f8d54e137f873821a1e2b6d519b05cd769edb7f6ff6e",
-        "content": "6f0896faf340c2a80d89e655a6499f1558c8f24b40ab0ac78ea7582550b21a9b"
+        "content": "52f05654bfb3699d347f09715013a2a6daf5fbb1a4df910ce7ddf11989115bc4"
       }
     },
     {
@@ -56517,7 +56519,7 @@
             },
             "componentName": {
               "type": "string",
-              "description": "Name of the audio component that was created or spawned."
+              "description": "Name of the audio component that was created, spawned or faded."
             }
           },
           "required": [
@@ -56636,8 +56638,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "7ca565077c1d3023e9beb02b3964739bd23ccc91ae32cf162896cbd5398af913",
-        "content": "0d3b7e0de37387e0559ebebbdd2ebc48d62bf9774dc95be63b2f00eb87750079"
+        "schema": "bb23d421ca34194924a6a63e92061794e3bb0af45ec46fa9a6176a83f5333494",
+        "content": "94e2192dd0c157ce8f3cd9e69f773adfadb3b271755c1f08b07a24abc2976c91"
       }
     },
     {
@@ -57923,7 +57925,7 @@
           "lower the volume",
           "make the music quieter"
         ],
-        "summary": "Fade a playing sound: to a target volume, in, or out.",
+        "summary": "Fade a sound an actor or audio component plays. soundName is an actor label or name, or an audio component name; componentName picks one of that actor's audio components (refused, listing the ones it has, when it names none), else the first. in (re)starts the sound from its beginning, rising from silence to targetVolume (default 1) over fadeInTime; out lowers it to targetVolume (default 0) over fadeOutTime and then stops it, whatever the level, and changes nothing when it was not playing; to_volume changes the volume of the sound playing to targetVolume over fadeTime (default 1 s), stopping it at 0 (the default), and is refused with SOUND_NOT_PLAYING when nothing plays. The engine ignores a fade out to a level at or above the current one. While a game runs in the editor, the name resolves in the game first. The reply names the actor and component, the fade time and volume used, and playing (whether the sound plays after the call).",
         "whenToUse": [
           "fade=to_volume: Use it to fade a named sound instance to a target volume.",
           "fade=in: Use it to fade a sound instance in.",
@@ -58001,6 +58003,26 @@
               "type": "object",
               "x-unreal-reflection-boundary": true,
               "description": "Additional handler result fields not named by the contract."
+            },
+            "actorName": {
+              "type": "string",
+              "description": "Name of the actor that was spawned or acted upon."
+            },
+            "componentName": {
+              "type": "string",
+              "description": "Name of the audio component that was created, spawned or faded."
+            },
+            "fadeTime": {
+              "type": "number",
+              "description": "Seconds the fade takes, as used."
+            },
+            "targetVolume": {
+              "type": "number",
+              "description": "Volume the fade ends at, as used: a multiplier, where 1 plays the sound at the volume it was made with."
+            },
+            "playing": {
+              "type": "boolean",
+              "description": "Whether the faded sound is playing after the call (a fade out still plays until it ends)."
             }
           },
           "required": [
@@ -58011,7 +58033,7 @@
       },
       "examples": [
         {
-          "title": "Fade a playing sound: to a target volume, in, or out.",
+          "title": "Fade a sound an actor or audio component plays. soundName is an actor label or name, or an audio component name; componentName picks one of that actor's audio components (refused, listing the ones it has, when it names none), else the first. in (re)starts the sound from its beginning, rising from silence to targetVolume (default 1) over fadeInTime; out lowers it to targetVolume (default 0) over fadeOutTime and then stops it, whatever the level, and changes nothing when it was not playing; to_volume changes the volume of the sound playing to targetVolume over fadeTime (default 1 s), stopping it at 0 (the default), and is refused with SOUND_NOT_PLAYING when nothing plays. The engine ignores a fade out to a level at or above the current one. While a game runs in the editor, the name resolves in the game first. The reply names the actor and component, the fade time and volume used, and playing (whether the sound plays after the call).",
           "input": {
             "action": "fade_sound",
             "soundName": "FootstepConcrete",
@@ -58074,8 +58096,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "5c00c06e120e9ba8334d9908c2acec526a5bc27ae74f4b591599620f8b18f196",
-        "content": "27d0570bd2f26fde4a6b074612b930301435ec5b9b1b48793d524d2fe6e8def9"
+        "schema": "81d72c192140ccee7dbf8dee5cb2424aa7094848673e8587c5488b3f51ed37b7",
+        "content": "080eff4db0e40ffbe1fd8af5d993f894f18b9f1e9ec3f4ec3ed9173c5fddfa66"
       }
     },
     {
@@ -58846,7 +58868,7 @@
             },
             "componentName": {
               "type": "string",
-              "description": "Name of the audio component that was created or spawned."
+              "description": "Name of the audio component that was created, spawned or faded."
             },
             "peakDb": {
               "type": "number",
@@ -59010,8 +59032,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "5a15db6eda3d6892a99e9122abce96bfeb692004006237f52d28ca1f16c91dcc",
-        "content": "1823827e293a87763b40c9a6f83ffe671e9b6ddcd86e2104c54fc6a19a949fa6"
+        "schema": "ae08078f5b5eb70cfd49aded13cab1d7238149edb1107f678e90e09697a36d19",
+        "content": "154612dec11581433d098a82dea5c2f57075d1d10350b25b9fafdc776a877c71"
       }
     },
     {
@@ -68063,7 +68085,7 @@
           "lod settings",
           "lod screen size"
         ],
-        "summary": "Generate mesh LODs, or set LOD settings and screen sizes.",
+        "summary": "LODs for the meshes the geometry tools make. generate (lodOp generate, the default) bakes the dynamic mesh of actorName or targetActor into a new static mesh asset saved at outputPath (default /Game/GeneratedMeshes/<actor>_LOD) with lodCount LODs in all (default 4, LOD 0 included, each later one half the triangles of the one before) and replies assetPath, lodCount and the LOD 0 triangles; the actor keeps its dynamic mesh. set_settings and set_screen_sizes change the static mesh asset the first static mesh component of the actor draws, so every actor drawing it changes, and save it (saved says whether it was written); an engine mesh is refused with ENGINE_CONTENT (duplicate it into /Game and assign the copy first). set_settings rebuilds LOD lodIndex (default 1; INVALID_LOD_INDEX past the LODs the mesh has, so generate them first) at trianglePercent of the base triangles (default 50, or 100 minus reductionPercent; above 0 and at most 100), recomputing normals or tangents when asked. set_screen_sizes writes screenSizes, LOD 0 first, as the screen size at which each LOD takes over, and turns the automatic screen sizes off; values past the LODs the mesh has are ignored (screenSizesSet counts those written).",
         "whenToUse": [
           "lodOp=generate: LODs must be generated for a mesh.",
           "lodOp=set_settings: LOD build settings must be configured.",
@@ -68170,7 +68192,7 @@
       },
       "examples": [
         {
-          "title": "Generate mesh LODs, or set LOD settings and screen sizes.",
+          "title": "LODs for the meshes the geometry tools make. generate (lodOp generate, the default) bakes the dynamic mesh of actorName or targetActor into a new static mesh asset saved at outputPath (default /Game/GeneratedMeshes/<actor>_LOD) with lodCount LODs in all (default 4, LOD 0 included, each later one half the triangles of the one before) and replies assetPath, lodCount and the LOD 0 triangles; the actor keeps its dynamic mesh. set_settings and set_screen_sizes change the static mesh asset the first static mesh component of the actor draws, so every actor drawing it changes, and save it (saved says whether it was written); an engine mesh is refused with ENGINE_CONTENT (duplicate it into /Game and assign the copy first). set_settings rebuilds LOD lodIndex (default 1; INVALID_LOD_INDEX past the LODs the mesh has, so generate them first) at trianglePercent of the base triangles (default 50, or 100 minus reductionPercent; above 0 and at most 100), recomputing normals or tangents when asked. set_screen_sizes writes screenSizes, LOD 0 first, as the screen size at which each LOD takes over, and turns the automatic screen sizes off; values past the LODs the mesh has are ignored (screenSizesSet counts those written).",
           "input": {
             "action": "configure_mesh_lods",
             "targetActor": "DM_A",
@@ -68245,7 +68267,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "23e9c89796ce49134caa7130d6dbfb2912e20874453dc21972640fc5639c34d2",
-        "content": "cf13e18a21baeafd5bc91f7a8fa1d27348b94d3772ee33ede1e4d23dc63027e8"
+        "content": "0992f8026d5d2e2fd4bf86d13a6e55496f2bca8515a17df62cf692a73e8ffa80"
       }
     },
     {
@@ -76330,7 +76352,7 @@
         "topics": [
           "create_light"
         ],
-        "summary": "Create a light actor in the current level.",
+        "summary": "Spawn a light actor in the level being edited: lightType point, directional, spot, rect or sky (or any light class as lightClass), at location (default 0, 0, 300), labelled name, made Movable; intensity, color and properties are applied, and the reply lists what was applied, refused or adjusted. One undo step; the level is left unsaved. During Play it still spawns into the edited level, not the running game.",
         "whenToUse": [
           "A Point, Directional, Spot, Sky, or Rect light must be added."
         ],
@@ -76426,7 +76448,7 @@
       },
       "examples": [
         {
-          "title": "Create a light actor in the current level.",
+          "title": "Spawn a light actor in the level being edited: lightType point, directional, spot, rect or sky (or any light class as lightClass), at location (default 0, 0, 300), labelled name, made Movable; intensity, color and properties are applied, and the reply lists what was applied, refused or adjusted. One undo step; the level is left unsaved. During Play it still spawns into the edited level, not the running game.",
           "input": {
             "action": "create_light",
             "lightType": "Spot",
@@ -76479,7 +76501,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "dc3386fc6182707c1181823c45efc9e4b1e4cd4ca8219829ed660ef13eebdcf7",
-        "content": "7df3128b9b589e57757e4fadf4aa262c601bafbdd1a1a5f2872edac30fb0e984"
+        "content": "d7de6b399b14a05c3c3a3616c4a6165dd1a9a384f4b6111fc23d86856ff235f2"
       }
     },
     {

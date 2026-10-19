@@ -8,14 +8,17 @@ const r = (action: string, summary: string, params: readonly string[] = [], requ
   states: RUNTIME, safeToRetry: false,
 });
 
+// What every fade reply carries (one handler answers all three).
+const FADE_OUTPUTS = ['actorName', 'componentName', 'fadeTime', 'targetVolume', 'playing'] as const;
+
 export const AUDIO_RUNTIME_RECORDS: readonly CapabilityRecordSource[] = [
   r('clear_sound_mix_class_override', 'Clear a Sound Mix class override.', ['mixName', 'soundClassName', 'fadeOutTime'], ['mixName', 'soundClassName']),
   r('create_ambient_sound', 'Create an ambient sound actor.', ['soundPath', 'location', 'name', 'volume', 'pitch', 'attenuationPath', 'concurrencyPath'], ['soundPath'], ['actorName'], ['actorName']),
-  r('create_audio_component', 'Create an audio component on an actor, or on a new actor at location when actorName is omitted.', ['actorName', 'componentName', 'soundPath', 'location', 'rotation', 'volume', 'pitch', 'autoPlay'], ['soundPath'], ['componentName'], ['componentName']),
+  r('create_audio_component', 'Create an audio component on an actor, or on a new actor at location when actorName is omitted.', ['actorName', 'componentName', 'soundPath', 'location', 'rotation', 'volume', 'pitch', 'autoPlay'], ['soundPath'], ['componentName', 'actorName'], ['componentName']),
   r('create_reverb_zone', 'Create a runtime reverb zone actor.', ['name', 'location', 'size', 'reverbEffect', 'volume', 'fadeTime'], ['name'], ['actorName'], ['actorName']),
-  r('fade_sound', 'Fade a named sound instance to a target volume.', ['soundName', 'componentName', 'targetVolume', 'fadeTime', 'fadeType'], ['soundName']),
-  r('fade_sound_in', 'Fade a sound instance in.', ['soundName', 'componentName', 'fadeInTime', 'targetVolume'], ['soundName']),
-  r('fade_sound_out', 'Fade a sound instance out.', ['soundName', 'componentName', 'fadeOutTime', 'targetVolume'], ['soundName']),
+  r('fade_sound', 'Fade a named sound instance to a target volume.', ['soundName', 'componentName', 'targetVolume', 'fadeTime', 'fadeType'], ['soundName'], FADE_OUTPUTS),
+  r('fade_sound_in', 'Fade a sound instance in.', ['soundName', 'componentName', 'fadeInTime', 'targetVolume'], ['soundName'], FADE_OUTPUTS),
+  r('fade_sound_out', 'Fade a sound instance out.', ['soundName', 'componentName', 'fadeOutTime', 'targetVolume'], ['soundName'], FADE_OUTPUTS),
   withTopics(r('play_sound_2d', 'Play a non-spatial sound.', ['soundPath', 'volume', 'pitch', 'startTime'], ['soundPath']), ['play sound', 'play audio', 'play sfx', 'ui sound', 'play music']),
   withTopics(r('play_sound_at_location', 'Play a sound at a world location.', ['soundPath', 'location', 'rotation', 'volume', 'pitch', 'startTime', 'attenuationPath', 'concurrencyPath'], ['soundPath']), ['play sound at location', '3d sound', 'spatial sound', 'positional audio']),
   r('play_sound_attached', 'Play a sound attached to an actor component.', ['soundPath', 'actorName', 'componentName', 'attachPointName', 'volume', 'pitch'], ['soundPath', 'actorName']),

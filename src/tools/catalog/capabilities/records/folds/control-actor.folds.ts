@@ -61,5 +61,5 @@ export const CONTROL_ACTOR_FOLDS: readonly FoldSpec[] = [
     members: { class: 'find_by_class', name: 'find_by_name', mesh: 'find_by_mesh', material: 'find_by_material' },
     aliasMembers: { class: 'find_actors_by_class', name: 'find_actors_by_name' },
   },
-  { primary: 'set_visibility', summary: 'Show or hide an actor, or many at once with actorNames.', members: ['set_actor_visible'] },
+  { primary: 'set_visibility', summary: 'Show or hide an actor in the editor and in play (visible, default true), or many actors at once with actorNames, as one undo step. Collision follows visibility: hiding turns its collision off, and showing turns it back on, even where set_actor_collision had turned it off. Showing also shows every primitive component, including one hidden on purpose. The single form replies visible as read back plus actorName; the many form replies updatedActors, affectedActors and the names not found under missing. A name that matches nothing is ACTOR_NOT_FOUND; an actor that does not read back as asked is VISIBILITY_MISMATCH.', members: ['set_actor_visible'] },
 ];

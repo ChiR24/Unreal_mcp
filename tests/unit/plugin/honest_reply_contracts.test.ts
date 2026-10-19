@@ -3739,3 +3739,74 @@ describe('review findings on renders, bone keys, play rate and paging', () => {
     expect(code('Log', 'McpLogHistory.cpp')).toContain('if (Unlisted > 0 && MaxDistinct > 0)');
   });
 });
+
+describe('spawned lights undo, render targets say what was saved, fades change the sound playing', () => {
+  it('create_light spawns inside a transaction and reports it', () => {
+    const spawn = code('Lighting', 'McpLightingLightSpawn.cpp');
+    expect(spawn).toMatch(/FMcpScopedEditorTransaction Transaction\(FText::FromString\(TEXT\("Spawn Light"\)\)[\s\S]*?SpawnActorDeferred/u);
+    expect(spawn).toContain('Transaction.DescribeInto(Resp);');
+  });
+
+  it('create_render_target answers the save it made and flags an existing target', () => {
+    const target = code('Texture', 'McpTextureRenderTarget.cpp');
+    expect(target).toContain('const bool bSaved = bSave && McpSafeAssetSave(RenderTarget);');
+    expect(target).toContain('Response->SetBoolField(TEXT("saved"), bSaved);');
+    expect(target.match(/SetBoolField\(TEXT\("alreadyExists"\), true\)/gu)).toHaveLength(2);
+  });
+
+  it('all three fades share one handler: a volume change adjusts, a silent sound or unknown component is refused', () => {
+    const fade = code('Audio', 'McpAudioFadeAndReverb.cpp');
+    expect(fade).toContain('AudioComp->AdjustVolume((float)FadeTime, (float)TargetVolume);');
+    expect(fade).toContain('TEXT("SOUND_NOT_PLAYING")');
+    expect(fade).toContain('TEXT("COMPONENT_NOT_FOUND")');
+    expect(fade).toMatch(/for \(UWorld\* World : \{GEditor->PlayWorld\.Get\(\), GEditor->GetEditorWorldContext\(\)\.World\(\)\}\)/u);
+    expect(fade).toContain('Lower == TEXT("fade_sound_in") || Lower == TEXT("fade_sound_out")');
+    expect(code('Audio', 'McpAudioComponentsAndFades.cpp')).not.toContain('fade_sound');
+  });
+});
+
+describe('a write never deletes, engine content is never rebuilt, a listing can be paged', () => {
+  it('ensure_single_sky_light refuses several sky lights instead of destroying them, and refuses during Play', () => {
+    const sky = code('Lighting', 'McpLightingSky.cpp');
+    expect(sky).not.toContain('DestroyActor');
+    expect(sky).toContain('TEXT("MULTIPLE_SKY_LIGHTS")');
+    expect(sky).toContain('TEXT("PIE_ACTIVE")');
+    expect(sky).toContain('ExtractVectorField(Payload, TEXT("location"), FVector(0.0, 0.0, 500.0))');
+    expect(sky.match(/TEXT\("SPAWN_FAILED"\)/gu)).toHaveLength(2);
+  });
+
+  it('list_data_table_rows lists rows once, at the root, so the gateway can page them', () => {
+    const rows = code('AssetWorkflow', 'DataTables', 'Rows.cpp');
+    expect(rows).not.toContain('Details->SetArrayField(TEXT("rows")');
+    expect(rows).toContain('constexpr int32 MaxListedRows = 10000;');
+    expect(rows).toContain('OutResult->SetBoolField(TEXT("truncated"), true);');
+  });
+
+  it('LOD edits refuse engine meshes and say whether they saved', () => {
+    const lods = code('Geometry', 'Mesh', 'McpGeometryLodOperations.cpp');
+    expect(lods).toContain('TEXT("ENGINE_CONTENT")');
+    expect(lods.match(/Result->SetBoolField\(TEXT\("saved"\), bSaved\);/gu)).toHaveLength(2);
+    expect(lods).toContain('TrianglePercent <= 0.0 || TrianglePercent > 100.0');
+    const assetLods = code('AssetWorkflow', 'Optimization', 'McpAssetLODs.cpp');
+    expect(assetLods).toMatch(/StartsWith\(TEXT\("\/Engine\/"\)\)\) \{\s*EnginePaths\.Add\(Path\);\s*continue;/u);
+    expect(assetLods).toContain('ErrorCode = TEXT("ENGINE_CONTENT");');
+  });
+});
+
+describe('thumbnails are stored, found assets are not changes, a new audio actor is named', () => {
+  it('create_thumbnail caches the render into the package and dirties it only then', () => {
+    const thumbs = code('AssetWorkflow', 'Operations', 'McpAssetThumbnails.cpp');
+    expect(thumbs).toMatch(/if \(bCached\) \{\s*ThumbnailTools::CacheThumbnail\(Asset->GetFullName\(\), &ObjectThumbnail, Package\);\s*Package->MarkPackageDirty\(\);/u);
+    expect(thumbs.match(/MarkPackageDirty\(\)/gu)).toHaveLength(1);
+    expect(thumbs).toContain('Width > 4096 || Height > 4096');
+  });
+
+  it('an existing render target and a no-op sky light check claim no change', () => {
+    expect(code('Texture', 'McpTextureRenderTarget.cpp').match(/McpHandlerUtils::MarkNoAssetsChanged\(Response\);/gu)).toHaveLength(2);
+    expect(code('Lighting', 'McpLightingSky.cpp')).toMatch(/if \(bSpawned \|\| bRelabelled\)\s*\{\s*Transaction\.Emplace/u);
+  });
+
+  it('create_audio_component names the actor the component is on', () => {
+    expect(code('Audio', 'McpAudioComponentsAndFades.cpp')).toContain('Resp->SetStringField(TEXT("actorName"), McpActorRef(Owner));');
+  });
+});

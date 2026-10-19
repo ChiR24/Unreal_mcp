@@ -173,8 +173,8 @@ export const ASSET_LIFECYCLE_RECORDS: readonly RecordSpec[] = [
       examples: [ex('Delete several assets in one call', { paths: ['/Game/MCPTest/DisposableA', '/Game/MCPTest/DisposableB'] }, { success: true })] }
   ),
 
-  r('create_folder', 'asset', 'Create a new content-browser folder under a /Game path.',
-    schema({ path: str('Folder path (must start with /).') }, ['path']),
+  r('create_folder', 'asset', 'Create a Content Browser folder at path (under /Game or another allowed root); one that exists already answers success with alreadyExisted true. An empty folder may be gone after an editor restart until an asset is saved in it.',
+    schema({ path: str('Folder path, e.g. /Game/Art/Props; a path outside the allowed roots is refused (INVALID_PATH).') }, ['path']),
     OK_OUTPUT, WRITE, WRITE_POLICY, LOW,
     { topics: ['make folder', 'new folder', 'create directory'],
       whenToUse: [

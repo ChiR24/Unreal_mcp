@@ -161,9 +161,9 @@ export const LANDSCAPE_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'build_environment.generate_lods', action: 'generate_lods', family: F,
-    summary: 'Generate LODs for static mesh assets (foliage meshes included).',
+    summary: 'Give static mesh assets (foliage meshes included) numLODs LODs in all (default 4, LOD 0 included): each LOD keeps half the triangles of the one before, LODs past the count and hand-tuned LOD settings are replaced, and each mesh is rebuilt and saved. Engine meshes are not changed (engineContentPaths; ENGINE_CONTENT when nothing else was given): duplicate one into /Game first. The reply counts processed out of requested and lists notFoundPaths and notMeshPaths.',
     whenToUse: ['LODs must be generated for one or more assets.'],
-    whenNotToUse: ['LODs have already been generated.'],
+    whenNotToUse: ['LODs have already been tuned by hand: this replaces their settings (manage_geometry.configure_mesh_lods tunes one LOD).'],
     inputProps: { assetPath: P.assetPath, assetPaths: P.assetPaths, assets: P.assets, numLODs: P.numLODs },
     effect: 'write', latency: 'long-running', resources: 'high',
     behavior: { longRunning: true },

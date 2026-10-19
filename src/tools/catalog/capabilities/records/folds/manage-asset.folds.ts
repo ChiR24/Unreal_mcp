@@ -93,7 +93,7 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'process_asset', selector: 'process',
-    summary: 'Process an asset: render a thumbnail, generate mesh LODs, set the materials in the slots of a static or skeletal mesh asset (mesh_materials), or set a static mesh asset\'s collision (mesh_collision), so every placement shows or uses them.',
+    summary: 'Process an asset, chosen by process. thumbnail renders its preview at width by height (default 512, 1 to 4096) and stores it in the asset, which is left unsaved (thumbnailCached; engine content keeps its own), writing it as a PNG as well when outputPath names a project-relative file. lods gives static meshes lodCount LODs in all (default 4, LOD 0 included, each half the triangles of the one before), replacing LODs past the count and hand-tuned settings, then rebuilds and saves each. mesh_materials sets the materials in the slots of a static or skeletal mesh asset, by slot index or name, so every placement shows them; an engine mesh changes for this session only and is never saved (saveSkippedReason). mesh_collision sets the collision of a static mesh asset (a fitted box, sphere or capsule, its render triangles, or none), rebuilds every placed copy and saves it. lods and mesh_collision refuse engine meshes (ENGINE_CONTENT): duplicate one into /Game first.',
     topics: ['thumbnail', 'generate lods', 'material thumbnail', 'mesh collision', 'static mesh collision'],
     members: { thumbnail: 'create_thumbnail', lods: 'generate_lods', mesh_materials: 'set_mesh_materials', mesh_collision: 'set_mesh_collision' },
   },
@@ -106,7 +106,7 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
   // datatable
   {
     primary: 'edit_data_table', selector: 'edit',
-    summary: 'Create a data table or row struct, add/update/import rows, or set the row struct.',
+    summary: 'Write a data table, chosen by edit. create makes a table (name and path, default /Game/DataTables, or dataTablePath) bound to the row struct at rowStructPath; create_row_struct makes a struct for its rows (name and path, default /Game/Structs, or rowStructPath) from members. add_row adds rowName with rowData, the columns it leaves out taking the struct defaults, and refuses a name already there (ROW_ALREADY_EXISTS); update_row changes only the columns rowData names in an existing row; import_rows loads rows of {rowName, rowData} in one call, each named row replaced whole (clearExisting drops every row first), and lists the rows that do not fit under invalidRows. set_row_struct (set_struct_as_row_struct is the same) binds another row struct and carries the rows over (migrateExistingRows, default true): a row whose values do not convert is dropped and listed under invalidRows, and a filled table is refused unless the rows are migrated or cleared. rowData keys are the struct property names, as inspect_data_table reads them back. Every edit saves the asset unless save is false (saved).',
     topics: ['data table', 'data table row', 'row struct', 'import rows', 'make data table', 'change data table row', 'add item to data table'],
     members: {
       create: 'create_data_table', create_row_struct: 'create_row_struct', add_row: 'add_data_table_row', update_row: 'update_data_table_row',
@@ -120,7 +120,7 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'inspect_data_table', selector: 'info',
-    summary: 'Read a data table: one row, all rows, or its row struct.',
+    summary: 'Read a data table at dataTablePath (ASSET_NOT_FOUND when none is there). info row, the default, reads one row by rowName: found, and its rowData, each column under its property name in the form edit_data_table writes; a missing row answers found false rather than an error. rows lists every row with its values (rows of rowName and rowData), with rowCount the table total and rowStructPath; a listing too large for one reply comes a page at a time (send page.nextCall for the next), and past 10,000 rows truncated is true. row_struct answers hasRowStruct and rowStructPath (struct.get_struct reads the columns).',
     topics: ['data table row', 'list rows', 'row struct', 'look at data table', 'view data table rows'],
     members: { row: 'get_data_table_row', rows: 'list_data_table_rows', row_struct: 'get_row_struct' },
   },

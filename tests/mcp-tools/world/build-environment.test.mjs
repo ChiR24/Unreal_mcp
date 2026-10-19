@@ -80,7 +80,9 @@ const testCases = [
   // === CREATE ===
   { scenario: 'CREATE: create_landscape_grass_type', toolName: 'build_environment', arguments: {"action": "create_landscape_grass_type", "name": `TestLandscapeGrassType_${ts}`, "path": TEST_FOLDER_ALIAS, "staticMesh": TEST_MESH_ALIAS}, expected: 'success|already exists' },
   // === ACTION ===
-  { scenario: 'ACTION: generate_lods', toolName: 'build_environment', arguments: {"action": "generate_lods", "assetPath": TEST_MESH_ALIAS, "assetPaths": [TEST_MESH_ALIAS], "assets": [TEST_MESH_ALIAS], "numLODs": 2}, expected: 'success|already exists' },
+  // The runner seeds /Game/MCPTest/TestMesh, a copy of the engine cube: the engine sphere itself is never rebuilt.
+  { scenario: 'ACTION: generate_lods', toolName: 'build_environment', arguments: {"action": "generate_lods", "assetPath": 'Game/MCPTest/TestMesh', "assetPaths": ['Game/MCPTest/TestMesh'], "assets": ['Game/MCPTest/TestMesh'], "numLODs": 2}, expected: 'success|already exists' },
+  { scenario: 'ERROR: generate_lods refuses an engine mesh', toolName: 'build_environment', arguments: { action: 'generate_lods', assetPath: TEST_MESH }, expected: 'error|ENGINE_CONTENT' },
   { scenario: 'ACTION: bake_lightmap', toolName: 'build_environment', arguments: {"action": "bake_lightmap"}, expected: 'success' },
   // === SNAPSHOT SETUP ===
   { scenario: 'CONFIG: configure snapshot skylight', toolName: 'build_environment', arguments: { action: 'configure_sky_light', actorName: SNAPSHOT_SKY_NAME, intensity: ORIGINAL_SKY_INTENSITY, cubemapPath: '/Engine/MapTemplates/Sky/DaylightAmbientCubemap.DaylightAmbientCubemap' }, expected: 'success', captureResult: { key: 'snapshotSkyPath', fromField: 'result.actorPath' } },
@@ -195,7 +197,8 @@ const testCases = [
     { scenario: 'CREATE: spawn_sky_light', toolName: 'build_environment', arguments: {"action": "spawn_sky_light", "location": {"x": 0, "y": 0, "z": 100}}, expected: 'success|already exists' },
     { scenario: 'CREATE: create_sky_light', toolName: 'build_environment', arguments: {"action": "create_sky_light", "name": "Testsky_light", "rotation": {"pitch": 0, "yaw": 90, "roll": 0}, "cubemapPath": "/Engine/MapTemplates/Sky/DaylightAmbientCubemap.DaylightAmbientCubemap", "recapture": true}, expected: 'success|already exists' },
     // === ACTION ===
-    { scenario: 'ACTION: ensure_single_sky_light', toolName: 'build_environment', arguments: {"action": "ensure_single_sky_light", "name": "Testsky_light", "recapture": true}, expected: 'success' },
+    // The cases above spawned several sky lights: it names the one to keep and the ones to delete, and deletes nothing.
+    { scenario: 'ACTION: ensure_single_sky_light refuses several sky lights', toolName: 'build_environment', arguments: {"action": "ensure_single_sky_light", "name": "Testsky_light", "recapture": true}, expected: 'error|MULTIPLE_SKY_LIGHTS' },
     { scenario: 'CONFIG: configure_sky_light intensity on the kept sky light', toolName: 'build_environment', arguments: { action: 'configure_sky_light', actorName: 'Testsky_light', skyLightIntensity: 1.5 }, expected: 'success' },
     // === CREATE ===
     { scenario: 'CREATE: create_lightmass_volume', toolName: 'build_environment', arguments: {"action": "create_lightmass_volume", "name": "Testlightmass_volume", "size": {"x": 1500, "y": 1500, "z": 600}}, expected: 'success|already exists' },

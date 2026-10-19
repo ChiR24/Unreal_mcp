@@ -93,8 +93,8 @@ export const ASSET_QUERY_RECORDS: readonly RecordSpec[] = [
       examples: [ex('Read the reference graph through the direct bridge route', { assetPath: '/Game/Materials/M_Base', maxDepth: 2 }, { success: true })] }
   ),
 
-  r('create_thumbnail', 'asset', 'Generate a thumbnail for an asset.',
-    schema({ assetPath: ASSET_PATH, width: num('Thumbnail width.'), height: num('Thumbnail height.'), outputPath: str('Project-relative PNG file to write, e.g. Saved/Thumbnails/SM_Crate.png.') }, ['assetPath']),
+  r('create_thumbnail', 'asset', 'Render the preview of an asset and store it as its thumbnail (the asset is left unsaved; engine content keeps its own), and write it as a PNG when outputPath is given.',
+    schema({ assetPath: ASSET_PATH, width: num('Thumbnail width in pixels (default 512, 1 to 4096).'), height: num('Thumbnail height in pixels (default 512, 1 to 4096).'), outputPath: str('Project-relative PNG file to write, e.g. Saved/Thumbnails/SM_Crate.png.') }, ['assetPath']),
     OK, WRITE, WRITE_POLICY, LOW,
     { dispatchAction: 'generate_thumbnail',
       whenToUse: ['An asset needs a preview image, optionally written as a PNG file inside the project.'],

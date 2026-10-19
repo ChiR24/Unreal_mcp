@@ -70,7 +70,7 @@ export const OPERATIONS_POWER_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'manage_level', action: 'create_light', dispatchAction: 'manage_lighting',
     domain: D, family: 'lighting',
-    summary: 'Create a light actor in the current level.',
+    summary: 'Spawn a light actor in the level being edited: lightType point, directional, spot, rect or sky (or any light class as lightClass), at location (default 0, 0, 300), labelled name, made Movable; intensity, color and properties are applied, and the reply lists what was applied, refused or adjusted. One undo step; the level is left unsaved. During Play it still spawns into the edited level, not the running game.',
     whenToUse: ['A Point, Directional, Spot, Sky, or Rect light must be added.'],
     whenNotToUse: [
       'A generic actor spawn is needed; use control_actor.',

@@ -7356,7 +7356,7 @@
           },
           "height": {
             "type": "number",
-            "description": "Height in pixels."
+            "description": "Height in pixels (default 1024; 1 to 8192)."
           },
           "importAnimations": {
             "type": "boolean",
@@ -7690,7 +7690,7 @@
                   "type": "object",
                   "x-unreal-reflection-boundary": true
                 },
-                "description": "Member definitions."
+                "description": "The columns of the new row struct, each { name, type } (or memberName, memberType) with optional defaultValue, tooltip and metadata. type takes Bool, Int, Float, String, Name, Text, Vector, Rotator, Transform, Object, SoftObject, Class, SoftClass, Enum:<Name> or Struct:<Path>, or a container: Array:..., Set:..., Map:<K>,<V>. Without members the struct keeps one placeholder member."
               }
             ],
             "description": "Member definitions, each { name, type } (or memberName, memberType) with optional defaultValue, tooltip and metadata."
@@ -7964,15 +7964,15 @@
               },
               {
                 "type": "string",
-                "description": "Folder path (must start with /)."
-              },
-              {
-                "type": "string",
-                "description": "Package path (default /Game/DataTables)."
+                "description": "Folder path, e.g. /Game/Art/Props; a path outside the allowed roots is refused (INVALID_PATH)."
               },
               {
                 "type": "string",
                 "description": "Package path (default /Game/Structs)."
+              },
+              {
+                "type": "string",
+                "description": "Package path of the new asset: default /Game/DataTables for a table, /Game/Structs for a row struct."
               },
               {
                 "type": "string",
@@ -8175,7 +8175,7 @@
           },
           "rowStructPath": {
             "type": "string",
-            "description": "Asset path of the row UScriptStruct."
+            "description": "Asset path of a row struct: the one the table is bound to (create, set_row_struct), or the new struct (create_row_struct, in place of name and path)."
           },
           "rows": {
             "type": "array",

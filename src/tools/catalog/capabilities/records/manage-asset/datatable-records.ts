@@ -20,7 +20,7 @@ const ROW = '/Game/Structs/S_WeaponRow';
 const DONE = { success: true };
 
 export const DATATABLE_RECORDS: readonly RecordSpec[] = [
-  r('create_data_table', 'datatable', 'Create a new DataTable asset.', schema({ name: str('DataTable name.'), path: str('Package path (default /Game/DataTables).'), dataTablePath: str('Full asset path of the new table, e.g. /Game/DataTables/DT_Weapons; alternative to name and path.'), rowStructPath: ROW_STRUCT, save: SAVE }, ['rowStructPath'], ['name', 'dataTablePath']), OK, WRITE, WRITE_POLICY, MEDIUM,
+  r('create_data_table', 'datatable', 'Create a new DataTable asset.', schema({ name: str('Name of the new data table (create) or row struct (create_row_struct).'), path: str('Package path of the new asset: default /Game/DataTables for a table, /Game/Structs for a row struct.'), dataTablePath: str('Asset path of the data table: the one to create (create, in place of name and path), or the one every other edit writes, e.g. /Game/DataTables/DT_Weapons.'), rowStructPath: str('Asset path of a row struct: the one the table is bound to (create, set_row_struct), or the new struct (create_row_struct, in place of name and path).'), save: SAVE }, ['rowStructPath'], ['name', 'dataTablePath']), OK, WRITE, WRITE_POLICY, MEDIUM,
     { examples: [ex('Create a weapons DataTable', { name: 'DT_Weapons', path: '/Game/DataTables', rowStructPath: ROW }, DONE)],
       whenToUse: ['A new DataTable is needed to hold rows of game data such as weapon stats or item lists; the row struct must already exist.'],
       whenNotToUse: ['A copy of an existing table is wanted, rows included (use asset.duplicate).'] }),
@@ -28,7 +28,7 @@ export const DATATABLE_RECORDS: readonly RecordSpec[] = [
     { examples: [ex('Bind the row struct after creation', { dataTablePath: DT, rowStructPath: ROW }, DONE)],
       whenToUse: ['A table must be bound to a different row struct; existing rows are migrated unless clearExisting drops them.'],
       whenNotToUse: ['The struct itself needs new or changed columns first (use struct.edit_struct).'] }),
-  r('create_row_struct', 'datatable', 'Create a new UScriptStruct suitable as a DataTable row type.', schema({ name: str('Struct name.'), path: str('Package path (default /Game/Structs).'), rowStructPath: str('Full asset path of the new struct, e.g. /Game/Structs/S_WeaponRow; alternative to name and path.'), members: arrObj('Member definitions.'), save: SAVE }, [], ['name', 'rowStructPath']), OK, WRITE, WRITE_POLICY, MEDIUM,
+  r('create_row_struct', 'datatable', 'Create a new UScriptStruct suitable as a DataTable row type.', schema({ name: str('Struct name.'), path: str('Package path (default /Game/Structs).'), rowStructPath: str('Full asset path of the new struct, e.g. /Game/Structs/S_WeaponRow; alternative to name and path.'), members: arrObj('The columns of the new row struct, each { name, type } (or memberName, memberType) with optional defaultValue, tooltip and metadata. type takes Bool, Int, Float, String, Name, Text, Vector, Rotator, Transform, Object, SoftObject, Class, SoftClass, Enum:<Name> or Struct:<Path>, or a container: Array:..., Set:..., Map:<K>,<V>. Without members the struct keeps one placeholder member.'), save: SAVE }, [], ['name', 'rowStructPath']), OK, WRITE, WRITE_POLICY, MEDIUM,
     { examples: [ex('Create a weapon row struct', { name: 'S_WeaponRow', path: '/Game/Structs', members: [{ memberName: 'Damage', memberType: 'Float' }] }, DONE)],
       whenToUse: ['A new struct with named, typed columns is needed as the row type of a table.'],
       whenNotToUse: ['An existing struct only needs columns added, renamed or retyped (use struct.edit_struct).'] }),
@@ -58,7 +58,7 @@ export const DATATABLE_RECORDS: readonly RecordSpec[] = [
       whenNotToUse: ['The whole DataTable asset must be deleted, not one row (use asset.delete).', 'A row must be changed rather than removed (use datatable.edit_data_table).'] }),
   r('list_data_table_rows', 'datatable', 'List all rows in a DataTable.', schema({ dataTablePath: DT_PATH }, ['dataTablePath']), OK, READ, READ_POLICY, LOW,
     { examples: [ex('List every weapon row', { dataTablePath: DT }, DONE)],
-      whenToUse: ['Every row and its values must be seen at once; at most 200 rows are returned, with the full rowCount.'],
+      whenToUse: ['Every row and its values must be seen at once; a large table comes a page at a time, and rowCount is its total.'],
       whenNotToUse: ['The DataTable asset must first be found in the project (use asset.query_asset).'] }),
   r('import_data_table_rows', 'datatable', 'Import multiple rows into a DataTable from an array.', schema({ dataTablePath: DT_PATH, rows: arrObj('Rows to import, each { rowName: <name>, rowData: { <field>: <value>, ... } }. The field names inside rowData are the row struct own property names, e.g. { rowName: ArcRifle, rowData: { DisplayName: Arc Rifle, Damage: 42 } }. A flat entry such as { rowName, Damage } is rejected as missing rowData.'), clearExisting: CLEAR_ROWS, save: SAVE }, ['dataTablePath', 'rows']), OK, WRITE, WRITE_POLICY, MEDIUM,
     { examples: [ex('Replace the table contents in bulk', { dataTablePath: DT, rows: [{ rowName: 'Pistol', rowData: { Damage: 18 } }, { rowName: 'Rifle', rowData: { Damage: 32 } }], clearExisting: true }, DONE)],

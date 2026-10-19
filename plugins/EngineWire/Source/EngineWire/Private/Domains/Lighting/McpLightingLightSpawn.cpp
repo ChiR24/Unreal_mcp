@@ -5,6 +5,7 @@
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 #include "Components/LightComponent.h"
 #include "Components/SkyLightComponent.h"
 #include "Dom/JsonObject.h"
@@ -105,6 +106,9 @@ bool HandleSpawnLight(
     }
 
     FlushRenderingCommands();
+    // A light spawned outside any transaction could not be undone, where control_actor spawn could.
+    FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Spawn Light")), EMcpMutationDurability::EditorStateOnly,
+                                            TArray<UObject*>());
     FTransform SpawnTransform(Rotation, Location);
     AActor* NewLight = World->SpawnActorDeferred<AActor>(
         LightClass, SpawnTransform, nullptr, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
@@ -190,6 +194,7 @@ bool HandleSpawnLight(
     Say(TEXT("refused"), Report.Refused);
     Say(TEXT("adjusted"), Report.Adjusted);
     McpHandlerUtils::AddVerification(Resp, NewLight);
+    Transaction.DescribeInto(Resp);
     Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, Message, Resp);
     return true;
 }

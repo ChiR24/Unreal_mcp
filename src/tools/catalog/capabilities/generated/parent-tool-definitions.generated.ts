@@ -9937,7 +9937,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "height": {
           "type": "number",
-          "description": "Height in pixels."
+          "description": "Height in pixels (default 1024; 1 to 8192)."
         },
         "importAnimations": {
           "type": "boolean",
@@ -10271,7 +10271,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "type": "object",
                 "x-unreal-reflection-boundary": true
               },
-              "description": "Member definitions."
+              "description": "The columns of the new row struct, each { name, type } (or memberName, memberType) with optional defaultValue, tooltip and metadata. type takes Bool, Int, Float, String, Name, Text, Vector, Rotator, Transform, Object, SoftObject, Class, SoftClass, Enum:<Name> or Struct:<Path>, or a container: Array:..., Set:..., Map:<K>,<V>. Without members the struct keeps one placeholder member."
             }
           ],
           "description": "Member definitions, each { name, type } (or memberName, memberType) with optional defaultValue, tooltip and metadata."
@@ -10545,15 +10545,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             },
             {
               "type": "string",
-              "description": "Folder path (must start with /)."
-            },
-            {
-              "type": "string",
-              "description": "Package path (default /Game/DataTables)."
+              "description": "Folder path, e.g. /Game/Art/Props; a path outside the allowed roots is refused (INVALID_PATH)."
             },
             {
               "type": "string",
               "description": "Package path (default /Game/Structs)."
+            },
+            {
+              "type": "string",
+              "description": "Package path of the new asset: default /Game/DataTables for a table, /Game/Structs for a row struct."
             },
             {
               "type": "string",
@@ -10756,7 +10756,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "rowStructPath": {
           "type": "string",
-          "description": "Asset path of the row UScriptStruct."
+          "description": "Asset path of a row struct: the one the table is bound to (create, set_row_struct), or the new struct (create_row_struct, in place of name and path)."
         },
         "rows": {
           "type": "array",
@@ -13062,7 +13062,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "componentName": {
           "type": "string",
-          "description": "Name of the audio component that was created or spawned."
+          "description": "Name of the audio component that was created, spawned or faded."
         },
         "details": {
           "type": "object",
@@ -13105,6 +13105,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "envelopeUpdates": {
           "type": "number",
           "description": "Meter readings that arrived, about one per editor frame; 0 means the engine never rendered the sound."
+        },
+        "fadeTime": {
+          "type": "number",
+          "description": "Seconds the fade takes, as used."
         },
         "falloffDistance": {
           "type": "number",
@@ -13204,6 +13208,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Pitch multiplier declared by the inspected Sound Class."
         },
+        "playing": {
+          "type": "boolean",
+          "description": "Whether the faded sound is playing after the call (a fade out still plays until it ends)."
+        },
         "removed": {
           "type": "array",
           "items": {
@@ -13259,6 +13267,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "success": {
           "type": "boolean",
           "description": "Whether the action succeeded."
+        },
+        "targetVolume": {
+          "type": "number",
+          "description": "Volume the fade ends at, as used: a multiplier, where 1 plays the sound at the volume it was made with."
         },
         "timeline": {
           "type": "array",

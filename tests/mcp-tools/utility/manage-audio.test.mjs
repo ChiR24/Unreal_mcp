@@ -94,8 +94,9 @@ const testCases = [
 // === SOUND FADING === (C++ handler now accepts componentName for targeted search)
 { scenario: 'ACTION: fade_sound_in', toolName: 'manage_audio', arguments: { action: 'fade_sound_in', soundName: FADE_ACTOR_NAME, componentName: '${captured:audioComponentName}', fadeInTime: 1.0, targetVolume: 0.9 }, expected: 'success', assertions: [{ path: 'structuredContent.result.fadeTime', equals: 1, label: 'fadeInTime applied' }] },
 { scenario: 'ACTION: fade_sound_out', toolName: 'manage_audio', arguments: { action: 'fade_sound_out', soundName: FADE_ACTOR_NAME, componentName: '${captured:audioComponentName}', fadeOutTime: 0.5, targetVolume: 0.2 }, expected: 'success', assertions: [{ path: 'structuredContent.result.targetVolume', equals: 0.2, label: 'fade-out target volume applied' }] },
-// fade_sound: C++ reads soundName (preferred) or actorName
-{ scenario: 'ACTION: fade_sound', toolName: 'manage_audio', arguments: { action: 'fade_sound', soundName: FADE_ACTOR_NAME, componentName: '${captured:audioComponentName}', fadeTime: 1.0, targetVolume: 0.5, fadeType: 'FadeTo' }, expected: 'success' },
+// The test cue is silent, so it has stopped by now: a volume change has nothing to change.
+{ scenario: 'ACTION: fade_sound to a volume on a sound that is not playing is refused', toolName: 'manage_audio', arguments: { action: 'fade_sound', soundName: FADE_ACTOR_NAME, componentName: '${captured:audioComponentName}', fadeTime: 1.0, targetVolume: 0.5, fadeType: 'FadeTo' }, expected: 'error|SOUND_NOT_PLAYING' },
+{ scenario: 'ACTION: fade_sound_in of a component the actor lacks is refused', toolName: 'manage_audio', arguments: { action: 'fade_sound_in', soundName: FADE_ACTOR_NAME, componentName: `NoSuchAudio_${ts}` }, expected: 'error|COMPONENT_NOT_FOUND' },
 
 // === AMBIENT & REVERB ===
 { scenario: 'CREATE: create_ambient_sound', toolName: 'manage_audio', arguments: { action: 'create_ambient_sound', soundPath: SOUND_CUE, location: { x: 0, y: 0, z: 0 }, name: `MCPTestAmbient_${ts}`, volume: 0.5, pitch: 1.0, attenuationPath: ATTENUATION }, expected: 'success' },
