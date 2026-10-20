@@ -85,7 +85,10 @@ const testCases = [
 { scenario: 'ADD: add_cached_pose', toolName: 'animation_physics', arguments: {"action": "add_cached_pose", "blueprintPath": `${TEST_FOLDER}/Testanimation_blueprint`, "cacheName": "Testcached_pose", "positionX": 600, "positionY": 0}, expected: 'success|already exists' },
 
 // === ADD (Slot Node - needs blueprintPath) ===
-{ scenario: 'ADD: add_slot_node', toolName: 'animation_physics', arguments: {"action": "add_slot_node", "blueprintPath": `${TEST_FOLDER}/Testanimation_blueprint`, "slotName": "Testslot_node", "groupName": "DefaultGroup", "positionX": 800, "positionY": 0}, expected: 'success|already exists' },
+{ scenario: 'ADD: add_slot_node', toolName: 'animation_physics', arguments: {"action": "add_slot_node", "blueprintPath": `${TEST_FOLDER}/Testanimation_blueprint`, "slotName": "Testslot_node", "groupName": "DefaultGroup", "positionX": 800, "positionY": 0}, expected: 'success|already exists', assertions: [
+  { path: 'structuredContent.result.slotName', equals: 'Testslot_node', label: 'the node plays the bare slot name montages use' },
+  { path: 'structuredContent.result.groupName', equals: 'DefaultGroup', label: 'the slot group is reported' },
+] },
 { scenario: 'ADD: add_layered_blend_per_bone', toolName: 'animation_physics', arguments: {"action": "add_layered_blend_per_bone", "blueprintPath": `${TEST_FOLDER}/Testanimation_blueprint`, "layerSetup": [{"branchFilters": [{"boneName": "Root", "blendDepth": 1}]}]}, expected: 'success|ANIMGRAPH_MODULE_UNAVAILABLE', assertions: [{ path: 'structuredContent.result.layerCount', equals: 1, label: 'layerSetup is applied to the node' }] },
 { scenario: 'ADD: add_layered_blend_per_bone from boneName', toolName: 'animation_physics', arguments: {"action": "add_layered_blend_per_bone", "blueprintPath": `${TEST_FOLDER}/Testanimation_blueprint`, "boneName": "Root", "positionX": 1000, "positionY": 200, "save": true}, expected: 'success|ANIMGRAPH_MODULE_UNAVAILABLE' },
 { scenario: 'CONFIG: set_anim_graph_node_value', toolName: 'animation_physics', arguments: {"action": "set_anim_graph_node_value", "blueprintPath": `${TEST_FOLDER}/Testanimation_blueprint`, "nodeName": "Testblend_node", "propertyName": "NodeComment", "value": "MCPUpdatedBlendNode", "save": true}, expected: 'success|ANIMGRAPH_MODULE_UNAVAILABLE|NODE_NOT_FOUND|PROPERTY_NOT_FOUND' },

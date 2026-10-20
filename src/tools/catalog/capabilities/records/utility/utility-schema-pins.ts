@@ -187,7 +187,7 @@ export const FIELD_DESCRIPTIONS: Readonly<Record<string, string>> = {
   midGain: 'Linear gain of EQ band 1 (0 to 4).',
   pitchAdjuster: 'Pitch multiplier applied by the mix modifier.',
   plurality: 'Grammatical number of the voice: Singular or Plural (default Singular).',
-  replace: 'Replace the context mapping of the same speaker instead of adding another (default false).',
+  replace: 'Swap the context this speaker already has with these same listeners (its sound and key format) instead of refusing with CONTEXT_EXISTS (default false).',
   soundWavePath: 'Canonical /Game SoundWave asset spoken in this context.',
   spatialize: 'Whether the sound is spatialized (default true).',
   spokenText: 'Transcript of the spoken line.',

@@ -9,7 +9,7 @@ TSharedPtr<FJsonObject> HandleBlueprintSlotLayerActions(const FString& SubAction
     {
         FString BlueprintPath = NormalizeAnimPath(GetJsonStringField(Params, TEXT("blueprintPath"), TEXT("")));
         FString SlotName = GetJsonStringField(Params, TEXT("slotName"), TEXT(""));
-        FString GroupName = GetJsonStringField(Params, TEXT("groupName"), TEXT("DefaultGroup"));
+        FString GroupName = GetJsonStringField(Params, TEXT("groupName"), TEXT(""));
         int32 NodePosX = static_cast<int32>(GetJsonNumberField(Params, TEXT("positionX"), 0));
         int32 NodePosY = static_cast<int32>(GetJsonNumberField(Params, TEXT("positionY"), 0));
         bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
@@ -32,23 +32,41 @@ TSharedPtr<FJsonObject> HandleBlueprintSlotLayerActions(const FString& SubAction
             ANIM_ERROR_RESPONSE(TEXT("Could not find AnimGraph in blueprint"), TEXT("GRAPH_NOT_FOUND"));
         }
 
-        // Create the Slot node
+        // The node holds the bare slot name, as montages do, and the skeleton holds its group. "Group.Slot" went into
+        // the node, so no montage ever played through it. A slot keeps the group the skeleton already has it in.
+        USkeleton* Skeleton = AnimBP->TargetSkeleton;
+        const FName Slot(*SlotName);
+        const FName KnownGroup = Skeleton && Skeleton->ContainsSlotName(Slot) ? Skeleton->GetSlotGroupName(Slot) : NAME_None;
+        if (!GroupName.IsEmpty() && !KnownGroup.IsNone() && KnownGroup != FName(*GroupName))
+        {
+            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Slot '%s' is in group '%s' on the skeleton; send that groupName or none. Nothing was added."),
+                *SlotName, *KnownGroup.ToString()), TEXT("SLOT_IN_OTHER_GROUP"));
+        }
+        const FName Group = !KnownGroup.IsNone() ? KnownGroup : GroupName.IsEmpty() ? FAnimSlotGroup::DefaultGroupName : FName(*GroupName);
+
         FGraphNodeCreator<UAnimGraphNode_Slot> NodeCreator(*AnimGraph);
         UAnimGraphNode_Slot* SlotNode = NodeCreator.CreateNode();
         SlotNode->NodePosX = NodePosX;
         SlotNode->NodePosY = NodePosY;
-
-        // Set the slot name (format: "GroupName.SlotName")
-        FString FullSlotName = FString::Printf(TEXT("%s.%s"), *GroupName, *SlotName);
-        SlotNode->Node.SlotName = FName(*FullSlotName);
-
+        SlotNode->Node.SlotName = Slot;
         NodeCreator.Finalize();
 
+        // Compiling registers a new slot in DefaultGroup; another group must be on the skeleton, and saved, first.
+        if (Skeleton && KnownGroup.IsNone() && Group != FAnimSlotGroup::DefaultGroupName)
+        {
+            Skeleton->Modify();
+            Skeleton->AddSlotGroupName(Group);
+            Skeleton->SetSlotGroupName(Slot, Group);
+            Response->SetBoolField(TEXT("skeletonSaved"), SaveAnimAsset(Skeleton, bSave) && bSave);
+        }
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(AnimBP);
-        SaveAnimAsset(AnimBP, bSave);
+        SaveAnimAssetAndReport(AnimBP, bSave, Response);
 
-        Response->SetStringField(TEXT("slotName"), FullSlotName);
-        ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Slot node '%s' created"), *FullSlotName));
+        Response->SetStringField(TEXT("slotName"), SlotName);
+        Response->SetStringField(TEXT("groupName"), Group.ToString());
+        Response->SetStringField(TEXT("nodeName"), SlotNode->GetName());
+        Response->SetStringField(TEXT("nodeId"), SlotNode->NodeGuid.ToString());
+        ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Slot node '%s' (group %s) created"), *SlotName, *Group.ToString()));
         return Response;
     }
 
@@ -141,8 +159,11 @@ TSharedPtr<FJsonObject> HandleBlueprintSlotLayerActions(const FString& SubAction
         }
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(AnimBP);
-        SaveAnimAsset(AnimBP, bSave);
+        SaveAnimAssetAndReport(AnimBP, bSave, Response);
 
+        // Named so it can be wired: the reply gave no way to reach the node it made.
+        Response->SetStringField(TEXT("nodeName"), BlendNode->GetName());
+        Response->SetStringField(TEXT("nodeId"), BlendNode->NodeGuid.ToString());
         Response->SetNumberField(TEXT("layerCount"), Layers.Num());
         ANIM_SUCCESS_RESPONSE(Layers.Num() > 0
             ? FString::Printf(TEXT("Layered blend per bone node created with %d layer(s)"), Layers.Num())

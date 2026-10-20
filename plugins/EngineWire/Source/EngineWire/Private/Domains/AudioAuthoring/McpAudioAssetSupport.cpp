@@ -77,12 +77,16 @@ bool BuildAudioCreationPath(const FString& Directory, const FString& Name, FStri
 
 bool SaveAudioAsset(UObject* Asset, bool bShouldSave)
 {
-	if (!bShouldSave || !Asset)
+	if (!Asset)
 	{
 		return true;
 	}
-
+	// save false keeps the edit as an unsaved change: unmarked, it was in no save list and went with the editor.
 	Asset->MarkPackageDirty();
+	if (!bShouldSave)
+	{
+		return true;
+	}
 	FAssetRegistryModule::AssetCreated(Asset);
 	// Dirtying the package is not saving it. This returned true after marking
 	// the asset dirty and registering it, so every `save: true` across the

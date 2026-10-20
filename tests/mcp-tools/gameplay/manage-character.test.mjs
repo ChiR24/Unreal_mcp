@@ -51,7 +51,10 @@ const testCases = [
   { scenario: 'CONFIG: configure_movement_speeds', toolName: 'manage_character', arguments: { action: 'configure_movement_speeds', blueprintPath: '${captured:blueprintPath}', runSpeed: 420, crouchSpeed: 180, swimSpeed: 320, flySpeed: 500, acceleration: 1400, deceleration: 1600, groundFriction: 7, jumpHeight: 650 }, expected: 'success', assertions: [{ path: 'structuredContent.result.runSpeedApplied', equals: true, label: 'runSpeed applied when walkSpeed omitted' }, { path: 'structuredContent.result.walkSpeed', equals: 420, label: 'runSpeed maps to max walk speed' }] },
   { scenario: 'CONFIG: configure_jump', toolName: 'manage_character', arguments: { action: 'configure_jump', blueprintPath: '${captured:blueprintPath}', jumpHeight: 650, airControl: 0.45, gravityScale: 1.1, fallingLateralFriction: 0.15, maxJumpCount: 2, jumpHoldTime: 0.25 }, expected: 'success' },
   { scenario: 'CONFIG: configure_rotation', toolName: 'manage_character', arguments: { action: 'configure_rotation', blueprintPath: '${captured:blueprintPath}', orientToMovement: true, useControllerRotationYaw: false, useControllerRotationPitch: false, useControllerRotationRoll: false, rotationRate: 540 }, expected: 'success' },
-  { scenario: 'CONFIG: configure_nav_movement', toolName: 'manage_character', arguments: { action: 'configure_nav_movement', blueprintPath: '${captured:blueprintPath}', navAgentRadius: 42, navAgentHeight: 192, avoidanceEnabled: true }, expected: 'success' },
+  { scenario: 'CONFIG: configure_nav_movement', toolName: 'manage_character', arguments: { action: 'configure_nav_movement', blueprintPath: '${captured:blueprintPath}', navAgentRadius: 42, navAgentHeight: 192, avoidanceEnabled: true }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.navAgentRadius', equals: 42, label: 'nav agent radius read back' },
+    { path: 'structuredContent.result.navAgentFollowsCapsule', equals: false, label: 'a sent size stops the capsule copy' },
+  ] },
 
   // === ADVANCED MOVEMENT ===
 
@@ -65,6 +68,7 @@ const testCases = [
   // === WRONG TARGET (BB-012) ===
   // A non-Character blueprint (the anim blueprint's AnimInstance parent chain)
   // must be rejected by the prerequisite gate with zero mutation.
+  { scenario: 'WRONG TARGET: configure_jump on an Animation Blueprint is refused', toolName: 'manage_character', arguments: { action: 'configure_jump', blueprintPath: '${captured:animBlueprintPath}', jumpHeight: 700 }, expected: 'error|NOT_A_CHARACTER' },
 
   // === INFO ===
   { scenario: 'INFO: get_character_info', toolName: 'manage_character', arguments: { action: 'get_character_info', blueprintPath: '${captured:blueprintPath}' }, expected: 'success', assertions: [

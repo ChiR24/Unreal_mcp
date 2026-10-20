@@ -38,7 +38,7 @@ export const A: PropertyMap = {
   automaticRule: bool('Fire the transition when the source state\'s sequence player reaches the end of its animation instead of testing a condition. Left alone when omitted.'),
   bidirectional: bool('Whether the transition also applies from toState back to fromState. Left alone when omitted.'),
   blendType: str('Blend node type (TwoWayBlend, BlendListByBool, BlendListByInt).'),
-  layerSetup: objectList('Layered blend-per-bone branch filter descriptors.'),
+  layerSetup: objectList('One entry per blend pose, in pin order: [{ branchFilters: [{ boneName, blendDepth }] }]. A filter takes boneName and every bone under it from that blend pose over the base pose: blendDepth 0 (default) at full weight at once, N ramps the weight up over N bones down the chain (the named bone gets 1/N), and a negative depth on a bone under an earlier filter takes that branch back out (-1 removes it). Every bone must be on the Animation Blueprint\'s skeleton (BONE_NOT_FOUND).'),
   boneTracks: objectList(
     'Bone tracks to key: [{ boneName, frames: [{ frame, rotationDelta?: {pitch,yaw,roll}, '
     + 'rotation?: {pitch,yaw,roll}|{x,y,z,w}, location?: {x,y,z}, scale?: {x,y,z} }] }]. '

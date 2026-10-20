@@ -701,7 +701,7 @@
           },
           "groupName": {
             "type": "string",
-            "description": "Slot group the slot belongs to (default DefaultGroup)."
+            "description": "Slot group a new slot joins on the skeleton (default DefaultGroup). Montages in one group interrupt each other; a slot already on the skeleton keeps its group."
           },
           "height": {
             "type": "number",
@@ -776,7 +776,7 @@
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true
             },
-            "description": "Layered blend-per-bone branch filter descriptors."
+            "description": "One entry per blend pose, in pin order: [{ branchFilters: [{ boneName, blendDepth }] }]. A filter takes boneName and every bone under it from that blend pose over the base pose: blendDepth 0 (default) at full weight at once, N ramps the weight up over N bones down the chain (the named bone gets 1/N), and a negative depth on a bone under an earlier filter takes that branch back out (-1 removes it). Every bone must be on the Animation Blueprint's skeleton (BONE_NOT_FOUND)."
           },
           "length": {
             "type": "number",
@@ -9163,7 +9163,7 @@
           },
           "replace": {
             "type": "boolean",
-            "description": "Replace the context mapping of the same speaker instead of adding another (default false)."
+            "description": "Swap the context this speaker already has with these same listeners (its sound and key format) instead of refusing with CONTEXT_EXISTS (default false)."
           },
           "reverbDistanceMax": {
             "type": "number",

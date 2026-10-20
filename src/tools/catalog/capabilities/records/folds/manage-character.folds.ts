@@ -5,7 +5,7 @@ import type { FoldSpec } from '../shared/fold-types.js';
 export const MANAGE_CHARACTER_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'configure_character', selector: 'setting',
-    summary: 'Configure a Character Blueprint: movement speeds, jump, crouch, rotation, capsule, mesh, camera, nav movement.',
+    summary: 'Configure a Character Blueprint\'s defaults by setting: movement_speeds (walk, crouch, swim, fly, acceleration, braking, friction), jump (launch speed, hold, double jump, air control, gravity), crouch, rotation (orient to movement or face the aim), capsule_component, mesh_component (skeletal mesh, Animation Blueprint, offset), camera_component (a third-person spring arm and camera, made when missing) or nav_movement (AI agent size, avoidance). Each compiles and saves the Blueprint, changes only the fields sent and reads the values back; a Blueprint that is not a Character is refused (NOT_A_CHARACTER).',
     topics: ['character movement', 'jump', 'crouch', 'capsule', 'character camera', 'third person camera', 'follow camera', 'assign anim blueprint', 'make the player run faster', 'double jump'],
     members: {
       ...byTarget('configure_', ['configure_movement_speeds', 'configure_jump', 'configure_crouch', 'configure_rotation', 'configure_capsule_component',

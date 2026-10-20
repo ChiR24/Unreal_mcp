@@ -474,7 +474,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "groupName": {
           "type": "string",
-          "description": "Slot group the slot belongs to (default DefaultGroup)."
+          "description": "Slot group a new slot joins on the skeleton (default DefaultGroup). Montages in one group interrupt each other; a slot already on the skeleton keeps its group."
         },
         "height": {
           "type": "number",
@@ -549,7 +549,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "additionalProperties": true,
             "x-unreal-reflection-boundary": true
           },
-          "description": "Layered blend-per-bone branch filter descriptors."
+          "description": "One entry per blend pose, in pin order: [{ branchFilters: [{ boneName, blendDepth }] }]. A filter takes boneName and every bone under it from that blend pose over the base pose: blendDepth 0 (default) at full weight at once, N ramps the weight up over N bones down the chain (the named bone gets 1/N), and a negative depth on a bone under an earlier filter takes that branch back out (-1 removes it). Every bone must be on the Animation Blueprint's skeleton (BONE_NOT_FOUND)."
         },
         "length": {
           "type": "number",
@@ -1616,6 +1616,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Frames (sampled keys) in the sequence."
         },
+        "groupName": {
+          "type": "string",
+          "description": "The slot group the slot is in on the skeleton."
+        },
         "hasPhysicsAsset": {
           "type": "boolean",
           "description": "Boolean parameter."
@@ -1641,6 +1645,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "influencesRemoved": {
           "type": "number",
           "description": "Influences removed."
+        },
+        "layerCount": {
+          "type": "number",
+          "description": "Blend poses with branch filters set."
         },
         "length": {
           "type": "number",
@@ -1782,11 +1790,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "nodeId": {
           "type": "string",
-          "description": "GUID of the node that was set."
+          "description": "GUID of the node made: the nodeId graph edits take."
         },
         "nodeName": {
           "type": "string",
-          "description": "Object name of the node that was set."
+          "description": "Object name of the node made."
         },
         "nodeNames": {
           "type": "array",
@@ -1956,7 +1964,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "saved": {
           "type": "boolean",
-          "description": "Whether the mesh was saved."
+          "description": "Boolean parameter."
         },
         "scale": {
           "type": "object",
@@ -1985,6 +1993,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "skeletonSaved": {
           "type": "boolean",
           "description": "UE 5.0 to 5.2: whether the skeleton, which holds the pose curve names there, was saved."
+        },
+        "slotName": {
+          "type": "string",
+          "description": "The slot name the node plays."
         },
         "socketCount": {
           "type": "number",
@@ -12907,7 +12919,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "replace": {
           "type": "boolean",
-          "description": "Replace the context mapping of the same speaker instead of adding another (default false)."
+          "description": "Swap the context this speaker already has with these same listeners (its sound and key format) instead of refusing with CONTEXT_EXISTS (default false)."
         },
         "reverbDistanceMax": {
           "type": "number",
@@ -13119,6 +13131,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Name of the audio component that was created, spawned or faded."
         },
+        "contextCount": {
+          "type": "number",
+          "description": "Number of contexts the Dialogue Wave now has."
+        },
         "details": {
           "type": "object",
           "x-unreal-reflection-boundary": true,
@@ -13277,6 +13293,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "removedCount": {
           "type": "number",
           "description": "How many nodes were removed."
+        },
+        "replaced": {
+          "type": "boolean",
+          "description": "True when the call swapped a context the speaker already had with the same listeners; false when it added one."
         },
         "results": {
           "type": "array",

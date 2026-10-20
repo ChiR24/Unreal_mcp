@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "4aa482ffa0f192d5",
+  "catalogRevision": "f936d0a86603d95d",
   "recordCount": 416,
   "records": [
     {
@@ -627,14 +627,15 @@
           "anim graph node value",
           "blend upper body only"
         ],
-        "summary": "Configure an AnimGraph node: add a layered-blend-per-bone node or set a node property value.",
+        "summary": "Change an Animation Blueprint's AnimGraph, chosen by edit. add_layered_blend_per_bone adds a Layered Blend Per Bone node that layers each blend pose over the bones its branch filters name (a bone not on the skeleton is BONE_NOT_FOUND) and names the node for wiring. set_value sets a node setting (Alpha, PlayRate, bLoopAnimation, NodeComment) or the animation an asset player plays, by node name or nodeId, and reads it back; NODE_NOT_FOUND lists the nodes and AMBIGUOUS_NODE the matches. Both save unless save is false.",
         "whenToUse": [
-          "edit=add_layered_blend_per_bone: Partial-skeleton layering needed.",
+          "edit=add_layered_blend_per_bone: Part of the body must play another animation than the rest, such as attacking or aiming while walking.",
           "edit=set_value: A graph node property must change.",
           "edit=set_value: A Sequence Player or Blend Space Player must play a different animation."
         ],
         "whenNotToUse": [
-          "Use add_blend_node."
+          "edit=add_layered_blend_per_bone: A whole-body blend between poses (add_blend_node).",
+          "edit=set_value: Use add_blend_node."
         ]
       },
       "schemas": {
@@ -653,7 +654,7 @@
                 "additionalProperties": true,
                 "x-unreal-reflection-boundary": true
               },
-              "description": "Layered blend-per-bone branch filter descriptors."
+              "description": "One entry per blend pose, in pin order: [{ branchFilters: [{ boneName, blendDepth }] }]. A filter takes boneName and every bone under it from that blend pose over the base pose: blendDepth 0 (default) at full weight at once, N ramps the weight up over N bones down the chain (the named bone gets 1/N), and a negative depth on a bone under an earlier filter takes that branch back out (-1 removes it). Every bone must be on the Animation Blueprint's skeleton (BONE_NOT_FOUND)."
             },
             "boneName": {
               "type": "string",
@@ -720,11 +721,19 @@
             },
             "nodeName": {
               "type": "string",
-              "description": "Object name of the node that was set."
+              "description": "Object name of the node made."
             },
             "nodeId": {
               "type": "string",
-              "description": "GUID of the node that was set."
+              "description": "GUID of the node made: the nodeId graph edits take."
+            },
+            "layerCount": {
+              "type": "number",
+              "description": "Blend poses with branch filters set."
+            },
+            "saved": {
+              "type": "boolean",
+              "description": "Boolean parameter."
             },
             "propertyName": {
               "type": "string",
@@ -743,7 +752,7 @@
       },
       "examples": [
         {
-          "title": "Configure an AnimGraph node: add a layered-blend-per-bone node or set a node property value.",
+          "title": "Change an Animation Blueprint's AnimGraph, chosen by edit. add_layered_blend_per_bone adds a Layered Blend Per Bone node that layers each blend pose over the bones its branch filters name (a bone not on the skeleton is BONE_NOT_FOUND) and names the node for wiring. set_value sets a node setting (Alpha, PlayRate, bLoopAnimation, NodeComment) or the animation an asset player plays, by node name or nodeId, and reads it back; NODE_NOT_FOUND lists the nodes and AMBIGUOUS_NODE the matches. Both save unless save is false.",
           "input": {
             "action": "configure_anim_graph_node",
             "blueprintPath": "/Game/ABP_Char",
@@ -760,7 +769,12 @@
             "edit": "add_layered_blend_per_bone"
           },
           "output": {
-            "success": true
+            "success": true,
+            "message": "Layered blend per bone node created with 1 layer(s)",
+            "nodeName": "AnimGraphNode_LayeredBoneBlend_0",
+            "nodeId": "8F2A61D04B7E4C2D9A1B3C5D7E9F0A12",
+            "layerCount": 1,
+            "saved": true
           }
         }
       ],
@@ -838,8 +852,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "ca04dba7da327667c2f9759d4a91abf57ef3c59ac9939056b27b2ad40adc9c12",
-        "content": "f6841e3093805a9a083fad1108d8a20662f6d7a1acc939e253dac9f4014cf81d"
+        "schema": "28131709135f018d547b2237d2d98a058c832abebea81ee2a5c6478cbb9792cd",
+        "content": "bd7af48e6a4e2c676cda32a7bd4e6ca2b869e6ac6087f2be340aba60fae8ac72"
       }
     },
     {
@@ -2417,7 +2431,7 @@
         "whenToUse": [
           "edit=add_blend_node: Graph needs a blend node.",
           "edit=add_cached_pose: Pose reuse optimization needed.",
-          "edit=add_slot_node: Montage slot must be exposed.",
+          "edit=add_slot_node: Montages (attacks, reloads, emotes) must play on a character whose Animation Blueprint has no Slot node for their slot.",
           "edit=create_state_machine: State-driven animation is needed.",
           "edit=add_state_machine: A state machine must be embedded.",
           "edit=add_state: A new animation state is needed.",
@@ -2430,7 +2444,7 @@
         ],
         "whenNotToUse": [
           "edit=add_cached_pose: Inline pose suffices.",
-          "edit=add_slot_node: Use create_montage.",
+          "edit=add_slot_node: The montage asset itself is made (create_montage).",
           "edit=create_state_machine: A single graph suffices.",
           "edit=delete_transition: The state itself must go, not just the transition."
         ]
@@ -2480,7 +2494,7 @@
             },
             "groupName": {
               "type": "string",
-              "description": "Slot group the slot belongs to (default DefaultGroup)."
+              "description": "Slot group a new slot joins on the skeleton (default DefaultGroup). Montages in one group interrupt each other; a slot already on the skeleton keeps its group."
             },
             "machineName": {
               "type": "string",
@@ -2628,6 +2642,30 @@
               "type": "object",
               "x-unreal-reflection-boundary": true,
               "description": "Additional handler result fields not named by the contract."
+            },
+            "slotName": {
+              "type": "string",
+              "description": "The slot name the node plays."
+            },
+            "groupName": {
+              "type": "string",
+              "description": "The slot group the slot is in on the skeleton."
+            },
+            "nodeName": {
+              "type": "string",
+              "description": "Object name of the node made."
+            },
+            "nodeId": {
+              "type": "string",
+              "description": "GUID of the node made: the nodeId graph edits take."
+            },
+            "saved": {
+              "type": "boolean",
+              "description": "Whether the Animation Blueprint reached disk."
+            },
+            "skeletonSaved": {
+              "type": "boolean",
+              "description": "Whether the skeleton, given a new slot group, reached disk."
             },
             "blueprintPath": {
               "type": "string",
@@ -2904,8 +2942,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "de92c8a8ddd6f559eddb1cc7b64ccae8e3cb51afc043f1f370840861cf72245e",
-        "content": "649ad00d1a70dd75a84ba907fe3ce97293945f9046aa2b8405025b4f35b6ffe6"
+        "schema": "739eda33c45eeca9566b604b0e59e565acada38ecc1846f0e263335840728c66",
+        "content": "cf1b103bf79286f19ed6ac425a19ccff01e5034c3999d1668e7ee21324888895"
       }
     },
     {
@@ -6433,10 +6471,10 @@
           "virtual bones",
           "check skeleton bones"
         ],
-        "summary": "Read skeleton data: summary, bones, sockets, virtual bones, bone transforms, morph targets, physics asset and bodies.",
+        "summary": "Read a skeleton, skeletal mesh or Physics Asset, chosen by info (a skeletal mesh path reads its skeleton, or its assigned Physics Asset). skeleton gives counts of bones, virtual bones and sockets; bones lists every bone in hierarchy order with index, parent and reference-pose location, the names other calls take (layer filters, sockets, IK, physics bodies); sockets lists each socket with its bone and offset; virtual_bones lists virtual bones with source and target; bone_transform reads one bone's reference-pose transform and parent; morph_targets lists a mesh's morph targets and their delta counts; physics_asset reads a Physics Asset's bodies (the shapes in each) and constraints; physics_bodies lists only the body names. A path that does not load is SKELETON_NOT_FOUND or MESH_NOT_FOUND, a bone the skeleton lacks BONE_NOT_FOUND.",
         "whenToUse": [
-          "info=skeleton: Inspect skeleton structure.",
-          "info=bones: Enumerate bones.",
+          "info=skeleton: A skeleton's size must be checked, such as before retargeting or adding bones.",
+          "info=bones: Bone names must be known before naming one in another call.",
           "info=sockets: Enumerate sockets.",
           "info=virtual_bones: Existing virtual bones must be discovered before adding another.",
           "info=bone_transform: A bone position must be read before placing a socket or constraint.",
@@ -6445,8 +6483,6 @@
           "info=physics_bodies: Enumerate physics bodies."
         ],
         "whenNotToUse": [
-          "info=skeleton: Mutate the skeleton.",
-          "info=bones: Mutate bones.",
           "info=sockets: Mutate sockets.",
           "info=virtual_bones: A virtual bone must be created (use create_virtual_bone).",
           "info=morph_targets: A morph target must be created (use create_morph_target).",
@@ -6740,7 +6776,7 @@
       },
       "examples": [
         {
-          "title": "Read skeleton data: summary, bones, sockets, virtual bones, bone transforms, morph targets, physics asset and bodies.",
+          "title": "Read a skeleton, skeletal mesh or Physics Asset, chosen by info (a skeletal mesh path reads its skeleton, or its assigned Physics Asset). skeleton gives counts of bones, virtual bones and sockets; bones lists every bone in hierarchy order with index, parent and reference-pose location, the names other calls take (layer filters, sockets, IK, physics bodies); sockets lists each socket with its bone and offset; virtual_bones lists virtual bones with source and target; bone_transform reads one bone's reference-pose transform and parent; morph_targets lists a mesh's morph targets and their delta counts; physics_asset reads a Physics Asset's bodies (the shapes in each) and constraints; physics_bodies lists only the body names. A path that does not load is SKELETON_NOT_FOUND or MESH_NOT_FOUND, a bone the skeleton lacks BONE_NOT_FOUND.",
           "input": {
             "action": "get_skeleton_info",
             "skeletonPath": "/Game/SK_Char",
@@ -6869,7 +6905,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "aee94e29d7d00f4b817197e625376a84c94a2a6774c250662aba7ea38c65f67b",
-        "content": "74ae3255d8d1ed097c6a2c882e532d8573d4e6d9eb99a0e91467a43f602157e8"
+        "content": "7dbb56ba550f28c624c2447a769c112d96497a0c4cd1b80bf45d5c9af0f95145"
       }
     },
     {
@@ -59243,9 +59279,9 @@
           "set_dialogue_context",
           "link sound to speaker"
         ],
-        "summary": "Add a context mapping to a Dialogue Wave: who speaks it, to whom, and which SoundWave plays.",
+        "summary": "Add a context to a Dialogue Wave: speakerPath (the DialogueVoice that speaks the line) speaking to targetVoices (the DialogueVoices listening), with soundWavePath (the SoundWave that plays) and localizationKeyFormat (default {ContextHash}). The same speaker and listeners already on the wave is CONTEXT_EXISTS unless replace is true, which swaps that context (replaced). Saved unless save is false (saved).",
         "whenToUse": [
-          "Use it to add a context mapping to a Dialogue Wave: who speaks it, to whom, and which SoundWave plays."
+          "Use it to add a context to a Dialogue Wave: speakerPath (the DialogueVoice that speaks the line) speaking to targetVoices (the DialogueVoices listening), with soundWavePath (the SoundWave that plays) and localizationKeyFormat (default {ContextHash}). The same speaker and listeners already on the wave is CONTEXT_EXISTS unless replace is true, which swaps that context (replaced). Saved unless save is false (saved)."
         ],
         "whenNotToUse": []
       },
@@ -59281,7 +59317,7 @@
             },
             "replace": {
               "type": "boolean",
-              "description": "Replace the context mapping of the same speaker instead of adding another (default false)."
+              "description": "Swap the context this speaker already has with these same listeners (its sound and key format) instead of refusing with CONTEXT_EXISTS (default false)."
             },
             "save": {
               "type": "boolean",
@@ -59290,7 +59326,8 @@
           },
           "required": [
             "action",
-            "assetPath"
+            "assetPath",
+            "speakerPath"
           ],
           "additionalProperties": false
         },
@@ -59310,6 +59347,18 @@
               "type": "object",
               "x-unreal-reflection-boundary": true,
               "description": "Additional handler result fields not named by the contract."
+            },
+            "replaced": {
+              "type": "boolean",
+              "description": "True when the call swapped a context the speaker already had with the same listeners; false when it added one."
+            },
+            "saved": {
+              "type": "boolean",
+              "description": "Whether the asset was saved to disk."
+            },
+            "contextCount": {
+              "type": "number",
+              "description": "Number of contexts the Dialogue Wave now has."
             }
           },
           "required": [
@@ -59320,14 +59369,21 @@
       },
       "examples": [
         {
-          "title": "Add a context mapping to a Dialogue Wave: who speaks it, to whom, and which SoundWave plays.",
+          "title": "The guard says the line to the player",
           "input": {
             "action": "set_dialogue_context",
-            "assetPath": "/Game/Audio/Cues/Cue_FootstepConcrete"
+            "assetPath": "/Game/Audio/Dialogue/DW_Halt",
+            "speakerPath": "/Game/Audio/Dialogue/DV_Guard",
+            "targetVoices": [
+              "/Game/Audio/Dialogue/DV_Player"
+            ],
+            "soundWavePath": "/Game/Audio/Dialogue/SW_Halt_Guard"
           },
           "output": {
             "success": true,
-            "message": "set_dialogue_context completed successfully."
+            "replaced": false,
+            "saved": true,
+            "contextCount": 2
           }
         }
       ],
@@ -59358,8 +59414,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "515cf23378c5a85b600ba7bbe18d52780e170475651c9a8b39db183b4d5b06ea",
-        "content": "e7d0c10a27a15d963bbaf4818732e25a875ea2093c0a2f228999a34dfaf5a33f"
+        "schema": "38e8499a2c50562b41c32c1891319b3fc37731526d4d6e2c0b427f8e1f1daabf",
+        "content": "0c612f0c591404bce7efa65a24d9be1ce8f808da79efef666c1219d967a53a88"
       }
     },
     {
@@ -59789,20 +59845,20 @@
           "make the player run faster",
           "double jump"
         ],
-        "summary": "Configure a Character Blueprint: movement speeds, jump, crouch, rotation, capsule, mesh, camera, nav movement.",
+        "summary": "Configure a Character Blueprint's defaults by setting: movement_speeds (walk, crouch, swim, fly, acceleration, braking, friction), jump (launch speed, hold, double jump, air control, gravity), crouch, rotation (orient to movement or face the aim), capsule_component, mesh_component (skeletal mesh, Animation Blueprint, offset), camera_component (a third-person spring arm and camera, made when missing) or nav_movement (AI agent size, avoidance). Each compiles and saves the Blueprint, changes only the fields sent and reads the values back; a Blueprint that is not a Character is refused (NOT_A_CHARACTER).",
         "whenToUse": [
-          "setting=movement_speeds: Speeds must change.",
-          "setting=jump: Jump must change.",
-          "setting=crouch: Crouch needed.",
-          "setting=rotation: Rotation policy must change.",
-          "setting=capsule_component: Capsule size must change.",
-          "setting=mesh_component: Mesh must change.",
+          "setting=movement_speeds: A character must move, stop, crouch, swim or fly faster or slower, or several movement values change at once.",
+          "setting=jump: A character jumps too high, too low or too floaty, needs a double jump, or must steer in the air.",
+          "setting=crouch: A character must crouch, crouch-walk at another speed, or fit under lower gaps while crouched.",
+          "setting=rotation: A character must turn toward where it walks, or face where the camera aims.",
+          "setting=capsule_component: A character is taller, wider or smaller than its capsule, or gets stuck in doorways it should fit through.",
+          "setting=mesh_component: A character needs its body mesh or the Animation Blueprint that drives it, or its mesh floats, sinks or faces sideways.",
           "setting=camera_component: A Character needs a camera that follows it from behind; without one the game views from the eyes of the pawn.",
-          "setting=nav_movement: AI movement needed."
+          "setting=nav_movement: An AI character paths through gaps too narrow for it, or AI characters walk into each other."
         ],
         "whenNotToUse": [
-          "setting=movement_speeds: Use set_walk_speed.",
-          "setting=jump: Use set_jump_height."
+          "setting=movement_speeds: One value changes (set_movement_property).",
+          "setting=jump: Only the launch speed changes (set_movement_property)."
         ]
       },
       "schemas": {
@@ -60021,7 +60077,7 @@
       },
       "examples": [
         {
-          "title": "Configure a Character Blueprint: movement speeds, jump, crouch, rotation, capsule, mesh, camera, nav movement.",
+          "title": "Configure a Character Blueprint's defaults by setting: movement_speeds (walk, crouch, swim, fly, acceleration, braking, friction), jump (launch speed, hold, double jump, air control, gravity), crouch, rotation (orient to movement or face the aim), capsule_component, mesh_component (skeletal mesh, Animation Blueprint, offset), camera_component (a third-person spring arm and camera, made when missing) or nav_movement (AI agent size, avoidance). Each compiles and saves the Blueprint, changes only the fields sent and reads the values back; a Blueprint that is not a Character is refused (NOT_A_CHARACTER).",
           "input": {
             "action": "configure_character",
             "blueprintPath": "/Game/BP_Char",
@@ -60186,7 +60242,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "bcae2654a2de5b198c482ed9c60a5714ca0d0240bd522bffae79efd0967b8c74",
-        "content": "fbae55a99cf419ecfb2f71c0bd958b85e627f48d3ce47f08f2a3b9874140dc26"
+        "content": "7986e5f3a969acba771d79b2567c0aafcf1f750f0e55abc7e93d28f4ef2aad77"
       }
     },
     {
@@ -61384,7 +61440,7 @@
         "topics": [
           "setup_movement"
         ],
-        "summary": "Set a Character Blueprint's walk speed (walkSpeed, or runSpeed when walkSpeed is absent) and acceleration on its Character Movement defaults, then compile and save it; a value not sent stays as it is. The reply gives the maxWalkSpeed and maxAcceleration it now has; a Blueprint that is not a Character is refused (INVALID_TARGET).",
+        "summary": "Set a Character Blueprint's walk speed (walkSpeed, or runSpeed when walkSpeed is absent) and acceleration on its Character Movement defaults, then compile and save it; a value not sent stays as it is. The reply gives the maxWalkSpeed and maxAcceleration it now has; a Blueprint that is not a Character is refused (NOT_A_CHARACTER).",
         "whenToUse": [
           "A character must walk faster or slower, or reach its speed sooner."
         ],
@@ -61445,7 +61501,7 @@
       },
       "examples": [
         {
-          "title": "Set a Character Blueprint's walk speed (walkSpeed, or runSpeed when walkSpeed is absent) and acceleration on its Character Movement defaults, then compile and save it; a value not sent stays as it is. The reply gives the maxWalkSpeed and maxAcceleration it now has; a Blueprint that is not a Character is refused (INVALID_TARGET).",
+          "title": "Set a Character Blueprint's walk speed (walkSpeed, or runSpeed when walkSpeed is absent) and acceleration on its Character Movement defaults, then compile and save it; a value not sent stays as it is. The reply gives the maxWalkSpeed and maxAcceleration it now has; a Blueprint that is not a Character is refused (NOT_A_CHARACTER).",
           "input": {
             "action": "setup_movement",
             "blueprintPath": "/Game/BP_Char",
@@ -61485,7 +61541,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "e4a44b41622a3dd289ba00c448262214968d649d561b9a0fd66e06720a65a205",
-        "content": "9dc1413ef37ce24aa427059cf9e83292ab87835217c33c9f29cc0744c842e037"
+        "content": "1a57be8ed646844faedfa6ef0763297e6600f387a8ea96c608fcbae09ebba4e6"
       }
     },
     {
@@ -92585,7 +92641,7 @@
           "aperture",
           "set camera focal length"
         ],
-        "summary": "Configure cinematic cameras and shots: camera settings, crane or rail rigs, shot settings.",
+        "summary": "Cinematic cameras and shots, chosen by setting. camera sets a CineCameraActor's focal length, aperture, sensor size and focus distance and reads back what the camera kept after clamping to its lens (values); rig_rail sets a rail rig's positionOnRail (0 to 1) and rig_crane a crane rig's pitch, yaw and arm length, each placing the rig at the world origin when actorName names none (spawned); shot sets a shot's display name, range or row. camera and the rigs are one undo step, and a call with nothing to set is refused.",
         "whenToUse": [
           "setting=camera: Camera lens, focal length, aperture, or focus must be set.",
           "setting=rig_crane: A camera must boom or swing on a crane arm.",
@@ -92808,7 +92864,7 @@
       },
       "examples": [
         {
-          "title": "Configure cinematic cameras and shots: camera settings, crane or rail rigs, shot settings.",
+          "title": "Cinematic cameras and shots, chosen by setting. camera sets a CineCameraActor's focal length, aperture, sensor size and focus distance and reads back what the camera kept after clamping to its lens (values); rig_rail sets a rail rig's positionOnRail (0 to 1) and rig_crane a crane rig's pitch, yaw and arm length, each placing the rig at the world origin when actorName names none (spawned); shot sets a shot's display name, range or row. camera and the rigs are one undo step, and a call with nothing to set is refused.",
           "input": {
             "action": "configure_cinematic",
             "actorName": "CineCam_01",
@@ -92965,7 +93021,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "3abd1407aefb2d499932f2f15c7de8832f4119dc2e1180d8d79489988e9560be",
-        "content": "4f0e8fc259197e960267e8ee82b28cee9481e81797f5cbb444b14769ba80561c"
+        "content": "b3a2357503d2e2f85fdb247bb54317ab81595c7efc9418225e64c53e41e6292b"
       }
     },
     {

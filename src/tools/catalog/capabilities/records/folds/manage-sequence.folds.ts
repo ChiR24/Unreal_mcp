@@ -56,7 +56,7 @@ export const MANAGE_SEQUENCE_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'configure_cinematic', selector: 'setting',
-    summary: 'Configure cinematic cameras and shots: camera settings, crane or rail rigs, shot settings.',
+    summary: 'Cinematic cameras and shots, chosen by setting. camera sets a CineCameraActor\'s focal length, aperture, sensor size and focus distance and reads back what the camera kept after clamping to its lens (values); rig_rail sets a rail rig\'s positionOnRail (0 to 1) and rig_crane a crane rig\'s pitch, yaw and arm length, each placing the rig at the world origin when actorName names none (spawned); shot sets a shot\'s display name, range or row. camera and the rigs are one undo step, and a call with nothing to set is refused.',
     topics: ['cine camera settings', 'camera rig crane', 'camera rig rail', 'shot settings', 'focal length', 'aperture', 'set camera focal length'],
     members: { camera: 'configure_camera_settings', rig_crane: 'configure_camera_rig_crane', rig_rail: 'configure_camera_rig_rail', shot: 'configure_shot_settings' },
   },

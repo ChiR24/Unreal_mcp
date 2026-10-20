@@ -153,7 +153,7 @@ export const CINEMATIC_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'sequence.cinematic.configure_camera_settings', action: 'configure_camera_settings', family: F, domain: D,
-    summary: 'Configure CineCamera lens, filmback, and focus settings on a camera actor in the level.',
+    summary: 'Set the lens of a CineCameraActor (actorName): currentFocalLength or focalLength (mm), currentAperture or aperture (f-stop), sensorWidth and sensorHeight (mm), manualFocusDistance or focusDistance (cm), each also accepted inside a lens, filmback or focus object. The camera clamps them to its lens limits and the reply reads back what it kept (values). One undo step; a call with nothing to set, or an actor with no CineCameraComponent, is refused.',
     whenToUse: ['Camera lens, focal length, aperture, or focus must be set.'],
     whenNotToUse: ['Default camera settings are acceptable.'],
     // Native HandleConfigureCameraSettings (Cameras.cpp) edits the level actor
@@ -197,7 +197,7 @@ export const CINEMATIC_RECORDS: readonly CapabilityRecordSource[] = [
   // they never load a sequence or save one, so path and save are not declared.
   buildRecord({
     id: 'sequence.cinematic.configure_camera_rig_rail', action: 'configure_camera_rig_rail', family: F, domain: D,
-    summary: 'Configure a camera rig rail for dolly camera movement.',
+    summary: 'Set positionOnRail (0 to 1, where the camera mount sits along the rail spline) on a CameraRig_Rail named actorName, placing one at the world origin when actorName names none (spawned true). One undo step; a call with no setting is refused, and an actor of another class is RIG_CLASS_MISMATCH.',
     whenToUse: ['A camera must move along a rail for dolly shots.'],
     whenNotToUse: ['No rail-based camera movement is needed.'],
     inputProps: { positionOnRail: { type: 'number', description: 'Position on the rail (0-1).' }, actorName: P.actorName, label: A.label },
@@ -206,7 +206,7 @@ export const CINEMATIC_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'sequence.cinematic.configure_camera_rig_crane', action: 'configure_camera_rig_crane', family: F, domain: D,
-    summary: 'Configure a camera rig crane for boom camera movement.',
+    summary: 'Set cranePitch and craneYaw (degrees) and craneArmLength (cm) on a CameraRig_Crane named actorName, placing one at the world origin when actorName names none (spawned true). One undo step; a call with no setting is refused, and an actor of another class is RIG_CLASS_MISMATCH.',
     whenToUse: ['A camera must boom or swing on a crane arm.'],
     whenNotToUse: ['No crane-based camera movement is needed.'],
     inputProps: { cranePitch: { type: 'number', description: 'Crane pitch in degrees.' }, craneYaw: { type: 'number', description: 'Crane yaw in degrees.' }, craneArmLength: { type: 'number', description: 'Crane arm length.' }, actorName: P.actorName, label: A.label },

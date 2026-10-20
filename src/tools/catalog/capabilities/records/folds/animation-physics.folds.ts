@@ -47,7 +47,7 @@ export const ANIMATION_PHYSICS_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'configure_anim_graph_node', selector: 'edit',
-    summary: 'Configure an AnimGraph node: add a layered-blend-per-bone node or set a node property value.',
+    summary: 'Change an Animation Blueprint\'s AnimGraph, chosen by edit. add_layered_blend_per_bone adds a Layered Blend Per Bone node that layers each blend pose over the bones its branch filters name (a bone not on the skeleton is BONE_NOT_FOUND) and names the node for wiring. set_value sets a node setting (Alpha, PlayRate, bLoopAnimation, NodeComment) or the animation an asset player plays, by node name or nodeId, and reads it back; NODE_NOT_FOUND lists the nodes and AMBIGUOUS_NODE the matches. Both save unless save is false.',
     topics: ['layered blend per bone', 'anim graph node value', 'blend upper body only'],
     members: { add_layered_blend_per_bone: 'add_layered_blend_per_bone', set_value: 'set_anim_graph_node_value' },
   },
@@ -99,7 +99,7 @@ export const ANIMATION_PHYSICS_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'get_skeleton_info', selector: 'info',
-    summary: 'Read skeleton data: summary, bones, sockets, virtual bones, bone transforms, morph targets, physics asset and bodies.',
+    summary: 'Read a skeleton, skeletal mesh or Physics Asset, chosen by info (a skeletal mesh path reads its skeleton, or its assigned Physics Asset). skeleton gives counts of bones, virtual bones and sockets; bones lists every bone in hierarchy order with index, parent and reference-pose location, the names other calls take (layer filters, sockets, IK, physics bodies); sockets lists each socket with its bone and offset; virtual_bones lists virtual bones with source and target; bone_transform reads one bone\'s reference-pose transform and parent; morph_targets lists a mesh\'s morph targets and their delta counts; physics_asset reads a Physics Asset\'s bodies (the shapes in each) and constraints; physics_bodies lists only the body names. A path that does not load is SKELETON_NOT_FOUND or MESH_NOT_FOUND, a bone the skeleton lacks BONE_NOT_FOUND.',
     topics: ['skeleton info', 'list bones', 'list sockets', 'bone transform', 'morph targets', 'physics bodies', 'virtual bones', 'check skeleton bones'],
     members: {
       skeleton: 'get_skeleton_info', bones: 'list_bones', sockets: 'list_sockets', virtual_bones: 'list_virtual_bones',

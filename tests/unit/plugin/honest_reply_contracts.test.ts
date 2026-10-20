@@ -3654,11 +3654,38 @@ describe('a player start is judged where a pawn spawns', () => {
 });
 
 describe('animation and character creators say what they did', () => {
-  // A Blueprint that is not a Character was compiled, saved unchanged and answered "Movement configured".
-  it('setup_movement refuses a Blueprint with no character movement and reports the speeds it set', () => {
+  // A Blueprint that is not a Character was compiled, saved unchanged and answered "Movement configured";
+  // every character edit loads through one loader, which now refuses it.
+  it('character edits refuse a Blueprint with no character movement and report the values they set', () => {
+    const loader = code('Character', 'McpCharacterBPSupport.cpp');
+    expect(loader).toContain('if (!CharacterDefaults || !CharacterDefaults->GetCharacterMovement())');
+    expect(loader).toContain('TEXT("NOT_A_CHARACTER")');
     const movement = code('Character', 'McpCharacterMovementCore.cpp');
-    expect(movement).toContain('TEXT("INVALID_TARGET")');
     expect(movement).toContain('Result->SetNumberField(TEXT("maxWalkSpeed"), Movement->MaxWalkSpeed);');
+    expect(movement).toContain('Result->SetNumberField(TEXT("navAgentRadius"), Applied->NavAgentProps.AgentRadius);');
+    expect(movement).not.toContain('configure_sprint');
+  });
+
+  // A nav agent size on the defaults was replaced by the capsule size when the character spawned, and an Animation
+  // Blueprint for another skeleton left the character in its rest pose; both answered "configured".
+  it('nav agent sizes stick and an Animation Blueprint must fit the mesh skeleton', () => {
+    const movement = code('Character', 'McpCharacterMovementCore.cpp');
+    expect(movement).toContain('Movement->SetUpdateNavAgentWithOwnersCollisions(false);');
+    expect(movement).toContain('Result->SetBoolField(TEXT("navAgentFollowsCapsule"), Applied->ShouldUpdateNavAgentWithOwnersCollision());');
+    const components = code('Character', 'McpCharacterComponents.cpp');
+    expect(components).toContain('MeshSkeleton->IsCompatibleForEditor(AnimSkeleton)');
+    expect(components).toContain('TEXT("SKELETON_MISMATCH")');
+  });
+
+  // "Group.Slot" went into the Slot node while montages name the bare slot, so no montage ever played through it;
+  // neither node creator named the node it made, so it could not be wired.
+  it('slot nodes hold the bare slot name and both anim node creators name their node', () => {
+    const layers = code('AnimationAuthoring', 'McpAnimBPSlotLayers.cpp');
+    expect(layers).toContain('SlotNode->Node.SlotName = Slot;');
+    expect(layers).not.toContain('TEXT("%s.%s"), *GroupName, *SlotName');
+    expect(layers).toContain('TEXT("SLOT_IN_OTHER_GROUP")');
+    expect(layers).toContain('Response->SetStringField(TEXT("nodeId"), SlotNode->NodeGuid.ToString());');
+    expect(layers).toContain('Response->SetStringField(TEXT("nodeId"), BlendNode->NodeGuid.ToString());');
   });
 
   // The editor-world actor does not tick, so a montage "playing" there stood still.
@@ -4537,5 +4564,38 @@ describe('a sequence camera is placed only when it can be bound', () => {
     expect(camera.indexOf('is not a Level Sequence; nothing was added.')).toBeLessThan(camera.indexOf('SpawnActorInActiveWorld'));
     expect(camera).toContain('TEXT("BIND_FAILED")');
     expect(camera).toContain('->DestroyActor(Spawned)');
+  });
+});
+
+describe('cinematic camera and rig edits undo and read back', () => {
+  it('camera settings modify the camera before writing, re-derive the lens and read back what it kept', () => {
+    const cameras = code('Sequence', 'Cinematics', 'McpSeqCineCameras.cpp');
+    const apply = cameras.slice(cameras.indexOf('int32 ApplyCameraSettings('));
+    expect(apply.indexOf('Camera->Modify();')).toBeLessThan(apply.indexOf('ApplyNumberAliases('));
+    expect(apply).toContain('Camera->PostEditChange();');
+    expect(apply).toContain('Result->SetObjectField(TEXT("values"), Kept);');
+    expect(cameras).toContain('FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Configure Camera Settings"))');
+  });
+
+  it('a camera rig edit is one transaction opened before the rig is spawned or changed', () => {
+    const rigs = code('Sequence', 'Cinematics', 'McpSeqCineCameraRigs.cpp');
+    expect(rigs.indexOf('FMcpScopedEditorTransaction Transaction(')).toBeLessThan(rigs.indexOf('SpawnActorInActiveWorld'));
+    expect(rigs).toContain('Transaction.DescribeInto(OutResult);');
+  });
+});
+
+describe('dialogue contexts are whole and audio edits keep save false', () => {
+  it('set_dialogue_context requires a speaker and refuses a context already on the wave unless replace', () => {
+    const dialogue = code('AudioAuthoring', 'McpAudioDialogue.cpp');
+    expect(dialogue).toContain('speakerPath is required');
+    expect(dialogue).toContain('Mapping.Context == NewMapping.Context');
+    expect(dialogue).toContain('TEXT("CONTEXT_EXISTS")');
+    expect(dialogue).toContain('Response->SetBoolField(TEXT("saved"), bSaved);');
+  });
+
+  it('save false leaves an audio edit as an unsaved change', () => {
+    const support = code('AudioAuthoring', 'McpAudioAssetSupport.cpp');
+    const save = support.slice(support.indexOf('bool SaveAudioAsset('));
+    expect(save.indexOf('Asset->MarkPackageDirty();')).toBeLessThan(save.indexOf('if (!bShouldSave)'));
   });
 });
