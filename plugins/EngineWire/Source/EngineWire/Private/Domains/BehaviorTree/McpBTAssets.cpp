@@ -47,21 +47,12 @@ bool HandleCreate(UEngineWireSubsystem* Subsystem,
     return true;
   }
 
-  if (McpAssetExists(PackagePath)) {
-    Subsystem->SendAutomationError(
-        Context.RequestingSocket,
-        Context.RequestId,
-        FString::Printf(TEXT("Behavior Tree already exists at %s"),
-                        *PackagePath),
-        TEXT("ASSET_EXISTS"));
-    return true;
-  }
-
-  UPackage* Package = CreatePackage(*PackagePath);
+  // The same refusal as create_behavior_tree, for an asset saved or only in memory.
+  FString PackageError;
+  FString PackageCode;
+  UPackage* Package = McpCreatePackageForNewAsset(PackagePath, PackageError, PackageCode);
   if (!Package) {
-    Subsystem->SendAutomationError(Context.RequestingSocket, Context.RequestId,
-                                   TEXT("Failed to create package"),
-                                   TEXT("PACKAGE_FAILED"));
+    Subsystem->SendAutomationError(Context.RequestingSocket, Context.RequestId, PackageError, PackageCode);
     return true;
   }
 

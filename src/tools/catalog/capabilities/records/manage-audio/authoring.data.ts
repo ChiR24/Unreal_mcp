@@ -70,7 +70,7 @@ export const AUDIO_AUTHORING_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   a('add_mix_modifier', 'Add a Sound Class modifier to a Sound Mix; fadeInTime and fadeOutTime set the fades of the mix itself.',
     ['assetPath', 'soundClassPath', 'volumeAdjuster', 'pitchAdjuster', 'applyToChildren', 'fadeInTime', 'fadeOutTime', 'save'], ['assetPath', 'soundClassPath']),
-  a('add_source_effect', 'Add an effect to a Source Effect Chain: a new preset of effectType (an asset of its own beside the chain), or an existing preset asset by effectPresetPath.',
+  a('add_source_effect', 'Add an effect to a Source Effect Chain: a new preset of effectType (eq, chorus, delay, filter, dynamics, bitcrusher, phaser, waveshaper, panner, stereodelay, foldback, ringmodulation, midsidespreader, motionfilter, envelopefollower or convolutionreverb), saved as an asset of its own beside the chain and listed in the receipt, or an existing preset asset by effectPresetPath. An unknown effectType or a preset that does not load is refused.',
     ['assetPath', 'effectType', 'effectPresetPath', 'bypass', 'save'], ['assetPath'], [], [], [], ['effectType', 'effectPresetPath']),
   { ...(withInputProps(a('build_metasound', 'Run many MetaSound graph edits in one call: add nodes, inputs and outputs, connect pins and set literals, with $id references between steps.', ['assetPath'], ['assetPath', 'operations'], ['nodeIds', 'results', 'saved'], [], META), {
     operations: {

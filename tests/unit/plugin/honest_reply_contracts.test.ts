@@ -4033,7 +4033,8 @@ describe('a create never rebuilds an asset already at its path', () => {
       ['AudioAuthoring', 'McpAudioSoundMixes.cpp'], ['AudioAuthoring', 'McpAudioDialogue.cpp'], ['AudioAuthoring', 'McpAudioEffects.cpp'],
       ['Environment', 'Runtime', 'McpEnvFoliageAssets.cpp'], ['LevelStructure', 'McpLevelStructureDataLayerCreation.cpp'], ['LevelStructure', 'McpLevelStructureHlod.cpp'],
       ['MaterialAuthoring', 'Nodes', 'McpMatAddLandscapeLayer.cpp'], ['Skeleton', 'Bones', 'McpSkeletonStructureCreation.cpp'], ['Skeleton', 'Physics', 'McpSkeletonPhysicsAssets.cpp'],
-      ['Texture', 'McpTextureExtract.cpp'], ['Audio', 'McpAudioOcclusionAndAttenuation.cpp'], ['Foliage', 'McpFoliageProcedural.cpp']]) {
+      ['Texture', 'McpTextureExtract.cpp'], ['Audio', 'McpAudioOcclusionAndAttenuation.cpp'], ['Foliage', 'McpFoliageProcedural.cpp'],
+      ['AI', 'McpAIContext.h'], ['BehaviorTree', 'McpBTAssets.cpp'], ['Landscape', 'McpLandscapeGrassType.cpp']]) {
       expect(code(...file), file.join('/')).toContain('McpCreatePackageForNewAsset(');
     }
   });
@@ -4042,5 +4043,57 @@ describe('a create never rebuilds an asset already at its path', () => {
     const support = code('AudioAuthoring', 'McpAudioAssetSupport.cpp');
     expect(support).toContain('NewObject<UObject>(Outer, PresetClass, PresetName, RF_Public | RF_Standalone)');
     expect(support).not.toContain('NewObject<UObject>(GetTransientPackage(), PresetClass');
+    expect(code('AudioAuthoring', 'McpAudioEffects.cpp')).toContain('Response->SetStringField(TEXT("createdAssetPath"), PresetPkg);');
+  });
+});
+
+describe('AI and navigation writes say what they did', () => {
+  it('a Blackboard key is refused on a taken name instead of shadowing the first', () => {
+    const keys = code('AI', 'Blackboard', 'McpAIBlackboardKeys.cpp');
+    expect(keys.indexOf('Blackboard->GetKeyID(FName(*KeyName)) != FBlackboard::InvalidKey')).toBeLessThan(keys.indexOf('Blackboard->Keys.Add(Entry)'));
+    expect(keys).toContain('TEXT("NAME_TAKEN")');
+    expect(keys).not.toContain('NewObject<UBlackboardKeyType_Object>(Blackboard)');
+    expect(keys).toContain('NotifyBlackboardKeysChanged(Blackboard);');
+  });
+
+  it('a Blackboard default refuses what it cannot hold instead of answering valueSet false', () => {
+    const values = code('AI', 'Blackboard', 'McpAIBlackboardValues.cpp');
+    expect(values).not.toContain('valueSet');
+    expect(values.indexOf('WriteBlackboardKeyDefault(')).toBeLessThan(values.indexOf('McpSafeAssetSave(Blackboard)'));
+    const defaults = code('AI', 'Blackboard', 'McpAIBlackboardDefaults.cpp');
+    expect(defaults).toContain('TEXT("NOT_SUPPORTED")');
+    expect(defaults).toContain('ENGINE_MINOR_VERSION >= 4');
+  });
+
+  it('a nav link proxy is one kind of link and counts for navigation as soon as it is made', () => {
+    const links = code('Navigation', 'McpNavLinks.cpp');
+    expect(links).toContain('NavLink->PointLinks.Reset();');
+    expect(links).toContain('SmartComp->SetNavigationRelevancy(NavLink->bSmartLinkIsRelevant);');
+    expect(links).toContain('FNavigationSystem::UpdateActorData(*NavLink);');
+    expect(links).not.toContain('PointLinks.Add(NewLink)');
+    expect(code('Navigation', 'McpNavPrivate.h')).toContain('return Direction.Equals(TEXT("BothWays"), ESearchCase::IgnoreCase);');
+  });
+
+  it('smart link settings check every area class before changing anything', () => {
+    const smart = code('Navigation', 'McpNavSmartLinks.cpp');
+    expect(smart.indexOf('TEXT("INVALID_AREA_CLASS")')).toBeLessThan(smart.indexOf('SmartComp->SetEnabledArea('));
+    expect(smart).toContain('NavLinkCustomField<float>(SmartComp, TEXT("BroadcastRadius"))');
+  });
+
+  it('create_landscape refuses a taken label and a material that does not load before it spawns', () => {
+    const create = code('Landscape', 'McpLandscapeCreation.cpp');
+    expect(create).toContain('TEXT("NAME_TAKEN")');
+    expect(create).toContain('TEXT("ASSET_NOT_FOUND")');
+    expect(create).toContain('static_cast<int32>(Value) - 1');
+    // A spawned Landscape keeps the engine's old 128 x 128 x 256; the editor builds at 100.
+    expect(code('Landscape', 'McpLandscapeCreationTask.cpp')).toContain('Landscape->SetActorRelativeScale3D(FVector(100.0f, 100.0f, 100.0f));');
+  });
+
+  it('set_ai_movement takes 0, refuses a negative value and a call that sets nothing', () => {
+    const movement = code('AI', 'Navigation', 'McpAIMovement.cpp');
+    expect(movement).toContain('Nothing to set: send maxWalkSpeed');
+    expect(movement).toContain('if (Value < 0.0)');
+    expect(movement).not.toContain('> 0.0f');
+    expect(movement.indexOf('MovementComp->Modify();')).toBeLessThan(movement.indexOf('SetNumber(TEXT("maxWalkSpeed")'));
   });
 });

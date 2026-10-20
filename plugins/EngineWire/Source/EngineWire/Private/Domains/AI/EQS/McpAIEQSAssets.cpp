@@ -11,13 +11,13 @@
 
 namespace McpAIHandlers
 {
-static UEnvQuery* CreateEQSQueryAsset(const FString& Path, const FString& Name, FString& OutError)
+static UEnvQuery* CreateEQSQueryAsset(const FString& Path, const FString& Name, FString& OutError, FString& OutCode, bool& bOutSaved)
 {
     UEnvQuery* Query = CreateAIAssetInPackage<UEnvQuery>(
-        Path, Name, TEXT("EQS Query"), OutError);
+        Path, Name, TEXT("EQS Query"), OutError, OutCode);
     if (Query)
     {
-        McpSafeAssetSave(Query);
+        bOutSaved = McpSafeAssetSave(Query);
     }
     return Query;
 }
@@ -38,14 +38,17 @@ bool HandleCreateEQSQuery(UEngineWireSubsystem* Self, const FString& RequestId, 
     }
 
     FString Error;
-    UEnvQuery* Query = CreateEQSQueryAsset(Path, Name, Error);
+    FString ErrorCode;
+    bool bSaved = false;
+    UEnvQuery* Query = CreateEQSQueryAsset(Path, Name, Error, ErrorCode, bSaved);
     if (!Query)
     {
-        Self->SendAutomationError(RequestingSocket, RequestId, Error, TEXT("CREATION_FAILED"));
+        Self->SendAutomationError(RequestingSocket, RequestId, Error, ErrorCode);
         return true;
     }
 
     Result->SetStringField(TEXT("queryPath"), Query->GetPathName());
+    Result->SetBoolField(TEXT("saved"), bSaved);
     Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Created EQS Query: %s"), *Name));
     McpHandlerUtils::AddVerification(Result, Query);
     Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("EQS Query created"), Result);

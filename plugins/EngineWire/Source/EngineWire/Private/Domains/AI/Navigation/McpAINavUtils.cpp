@@ -118,6 +118,16 @@ bool HandleCreateNavModifier(UEngineWireSubsystem* Self, const FString& RequestI
     {
         ComponentName = TEXT("NavModifierComponent");
     }
+    // A taken name made CreateNode pick another, while the reply named the one asked for.
+    for (const USCS_Node* Node : Blueprint->SimpleConstructionScript->GetAllNodes())
+    {
+        if (Node && Node->GetVariableName().ToString().Equals(ComponentName, ESearchCase::IgnoreCase))
+        {
+            Self->SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Component '%s' already exists on %s; pick another "
+                "componentName. Nothing was added."), *ComponentName, *Blueprint->GetName()), TEXT("ALREADY_EXISTS"));
+            return true;
+        }
+    }
 
     // Create nav modifier component
     USCS_Node* NavModNode = Blueprint->SimpleConstructionScript->CreateNode(
@@ -135,13 +145,14 @@ bool HandleCreateNavModifier(UEngineWireSubsystem* Self, const FString& RequestI
     }
 
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-    McpSafeAssetSave(Blueprint);
 
     TSharedPtr<FJsonObject> NavModResult = McpHandlerUtils::CreateResultObject();
     NavModResult->SetStringField(TEXT("blueprintPath"), BlueprintPath);
-    NavModResult->SetStringField(TEXT("componentName"), ComponentName);
+    NavModResult->SetStringField(TEXT("componentName"), NavModNode->GetVariableName().ToString());
     // Report the class actually applied (dogfood #61); UNavModifierComponent has no getter on 5.7.
     NavModResult->SetStringField(TEXT("areaClass"), AppliedAreaClass->GetPathName());
+    NavModResult->SetBoolField(TEXT("saved"), McpSafeAssetSave(Blueprint));
+    McpHandlerUtils::AddVerification(NavModResult, Blueprint);
 
     Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Nav modifier component created"), NavModResult);
     return true;

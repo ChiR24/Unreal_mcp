@@ -39,6 +39,8 @@ const testCases = [
 
   // === CREATE ===
   { scenario: 'CREATE: create_landscape', toolName: 'build_environment', arguments: {"action": "create_landscape", "name": LANDSCAPE_NAME, "path": TEST_FOLDER_ALIAS, "materialPath": TEST_MATERIAL_ALIAS, "location": {"x": 0, "y": 0, "z": 0}, "sizeX": 1000, "sizeY": 1000, "sectionSize": 7, "quadsPerSection": 7, "sectionsPerComponent": 1, "componentCount": {"x": 1, "y": 1}}, expected: 'success|already exists' },
+  { scenario: 'ERROR: create_landscape refuses a name already in the level', toolName: 'build_environment', arguments: { action: 'create_landscape', name: LANDSCAPE_NAME, sizeX: 64, sizeY: 64 }, expected: 'error|NAME_TAKEN' },
+  { scenario: 'ERROR: create_landscape refuses a material that does not load', toolName: 'build_environment', arguments: { action: 'create_landscape', name: `NoMaterialLandscape_${ts}`, materialPath: '/Game/MCPTest/NoSuchLandscapeMaterial' }, expected: 'error|ASSET_NOT_FOUND' },
   // Zero sections per component used to divide by zero in the creation task.
   { scenario: 'ERROR: create_landscape rejects zero sections per component', toolName: 'build_environment', arguments: { action: 'create_landscape', name: `BadLandscape_${ts}`, quadsPerSection: 7, sectionsPerComponent: 0 }, expected: 'error' },
   // === ACTION ===

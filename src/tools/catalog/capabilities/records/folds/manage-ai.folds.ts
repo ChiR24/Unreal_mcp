@@ -4,7 +4,7 @@ import type { FoldSpec } from '../shared/fold-types.js';
 export const MANAGE_AI_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'create_behavior_tree', selector: 'kind',
-    summary: 'Create a Behavior Tree (directly or through the graph route) or a Blackboard asset.',
+    summary: 'Create an AI asset named name, chosen by kind, each saved (saved): behavior_tree a Behavior Tree in path (default /Game/AI/BehaviorTrees), graph_route the same in savePath (default /Game), blackboard a Blackboard in path (default /Game/AI/Blackboards), where a Blackboard already there is kept (alreadyExisted). Any other asset already at the path is refused (ASSET_ALREADY_EXISTS).',
     topics: ['behavior tree', 'blackboard', 'create ai asset'],
     members: { behavior_tree: 'create_behavior_tree', graph_route: 'create', blackboard: 'create_blackboard' },
     aliasMembers: { blackboard: 'create_blackboard_asset' },
@@ -20,7 +20,7 @@ export const MANAGE_AI_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'edit_blackboard', selector: 'edit',
-    summary: 'Edit a Blackboard: add a key, set a key value, or mark a key instance-synced.',
+    summary: 'Edit a Blackboard asset (blackboardPath), chosen by edit, each saved: add_key adds keyName of keyType (an Object key a MoveTo target uses wants baseObjectClass /Script/Engine.Actor; an Enum key takes enumType), set_value sets the default a key starts with (UE 5.4+, Enum, Object and Class keys 5.5+), set_key_instance_synced shares one value across every AI. A taken name (NAME_TAKEN), a value of the wrong kind, a key of a parent Blackboard (KEY_IN_PARENT) and engine content are refused.',
     topics: ['blackboard key', 'blackboard value', 'instance synced'],
     members: { add_key: 'add_blackboard_key', set_value: 'set_blackboard_value', set_key_instance_synced: 'set_key_instance_synced' },
   },
@@ -56,7 +56,7 @@ export const MANAGE_AI_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'create_nav_actor', selector: 'kind',
-    summary: 'Create a nav link proxy, a smart link, or a nav modifier (actor or component).',
+    summary: 'Create navigation helpers, chosen by kind: link_proxy places a NavLinkProxy whose point link joins startPoint and endPoint (relative to it) so agents cross a gap the navmesh does not connect; smart_link places one whose smart link alone does, switchable on and off; modifier places a NavModifierVolume marking the navmesh under it with areaClass (default NavArea_Obstacle) or, with blueprintPath, adds a NavModifier component to a Blueprint; modifier_component adds that component to a Blueprint or a placed actor. A label or component name already taken is refused.',
     topics: ['nav link proxy', 'smart link', 'nav modifier', 'add nav modifier'],
     members: { link_proxy: 'create_nav_link_proxy', smart_link: 'create_smart_link', modifier: 'create_nav_modifier', modifier_component: 'create_nav_modifier_component' },
   },

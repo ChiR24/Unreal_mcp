@@ -40,6 +40,9 @@ void CreateLandscapeOnGameThread(
     return;
   }
 
+  // The editor's New Landscape scale. A spawned Landscape keeps the engine's old default of 128 x 128 x 256, so a quad
+  // was 128 units wide and heights spanned another range than every landscape made in the editor.
+  Landscape->SetActorRelativeScale3D(FVector(100.0f, 100.0f, 100.0f));
   Landscape->SetActorLabel(Request.Name.IsEmpty()
                                ? FString::Printf(TEXT("Landscape_%dx%d"),
                                                  Request.ComponentsX,
@@ -51,12 +54,8 @@ void CreateLandscapeOnGameThread(
   Landscape->SubsectionSizeQuads = QuadsPerSection;
   Landscape->NumSubsections = Request.SectionsPerComponent;
 
-  if (!Request.MaterialPath.IsEmpty()) {
-    UMaterialInterface *Mat =
-        LoadObject<UMaterialInterface>(nullptr, *Request.MaterialPath);
-    if (Mat) {
-      Landscape->LandscapeMaterial = Mat;
-    }
+  if (UMaterialInterface *Mat = LoadLandscapeMaterial(Request.MaterialPath)) {
+    Landscape->LandscapeMaterial = Mat;
   }
 
 #if !(ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5)
@@ -151,9 +150,14 @@ void CreateLandscapeOnGameThread(
   Resp->SetNumberField(TEXT("componentsX"), Request.ComponentsX);
   Resp->SetNumberField(TEXT("componentsY"), Request.ComponentsY);
   Resp->SetNumberField(TEXT("quadsPerComponent"), Request.QuadsPerComponent);
+  // The editor's Overall Resolution: vertices along each side.
+  Resp->SetNumberField(TEXT("resolutionX"), Request.ComponentsX * Request.QuadsPerComponent + 1);
+  Resp->SetNumberField(TEXT("resolutionY"), Request.ComponentsY * Request.QuadsPerComponent + 1);
   // Measured from the built components, not computed from the request.
   Resp->SetNumberField(TEXT("extentX"), BuiltBounds.GetExtent().X);
   Resp->SetNumberField(TEXT("extentY"), BuiltBounds.GetExtent().Y);
+  Resp->SetStringField(TEXT("material"), GetPathNameSafe(Landscape->LandscapeMaterial.Get()));
+  McpHandlerUtils::AddVerification(Resp, Landscape);
 
   Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true,
                                    TEXT("Landscape created successfully"), Resp,

@@ -93,7 +93,15 @@ TSharedPtr<FJsonObject> HandleEffectActions(const FString& SubAction, const TSha
 					EffectPreset->SetFlags(RF_Public | RF_Standalone);
 					SaveAudioAsset(EffectPreset, bSave);
 					Response->SetStringField(TEXT("effectPresetPath"), EffectPreset->GetPathName());
+					// The receipt lists the new preset beside the chain.
+					Response->SetStringField(TEXT("createdAssetPath"), PresetPkg);
 				}
+			}
+			if (!EffectPreset)
+			{
+				return McpHandlerUtils::BuildErrorResponse(TEXT("INVALID_ARGUMENT"), FString::Printf(TEXT("Unknown effectType %s: use eq, chorus, delay, "
+					"filter, dynamics, bitcrusher, phaser, waveshaper, panner, stereodelay, foldback, ringmodulation, midsidespreader, "
+					"motionfilter, envelopefollower or convolutionreverb. Nothing was added."), *EffectType));
 			}
 		}
 #endif

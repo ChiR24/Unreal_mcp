@@ -69,16 +69,17 @@ export const AI_SET_RECORDS: readonly CapabilityRecordSource[] = [
     result: 'Behavior Tree run configured',
   }),
   aiRecord({
-    action: 'set_blackboard_value', summary: 'Set a Blackboard key value on a Blackboard asset.',
-    use: 'A Blackboard key needs a different authored default.',
-    avoid: 'Use add_blackboard_key to create the key.',
+    action: 'set_blackboard_value', summary: 'Set the default of a Blackboard key, the value it holds when an AI starts with the asset, and save it: UE 5.4+ for Bool, Int, Float, Vector, Rotator, Name and String keys, 5.5+ for Enum, Object and Class keys. value takes the kind the key holds: true or false, a whole number, a number, {x, y, z}, {pitch, yaw, roll}, text, an enumerator by name or value, an asset path for an Object key (placed actors are not assets; None clears it) or a class path for a Class key. A value of the wrong kind or outside the base class of the key is refused, as is a key with no default on this engine (NOT_SUPPORTED) or one a parent Blackboard holds (KEY_IN_PARENT); value in the reply is what the key now holds.',
+    use: 'A Blackboard key needs a different authored default, such as a speed or a starting state.',
+    avoid: 'Use add_blackboard_key to create the key; a value an AI writes while it runs comes from its Behavior Tree or Blueprint.',
     props: {
       blackboardPath: A.blackboardPath,
-      keyName: A.keyName, value: A.value,
+      keyName: A.keyName,
+      value: { description: 'The default, in the kind the key holds: a boolean, a number, {x, y, z}, {pitch, yaw, roll}, text, an enumerator, or an asset or class path.' },
     },
-    required: ['blackboardPath', 'keyName'], plugins: BT,
-    out: { assetPath: A.assetPath },
-    example: { blackboardPath: '/Game/AI/BB_Enemy', keyName: 'TargetActor', value: 'true' },
+    required: ['blackboardPath', 'keyName', 'value'], plugins: BT,
+    out: { assetPath: A.assetPath, value: { type: 'string', description: 'The default the key now holds, as the engine writes it.' } },
+    example: { blackboardPath: '/Game/AI/BB_Enemy', keyName: 'PatrolSpeed', value: 300 },
     result: 'Blackboard value set',
   }),
   aiRecord({
@@ -92,7 +93,7 @@ export const AI_SET_RECORDS: readonly CapabilityRecordSource[] = [
     result: 'Focus written',
   }),
   aiRecord({
-    action: 'set_key_instance_synced', summary: 'Set Blackboard key instance synchronization.',
+    action: 'set_key_instance_synced', summary: 'Mark a Blackboard key instance-synced (isInstanceSynced, default true) or not, and save the asset. A synced key holds one value shared by every Blackboard component using the asset, so a value one AI sets reaches all of them. A key already set that way changes nothing (changed false), and a key a parent Blackboard holds is refused (KEY_IN_PARENT), naming the parent.',
     use: 'A Blackboard key must share its value across instances.',
     avoid: 'Use add_blackboard_key to create the key.',
     props: {
@@ -128,11 +129,11 @@ export const AI_SET_RECORDS: readonly CapabilityRecordSource[] = [
     result: 'Nav area class set',
   }),
   aiRecord({
-    action: 'set_nav_link_type', summary: 'Set an authored navigation link type.',
+    action: 'set_nav_link_type', summary: 'Switch a placed NavLinkProxy (actorName) between a simple link, its point link, and a smart link, its smart link alone (linkType simple or smart), carrying the endpoints and direction over. A proxy already of that type changes nothing (changed false). One undo step; the level is left unsaved.',
     use: 'A link must switch between the simple and smart form.',
     avoid: 'Use configure_smart_link_behavior to tune a smart link.',
     props: { actorName: A.actorName, linkType: N.linkType },
-    required: ['actorName'],
+    required: ['actorName', 'linkType'],
     out: { actorName: A.actorName },
     example: { actorName: 'NavLinkProxy_0', linkType: 'smart' }, result: 'Nav link type set',
   }),
@@ -206,7 +207,7 @@ export const AI_SET_RECORDS: readonly CapabilityRecordSource[] = [
     }),
     aiRecord({
       action: 'set_ai_movement',
-      summary: 'Set the movement limits on the CharacterMovement component of a Blueprint.',
+      summary: 'Set the movement limits on the CharacterMovement component of a Character Blueprint (an AI pawn) and save it: maxWalkSpeed, maxAcceleration, brakingDeceleration (walking), rotationRate (yaw, degrees per second), maxFlySpeed, jumpZVelocity and avoidanceWeight, plus useAccelerationForPaths (path following speeds up and slows down like a player instead of moving at full speed at once), orientRotationToMovement (turn to face where it goes) and useRVOAvoidance (steer around other agents). Only what is sent changes, 0 included; a negative number or a call that sets nothing is refused, as is a Blueprint with no CharacterMovement component (COMPONENT_NOT_FOUND). propertiesSet names what changed and currentValues reads the main values back.',
       use: 'Walk speed, acceleration, braking or rotation rate must change on a pawn asset.',
       avoid: 'The pawn has no CharacterMovement component; the call reports the missing component instead.',
       props: {

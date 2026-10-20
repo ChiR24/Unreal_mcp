@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "731f45a985a45240",
+  "catalogRevision": "e8cdb2872f745774",
   "recordCount": 416,
   "records": [
     {
@@ -29308,7 +29308,7 @@
           "heightfield",
           "add a landscape"
         ],
-        "summary": "Create a new landscape in the level, or a grass type for one, chosen by kind. landscape spawns a flat Landscape actor labelled name (or landscapeName), its corner at location: componentCount {x, y} components (default 8 x 8), or as many as sizeX and sizeY quads need, each component holding sectionsPerComponent (1 or 2) squared sections of quadsPerSection quads (7, 15, 31, 63 by default, 127 or 255), with materialPath on it (default the engine grid material). builtComponents and extentX/extentY (half the built size; a quad is 100 units) are measured from what was built, a build that makes no components fails (LANDSCAPE_BUILD_FAILED), and the level is left unsaved. grass_type saves a landscape grass type asset named name in path (default /Game/Landscape) that grows meshPath at density 1 per 10 square metres, scaled 0.8 to 1.2, randomly turned and aligned to the surface.",
+        "summary": "Create a new landscape in the world (its current level), or a grass type for one, chosen by kind. landscape spawns a flat Landscape actor labelled name (or landscapeName; an actor already under it is refused, NAME_TAKEN), its corner at location: componentCount {x, y} components (default 8 x 8), or the fewest that cover sizeX and sizeY (vertices like the editor Overall Resolution, or quads). Each component holds sectionsPerComponent (1 or 2) squared sections of quadsPerSection quads (7, 15, 31, 63 by default, 127 or 255). materialPath goes on it (default the engine grid material; one that does not load is refused, ASSET_NOT_FOUND). builtComponents, resolutionX/resolutionY and extentX/extentY (half the built size; a quad is 100 units) are measured from what was built, a build that makes no components fails (LANDSCAPE_BUILD_FAILED), and the level is left unsaved. grass_type saves a landscape grass type asset named name in path (default /Game/Landscape) that grows meshPath at density 1 per 10 square metres, scaled 0.8 to 1.2, randomly turned and aligned to the surface; a grass type already there is kept unchanged (alreadyExists) and another asset there is refused (ASSET_ALREADY_EXISTS).",
         "whenToUse": [
           "kind=landscape: A landscape must be created or modified in the current level.",
           "kind=grass_type: A grass type asset is needed for landscape grass rendering."
@@ -29356,11 +29356,11 @@
             },
             "sizeX": {
               "type": "number",
-              "description": "Landscape size in quads (X)."
+              "description": "Landscape size along X, in vertices like the editor Overall Resolution (1009 is 16 components of 63 quads) or in quads; it becomes the fewest whole components that cover it."
             },
             "sizeY": {
               "type": "number",
-              "description": "Landscape size in quads (Y)."
+              "description": "Landscape size along Y, in vertices like the editor Overall Resolution (1009 is 16 components of 63 quads) or in quads; it becomes the fewest whole components that cover it."
             },
             "quadsPerSection": {
               "type": "number",
@@ -29450,7 +29450,7 @@
       },
       "examples": [
         {
-          "title": "Create a new landscape in the level, or a grass type for one, chosen by kind. landscape spawns a flat Landscape actor labelled name (or landscapeName), its corner at location: componentCount {x, y} components (default 8 x 8), or as many as sizeX and sizeY quads need, each component holding sectionsPerComponent (1 or 2) squared sections of quadsPerSection quads (7, 15, 31, 63 by default, 127 or 255), with materialPath on it (default the engine grid material). builtComponents and extentX/extentY (half the built size; a quad is 100 units) are measured from what was built, a build that makes no components fails (LANDSCAPE_BUILD_FAILED), and the level is left unsaved. grass_type saves a landscape grass type asset named name in path (default /Game/Landscape) that grows meshPath at density 1 per 10 square metres, scaled 0.8 to 1.2, randomly turned and aligned to the surface.",
+          "title": "Create a new landscape in the world (its current level), or a grass type for one, chosen by kind. landscape spawns a flat Landscape actor labelled name (or landscapeName; an actor already under it is refused, NAME_TAKEN), its corner at location: componentCount {x, y} components (default 8 x 8), or the fewest that cover sizeX and sizeY (vertices like the editor Overall Resolution, or quads). Each component holds sectionsPerComponent (1 or 2) squared sections of quadsPerSection quads (7, 15, 31, 63 by default, 127 or 255). materialPath goes on it (default the engine grid material; one that does not load is refused, ASSET_NOT_FOUND). builtComponents, resolutionX/resolutionY and extentX/extentY (half the built size; a quad is 100 units) are measured from what was built, a build that makes no components fails (LANDSCAPE_BUILD_FAILED), and the level is left unsaved. grass_type saves a landscape grass type asset named name in path (default /Game/Landscape) that grows meshPath at density 1 per 10 square metres, scaled 0.8 to 1.2, randomly turned and aligned to the surface; a grass type already there is kept unchanged (alreadyExists) and another asset there is refused (ASSET_ALREADY_EXISTS).",
           "input": {
             "action": "create_landscape",
             "name": "Landscape_1",
@@ -29548,8 +29548,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "b7018f018fa2b27b651061c1ec11863c92725d64d99dba9b1a1b914234bd251d",
-        "content": "042f110b2fd7dc83a710b3ad35b39d06e9ad84648a5c80c3ae8a04499e464f47"
+        "schema": "8f1f3c43dac3c9e9addea9dcf664bc3a1659c1848041c52095e6f91bd551018e",
+        "content": "3f7a8ddc6fc9fced403dbd001d92fd0a9e59bc0fd7bc39ef1beb35713c562fe5"
       }
     },
     {
@@ -30333,11 +30333,11 @@
             },
             "sizeX": {
               "type": "number",
-              "description": "Landscape size in quads (X)."
+              "description": "Landscape size along X, in vertices like the editor Overall Resolution (1009 is 16 components of 63 quads) or in quads; it becomes the fewest whole components that cover it."
             },
             "sizeY": {
               "type": "number",
-              "description": "Landscape size in quads (Y)."
+              "description": "Landscape size along Y, in vertices like the editor Overall Resolution (1009 is 16 components of 63 quads) or in quads; it becomes the fewest whole components that cover it."
             },
             "heightScale": {
               "type": "number",
@@ -30445,8 +30445,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "90c2cb83742b90570515d520853921110aa95c21bd7c62b219242ff42ebff9b7",
-        "content": "af108b29bb33cf369cec97fc615e177be7b2a790360d1a354feae61bdbce5e9d"
+        "schema": "a9b6dcfdd8395d32930921e12f2c0e7098dc08cc0795813421cce3553e7cc9e8",
+        "content": "5cf609c272235ce642dfba0d709846b43d669302ff9577585922ea873444b2ae"
       }
     },
     {
@@ -50780,7 +50780,7 @@
                   "type": "number"
                 }
               },
-              "description": "Start point of the navigation link (relative to the actor).",
+              "description": "Start of the link, relative to the link actor (its location and rotation).",
               "additionalProperties": false
             },
             "endPoint": {
@@ -50796,7 +50796,7 @@
                   "type": "number"
                 }
               },
-              "description": "End point of the navigation link (relative to the actor).",
+              "description": "End of the link, relative to the link actor (its location and rotation).",
               "additionalProperties": false
             },
             "direction": {
@@ -50806,11 +50806,11 @@
                 "LeftToRight",
                 "RightToLeft"
               ],
-              "description": "Link traversal direction."
+              "description": "Which way agents may cross: BothWays (default), LeftToRight (start to end) or RightToLeft."
             },
             "snapRadius": {
               "type": "number",
-              "description": "Snap radius for link endpoints (default: 30)."
+              "description": "How far from each end of the point link the navmesh is looked for (default 30)."
             },
             "linkType": {
               "type": "string",
@@ -50818,35 +50818,35 @@
                 "simple",
                 "smart"
               ],
-              "description": "Type of navigation link."
+              "description": "simple (the point link of the proxy) or smart (its smart link, which can switch on and off)."
             },
             "linkEnabled": {
               "type": "boolean",
-              "description": "Whether the link is enabled."
+              "description": "Switch the smart link on (true) or off."
             },
             "enabledAreaClass": {
               "type": "string",
-              "description": "Area class applied while the smart link is enabled."
+              "description": "Navigation area class the smart link marks while on, e.g. /Script/NavigationSystem.NavArea_Default."
             },
             "disabledAreaClass": {
               "type": "string",
-              "description": "Area class applied while the smart link is disabled."
+              "description": "Navigation area class the smart link marks while off, e.g. /Script/NavigationSystem.NavArea_Null (impassable)."
             },
             "broadcastRadius": {
               "type": "number",
-              "description": "Radius for the state-change broadcast."
+              "description": "Radius, in units, of the agents told when the smart link switches; the engine default 0 tells none."
             },
             "broadcastInterval": {
               "type": "number",
-              "description": "Interval for the state-change broadcast (0 = single)."
+              "description": "Seconds between repeats of that notice; 0 sends it once."
             },
             "bCreateBoxObstacle": {
               "type": "boolean",
-              "description": "Add a box obstacle during navigation generation."
+              "description": "true sets the box obstacle of the smart link, which marks the navmesh with obstacleAreaClass."
             },
             "obstacleAreaClass": {
               "type": "string",
-              "description": "Area class for the box obstacle."
+              "description": "Area the box obstacle marks (default /Script/NavigationSystem.NavArea_Null, impassable)."
             },
             "obstacleExtent": {
               "type": "object",
@@ -50861,7 +50861,7 @@
                   "type": "number"
                 }
               },
-              "description": "Extent of the simple box obstacle.",
+              "description": "Half size of the box obstacle (default 100 on each axis).",
               "additionalProperties": false
             },
             "obstacleOffset": {
@@ -50877,7 +50877,7 @@
                   "type": "number"
                 }
               },
-              "description": "Offset of the simple box obstacle.",
+              "description": "Offset of the box obstacle from the link actor.",
               "additionalProperties": false
             },
             "setting": {
@@ -51093,7 +51093,8 @@
             },
             "set_nav_link_type": {
               "required": [
-                "actorName"
+                "actorName",
+                "linkType"
               ]
             },
             "configure_smart_link_behavior": {
@@ -51106,8 +51107,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "efde91a9cabfb8569fb2d5a302d91bde215ffd6478ec2ac16aa9725ff3bc3521",
-        "content": "26c07b28b4da4d2e042b4a7e020d7e0a4d8b5a9e8ba43cf4aa2c9c997963ac2d"
+        "schema": "c8f9c82497b4bff0ae4070508c87c3c807eccc9215ddafe86adc5aa1df918a5d",
+        "content": "3e8885e728cf790650fa55f0ed5d790c75f138d4edd8e811c05b8f92e2a942f6"
       }
     },
     {
@@ -51276,7 +51277,7 @@
           "ai behavior",
           "new behavior tree"
         ],
-        "summary": "Create a Behavior Tree (directly or through the graph route) or a Blackboard asset.",
+        "summary": "Create an AI asset named name, chosen by kind, each saved (saved): behavior_tree a Behavior Tree in path (default /Game/AI/BehaviorTrees), graph_route the same in savePath (default /Game), blackboard a Blackboard in path (default /Game/AI/Blackboards), where a Blackboard already there is kept (alreadyExisted). Any other asset already at the path is refused (ASSET_ALREADY_EXISTS).",
         "whenToUse": [
           "kind=behavior_tree: An AI needs a new Behavior Tree asset.",
           "kind=graph_route: A caller uses the short create verb with savePath.",
@@ -51351,7 +51352,7 @@
             },
             "alreadyExisted": {
               "type": "boolean",
-              "description": "Whether the Blackboard already existed and was reused."
+              "description": "Whether a Blackboard was already at the path; it is kept as it was."
             }
           },
           "required": [
@@ -51362,7 +51363,7 @@
       },
       "examples": [
         {
-          "title": "Create a Behavior Tree (directly or through the graph route) or a Blackboard asset.",
+          "title": "Create an AI asset named name, chosen by kind, each saved (saved): behavior_tree a Behavior Tree in path (default /Game/AI/BehaviorTrees), graph_route the same in savePath (default /Game), blackboard a Blackboard in path (default /Game/AI/Blackboards), where a Blackboard already there is kept (alreadyExisted). Any other asset already at the path is refused (ASSET_ALREADY_EXISTS).",
           "input": {
             "action": "create_behavior_tree",
             "name": "BT_Enemy",
@@ -51421,8 +51422,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "8292374c3d2061f01fc2c64035774c173ec46b36442b26bc61686a2654b3369f",
-        "content": "dfd003ffe99f0cf3d11b554a87915983488a5eb2faf611409f484c11b43f0e72"
+        "schema": "54d6cb7998f2ef349ae5cac780c11afc73550e6e9719cf8303bd8f88754a14c3",
+        "content": "e3bc96bff30654c50471b5970182f7b31f15354fca40beda5717ec253707f1c6"
       }
     },
     {
@@ -51477,7 +51478,7 @@
           "nav modifier",
           "add nav modifier"
         ],
-        "summary": "Create a nav link proxy, a smart link, or a nav modifier (actor or component).",
+        "summary": "Create navigation helpers, chosen by kind: link_proxy places a NavLinkProxy whose point link joins startPoint and endPoint (relative to it) so agents cross a gap the navmesh does not connect; smart_link places one whose smart link alone does, switchable on and off; modifier places a NavModifierVolume marking the navmesh under it with areaClass (default NavArea_Obstacle) or, with blueprintPath, adds a NavModifier component to a Blueprint; modifier_component adds that component to a Blueprint or a placed actor. A label or component name already taken is refused.",
         "whenToUse": [
           "kind=link_proxy: A level needs an authored navigation link between two points.",
           "kind=smart_link: A level needs a navigation link that can toggle its area class.",
@@ -51542,7 +51543,7 @@
                   "type": "number"
                 }
               },
-              "description": "Start point of the navigation link (relative to the actor).",
+              "description": "Start of the link, relative to the link actor (its location and rotation).",
               "additionalProperties": false
             },
             "endPoint": {
@@ -51558,7 +51559,7 @@
                   "type": "number"
                 }
               },
-              "description": "End point of the navigation link (relative to the actor).",
+              "description": "End of the link, relative to the link actor (its location and rotation).",
               "additionalProperties": false
             },
             "direction": {
@@ -51568,7 +51569,7 @@
                 "LeftToRight",
                 "RightToLeft"
               ],
-              "description": "Link traversal direction."
+              "description": "Which way agents may cross: BothWays (default), LeftToRight (start to end) or RightToLeft."
             },
             "blueprintPath": {
               "type": "string",
@@ -51680,7 +51681,7 @@
       },
       "examples": [
         {
-          "title": "Create a nav link proxy, a smart link, or a nav modifier (actor or component).",
+          "title": "Create navigation helpers, chosen by kind: link_proxy places a NavLinkProxy whose point link joins startPoint and endPoint (relative to it) so agents cross a gap the navmesh does not connect; smart_link places one whose smart link alone does, switchable on and off; modifier places a NavModifierVolume marking the navmesh under it with areaClass (default NavArea_Obstacle) or, with blueprintPath, adds a NavModifier component to a Blueprint; modifier_component adds that component to a Blueprint or a placed actor. A label or component name already taken is refused.",
           "input": {
             "action": "create_nav_actor",
             "actorName": "NavLinkProxy_0",
@@ -51777,6 +51778,20 @@
             ]
           },
           "requires": {
+            "create_nav_link_proxy": {
+              "required": [
+                "location",
+                "startPoint",
+                "endPoint"
+              ]
+            },
+            "create_smart_link": {
+              "required": [
+                "location",
+                "startPoint",
+                "endPoint"
+              ]
+            },
             "create_nav_modifier_component": {
               "oneOf": [
                 "blueprintPath",
@@ -51788,8 +51803,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "4541a58c55adffbd7ebe32769e69283d7c607011a2051a3a4e6d66093f3c7d1c",
-        "content": "7dfb4b429c87090bf2906026a26851abcfe6a543c0f15124bd0598a2f5a0abe7"
+        "schema": "fc970a14671e3c1f696ddd91faba3d68af8448415d64960715cb5133a0286196",
+        "content": "28622e7076c544cfdf81c687656eb36b8ce3763368ccda153c0eda8b4ca0d3ff"
       }
     },
     {
@@ -51907,7 +51922,7 @@
         ],
         "summary": "Edit a Behavior Tree graph: add composite, task, decorator, service or generic nodes and subnodes, connect or break connections, configure or remove nodes.",
         "whenToUse": [
-          "edit=add_composite: A Behavior Tree needs a Selector or Sequence branch.",
+          "edit=add_composite: A Behavior Tree needs a Selector, Sequence or Simple Parallel branch.",
           "edit=add_task: A Behavior Tree branch needs a leaf task. An enemy that chases the player is a Sequence with a MoveTo task whose Blackboard key (an Object key such as TargetActor) holds the player, run on its AI controller with run_behavior_tree.",
           "edit=add_decorator: A Behavior Tree branch needs a conditional gate.",
           "edit=add_service: A Behavior Tree branch needs recurring background work.",
@@ -51938,7 +51953,7 @@
                 "Parallel",
                 "SimpleParallel"
               ],
-              "description": "Composite node type."
+              "description": "Composite node type: Selector, Sequence, or SimpleParallel (Parallel is the same)."
             },
             "nodeName": {
               "type": "string",
@@ -52307,8 +52322,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "38033c07cf28e73a9264761aa23843caad7e4fc03d924b5ec467bc1b04a23e98",
-        "content": "433b76da9425dcc63b61e90c2127ed46898b8d7fcbe232a9ba664ab5217cb489"
+        "schema": "39fb90f7fde854c5850c4c58ebffda6427615c9e47d4e6f4a192aed137776edf",
+        "content": "a4a389d7bf86172f37ba560f2c9489c20b25d1e7fac6e2ee2825fe4e6afed109"
       }
     },
     {
@@ -52354,10 +52369,10 @@
           "blackboard value",
           "instance synced"
         ],
-        "summary": "Edit a Blackboard: add a key, set a key value, or mark a key instance-synced.",
+        "summary": "Edit a Blackboard asset (blackboardPath), chosen by edit, each saved: add_key adds keyName of keyType (an Object key a MoveTo target uses wants baseObjectClass /Script/Engine.Actor; an Enum key takes enumType), set_value sets the default a key starts with (UE 5.4+, Enum, Object and Class keys 5.5+), set_key_instance_synced shares one value across every AI. A taken name (NAME_TAKEN), a value of the wrong kind, a key of a parent Blackboard (KEY_IN_PARENT) and engine content are refused.",
         "whenToUse": [
-          "edit=add_key: A Blackboard needs a new typed entry.",
-          "edit=set_value: A Blackboard key needs a different authored default.",
+          "edit=add_key: A Blackboard needs a new typed entry, such as the actor an AI chases or the place it moves to.",
+          "edit=set_value: A Blackboard key needs a different authored default, such as a speed or a starting state.",
           "edit=set_key_instance_synced: A Blackboard key must share its value across instances."
         ],
         "whenNotToUse": []
@@ -52373,7 +52388,7 @@
             },
             "keyName": {
               "type": "string",
-              "description": "Blackboard key name."
+              "description": "Blackboard key name, matched in any case."
             },
             "keyType": {
               "type": "string",
@@ -52393,14 +52408,18 @@
             },
             "baseObjectClass": {
               "type": "string",
-              "description": "Base class filter for Object/Class blackboard keys."
+              "description": "Class an Object key holds or a Class key names, as a class path or name (e.g. /Script/Engine.Actor); Object and Class keys only. Without it the key is based on Object, which actor-only key filters such as the MoveTo target skip."
+            },
+            "enumType": {
+              "type": "string",
+              "description": "Enum an Enum key holds, by path (/Game/Enums/E_State, /Script/Engine.ECollisionChannel); Enum keys only. Without it the key has no enumerators to hold."
             },
             "isInstanceSynced": {
               "type": "boolean",
-              "description": "Sync key across instances."
+              "description": "Share the value of the key across every Blackboard component using this asset, so a value one AI sets reaches them all."
             },
             "value": {
-              "description": "Property value (any type)."
+              "description": "The default, in the kind the key holds: a boolean, a number, {x, y, z}, {pitch, yaw, roll}, text, an enumerator, or an asset or class path."
             },
             "edit": {
               "type": "string",
@@ -52439,6 +52458,18 @@
             "assetPath": {
               "type": "string",
               "description": "Canonical /Game asset path."
+            },
+            "baseClass": {
+              "type": "string",
+              "description": "Class path an Object or Class key is based on."
+            },
+            "saved": {
+              "type": "boolean",
+              "description": "Whether the Blackboard reached disk."
+            },
+            "value": {
+              "type": "string",
+              "description": "The default the key now holds, as the engine writes it."
             }
           },
           "required": [
@@ -52449,12 +52480,13 @@
       },
       "examples": [
         {
-          "title": "Edit a Blackboard: add a key, set a key value, or mark a key instance-synced.",
+          "title": "Edit a Blackboard asset (blackboardPath), chosen by edit, each saved: add_key adds keyName of keyType (an Object key a MoveTo target uses wants baseObjectClass /Script/Engine.Actor; an Enum key takes enumType), set_value sets the default a key starts with (UE 5.4+, Enum, Object and Class keys 5.5+), set_key_instance_synced shares one value across every AI. A taken name (NAME_TAKEN), a value of the wrong kind, a key of a parent Blackboard (KEY_IN_PARENT) and engine content are refused.",
           "input": {
             "action": "edit_blackboard",
             "blackboardPath": "/Game/AI/BB_Enemy",
             "keyName": "TargetActor",
             "keyType": "Object",
+            "baseObjectClass": "/Script/Engine.Actor",
             "edit": "add_key"
           },
           "output": {
@@ -52503,6 +52535,9 @@
             "baseObjectClass": [
               "add_key"
             ],
+            "enumType": [
+              "add_key"
+            ],
             "isInstanceSynced": [
               "add_key",
               "set_key_instance_synced"
@@ -52516,14 +52551,19 @@
               "required": [
                 "keyType"
               ]
+            },
+            "set_blackboard_value": {
+              "required": [
+                "value"
+              ]
             }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "3658ed3b93e5a0bcc15a0d64f8ea45e6b3c5b80254a77c822077f2e7f4c81cb5",
-        "content": "f54b67953505af6a08f369eb8d35a6d2cbb50e801b83e6fa4c08c57590372dee"
+        "schema": "81e11434aaf3c6604afe3b3ff64667a2c4f4f3fcce22dc09c3c3578d86f896f7",
+        "content": "1152f8444e680a4d92898ebaa7fc7c25dc6feae74e9a152dbddb94f5c1824491"
       }
     },
     {
@@ -54121,7 +54161,7 @@
             },
             "keyName": {
               "type": "string",
-              "description": "Blackboard key name."
+              "description": "Blackboard key name, matched in any case."
             },
             "info": {
               "type": "string",
@@ -54165,7 +54205,7 @@
             },
             "valueAvailable": {
               "type": "boolean",
-              "description": "Whether the typed default value was available to read (false on UE 5.0-5.4)."
+              "description": "Whether the key holds a default to read: false before UE 5.4, for Enum, Object and Class keys before 5.5, and for a vector or rotator never set."
             },
             "value": {
               "description": "Property value (any type)."
@@ -54255,8 +54295,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "1774b526fa1da64dc19a57a3bb9b1c1de66b7e39cb556750e3d184599c5d93e4",
-        "content": "8229d3f20cb4900b19ddb435c72d4ef051d32eef888cf6c538464e8d1973e8ea"
+        "schema": "99d169eb6ff771e2187e40e0dfab01f98acd30048aa635dc76a418109b834faa",
+        "content": "43e400b1f4dc669e3bfa6d5e635e18be5b137ebb59f3cd511b47c0fded85cefb"
       }
     },
     {
@@ -54532,7 +54572,7 @@
         "topics": [
           "set_ai_movement"
         ],
-        "summary": "Set the movement limits on the CharacterMovement component of a Blueprint.",
+        "summary": "Set the movement limits on the CharacterMovement component of a Character Blueprint (an AI pawn) and save it: maxWalkSpeed, maxAcceleration, brakingDeceleration (walking), rotationRate (yaw, degrees per second), maxFlySpeed, jumpZVelocity and avoidanceWeight, plus useAccelerationForPaths (path following speeds up and slows down like a player instead of moving at full speed at once), orientRotationToMovement (turn to face where it goes) and useRVOAvoidance (steer around other agents). Only what is sent changes, 0 included; a negative number or a call that sets nothing is refused, as is a Blueprint with no CharacterMovement component (COMPONENT_NOT_FOUND). propertiesSet names what changed and currentValues reads the main values back.",
         "whenToUse": [
           "Walk speed, acceleration, braking or rotation rate must change on a pawn asset."
         ],
@@ -54656,7 +54696,7 @@
       },
       "examples": [
         {
-          "title": "Set the movement limits on the CharacterMovement component of a Blueprint.",
+          "title": "Set the movement limits on the CharacterMovement component of a Character Blueprint (an AI pawn) and save it: maxWalkSpeed, maxAcceleration, brakingDeceleration (walking), rotationRate (yaw, degrees per second), maxFlySpeed, jumpZVelocity and avoidanceWeight, plus useAccelerationForPaths (path following speeds up and slows down like a player instead of moving at full speed at once), orientRotationToMovement (turn to face where it goes) and useRVOAvoidance (steer around other agents). Only what is sent changes, 0 included; a negative number or a call that sets nothing is refused, as is a Blueprint with no CharacterMovement component (COMPONENT_NOT_FOUND). propertiesSet names what changed and currentValues reads the main values back.",
           "input": {
             "action": "set_ai_movement",
             "blueprintPath": "/Game/AI/BP_Enemy",
@@ -54697,7 +54737,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "1feebb40d2f6e744bedd54ba451d6b92827e0c59a4a85c84d21f14ae6403f029",
-        "content": "354183621643bbcd379a3000c6630b2e883d0901585900a9d8f52fe0c85bbe1f"
+        "content": "0bf0583ce423d523b146636fb11a42101a70b4a974bc505c133817bdc5e02e53"
       }
     },
     {
@@ -57610,7 +57650,7 @@
           "edit=set_attenuation: Use it to assign attenuation settings to a Sound Cue; omit attenuationPath to clear them.",
           "edit=set_concurrency: Use it to assign concurrency settings to a Sound Cue.",
           "edit=doppler: Use it to add a Doppler node at the root of a Sound Cue (or update the one already there) so the cue shifts pitch as its source moves toward or away from the listener. Sound Cues only; a SoundWave or MetaSound is refused.",
-          "edit=add_source_effect: Use it to add an effect to a Source Effect Chain: a new preset of effectType (an asset of its own beside the chain), or an existing preset asset by effectPresetPath."
+          "edit=add_source_effect: Use it to add an effect to a Source Effect Chain: a new preset of effectType (eq, chorus, delay, filter, dynamics, bitcrusher, phaser, waveshaper, panner, stereodelay, foldback, ringmodulation, midsidespreader, motionfilter, envelopefollower or convolutionreverb), saved as an asset of its own beside the chain and listed in the receipt, or an existing preset asset by effectPresetPath. An unknown effectType or a preset that does not load is refused."
         ],
         "whenNotToUse": []
       },
@@ -57903,7 +57943,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "77ab96f66cc7db6f5a4994361d48cf99ef9c775783f9502fc1d9e74cac288b7f",
-        "content": "fe39371f6291c1b512392c4de58e56f10a560807f01e3e3b7f48b3425860fe03"
+        "content": "603f132846acccf9b14662a14f259f6f2ded22df777e8d9b088309648bd49b99"
       }
     },
     {

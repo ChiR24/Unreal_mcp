@@ -114,7 +114,7 @@ export const AI_CONFIGURE_RECORDS: readonly CapabilityRecordSource[] = [
     result: 'Nav area cost configured',
   }),
   aiRecord({
-    action: 'configure_nav_link', summary: 'Configure an authored navigation link.',
+    action: 'configure_nav_link', summary: 'Change the link of a placed NavLinkProxy (actorName): startPoint and endPoint (relative to the actor) and direction go on its smart link when it uses one, else on its point link, and snapRadius on the point link (refused for a smart link). Only what is sent changes, and a call that sends none of them is refused. The navmesh takes the change at once; one undo step, the level left unsaved; the reply gives the link as it is now.',
     use: 'A placed nav link actor needs endpoint or snap tuning.',
     avoid: 'Use create_nav_link_proxy to place the link first.',
     props: {
@@ -165,7 +165,7 @@ export const AI_CONFIGURE_RECORDS: readonly CapabilityRecordSource[] = [
     result: 'Slot behavior configured',
   }),
   aiRecord({
-    action: 'configure_smart_link_behavior', summary: 'Configure smart navigation link behavior.',
+    action: 'configure_smart_link_behavior', summary: 'Change the smart link of a NavLinkProxy (actorName): linkEnabled switches it on or off; enabledAreaClass and disabledAreaClass are the navigation areas it marks while on and off (NavArea_Null blocks it); broadcastRadius and broadcastInterval set who hears it switch, heard only while its Notify When Enabled or Disabled is on, and the one left out keeps its value; bCreateBoxObstacle true sets its box obstacle of obstacleAreaClass (default NavArea_Null), obstacleExtent (default 100) and obstacleOffset. An area class that does not load is refused before anything changes, as is a call that sets nothing. The settings stay on a proxy that uses its point link and apply once set_nav_link_type makes it smart. One undo step; the level is left unsaved.',
     use: 'A smart link needs area-class switching or an obstacle.',
     avoid: 'Use configure_nav_link for a simple link.',
     props: {

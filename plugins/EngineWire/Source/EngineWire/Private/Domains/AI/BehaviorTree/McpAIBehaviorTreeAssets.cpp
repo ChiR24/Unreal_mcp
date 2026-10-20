@@ -7,6 +7,7 @@
 #include "BehaviorTree/BTTaskNode.h"
 #include "BehaviorTree/Composites/BTComposite_Selector.h"
 #include "BehaviorTree/Composites/BTComposite_Sequence.h"
+#include "BehaviorTree/Composites/BTComposite_SimpleParallel.h"
 #include "BehaviorTree/Tasks/BTTask_MoveTo.h"
 #include "BehaviorTree/Tasks/BTTask_Wait.h"
 #include "Domains/BehaviorTree/McpBTPrivate.h"
@@ -40,10 +41,10 @@ UBTCompositeNode* FindCompositeById(UBTCompositeNode* Node, const FString& Id)
 
 namespace McpAIHandlers
 {
-static UBehaviorTree* CreateBehaviorTreeAsset(const FString& Path, const FString& Name, FString& OutError)
+static UBehaviorTree* CreateBehaviorTreeAsset(const FString& Path, const FString& Name, FString& OutError, FString& OutCode, bool& bOutSaved)
 {
     UBehaviorTree* BehaviorTree = CreateAIAssetInPackage<UBehaviorTree>(
-        Path, Name, TEXT("Behavior Tree"), OutError);
+        Path, Name, TEXT("Behavior Tree"), OutError, OutCode);
     if (!BehaviorTree)
     {
         return nullptr;
@@ -51,7 +52,7 @@ static UBehaviorTree* CreateBehaviorTreeAsset(const FString& Path, const FString
 
     UEdGraph* Graph = nullptr;
     McpBehaviorTreeHandlers::EnsureBehaviorTreeGraph(BehaviorTree, Graph);
-    McpSafeAssetSave(BehaviorTree);
+    bOutSaved = McpSafeAssetSave(BehaviorTree);
 
     return BehaviorTree;
 }
@@ -77,15 +78,18 @@ bool HandleCreateBehaviorTree(UEngineWireSubsystem* Self, const FString& Request
     }
 
     FString Error;
-    UBehaviorTree* BT = CreateBehaviorTreeAsset(Path, Name, Error);
+    FString ErrorCode;
+    bool bSaved = false;
+    UBehaviorTree* BT = CreateBehaviorTreeAsset(Path, Name, Error, ErrorCode, bSaved);
     if (!BT)
     {
-        Self->SendAutomationError(RequestingSocket, RequestId, Error, TEXT("CREATION_FAILED"));
+        Self->SendAutomationError(RequestingSocket, RequestId, Error, ErrorCode);
         return true;
     }
 
     Result->SetStringField(TEXT("behaviorTreePath"), BT->GetPathName());
     Result->SetStringField(TEXT("packagePath"), BT->GetOutermost()->GetName()); // dogfood #66
+    Result->SetBoolField(TEXT("saved"), bSaved);
     Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Created Behavior Tree: %s"), *Name));
     McpHandlerUtils::AddVerification(Result, BT);
     Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Behavior Tree created"), Result);
@@ -122,7 +126,18 @@ bool HandleAddCompositeNode(UEngineWireSubsystem* Self, const FString& RequestId
     {
         NewNode = NewObject<UBTComposite_Sequence>(BT);
     }
-    // Add more composite types as needed
+    // The schema offered both spellings and neither was built; the engine's parallel composite is Simple Parallel.
+    else if (CompositeType.Equals(TEXT("SimpleParallel"), ESearchCase::IgnoreCase) || CompositeType.Equals(TEXT("Parallel"), ESearchCase::IgnoreCase))
+    {
+        NewNode = NewObject<UBTComposite_SimpleParallel>(BT);
+    }
+    else
+    {
+        Self->SendAutomationError(RequestingSocket, RequestId,
+                            FString::Printf(TEXT("compositeType must be Selector, Sequence or SimpleParallel, not %s."), *CompositeType),
+                            TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
 
     if (NewNode)
     {

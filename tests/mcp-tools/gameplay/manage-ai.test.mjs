@@ -64,13 +64,19 @@ const testCases = [
   // === BLACKBOARD ===
   { scenario: 'ADD: add_blackboard_key', toolName: 'manage_ai', arguments: { action: 'add_blackboard_key', blackboardPath: '${captured:blackboardPath}', keyName: blackboardKeyName, keyType: 'Bool', isInstanceSynced: false }, expected: 'success' },
   { scenario: 'ADD: add_blackboard_key vector goal', toolName: 'manage_ai', arguments: { action: 'add_blackboard_key', blackboardPath: '${captured:blackboardPath}', keyName: moveGoalKeyName, keyType: 'Vector' }, expected: 'success' },
+  { scenario: 'ERROR: add_blackboard_key refuses a name the Blackboard already has', toolName: 'manage_ai', arguments: { action: 'add_blackboard_key', blackboardPath: '${captured:blackboardPath}', keyName: blackboardKeyName, keyType: 'Int' }, expected: 'error|NAME_TAKEN' },
+  { scenario: 'ADD: add_blackboard_key enum with its enum type', toolName: 'manage_ai', arguments: { action: 'add_blackboard_key', blackboardPath: '${captured:blackboardPath}', keyName: `Channel_${ts}`, keyType: 'Enum', enumType: '/Script/Engine.ECollisionChannel' }, expected: 'success' },
+  { scenario: 'ADD: add_blackboard_key object based on Actor', toolName: 'manage_ai', arguments: { action: 'add_blackboard_key', blackboardPath: '${captured:blackboardPath}', keyName: `Chased_${ts}`, keyType: 'Object', baseObjectClass: '/Script/Engine.Actor' }, expected: 'success', assertions: [{ path: 'structuredContent.result.baseClass', equals: '/Script/Engine.Actor', label: 'the key holds actors, so a MoveTo target accepts it' }] },
   { scenario: 'CONFIG: set_key_instance_synced', toolName: 'manage_ai', arguments: { action: 'set_key_instance_synced', blackboardPath: '${captured:blackboardPath}', keyName: blackboardKeyName, isInstanceSynced: true }, expected: 'success' },
   { scenario: 'CONFIG: set_blackboard_value', toolName: 'manage_ai', arguments: { action: 'set_blackboard_value', blackboardPath: '${captured:blackboardPath}', keyName: blackboardKeyName, value: 'true' }, expected: 'success' },
+  { scenario: 'ERROR: set_blackboard_value refuses a value the key cannot hold', toolName: 'manage_ai', arguments: { action: 'set_blackboard_value', blackboardPath: '${captured:blackboardPath}', keyName: blackboardKeyName, value: 'maybe' }, expected: 'error|INVALID_ARGUMENT' },
+  { scenario: 'CONFIG: set_blackboard_value sets a vector default', toolName: 'manage_ai', arguments: { action: 'set_blackboard_value', blackboardPath: '${captured:blackboardPath}', keyName: moveGoalKeyName, value: { x: 100, y: 200, z: 0 } }, expected: 'success' },
   { scenario: 'INFO: get_blackboard_value', toolName: 'manage_ai', arguments: { action: 'get_blackboard_value', blackboardPath: '${captured:blackboardPath}', keyName: blackboardKeyName }, expected: 'success' },
 
   // === BEHAVIOR TREE ===
   { scenario: 'ADD: add_composite_node', toolName: 'manage_ai', arguments: { action: 'add_composite_node', behaviorTreePath: '${captured:behaviorTreePath}', compositeType: 'Sequence' }, expected: 'success' },
   { scenario: 'ADD: add_composite_node named', toolName: 'manage_ai', arguments: { action: 'add_composite_node', behaviorTreePath: '${captured:behaviorTreePath}', compositeType: 'Selector', nodeName: 'RootSelector' }, expected: 'success' },
+  { scenario: 'ADD: add_composite_node SimpleParallel', toolName: 'manage_ai', arguments: { action: 'add_composite_node', behaviorTreePath: '${captured:behaviorTreePath}', compositeType: 'SimpleParallel', parentNodeId: 'RootSelector' }, expected: 'success' },
   { scenario: 'ADD: add_task_node', toolName: 'manage_ai', arguments: { action: 'add_task_node', behaviorTreePath: '${captured:behaviorTreePath}', taskType: 'Wait' }, expected: 'success' },
   { scenario: 'ADD: add_decorator', toolName: 'manage_ai', arguments: { action: 'add_decorator', behaviorTreePath: '${captured:behaviorTreePath}', decoratorType: 'Blackboard' }, expected: 'success' },
   { scenario: 'ADD: add_decorator on a named node', toolName: 'manage_ai', arguments: { action: 'add_decorator', behaviorTreePath: '${captured:behaviorTreePath}', decoratorType: 'Cooldown', parentNodeId: 'RootSelector' }, expected: 'success', assertions: [{ path: 'structuredContent.result.attachedTo', equals: 'RootSelector' }] },
@@ -311,13 +317,17 @@ const testCases = [
     { scenario: 'CONFIG: configure_nav_area_cost', toolName: 'manage_ai', arguments: {"action": "configure_nav_area_cost", "areaClass": OBSTACLE_AREA, "areaCost": 1.0, "fixedAreaEnteringCost": 0}, expected: 'success' },
     // === CREATE ===
     { scenario: 'CREATE: create_nav_link_proxy', toolName: 'manage_ai', arguments: {"action": "create_nav_link_proxy", "actorName": NAV_LINK, "location": {"x": 0, "y": 0, "z": 100}, "startPoint": {"x": -100, "y": 0, "z": 0}, "endPoint": {"x": 100, "y": 0, "z": 0}, "direction": "BothWays"}, expected: 'success' },
+    { scenario: 'ERROR: create_nav_link_proxy refuses a label already in the level', toolName: 'manage_ai', arguments: {"action": "create_nav_link_proxy", "actorName": NAV_LINK, "location": {"x": 0, "y": 0, "z": 100}, "startPoint": {"x": -100, "y": 0, "z": 0}, "endPoint": {"x": 100, "y": 0, "z": 0}}, expected: 'error|NAME_TAKEN' },
     // === CONFIG ===
     { scenario: 'CONFIG: configure_nav_link', toolName: 'manage_ai', arguments: {"action": "configure_nav_link", "actorName": NAV_LINK, "snapRadius": 30}, expected: 'success' },
+    { scenario: 'ERROR: configure_nav_link refuses a call that sets nothing', toolName: 'manage_ai', arguments: { action: 'configure_nav_link', actorName: NAV_LINK }, expected: 'error|INVALID_ARGUMENT' },
+    { scenario: 'CONFIG: configure_nav_link direction alone', toolName: 'manage_ai', arguments: { action: 'configure_nav_link', actorName: NAV_LINK, direction: 'LeftToRight' }, expected: 'success' },
     { scenario: 'CONFIG: set_nav_link_type', toolName: 'manage_ai', arguments: {"action": "set_nav_link_type", "actorName": NAV_LINK, "linkType": "smart"}, expected: 'success' },
     // === CREATE ===
     { scenario: 'CREATE: create_smart_link', toolName: 'manage_ai', arguments: {"action": "create_smart_link", "actorName": SMART_LINK, "location": {"x": 0, "y": 200, "z": 100}, "startPoint": {"x": -100, "y": 0, "z": 0}, "endPoint": {"x": 100, "y": 0, "z": 0}, "direction": "BothWays"}, expected: 'success' },
     // === CONFIG ===
     { scenario: 'CONFIG: configure_smart_link_behavior', toolName: 'manage_ai', arguments: {"action": "configure_smart_link_behavior", "actorName": SMART_LINK, "linkEnabled": true, "enabledAreaClass": "/Script/NavigationSystem.NavArea_Default", "disabledAreaClass": "/Script/NavigationSystem.NavArea_Null", "broadcastRadius": 900, "broadcastInterval": 0, "bCreateBoxObstacle": true, "obstacleAreaClass": "/Script/NavigationSystem.NavArea_Null", "obstacleExtent": {"x": 75, "y": 50, "z": 40}, "obstacleOffset": {"x": 0, "y": 0, "z": 20}}, expected: 'success' },
+    { scenario: 'ERROR: configure_smart_link_behavior refuses an area class that does not load', toolName: 'manage_ai', arguments: { action: 'configure_smart_link_behavior', actorName: SMART_LINK, enabledAreaClass: '/Script/NavigationSystem.NoSuchNavArea' }, expected: 'error|INVALID_AREA_CLASS' },
     // === INFO ===
     { scenario: 'INFO: get_navigation_info', toolName: 'manage_ai', arguments: {"action": "get_navigation_info"}, expected: 'success' },
 

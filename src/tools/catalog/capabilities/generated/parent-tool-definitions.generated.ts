@@ -3607,11 +3607,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "sizeX": {
           "type": "number",
-          "description": "Landscape size in quads (X)."
+          "description": "Landscape size along X, in vertices like the editor Overall Resolution (1009 is 16 components of 63 quads) or in quads; it becomes the fewest whole components that cover it."
         },
         "sizeY": {
           "type": "number",
-          "description": "Landscape size in quads (Y)."
+          "description": "Landscape size along Y, in vertices like the editor Overall Resolution (1009 is 16 components of 63 quads) or in quads; it becomes the fewest whole components that cover it."
         },
         "skipFlush": {
           "type": "boolean",
@@ -8228,11 +8228,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "bCreateBoxObstacle": {
           "type": "boolean",
-          "description": "Add a box obstacle during navigation generation."
+          "description": "true sets the box obstacle of the smart link, which marks the navmesh with obstacleAreaClass."
         },
         "baseObjectClass": {
           "type": "string",
-          "description": "Base class filter for Object/Class blackboard keys."
+          "description": "Class an Object key holds or a Class key names, as a class path or name (e.g. /Script/Engine.Actor); Object and Class keys only. Without it the key is based on Object, which actor-only key filters such as the MoveTo target skip."
         },
         "behaviorTreePath": {
           "type": "string",
@@ -8252,11 +8252,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "broadcastInterval": {
           "type": "number",
-          "description": "Interval for the state-change broadcast (0 = single)."
+          "description": "Seconds between repeats of that notice; 0 sends it once."
         },
         "broadcastRadius": {
           "type": "number",
-          "description": "Radius for the state-change broadcast."
+          "description": "Radius, in units, of the agents told when the smart link switches; the engine default 0 tells none."
         },
         "cellHeight": {
           "type": "number",
@@ -8286,7 +8286,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "Parallel",
             "SimpleParallel"
           ],
-          "description": "Composite node type."
+          "description": "Composite node type: Selector, Sequence, or SimpleParallel (Parallel is the same)."
         },
         "configPath": {
           "type": "string",
@@ -8360,11 +8360,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "LeftToRight",
             "RightToLeft"
           ],
-          "description": "Link traversal direction."
+          "description": "Which way agents may cross: BothWays (default), LeftToRight (start to end) or RightToLeft."
         },
         "disabledAreaClass": {
           "type": "string",
-          "description": "Area class applied while the smart link is disabled."
+          "description": "Navigation area class the smart link marks while off, e.g. /Script/NavigationSystem.NavArea_Null (impassable)."
         },
         "dominantSense": {
           "type": "string",
@@ -8430,7 +8430,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "enabledAreaClass": {
           "type": "string",
-          "description": "Area class applied while the smart link is enabled."
+          "description": "Navigation area class the smart link marks while on, e.g. /Script/NavigationSystem.NavArea_Default."
         },
         "endPoint": {
           "type": "object",
@@ -8445,8 +8445,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "type": "number"
             }
           },
-          "description": "End point of the navigation link (relative to the actor).",
+          "description": "End of the link, relative to the link actor (its location and rotation).",
           "additionalProperties": false
+        },
+        "enumType": {
+          "type": "string",
+          "description": "Enum an Enum key holds, by path (/Game/Enums/E_State, /Script/Engine.ECollisionChannel); Enum keys only. Without it the key has no enumerators to hold."
         },
         "extent": {
           "type": "object",
@@ -8586,7 +8590,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "isInstanceSynced": {
           "type": "boolean",
-          "description": "Sync key across instances."
+          "description": "Share the value of the key across every Blackboard component using this asset, so a value one AI sets reaches them all."
         },
         "jumpZVelocity": {
           "type": "number",
@@ -8594,7 +8598,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "keyName": {
           "type": "string",
-          "description": "Blackboard key name."
+          "description": "Blackboard key name, matched in any case."
         },
         "keyType": {
           "type": "string",
@@ -8627,7 +8631,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "linkEnabled": {
           "type": "boolean",
-          "description": "Whether the link is enabled."
+          "description": "Switch the smart link on (true) or off."
         },
         "linkType": {
           "type": "string",
@@ -8635,7 +8639,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "simple",
             "smart"
           ],
-          "description": "Type of navigation link."
+          "description": "simple (the point link of the proxy) or smart (its smart link, which can switch on and off)."
         },
         "location": {
           "type": "object",
@@ -8703,7 +8707,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "obstacleAreaClass": {
           "type": "string",
-          "description": "Area class for the box obstacle."
+          "description": "Area the box obstacle marks (default /Script/NavigationSystem.NavArea_Null, impassable)."
         },
         "obstacleExtent": {
           "type": "object",
@@ -8718,7 +8722,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "type": "number"
             }
           },
-          "description": "Extent of the simple box obstacle.",
+          "description": "Half size of the box obstacle (default 100 on each axis).",
           "additionalProperties": false
         },
         "obstacleOffset": {
@@ -8734,7 +8738,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "type": "number"
             }
           },
-          "description": "Offset of the simple box obstacle.",
+          "description": "Offset of the box obstacle from the link actor.",
           "additionalProperties": false
         },
         "offset": {
@@ -8918,7 +8922,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "snapRadius": {
           "type": "number",
-          "description": "Snap radius for link endpoints (default: 30)."
+          "description": "How far from each end of the point link the navmesh is looked for (default 30)."
         },
         "spawnCount": {
           "type": "number",
@@ -8937,7 +8941,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "type": "number"
             }
           },
-          "description": "Start point of the navigation link (relative to the actor).",
+          "description": "Start of the link, relative to the link actor (its location and rotation).",
           "additionalProperties": false
         },
         "stateName": {
@@ -9078,7 +9082,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Enable RVO avoidance; left unchanged when omitted."
         },
         "value": {
-          "description": "Property value (any type)."
+          "description": "The default, in the kind the key holds: a boolean, a number, {x, y, z}, {pitch, yaw, roll}, text, an enumerator, or an asset or class path."
         },
         "x": {
           "type": "number",
@@ -9240,7 +9244,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "alreadyExisted": {
           "type": "boolean",
-          "description": "Whether the Blackboard already existed and was reused."
+          "description": "Whether a Blackboard was already at the path; it is kept as it was."
         },
         "areaClass": {
           "type": "string",
@@ -9249,6 +9253,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "assetPath": {
           "type": "string",
           "description": "Canonical /Game asset path."
+        },
+        "baseClass": {
+          "type": "string",
+          "description": "Class path an Object or Class key is based on."
         },
         "behaviorTreePath": {
           "type": "string",
@@ -9412,7 +9420,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "saved": {
           "type": "boolean",
-          "description": "Whether the Blueprint was saved."
+          "description": "Whether the Blackboard reached disk."
         },
         "sensesConfigured": {
           "type": "array",
@@ -9436,11 +9444,20 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Whether RVO avoidance is enabled on the component."
         },
         "value": {
+          "oneOf": [
+            {
+              "description": "Property value (any type)."
+            },
+            {
+              "type": "string",
+              "description": "The default the key now holds, as the engine writes it."
+            }
+          ],
           "description": "Property value (any type)."
         },
         "valueAvailable": {
           "type": "boolean",
-          "description": "Whether the typed default value was available to read (false on UE 5.0-5.4)."
+          "description": "Whether the key holds a default to read: false before UE 5.4, for Enum, Object and Class keys before 5.5, and for a vector or rotator never set."
         },
         "variable": {
           "type": "string",

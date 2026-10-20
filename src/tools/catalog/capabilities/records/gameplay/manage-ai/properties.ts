@@ -65,14 +65,15 @@ export const AI = {
   componentName: str('Name of the component to add.'),
 
   // --- blackboard ---
-  keyName: str('Blackboard key name.'),
+  keyName: str('Blackboard key name, matched in any case.'),
   keyType: pick('Blackboard key data type.',
     ['Bool', 'Int', 'Float', 'Vector', 'Rotator', 'Object', 'Class', 'Enum', 'Name', 'String']),
-  baseObjectClass: str('Base class filter for Object/Class blackboard keys.'),
-  isInstanceSynced: bool('Sync key across instances.'),
+  baseObjectClass: str('Class an Object key holds or a Class key names, as a class path or name (e.g. /Script/Engine.Actor); Object and Class keys only. Without it the key is based on Object, which actor-only key filters such as the MoveTo target skip.'),
+  enumType: str('Enum an Enum key holds, by path (/Game/Enums/E_State, /Script/Engine.ECollisionChannel); Enum keys only. Without it the key has no enumerators to hold.'),
+  isInstanceSynced: bool('Share the value of the key across every Blackboard component using this asset, so a value one AI sets reaches them all.'),
 
   // --- behavior tree nodes ---
-  compositeType: pick('Composite node type.', ['Selector', 'Sequence', 'Parallel', 'SimpleParallel']),
+  compositeType: pick('Composite node type: Selector, Sequence, or SimpleParallel (Parallel is the same).', ['Selector', 'Sequence', 'Parallel', 'SimpleParallel']),
   taskType: pick('Task node type.', TASK_TYPES),
   decoratorType: pick('Decorator node type.', DECORATOR_TYPES),
   serviceType: pick('Service node type.', ['DefaultFocus', 'RunEQS', 'Custom']),

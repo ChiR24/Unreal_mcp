@@ -17,21 +17,25 @@ export const AI_ADD_RECORDS: readonly CapabilityRecordSource[] = [
     example: { blueprintPath: '/Game/AI/BP_Enemy' }, result: 'Perception component added',
   }),
   aiRecord({
-    action: 'add_blackboard_key', summary: 'Add a typed key to a Blackboard asset.',
-    use: 'A Blackboard needs a new typed entry.',
+    action: 'add_blackboard_key', summary: 'Add a key to a Blackboard asset (blackboardPath) and save it: keyName of keyType Bool, Int, Float, Vector, Rotator, Object, Class, Enum, Name or String. An Object or Class key is based on Object unless baseObjectClass names another class, and actor-only key filters (the target key of MoveTo) skip a key not based on Actor, so the actor an AI chases wants baseObjectClass /Script/Engine.Actor; an Enum key takes its enumerators from enumType. isInstanceSynced (default false) shares the value across every AI using the asset, and Blackboards deriving from this one get the key too. A name this Blackboard or a parent already has is refused (NAME_TAKEN), as are a class or enum that does not load and engine content (ENGINE_CONTENT).',
+    use: 'A Blackboard needs a new typed entry, such as the actor an AI chases or the place it moves to.',
     avoid: 'Use set_key_instance_synced to change sync on an existing key.',
     props: {
       blackboardPath: A.blackboardPath, keyName: A.keyName, keyType: A.keyType,
-      baseObjectClass: A.baseObjectClass, isInstanceSynced: A.isInstanceSynced,
+      baseObjectClass: A.baseObjectClass, enumType: A.enumType, isInstanceSynced: A.isInstanceSynced,
     },
     required: ['blackboardPath', 'keyName', 'keyType'], plugins: BT,
-    out: { assetPath: A.assetPath },
-    example: { blackboardPath: '/Game/AI/BB_Enemy', keyName: 'TargetActor', keyType: 'Object' },
+    out: {
+      assetPath: A.assetPath,
+      baseClass: { type: 'string', description: 'Class path an Object or Class key is based on.' },
+      saved: { type: 'boolean', description: 'Whether the Blackboard reached disk.' },
+    },
+    example: { blackboardPath: '/Game/AI/BB_Enemy', keyName: 'TargetActor', keyType: 'Object', baseObjectClass: '/Script/Engine.Actor' },
     result: 'Blackboard key added',
   }),
   aiRecord({
-    action: 'add_composite_node', summary: 'Add a composite node to a Behavior Tree asset.',
-    use: 'A Behavior Tree needs a Selector or Sequence branch.',
+    action: 'add_composite_node', summary: 'Add a composite to a Behavior Tree and save it: compositeType Selector (runs its children until one succeeds), Sequence (until one fails) or SimpleParallel (Parallel is the same: its first child is the main task, the second runs beside it). It goes under parentNodeId (a composite by nodeId or nodeName), else under the root, and a tree with no root takes it as the root (isRoot). nodeName names it; nodeId and nodeName in the reply address it for add_task_node, add_decorator and add_service. Another compositeType is refused (INVALID_ARGUMENT), as is a parent that is not found (PARENT_NOT_FOUND).',
+    use: 'A Behavior Tree needs a Selector, Sequence or Simple Parallel branch.',
     avoid: 'Use add_task_node for leaf behavior.',
     // `nodeName` names the created node, and the response now returns the
     // resolved name plus isRoot. Without them a composite was created unnamed

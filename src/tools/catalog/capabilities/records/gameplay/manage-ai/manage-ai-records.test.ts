@@ -103,7 +103,8 @@ describe('manage_ai capability records', () => {
     // ai-utility-actions.ts blueprintPath guard is ever reached.
     expect(propsFor('create_nav_link_proxy')).not.toContain('blueprintPath');
     expect(propsFor('create_nav_link_proxy')).toContain('startPoint');
-    expect(requiredFor('create_nav_link_proxy')).toEqual([]);
+    // The handler refuses a link without them (MISSING_PARAM), so the schema says so up front.
+    expect(requiredFor('create_nav_link_proxy')).toEqual(['endPoint', 'location', 'startPoint']);
   });
 
   it('declares every action as an editor-state operation', () => {

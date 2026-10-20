@@ -134,14 +134,12 @@ bool HandleCreateNavModifierComponent(
 
     SCS->AddNode(NewNode);
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-    if (GetJsonBoolField(Payload, TEXT("save"), false))
-    {
-        McpSafeAssetSave(Blueprint);
-    }
+    const bool bSaved = GetJsonBoolField(Payload, TEXT("save"), false) && McpSafeAssetSave(Blueprint);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(TEXT("componentName"), ComponentName);
+    Result->SetStringField(TEXT("componentName"), NewNode->GetVariableName().ToString());
     Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+    Result->SetBoolField(TEXT("saved"), bSaved);
     McpHandlerUtils::AddVerification(Result, Blueprint);
 
     Self->SendAutomationResponse(Socket, RequestId, true,
