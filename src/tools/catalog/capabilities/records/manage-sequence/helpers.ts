@@ -75,7 +75,7 @@ export const P = {
   playlistPath: str('Canonical /Game media playlist path.'),
   playerPath: str('Canonical /Game media player path.'),
   sourcePath: str('Source file or asset path.'),
-  filePath: str('File system path to a media file.'),
+  filePath: str('A local media file under the project\'s Content or Saved folder: an absolute path there, or Content/... or Saved/... (/Saved/... too). It must exist; file:// URLs, traversal and links are refused.'),
   sourceType: str('Media source type: file or platform (network streams are refused).'),
   precacheFile: bool('Whether the file media source precaches on open.'),
   defaultSourcePath: str('Default media source asset path for a platform media source.'),

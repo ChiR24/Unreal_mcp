@@ -12,6 +12,9 @@
 #include "Editor.h"
 #include "Engine/World.h"
 #include "GameFramework/WorldSettings.h"
+#include "Domains/Volume/McpVolumeGeometry.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsActionsPaths.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 #include "Lightmass/LightmassImportanceVolume.h"
 
 #include "LevelEditorSubsystem.h"
@@ -225,26 +228,46 @@ bool HandleCreateLightmassVolume(
 {
     const FVector Location = ExtractVectorField(Payload, TEXT("location"), FVector::ZeroVector);
     const FVector Size = ExtractVectorField(Payload, TEXT("size"), FVector(1000.0));
+    FString Name;
+    Payload->TryGetStringField(TEXT("name"), Name);
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    if (!World)
+    {
+        Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("No editor world available"), TEXT("NO_WORLD"));
+        return true;
+    }
+    if (Size.GetMin() <= 0.0)
+    {
+        Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("size must be above 0 on every axis. Nothing was created."), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+    // A second actor under one label left every later call by that name on whichever came first.
+    if (!Name.IsEmpty() && FindActorByNameInWorldForMcp(World, Name, true))
+    {
+        Subsystem.SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("An actor named %s is already in the level; pick another name. Nothing was created."), *Name), TEXT("NAME_TAKEN"));
+        return true;
+    }
 
-    AActor* Volume = SpawnActorInActiveWorld<AActor>(
-        ALightmassImportanceVolume::StaticClass(), Location, FRotator::ZeroRotator);
+    // Into the editor level, which Lightmass bakes (in Play it went into the Play world and was gone on stop), with a box
+    // brush of that size: the scaled empty brush it had has bounds {0,0,0} and marked nothing for Lightmass.
+    FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Create Lightmass Importance Volume")), EMcpMutationDurability::EditorStateOnly, TArray<UObject*>());
+    ALightmassImportanceVolume* Volume = VolumeHelpers::SpawnVolumeActor<ALightmassImportanceVolume>(World, Name, Location, FRotator::ZeroRotator, Size * 0.5);
     if (!Volume)
     {
         Subsystem.SendAutomationError(
             RequestingSocket, RequestId, TEXT("Failed to spawn LightmassImportanceVolume"), TEXT("SPAWN_FAILED"));
         return true;
     }
-
-    Volume->SetActorScale3D(Size / 200.0f);
-    FString Name;
-    if (Payload->TryGetStringField(TEXT("name"), Name) && !Name.IsEmpty())
-    {
-        Volume->SetActorLabel(Name);
-    }
+    Volume->MarkPackageDirty();
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("actorName"), McpActorRef(Volume));
+    Resp->SetStringField(TEXT("actorPath"), Volume->GetPathName());
+    Resp->SetObjectField(TEXT("location"), McpHandlerUtils::VectorToJson(Volume->GetActorLocation()));
+    Resp->SetObjectField(TEXT("size"), McpHandlerUtils::VectorToJson(Volume->GetComponentsBoundingBox(true).GetSize()));
+    Transaction.DescribeInto(Resp);
     McpHandlerUtils::AddVerification(Resp, Volume);
     Subsystem.SendAutomationResponse(
         RequestingSocket, RequestId, true, TEXT("LightmassImportanceVolume created"), Resp);

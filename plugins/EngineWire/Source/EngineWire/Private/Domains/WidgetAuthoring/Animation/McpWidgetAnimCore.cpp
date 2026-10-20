@@ -91,7 +91,7 @@ bool HandleWidgetAuthoringAnimationCore(
         // The animation is a variable a graph reads (PlayAnimation's target): until a compile gave the generated
         // class its property, a VariableGet of it failed with "Variable not found".
         RefreshWidgetBlueprintClass(WidgetBP);
-        McpSafeAssetSave(WidgetBP);
+        ResultJson->SetBoolField(TEXT("saved"), McpSafeAssetSave(WidgetBP));
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("animationName"), AnimationName);

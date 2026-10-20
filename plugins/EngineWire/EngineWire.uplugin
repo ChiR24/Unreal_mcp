@@ -160,6 +160,16 @@
       "Optional": true
     },
     {
+      "Name": "PropertyBindingUtils",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "GameplayStateTree",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
       "Name": "SmartObjects",
       "Enabled": true
     },

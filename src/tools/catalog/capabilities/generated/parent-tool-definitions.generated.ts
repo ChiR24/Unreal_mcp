@@ -8192,7 +8192,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "actorName": {
           "type": "string",
-          "description": "Target actor name in the current level."
+          "description": "Label for the placed spawner; a label already in the level is refused."
         },
         "agentHeight": {
           "type": "number",
@@ -8292,15 +8292,22 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Canonical /Game Mass Entity config asset path."
         },
+        "contextClass": {
+          "type": "string",
+          "description": "Context class for contextType Custom: a Blueprint based on EnvQueryContext_BlueprintBase, or a context class path."
+        },
+        "contextProperty": {
+          "type": "string",
+          "description": "Context property of the generator or test to set (SearchCenter, GenerateAround, DistanceTo, Context); default the first one it has."
+        },
         "contextType": {
           "type": "string",
           "enum": [
             "Querier",
             "Item",
-            "EnvQueryContext_BlueprintBase",
             "Custom"
           ],
-          "description": "EQS context type."
+          "description": "Querier (the AI running the query), Item (each item being tested), or Custom with contextClass."
         },
         "control": {
           "type": "string",
@@ -8519,9 +8526,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "searchRadius": {
               "type": "number"
             },
-            "searchCenter": {
-              "type": "string"
-            },
             "actorClass": {
               "type": "string"
             },
@@ -8538,7 +8542,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "type": "number"
             }
           },
-          "description": "Generator-specific settings.",
+          "description": "Settings the generator reads, refused when it does not: ActorsOfClass searchRadius (also keeps items inside it) and actorClass; SimpleGrid and PathingGrid gridSize (half the grid side) and spacesBetween; OnCircle searchRadius or outerRadius (the circle radius) and spacesBetween; Donut innerRadius and outerRadius. Where a generator centers is set with add_eqs_context.",
           "additionalProperties": false
         },
         "generatorType": {
@@ -8550,8 +8554,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "OnCircle",
             "PathingGrid",
             "SimpleGrid",
-            "Composite",
-            "Custom"
+            "Composite"
           ],
           "description": "EQS generator type."
         },
@@ -8559,9 +8562,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "object",
           "properties": {
             "hearingRange": {
-              "type": "number"
-            },
-            "loSHearingRange": {
               "type": "number"
             },
             "detectFriendly": {
@@ -8642,20 +8642,41 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "simple (the point link of the proxy) or smart (its smart link, which can switch on and off)."
         },
         "location": {
-          "type": "object",
-          "additionalProperties": false,
-          "description": "World location for the spawned link actor.",
-          "properties": {
-            "x": {
-              "type": "number"
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "description": "World location for the spawned link actor.",
+              "properties": {
+                "x": {
+                  "type": "number"
+                },
+                "y": {
+                  "type": "number"
+                },
+                "z": {
+                  "type": "number"
+                }
+              }
             },
-            "y": {
-              "type": "number"
-            },
-            "z": {
-              "type": "number"
+            {
+              "type": "object",
+              "properties": {
+                "x": {
+                  "type": "number"
+                },
+                "y": {
+                  "type": "number"
+                },
+                "z": {
+                  "type": "number"
+                }
+              },
+              "description": "World location of the spawner (default the world origin).",
+              "additionalProperties": false
             }
-          }
+          ],
+          "description": "World location for the spawned link actor."
         },
         "loseSightRadius": {
           "type": "number",
@@ -8757,6 +8778,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Slot offset relative to the definition origin.",
           "additionalProperties": false
         },
+        "optionIndex": {
+          "type": "number",
+          "description": "Option whose generator takes the context when no testIndex is sent (default 0)."
+        },
         "orientRotationToMovement": {
           "type": "boolean",
           "description": "Rotate the pawn toward its movement direction; left unchanged when omitted."
@@ -8833,6 +8858,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "savePath": {
           "type": "string",
           "description": "Directory path used when saving the created Behavior Tree."
+        },
+        "schema": {
+          "type": "string",
+          "description": "What runs the tree: component (default, a StateTreeComponent on any actor), ai (a StateTreeAIComponent on an AI controller, UE 5.4+), or the class path of another State Tree schema (a UStateTreeSchema subclass, such as /Script/MassAIBehavior.MassStateTreeSchema for Mass entities)."
         },
         "selectionBehavior": {
           "type": "string",
@@ -8954,7 +8983,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "stateType": {
           "type": "string",
-          "description": "State kind for the added state."
+          "description": "State (default), Group, Linked, LinkedAsset (UE 5.4+) or Subtree."
         },
         "subnodeType": {
           "type": "string",
@@ -8995,11 +9024,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "teamId": {
           "type": "number",
-          "description": "Team ID for perception affiliation (0=Neutral, 1=Player, 2=Enemy, ...)."
+          "description": "Team id to store, 0 to 254 (255 means no team)."
         },
         "testIndex": {
           "type": "number",
-          "description": "Index of the test to configure."
+          "description": "Test index counted across all options of the query, in the order the tests were added (the testIndex add_eqs_test returned)."
         },
         "testSettings": {
           "type": "object",
@@ -9010,6 +9039,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "Linear",
                 "Square",
                 "InverseLinear",
+                "SquareRoot",
                 "Constant"
               ]
             },
@@ -9024,7 +9054,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "enum": [
                 "Minimum",
                 "Maximum",
-                "Range"
+                "Range",
+                "Match"
               ]
             },
             "floatMin": {
@@ -9048,8 +9079,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "PathfindingBatch",
             "Project",
             "Random",
-            "Trace",
-            "Custom"
+            "Trace"
           ],
           "description": "EQS test type."
         },
@@ -9063,7 +9093,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "traitClass": {
           "type": "string",
-          "description": "Trait class name whose properties are configured."
+          "description": "Mass trait class (short name or path, a UMassEntityTraitBase subclass): edited when the config has it, added when it does not."
         },
         "traitIndex": {
           "type": "number",
@@ -9071,7 +9101,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "triggerType": {
           "type": "string",
-          "description": "Transition trigger kind."
+          "description": "OnStateCompleted (default), OnStateSucceeded, OnStateFailed, OnTick, OnEvent (needs an event tag) or OnDelegate (newer engines)."
         },
         "useAccelerationForPaths": {
           "type": "boolean",
@@ -12841,7 +12871,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "parentClass": {
           "type": "string",
-          "description": "Canonical /Game SoundClass asset path of the new parent; omit it to clear the parent."
+          "description": "Canonical /Game SoundClass asset path of the new parent; an empty string clears the parent."
         },
         "path": {
           "type": "string",
@@ -14965,6 +14995,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "animationAssetClass": {
           "type": "string",
           "description": "The class of that animation asset (AnimSequence, BlendSpace ...)."
+        },
+        "animationBindingsRenamed": {
+          "type": "number",
+          "description": "Animation bindings that now name the widget by newName."
         },
         "animationName": {
           "type": "string",
@@ -23204,7 +23238,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "taskId": {
           "type": "number",
-          "description": "Opaque numeric scheduling receipt for the PCG task."
+          "description": "The PCG scheduler's id for the generation task (nothing here polls it; read bGenerated instead)."
         }
       },
       "additionalProperties": true
@@ -23528,7 +23562,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "filePath": {
           "type": "string",
-          "description": "File system path to a media file."
+          "description": "A local media file under the project's Content or Saved folder: an absolute path there, or Content/... or Saved/... (/Saved/... too). It must exist; file:// URLs, traversal and links are refused."
         },
         "filePaths": {
           "type": "array",
@@ -25102,7 +25136,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "items": {
             "type": "string"
           },
-          "description": "Actor names to merge (>=2 required)."
+          "description": "Labels of the actors to merge, at least 2; every one must be in the level."
         },
         "antiAliasing": {
           "type": "string",
@@ -25437,7 +25471,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "outputPath": {
           "type": "string",
-          "description": "Output /Game folder for the merged asset."
+          "description": "The folder for a packageName that is a name, or with no packageName the merged asset's /Game path."
         },
         "overwrite": {
           "type": "boolean",
@@ -25445,7 +25479,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "packageName": {
           "type": "string",
-          "description": "Package name for the merged asset."
+          "description": "The merged asset: a /Game path, or a name placed in the outputPath folder (default /Game/MergedActors); the mesh is named SM_<name>."
         },
         "pak": {
           "type": "boolean",
@@ -25549,7 +25583,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "replaceSourceActors": {
           "type": "boolean",
-          "description": "Replace source actors in the level."
+          "description": "Place the merged mesh in the level and remove the source actors, in one undo step (default false)."
         },
         "resolution": {
           "type": "string",

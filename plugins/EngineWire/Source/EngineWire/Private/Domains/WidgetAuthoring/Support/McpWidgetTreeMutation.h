@@ -27,6 +27,10 @@ bool SafeAddWidgetToTree(UWidgetBlueprint* WidgetBlueprint, UWidget* NewWidget, 
     const TSharedPtr<FJsonObject>& Payload = TSharedPtr<FJsonObject>(), bool bMove = false);
 void ClearWidgetTreeForRebuild(UWidgetBlueprint* WidgetBlueprint);
 
+// After renaming a widget: property bindings, animation bindings, navigation rules and the desired focus follow the new
+// name, as the editor's rename does. Returns the animation bindings renamed.
+int32 McpRenameWidgetReferences(UWidgetBlueprint* WidgetBP, FName OldName, FName NewName);
+
 template<typename T>
 T* CreateAndRegisterWidget(UWidgetBlueprint* WidgetBlueprint, UWidgetTree* WidgetTree, FName WidgetName)
 {

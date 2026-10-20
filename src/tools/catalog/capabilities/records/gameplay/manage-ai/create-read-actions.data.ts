@@ -72,7 +72,7 @@ export const AI_CREATE_READ_RECORDS: readonly CapabilityRecordSource[] = [
     example: { name: 'EQS_Cover', path: '/Game/AI' }, result: 'Environment Query created',
   }),
   aiRecord({
-    action: 'create_mass_entity_config', summary: 'Create a Mass Entity configuration asset.',
+    action: 'create_mass_entity_config', summary: 'Create a Mass entity config asset named name in path (default /Game/AI/Mass), saved, with no traits yet; an asset already at the path is refused (ASSET_ALREADY_EXISTS).',
     use: 'Crowd simulation needs an entity config asset.',
     avoid: 'Use configure_mass_entity to edit an existing config.',
     props: createProps, required: ['name'], plugins: MASS_AI,
@@ -122,7 +122,7 @@ export const AI_CREATE_READ_RECORDS: readonly CapabilityRecordSource[] = [
     result: 'Smart link created',
   }),
   aiRecord({
-    action: 'create_smart_object_definition', summary: 'Create a Smart Object definition.',
+    action: 'create_smart_object_definition', summary: 'Create a Smart Object definition asset named name in path (default /Game/AI/SmartObjects), saved, with no slots yet (add_smart_object_slot); an asset already at the path is refused (ASSET_ALREADY_EXISTS).',
     use: 'An interactable needs a Smart Object definition asset.',
     avoid: 'Use add_smart_object_slot to add interaction slots.',
     props: createProps, required: ['name'], plugins: SMART_OBJECTS,
@@ -130,10 +130,10 @@ export const AI_CREATE_READ_RECORDS: readonly CapabilityRecordSource[] = [
     example: { name: 'SO_Bench', path: '/Game/AI' }, result: 'Smart Object definition created',
   }),
   aiRecord({
-    action: 'create_state_tree', summary: 'Create a StateTree asset.',
+    action: 'create_state_tree', summary: 'Create a State Tree asset named name in path (default /Game/AI/StateTrees) with a Root state and a schema, compiled and saved: schema component (default; a StateTreeComponent on any actor runs it), ai (a StateTreeAIComponent on an AI controller, UE 5.4+) or the class path of another schema. component and ai come from the GameplayStateTree plugin and are refused while it is off (SCHEMA_NOT_AVAILABLE); an asset already at the path is refused (ASSET_ALREADY_EXISTS). compiled says whether the tree compiled, with compileMessages.',
     use: 'An AI needs a StateTree instead of a Behavior Tree.',
     avoid: 'Use create_behavior_tree for Behavior Tree logic.',
-    props: createProps, required: ['name'], plugins: STATE_TREE,
+    props: { ...createProps, schema: A.schema }, required: ['name'], plugins: STATE_TREE,
     out: { assetPath: A.assetPath },
     example: { name: 'ST_Enemy', path: '/Game/AI' }, result: 'StateTree created',
   }),

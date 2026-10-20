@@ -3,6 +3,7 @@
 #include "Domains/Sequence/McpSeqPathSecurity.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "EngineWireSubsystem.h"
 #include "Misc/PackageName.h"
@@ -202,7 +203,8 @@ bool CreateMediaAsset(UClass *AssetClass,
                       FMediaAssetCreateResult &OutCreated,
                       FString &OutError) {
   const FString ObjectPath = PackageName + TEXT(".") + AssetName;
-  if (UObject *Existing = LoadObject<UObject>(nullptr, *ObjectPath)) {
+  // McpLoadAsset asks the asset registry first: LoadObject on a free path logged "Failed to find object" on every create.
+  if (UObject *Existing = McpLoadAsset(ObjectPath)) {
     OutError = Existing->IsA(AssetClass)
                    ? TEXT("[MEDIA_ASSET_ALREADY_EXISTS] A media asset already exists at this path")
                    : TEXT("An asset of another class already uses this path");

@@ -80,7 +80,7 @@ export const MANAGE_SEQUENCE_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'create_media_asset', selector: 'kind',
-    summary: 'Create a media asset: media source, player, playlist, texture, or sound component.',
+    summary: 'Create media playback pieces, chosen by kind, each saved: source points at a local video file (under Content or Saved) or per-platform sources, player plays a source (loop, playOnOpen), playlist strings sources and files together, texture shows a player\'s picture in a material or widget, sound_component gives a placed actor the player\'s sound. A taken name is refused.',
     topics: ['media source', 'media player', 'media playlist', 'media texture', 'media sound'],
     members: byTarget('create_media_', ['create_media_source', 'create_media_player', 'create_media_playlist', 'create_media_texture', 'create_media_sound_component']),
   },

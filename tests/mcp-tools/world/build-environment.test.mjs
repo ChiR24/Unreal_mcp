@@ -205,9 +205,10 @@ const testCases = [
     { scenario: 'ACTION: ensure_single_sky_light refuses several sky lights', toolName: 'build_environment', arguments: {"action": "ensure_single_sky_light", "name": "Testsky_light", "recapture": true}, expected: 'error|MULTIPLE_SKY_LIGHTS' },
     { scenario: 'CONFIG: configure_sky_light intensity on the kept sky light', toolName: 'build_environment', arguments: { action: 'configure_sky_light', actorName: 'Testsky_light', skyLightIntensity: 1.5 }, expected: 'success' },
     // === CREATE ===
-    { scenario: 'CREATE: create_lightmass_volume', toolName: 'build_environment', arguments: {"action": "create_lightmass_volume", "name": "Testlightmass_volume", "size": {"x": 1500, "y": 1500, "z": 600}}, expected: 'success|already exists' },
-    { scenario: 'CREATE: create_lighting_enabled_level', toolName: 'build_environment', arguments: {"action": "create_lighting_enabled_level", "name": "Testlighting_enabled_level", "path": "/Game/MCPTest/Testlighting_enabled_level"}, expected: 'success|already exists' },
-    { scenario: 'CREATE: create_lighting_enabled_level (folder path + levelName)', toolName: 'build_environment', arguments: {"action": "create_lighting_enabled_level", "path": "/Game/MCPTest/Maps", "levelName": "Testlighting_enabled_level2"}, expected: 'success|already exists' },
+    { scenario: 'CREATE: create_lightmass_volume', toolName: 'build_environment', arguments: { action: 'create_lightmass_volume', name: `TestLightmassVolume_${ts}`, size: { x: 1500, y: 1500, z: 600 } }, expected: 'success' },
+    // The lights spawned above leave the open level unsaved, and a new level replaces it: refused instead of dropping them.
+    { scenario: 'ERROR: create_lighting_enabled_level refuses over the unsaved open level', toolName: 'build_environment', arguments: { action: 'create_lighting_enabled_level', name: `TestLitLevel_${ts}`, path: `/Game/MCPTest/TestLitLevel_${ts}` }, expected: 'error|DIRTY_PACKAGES' },
+    { scenario: 'ERROR: create_lighting_enabled_level (folder path + levelName) refuses the same way', toolName: 'build_environment', arguments: { action: 'create_lighting_enabled_level', path: '/Game/MCPTest/Maps', levelName: `TestLitLevel2_${ts}` }, expected: 'error|DIRTY_PACKAGES' },
     { scenario: 'CREATE: create_dynamic_light', toolName: 'build_environment', arguments: {"action": "create_dynamic_light", "name": "Testdynamic_light", "lightType": "Point"}, expected: 'success|already exists' },
     // === ACTION ===
     { scenario: 'ACTION: setup_global_illumination', toolName: 'build_environment', arguments: {"action": "setup_global_illumination", "method": "LumenGI", "quality": "High", "indirectLightingIntensity": 1.0, "bounces": 3}, expected: 'success|already exists' },

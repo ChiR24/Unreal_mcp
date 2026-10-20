@@ -3,7 +3,10 @@
 #include "Domains/Performance/McpPerfPrivate.h"
 
 #include "Foundation/BridgeHelpers/McpHelpers.h"
+#include "Foundation/BridgeHelpers/Responses/McpResponseVerify.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/McpScopedEditorTransaction.h"
+#include "Subsystems/EditorActorSubsystem.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Dom/JsonValue.h"
@@ -57,23 +60,27 @@ bool HandleActorMergeAction(const FPerformanceActionContext& Context)
 
     UWorld* World = GEditor->GetEditorWorldContext().World();
     TArray<AActor*> ActorsToMerge;
+    TArray<FString> Unresolved;
     for (const TSharedPtr<FJsonValue>& Val : *NamesArray)
     {
-        if (!Val.IsValid() || Val->Type != EJson::String)
-        {
-            continue;
-        }
-
-        const FString RawName = Val->AsString().TrimStartAndEnd();
-        if (RawName.IsEmpty())
-        {
-            continue;
-        }
-
-        if (AActor* Resolved = ResolveMergeActorByName(World, RawName))
+        const FString RawName = Val.IsValid() && Val->Type == EJson::String ? Val->AsString().TrimStartAndEnd() : FString();
+        AActor* Resolved = RawName.IsEmpty() ? nullptr : ResolveMergeActorByName(World, RawName);
+        if (Resolved)
         {
             ActorsToMerge.AddUnique(Resolved);
         }
+        else
+        {
+            Unresolved.Add(RawName.IsEmpty() ? FString(TEXT("(empty)")) : RawName);
+        }
+    }
+    // A name that matched no actor was skipped, and the merge went ahead without it.
+    if (Unresolved.Num() > 0)
+    {
+        Context.Bridge.SendAutomationResponse(Context.RequestingSocket, Context.RequestId, false,
+            FString::Printf(TEXT("No actor named %s in the level; nothing was merged."), *FString::Join(Unresolved, TEXT(", "))),
+            nullptr, TEXT("ACTOR_NOT_FOUND"));
+        return true;
     }
 
     if (ActorsToMerge.Num() < 2)
@@ -85,11 +92,19 @@ bool HandleActorMergeAction(const FPerformanceActionContext& Context)
         return true;
     }
 
+    // packageName is the asset (a /Game path, or a name placed in the outputPath folder, default /Game/MergedActors);
+    // outputPath alone is the asset path. A bare name was refused, the record's own example among them.
     FString RequestedPackageName;
+    FString OutputPath;
     Context.Payload->TryGetStringField(TEXT("packageName"), RequestedPackageName);
+    Context.Payload->TryGetStringField(TEXT("outputPath"), OutputPath);
     if (RequestedPackageName.IsEmpty())
     {
-        Context.Payload->TryGetStringField(TEXT("outputPath"), RequestedPackageName);
+        Swap(RequestedPackageName, OutputPath);
+    }
+    if (!RequestedPackageName.IsEmpty() && !RequestedPackageName.Contains(TEXT("/")))
+    {
+        RequestedPackageName = (OutputPath.IsEmpty() ? FString(TEXT("/Game/MergedActors")) : OutputPath) / RequestedPackageName;
     }
     if (RequestedPackageName.IsEmpty())
     {
@@ -124,6 +139,15 @@ bool HandleActorMergeAction(const FPerformanceActionContext& Context)
             Context.RequestingSocket, Context.RequestId, false,
             TEXT("merge_actors normalized packageName/outputPath to an invalid merge base package name"),
             nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    // The merge names its mesh SM_<name> and builds it over a static mesh already there.
+    const FString FinalPackageName = FPackageName::GetLongPackagePath(MergeBasePackageName) / (TEXT("SM_") + FPackageName::GetShortName(MergeBasePackageName));
+    if (FPackageName::DoesPackageExist(FinalPackageName) || FindObject<UPackage>(nullptr, *FinalPackageName))
+    {
+        Context.Bridge.SendAutomationResponse(Context.RequestingSocket, Context.RequestId, false,
+            FString::Printf(TEXT("%s already exists; pick another packageName. Nothing was merged."), *FinalPackageName), nullptr, TEXT("ASSET_ALREADY_EXISTS"));
         return true;
     }
 
@@ -213,20 +237,34 @@ bool HandleActorMergeAction(const FPerformanceActionContext& Context)
         return true;
     }
 
+    // Replacing put nothing in the sources' place: it destroyed them and the geometry was gone from the level. One undo
+    // step now places the merged mesh where the merge put it and removes the sources.
     bool bReplaceSources = false;
     Context.Payload->TryGetBoolField(TEXT("replaceSourceActors"), bReplaceSources);
+    TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
+    AActor* ResultActor = ActorsToMerge[0];
     if (bReplaceSources)
     {
+        FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Merge Actors")), EMcpMutationDurability::EditorStateOnly, TArray<UObject*>(ActorsToMerge));
+        FActorSpawnParameters SpawnParams;
+        SpawnParams.ObjectFlags |= RF_Transactional;
+        AStaticMeshActor* Merged = World->SpawnActor<AStaticMeshActor>(MergedActorLocation, FRotator::ZeroRotator, SpawnParams);
+        if (!Merged)
+        {
+            Context.Bridge.SendAutomationResponse(Context.RequestingSocket, Context.RequestId, false,
+                TEXT("The merged mesh was saved but its actor could not be placed; the source actors were kept."), nullptr, TEXT("SPAWN_FAILED"));
+            return true;
+        }
+        Merged->GetStaticMeshComponent()->SetStaticMesh(MergedMesh);
+        Merged->SetActorLabel(ActorsToMerge[0]->GetActorLabel() + TEXT("_Merged"));
+        UEditorActorSubsystem* ActorSubsystem = GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
         for (AActor* Actor : ActorsToMerge)
         {
-            if (Actor)
-            {
-                Actor->Destroy();
-            }
+            ActorSubsystem->DestroyActor(Actor);
         }
+        ResultActor = Merged;
+        Transaction.DescribeInto(Response);
     }
-
-    TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
     Response->SetNumberField(TEXT("mergedActorCount"), ActorsToMerge.Num());
     Response->SetNumberField(TEXT("mergedComponentCount"), ComponentsToMerge.Num());
     Response->SetBoolField(TEXT("replaceSourceActors"), bReplaceSources);
@@ -246,10 +284,8 @@ bool HandleActorMergeAction(const FPerformanceActionContext& Context)
     }
     Response->SetArrayField(TEXT("assets"), AssetPaths);
 
-    if (ActorsToMerge.Num() > 0 && ActorsToMerge[0])
-    {
-        McpHandlerUtils::AddVerification(Response, ActorsToMerge[0]);
-    }
+    // The actor the level now holds: the merged one when it replaced the sources (it named a destroyed source).
+    McpHandlerUtils::AddVerification(Response, ResultActor);
 
     Context.Bridge.SendAutomationResponse(
         Context.RequestingSocket, Context.RequestId, true,

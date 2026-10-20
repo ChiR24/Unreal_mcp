@@ -2,6 +2,7 @@
 
 #include "EditorAssetLibrary.h"
 #include "Engine/Blueprint.h"
+#include "Foundation/BridgeHelpers/Reflection/McpClassResolve.h"
 #include "Modules/ModuleManager.h"
 #include "UObject/UnrealType.h"
 
@@ -52,29 +53,20 @@ bool HandleCreateMassEntityConfig(UEngineWireSubsystem* Self, const FString& Req
         return true;
     }
 
-    // Create the package and asset
-    FString FullPath = Path / Name;
-    UPackage* Package = CreatePackage(*FullPath);
-    if (!Package)
-    {
-        Self->SendAutomationError(RequestingSocket, RequestId,
-            FString::Printf(TEXT("Failed to create package: %s"), *FullPath), TEXT("CREATION_FAILED"));
-        return true;
-    }
-
-    UMassEntityConfigAsset* ConfigAsset = NewObject<UMassEntityConfigAsset>(Package, *Name, RF_Public | RF_Standalone);
+    // CreatePackage and NewObject rebuilt an asset already at the path, or crashed on another class.
+    FString Error;
+    FString Code;
+    UMassEntityConfigAsset* ConfigAsset = CreateAIAssetInPackage<UMassEntityConfigAsset>(Path, Name, TEXT("Mass Entity Config"), Error, Code);
     if (!ConfigAsset)
     {
-        Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create MassEntityConfigAsset"), TEXT("CREATION_FAILED"));
+        Self->SendAutomationError(RequestingSocket, RequestId, Error, Code);
         return true;
     }
 
-    // Save the asset
-    McpSafeAssetSave(ConfigAsset);
-
-    Result->SetStringField(TEXT("configPath"), FullPath);
+    Result->SetStringField(TEXT("configPath"), ConfigAsset->GetOutermost()->GetName());
     Result->SetNumberField(TEXT("traitCount"), 0);
-    Result->SetStringField(TEXT("message"), TEXT("Mass Entity Config created"));
+    Result->SetBoolField(TEXT("saved"), McpSafeAssetSave(ConfigAsset));
+    McpHandlerUtils::AddVerification(Result, ConfigAsset);
     Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Config created"), Result);
 #else
     Self->SendAutomationError(RequestingSocket, RequestId,
@@ -91,6 +83,7 @@ bool HandleConfigureMassEntity(UEngineWireSubsystem* Self, const FString& Reques
 #if MCP_MASS_AI_HEADERS_AVAILABLE
     FString ConfigPath = GetJsonStringField(Payload, TEXT("configPath"));
     FString ParentConfigPath = GetJsonStringField(Payload, TEXT("parentConfigPath"), TEXT(""));
+    const FString TraitClassName = GetJsonStringField(Payload, TEXT("traitClass"));
 
     if (ConfigPath.IsEmpty())
     {
@@ -103,11 +96,18 @@ bool HandleConfigureMassEntity(UEngineWireSubsystem* Self, const FString& Reques
     const TSharedPtr<FJsonObject>* PropertiesPtr = nullptr;
     const bool bHasProperties = Payload->TryGetObjectField(TEXT("properties"), PropertiesPtr)
         && PropertiesPtr && PropertiesPtr->IsValid() && (*PropertiesPtr)->Values.Num() > 0;
-    if (ParentConfigPath.IsEmpty() && !bHasProperties)
+    if (ParentConfigPath.IsEmpty() && !bHasProperties && TraitClassName.IsEmpty())
     {
         Self->SendAutomationError(RequestingSocket, RequestId,
-            TEXT("No configurable fields supplied (accepted: properties{...}, traitClass/traitIndex, parentConfigPath)"),
+            TEXT("Nothing to set: send traitClass (adds the trait when the config has none of it), properties{...} or parentConfigPath."),
             TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+    UClass* TraitClass = TraitClassName.IsEmpty() ? nullptr : ResolveClassByName(TraitClassName);
+    if (!TraitClassName.IsEmpty() && (!TraitClass || !TraitClass->IsChildOf(UMassEntityTraitBase::StaticClass()) || TraitClass->HasAnyClassFlags(CLASS_Abstract)))
+    {
+        Self->SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("traitClass %s is not a Mass trait class that loads "
+            "(a UMassEntityTraitBase subclass, such as MassMovementTrait). Nothing was changed."), *TraitClassName), TEXT("INVALID_ARGUMENT"));
         return true;
     }
 
@@ -138,6 +138,20 @@ bool HandleConfigureMassEntity(UEngineWireSubsystem* Self, const FString& Reques
                 FString::Printf(TEXT("Parent MassEntityConfigAsset not found: %s"), *ParentConfigPath), TEXT("NOT_FOUND"));
             return true;
         }
+        // A config made its own ancestor was accepted, and gathering its traits then walks the loop.
+        int32 Depth = 0;
+        for (const UMassEntityConfigAsset* Ancestor = ParentConfig; Ancestor && Depth < 64; Ancestor = Ancestor->GetConfig().GetParent(), ++Depth)
+        {
+            if (Ancestor == ConfigAsset)
+            {
+                const FString Why = ParentConfig == ConfigAsset ? FString(TEXT("parentConfigPath names the config itself"))
+                    : FString::Printf(TEXT("%s already derives from %s"), *ParentConfigPath, *ConfigPath);
+                Self->SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("%s; a config cannot be its own parent or ancestor. "
+                    "Nothing was changed."), *Why), TEXT("INVALID_ARGUMENT"));
+                return true;
+            }
+        }
+        ConfigAsset->Modify();
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
         Config.SetParentAsset(*ParentConfig);
 #else
@@ -150,12 +164,21 @@ bool HandleConfigureMassEntity(UEngineWireSubsystem* Self, const FString& Reques
         Applied.Add(TEXT("parentConfigPath"));
     }
 
-    // properties{...} go onto a trait: the one traitIndex/traitClass names,
-    // or the first trait that declares any of the supplied names.
-    FString TraitName;
+    // A traitClass the config has no trait of is added: a new config starts with none, and nothing could add one.
+    const bool bTraitAdded = TraitClass && !Config.GetTraits().ContainsByPredicate([TraitClass](const UMassEntityTraitBase* Trait)
+        { return Trait && Trait->GetClass() == TraitClass; });
+    if (bTraitAdded)
+    {
+        ConfigAsset->Modify();
+        Config.AddTrait(*NewObject<UMassEntityTraitBase>(ConfigAsset, TraitClass, NAME_None, RF_Transactional));
+        Applied.Add(TEXT("traitClass"));
+    }
+
+    // properties{...} go onto a trait: the one traitIndex/traitClass names, or the first trait that declares any of the
+    // supplied names. Properties a trait added here does not take are listed in failed; the add itself stands.
+    FString TraitName = bTraitAdded ? TraitClass->GetName() : FString();
     if (bHasProperties)
     {
-        const FString TraitClass = GetJsonStringField(Payload, TEXT("traitClass"));
         const int32 TraitIndex = static_cast<int32>(GetJsonNumberField(Payload, TEXT("traitIndex"), -1));
         TArray<FString> TraitNames;
         int32 Index = 0;
@@ -168,14 +191,13 @@ bool HandleConfigureMassEntity(UEngineWireSubsystem* Self, const FString& Reques
             }
             const FString ClassName = Trait->GetClass()->GetName();
             TraitNames.Add(ClassName);
-            const bool bSelected = TraitIndex >= 0
-                ? ThisIndex == TraitIndex
-                : (TraitClass.IsEmpty() || ClassName.Contains(TraitClass) || Trait->GetClass()->GetPathName() == TraitClass);
+            const bool bSelected = TraitIndex >= 0 ? ThisIndex == TraitIndex : (!TraitClass || Trait->GetClass() == TraitClass);
             if (!bSelected)
             {
                 continue;
             }
             const int32 Before = Applied.Num();
+            Trait->Modify();
             ApplyAIJsonProperties(Trait->GetClass(), Trait, *PropertiesPtr, Applied, Failed);
             if (Applied.Num() > Before)
             {
@@ -199,6 +221,13 @@ bool HandleConfigureMassEntity(UEngineWireSubsystem* Self, const FString& Reques
 
     Result->SetStringField(TEXT("configPath"), ConfigPath);
     Result->SetNumberField(TEXT("traitCount"), Config.GetTraits().Num());
+    Result->SetBoolField(TEXT("traitAdded"), bTraitAdded);
+    TArray<TSharedPtr<FJsonValue>> TraitsJson;
+    for (const UMassEntityTraitBase* Trait : Config.GetTraits())
+    {
+        TraitsJson.Add(MakeShared<FJsonValueString>(Trait ? Trait->GetClass()->GetName() : TEXT("None")));
+    }
+    Result->SetArrayField(TEXT("traits"), TraitsJson);
     TArray<TSharedPtr<FJsonValue>> AppliedJson;
     for (const FString& Name : Applied)
     {
@@ -216,6 +245,7 @@ bool HandleConfigureMassEntity(UEngineWireSubsystem* Self, const FString& Reques
         Result->SetStringField(TEXT("trait"), TraitName);
     }
     Result->SetBoolField(TEXT("saved"), bSaved);
+    McpHandlerUtils::AddVerification(Result, ConfigAsset);
     Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Mass entity config updated: %d field(s) applied"), Applied.Num()));
     Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Mass entity config updated"), Result);
 #else
@@ -223,50 +253,6 @@ bool HandleConfigureMassEntity(UEngineWireSubsystem* Self, const FString& Reques
         TEXT("Mass AI is unavailable in this build; enable the MassEntity plugin"),
         TEXT("MASS_AI_NOT_AVAILABLE"));
 #endif
-    return true;
-}
-
-// Implements the "add_mass_spawner" action.
-bool HandleAddMassSpawner(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
-{
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
-    FString ConfigPath = GetJsonStringField(Payload, TEXT("configPath"), TEXT(""));
-    FString ComponentName = GetJsonStringField(Payload, TEXT("componentName"), TEXT("MassSpawner"));
-    int32 SpawnCount = static_cast<int32>(GetJsonNumberField(Payload, TEXT("spawnCount"), 100));
-
-    if (BlueprintPath.IsEmpty())
-    {
-        Self->SendAutomationError(RequestingSocket, RequestId, TEXT("blueprintPath is required"), TEXT("INVALID_PARAMS"));
-        return true;
-    }
-
-    // Load the Blueprint
-    FString NormalizedPath, LoadError;
-    UBlueprint* Blueprint = LoadBlueprintAsset(BlueprintPath, NormalizedPath, LoadError);
-    if (!Blueprint)
-    {
-        Self->SendAutomationError(RequestingSocket, RequestId, LoadError, TEXT("NOT_FOUND"));
-        return true;
-    }
-
-    // Note: MassSpawner is typically an Actor class, not a component.
-    // For component-based spawning, use MassAgentComponent on individual actors.
-    // This implementation adds metadata indicating spawner configuration.
-
-    // Mark blueprint as modified
-    Blueprint->MarkPackageDirty();
-    McpSafeAssetSave(Blueprint);
-
-    Result->SetStringField(TEXT("componentName"), ComponentName);
-    Result->SetStringField(TEXT("blueprintPath"), NormalizedPath);
-    Result->SetNumberField(TEXT("spawnCount"), SpawnCount);
-    if (!ConfigPath.IsEmpty())
-    {
-        Result->SetStringField(TEXT("configPath"), ConfigPath);
-    }
-    Result->SetStringField(TEXT("message"), TEXT("Mass Spawner configuration added. Note: For high-performance crowd spawning, use AMassSpawner actor directly."));
-    Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Spawner configured"), Result);
     return true;
 }
 }

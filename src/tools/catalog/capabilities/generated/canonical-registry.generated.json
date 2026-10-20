@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "e8cdb2872f745774",
+  "catalogRevision": "a4a23f69aafcc484",
   "recordCount": 416,
   "records": [
     {
@@ -20448,17 +20448,16 @@
           "pop a widget",
           "fade in widget"
         ],
-        "summary": "Create a widget animation or add tracks and keyframes to it.",
+        "summary": "Build a widget animation, chosen by edit, each saved: create makes a named animation of a given length (a taken name is refused), add_track gives one widget an opacity, color or render-transform track, add_keyframe keys a value at a time on a widget (adding the track and binding when missing) or a whole animation across several widgets in one call (keys, all checked before any is written). get_widget_animation reads it back.",
         "whenToUse": [
           "edit=create: A new UMG widget animation must be created for property keyframing.",
-          "edit=add_track: A property track must be added to a widget animation for keyframing.",
+          "edit=add_track: A widget needs an empty property track in a widget animation before keys are added.",
           "edit=add_keyframe: A property value must be keyframed at a specific time in a widget animation.",
           "edit=add_keyframe: A whole widget animation (a logo popping in, a menu sliding up, a pulse) must be keyed in one call (keys)."
         ],
         "whenNotToUse": [
           "edit=create: A Blueprint graph animation is needed (use animation_physics).",
           "edit=create: An animation must be seen playing in PIE: write the value that sets it off with inspect.set_property and watch (a short pop ends before a later call can read it).",
-          "edit=add_track: The animation has enough tracks.",
           "edit=add_keyframe: The track should be removed rather than keyframed."
         ]
       },
@@ -20499,7 +20498,7 @@
             },
             "slotName": {
               "type": "string",
-              "description": "Slot name for a child widget inside its parent."
+              "description": "Name of the widget in the widget tree that the track animates."
             },
             "time": {
               "type": "number",
@@ -20580,6 +20579,10 @@
               "type": "number",
               "description": "Length of the new animation in seconds."
             },
+            "saved": {
+              "type": "boolean",
+              "description": "Whether the Widget Blueprint was saved."
+            },
             "slotName": {
               "type": "string",
               "description": "Widget the track animates."
@@ -20607,10 +20610,6 @@
             "bindingGuid": {
               "type": "string",
               "description": "MovieScene possessable GUID bound to the widget."
-            },
-            "saved": {
-              "type": "boolean",
-              "description": "Whether the Widget Blueprint was saved."
             },
             "keysAdded": {
               "type": "number",
@@ -20641,7 +20640,7 @@
       },
       "examples": [
         {
-          "title": "Create a widget animation or add tracks and keyframes to it.",
+          "title": "Build a widget animation, chosen by edit, each saved: create makes a named animation of a given length (a taken name is refused), add_track gives one widget an opacity, color or render-transform track, add_keyframe keys a value at a time on a widget (adding the track and binding when missing) or a whole animation across several widgets in one call (keys, all checked before any is written). get_widget_animation reads it back.",
           "input": {
             "action": "edit_widget_animation",
             "widgetPath": "/Game/UI/WBP_MainUI",
@@ -20719,7 +20718,8 @@
           "requires": {
             "add_animation_track": {
               "required": [
-                "trackType"
+                "trackType",
+                "slotName"
               ]
             }
           }
@@ -20727,8 +20727,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "14264c3adc18880c0bfbdf5b76849cd75d98896ea9825d1eebed5bddebfea201",
-        "content": "36f748b9c976b5332ce89ee6c7d6217474342fb32273f8bb388b4cb603fc9c2f"
+        "schema": "315f53ede6de81890a16db1ce32944e8b9b6dbd1e19399d37d2a30a119569624",
+        "content": "3e43feb0c4c4ceabbb18f487acaabb44e4195277c2355b773577051d80d9c98a"
       }
     },
     {
@@ -20900,6 +20900,10 @@
               "type": "string",
               "description": "New name for a renamed variable, function, or component."
             },
+            "animationBindingsRenamed": {
+              "type": "number",
+              "description": "Animation bindings that now name the widget by newName."
+            },
             "slotName": {
               "type": "string",
               "description": "Slot name for a child widget inside its parent."
@@ -21040,8 +21044,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "5878abcf216bd80470da11ceb1b9a248c7575cdbd5b0a01fdfd59aa6e587d852",
-        "content": "0fbd1d56f170d7d623f9e2666bfd888b22a4a8852ba18427ced7167be62b303b"
+        "schema": "ca30e6e488d7da3a083e527bb9b6bc4c04ba0ed1fc0ac0589d0b7c2ccb78b057",
+        "content": "a6328ff9e9a0749f34a548912cafb3da34635cb858a74131eb0e58c30132c2e7"
       }
     },
     {
@@ -30099,7 +30103,7 @@
         "topics": [
           "create_lighting_setup"
         ],
-        "summary": "Create a lighting-enabled level or a Lightmass importance volume.",
+        "summary": "Create lighting scaffolding, chosen by kind: level makes, saves and opens a new level lit by a sun, a SkyAtmosphere and a real-time sky light (refused over unsaved levels and during Play); lightmass_volume places a Lightmass Importance Volume box in the editor level, inside which baked lighting gets full quality.",
         "whenToUse": [
           "kind=level: A new level with lighting setup is needed.",
           "kind=lightmass_volume: A lightmass importance volume is needed for baking."
@@ -30209,7 +30213,7 @@
       },
       "examples": [
         {
-          "title": "Create a lighting-enabled level or a Lightmass importance volume.",
+          "title": "Create lighting scaffolding, chosen by kind: level makes, saves and opens a new level lit by a sun, a SkyAtmosphere and a real-time sky light (refused over unsaved levels and during Play); lightmass_volume places a Lightmass Importance Volume box in the editor level, inside which baked lighting gets full quality.",
           "input": {
             "action": "create_lighting_setup",
             "name": "LightingLevel",
@@ -30269,7 +30273,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "6d08ad6fedbdddcc94d8b6c7cb2ddc01121d05d47a8f4c6f346100b94902d6d0",
-        "content": "010d202347931509ddef97d5139536b1730adc1194861767b3b3cbc71133a2e7"
+        "content": "51132dff2f72cc1286e17ce9c0d9a911b64f4e86d8d60ace2d9b08482200cbe9"
       }
     },
     {
@@ -52626,12 +52630,12 @@
           "eqs generator",
           "eqs test"
         ],
-        "summary": "Create an EQS query or edit it: add generators, tests and contexts, configure test scoring.",
+        "summary": "Create an Environment Query or edit it, chosen by edit, each saved: create makes the asset, add_generator gives an option its items (ActorsOfClass, CurrentLocation, Donut, OnCircle, PathingGrid, SimpleGrid, Composite), add_test adds a test (Distance, Dot, GameplayTags, Overlap, Pathfinding, PathfindingBatch, Project, Random, Trace), add_context points a generator or test at the querier, the items or a context class, configure_test_scoring sets the equation, clamps and filter of a test. A Behavior Tree runs it with a Run EQS Query task.",
         "whenToUse": [
           "edit=create: An AI needs a spatial query asset.",
           "edit=add_generator: An Environment Query needs its candidate item set.",
           "edit=add_test: Generated Environment Query items need scoring or filtering.",
-          "edit=add_context: An Environment Query needs a querier or item context.",
+          "edit=add_context: A generator should search around the querier or a test should measure to a context.",
           "edit=configure_test_scoring: An existing Environment Query test needs scoring or filter tuning."
         ],
         "whenNotToUse": []
@@ -52662,8 +52666,7 @@
                 "OnCircle",
                 "PathingGrid",
                 "SimpleGrid",
-                "Composite",
-                "Custom"
+                "Composite"
               ],
               "description": "EQS generator type."
             },
@@ -52672,9 +52675,6 @@
               "properties": {
                 "searchRadius": {
                   "type": "number"
-                },
-                "searchCenter": {
-                  "type": "string"
                 },
                 "actorClass": {
                   "type": "string"
@@ -52692,7 +52692,7 @@
                   "type": "number"
                 }
               },
-              "description": "Generator-specific settings.",
+              "description": "Settings the generator reads, refused when it does not: ActorsOfClass searchRadius (also keeps items inside it) and actorClass; SimpleGrid and PathingGrid gridSize (half the grid side) and spacesBetween; OnCircle searchRadius or outerRadius (the circle radius) and spacesBetween; Donut innerRadius and outerRadius. Where a generator centers is set with add_eqs_context.",
               "additionalProperties": false
             },
             "testType": {
@@ -52706,8 +52706,7 @@
                 "PathfindingBatch",
                 "Project",
                 "Random",
-                "Trace",
-                "Custom"
+                "Trace"
               ],
               "description": "EQS test type."
             },
@@ -52716,14 +52715,25 @@
               "enum": [
                 "Querier",
                 "Item",
-                "EnvQueryContext_BlueprintBase",
                 "Custom"
               ],
-              "description": "EQS context type."
+              "description": "Querier (the AI running the query), Item (each item being tested), or Custom with contextClass."
+            },
+            "contextClass": {
+              "type": "string",
+              "description": "Context class for contextType Custom: a Blueprint based on EnvQueryContext_BlueprintBase, or a context class path."
+            },
+            "contextProperty": {
+              "type": "string",
+              "description": "Context property of the generator or test to set (SearchCenter, GenerateAround, DistanceTo, Context); default the first one it has."
             },
             "testIndex": {
               "type": "number",
-              "description": "Index of the test to configure."
+              "description": "Test index counted across all options of the query, in the order the tests were added (the testIndex add_eqs_test returned)."
+            },
+            "optionIndex": {
+              "type": "number",
+              "description": "Option whose generator takes the context when no testIndex is sent (default 0)."
             },
             "testSettings": {
               "type": "object",
@@ -52734,6 +52744,7 @@
                     "Linear",
                     "Square",
                     "InverseLinear",
+                    "SquareRoot",
                     "Constant"
                   ]
                 },
@@ -52748,7 +52759,8 @@
                   "enum": [
                     "Minimum",
                     "Maximum",
-                    "Range"
+                    "Range",
+                    "Match"
                   ]
                 },
                 "floatMin": {
@@ -52808,7 +52820,7 @@
       },
       "examples": [
         {
-          "title": "Create an EQS query or edit it: add generators, tests and contexts, configure test scoring.",
+          "title": "Create an Environment Query or edit it, chosen by edit, each saved: create makes the asset, add_generator gives an option its items (ActorsOfClass, CurrentLocation, Donut, OnCircle, PathingGrid, SimpleGrid, Composite), add_test adds a test (Distance, Dot, GameplayTags, Overlap, Pathfinding, PathfindingBatch, Project, Random, Trace), add_context points a generator or test at the querier, the items or a context class, configure_test_scoring sets the equation, clamps and filter of a test. A Behavior Tree runs it with a Run EQS Query task.",
           "input": {
             "action": "edit_eqs_query",
             "name": "EQS_Cover",
@@ -52881,8 +52893,18 @@
             "contextType": [
               "add_context"
             ],
+            "contextClass": [
+              "add_context"
+            ],
+            "contextProperty": [
+              "add_context"
+            ],
             "testIndex": [
+              "add_context",
               "configure_test_scoring"
+            ],
+            "optionIndex": [
+              "add_context"
             ],
             "testSettings": [
               "configure_test_scoring"
@@ -52922,8 +52944,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "10861af4807efb7e3c8080f154be8ab639e5f05d63eece2114c475934fa4faa9",
-        "content": "a28c3588af9900dc5d9053675d166717ead66f298e665477190405cafee9de2b"
+        "schema": "375fce99a5ad505fd32c2828cb22977a2e03aaff938b479eae12b05e0e90a0d8",
+        "content": "14d556d1bacce7a59e40c01f854898288414ec90bb0f01d70c9dbcb5a5541c16"
       }
     },
     {
@@ -52969,11 +52991,11 @@
           "mass spawner",
           "mass config"
         ],
-        "summary": "Create a Mass entity config, configure its traits, or add a Mass spawner.",
+        "summary": "Build Mass entities, chosen by edit: create_config makes an empty Mass entity config asset and configure adds a trait to it or sets trait properties or a parent config, each saved; add_spawner places a Mass Spawner actor that spawns the config's entities at the items of an Environment Query when play begins. A configure call that sets nothing is refused.",
         "whenToUse": [
           "edit=create_config: Crowd simulation needs an entity config asset.",
-          "edit=configure: A Mass Entity config needs its parent config set.",
-          "edit=add_spawner: A Blueprint should spawn Mass entities from a config."
+          "edit=configure: A Mass entity config needs a trait, trait settings or a parent config.",
+          "edit=add_spawner: A level should spawn a crowd of Mass entities from a config."
         ],
         "whenNotToUse": []
       },
@@ -53000,7 +53022,7 @@
             },
             "traitClass": {
               "type": "string",
-              "description": "Trait class name whose properties are configured."
+              "description": "Mass trait class (short name or path, a UMassEntityTraitBase subclass): edited when the config has it, added when it does not."
             },
             "traitIndex": {
               "type": "number",
@@ -53011,17 +53033,33 @@
               "x-unreal-reflection-boundary": true,
               "description": "Trait property values keyed by UPROPERTY name."
             },
-            "blueprintPath": {
+            "queryPath": {
               "type": "string",
-              "description": "Canonical /Game Blueprint asset path."
-            },
-            "componentName": {
-              "type": "string",
-              "description": "Name of the component to add."
+              "description": "Environment Query whose items are the spawn points; it runs around the spawner."
             },
             "spawnCount": {
               "type": "number",
               "description": "Number of entities the spawner creates."
+            },
+            "actorName": {
+              "type": "string",
+              "description": "Label for the placed spawner; a label already in the level is refused."
+            },
+            "location": {
+              "type": "object",
+              "properties": {
+                "x": {
+                  "type": "number"
+                },
+                "y": {
+                  "type": "number"
+                },
+                "z": {
+                  "type": "number"
+                }
+              },
+              "description": "World location of the spawner (default the world origin).",
+              "additionalProperties": false
             },
             "edit": {
               "type": "string",
@@ -53059,9 +53097,9 @@
               "type": "string",
               "description": "Canonical /Game Mass Entity config asset path."
             },
-            "blueprintPath": {
+            "actorName": {
               "type": "string",
-              "description": "Canonical /Game Blueprint asset path."
+              "description": "Target actor name in the current level."
             }
           },
           "required": [
@@ -53072,7 +53110,7 @@
       },
       "examples": [
         {
-          "title": "Create a Mass entity config, configure its traits, or add a Mass spawner.",
+          "title": "Build Mass entities, chosen by edit: create_config makes an empty Mass entity config asset and configure adds a trait to it or sets trait properties or a parent config, each saved; add_spawner places a Mass Spawner actor that spawns the config's entities at the items of an Environment Query when play begins. A configure call that sets nothing is refused.",
           "input": {
             "action": "edit_mass_entity",
             "name": "MEC_Crowd",
@@ -53141,13 +53179,16 @@
             "properties": [
               "configure"
             ],
-            "blueprintPath": [
-              "add_spawner"
-            ],
-            "componentName": [
+            "queryPath": [
               "add_spawner"
             ],
             "spawnCount": [
+              "add_spawner"
+            ],
+            "actorName": [
+              "add_spawner"
+            ],
+            "location": [
               "add_spawner"
             ]
           },
@@ -53164,7 +53205,8 @@
             },
             "add_mass_spawner": {
               "required": [
-                "blueprintPath"
+                "configPath",
+                "queryPath"
               ]
             }
           }
@@ -53172,8 +53214,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "dfeb8d9967159197fd64e17baba23716d9fb7063b3f8d51110fbffe8ddc857ce",
-        "content": "53629e2dc9f649096b841a7590c217143892c96b1506f9f25fcb7ab19680989f"
+        "schema": "00959fc36123547be398e9546c526926e41c01b406161880663c6b62c4073fd7",
+        "content": "407e2e7c1c242347e6836aa46bc75f0a53db4611026238a471f9e9fdfd499d61"
       }
     },
     {
@@ -53227,7 +53269,7 @@
           "smart object slot",
           "smart object definition"
         ],
-        "summary": "Create a Smart Object definition, add slots, configure slot behavior, or add a Smart Object component.",
+        "summary": "Build Smart Objects, chosen by edit, each saved: create_definition makes a definition asset, add_slot adds a slot at an offset, configure_slot enables a slot or adds registered activity tags, add_component puts a Smart Object component (with its definition) on an actor Blueprint. A taken path or component name, an unregistered tag and a definition that does not load are refused.",
         "whenToUse": [
           "edit=create_definition: An interactable needs a Smart Object definition asset.",
           "edit=add_slot: A Smart Object definition needs another interaction slot.",
@@ -53358,7 +53400,7 @@
       },
       "examples": [
         {
-          "title": "Create a Smart Object definition, add slots, configure slot behavior, or add a Smart Object component.",
+          "title": "Build Smart Objects, chosen by edit, each saved: create_definition makes a definition asset, add_slot adds a slot at an offset, configure_slot enables a slot or adds registered activity tags, add_component puts a Smart Object component (with its definition) on an actor Blueprint. A taken path or component name, an unregistered tag and a definition that does not load are refused.",
           "input": {
             "action": "edit_smart_object",
             "name": "SO_Bench",
@@ -53467,7 +53509,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "591981debe5418ed3036f4f6336100efe5f0d9630d9202af4c20b69c6cda8d64",
-        "content": "bf60558d91c7065900c8125925e57eff712ff4f52d5be2f06497b07ade8438b8"
+        "content": "4c1cce78a375ff43fcd6a966d94e276f6344a06ef083847d32ecd111249a9ece"
       }
     },
     {
@@ -53523,7 +53565,7 @@
           "state tree task",
           "make a state tree"
         ],
-        "summary": "Create a State Tree or edit it: add states and transitions, configure tasks.",
+        "summary": "Create a State Tree or edit it, chosen by edit, each compiled and saved: create makes the asset with a Root state and a schema (component or ai, from the GameplayStateTree plugin), add_state adds a named state, add_transition links two states on a trigger, configure_task sets the properties of a task or the selection behavior of a state. compiled says whether the tree compiled (an uncompiled tree does not run), with compileMessages.",
         "whenToUse": [
           "edit=create: An AI needs a StateTree instead of a Behavior Tree.",
           "edit=add_state: A StateTree needs another state under a parent.",
@@ -53547,6 +53589,10 @@
               "type": "string",
               "description": "Canonical /Game output path for the created asset."
             },
+            "schema": {
+              "type": "string",
+              "description": "What runs the tree: component (default, a StateTreeComponent on any actor), ai (a StateTreeAIComponent on an AI controller, UE 5.4+), or the class path of another State Tree schema (a UStateTreeSchema subclass, such as /Script/MassAIBehavior.MassStateTreeSchema for Mass entities)."
+            },
             "stateTreePath": {
               "type": "string",
               "description": "Canonical /Game State Tree asset path."
@@ -53561,7 +53607,7 @@
             },
             "stateType": {
               "type": "string",
-              "description": "State kind for the added state."
+              "description": "State (default), Group, Linked, LinkedAsset (UE 5.4+) or Subtree."
             },
             "fromState": {
               "type": "string",
@@ -53573,7 +53619,7 @@
             },
             "triggerType": {
               "type": "string",
-              "description": "Transition trigger kind."
+              "description": "OnStateCompleted (default), OnStateSucceeded, OnStateFailed, OnTick, OnEvent (needs an event tag) or OnDelegate (newer engines)."
             },
             "taskName": {
               "type": "string",
@@ -53638,7 +53684,7 @@
       },
       "examples": [
         {
-          "title": "Create a State Tree or edit it: add states and transitions, configure tasks.",
+          "title": "Create a State Tree or edit it, chosen by edit, each compiled and saved: create makes the asset with a Root state and a schema (component or ai, from the GameplayStateTree plugin), add_state adds a named state, add_transition links two states on a trigger, configure_task sets the properties of a task or the selection behavior of a state. compiled says whether the tree compiled (an uncompiled tree does not run), with compileMessages.",
           "input": {
             "action": "edit_state_tree",
             "name": "ST_Enemy",
@@ -53690,6 +53736,9 @@
               "create"
             ],
             "path": [
+              "create"
+            ],
+            "schema": [
               "create"
             ],
             "stateTreePath": [
@@ -53759,8 +53808,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "1c703ae2b61e3a9a020fc2d7e06831639a9b522ba9230c32cee79712dcd88ce2",
-        "content": "67a3cf49fa47251352092a19cf6e408153e6cf4220de411c6002efa9069ca2bf"
+        "schema": "28ea25b11395fdb5a99bfa7d58c50a306ecebe8c1a126f8b1a770278b4a00698",
+        "content": "d149057fc489b9a59e7cb133e061e7b2282e3f63d5e21a387ce966547cc05aa9"
       }
     },
     {
@@ -53791,7 +53840,7 @@
           "navmesh settings",
           "state tree states"
         ],
-        "summary": "Read an AI asset: a pawn or AI controller Blueprint (perception, team, movement), a Behavior Tree summary, Blackboard keys, State Tree states or EQS query options; info=navigation returns NavMesh and agent settings.",
+        "summary": "Read an AI asset: a pawn or AI controller Blueprint (each perception sense with its settings under the names the configure actions take, the engine teamId and the teamIdVariable set_perception_team stores, movement), a Behavior Tree summary, Blackboard keys, State Tree states or EQS query options; info=navigation returns NavMesh and agent settings.",
         "whenToUse": [
           "info=ai: A caller needs the current state of an AI asset.",
           "info=navigation: A caller needs current NavMesh and agent settings."
@@ -54032,7 +54081,7 @@
       },
       "examples": [
         {
-          "title": "Read an AI asset: a pawn or AI controller Blueprint (perception, team, movement), a Behavior Tree summary, Blackboard keys, State Tree states or EQS query options; info=navigation returns NavMesh and agent settings.",
+          "title": "Read an AI asset: a pawn or AI controller Blueprint (each perception sense with its settings under the names the configure actions take, the engine teamId and the teamIdVariable set_perception_team stores, movement), a Behavior Tree summary, Blackboard keys, State Tree states or EQS query options; info=navigation returns NavMesh and agent settings.",
           "input": {
             "action": "get_ai_info",
             "controllerPath": "/Game/AI/AIC_Enemy",
@@ -54102,7 +54151,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "2cba2666511b027bc9d3708558d0762894825cd9738e19784681644314107dfd",
-        "content": "c29e6b6dffb8f4444e25a511b00de2d960b67ce5d859f8be3423e13a327c6b66"
+        "content": "69ac511960fb626cfe71de2ab72b6cbdb860a85eeb3e1b0502a6e658087512b6"
       }
     },
     {
@@ -55013,14 +55062,14 @@
           "perception team",
           "sight range"
         ],
-        "summary": "Set up AI perception on a Blueprint or controller: add the component, configure sight, hearing or damage senses, team, or runtime perception.",
+        "summary": "Set up AI perception on an AI controller or pawn Blueprint, chosen by setting, each saved: setup adds the component and several senses at once, add_component only the component (kept when present), sight, hearing and damage tune one sense and keep what is not sent, team stores a team id variable (the engine team itself needs C++), controller is setup for an AIController path. An actor with no team is neutral, so a sense must detect neutrals to notice the player.",
         "whenToUse": [
           "setting=setup: A Blueprint needs perception added and several senses tuned at once.",
           "setting=add_component: A Blueprint needs an AIPerception component before senses are configured.",
           "setting=sight: An AIPerception component needs sight-sense tuning.",
           "setting=hearing: An AIPerception component needs hearing-sense tuning.",
           "setting=damage: An AIPerception component needs damage-sense tuning.",
-          "setting=team: An AI must belong to a specific perception team.",
+          "setting=team: A team id should be stored on the AI for its own logic to read.",
           "setting=controller: One call should add the perception component and set its senses together."
         ],
         "whenNotToUse": [
@@ -55125,9 +55174,6 @@
                 "hearingRange": {
                   "type": "number"
                 },
-                "loSHearingRange": {
-                  "type": "number"
-                },
                 "detectFriendly": {
                   "type": "boolean"
                 },
@@ -55150,7 +55196,7 @@
             },
             "teamId": {
               "type": "number",
-              "description": "Team ID for perception affiliation (0=Neutral, 1=Player, 2=Enemy, ...)."
+              "description": "Team id to store, 0 to 254 (255 means no team)."
             },
             "controllerPath": {
               "type": "string",
@@ -55223,7 +55269,7 @@
       },
       "examples": [
         {
-          "title": "Set up AI perception on a Blueprint or controller: add the component, configure sight, hearing or damage senses, team, or runtime perception.",
+          "title": "Set up AI perception on an AI controller or pawn Blueprint, chosen by setting, each saved: setup adds the component and several senses at once, add_component only the component (kept when present), sight, hearing and damage tune one sense and keep what is not sent, team stores a team id variable (the engine team itself needs C++), controller is setup for an AIController path. An actor with no team is neutral, so a sense must detect neutrals to notice the player.",
           "input": {
             "action": "setup_perception",
             "blueprintPath": "/Game/AI/BP_Enemy",
@@ -55361,7 +55407,8 @@
             },
             "set_perception_team": {
               "required": [
-                "blueprintPath"
+                "blueprintPath",
+                "teamId"
               ]
             },
             "set_ai_perception": {
@@ -55374,8 +55421,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "54e7f626238bc0ec374aea51ce9ca1d70862d4cf52711496b21fd1b436728bb2",
-        "content": "f6e529ff13950df4cdbf449fa28a95493c0628682420a0b766f1914bc4c8061a"
+        "schema": "870bde1e3697a5176529df7b76be471964f4d814e6ea2d4a586ea6181e21f018",
+        "content": "68b1b3ba951a25bb1954201e291ebe25e29f5baf05fab8f3ec30101a65c73bdc"
       }
     },
     {
@@ -55878,12 +55925,12 @@
           "mix equalizer",
           "master volume"
         ],
-        "summary": "Configure a sound class or mix: parent class, class properties, mix modifier, mix EQ.",
+        "summary": "Change a Sound Class or Sound Mix, chosen by setting, each saved: parent sets or clears a class's parent (a loop is refused), properties sets its volume, pitch, low-pass, LFE bleed and center-channel volume, mix_modifier adds or edits the adjuster a mix applies to a class (and the mix fades), mix_eq sets the mix's four EQ bands. A call that sets nothing is refused.",
         "whenToUse": [
-          "setting=parent: Use it to set a Sound Class parent.",
-          "setting=properties: Use it to set Sound Class properties.",
-          "setting=mix_modifier: Use it to add a Sound Class modifier to a Sound Mix; fadeInTime and fadeOutTime set the fades of the mix itself.",
-          "setting=mix_eq: Use it to configure Sound Mix equalization: the four bands through eqSettings, or the low, mid, highMid and high fields."
+          "setting=parent: Use it to set the parent of a Sound Class, or clear it with an empty parentClass, keeping both classes' child lists in step (a mix modifier applying to children walks them). A parent that does not load (PARENT_NOT_FOUND), or that is the class itself or one of its children (CYCLIC_PARENT), is refused. Saved unless save is false.",
+          "setting=properties: Use it to set the properties of a Sound Class, each only when sent: volume and pitch (multipliers, 1 leaves them as authored), lowPassFilterFrequency (Hz; 20000 leaves the sound unfiltered), lfeBleed and voiceCenterChannelVolume (0-1). The reply lists all five; a call that sends none is refused. Saved unless save is false.",
+          "setting=mix_modifier: Use it to add a Sound Class modifier to a Sound Mix, or edit the one the mix already has for that class (replaced true), keeping what is not sent: volumeAdjuster and pitchAdjuster (multipliers; a new modifier starts at 1) and applyToChildren (default true). fadeInTime and fadeOutTime set the fades of the mix itself. Saved unless save is false.",
+          "setting=mix_eq: Use it to configure Sound Mix equalization: the four bands through eqSettings (frequencyCenterN, gainN, bandwidthN for N 0-3), or the low, mid, highMid and high fields on top of them. Sending a band switches the EQ on unless applyEQ is false; eqPriority ranks the mix against other active mixes. Values are clamped (gain 0-4, frequency 0-20000 Hz, bandwidth 0-2) and the reply lists every band after clamping; a call that sets nothing is refused."
         ],
         "whenNotToUse": []
       },
@@ -55902,7 +55949,7 @@
             },
             "parentClass": {
               "type": "string",
-              "description": "Canonical /Game SoundClass asset path of the new parent; omit it to clear the parent."
+              "description": "Canonical /Game SoundClass asset path of the new parent; an empty string clears the parent."
             },
             "save": {
               "type": "boolean",
@@ -56042,10 +56089,11 @@
       },
       "examples": [
         {
-          "title": "Configure a sound class or mix: parent class, class properties, mix modifier, mix EQ.",
+          "title": "Change a Sound Class or Sound Mix, chosen by setting, each saved: parent sets or clears a class's parent (a loop is refused), properties sets its volume, pitch, low-pass, LFE bleed and center-channel volume, mix_modifier adds or edits the adjuster a mix applies to a class (and the mix fades), mix_eq sets the mix's four EQ bands. A call that sets nothing is refused.",
           "input": {
             "action": "configure_sound_class",
             "assetPath": "/Game/Audio/Cues/Cue_FootstepConcrete",
+            "parentClass": "ExampleParentClass",
             "setting": "parent"
           },
           "output": {
@@ -56158,6 +56206,11 @@
             ]
           },
           "requires": {
+            "set_class_parent": {
+              "required": [
+                "parentClass"
+              ]
+            },
             "add_mix_modifier": {
               "required": [
                 "soundClassPath"
@@ -56168,8 +56221,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "3424b7cb0c12cad5e140c609467a3c1ca2d5671bf6fe3904ae664fe76b80f8ec",
-        "content": "97f2dd2e4ece22e3b514493788614fc13c5d7c2e5fb9eb5a88453b2f66eec5e6"
+        "schema": "1fd3c194b421feb3aa74ebc6f70faa34a1e037612fda1d704015c5223891d6c1",
+        "content": "59867dbaf9fdc9904e64e3d5c376bce4c8ab180966473a83b19f27576b51f90c"
       }
     },
     {
@@ -67696,7 +67749,7 @@
           "csg",
           "cut a hole in a mesh"
         ],
-        "summary": "Boolean mesh operations: union, subtract, intersection, trim, self-union.",
+        "summary": "Combine placed dynamic mesh actors, chosen by booleanOp, editing targetActor's mesh in place in world space: union adds toolActor, subtract cuts it out, intersection keeps only the overlap, trim cuts by trimActorName (keepInside keeps the inside), self_union resolves a mesh's own overlaps. keepTool (default true) keeps the tool actor; a result that would be empty or change nothing is refused (EMPTY_RESULT, NO_EFFECT) with the target as it was and the tool kept to move. Triangle counts before and after come back; not undoable.",
         "whenToUse": [
           "booleanOp=union: Two meshes must be merged via union.",
           "booleanOp=subtract: A tool mesh must be cut out of a target.",
@@ -67785,7 +67838,7 @@
       },
       "examples": [
         {
-          "title": "Boolean mesh operations: union, subtract, intersection, trim, self-union.",
+          "title": "Combine placed dynamic mesh actors, chosen by booleanOp, editing targetActor's mesh in place in world space: union adds toolActor, subtract cuts it out, intersection keeps only the overlap, trim cuts by trimActorName (keepInside keeps the inside), self_union resolves a mesh's own overlaps. keepTool (default true) keeps the tool actor; a result that would be empty or change nothing is refused (EMPTY_RESULT, NO_EFFECT) with the target as it was and the tool kept to move. Triangle counts before and after come back; not undoable.",
           "input": {
             "action": "boolean_mesh",
             "targetActor": "DM_A",
@@ -67894,7 +67947,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "c94f97e71f46888d70dde858c2e93bc9ea8dbcd0236b0d44ab399eaa7729ff22",
-        "content": "b590098673f1c2e437cd13ea6225ee0fe9e3a84f4cd9f84f1fc6a435acb8e93f"
+        "content": "403469a6a7ac3c86144093716defc4fb508497c2a1667f859b828d5ab9337317"
       }
     },
     {
@@ -86711,9 +86764,9 @@
           "run pcg graph",
           "generate pcg"
         ],
-        "summary": "Execute a PCG graph asynchronously, returning a numeric task identifier.",
+        "summary": "Generate a PCG graph on a placed PCG component: the one actorName, componentName or componentPath names, or with createComponent a new one on actorName (one it already has is used; createdComponent says which). graphPath becomes the component's graph and generation is scheduled to run over the next frames (force, default true, regenerates an up-to-date component); read PCGComponent.bGenerated with inspect get_property to see it finished (partitioned actors keep it false). GENERATION_NOT_SCHEDULED when it is already generating, has no graph or has invalid bounds; save also saves the level.",
         "whenToUse": [
-          "A PCG graph must be generated and the caller needs the scheduling task id."
+          "A PCG graph must be generated in the level."
         ],
         "whenNotToUse": [
           "Graph authoring is needed; use add_pcg_node or connect_pcg_pins."
@@ -86782,7 +86835,7 @@
             },
             "taskId": {
               "type": "number",
-              "description": "Opaque numeric scheduling receipt for the PCG task."
+              "description": "The PCG scheduler's id for the generation task (nothing here polls it; read bGenerated instead)."
             }
           },
           "required": [
@@ -86793,7 +86846,7 @@
       },
       "examples": [
         {
-          "title": "Execute a PCG graph asynchronously, returning a numeric task identifier.",
+          "title": "Generate a PCG graph on a placed PCG component: the one actorName, componentName or componentPath names, or with createComponent a new one on actorName (one it already has is used; createdComponent says which). graphPath becomes the component's graph and generation is scheduled to run over the next frames (force, default true, regenerates an up-to-date component); read PCGComponent.bGenerated with inspect get_property to see it finished (partitioned actors keep it false). GENERATION_NOT_SCHEDULED when it is already generating, has no graph or has invalid bounds; save also saves the level.",
           "input": {
             "action": "execute_pcg_graph",
             "graphPath": "/Game/PCG/PCG_MyGraph",
@@ -86836,8 +86889,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "4b81aeae37b23ab1c9b69240fbd857c368b51bd630bac3882fe1bcf0166f7cfc",
-        "content": "1eb1b406f8ac85b8d4dc53830aeee35292f15c1acc7a6bc116f0b6900bcd0a64"
+        "schema": "bca098efcb2db4d2fc6ea1139d3ca3defc6c4696d911e725496369f7b73a3028",
+        "content": "f1e6c2d7fbc2603f6a949f2625b5c548486c20a6045f415a8087d5a898120378"
       }
     },
     {
@@ -95175,7 +95228,7 @@
           "media texture",
           "media sound"
         ],
-        "summary": "Create a media asset: media source, player, playlist, texture, or sound component.",
+        "summary": "Create media playback pieces, chosen by kind, each saved: source points at a local video file (under Content or Saved) or per-platform sources, player plays a source (loop, playOnOpen), playlist strings sources and files together, texture shows a player's picture in a material or widget, sound_component gives a placed actor the player's sound. A taken name is refused.",
         "whenToUse": [
           "kind=source: A media source asset must be created for a media file.",
           "kind=player: A media player asset must be created for video/audio playback.",
@@ -95218,7 +95271,7 @@
             },
             "filePath": {
               "type": "string",
-              "description": "File system path to a media file."
+              "description": "A local media file under the project's Content or Saved folder: an absolute path there, or Content/... or Saved/... (/Saved/... too). It must exist; file:// URLs, traversal and links are refused."
             },
             "precacheFile": {
               "type": "boolean",
@@ -95410,13 +95463,13 @@
       },
       "examples": [
         {
-          "title": "Create a media asset: media source, player, playlist, texture, or sound component.",
+          "title": "Create media playback pieces, chosen by kind, each saved: source points at a local video file (under Content or Saved) or per-platform sources, player plays a source (loop, playOnOpen), playlist strings sources and files together, texture shows a player's picture in a material or widget, sound_component gives a placed actor the player's sound. A taken name is refused.",
           "input": {
             "action": "create_media_asset",
             "name": "MS_Cinematics",
             "path": "/Game/Media",
-            "sourceType": "File",
-            "filePath": "/tmp/cinematics/source.mp4",
+            "sourceType": "file",
+            "filePath": "Content/Movies/Intro.mp4",
             "kind": "source"
           },
           "output": {
@@ -95574,8 +95627,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "4f467303258d789ec26d1f488ddb7b799f8fab5ad064639087c499eccb4b167e",
-        "content": "6772ab99e43e5e358ed9889b15ab8045039a45bcafbfc74cde6e78b302ee0921"
+        "schema": "6b2ea21b857bcd8306ffda4e285235e2fab0ba8fb0b45bef7754d7a4f5125b7f",
+        "content": "8412ac49520b0f0c782879e0b7676ab035a030669f34c7532aa27971ab964376"
       }
     },
     {
@@ -95654,7 +95707,7 @@
             },
             "filePath": {
               "type": "string",
-              "description": "File system path to a media file."
+              "description": "A local media file under the project's Content or Saved folder: an absolute path there, or Content/... or Saved/... (/Saved/... too). It must exist; file:// URLs, traversal and links are refused."
             },
             "mediaPath": {
               "type": "string",
@@ -95815,8 +95868,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "ccbb9d6802af262ae9cab7ec9e26822b18f8115dcccf7c8b84cea09ff781e9ef",
-        "content": "2fc21deb039c2b38be4fed468ec2549b5fd5caccf4e5c789d5074616870c1984"
+        "schema": "59a98896537264ccafef33d64aed88f7eeea16885ce513c17991fb386433b243",
+        "content": "3e3d8c064c0d68744e852ca80a4499d877185875ad72c4bccdd63fbea3e7117c"
       }
     },
     {
@@ -102571,7 +102624,7 @@
         "topics": [
           "merge_actors"
         ],
-        "summary": "Merge a set of actors into a single mesh (requires >=2 actor names) via the merge_actors bridge action.",
+        "summary": "Merge the static meshes of two or more placed actors into one saved static mesh asset named SM_<name>, materials kept as separate slots and lightmap UVs generated. A name that matches no actor, fewer than two static mesh components, or an asset already at the path is refused. replaceSourceActors places the merged mesh where the merge centred it and removes the sources in one undo step (actorName is the new actor); without it the level is left as it is.",
         "whenToUse": [
           "Two or more actors must be merged into one mesh asset."
         ],
@@ -102593,19 +102646,19 @@
               "items": {
                 "type": "string"
               },
-              "description": "Actor names to merge (>=2 required)."
+              "description": "Labels of the actors to merge, at least 2; every one must be in the level."
             },
             "replaceSourceActors": {
               "type": "boolean",
-              "description": "Replace source actors in the level."
+              "description": "Place the merged mesh in the level and remove the source actors, in one undo step (default false)."
             },
             "packageName": {
               "type": "string",
-              "description": "Package name for the merged asset."
+              "description": "The merged asset: a /Game path, or a name placed in the outputPath folder (default /Game/MergedActors); the mesh is named SM_<name>."
             },
             "outputPath": {
               "type": "string",
-              "description": "Output /Game folder for the merged asset."
+              "description": "The folder for a packageName that is a name, or with no packageName the merged asset's /Game path."
             }
           },
           "required": [
@@ -102640,7 +102693,7 @@
       },
       "examples": [
         {
-          "title": "Merge a set of actors into a single mesh (requires >=2 actor names) via the merge_actors bridge action.",
+          "title": "Merge the static meshes of two or more placed actors into one saved static mesh asset named SM_<name>, materials kept as separate slots and lightmap UVs generated. A name that matches no actor, fewer than two static mesh components, or an asset already at the path is refused. replaceSourceActors places the merged mesh where the merge centred it and removes the sources in one undo step (actorName is the new actor); without it the level is left as it is.",
           "input": {
             "action": "merge_actors",
             "actors": [
@@ -102681,8 +102734,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "6947cc983929ab26797429a45a05d8f568b8b74a11f1548aedbd306f44c894f8",
-        "content": "0448e46384e57bd9b5391b282f83d0b8429b60a3ec02adc59708db77dab50e22"
+        "schema": "b1c4d1d8fbbe233e7b841ca4b7ab390b0b8b463186a503723326909676e53f6a",
+        "content": "87e169861fd75acabaf4b095fc8e8d646cda992452f0cafe585c120600a734ad"
       }
     },
     {

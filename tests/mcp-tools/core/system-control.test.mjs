@@ -252,6 +252,9 @@ const testCases = [
     { scenario: 'ACTION: optimize_draw_calls', toolName: 'system_control', arguments: {"action": "optimize_draw_calls", "enableInstancing": false, "enableBatching": true}, expected: 'success' },
     { scenario: 'ACTION: merge_actors', toolName: 'system_control', arguments: {"action": "merge_actors", "actors": [MERGE_PARENT_ACTOR, MERGE_CHILD_ACTOR], "replaceSourceActors": false, "outputPath": MERGED_ACTOR_ASSET}, expected: 'success' },
     { scenario: 'ACTION: merge_actors via packageName', toolName: 'system_control', arguments: {"action": "merge_actors", "actors": [MERGE_PARENT_ACTOR, MERGE_CHILD_ACTOR], "replaceSourceActors": false, "packageName": MERGED_ACTOR_PACKAGE_ASSET}, expected: 'success' },
+    { scenario: 'ACTION: merge_actors with a packageName name placed in outputPath', toolName: 'system_control', arguments: { action: 'merge_actors', actors: [MERGE_PARENT_ACTOR, MERGE_CHILD_ACTOR], packageName: `PerformanceMergedName_${ts}`, outputPath: TEST_FOLDER }, expected: 'success' },
+    { scenario: 'ERROR: merge_actors refuses an asset already at the path', toolName: 'system_control', arguments: { action: 'merge_actors', actors: [MERGE_PARENT_ACTOR, MERGE_CHILD_ACTOR], packageName: MERGED_ACTOR_PACKAGE_ASSET }, expected: 'error|ASSET_ALREADY_EXISTS' },
+    { scenario: 'ERROR: merge_actors refuses a name that matches no actor', toolName: 'system_control', arguments: { action: 'merge_actors', actors: [MERGE_PARENT_ACTOR, `NoSuchMergeActor_${ts}`] }, expected: 'error|ACTOR_NOT_FOUND' },
     // === CONFIG ===
     { scenario: 'CONFIG: configure_occlusion_culling', toolName: 'system_control', arguments: {"action": "configure_occlusion_culling"}, expected: 'success' },
   { scenario: 'CONFIG: configure_occlusion_culling slop and min screen radius', toolName: 'system_control', arguments: { action: 'configure_occlusion_culling', enabled: true, slop: 1, minScreenRadius: 0.01 }, expected: 'success' },

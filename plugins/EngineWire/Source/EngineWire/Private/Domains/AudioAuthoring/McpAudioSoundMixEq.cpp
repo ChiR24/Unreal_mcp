@@ -37,7 +37,23 @@ TSharedPtr<FJsonObject> HandleSoundMixEqActions(const FString& SubAction, const 
 		return McpHandlerUtils::BuildErrorResponse(TEXT("MIX_NOT_FOUND"), FString::Printf(TEXT("Could not load SoundMix: %s"), *AssetPath));
 	}
 
-	Mix->bApplyEQ = GetJsonBoolField(Params, TEXT("applyEQ"), true);
+	// A call sending nothing switched the EQ on, saved and answered success. Bands switch it on unless applyEQ is sent.
+	static const TCHAR* BandFields[] = {TEXT("eqSettings"), TEXT("lowFrequency"), TEXT("lowGain"), TEXT("midFrequency"), TEXT("midGain"),
+		TEXT("highMidFrequency"), TEXT("highMidGain"), TEXT("highFrequency"), TEXT("highGain")};
+	bool bBandsSent = false;
+	for (const TCHAR* Field : BandFields)
+	{
+		bBandsSent |= Params->HasField(Field);
+	}
+	if (!bBandsSent && !Params->HasField(TEXT("applyEQ")) && !Params->HasField(TEXT("eqPriority")))
+	{
+		return McpHandlerUtils::BuildErrorResponse(TEXT("INVALID_ARGUMENT"), TEXT("Nothing to set: send applyEQ, eqPriority, eqSettings or a band (lowFrequency, lowGain, midFrequency, ...)."));
+	}
+	Mix->Modify();
+	if (Params->HasField(TEXT("applyEQ")) || bBandsSent)
+	{
+		Mix->bApplyEQ = GetJsonBoolField(Params, TEXT("applyEQ"), true);
+	}
 	if (Params->HasField(TEXT("eqPriority")))
 	{
 		Mix->EQPriority = static_cast<float>(GetJsonNumberField(Params, TEXT("eqPriority"), 1.0));
@@ -72,17 +88,23 @@ TSharedPtr<FJsonObject> HandleSoundMixEqActions(const FString& SubAction, const 
 	}
 
 	ClampMixEq(Mix);
-	SaveAudioAsset(Mix, bSave);
+	Response->SetBoolField(TEXT("saved"), SaveAudioAsset(Mix, bSave));
+	// Every band after clamping (gain 0-4, frequency 0-20000, bandwidth 0-2), under the eqSettings names.
+	const FAudioEQEffect& EQ = Mix->EQSettings;
+	const TPair<const TCHAR*, float> Bands[] = {
+		{TEXT("frequencyCenter0"), EQ.FrequencyCenter0}, {TEXT("gain0"), EQ.Gain0}, {TEXT("bandwidth0"), EQ.Bandwidth0},
+		{TEXT("frequencyCenter1"), EQ.FrequencyCenter1}, {TEXT("gain1"), EQ.Gain1}, {TEXT("bandwidth1"), EQ.Bandwidth1},
+		{TEXT("frequencyCenter2"), EQ.FrequencyCenter2}, {TEXT("gain2"), EQ.Gain2}, {TEXT("bandwidth2"), EQ.Bandwidth2},
+		{TEXT("frequencyCenter3"), EQ.FrequencyCenter3}, {TEXT("gain3"), EQ.Gain3}, {TEXT("bandwidth3"), EQ.Bandwidth3}};
 	TSharedPtr<FJsonObject> EQInfo = McpHandlerUtils::CreateResultObject();
-	EQInfo->SetNumberField(TEXT("frequencyCenter0"), Mix->EQSettings.FrequencyCenter0);
-	EQInfo->SetNumberField(TEXT("gain0"), Mix->EQSettings.Gain0);
-	EQInfo->SetNumberField(TEXT("frequencyCenter1"), Mix->EQSettings.FrequencyCenter1);
-	EQInfo->SetNumberField(TEXT("gain1"), Mix->EQSettings.Gain1);
-	EQInfo->SetNumberField(TEXT("frequencyCenter2"), Mix->EQSettings.FrequencyCenter2);
-	EQInfo->SetNumberField(TEXT("gain2"), Mix->EQSettings.Gain2);
-	EQInfo->SetNumberField(TEXT("frequencyCenter3"), Mix->EQSettings.FrequencyCenter3);
-	EQInfo->SetNumberField(TEXT("gain3"), Mix->EQSettings.Gain3);
+	for (const TPair<const TCHAR*, float>& Band : Bands)
+	{
+		EQInfo->SetNumberField(Band.Key, Band.Value);
+	}
 	Response->SetObjectField(TEXT("eqSettings"), EQInfo);
+	Response->SetBoolField(TEXT("applyEQ"), Mix->bApplyEQ != 0);
+	Response->SetNumberField(TEXT("eqPriority"), Mix->EQPriority);
+	Response->SetStringField(TEXT("message"), FString::Printf(TEXT("EQ of %s configured (%s)"), *Mix->GetName(), Mix->bApplyEQ ? TEXT("applied") : TEXT("off")));
 	McpHandlerUtils::AddVerification(Response, Mix);
 	Response->SetBoolField(TEXT("success"), true);
 	return Response;

@@ -51,7 +51,13 @@ bool HandleSetPerceptionTeam(UEngineWireSubsystem* Self, const FString& RequestI
 {
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
-    int32 TeamId = static_cast<int32>(GetJsonNumberField(Payload, TEXT("teamId"), 0));
+    double TeamValue = 0.0;
+    if (!Payload->TryGetNumberField(TEXT("teamId"), TeamValue) || TeamValue < 0.0 || TeamValue > 255.0)
+    {
+        Self->SendAutomationError(RequestingSocket, RequestId, TEXT("teamId is required: 0 to 254, 255 meaning no team."), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+    const int32 TeamId = static_cast<int32>(TeamValue);
 
     UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
     if (!Blueprint)
@@ -62,19 +68,9 @@ bool HandleSetPerceptionTeam(UEngineWireSubsystem* Self, const FString& RequestI
         return true;
     }
 
-    bool bAppliedToGenericTeamAgent = false;
-    if (Blueprint->GeneratedClass)
-    {
-        if (UObject* CDO = Blueprint->GeneratedClass->GetDefaultObject())
-        {
-            if (IGenericTeamAgentInterface* TeamAgent = Cast<IGenericTeamAgentInterface>(CDO))
-            {
-                TeamAgent->SetGenericTeamId(FGenericTeamId(static_cast<uint8>(FMath::Clamp(TeamId, 0, 255))));
-                bAppliedToGenericTeamAgent = true;
-            }
-        }
-    }
-
+    // SetGenericTeamId on the class default object was reported as applied, but AAIController keeps its team in a
+    // plain member: never saved, never copied to the controllers spawned from the class. Blueprints cannot set it, so
+    // the team is stored in a GenericTeamId variable for the project's own logic to apply.
     const FName TeamVarName(TEXT("GenericTeamId"));
     bool bStoredBlueprintVariable = false;
     const bool bHasTeamVariable = Blueprint->GeneratedClass &&
@@ -94,20 +90,22 @@ bool HandleSetPerceptionTeam(UEngineWireSubsystem* Self, const FString& RequestI
         bStoredBlueprintVariable = true;
     }
 
-    if (bStoredBlueprintVariable)
+    if (!bStoredBlueprintVariable)
     {
-        SetBPVarDefaultValueAI(Blueprint, TeamVarName, FString::FromInt(TeamId));
+        Self->SendAutomationError(RequestingSocket, RequestId, TEXT("The GenericTeamId variable could not be added to the Blueprint."), TEXT("VARIABLE_FAILED"));
+        return true;
     }
+    SetBPVarDefaultValueAI(Blueprint, TeamVarName, FString::FromInt(TeamId));
 
     FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
     Blueprint->MarkPackageDirty();
-    McpSafeAssetSave(Blueprint);
     Result->SetNumberField(TEXT("teamId"), TeamId);
-    Result->SetBoolField(TEXT("appliedToGenericTeamAgent"), bAppliedToGenericTeamAgent);
-    Result->SetBoolField(TEXT("storedBlueprintVariable"), bStoredBlueprintVariable);
-    Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Team ID set to %d"), TeamId));
+    Result->SetStringField(TEXT("variable"), TeamVarName.ToString());
+    Result->SetBoolField(TEXT("appliedToGenericTeamAgent"), false);
+    Result->SetBoolField(TEXT("saved"), McpSafeAssetSave(Blueprint));
     McpHandlerUtils::AddVerification(Result, Blueprint);
-    Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Team set"), Result);
+    Self->SendAutomationResponse(RequestingSocket, RequestId, true,
+        FString::Printf(TEXT("GenericTeamId variable set to %d; an AI controller takes a team only through C++ SetGenericTeamId"), TeamId), Result);
     return true;
 }
 }

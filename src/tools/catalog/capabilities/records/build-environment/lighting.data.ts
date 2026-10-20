@@ -64,7 +64,7 @@ export const LIGHTING_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'build_environment.create_lightmass_volume', action: 'create_lightmass_volume', family: F,
-    summary: 'Create a LightmassImportanceVolume actor.',
+    summary: 'Place a Lightmass Importance Volume in the editor level: a box size cm across (default 1000 on each axis) at location, labelled name (a label already in the level is refused), in one undo step. Lightmass spends its photons inside it, so baked lighting outside is coarser; the reply gives the size it encloses. manage_level_structure create_volume (volumeClass LightmassImportanceVolume) places the same volume.',
     whenToUse: ['A lightmass importance volume is needed for baking.'],
     whenNotToUse: ['Dynamic lighting is used exclusively.'],
     inputProps: { name: P.name, location: P.location, size: P.size },
@@ -73,7 +73,7 @@ export const LIGHTING_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'build_environment.create_lighting_enabled_level', action: 'create_lighting_enabled_level', family: F,
-    summary: 'Create a level with lighting enabled.',
+    summary: 'Create a new level at path (levelName is appended when path is a folder) lit by a sun (a directional light driving the sky), a SkyAtmosphere and a sky light capturing that sky in real time, save it and open it in place of the open level; actors lists what it holds. Refused during Play (PIE_ACTIVE) and while open levels have unsaved changes (DIRTY_PACKAGES, listed in unsavedPackages); a level already at the path is neither replaced nor opened (alreadyExisted).',
     whenToUse: ['A new level with lighting setup is needed.'],
     whenNotToUse: ['An existing level should be modified.'],
     inputProps: { name: P.name, path: P.path, levelName: str('Level name; appended when path is a folder.') },

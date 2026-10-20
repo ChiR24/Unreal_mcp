@@ -55,11 +55,8 @@ bool HandleWidgetAuthoringCreation(
         UClass* ParentUClass = UUserWidget::StaticClass();
         if (!ParentClass.Equals(TEXT("UserWidget"), ESearchCase::IgnoreCase))
         {
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-            ParentUClass = FindFirstObject<UClass>(*ParentClass, EFindFirstObjectOptions::None);
-#else
+            // FindFirstObject (5.1+) found only a loaded class by name, not a Widget Blueprint path to parent on.
             ParentUClass = ResolveClassByName(ParentClass);
-#endif
             if (!ParentUClass)
             {
                 ParentUClass = LoadClass<UUserWidget>(nullptr, *ParentClass);
@@ -207,24 +204,33 @@ bool HandleWidgetAuthoringCreation(
             return true;
         }
 
-        // Find parent class
-        // Note: FindFirstObject was introduced in UE 5.1
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-        UClass* NewParentClass = FindFirstObject<UClass>(*ParentClass, EFindFirstObjectOptions::None);
-#else
+        // From 5.1 this found only a class already loaded, by name, so a Widget Blueprint path (the record's own example)
+        // was INVALID_CLASS; ResolveClassByName loads a class or Blueprint path in every version.
         UClass* NewParentClass = ResolveClassByName(ParentClass);
-#endif
         if (!NewParentClass || !NewParentClass->IsChildOf(UUserWidget::StaticClass()))
         {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Parent class not found or invalid"), TEXT("INVALID_CLASS"));
+            Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("parentClass %s is not a UserWidget class or Widget Blueprint that loads. Nothing was changed."), *ParentClass), TEXT("INVALID_CLASS"));
+            return true;
+        }
+        // This widget, or one deriving from it, as its parent made the class its own ancestor.
+        if (WidgetBP->GeneratedClass && NewParentClass->IsChildOf(WidgetBP->GeneratedClass))
+        {
+            Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("%s is %s itself or derives from it; a class cannot be its own parent. Nothing was changed."),
+                *NewParentClass->GetName(), *WidgetBP->GetName()), TEXT("CYCLIC_PARENT"));
             return true;
         }
 
-        // Set parent class
+        // As the editor's Reparent does: nodes refreshed and the class compiled against its new parent, then saved.
+        const FString PreviousParent = WidgetBP->ParentClass ? WidgetBP->ParentClass->GetPathName() : FString();
+        WidgetBP->Modify();
         WidgetBP->ParentClass = NewParentClass;
-        WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
+        FBlueprintEditorUtils::RefreshAllNodes(WidgetBP);
+        WidgetAuthoringHelpers::RefreshWidgetBlueprintClass(WidgetBP);
+        ResultJson->SetBoolField(TEXT("saved"), WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP));
 
         ResultJson->SetBoolField(TEXT("success"), true);
+        ResultJson->SetStringField(TEXT("parentClass"), NewParentClass->GetPathName());
+        ResultJson->SetStringField(TEXT("previousParentClass"), PreviousParent);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Set parent class to: %s"), *ParentClass));
 
         Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true,

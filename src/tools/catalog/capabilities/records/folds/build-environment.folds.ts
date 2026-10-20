@@ -72,7 +72,7 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'create_lighting_setup', selector: 'kind',
-    summary: 'Create a lighting-enabled level or a Lightmass importance volume.',
+    summary: 'Create lighting scaffolding, chosen by kind: level makes, saves and opens a new level lit by a sun, a SkyAtmosphere and a real-time sky light (refused over unsaved levels and during Play); lightmass_volume places a Lightmass Importance Volume box in the editor level, inside which baked lighting gets full quality.',
     members: { level: 'create_lighting_enabled_level', lightmass_volume: 'create_lightmass_volume' },
   },
   // render / post process

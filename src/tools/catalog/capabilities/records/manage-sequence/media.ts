@@ -21,7 +21,7 @@ const D = 'media';
 export const MEDIA_RECORDS: readonly CapabilityRecordSource[] = [
   buildRecord({
     id: 'sequence.media.create_media_player', action: 'create_media_player', family: F, domain: D,
-    summary: 'Create a MediaPlayer asset for media playback.',
+    summary: 'Create a MediaPlayer asset named name in path and save it: loop (default false) and playOnOpen (default true). mediaSourcePath opens that source on it at once (openStatus pending); a source that does not validate or that the player cannot play is refused with nothing created, and so is a taken name (MEDIA_ASSET_ALREADY_EXISTS). Its picture shows through a media texture and its sound through a media sound component; play_media plays it.',
     whenToUse: ['A media player asset must be created for video/audio playback.'],
     whenNotToUse: ['An existing media player should be reused.'],
     inputProps: { name: P.name, path: P.path, assetPath: P.assetPath, mediaSourcePath: P.mediaSourcePath, sourcePath: P.sourcePath, autoPlay: A.autoPlay, playOnOpen: A.playOnOpen, loop: A.loop, looping: A.looping },
@@ -54,7 +54,7 @@ export const MEDIA_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'sequence.media.create_media_source', action: 'create_media_source', family: F, domain: D,
-    summary: 'Create a MediaSource asset (FileMediaSource or PlatformMediaSource).',
+    summary: 'Create a media source asset and save it: sourceType file (default) points at filePath, a video file under the project\'s Content or Saved folder that must exist (MEDIA_PATH_NOT_ALLOWED, MEDIA_FILE_NOT_FOUND; precacheFile loads it into memory on open); platform maps platformSources to source assets with defaultSourcePath as the fallback. Network streams are refused. A taken name is MEDIA_ASSET_ALREADY_EXISTS.',
     whenToUse: ['A media source asset must be created for a media file.'],
     whenNotToUse: ['An existing media source should be reused.'],
     inputProps: {
@@ -67,12 +67,12 @@ export const MEDIA_RECORDS: readonly CapabilityRecordSource[] = [
     outputProps: { mediaSourcePath: P.mediaSourcePath },
     outputRequired: ['mediaSourcePath'],
     effect: 'write', latency: 'interactive', resources: 'low', plugins: MEDIA_PLUGINS,
-    exampleInput: { action: 'create_media_source', name: 'MS_Cinematics', path: '/Game/Media', sourceType: 'File', filePath: '/tmp/cinematics/source.mp4' },
+    exampleInput: { action: 'create_media_source', name: 'MS_Cinematics', path: '/Game/Media', sourceType: 'file', filePath: 'Content/Movies/Intro.mp4' },
     exampleOutput: { success: true, mediaSourcePath: '/Game/Media/MS_Cinematics' },
   }),
   buildRecord({
     id: 'sequence.media.create_media_texture', action: 'create_media_texture', family: F, domain: D,
-    summary: 'Create a MediaTexture asset linked to a MediaPlayer.',
+    summary: 'Create a MediaTexture asset and save it, bound to the MediaPlayer at mediaPlayerPath (MEDIA_PLAYER_NOT_FOUND when it does not load): use it in a material on a mesh or in a widget to show the player\'s picture. autoClear (default true) clears it when nothing plays; a taken name is MEDIA_ASSET_ALREADY_EXISTS.',
     whenToUse: ['A media texture must be created for video rendering.'],
     whenNotToUse: ['A media texture is not needed for audio-only playback.'],
     inputProps: { name: P.name, path: P.path, mediaPlayerPath: P.mediaPlayerPath, playerPath: P.playerPath, autoClear: A.autoClear },
@@ -82,7 +82,7 @@ export const MEDIA_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'sequence.media.create_media_sound_component', action: 'create_media_sound_component', family: F, domain: D,
-    summary: 'Create a MediaSoundComponent linked to a MediaPlayer.',
+    summary: 'Add a MediaSoundComponent to a placed actor (actorName) that plays the sound of the MediaPlayer at mediaPlayerPath, named componentName (default MediaSound_<player>); a name the actor already has is refused (NAME_TAKEN). activate (default true) starts it. It lives on the level actor, so no asset is created; save the level to keep it.',
     whenToUse: ['Audio from media playback must be routed through a sound component.'],
     whenNotToUse: ['Audio is not needed for the media playback.'],
     // Native HandleCreateMediaSoundComponent (MediaComponents.cpp) adds the
@@ -94,7 +94,7 @@ export const MEDIA_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'sequence.media.create_media_playlist', action: 'create_media_playlist', family: F, domain: D,
-    summary: 'Create a MediaPlaylist asset for sequential media source playback.',
+    summary: 'Create a MediaPlaylist asset and save it, holding the media source assets sourcePaths and then the local files filePaths (under the project\'s Content or Saved folder) in order; a source that does not load or a file that is missing or elsewhere is refused with nothing created. play_media plays it from playlistIndex.',
     whenToUse: ['A playlist of multiple media sources must be created.'],
     whenNotToUse: ['Only a single media source is needed.'],
     inputProps: {

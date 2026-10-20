@@ -115,6 +115,7 @@ bool HandleConfigureStateTreeTask(UEngineWireSubsystem* Self, const FString& Req
         return true;
     }
 
+    FoundState->Modify();
     TArray<FString> Applied;
     TArray<FString> Failed;
     if (!SelectionBehavior.IsEmpty())
@@ -174,17 +175,18 @@ bool HandleConfigureStateTreeTask(UEngineWireSubsystem* Self, const FString& Req
         }
     }
 
+    const int32 TaskCount = FoundState->Tasks.Num();
+    McpCompileStateTreeInto(StateTree, Result);
     const bool bSaved = McpSafeAssetSave(StateTree);
 
     Result->SetStringField(TEXT("assetPath"), StateTree->GetPathName());
     Result->SetStringField(TEXT("packagePath"), StateTree->GetOutermost()->GetName()); // dogfood #66
     Result->SetStringField(TEXT("stateName"), StateName);
-    Result->SetNumberField(TEXT("taskCount"), FoundState->Tasks.Num());
+    Result->SetNumberField(TEXT("taskCount"), TaskCount);
     Result->SetArrayField(TEXT("applied"), ToJsonStringArray(Applied));
     Result->SetArrayField(TEXT("failed"), ToJsonStringArray(Failed));
     Result->SetBoolField(TEXT("saved"), bSaved);
     Result->SetStringField(TEXT("message"), FString::Printf(TEXT("State task updated: %d field(s) applied"), Applied.Num()));
-    Result->SetStringField(TEXT("note"), TEXT("Edits target the StateTree editor data; recompile the asset in the StateTree editor to bake them into the runtime tree."));
     Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("State task updated"), Result);
 #else
     Self->SendAutomationError(RequestingSocket, RequestId,

@@ -60,7 +60,7 @@ export const MANAGE_AUDIO_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'configure_sound_class', selector: 'setting',
-    summary: 'Configure a sound class or mix: parent class, class properties, mix modifier, mix EQ.',
+    summary: 'Change a Sound Class or Sound Mix, chosen by setting, each saved: parent sets or clears a class\'s parent (a loop is refused), properties sets its volume, pitch, low-pass, LFE bleed and center-channel volume, mix_modifier adds or edits the adjuster a mix applies to a class (and the mix fades), mix_eq sets the mix\'s four EQ bands. A call that sets nothing is refused.',
     topics: ['sound class properties', 'sound class parent', 'mix modifier', 'mix eq', 'mix equalizer', 'master volume'],
     members: { parent: 'set_class_parent', properties: 'set_class_properties', mix_modifier: 'add_mix_modifier', mix_eq: 'configure_mix_eq' },
   },

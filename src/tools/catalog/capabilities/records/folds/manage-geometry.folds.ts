@@ -13,7 +13,7 @@ export const MANAGE_GEOMETRY_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'boolean_mesh', selector: 'booleanOp',
-    summary: 'Boolean mesh operations: union, subtract, intersection, trim, self-union.',
+    summary: 'Combine placed dynamic mesh actors, chosen by booleanOp, editing targetActor\'s mesh in place in world space: union adds toolActor, subtract cuts it out, intersection keeps only the overlap, trim cuts by trimActorName (keepInside keeps the inside), self_union resolves a mesh\'s own overlaps. keepTool (default true) keeps the tool actor; a result that would be empty or change nothing is refused (EMPTY_RESULT, NO_EFFECT) with the target as it was and the tool kept to move. Triangle counts before and after come back; not undoable.',
     topics: ['boolean', 'union', 'subtract', 'intersection', 'trim mesh', 'csg', 'cut a hole in a mesh'],
     members: { union: 'boolean_union', subtract: 'boolean_subtract', intersection: 'boolean_intersection', trim: 'boolean_trim', self_union: 'self_union' },
   },

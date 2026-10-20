@@ -1345,7 +1345,7 @@ describe('material and widget authoring', () => {
   // of the generated class after the next compile.
   it('create_widget_animation compiles the Widget Blueprint so a graph can read the animation at once', () => {
     const core = code('WidgetAuthoring', 'Animation', 'McpWidgetAnimCore.cpp');
-    expect(core).toMatch(/RegisterAnimationGuid\(WidgetBP, NewAnim\);\s*FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified\(WidgetBP\);\s*RefreshWidgetBlueprintClass\(WidgetBP\);\s*McpSafeAssetSave\(WidgetBP\);/u);
+    expect(core).toMatch(/RegisterAnimationGuid\(WidgetBP, NewAnim\);\s*FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified\(WidgetBP\);\s*RefreshWidgetBlueprintClass\(WidgetBP\);\s*ResultJson->SetBoolField\(TEXT\("saved"\), McpSafeAssetSave\(WidgetBP\)\);/u);
   });
 
   // Re-keying a frame answered "4 keys in the track" for a 3-key track: the new key went in beside the old one on
@@ -4089,11 +4089,137 @@ describe('AI and navigation writes say what they did', () => {
     expect(code('Landscape', 'McpLandscapeCreationTask.cpp')).toContain('Landscape->SetActorRelativeScale3D(FVector(100.0f, 100.0f, 100.0f));');
   });
 
+  it('State Trees get a schema and are compiled after every edit', () => {
+    const feature = code('AI', 'StateTree', 'McpAIStateTreeFeature.h');
+    expect(feature).toContain('/Script/GameplayStateTreeModule.StateTreeComponentSchema');
+    expect(feature).not.toContain('__has_include("Components/StateTreeComponentSchema.h")');
+    expect(feature).toContain('UStateTreeEditingSubsystem::CompileStateTree(Tree, Log)');
+    expect(feature).toContain('FStateTreeCompiler Compiler(Log);');
+    const assets = code('AI', 'StateTree', 'McpAIStateTreeAssets.cpp');
+    expect(assets).toContain('CreateAIAssetInPackage<UStateTree>(');
+    expect(assets).toContain('TEXT("NAME_TAKEN")');
+    expect(assets.match(/McpCompileStateTreeInto\(StateTree, Result\);/gu)).toHaveLength(2);
+    expect(code('AI', 'StateTree', 'McpAIStateTreeTransitions.cpp')).toContain('TriggerValue == INDEX_NONE || TriggerValue == 0');
+    expect(code('AI', 'StateTree', 'McpAIStateTreeTasks.cpp')).not.toContain('recompile the asset in the StateTree editor');
+  });
+
+  it('Smart Object, Mass and EQS writes refuse what they cannot do', () => {
+    expect(code('AI', 'SmartObjects', 'McpAISmartObjectsDefs.cpp')).toContain('CreateAIAssetInPackage<USmartObjectDefinition>(');
+    const components = code('AI', 'SmartObjects', 'McpAISmartObjectsComponents.cpp');
+    expect(components).toContain('TEXT("ALREADY_EXISTS")');
+    expect(components).toContain('Nothing to set: send activityTags or enabled.');
+    const mass = code('AI', 'Runtime', 'McpAIMass.cpp');
+    expect(mass).toContain('CreateAIAssetInPackage<UMassEntityConfigAsset>(');
+    expect(mass).toContain('a config cannot be its own');
+    const context = code('AI', 'EQS', 'McpAIEQSContextTests.cpp');
+    expect(context).toContain('Property->SetObjectPropertyValue_InContainer(Target, ContextClass);');
+    expect(context).not.toContain('Context %s configured');
+    const scoring = code('AI', 'EQS', 'McpAIEQSScoring.cpp');
+    expect(scoring.indexOf('Nothing to set: send scoringEquation')).toBeLessThan(scoring.indexOf('TargetTest->Modify();'));
+  });
+
+  it('perception senses keep what a call does not send, and no team is claimed', () => {
+    expect(code('AI', 'Perception', 'McpAIPerceptionConfigs.h')).toContain('Cast<TConfig>(*It)');
+    for (const file of ['McpAIPerceptionSight.cpp', 'McpAIPerceptionHearingDamage.cpp', 'McpAIPerceptionSetup.cpp']) {
+      const source = code('AI', 'Perception', file);
+      expect(source, file).toContain('FindOrAddSenseConfig<');
+      expect(source, file).not.toMatch(/NewObject<UAISenseConfig_\w+>\(PerceptionComp\)/u);
+    }
+    expect(code('AI', 'Perception', 'McpAIPerceptionTeam.cpp')).not.toContain('SetGenericTeamId(FGenericTeamId');
+  });
+
   it('set_ai_movement takes 0, refuses a negative value and a call that sets nothing', () => {
     const movement = code('AI', 'Navigation', 'McpAIMovement.cpp');
     expect(movement).toContain('Nothing to set: send maxWalkSpeed');
     expect(movement).toContain('if (Value < 0.0)');
     expect(movement).not.toContain('> 0.0f');
     expect(movement.indexOf('MovementComp->Modify();')).toBeLessThan(movement.indexOf('SetNumber(TEXT("maxWalkSpeed")'));
+  });
+
+  it('add_mass_spawner places a spawner that spawns, and a Mass config can gain a trait', () => {
+    const spawner = code('AI', 'Runtime', 'McpAIMassSpawner.cpp');
+    expect(spawner).toContain('World->SpawnActor(F.Spawner,');
+    expect(spawner).toContain('AppendElement(F.Generators, Spawner)');
+    expect(spawner).toContain('F.QueryTemplate->SetObjectPropertyValue(');
+    expect(code('AI', 'Runtime', 'McpAIMass.cpp')).not.toContain('Spawner configured');
+    expect(code('AI', 'Runtime', 'McpAIMass.cpp')).toContain('Config.AddTrait(*NewObject<UMassEntityTraitBase>(ConfigAsset, TraitClass');
+  });
+
+  it('a Smart Object slot gets the setup the editor gives a new slot', () => {
+    const defs = code('AI', 'SmartObjects', 'McpAISmartObjectsDefs.cpp');
+    expect(defs).toContain('FPropertyChangedEvent Added(SlotsProp, EPropertyChangeType::ArrayAdd);');
+    expect(defs).toContain('NotifySlotAdded(Definition, ArrayProp, SlotIndex);');
+  });
+
+  it('add_eqs_generator refuses settings its generator does not read, before it adds anything', () => {
+    const assets = code('AI', 'EQS', 'McpAIEQSAssets.cpp');
+    expect(assets).toContain('GeneratorSettingKeys(GeneratorClass)');
+    expect(assets).toContain('Result->SetBoolField(TEXT("saved"), McpSafeAssetSave(Query));');
+    expect(assets.indexOf('does not apply to %s')).toBeLessThan(assets.indexOf('Query->Modify();'));
+  });
+
+  it('sound class and mix edits refuse empty calls and keep one modifier per class', () => {
+    const classes = code('AudioAuthoring', 'McpAudioSoundClasses.cpp');
+    expect(classes).toContain('Nothing to set: send volume, pitch');
+    expect(classes).toContain('or an empty string to clear the parent.');
+    expect(code('AudioAuthoring', 'McpAudioSoundMixes.cpp')).toContain('Mix->SoundClassEffects.FindByPredicate(');
+    expect(code('AudioAuthoring', 'McpAudioSoundMixEq.cpp')).toContain('Nothing to set: send applyEQ');
+  });
+
+  it('perception replies and reads use the names the configure actions take', () => {
+    const configs = code('AI', 'Perception', 'McpAIPerceptionConfigs.h');
+    expect(configs).toContain('Out->SetObjectField(TEXT("detectionByAffiliation"), Affiliation);');
+    expect(configs).not.toContain('LoSHearingRange =');
+    for (const file of ['McpAIPerceptionSight.cpp', 'McpAIPerceptionHearingDamage.cpp']) {
+      expect(code('AI', 'Perception', file), file).toContain('AddSenseSettings(');
+    }
+    expect(code('AI', 'Runtime', 'McpAIInfoBP.cpp')).toContain('AddSenseSettings(Config, Sense);');
+  });
+});
+
+describe('widget renames and reparents keep what depends on them', () => {
+  it('a rename carries animation bindings, property bindings and navigation to the new name', () => {
+    const refs = code('WidgetAuthoring', 'Support', 'McpWidgetRenameRefs.cpp');
+    expect(refs).toContain('AnimBinding.WidgetName = NewName;');
+    expect(refs).toContain('Binding.ObjectName = NewName.ToString();');
+    expect(refs).toContain('TryToRenameBinding(OldName, NewName)');
+    expect(code('WidgetAuthoring', 'Support', 'McpWidgetManipulation.cpp')).toContain('McpRenameWidgetReferences(WidgetBP, OldFName, NewFName)');
+  });
+
+  it('a reparent loads a Widget Blueprint path and refuses a cycle', () => {
+    const creation = code('WidgetAuthoring', 'Support', 'McpWidgetCreation.cpp');
+    expect(creation).not.toContain('FindFirstObject<UClass>(*ParentClass');
+    expect(creation).toContain('TEXT("CYCLIC_PARENT")');
+  });
+});
+
+describe('lighting setup does not destroy work and builds what it names', () => {
+  it('a lit level refuses to replace unsaved levels and lights its sky', () => {
+    const level = code('Lighting', 'McpLightingLevelBootstrap.cpp');
+    expect(level.indexOf('McpRefuseLoadOverUnsavedLevels(')).toBeLessThan(level.indexOf('GEditor->NewMap();'));
+    expect(level.indexOf('TEXT("PIE_ACTIVE")')).toBeLessThan(level.indexOf('GEditor->NewMap();'));
+    expect(level).toContain('/Script/Engine.SkyAtmosphere');
+    expect(level).toContain('bRealTimeCapture = true;');
+  });
+
+  it('merge_actors places the merged mesh before it removes the sources, and skips no name', () => {
+    const merge = code('Performance', 'McpPerfActorMerge.cpp');
+    expect(merge).toContain('TEXT("ACTOR_NOT_FOUND")');
+    expect(merge).toContain('TEXT("ASSET_ALREADY_EXISTS")');
+    expect(merge.indexOf('SetStaticMesh(MergedMesh)')).toBeLessThan(merge.indexOf('ActorSubsystem->DestroyActor(Actor)'));
+    expect(merge).not.toContain('Actor->Destroy();');
+  });
+
+  it('component creators refuse a name the actor already has before NewObject collides', () => {
+    const media = code('Sequence', 'Media', 'McpSeqMediaComponents.cpp');
+    expect(media.indexOf('TEXT("NAME_TAKEN")')).toBeLessThan(media.indexOf('NewObject<UActorComponent>('));
+    const pcg = code('PCG', 'McpPCGComponentActions.cpp');
+    expect(pcg.indexOf('TEXT("NAME_TAKEN")')).toBeLessThan(pcg.indexOf('CreatePCGComponent(Actor, ComponentName)'));
+  });
+
+  it('a Lightmass volume gets a box brush in the editor level', () => {
+    const build = code('Lighting', 'McpLightingBuild.cpp');
+    expect(build).toContain('VolumeHelpers::SpawnVolumeActor<ALightmassImportanceVolume>(World,');
+    expect(build).not.toContain('SetActorScale3D(Size / 200.0f)');
   });
 });

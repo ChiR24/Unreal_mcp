@@ -6,19 +6,38 @@
 
 namespace McpAIHandlers
 {
-static EEnvTestScoreEquation::Type ParseEQSScoringEquationAI(const FString& Value)
+// An unknown name used to become Linear or Range; false now, and the call is refused.
+static bool ParseEQSScoringEquationAI(const FString& Value, EEnvTestScoreEquation::Type& Out)
 {
-    if (Value.Equals(TEXT("Square"), ESearchCase::IgnoreCase)) return EEnvTestScoreEquation::Square;
-    if (Value.Equals(TEXT("InverseLinear"), ESearchCase::IgnoreCase)) return EEnvTestScoreEquation::InverseLinear;
-    if (Value.Equals(TEXT("Constant"), ESearchCase::IgnoreCase)) return EEnvTestScoreEquation::Constant;
-    return EEnvTestScoreEquation::Linear;
+    static const TPair<const TCHAR*, EEnvTestScoreEquation::Type> Names[] = {
+        {TEXT("Linear"), EEnvTestScoreEquation::Linear}, {TEXT("Square"), EEnvTestScoreEquation::Square},
+        {TEXT("InverseLinear"), EEnvTestScoreEquation::InverseLinear}, {TEXT("SquareRoot"), EEnvTestScoreEquation::SquareRoot},
+        {TEXT("Constant"), EEnvTestScoreEquation::Constant}};
+    for (const auto& Name : Names)
+    {
+        if (Value.Equals(Name.Key, ESearchCase::IgnoreCase))
+        {
+            Out = Name.Value;
+            return true;
+        }
+    }
+    return false;
 }
 
-static EEnvTestFilterType::Type ParseEQSFilterTypeAI(const FString& Value)
+static bool ParseEQSFilterTypeAI(const FString& Value, EEnvTestFilterType::Type& Out)
 {
-    if (Value.Equals(TEXT("Minimum"), ESearchCase::IgnoreCase)) return EEnvTestFilterType::Minimum;
-    if (Value.Equals(TEXT("Maximum"), ESearchCase::IgnoreCase)) return EEnvTestFilterType::Maximum;
-    return EEnvTestFilterType::Range;
+    static const TPair<const TCHAR*, EEnvTestFilterType::Type> Names[] = {
+        {TEXT("Minimum"), EEnvTestFilterType::Minimum}, {TEXT("Maximum"), EEnvTestFilterType::Maximum},
+        {TEXT("Range"), EEnvTestFilterType::Range}, {TEXT("Match"), EEnvTestFilterType::Match}};
+    for (const auto& Name : Names)
+    {
+        if (Value.Equals(Name.Key, ESearchCase::IgnoreCase))
+        {
+            Out = Name.Value;
+            return true;
+        }
+    }
+    return false;
 }
 
 
@@ -95,68 +114,67 @@ bool HandleConfigureEQSTestScoring(UEngineWireSubsystem* Self, const FString& Re
     Payload->TryGetObjectField(TEXT("testSettings"), TestSettings);
     const TSharedPtr<FJsonObject>& Settings = (TestSettings && TestSettings->IsValid()) ? *TestSettings : Payload;
 
-    bool bConfiguredAnySetting = false;
+    // Every name is checked before the test changes.
     FString ScoringEquation;
-    if (Settings->TryGetStringField(TEXT("scoringEquation"), ScoringEquation) && !ScoringEquation.IsEmpty())
-    {
-        TargetTest->ScoringEquation = ParseEQSScoringEquationAI(ScoringEquation);
-        TargetTest->TestPurpose = EEnvTestPurpose::FilterAndScore;
-        bConfiguredAnySetting = true;
-    }
-
     FString FilterType;
-    if (Settings->TryGetStringField(TEXT("filterType"), FilterType) && !FilterType.IsEmpty())
+    EEnvTestScoreEquation::Type Equation = EEnvTestScoreEquation::Linear;
+    EEnvTestFilterType::Type Filter = EEnvTestFilterType::Range;
+    const bool bHasEquation = Settings->TryGetStringField(TEXT("scoringEquation"), ScoringEquation) && !ScoringEquation.IsEmpty();
+    const bool bHasFilter = Settings->TryGetStringField(TEXT("filterType"), FilterType) && !FilterType.IsEmpty();
+    if ((bHasEquation && !ParseEQSScoringEquationAI(ScoringEquation, Equation)) || (bHasFilter && !ParseEQSFilterTypeAI(FilterType, Filter)))
     {
-        TargetTest->FilterType = ParseEQSFilterTypeAI(FilterType);
-        TargetTest->TestPurpose = EEnvTestPurpose::FilterAndScore;
-        bConfiguredAnySetting = true;
+        Self->SendAutomationError(RequestingSocket, RequestId, TEXT("scoringEquation is Linear, Square, InverseLinear, SquareRoot or Constant; "
+            "filterType is Minimum, Maximum, Range or Match."), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+    // A call that set nothing used to switch the test to Linear scoring and answer configured.
+    if (!bHasEquation && !bHasFilter && !Settings->HasField(TEXT("clampMin")) && !Settings->HasField(TEXT("clampMax"))
+        && !Settings->HasField(TEXT("floatMin")) && !Settings->HasField(TEXT("floatMax")))
+    {
+        Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Nothing to set: send scoringEquation, filterType, clampMin, clampMax, "
+            "floatMin or floatMax (in testSettings or at the top level)."), TEXT("INVALID_ARGUMENT"));
+        return true;
     }
 
+    TargetTest->Modify();
+    TargetTest->TestPurpose = EEnvTestPurpose::FilterAndScore;
+    if (bHasEquation)
+    {
+        TargetTest->ScoringEquation = Equation;
+    }
+    if (bHasFilter)
+    {
+        TargetTest->FilterType = Filter;
+    }
     double NumericValue = 0.0;
     if (Settings->TryGetNumberField(TEXT("clampMin"), NumericValue))
     {
         TargetTest->ScoreClampMin.DefaultValue = static_cast<float>(NumericValue);
         TargetTest->ClampMinType = EEnvQueryTestClamping::SpecifiedValue;
-        TargetTest->TestPurpose = EEnvTestPurpose::FilterAndScore;
-        bConfiguredAnySetting = true;
     }
     if (Settings->TryGetNumberField(TEXT("clampMax"), NumericValue))
     {
         TargetTest->ScoreClampMax.DefaultValue = static_cast<float>(NumericValue);
         TargetTest->ClampMaxType = EEnvQueryTestClamping::SpecifiedValue;
-        TargetTest->TestPurpose = EEnvTestPurpose::FilterAndScore;
-        bConfiguredAnySetting = true;
     }
+    // A float range filters by Range; an explicit filterType wins.
     if (Settings->TryGetNumberField(TEXT("floatMin"), NumericValue))
     {
         TargetTest->FloatValueMin.DefaultValue = static_cast<float>(NumericValue);
-        TargetTest->FilterType = EEnvTestFilterType::Range;
-        TargetTest->TestPurpose = EEnvTestPurpose::FilterAndScore;
-        bConfiguredAnySetting = true;
+        TargetTest->FilterType = bHasFilter ? Filter : EEnvTestFilterType::Range;
     }
     if (Settings->TryGetNumberField(TEXT("floatMax"), NumericValue))
     {
         TargetTest->FloatValueMax.DefaultValue = static_cast<float>(NumericValue);
-        TargetTest->FilterType = EEnvTestFilterType::Range;
-        TargetTest->TestPurpose = EEnvTestPurpose::FilterAndScore;
-        bConfiguredAnySetting = true;
-    }
-
-    if (!bConfiguredAnySetting)
-    {
-        TargetTest->TestPurpose = EEnvTestPurpose::FilterAndScore;
-        TargetTest->ScoringEquation = EEnvTestScoreEquation::Linear;
-        bConfiguredAnySetting = true;
+        TargetTest->FilterType = bHasFilter ? Filter : EEnvTestFilterType::Range;
     }
 
     Query->MarkPackageDirty();
-    McpSafeAssetSave(Query);
     Result->SetNumberField(TEXT("optionIndex"), ResolvedOptionIndex);
     Result->SetNumberField(TEXT("optionTestIndex"), ResolvedTestIndex);
     Result->SetNumberField(TEXT("testIndex"), TestIndex);
     Result->SetStringField(TEXT("testClass"), TargetTest->GetClass()->GetName());
-    Result->SetBoolField(TEXT("configured"), bConfiguredAnySetting);
-    Result->SetStringField(TEXT("message"), TEXT("Test scoring configured"));
+    Result->SetBoolField(TEXT("saved"), McpSafeAssetSave(Query));
 
     McpHandlerUtils::AddVerification(Result, Query);
     Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Scoring configured"), Result);

@@ -1,4 +1,5 @@
 #include "Domains/Navigation/McpNavPrivate.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 #include "Foundation/McpScopedEditorTransaction.h"
 
 namespace McpNavigationHandlers

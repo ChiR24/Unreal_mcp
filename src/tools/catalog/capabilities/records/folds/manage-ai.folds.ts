@@ -38,7 +38,7 @@ export const MANAGE_AI_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'setup_perception', selector: 'setting',
-    summary: 'Set up AI perception on a Blueprint or controller: add the component, configure sight, hearing or damage senses, team, or runtime perception.',
+    summary: 'Set up AI perception on an AI controller or pawn Blueprint, chosen by setting, each saved: setup adds the component and several senses at once, add_component only the component (kept when present), sight, hearing and damage tune one sense and keep what is not sent, team stores a team id variable (the engine team itself needs C++), controller is setup for an AIController path. An actor with no team is neutral, so a sense must detect neutrals to notice the player.',
     topics: ['ai perception', 'sight config', 'hearing config', 'damage sense', 'perception team', 'sight range'],
     members: {
       setup: 'setup_perception', add_component: 'add_ai_perception_component', sight: 'configure_sight_config', hearing: 'configure_hearing_config',
@@ -67,31 +67,31 @@ export const MANAGE_AI_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'edit_eqs_query', selector: 'edit',
-    summary: 'Create an EQS query or edit it: add generators, tests and contexts, configure test scoring.',
+    summary: 'Create an Environment Query or edit it, chosen by edit, each saved: create makes the asset, add_generator gives an option its items (ActorsOfClass, CurrentLocation, Donut, OnCircle, PathingGrid, SimpleGrid, Composite), add_test adds a test (Distance, Dot, GameplayTags, Overlap, Pathfinding, PathfindingBatch, Project, Random, Trace), add_context points a generator or test at the querier, the items or a context class, configure_test_scoring sets the equation, clamps and filter of a test. A Behavior Tree runs it with a Run EQS Query task.',
     topics: ['eqs', 'environment query', 'eqs generator', 'eqs test'],
     members: { create: 'create_eqs_query', add_generator: 'add_eqs_generator', add_test: 'add_eqs_test', add_context: 'add_eqs_context', configure_test_scoring: 'configure_test_scoring' },
   },
   {
     primary: 'edit_mass_entity', selector: 'edit',
-    summary: 'Create a Mass entity config, configure its traits, or add a Mass spawner.',
+    summary: 'Build Mass entities, chosen by edit: create_config makes an empty Mass entity config asset and configure adds a trait to it or sets trait properties or a parent config, each saved; add_spawner places a Mass Spawner actor that spawns the config\'s entities at the items of an Environment Query when play begins. A configure call that sets nothing is refused.',
     topics: ['mass entity', 'mass spawner', 'mass config'],
     members: { create_config: 'create_mass_entity_config', configure: 'configure_mass_entity', add_spawner: 'add_mass_spawner' },
   },
   {
     primary: 'edit_smart_object', selector: 'edit',
-    summary: 'Create a Smart Object definition, add slots, configure slot behavior, or add a Smart Object component.',
+    summary: 'Build Smart Objects, chosen by edit, each saved: create_definition makes a definition asset, add_slot adds a slot at an offset, configure_slot enables a slot or adds registered activity tags, add_component puts a Smart Object component (with its definition) on an actor Blueprint. A taken path or component name, an unregistered tag and a definition that does not load are refused.',
     topics: ['smart object', 'smart object slot', 'smart object definition'],
     members: { create_definition: 'create_smart_object_definition', add_slot: 'add_smart_object_slot', configure_slot: 'configure_slot_behavior', add_component: 'add_smart_object_component' },
   },
   {
     primary: 'edit_state_tree', selector: 'edit',
-    summary: 'Create a State Tree or edit it: add states and transitions, configure tasks.',
+    summary: 'Create a State Tree or edit it, chosen by edit, each compiled and saved: create makes the asset with a Root state and a schema (component or ai, from the GameplayStateTree plugin), add_state adds a named state, add_transition links two states on a trigger, configure_task sets the properties of a task or the selection behavior of a state. compiled says whether the tree compiled (an uncompiled tree does not run), with compileMessages.',
     topics: ['state tree', 'state tree state', 'state tree transition', 'state tree task', 'make a state tree'],
     members: { create: 'create_state_tree', add_state: 'add_state_tree_state', add_transition: 'add_state_tree_transition', configure_task: 'configure_state_tree_task' },
   },
   {
     primary: 'get_ai_info', selector: 'info',
-    summary: 'Read an AI asset: a pawn or AI controller Blueprint (perception, team, movement), a Behavior Tree summary, Blackboard keys, State Tree states or EQS query options; info=navigation returns NavMesh and agent settings.',
+    summary: 'Read an AI asset: a pawn or AI controller Blueprint (each perception sense with its settings under the names the configure actions take, the engine teamId and the teamIdVariable set_perception_team stores, movement), a Behavior Tree summary, Blackboard keys, State Tree states or EQS query options; info=navigation returns NavMesh and agent settings.',
     topics: ['controller settings', 'list blackboard keys', 'navmesh settings', 'state tree states'],
     members: { ai: 'get_ai_info', navigation: 'get_navigation_info' },
   },

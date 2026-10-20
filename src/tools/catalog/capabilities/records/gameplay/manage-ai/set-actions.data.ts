@@ -151,16 +151,16 @@ export const AI_SET_RECORDS: readonly CapabilityRecordSource[] = [
     result: 'Node properties set',
   }),
   aiRecord({
-    action: 'set_perception_team', summary: 'Set perception team data on a Blueprint asset.',
-    use: 'An AI must belong to a specific perception team.',
+    action: 'set_perception_team', summary: 'Store a team id (teamId 0 to 254, 255 meaning none) in a GenericTeamId integer variable on a Blueprint (added when missing) and save. It does not change the team the engine sees: an AI controller takes a team only in C++ (SetGenericTeamId is not exposed to Blueprints), so appliedToGenericTeamAgent is false, and an actor with no team counts as neutral to every AI. Read the variable from the project logic.',
+    use: 'A team id should be stored on the AI for its own logic to read.',
     avoid: 'Use configure_sight_config for sense tuning.',
     props: { blueprintPath: A.blueprintPath, teamId: A.teamId },
-    required: ['blueprintPath'],
+    required: ['blueprintPath', 'teamId'],
     out: { blueprintPath: A.blueprintPath },
     example: { blueprintPath: '/Game/AI/BP_Enemy', teamId: 2 }, result: 'Perception team set',
   }),
   aiRecord({
-    action: 'setup_perception', summary: 'Set up AI perception on a Blueprint asset.',
+    action: 'setup_perception', summary: 'Add or update the AIPerception component of an AI controller or pawn Blueprint and save: enableSight, enableHearing and enableDamage set up or update each sense (sightRadius, loseSightRadius, peripheralVisionAngle, hearingRange), and dominantSense (Sight, Hearing, Damage, Touch or None) picks the sense whose stimulus location wins. A sense already set up keeps what this call does not send; a call that enables nothing and names no dominant sense is refused. createdNew says whether the component was added.',
     use: 'A Blueprint needs perception added and several senses tuned at once.',
     avoid: 'Use the individual configure_*_config actions for one sense.',
     props: {
@@ -186,7 +186,7 @@ export const AI_SET_RECORDS: readonly CapabilityRecordSource[] = [
     }),
     aiRecord({
       action: 'set_ai_perception',
-      summary: 'Configure the sight and hearing senses of an AIController perception component.',
+      summary: 'Add or update the AIPerception component of an AI controller Blueprint (controllerPath) and save, as setup_perception does: enableSight, enableHearing and enableDamage set up or update each sense (sightRadius, loseSightRadius, peripheralVisionAngle, hearingRange) and dominantSense picks the leading one. A sense already set up keeps what is not sent; a call that enables nothing and names no dominant sense is refused.',
       use: 'One call should add the perception component and set its senses together.',
       avoid: 'Only one sense needs tuning; configure_sight_config and configure_hearing_config edit them separately.',
       props: {

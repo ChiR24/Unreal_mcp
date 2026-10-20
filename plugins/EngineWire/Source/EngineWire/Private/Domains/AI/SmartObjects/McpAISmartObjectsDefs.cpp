@@ -20,6 +20,24 @@ static bool IsSmartObjectsModuleAvailable()
     return false;
 }
 
+// Tells the definition a slot was added the way the details panel does, so each engine version gives it what the
+// editor gives a new slot (a fresh ID, the definition's world condition schema: without it every save warned
+// "missing schema").
+static void NotifySlotAdded(UObject* Definition, FArrayProperty* SlotsProp, int32 SlotIndex)
+{
+    FEditPropertyChain Chain;
+    Chain.AddHead(SlotsProp);
+    Chain.SetActivePropertyNode(SlotsProp);
+    Chain.SetActiveMemberPropertyNode(SlotsProp);
+    TArray<TMap<FString, int32>> Indices;
+    Indices.AddDefaulted_GetRef().Add(SlotsProp->GetName(), SlotIndex);
+    FPropertyChangedEvent Added(SlotsProp, EPropertyChangeType::ArrayAdd);
+    Added.SetArrayIndexPerObject(Indices);
+    Added.ObjectIteratorIndex = 0;
+    FPropertyChangedChainEvent Event(Chain, Added);
+    Definition->PostEditChangeChainProperty(Event);
+}
+
 // Implements the "create_smart_object_definition" action.
 bool HandleCreateSmartObjectDefinition(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
@@ -42,29 +60,20 @@ bool HandleCreateSmartObjectDefinition(UEngineWireSubsystem* Self, const FString
         return true;
     }
 
-    // Create the package and asset
-    FString FullPath = Path / Name;
-    UPackage* Package = CreatePackage(*FullPath);
-    if (!Package)
-    {
-        Self->SendAutomationError(RequestingSocket, RequestId,
-            FString::Printf(TEXT("Failed to create package: %s"), *FullPath), TEXT("CREATION_FAILED"));
-        return true;
-    }
-
-    USmartObjectDefinition* Definition = NewObject<USmartObjectDefinition>(Package, *Name, RF_Public | RF_Standalone);
+    // CreatePackage and NewObject rebuilt an asset already at the path, or crashed on another class.
+    FString Error;
+    FString Code;
+    USmartObjectDefinition* Definition = CreateAIAssetInPackage<USmartObjectDefinition>(Path, Name, TEXT("Smart Object Definition"), Error, Code);
     if (!Definition)
     {
-        Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create SmartObjectDefinition asset"), TEXT("CREATION_FAILED"));
+        Self->SendAutomationError(RequestingSocket, RequestId, Error, Code);
         return true;
     }
 
-    // Save the asset
-    McpSafeAssetSave(Definition);
-
-    Result->SetStringField(TEXT("definitionPath"), FullPath);
+    Result->SetStringField(TEXT("definitionPath"), Definition->GetOutermost()->GetName());
     Result->SetNumberField(TEXT("slotCount"), 0);
-    Result->SetStringField(TEXT("message"), TEXT("Smart Object Definition created"));
+    Result->SetBoolField(TEXT("saved"), McpSafeAssetSave(Definition));
+    McpHandlerUtils::AddVerification(Result, Definition);
     Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Definition created"), Result);
     return true;
 }
@@ -108,23 +117,23 @@ bool HandleAddSmartObjectSlot(UEngineWireSubsystem* Self, const FString& Request
 #endif
     // Access slots via reflection
     FProperty* SlotsProp = Definition->GetClass()->FindPropertyByName(TEXT("Slots"));
-    int32 SlotIndex = -1;
-    if (FArrayProperty* ArrayProp = CastField<FArrayProperty>(SlotsProp))
+    FArrayProperty* ArrayProp = CastField<FArrayProperty>(SlotsProp);
+    FStructProperty* InnerStruct = ArrayProp ? CastField<FStructProperty>(ArrayProp->Inner) : nullptr;
+    if (!InnerStruct)
     {
-        FScriptArrayHelper ArrayHelper(ArrayProp, ArrayProp->ContainerPtrToValuePtr<void>(Definition));
-        SlotIndex = ArrayHelper.AddValue();
-        if (FStructProperty* InnerStruct = CastField<FStructProperty>(ArrayProp->Inner))
-        {
-            InnerStruct->Struct->CopyScriptStruct(ArrayHelper.GetRawPtr(SlotIndex), &NewSlot);
-        }
+        Self->SendAutomationError(RequestingSocket, RequestId, TEXT("This engine's Smart Object definition has no Slots array to add to."), TEXT("INVALID_STATE"));
+        return true;
     }
-
-    // Save
-    McpSafeAssetSave(Definition);
+    Definition->Modify();
+    FScriptArrayHelper ArrayHelper(ArrayProp, ArrayProp->ContainerPtrToValuePtr<void>(Definition));
+    const int32 SlotIndex = ArrayHelper.AddValue();
+    InnerStruct->Struct->CopyScriptStruct(ArrayHelper.GetRawPtr(SlotIndex), &NewSlot);
+    NotifySlotAdded(Definition, ArrayProp, SlotIndex);
 
     Result->SetNumberField(TEXT("slotIndex"), SlotIndex);
     Result->SetStringField(TEXT("definitionPath"), DefinitionPath);
-    Result->SetStringField(TEXT("message"), TEXT("Slot added to Smart Object Definition"));
+    Result->SetBoolField(TEXT("saved"), McpSafeAssetSave(Definition));
+    McpHandlerUtils::AddVerification(Result, Definition);
     Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Slot added"), Result);
     return true;
 }

@@ -1,4 +1,5 @@
 #include "Domains/AI/McpAIContext.h"
+#include "Domains/AI/Perception/McpAIPerceptionConfigs.h"
 
 #include "EditorAssetLibrary.h"
 #include "Engine/Blueprint.h"
@@ -10,7 +11,8 @@
 
 namespace McpAIHandlers
 {
-// Implements the "add_ai_perception_component" action.
+// Implements the "add_ai_perception_component" action. Every call added another component (CreateNode picked
+// AIPerception1 while the reply said AIPerception) and none was saved; one already there is kept now.
 bool HandleAddAIPerceptionComponent(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
@@ -25,34 +27,35 @@ bool HandleAddAIPerceptionComponent(UEngineWireSubsystem* Self, const FString& R
         return true;
     }
 
-    USimpleConstructionScript* SCS = Blueprint->SimpleConstructionScript;
-    if (!SCS)
+    bool bCreated = false;
+    UAIPerceptionComponent* PerceptionComp = FindOrCreatePerceptionComponent(Self, RequestId, RequestingSocket, Blueprint, &bCreated);
+    if (!PerceptionComp)
     {
-        Self->SendAutomationError(RequestingSocket, RequestId,
-                            TEXT("Blueprint has no SimpleConstructionScript"),
-                            TEXT("INVALID_BLUEPRINT"));
         return true;
     }
-
-    // Create perception component
-    USCS_Node* NewNode = SCS->CreateNode(UAIPerceptionComponent::StaticClass(), TEXT("AIPerception"));
-    if (NewNode)
+    FString ComponentName;
+    for (const USCS_Node* Node : Blueprint->SimpleConstructionScript->GetAllNodes())
     {
-        SCS->AddNode(NewNode);
+        if (Node && Node->ComponentTemplate == PerceptionComp)
+        {
+            ComponentName = Node->GetVariableName().ToString();
+        }
+    }
+    if (bCreated)
+    {
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-
-        Result->SetStringField(TEXT("componentName"), TEXT("AIPerception"));
-        Result->SetStringField(TEXT("message"), TEXT("AI Perception component added"));
-        McpHandlerUtils::AddVerification(Result, Blueprint);
-        Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Perception component added"), Result);
+        Result->SetBoolField(TEXT("saved"), McpSafeAssetSave(Blueprint));
     }
     else
     {
-        Self->SendAutomationError(RequestingSocket, RequestId,
-                            TEXT("Failed to create AI Perception component"),
-                            TEXT("CREATION_FAILED"));
+        McpHandlerUtils::MarkNoAssetsChanged(Result);
     }
 
+    Result->SetStringField(TEXT("componentName"), ComponentName);
+    Result->SetBoolField(TEXT("alreadyExists"), !bCreated);
+    McpHandlerUtils::AddVerification(Result, Blueprint);
+    Self->SendAutomationResponse(RequestingSocket, RequestId, true,
+        bCreated ? TEXT("Perception component added") : TEXT("The Blueprint already has a perception component; nothing changed"), Result);
     return true;
 }
 
@@ -71,18 +74,6 @@ bool HandleConfigureSightConfig(UEngineWireSubsystem* Self, const FString& Reque
         return true;
     }
 
-    // Get sight config parameters
-    double SightRadius = GetJsonNumberField(Payload, TEXT("sightRadius"), 3000.0);
-    double LoseSightRadius = GetJsonNumberField(Payload, TEXT("loseSightRadius"), SightRadius + 500.0);
-    double PeripheralAngle = GetJsonNumberField(Payload, TEXT("peripheralVisionAngle"), 90.0);
-    const TSharedPtr<FJsonObject>* SightConfigObj = nullptr;
-    if (Payload->TryGetObjectField(TEXT("sightConfig"), SightConfigObj) && SightConfigObj->IsValid())
-    {
-        SightRadius = GetJsonNumberField(*SightConfigObj, TEXT("sightRadius"), SightRadius);
-        LoseSightRadius = GetJsonNumberField(*SightConfigObj, TEXT("loseSightRadius"), LoseSightRadius);
-        PeripheralAngle = GetJsonNumberField(*SightConfigObj, TEXT("peripheralVisionAngle"), PeripheralAngle);
-    }
-
     UAIPerceptionComponent* PerceptionComp = FindOrCreatePerceptionComponent(
         Self, RequestId, RequestingSocket, Blueprint, nullptr);
     if (!PerceptionComp)
@@ -90,22 +81,17 @@ bool HandleConfigureSightConfig(UEngineWireSubsystem* Self, const FString& Reque
         return true;
     }
 
-    UAISenseConfig_Sight* SightConfig = NewObject<UAISenseConfig_Sight>(PerceptionComp);
-    SightConfig->SightRadius = SightRadius;
-    SightConfig->LoseSightRadius = LoseSightRadius;
-    SightConfig->PeripheralVisionAngleDegrees = PeripheralAngle;
-    SightConfig->DetectionByAffiliation.bDetectEnemies = true;
-    SightConfig->DetectionByAffiliation.bDetectNeutrals = true;
-    SightConfig->DetectionByAffiliation.bDetectFriendlies = false;
-    SightConfig->SetMaxAge(5.0f);
+    // Only the sightConfig radii and angle were read; its offsets, maxAge and affiliation were dropped.
+    bool bCreated = false;
+    PerceptionComp->Modify();
+    UAISenseConfig_Sight* SightConfig = FindOrAddSenseConfig<UAISenseConfig_Sight>(PerceptionComp, bCreated);
+    ApplySightSettings(SightConfig, MergedSenseSettings(Payload, TEXT("sightConfig")), bCreated);
     PerceptionComp->ConfigureSense(*SightConfig);
 
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-    McpSafeAssetSave(Blueprint);
-    Result->SetNumberField(TEXT("sightRadius"), SightRadius);
-    Result->SetNumberField(TEXT("loseSightRadius"), LoseSightRadius);
-    Result->SetNumberField(TEXT("peripheralVisionAngle"), PeripheralAngle);
-    Result->SetStringField(TEXT("message"), TEXT("Sight sense configured"));
+    Result->SetBoolField(TEXT("createdSense"), bCreated);
+    AddSenseSettings(SightConfig, Result);
+    Result->SetBoolField(TEXT("saved"), McpSafeAssetSave(Blueprint));
     McpHandlerUtils::AddVerification(Result, Blueprint);
     Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Sight config set"), Result);
     return true;

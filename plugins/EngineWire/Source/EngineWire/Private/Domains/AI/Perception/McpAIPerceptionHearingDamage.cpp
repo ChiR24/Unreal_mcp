@@ -1,4 +1,5 @@
 #include "Domains/AI/McpAIContext.h"
+#include "Domains/AI/Perception/McpAIPerceptionConfigs.h"
 
 #include "EditorAssetLibrary.h"
 #include "Engine/Blueprint.h"
@@ -11,47 +12,49 @@
 
 namespace McpAIHandlers
 {
-// Implements the "configure_hearing_config" action.
+namespace
+{
+// The Blueprint at blueprintPath with its perception component (added when missing), or null once a refusal went out.
+UAIPerceptionComponent* LoadPerceptionOrReply(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, UBlueprint*& OutBlueprint)
+{
+    const FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
+    OutBlueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
+    if (!OutBlueprint)
+    {
+        Self->SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
+        return nullptr;
+    }
+    UAIPerceptionComponent* Perception = FindOrCreatePerceptionComponent(Self, RequestId, RequestingSocket, OutBlueprint, nullptr);
+    if (Perception)
+    {
+        Perception->Modify();
+    }
+    return Perception;
+}
+}
+
+// Implements the "configure_hearing_config" action. Each call used to build a new config, resetting the affiliation
+// and max age it was not sent, and read only hearingRange.
 bool HandleConfigureHearingConfig(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
-
-    UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
-    if (!Blueprint)
-    {
-        Self->SendAutomationError(RequestingSocket, RequestId,
-                            FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath),
-                            TEXT("NOT_FOUND"));
-        return true;
-    }
-
-    double HearingRange = GetJsonNumberField(Payload, TEXT("hearingRange"), 3000.0);
-    const TSharedPtr<FJsonObject>* HearingConfigObj = nullptr;
-    if (Payload->TryGetObjectField(TEXT("hearingConfig"), HearingConfigObj) && HearingConfigObj->IsValid())
-    {
-        HearingRange = GetJsonNumberField(*HearingConfigObj, TEXT("hearingRange"), HearingRange);
-    }
-
-    UAIPerceptionComponent* PerceptionComp = FindOrCreatePerceptionComponent(
-        Self, RequestId, RequestingSocket, Blueprint, nullptr);
+    UBlueprint* Blueprint = nullptr;
+    UAIPerceptionComponent* PerceptionComp = LoadPerceptionOrReply(Self, RequestId, Payload, RequestingSocket, Blueprint);
     if (!PerceptionComp)
     {
         return true;
     }
 
-    UAISenseConfig_Hearing* HearingConfig = NewObject<UAISenseConfig_Hearing>(PerceptionComp);
-    HearingConfig->HearingRange = HearingRange;
-    HearingConfig->DetectionByAffiliation.bDetectEnemies = true;
-    HearingConfig->DetectionByAffiliation.bDetectNeutrals = true;
-    HearingConfig->DetectionByAffiliation.bDetectFriendlies = false;
-    HearingConfig->SetMaxAge(5.0f);
+    bool bCreated = false;
+    UAISenseConfig_Hearing* HearingConfig = FindOrAddSenseConfig<UAISenseConfig_Hearing>(PerceptionComp, bCreated);
+    ApplyHearingSettings(HearingConfig, MergedSenseSettings(Payload, TEXT("hearingConfig")), bCreated);
     PerceptionComp->ConfigureSense(*HearingConfig);
 
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-    McpSafeAssetSave(Blueprint);
-    Result->SetNumberField(TEXT("hearingRange"), HearingRange);
-    Result->SetStringField(TEXT("message"), TEXT("Hearing sense configured"));
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetBoolField(TEXT("createdSense"), bCreated);
+    AddSenseSettings(HearingConfig, Result);
+    Result->SetBoolField(TEXT("saved"), McpSafeAssetSave(Blueprint));
     McpHandlerUtils::AddVerification(Result, Blueprint);
     Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Hearing config set"), Result);
     return true;
@@ -60,40 +63,27 @@ bool HandleConfigureHearingConfig(UEngineWireSubsystem* Self, const FString& Req
 // Implements the "configure_damage_sense_config" action.
 bool HandleConfigureDamageSenseConfig(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
-
-    UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
-    if (!Blueprint)
-    {
-        Self->SendAutomationError(RequestingSocket, RequestId,
-                            FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath),
-                            TEXT("NOT_FOUND"));
-        return true;
-    }
-
-    double MaxAge = 10.0;
-    const TSharedPtr<FJsonObject>* DamageConfigObj = nullptr;
-    if (Payload->TryGetObjectField(TEXT("damageConfig"), DamageConfigObj) && DamageConfigObj->IsValid())
-    {
-        MaxAge = GetJsonNumberField(*DamageConfigObj, TEXT("maxAge"), MaxAge);
-    }
-
-    UAIPerceptionComponent* PerceptionComp = FindOrCreatePerceptionComponent(
-        Self, RequestId, RequestingSocket, Blueprint, nullptr);
+    UBlueprint* Blueprint = nullptr;
+    UAIPerceptionComponent* PerceptionComp = LoadPerceptionOrReply(Self, RequestId, Payload, RequestingSocket, Blueprint);
     if (!PerceptionComp)
     {
         return true;
     }
 
-    UAISenseConfig_Damage* DamageConfig = NewObject<UAISenseConfig_Damage>(PerceptionComp);
-    DamageConfig->SetMaxAge(MaxAge);
+    bool bCreated = false;
+    UAISenseConfig_Damage* DamageConfig = FindOrAddSenseConfig<UAISenseConfig_Damage>(PerceptionComp, bCreated);
+    double MaxAge = 10.0;
+    if (MergedSenseSettings(Payload, TEXT("damageConfig"))->TryGetNumberField(TEXT("maxAge"), MaxAge) || bCreated)
+    {
+        DamageConfig->SetMaxAge(static_cast<float>(MaxAge));
+    }
     PerceptionComp->ConfigureSense(*DamageConfig);
 
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-    McpSafeAssetSave(Blueprint);
-    Result->SetNumberField(TEXT("maxAge"), MaxAge);
-    Result->SetStringField(TEXT("message"), TEXT("Damage sense configured"));
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetBoolField(TEXT("createdSense"), bCreated);
+    AddSenseSettings(DamageConfig, Result);
+    Result->SetBoolField(TEXT("saved"), McpSafeAssetSave(Blueprint));
     McpHandlerUtils::AddVerification(Result, Blueprint);
     Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Damage config set"), Result);
     return true;

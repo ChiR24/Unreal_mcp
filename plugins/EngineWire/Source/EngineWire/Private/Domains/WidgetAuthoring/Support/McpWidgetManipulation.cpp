@@ -151,6 +151,7 @@ bool HandleWidgetAuthoringManipulation(
         {
             FBlueprintEditorUtils::ReplaceVariableReferences(WidgetBP, OldFName, NewFName);
         }
+        const int32 AnimationBindings = WidgetAuthoringHelpers::McpRenameWidgetReferences(WidgetBP, OldFName, NewFName);
         WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
         // The renamed variable widget has no property under its new name until a compile.
         WidgetAuthoringHelpers::RefreshWidgetBlueprintClass(WidgetBP);
@@ -159,6 +160,7 @@ bool HandleWidgetAuthoringManipulation(
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
         ResultJson->SetStringField(TEXT("oldName"), OldName);
         ResultJson->SetStringField(TEXT("newName"), NewName);
+        ResultJson->SetNumberField(TEXT("animationBindingsRenamed"), AnimationBindings);
 
         Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Renamed widget"), ResultJson);
         return true;
