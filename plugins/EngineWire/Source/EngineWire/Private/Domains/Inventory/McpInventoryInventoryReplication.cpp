@@ -81,6 +81,7 @@ bool HandleInventoryReplicationActions(UEngineWireSubsystem& Bridge, const FStri
     }
     Result->SetArrayField(TEXT("modifiedVariables"), VarsArr);
 
+    McpHandlerUtils::AddVerification(Result, Blueprint);
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Inventory replication configured"), Result);
     return true;

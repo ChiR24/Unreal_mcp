@@ -118,6 +118,7 @@ bool HandleInventoryCraftingRecipeActions(UEngineWireSubsystem& Bridge, const FS
     }
     Result->SetBoolField(TEXT("configured"), true);
     Result->SetNumberField(TEXT("propertiesModified"), (bHasLevel ? 1 : 0) + (bHasStation ? 1 : 0));
+    McpHandlerUtils::AddVerification(Result, GenericRecipe);
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Recipe requirements configured"), Result);
     return true;
@@ -186,6 +187,7 @@ bool HandleInventoryCraftingRecipeActions(UEngineWireSubsystem& Bridge, const FS
     Result->SetBoolField(TEXT("added"), true);
     Result->SetStringField(TEXT("storage"), TEXT("Properties"));
 
+    McpHandlerUtils::AddVerification(Result, RecipeAsset);
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Recipe ingredient added"), Result);
     return true;

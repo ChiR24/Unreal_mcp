@@ -67,6 +67,7 @@ const testCases = [
 
   // === WEAPON FEATURES ===
   { scenario: 'ACTION: setup_attachment_system', toolName: 'manage_combat', arguments: { action: 'setup_attachment_system', blueprintPath: weaponPath, attachmentSlots: [{ slotName: 'Optic', socketName: 'OpticSocket', allowedTypes: ['Scope'] }, { slotName: 'Magazine', socketName: 'MagazineSocket', allowedTypes: ['Magazine'] }] }, expected: 'success', assertions: [{ path: 'structuredContent.result.attachmentSlots', length: 2, label: 'attachment slots registered' }, { path: 'structuredContent.result.componentsCreated', length: 2, label: 'attachment scene components created' }] },
+  { scenario: 'ACTION: setup_attachment_system refuses a call with no slot', toolName: 'manage_combat', arguments: { action: 'setup_attachment_system', blueprintPath: weaponPath, attachmentSlots: [] }, expected: 'error|INVALID_ARGUMENT' },
 
   // === EFFECTS ===
 

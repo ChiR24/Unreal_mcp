@@ -3949,3 +3949,36 @@ describe('RPCs are made where they can be called, and only flags a Blueprint run
     expect(repNotify).toContain('ResultJson->SetBoolField(TEXT("functionCreated"), bCreate);');
   });
 });
+
+describe('hitboxes, attachments, inventory receipts and the Ability System Component do what they report', () => {
+  it('hit detection refuses a shape it does not know before adding anything', () => {
+    const damage = code('Combat', 'McpCombatDamageExecution.cpp');
+    const detection = damage.slice(damage.indexOf('SubAction == TEXT("configure_hit_detection")'));
+    expect(detection.indexOf('HitboxType != TEXT("Capsule") && HitboxType != TEXT("Box") && HitboxType != TEXT("Sphere")'))
+      .toBeLessThan(detection.indexOf('GetOrCreateSCSComponent<UCapsuleComponent>'));
+  });
+
+  it('attachments refuse no slot, and apply the socket and the allowed types they report', () => {
+    const attach = code('Combat', 'McpCombatWeaponEquipment.cpp');
+    expect(attach.indexOf('if (Slots.Num() == 0 || !SCS)')).toBeLessThan(attach.indexOf('GetOrCreateSCSComponent<USceneComponent>'));
+    expect(attach).toContain('PointNode->AttachToName = FName(*Slot.Socket);');
+    expect(attach).toContain('AttachPoint->ComponentTags.AddUnique(FName(*Type));');
+  });
+
+  it('every inventory configure reply names the asset it changed', () => {
+    for (const file of ['McpInventoryItemPresentation.cpp', 'McpInventoryCategories.cpp', 'McpInventoryCraftingRecipes.cpp',
+      'McpInventoryLootTables.cpp', 'McpInventoryLootDrops.cpp', 'McpInventoryInventoryReplication.cpp']) {
+      expect(code('Inventory', file), file).toContain('McpHandlerUtils::AddVerification(Result,');
+    }
+  });
+
+  it('the Ability System Component needs an Actor Blueprint and is never doubled; base values need a value and an attribute', () => {
+    const components = code('GAS', 'McpGASComponents.cpp');
+    expect(components.indexOf('if (!SCS)')).toBeLessThan(components.indexOf('SCS->CreateNode('));
+    expect(components.indexOf('TEXT("alreadyExists"), true')).toBeLessThan(components.indexOf('SCS->CreateNode('));
+    const values = code('GAS', 'Authoring', 'McpGASAttributeValues.cpp');
+    expect(values).toContain('if (!Payload->HasField(TEXT("baseValue")))');
+    expect(values).toContain('TEXT("INVALID_TYPE")');
+    expect(code('GAS', 'McpGASAttributes.cpp')).toContain('Blueprint->ParentClass->IsChildOf(UAttributeSet::StaticClass())');
+  });
+});

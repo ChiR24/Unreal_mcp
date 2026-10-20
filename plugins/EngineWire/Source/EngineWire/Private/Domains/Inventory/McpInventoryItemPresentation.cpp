@@ -119,6 +119,7 @@ bool HandleInventoryItemPresentationActions(UEngineWireSubsystem& Bridge, const 
     Result->SetArrayField(TEXT("modifiedProperties"), ModArr);
     Result->SetBoolField(TEXT("configured"), true);
 
+    McpHandlerUtils::AddVerification(Result, ItemAsset);
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Item stacking configured"), Result);
     return true;
@@ -213,6 +214,7 @@ bool HandleInventoryItemPresentationActions(UEngineWireSubsystem& Bridge, const 
     Result->SetBoolField(TEXT("iconSet"), true);
     Result->SetStringField(TEXT("propertyModified"), IconPropertyName);
 
+    McpHandlerUtils::AddVerification(Result, ItemAsset);
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Item icon configured"), Result);
     return true;

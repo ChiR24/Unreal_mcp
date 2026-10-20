@@ -90,6 +90,7 @@ bool HandleInventoryLootDropActions(UEngineWireSubsystem& Bridge, const FString&
     Result->SetBoolField(TEXT("configured"), true);
 
 
+    McpHandlerUtils::AddVerification(Result, LootTable);
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Quality tiers configured"), Result);
     return true;

@@ -31,6 +31,7 @@ const testCases = [
 
   // === COMPONENTS / ATTRIBUTES ===
   { scenario: 'ADD: add_ability_system_component', toolName: 'manage_gas', arguments: { action: 'add_ability_system_component', blueprintPath: '${captured:blueprintPath}', componentName: 'AbilitySystemComponent' }, expected: 'success' },
+  { scenario: 'ADD: add_ability_system_component keeps the one already there', toolName: 'manage_gas', arguments: { action: 'add_ability_system_component', blueprintPath: '${captured:blueprintPath}', componentName: 'SecondASC' }, expected: 'success', assertions: [{ path: 'structuredContent.result.alreadyExists', equals: true, label: 'existing ASC kept, none doubled' }, { path: 'structuredContent.result.componentName', equals: 'AbilitySystemComponent', label: 'the existing ASC is named' }] },
   { scenario: 'CONFIG: configure_asc', toolName: 'manage_gas', arguments: { action: 'configure_asc', blueprintPath: '${captured:blueprintPath}', componentName: 'AbilitySystemComponent', replicationMode: 'Mixed' }, expected: 'success' },
   {
     scenario: 'CREATE: create_attribute_set',
@@ -40,6 +41,7 @@ const testCases = [
     captureResult: { key: 'attributeSetPath', fromField: 'result.assetPath' }
   },
   { scenario: 'ADD: add_attribute', toolName: 'manage_gas', arguments: { action: 'add_attribute', attributeSetPath: '${captured:attributeSetPath}', attributeName, defaultValue: 100 }, expected: 'success' },
+  { scenario: 'ADD: add_attribute refuses a name already there', toolName: 'manage_gas', arguments: { action: 'add_attribute', attributeSetPath: '${captured:attributeSetPath}', attributeName, defaultValue: 50 }, expected: 'error|NAME_TAKEN' },
   { scenario: 'CONFIG: set_attribute_base_value', toolName: 'manage_gas', arguments: { action: 'set_attribute_base_value', attributeSetPath: '${captured:attributeSetPath}', attributeName, baseValue: 125 }, expected: 'success' },
 
   // === GAMEPLAY ABILITY ===

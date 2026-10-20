@@ -17,11 +17,11 @@ const choice = (desc: string, values: readonly string[]): JsonObject => ({
 });
 
 export const GAS_P: PropertyMap = {
-  componentName: str('AbilitySystemComponent name (defaults to AbilitySystemComponent).'),
-  replicationMode: choice('ASC replication mode.', ['Full', 'Minimal', 'Mixed']),
+  componentName: str('Ability System Component name. Adding: the new component (default AbilitySystemComponent). Configuring: which one (default the Blueprint\'s own).'),
+  replicationMode: choice('How gameplay effects replicate: Full (every effect to every client, for single player), Mixed (effects to the owning client only, cues and tags to all, for player characters) or Minimal (cues and tags only, for AI).', ['Full', 'Minimal', 'Mixed']),
 
-  defaultValue: num('Initial value for the added attribute.'),
-  baseValue: num('Base value for the attribute.'),
+  defaultValue: num('Starting base and current value of the new attribute (default 0).'),
+  baseValue: num('New base and current value of the attribute (required; an omitted one used to write 0).'),
 
   abilityTags: tags('Gameplay tags granted to this ability.'),
   cancelAbilitiesWithTag: tags('Tags of abilities cancelled when this activates.'),

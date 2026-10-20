@@ -16810,25 +16810,25 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "attachmentSlots": {
           "type": "array",
-          "description": "Attachment slot definitions created on the weapon.",
+          "description": "Attachment slots: each adds an AttachPoint_<slotName> scene component under WeaponMesh (kept when there). An empty list or a nameless slot is refused before anything changes.",
           "items": {
             "type": "object",
             "additionalProperties": false,
             "properties": {
               "slotName": {
                 "type": "string",
-                "description": "Slot identifier."
+                "description": "Slot name, giving the component AttachPoint_<slotName>."
               },
               "socketName": {
                 "type": "string",
-                "description": "Socket the attachment binds to."
+                "description": "Socket of the WeaponMesh static mesh the attach point sits on; omitted, it sits at the mesh origin."
               },
               "allowedTypes": {
                 "type": "array",
                 "items": {
                   "type": "string"
                 },
-                "description": "Attachment types accepted by this slot."
+                "description": "Attachment types the slot takes, added to the attach point component tags for the game to read (ComponentHasTag, GetComponentsByTag)."
               }
             }
           }
@@ -16863,7 +16863,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "damageMultiplier": {
           "type": "number",
-          "description": "Damage multiplier applied for this hitbox."
+          "description": "Default of the Blueprint variable HitboxDamageMultiplier (added when missing; default 1). Nothing reads it until the Blueprint damage logic does."
         },
         "damageType": {
           "type": "string",
@@ -16918,7 +16918,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "Box",
             "Sphere"
           ],
-          "description": "Hitbox collision shape."
+          "description": "Hitbox shape and component: Capsule (default, HitboxCapsule), Box (HitboxBox) or Sphere (HitboxSphere). The component of that name is kept when the Blueprint has it, else added; any other value is refused."
         },
         "homingAcceleration": {
           "type": "number",
@@ -16939,7 +16939,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "isDamageZoneHead": {
           "type": "boolean",
-          "description": "Mark this hitbox as a headshot zone."
+          "description": "Default of the Blueprint variable bIsHeadshotZone (added when missing; default false), for its damage logic to read."
         },
         "kind": {
           "type": "string",
@@ -17028,25 +17028,29 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
       "properties": {
         "attachmentSlots": {
           "type": "array",
-          "description": "Attachment slot definitions created on the weapon.",
+          "description": "The slots made or kept, as each attach point now stands.",
           "items": {
             "type": "object",
             "additionalProperties": false,
             "properties": {
               "slotName": {
                 "type": "string",
-                "description": "Slot identifier."
+                "description": "Slot name."
               },
               "socketName": {
                 "type": "string",
-                "description": "Socket the attachment binds to."
+                "description": "Socket the attach point sits on; empty when none was given."
+              },
+              "socketFound": {
+                "type": "boolean",
+                "description": "Given a socketName: whether the WeaponMesh static mesh has that socket. Attached to a missing socket, the point sits at the mesh origin."
               },
               "allowedTypes": {
                 "type": "array",
                 "items": {
                   "type": "string"
                 },
-                "description": "Attachment types accepted by this slot."
+                "description": "Types added to its component tags."
               }
             }
           }
@@ -17139,7 +17143,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "Box",
             "Sphere"
           ],
-          "description": "Hitbox collision shape."
+          "description": "Hitbox shape and component: Capsule (default, HitboxCapsule), Box (HitboxBox) or Sphere (HitboxSphere). The component of that name is kept when the Blueprint has it, else added; any other value is refused."
         },
         "meshPath": {
           "type": "string",
@@ -17881,7 +17885,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "baseValue": {
           "type": "number",
-          "description": "Base value for the attribute."
+          "description": "New base and current value of the attribute (required; an omitted one used to write 0)."
         },
         "blockAbilitiesWithTag": {
           "type": "array",
@@ -17907,7 +17911,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "componentName": {
           "type": "string",
-          "description": "AbilitySystemComponent name (defaults to AbilitySystemComponent)."
+          "description": "Ability System Component name. Adding: the new component (default AbilitySystemComponent). Configuring: which one (default the Blueprint's own)."
         },
         "cooldownEffectPath": {
           "type": "string",
@@ -17927,7 +17931,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "defaultValue": {
           "type": "number",
-          "description": "Initial value for the added attribute."
+          "description": "Starting base and current value of the new attribute (default 0)."
         },
         "duration": {
           "type": "number",
@@ -18034,7 +18038,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "Minimal",
             "Mixed"
           ],
-          "description": "ASC replication mode."
+          "description": "How gameplay effects replicate: Full (every effect to every client, for single player), Mixed (effects to the owning client only, cues and tags to all, for player characters) or Minimal (cues and tags only, for AI)."
         },
         "setByCallerTag": {
           "type": "string",

@@ -128,6 +128,7 @@ bool HandleInventoryCategoryActions(UEngineWireSubsystem& Bridge, const FString&
     Result->SetStringField(TEXT("itemPath"), ItemPath);
     Result->SetStringField(TEXT("categoryPath"), CategoryPath);
     Result->SetBoolField(TEXT("assigned"), bCategoryAssigned);
+    McpHandlerUtils::AddVerification(Result, ItemObj);
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Category assigned to item"), Result);
     return true;

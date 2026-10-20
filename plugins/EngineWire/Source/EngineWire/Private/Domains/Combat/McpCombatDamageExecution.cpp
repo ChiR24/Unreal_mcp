@@ -213,6 +213,12 @@ bool FCombatActionContext::HandleDamageExecution() const
 
         FString HitboxType = GetJsonStringField(Payload, TEXT("hitboxType"), TEXT("Capsule"));
         double DamageMultiplier = GetJsonNumberField(Payload, TEXT("damageMultiplier"), 1.0);
+        // Any other name used to make a sphere while the reply echoed the name asked for.
+        if (HitboxType != TEXT("Capsule") && HitboxType != TEXT("Box") && HitboxType != TEXT("Sphere"))
+        {
+            SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("hitboxType '%s' is not Capsule, Box or Sphere; nothing was changed."), *HitboxType), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
 
         if (HitboxType == TEXT("Capsule"))
         {

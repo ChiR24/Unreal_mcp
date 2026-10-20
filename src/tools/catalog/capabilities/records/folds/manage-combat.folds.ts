@@ -11,7 +11,7 @@ export const MANAGE_COMBAT_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'configure_weapon', selector: 'setting',
-    summary: 'Configure a weapon Blueprint: its mesh or its attachment system.',
+    summary: 'A weapon Blueprint, chosen by setting. weapon_mesh assigns weaponMeshPath (a static mesh; NOT_FOUND otherwise) to its WeaponMesh component, added when missing. attachments adds an AttachPoint_<slotName> scene component under WeaponMesh for each attachmentSlots entry: on socketName when given (socketFound says whether the mesh has that socket), with allowedTypes added to its component tags. These are components only; equipping an attachment is Blueprint logic. Compiles and saves (SAVE_FAILED otherwise).',
     topics: ['weapon mesh', 'weapon attachments'],
     members: {
       ...byTarget('configure_', ['configure_weapon_mesh']), attachments: 'setup_attachment_system',
@@ -25,7 +25,7 @@ export const MANAGE_COMBAT_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'configure_damage', selector: 'setting',
-    summary: 'Configure hit detection or add a hitbox component.',
+    summary: 'Hitboxes on a Blueprint, chosen by setting. hitbox adds or updates the HitboxCapsule, HitboxBox or HitboxSphere component (hitboxType, default Capsule) sized by hitboxSize (only the sizes sent change), on hitboxBoneName of its skeletal mesh when given (NO_SKELETAL_MESH without one), and sets the variables bIsHeadshotZone and HitboxDamageMultiplier. hit_detection makes sure a hitbox of hitboxType exists and sets HitboxDamageMultiplier, without sizing it. An unknown hitboxType is refused. These are a component and variables only: no damage happens until the Blueprint applies it on the hitbox overlap or hit event. Compiles and saves (SAVE_FAILED otherwise).',
     topics: ['hit detection', 'hitbox'],
     members: { hit_detection: 'configure_hit_detection', hitbox: 'setup_hitbox_component',
     },

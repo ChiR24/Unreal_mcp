@@ -63,6 +63,21 @@ bool HandleGASAttributes(const FGASRequestContext& Context, const FString& SubAc
             return true;
         }
 
+        // A Gameplay Attribute lives on an AttributeSet; on any other Blueprint the variable was made and GAS never saw it.
+        if (!Blueprint->ParentClass || !Blueprint->ParentClass->IsChildOf(UAttributeSet::StaticClass()))
+        {
+            Bridge->SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("%s is not an AttributeSet Blueprint (make one with create_attribute_set); nothing was added."), *Blueprint->GetName()),
+                TEXT("INVALID_TYPE"));
+            return true;
+        }
+        if (FBlueprintEditorUtils::FindNewVariableIndex(Blueprint, FName(*AttributeName)) != INDEX_NONE)
+        {
+            Bridge->SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("%s already has a variable %s; change its value with set_attribute_base_value."), *Blueprint->GetName(), *AttributeName),
+                TEXT("NAME_TAKEN"));
+            return true;
+        }
         float DefaultValue = static_cast<float>(GetJsonNumberField(Payload, TEXT("defaultValue"), 0.0));
 
         // Add FGameplayAttributeData member variable.

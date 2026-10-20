@@ -37,6 +37,12 @@ bool HandleGASAttributeValues(const FGASRequestContext& Context, const FString& 
             return true;
         }
 
+        // An omitted baseValue used to write 0 over the attribute.
+        if (!Payload->HasField(TEXT("baseValue")))
+        {
+            Bridge->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing baseValue; nothing was changed."), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
         float BaseValue = static_cast<float>(GetJsonNumberField(Payload, TEXT("baseValue"), 0.0));
 
         UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
@@ -83,25 +89,32 @@ bool HandleGASAttributeValues(const FGASRequestContext& Context, const FString& 
         else
         {
             // Base and current value together, through the struct's own setters.
+            // Any other property of that name was left untouched while the reply said its value was set.
             const FStructProperty* AttrStructProp = CastField<FStructProperty>(AttrProperty);
-            if (AttrStructProp && AttrStructProp->Struct->IsChildOf(FGameplayAttributeData::StaticStruct()))
+            if (!AttrStructProp || !AttrStructProp->Struct->IsChildOf(FGameplayAttributeData::StaticStruct()))
             {
-                FGameplayAttributeData* Data = AttrStructProp->ContainerPtrToValuePtr<FGameplayAttributeData>(AttrSetCDO);
-                Data->SetBaseValue(BaseValue);
-                Data->SetCurrentValue(BaseValue);
+                Bridge->SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("%s is not a Gameplay Attribute (FGameplayAttributeData); nothing was changed."), *AttributeName),
+                    TEXT("INVALID_TYPE"));
+                return true;
             }
+            AttrSetCDO->Modify();
+            FGameplayAttributeData* Data = AttrStructProp->ContainerPtrToValuePtr<FGameplayAttributeData>(AttrSetCDO);
+            Data->SetBaseValue(BaseValue);
+            Data->SetCurrentValue(BaseValue);
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-        McpSafeCompileBlueprint(Blueprint);
-        McpSafeAssetSave(Blueprint);
-        AttrSetCDO->MarkPackageDirty();
+        if (!CommitGASBlueprintEdit(Context, Blueprint, TEXT("Attribute base value")))
+        {
+            return true;
+        }
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
         Result->SetStringField(TEXT("attributeName"), AttributeName);
         Result->SetNumberField(TEXT("baseValue"), BaseValue);
-        Bridge->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Attribute base value set via reflection"), Result);
+        McpHandlerUtils::AddVerification(Result, Blueprint);
+        Bridge->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Attribute base value set"), Result);
         return true;
     }
 

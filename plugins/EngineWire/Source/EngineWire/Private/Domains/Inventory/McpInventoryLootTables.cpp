@@ -104,6 +104,7 @@ bool HandleInventoryLootTableActions(UEngineWireSubsystem& Bridge, const FString
     Result->SetNumberField(TEXT("entryIndex"), EntryIndex);
     Result->SetBoolField(TEXT("added"), true);
     Result->SetStringField(TEXT("storage"), TEXT("Properties"));
+    McpHandlerUtils::AddVerification(Result, LootTable);
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Loot entry added"), Result);
     return true;
@@ -193,6 +194,7 @@ bool HandleInventoryLootTableActions(UEngineWireSubsystem& Bridge, const FString
     LootTable->MarkPackageDirty();
     Result->SetBoolField(TEXT("saved"), GetJsonBoolField(Payload, TEXT("save"), true) && McpSafeAssetSave(LootTable));
 
+    McpHandlerUtils::AddVerification(Result, LootTable);
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Loot entry removed"), Result);
     return true;

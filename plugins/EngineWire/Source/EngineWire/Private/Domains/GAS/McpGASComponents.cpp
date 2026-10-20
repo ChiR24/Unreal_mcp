@@ -9,7 +9,9 @@
 #include "Engine/Blueprint.h"
 #include "Engine/SCS_Node.h"
 #include "Engine/SimpleConstructionScript.h"
+#include "GameFramework/Actor.h"
 #include "Kismet2/BlueprintEditorUtils.h"
+#include "Kismet2/Kismet2NameValidators.h"
 
 namespace McpGASHandlers
 {
@@ -40,10 +42,56 @@ bool HandleGASComponents(const FGASRequestContext& Context, const FString& SubAc
             return true;
         }
 
+        // Only an Actor Blueprint has a construction script to hold components; this dereferenced it and crashed.
+        USimpleConstructionScript* SCS = Blueprint->SimpleConstructionScript;
+        if (!SCS)
+        {
+            Bridge->SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("%s is not an Actor Blueprint, so it holds no components; add the Ability System Component to the pawn or its PlayerState."), *Blueprint->GetName()),
+                TEXT("INVALID_TARGET"));
+            return true;
+        }
         FString ComponentName = GetJsonStringField(Payload, TEXT("componentName"), TEXT("AbilitySystemComponent"));
 
-        USCS_Node* NewNode = Blueprint->SimpleConstructionScript->CreateNode(
-            UAbilitySystemComponent::StaticClass(), FName(*ComponentName));
+        // The actor's one Ability System Component, its own or inherited from a native parent, is the one GAS finds.
+        // A second under another name was dead weight, and one under the same name made CreateNode build its
+        // template over the existing one.
+        FString Existing;
+        for (USCS_Node* Node : SCS->GetAllNodes())
+        {
+            if (Node && Node->ComponentTemplate && Node->ComponentTemplate->IsA<UAbilitySystemComponent>())
+            {
+                Existing = Node->GetVariableName().ToString();
+                break;
+            }
+        }
+        const AActor* ActorDefaults = Blueprint->GeneratedClass ? Cast<AActor>(Blueprint->GeneratedClass->GetDefaultObject()) : nullptr;
+        const UAbilitySystemComponent* Inherited = ActorDefaults ? ActorDefaults->FindComponentByClass<UAbilitySystemComponent>() : nullptr;
+        if (Existing.IsEmpty() && Inherited)
+        {
+            Existing = Inherited->GetName();
+        }
+        if (!Existing.IsEmpty())
+        {
+            TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+            Result->SetStringField(TEXT("componentName"), Existing);
+            Result->SetStringField(TEXT("componentClass"), TEXT("AbilitySystemComponent"));
+            Result->SetBoolField(TEXT("alreadyExists"), true);
+            McpHandlerUtils::AddVerification(Result, Blueprint);
+            McpHandlerUtils::MarkNoAssetsChanged(Result);
+            Bridge->SendAutomationResponse(RequestingSocket, RequestId, true,
+                FString::Printf(TEXT("%s already has the Ability System Component %s; nothing was added."), *Blueprint->GetName(), *Existing), Result);
+            return true;
+        }
+        if (FKismetNameValidator(Blueprint).IsValid(ComponentName) != EValidatorResult::Ok)
+        {
+            Bridge->SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("componentName '%s' is already used by a member of %s, or is not a valid name; nothing was added."), *ComponentName, *Blueprint->GetName()),
+                TEXT("NAME_TAKEN"));
+            return true;
+        }
+
+        USCS_Node* NewNode = SCS->CreateNode(UAbilitySystemComponent::StaticClass(), FName(*ComponentName));
 
         if (!NewNode)
         {
@@ -52,10 +100,12 @@ bool HandleGASComponents(const FGASRequestContext& Context, const FString& SubAc
             return true;
         }
 
-        Blueprint->SimpleConstructionScript->AddNode(NewNode);
+        SCS->AddNode(NewNode);
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-        McpSafeCompileBlueprint(Blueprint);
-        McpSafeAssetSave(Blueprint);
+        if (!CommitGASBlueprintEdit(Context, Blueprint, TEXT("Ability System Component")))
+        {
+            return true;
+        }
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("componentName"), ComponentName);
@@ -82,28 +132,34 @@ bool HandleGASComponents(const FGASRequestContext& Context, const FString& SubAc
             return true;
         }
 
-        FString ComponentName = GetJsonStringField(Payload, TEXT("componentName"), TEXT("AbilitySystemComponent"));
+        // componentName picks one; without it, the Blueprint's own Ability System Component (the first, as GAS finds it).
+        FString ComponentName = GetJsonStringField(Payload, TEXT("componentName"));
         FString ReplicationMode = GetJsonStringField(Payload, TEXT("replicationMode"), TEXT("Full"));
-
-        // Find ASC in SCS
         UAbilitySystemComponent* ASCTemplate = nullptr;
+        if (!Blueprint->SimpleConstructionScript)
+        {
+            Bridge->SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("%s is not an Actor Blueprint, so it holds no components."), *Blueprint->GetName()), TEXT("INVALID_TARGET"));
+            return true;
+        }
         for (USCS_Node* Node : Blueprint->SimpleConstructionScript->GetAllNodes())
         {
-            if (Node && Node->ComponentTemplate &&
-                Node->ComponentTemplate->IsA<UAbilitySystemComponent>())
+            if (Node && Node->ComponentTemplate && Node->ComponentTemplate->IsA<UAbilitySystemComponent>() &&
+                (ComponentName.IsEmpty() || Node->GetVariableName().ToString() == ComponentName))
             {
-                if (Node->GetVariableName().ToString() == ComponentName)
-                {
-                    ASCTemplate = Cast<UAbilitySystemComponent>(Node->ComponentTemplate);
-                    break;
-                }
+                ASCTemplate = Cast<UAbilitySystemComponent>(Node->ComponentTemplate);
+                ComponentName = Node->GetVariableName().ToString();
+                break;
             }
         }
 
         if (!ASCTemplate)
         {
             Bridge->SendAutomationError(RequestingSocket, RequestId,
-                FString::Printf(TEXT("ASC not found: %s"), *ComponentName), TEXT("NOT_FOUND"));
+                ComponentName.IsEmpty()
+                    ? FString::Printf(TEXT("%s has no Ability System Component of its own; add one with add_component (one inherited from a native parent is set in C++)."), *Blueprint->GetName())
+                    : FString::Printf(TEXT("%s has no Ability System Component named %s"), *Blueprint->GetName(), *ComponentName),
+                TEXT("NOT_FOUND"));
             return true;
         }
 

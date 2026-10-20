@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "5ce361d7f226a5fe",
+  "catalogRevision": "dd8594b86401d01d",
   "recordCount": 416,
   "records": [
     {
@@ -61487,9 +61487,9 @@
           "hit detection",
           "hitbox"
         ],
-        "summary": "Configure hit detection or add a hitbox component.",
+        "summary": "Hitboxes on a Blueprint, chosen by setting. hitbox adds or updates the HitboxCapsule, HitboxBox or HitboxSphere component (hitboxType, default Capsule) sized by hitboxSize (only the sizes sent change), on hitboxBoneName of its skeletal mesh when given (NO_SKELETAL_MESH without one), and sets the variables bIsHeadshotZone and HitboxDamageMultiplier. hit_detection makes sure a hitbox of hitboxType exists and sets HitboxDamageMultiplier, without sizing it. An unknown hitboxType is refused. These are a component and variables only: no damage happens until the Blueprint applies it on the hitbox overlap or hit event. Compiles and saves (SAVE_FAILED otherwise).",
         "whenToUse": [
-          "setting=hit_detection: An existing hitbox must change shape or scaling.",
+          "setting=hit_detection: A Blueprint needs a hitbox component of a given shape and a HitboxDamageMultiplier value, without sizing it.",
           "setting=hitbox: A per-bone damage volume is needed."
         ],
         "whenNotToUse": []
@@ -61510,11 +61510,11 @@
                 "Box",
                 "Sphere"
               ],
-              "description": "Hitbox collision shape."
+              "description": "Hitbox shape and component: Capsule (default, HitboxCapsule), Box (HitboxBox) or Sphere (HitboxSphere). The component of that name is kept when the Blueprint has it, else added; any other value is refused."
             },
             "damageMultiplier": {
               "type": "number",
-              "description": "Damage multiplier applied for this hitbox."
+              "description": "Default of the Blueprint variable HitboxDamageMultiplier (added when missing; default 1). Nothing reads it until the Blueprint damage logic does."
             },
             "hitboxBoneName": {
               "type": "string",
@@ -61556,7 +61556,7 @@
             },
             "isDamageZoneHead": {
               "type": "boolean",
-              "description": "Mark this hitbox as a headshot zone."
+              "description": "Default of the Blueprint variable bIsHeadshotZone (added when missing; default false), for its damage logic to read."
             },
             "setting": {
               "type": "string",
@@ -61597,7 +61597,7 @@
                 "Box",
                 "Sphere"
               ],
-              "description": "Hitbox collision shape."
+              "description": "Hitbox shape and component: Capsule (default, HitboxCapsule), Box (HitboxBox) or Sphere (HitboxSphere). The component of that name is kept when the Blueprint has it, else added; any other value is refused."
             },
             "hitboxSize": {
               "type": "object",
@@ -61642,7 +61642,7 @@
       },
       "examples": [
         {
-          "title": "Configure hit detection or add a hitbox component.",
+          "title": "Hitboxes on a Blueprint, chosen by setting. hitbox adds or updates the HitboxCapsule, HitboxBox or HitboxSphere component (hitboxType, default Capsule) sized by hitboxSize (only the sizes sent change), on hitboxBoneName of its skeletal mesh when given (NO_SKELETAL_MESH without one), and sets the variables bIsHeadshotZone and HitboxDamageMultiplier. hit_detection makes sure a hitbox of hitboxType exists and sets HitboxDamageMultiplier, without sizing it. An unknown hitboxType is refused. These are a component and variables only: no damage happens until the Blueprint applies it on the hitbox overlap or hit event. Compiles and saves (SAVE_FAILED otherwise).",
           "input": {
             "action": "configure_damage",
             "blueprintPath": "/Game/BP_Rifle",
@@ -61702,8 +61702,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "edf5038758db53cb74869a5bcbe5269e899b548e0288be7e5b1faaa514484aa4",
-        "content": "7c24e86e117bcad4d425f9623fcb56d0f7edbb26f73cc8b5b809bb71a66ba6d9"
+        "schema": "62aa4637e8c30b7f60d36a0be93145084bb8e380757b3425f445b101629dc0c7",
+        "content": "ccb0104499be92d9417c85ed565ec2774ee88f4176a84ecc8b4d84757835eb53"
       }
     },
     {
@@ -61985,7 +61985,7 @@
           "weapon mesh",
           "weapon attachments"
         ],
-        "summary": "Configure a weapon Blueprint: its mesh or its attachment system.",
+        "summary": "A weapon Blueprint, chosen by setting. weapon_mesh assigns weaponMeshPath (a static mesh; NOT_FOUND otherwise) to its WeaponMesh component, added when missing. attachments adds an AttachPoint_<slotName> scene component under WeaponMesh for each attachmentSlots entry: on socketName when given (socketFound says whether the mesh has that socket), with allowedTypes added to its component tags. These are components only; equipping an attachment is Blueprint logic. Compiles and saves (SAVE_FAILED otherwise).",
         "whenToUse": [
           "setting=weapon_mesh: The weapon mesh must change.",
           "setting=attachments: Modular optics or grips are needed."
@@ -62010,25 +62010,25 @@
             },
             "attachmentSlots": {
               "type": "array",
-              "description": "Attachment slot definitions created on the weapon.",
+              "description": "Attachment slots: each adds an AttachPoint_<slotName> scene component under WeaponMesh (kept when there). An empty list or a nameless slot is refused before anything changes.",
               "items": {
                 "type": "object",
                 "additionalProperties": false,
                 "properties": {
                   "slotName": {
                     "type": "string",
-                    "description": "Slot identifier."
+                    "description": "Slot name, giving the component AttachPoint_<slotName>."
                   },
                   "socketName": {
                     "type": "string",
-                    "description": "Socket the attachment binds to."
+                    "description": "Socket of the WeaponMesh static mesh the attach point sits on; omitted, it sits at the mesh origin."
                   },
                   "allowedTypes": {
                     "type": "array",
                     "items": {
                       "type": "string"
                     },
-                    "description": "Attachment types accepted by this slot."
+                    "description": "Attachment types the slot takes, added to the attach point component tags for the game to read (ComponentHasTag, GetComponentsByTag)."
                   }
                 }
               }
@@ -62071,25 +62071,29 @@
             },
             "attachmentSlots": {
               "type": "array",
-              "description": "Attachment slot definitions created on the weapon.",
+              "description": "The slots made or kept, as each attach point now stands.",
               "items": {
                 "type": "object",
                 "additionalProperties": false,
                 "properties": {
                   "slotName": {
                     "type": "string",
-                    "description": "Slot identifier."
+                    "description": "Slot name."
                   },
                   "socketName": {
                     "type": "string",
-                    "description": "Socket the attachment binds to."
+                    "description": "Socket the attach point sits on; empty when none was given."
+                  },
+                  "socketFound": {
+                    "type": "boolean",
+                    "description": "Given a socketName: whether the WeaponMesh static mesh has that socket. Attached to a missing socket, the point sits at the mesh origin."
                   },
                   "allowedTypes": {
                     "type": "array",
                     "items": {
                       "type": "string"
                     },
-                    "description": "Attachment types accepted by this slot."
+                    "description": "Types added to its component tags."
                   }
                 }
               }
@@ -62103,7 +62107,7 @@
       },
       "examples": [
         {
-          "title": "Configure a weapon Blueprint: its mesh or its attachment system.",
+          "title": "A weapon Blueprint, chosen by setting. weapon_mesh assigns weaponMeshPath (a static mesh; NOT_FOUND otherwise) to its WeaponMesh component, added when missing. attachments adds an AttachPoint_<slotName> scene component under WeaponMesh for each attachmentSlots entry: on socketName when given (socketFound says whether the mesh has that socket), with allowedTypes added to its component tags. These are components only; equipping an attachment is Blueprint logic. Compiles and saves (SAVE_FAILED otherwise).",
           "input": {
             "action": "configure_weapon",
             "blueprintPath": "/Game/BP_Rifle",
@@ -62166,8 +62170,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "aac6d960da7754f2f005757a2da3cd14bb798c13b15cce861303f54025a77d8e",
-        "content": "5110ebee2399c97399ef6885ebc8069e94e49638d5469738c320758d42c4906e"
+        "schema": "79022814df8abd2ca7fef5429c23b1aa066f9046fb494b1e486a3b1d4996a361",
+        "content": "32cd4e7e6d672bcd01ee62b72092fdd530c2e54f4971eb6aa9f57e90fda4f581"
       }
     },
     {
@@ -66211,13 +66215,13 @@
           "ability system component",
           "asc replication"
         ],
-        "summary": "Add an Ability System Component to a Blueprint, or configure its replication mode.",
+        "summary": "The Ability System Component of an Actor Blueprint, chosen by setting. add_component adds one named componentName (default AbilitySystemComponent); one already there, its own or inherited from a native parent, is kept and named (alreadyExists), never doubled. configure sets its replicationMode: Full (every effect to every client, for single player), Mixed (effects to the owner only, cues and tags to all, for player characters) or Minimal (cues and tags only, for AI). A non-Actor Blueprint is INVALID_TARGET and a name another member holds NAME_TAKEN. Compiles and saves (COMPILE_FAILED or SAVE_FAILED otherwise).",
         "whenToUse": [
-          "setting=configure: ASC defaults must change.",
-          "setting=add_component: A Gameplay Ability System asset must be authored."
+          "setting=configure: A multiplayer pawn or AI needs Mixed or Minimal replication instead of Full.",
+          "setting=add_component: A pawn, character or PlayerState must grant abilities, apply effects and hold attributes."
         ],
         "whenNotToUse": [
-          "setting=add_component: Component exists."
+          "setting=configure: The Blueprint has no Ability System Component of its own yet (add one first); one inherited from a native parent is set in C++."
         ]
       },
       "schemas": {
@@ -66231,7 +66235,7 @@
             },
             "componentName": {
               "type": "string",
-              "description": "AbilitySystemComponent name (defaults to AbilitySystemComponent)."
+              "description": "Ability System Component name. Adding: the new component (default AbilitySystemComponent). Configuring: which one (default the Blueprint's own)."
             },
             "replicationMode": {
               "type": "string",
@@ -66240,7 +66244,7 @@
                 "Minimal",
                 "Mixed"
               ],
-              "description": "ASC replication mode."
+              "description": "How gameplay effects replicate: Full (every effect to every client, for single player), Mixed (effects to the owning client only, cues and tags to all, for player characters) or Minimal (cues and tags only, for AI)."
             },
             "setting": {
               "type": "string",
@@ -66283,7 +66287,7 @@
       },
       "examples": [
         {
-          "title": "Add an Ability System Component to a Blueprint, or configure its replication mode.",
+          "title": "The Ability System Component of an Actor Blueprint, chosen by setting. add_component adds one named componentName (default AbilitySystemComponent); one already there, its own or inherited from a native parent, is kept and named (alreadyExists), never doubled. configure sets its replicationMode: Full (every effect to every client, for single player), Mixed (effects to the owner only, cues and tags to all, for player characters) or Minimal (cues and tags only, for AI). A non-Actor Blueprint is INVALID_TARGET and a name another member holds NAME_TAKEN. Compiles and saves (COMPILE_FAILED or SAVE_FAILED otherwise).",
           "input": {
             "action": "configure_asc",
             "blueprintPath": "/Game/BP_Char",
@@ -66343,8 +66347,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "738ac4ac4c9ac589f16fcd3f8fde9280cea97244789ed037e9d29ef440ebe473",
-        "content": "2bd08c58e8b8163abd0e44d77dcea42c917c63f838a47aaf32de7d08befb2632"
+        "schema": "eda9fc5dcbcf2fb3476afb95bed23ac53e215d74c73f61baacd48b61d9e2f9dd",
+        "content": "b62d43c5dd12e70adb5595c4f3e71ceae64601615c8e9ea3507c032349f0aa2a"
       }
     },
     {
@@ -66383,13 +66387,13 @@
           "add health attribute",
           "health attribute"
         ],
-        "summary": "Configure an attribute set: add an attribute or set its base value.",
+        "summary": "An AttributeSet Blueprint (attributeSetPath), chosen by setting. add_attribute adds a Gameplay Attribute (FGameplayAttributeData) named attributeName at defaultValue (default 0), checked on the compiled class before it saves (ATTRIBUTE_NOT_APPLIED otherwise). base_value sets an existing attribute's base and current value to baseValue (required). A Blueprint that is not an AttributeSet, or a property that is not an attribute, is INVALID_TYPE; a name already there is NAME_TAKEN. Attributes added here do not replicate and are not clamped until the set does that itself.",
         "whenToUse": [
-          "setting=add_attribute: An attribute is needed.",
-          "setting=base_value: Default value must change."
+          "setting=add_attribute: An AttributeSet needs a value such as Health or Stamina that gameplay effects change.",
+          "setting=base_value: An attribute must start at another value."
         ],
         "whenNotToUse": [
-          "setting=add_attribute: Use create_attribute_set."
+          "setting=add_attribute: The Blueprint is not an AttributeSet (make one with create_attribute_set)."
         ]
       },
       "schemas": {
@@ -66407,11 +66411,11 @@
             },
             "defaultValue": {
               "type": "number",
-              "description": "Initial value for the added attribute."
+              "description": "Starting base and current value of the new attribute (default 0)."
             },
             "baseValue": {
               "type": "number",
-              "description": "Base value for the attribute."
+              "description": "New base and current value of the attribute (required; an omitted one used to write 0)."
             },
             "setting": {
               "type": "string",
@@ -66455,7 +66459,7 @@
       },
       "examples": [
         {
-          "title": "Configure an attribute set: add an attribute or set its base value.",
+          "title": "An AttributeSet Blueprint (attributeSetPath), chosen by setting. add_attribute adds a Gameplay Attribute (FGameplayAttributeData) named attributeName at defaultValue (default 0), checked on the compiled class before it saves (ATTRIBUTE_NOT_APPLIED otherwise). base_value sets an existing attribute's base and current value to baseValue (required). A Blueprint that is not an AttributeSet, or a property that is not an attribute, is INVALID_TYPE; a name already there is NAME_TAKEN. Attributes added here do not replicate and are not clamped until the set does that itself.",
           "input": {
             "action": "configure_attribute_set",
             "attributeSetPath": "/Game/AS_Char",
@@ -66507,13 +66511,20 @@
             "baseValue": [
               "base_value"
             ]
+          },
+          "requires": {
+            "set_attribute_base_value": {
+              "required": [
+                "baseValue"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "3a12a58f68e17801ad8f4c6af64159cf8314b34326ed1bad512e52614a93f3bb",
-        "content": "d2ffdaaea14607aa0b910a121371ef4ff6ffd03661e689ff7e0be79e7484b633"
+        "schema": "8426e8c06e0f3d13e285b8400d347ef7b18ed64a80669e8b99092c42bc5f3414",
+        "content": "634a09a0e0964dfade04241b5c70171846d079d4e021ea958bbb79e5b67cbce9"
       }
     },
     {
