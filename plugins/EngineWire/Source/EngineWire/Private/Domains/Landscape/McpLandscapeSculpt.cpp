@@ -181,6 +181,7 @@ bool UEngineWireSubsystem::HandleSculptLandscape(
   Resp->SetNumberField(TEXT("modifiedVertices"), ModifiedVertices);
   Resp->SetNumberField(TEXT("brushVertices"), HeightData.Num());
   Edit.DescribeInto(Resp);
+  McpHandlerUtils::AddVerification(Resp, Landscape);
   SendAutomationResponse(RequestingSocket, RequestId,
                                     true,
                                     TEXT("Landscape sculpted"),

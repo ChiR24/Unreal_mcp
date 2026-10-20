@@ -39,13 +39,13 @@ export const MANAGE_GEOMETRY_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'edit_uvs', selector: 'uvOp',
-    summary: 'Edit mesh UVs: auto-generate, unwrap, project, pack islands, transform.',
+    summary: 'Give a placed dynamic mesh actor UVs, chosen by uvOp, in uvChannel (default 0, made when missing); each edit is one undo step. auto and unwrap cut seams with XAtlas and pack the islands into 0-1 (a bounds-sized box projection when XAtlas writes nothing); project box-projects, with tileSize the world size one texture repeat covers (else the texture spans each side once); pack_islands repacks the islands already there; transform shifts (uvOffset), scales (uvScale, about the middle of 0-1) and turns (rotation, degrees) the UVs already there.',
     topics: ['uv', 'unwrap', 'auto uv', 'pack uv islands', 'project uv'],
     members: { auto: 'auto_uv', unwrap: 'unwrap_uv', project: 'project_uv', pack_islands: 'pack_uv_islands', transform: 'transform_uvs' },
   },
   {
     primary: 'configure_mesh_collision', selector: 'collisionOp',
-    summary: 'Generate simple or complex collision for a mesh, or simplify its collision.',
+    summary: 'Give a placed dynamic mesh actor simple collision, chosen by collisionOp (UE 5.4 and later). generate fits collisionType box, sphere, capsule or convex (the default, one hull); generate_complex splits the mesh into up to maxHullCount convex hulls (default 8, at most 64) for a concave shape; simplify fits up to targetHullCount hulls (default 4, at most 16) to a copy decimated to simplificationFactor of its triangles (default 0.5), leaving the drawn mesh alone. The reply counts shapeCount; an unknown collisionType is refused.',
     topics: ['generate collision', 'complex collision', 'simplify collision', 'convex hull'],
     members: { generate: 'generate_collision', generate_complex: 'generate_complex_collision', simplify: 'simplify_collision' },
   },

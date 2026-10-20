@@ -4,14 +4,14 @@ import type { FoldSpec } from '../shared/fold-types.js';
 export const CONTROL_ACTOR_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'spawn', selector: 'spawnKind',
-    summary: 'Spawn an actor from a class or mesh path, or from a Blueprint, or many actors in one batch.',
+    summary: 'Place actors in the level, or in the running game during Play (gone when Play stops), chosen by spawnKind; each call is one undo step. class spawns classPath (or actorClass), such as /Script/Engine.PointLight or a Blueprint class, or with meshPath alone a Movable static or skeletal mesh actor showing that mesh; blueprint spawns blueprintPath; batch places up to 500 items (1000 once repeat rows are unrolled) in one call, each a spawn payload that can also take materialPath, variables, properties, folder and tags, with shared defaults. location and rotation default to zero and scale to 1; folder files the actor in the outliner and tags tag it. The actor is labelled actorName, else after its mesh or class; when another actor has the same label, the reply\'s actorName is the actor\'s unique object name, which later calls must use. An unknown class or mesh is refused (CLASS_NOT_FOUND, MESH_NOT_FOUND), and an actor that destroys itself at once is SPAWNED_THEN_DESTROYED. The reply checks the placement: groundZ and groundClearance, and placementWarning with suggestedLocation for an actor sunk, floating or intersecting (tag mcp.placement.ok to mark one deliberate).',
     topics: ['spawn actor', 'spawn blueprint', 'place actor', 'add actor to level', 'spawn many actors', 'add player start', 'spawn enemy', 'spawn actors in a row', 'spawn actors in a grid'],
     members: { class: 'spawn', blueprint: 'spawn_blueprint', batch: 'spawn_batch' },
     aliasMembers: ['spawn_actor'],
   },
   {
     primary: 'set_transform', selector: 'transformMode',
-    summary: 'Set an actor\'s transform: full transform, or location, rotation or scale alone, or teleport it.',
+    summary: 'Move, rotate or scale placed actors (the playing copy during Play), chosen by transformMode; every member writes alike. location, rotation ([pitch, yaw, roll] degrees) and scale are world values, a part left out keeps its current value, and offset moves by [dx, dy, dz] instead of to a location (both together are refused). actors gives several actors their own values and actorNames gives many the same change in one call. A single move is one undo step and teleports, without sweeping. The reply reads the transform back off the actor; one that did not end up as asked (attached, simulating physics, constrained, or moved by game logic) fails with TRANSFORM_MISMATCH carrying where it is, and TRANSFORM_BATCH_INCOMPLETE names batch items that did not move. The placement is checked: groundZ, groundClearance, and placementWarning with suggestedLocation when it is sunk, floating or intersecting.',
     topics: ['move actor', 'rotate actor', 'scale actor', 'set actor location', 'set actor rotation', 'teleport actor', 'make actor bigger', 'make actor smaller', 'resize actor', 'shrink actor'],
     members: { transform: 'set_transform', location: 'set_actor_location', rotation: 'set_actor_rotation', scale: 'set_actor_scale', teleport: 'teleport_actor' },
     aliasMembers: ['set_actor_transform'],

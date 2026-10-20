@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "c449acf10796d0fd",
+  "catalogRevision": "3b967bd35f947183",
   "recordCount": 416,
   "records": [
     {
@@ -20793,7 +20793,7 @@
           "new widget",
           "menu widget"
         ],
-        "summary": "Create a Widget Blueprint, set its parent class, or rename/reparent a widget in its tree.",
+        "summary": "Create or restructure a Widget Blueprint, chosen by edit. create makes one named name in path (default /Game/UI), or at widgetPath, from parentClass (default UserWidget; a native widget class or a Widget Blueprint class path, anything else INVALID_PARENT_CLASS), with an empty widget tree, then compiles and saves it (compileSucceeded, saveSucceeded); a taken path is ALREADY_EXISTS. set_parent_class reparents it to a UserWidget class or Widget Blueprint, refreshes, compiles and saves (INVALID_CLASS, CYCLIC_PARENT). rename_widget renames slotName to newName and carries graph references, bindings, animations and navigation along (ALREADY_EXISTS, NAME_CONFLICT). reparent_widget moves slotName under the panel newParent at index (default last; the same parent reorders), keeping its slot layout; a move under its own child is INVALID_PARENT.",
         "whenToUse": [
           "edit=create: A new UMG Widget Blueprint must be created.",
           "edit=set_parent_class: A Widget Blueprint must inherit from a specific UserWidget subclass.",
@@ -20935,7 +20935,7 @@
       },
       "examples": [
         {
-          "title": "Create a Widget Blueprint, set its parent class, or rename/reparent a widget in its tree.",
+          "title": "Create or restructure a Widget Blueprint, chosen by edit. create makes one named name in path (default /Game/UI), or at widgetPath, from parentClass (default UserWidget; a native widget class or a Widget Blueprint class path, anything else INVALID_PARENT_CLASS), with an empty widget tree, then compiles and saves it (compileSucceeded, saveSucceeded); a taken path is ALREADY_EXISTS. set_parent_class reparents it to a UserWidget class or Widget Blueprint, refreshes, compiles and saves (INVALID_CLASS, CYCLIC_PARENT). rename_widget renames slotName to newName and carries graph references, bindings, animations and navigation along (ALREADY_EXISTS, NAME_CONFLICT). reparent_widget moves slotName under the panel newParent at index (default last; the same parent reorders), keeping its slot layout; a move under its own child is INVALID_PARENT.",
           "input": {
             "action": "edit_widget_blueprint",
             "name": "WBP_MainUI",
@@ -21045,7 +21045,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "ca30e6e488d7da3a083e527bb9b6bc4c04ba0ed1fc0ac0589d0b7c2ccb78b057",
-        "content": "a6328ff9e9a0749f34a548912cafb3da34635cb858a74131eb0e58c30132c2e7"
+        "content": "e2fffe6f707e9f719ed0493ba74e9505c8dccdd9ae464126046239cd8808d458"
       }
     },
     {
@@ -38965,7 +38965,7 @@
           "set rotation",
           "translate"
         ],
-        "summary": "Set an actor's transform: full transform, or location, rotation or scale alone, or teleport it.",
+        "summary": "Move, rotate or scale placed actors (the playing copy during Play), chosen by transformMode; every member writes alike. location, rotation ([pitch, yaw, roll] degrees) and scale are world values, a part left out keeps its current value, and offset moves by [dx, dy, dz] instead of to a location (both together are refused). actors gives several actors their own values and actorNames gives many the same change in one call. A single move is one undo step and teleports, without sweeping. The reply reads the transform back off the actor; one that did not end up as asked (attached, simulating physics, constrained, or moved by game logic) fails with TRANSFORM_MISMATCH carrying where it is, and TRANSFORM_BATCH_INCOMPLETE names batch items that did not move. The placement is checked: groundZ, groundClearance, and placementWarning with suggestedLocation when it is sunk, floating or intersecting.",
         "whenToUse": [
           "transformMode=transform: An actor must be moved, rotated, or rescaled in one call.",
           "transformMode=transform: Several actors each need their own new location, rotation or scale (actors).",
@@ -39238,7 +39238,7 @@
       },
       "examples": [
         {
-          "title": "Set an actor's transform: full transform, or location, rotation or scale alone, or teleport it.",
+          "title": "Move, rotate or scale placed actors (the playing copy during Play), chosen by transformMode; every member writes alike. location, rotation ([pitch, yaw, roll] degrees) and scale are world values, a part left out keeps its current value, and offset moves by [dx, dy, dz] instead of to a location (both together are refused). actors gives several actors their own values and actorNames gives many the same change in one call. A single move is one undo step and teleports, without sweeping. The reply reads the transform back off the actor; one that did not end up as asked (attached, simulating physics, constrained, or moved by game logic) fails with TRANSFORM_MISMATCH carrying where it is, and TRANSFORM_BATCH_INCOMPLETE names batch items that did not move. The placement is checked: groundZ, groundClearance, and placementWarning with suggestedLocation when it is sunk, floating or intersecting.",
           "input": {
             "action": "set_transform",
             "actorName": "Cube1",
@@ -39321,7 +39321,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "60560b38b0f7850fa5e613bc2c023a738f894b5f95ae0470d072006041300a4e",
-        "content": "d08e9099eebaedec3a7ea87ef784ac55806a8da9379c0d638e2f713f7b277ff1"
+        "content": "311e4180f0d0e6f6a9ddc05419779d2a4bcdaf7d4f38c8eebc04c7a6ac5be289"
       }
     },
     {
@@ -39527,7 +39527,7 @@
           "row of actors",
           "grid of actors"
         ],
-        "summary": "Spawn an actor from a class or mesh path, or from a Blueprint, or many actors in one batch.",
+        "summary": "Place actors in the level, or in the running game during Play (gone when Play stops), chosen by spawnKind; each call is one undo step. class spawns classPath (or actorClass), such as /Script/Engine.PointLight or a Blueprint class, or with meshPath alone a Movable static or skeletal mesh actor showing that mesh; blueprint spawns blueprintPath; batch places up to 500 items (1000 once repeat rows are unrolled) in one call, each a spawn payload that can also take materialPath, variables, properties, folder and tags, with shared defaults. location and rotation default to zero and scale to 1; folder files the actor in the outliner and tags tag it. The actor is labelled actorName, else after its mesh or class; when another actor has the same label, the reply's actorName is the actor's unique object name, which later calls must use. An unknown class or mesh is refused (CLASS_NOT_FOUND, MESH_NOT_FOUND), and an actor that destroys itself at once is SPAWNED_THEN_DESTROYED. The reply checks the placement: groundZ and groundClearance, and placementWarning with suggestedLocation for an actor sunk, floating or intersecting (tag mcp.placement.ok to mark one deliberate).",
         "whenToUse": [
           "spawnKind=class: A new actor of a known Unreal class must be created in the scene.",
           "spawnKind=class: A static or skeletal mesh must be placed as its own actor (meshPath alone; the actor class follows the mesh).",
@@ -39769,7 +39769,7 @@
       },
       "examples": [
         {
-          "title": "Spawn an actor from a class or mesh path, or from a Blueprint, or many actors in one batch.",
+          "title": "Place actors in the level, or in the running game during Play (gone when Play stops), chosen by spawnKind; each call is one undo step. class spawns classPath (or actorClass), such as /Script/Engine.PointLight or a Blueprint class, or with meshPath alone a Movable static or skeletal mesh actor showing that mesh; blueprint spawns blueprintPath; batch places up to 500 items (1000 once repeat rows are unrolled) in one call, each a spawn payload that can also take materialPath, variables, properties, folder and tags, with shared defaults. location and rotation default to zero and scale to 1; folder files the actor in the outliner and tags tag it. The actor is labelled actorName, else after its mesh or class; when another actor has the same label, the reply's actorName is the actor's unique object name, which later calls must use. An unknown class or mesh is refused (CLASS_NOT_FOUND, MESH_NOT_FOUND), and an actor that destroys itself at once is SPAWNED_THEN_DESTROYED. The reply checks the placement: groundZ and groundClearance, and placementWarning with suggestedLocation for an actor sunk, floating or intersecting (tag mcp.placement.ok to mark one deliberate).",
           "input": {
             "action": "spawn",
             "classPath": "/Script/Engine.PointLight",
@@ -39910,7 +39910,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "2fdc87d08a2ef1e5f6f94086fdd06d38334e3f376aacfd4cd623990749df5a35",
-        "content": "4dcd762dd625573560ffe8285fe14fb52a57e35fa7ace063cb6a4ca7505ca2a1"
+        "content": "d63a4a7384f8eb3d23d6a67cf71823073b836aaf5a97f1ec2c5dbac4f3556fcd"
       }
     },
     {
@@ -58866,7 +58866,7 @@
         ],
         "summary": "Play a sound: 2D, at a location (played or spawned), attached to an actor, or prime it for playback. A 2D sound (looping music too) plays until stop_sound. measure plays it 2D and reports how loud it played (peak and average dB, silent). The sounds already playing are listed by console_command au.DumpActiveSounds.",
         "whenToUse": [
-          "playback=2d: Use it to play a non-spatial sound.",
+          "playback=2d: Use it to play a sound asset 2D, tied to no place, at volume and pitch (default 1) from startTime seconds; it plays to its end, a looping one until stop_sound. A path that loads no sound is ASSET_NOT_FOUND, and an editor with sound off answers NOT_PLAYED.",
           "playback=at_location: Use it to play a sound at a world location.",
           "playback=spawn_at_location: Use it to spawn a transient sound at a world location.",
           "playback=attached: Use it to play a sound attached to an actor component.",
@@ -59150,7 +59150,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "ae08078f5b5eb70cfd49aded13cab1d7238149edb1107f678e90e09697a36d19",
-        "content": "154612dec11581433d098a82dea5c2f57075d1d10350b25b9fafdc776a877c71"
+        "content": "fb43dbc5169cac19366f69264a261b237f5fe4cd1c88dbfe858747ace640aaf8"
       }
     },
     {
@@ -68001,7 +68001,7 @@
           "simplify collision",
           "convex hull"
         ],
-        "summary": "Generate simple or complex collision for a mesh, or simplify its collision.",
+        "summary": "Give a placed dynamic mesh actor simple collision, chosen by collisionOp (UE 5.4 and later). generate fits collisionType box, sphere, capsule or convex (the default, one hull); generate_complex splits the mesh into up to maxHullCount convex hulls (default 8, at most 64) for a concave shape; simplify fits up to targetHullCount hulls (default 4, at most 16) to a copy decimated to simplificationFactor of its triangles (default 0.5), leaving the drawn mesh alone. The reply counts shapeCount; an unknown collisionType is refused.",
         "whenToUse": [
           "collisionOp=generate: Simple collision must be generated.",
           "collisionOp=generate_complex: Complex collision must be generated.",
@@ -68099,7 +68099,7 @@
       },
       "examples": [
         {
-          "title": "Generate simple or complex collision for a mesh, or simplify its collision.",
+          "title": "Give a placed dynamic mesh actor simple collision, chosen by collisionOp (UE 5.4 and later). generate fits collisionType box, sphere, capsule or convex (the default, one hull); generate_complex splits the mesh into up to maxHullCount convex hulls (default 8, at most 64) for a concave shape; simplify fits up to targetHullCount hulls (default 4, at most 16) to a copy decimated to simplificationFactor of its triangles (default 0.5), leaving the drawn mesh alone. The reply counts shapeCount; an unknown collisionType is refused.",
           "input": {
             "action": "configure_mesh_collision",
             "targetActor": "DM_A",
@@ -68167,7 +68167,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "a7ec49e692447d12745cdaec1d4ca997a4e7bab62f0afe997a05191562a56712",
-        "content": "e4cdef548b6a74a0ee405251d903614d045c83f3b354d98b655dcb9f617469ea"
+        "content": "8dd82f7e20139a9f40c1160d4fd9f0f51055942a788c70b073b5c3aa56e59eff"
       }
     },
     {
@@ -71768,13 +71768,13 @@
           "pack uv islands",
           "project uv"
         ],
-        "summary": "Edit mesh UVs: auto-generate, unwrap, project, pack islands, transform.",
+        "summary": "Give a placed dynamic mesh actor UVs, chosen by uvOp, in uvChannel (default 0, made when missing); each edit is one undo step. auto and unwrap cut seams with XAtlas and pack the islands into 0-1 (a bounds-sized box projection when XAtlas writes nothing); project box-projects, with tileSize the world size one texture repeat covers (else the texture spans each side once); pack_islands repacks the islands already there; transform shifts (uvOffset), scales (uvScale, about the middle of 0-1) and turns (rotation, degrees) the UVs already there.",
         "whenToUse": [
-          "uvOp=auto: UVs must be auto-generated.",
-          "uvOp=unwrap: UVs must be unwrapped.",
-          "uvOp=project: UVs must be projected.",
-          "uvOp=pack_islands: UV islands must be packed.",
-          "uvOp=transform: UVs must be scaled/offset."
+          "uvOp=auto: A mesh needs UVs that follow its surface, such as before a texture, a lightmap or a bake.",
+          "uvOp=unwrap: A mesh needs UVs that follow its surface.",
+          "uvOp=project: A box-like mesh needs simple UVs fast, or a tiling material must repeat at a real-world size (tileSize).",
+          "uvOp=pack_islands: Islands overlap or stray outside 0-1 after edits, such as before a lightmap bake.",
+          "uvOp=transform: A texture on a mesh must repeat more or less often, shift or turn, keeping its UV layout."
         ],
         "whenNotToUse": []
       },
@@ -71798,6 +71798,11 @@
             "uvChannel": {
               "type": "integer",
               "description": "UV channel index (0-7)."
+            },
+            "tileSize": {
+              "type": "number",
+              "minimum": 1,
+              "description": "World size in cm one texture repeat covers (100 repeats a brick texture every metre); omitted, the texture spans each side of the mesh once."
             },
             "rotation": {
               "type": "number",
@@ -71881,7 +71886,7 @@
       },
       "examples": [
         {
-          "title": "Edit mesh UVs: auto-generate, unwrap, project, pack islands, transform.",
+          "title": "Give a placed dynamic mesh actor UVs, chosen by uvOp, in uvChannel (default 0, made when missing); each edit is one undo step. auto and unwrap cut seams with XAtlas and pack the islands into 0-1 (a bounds-sized box projection when XAtlas writes nothing); project box-projects, with tileSize the world size one texture repeat covers (else the texture spans each side once); pack_islands repacks the islands already there; transform shifts (uvOffset), scales (uvScale, about the middle of 0-1) and turns (rotation, degrees) the UVs already there.",
           "input": {
             "action": "edit_uvs",
             "targetActor": "DM_A",
@@ -71929,6 +71934,9 @@
             "transform": "transform_uvs"
           },
           "declaredBy": {
+            "tileSize": [
+              "project"
+            ],
             "rotation": [
               "transform"
             ],
@@ -71943,8 +71951,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "113a0284b999d0e7eac6ec5689a3120cc8d2c8e3c11d0c351c400d078be95ce4",
-        "content": "461a374b937b9bbdbe03098bbaad3a099208b0f7d54835af2e12b106504ea023"
+        "schema": "86be27366da9fdb232e790a5e1648c17600567b5c71a014253a7555db98460a6",
+        "content": "12169eb88f0f8d327fef9e386d68195e7f31f2662280d1680973391bf2123609"
       }
     },
     {
@@ -103152,9 +103160,9 @@
         "topics": [
           "play_sound"
         ],
-        "summary": "Play a 2D sound by path via the play_sound_2d bridge action, with an engine fallback sound.",
+        "summary": "Play a sound asset (soundPath: a SoundWave, SoundCue or MetaSound Source) as a 2D preview in the editor, tied to no place, at volume and pitch (default 1) from startTime seconds; with no soundPath it plays the editor's compile-success chime. A looping sound keeps playing until manage_audio stop_sound. A path that loads no sound is ASSET_NOT_FOUND, and an editor with sound off answers NOT_PLAYED.",
         "whenToUse": [
-          "A 2D (non-spatial) sound must be played at runtime."
+          "A sound must be heard now, to check that it plays and how it sounds, without running the game."
         ],
         "whenNotToUse": [
           "A spatial sound at a location is needed (use manage_audio)."
@@ -103217,7 +103225,7 @@
       },
       "examples": [
         {
-          "title": "Play a 2D sound by path via the play_sound_2d bridge action, with an engine fallback sound.",
+          "title": "Play a sound asset (soundPath: a SoundWave, SoundCue or MetaSound Source) as a 2D preview in the editor, tied to no place, at volume and pitch (default 1) from startTime seconds; with no soundPath it plays the editor's compile-success chime. A looping sound keeps playing until manage_audio stop_sound. A path that loads no sound is ASSET_NOT_FOUND, and an editor with sound off answers NOT_PLAYED.",
           "input": {
             "action": "play_sound",
             "soundPath": "/Game/Audio/SFX_Click",
@@ -103256,7 +103264,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "80572e46ad1d3716f43c94b747738814d686b923788a614bb01d0abd94224083",
-        "content": "29e4e34a8e3ad22c9597fa81ca4a04a4297f8284bc92d9ebef3221f686d9742f"
+        "content": "06759b3931e69c570fb19e8110116f0ce93ae76fd8a49add82c407901c08aa30"
       }
     },
     {

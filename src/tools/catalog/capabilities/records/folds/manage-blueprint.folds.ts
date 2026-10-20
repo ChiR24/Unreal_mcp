@@ -71,7 +71,7 @@ export const MANAGE_BLUEPRINT_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'edit_widget_blueprint', selector: 'edit',
-    summary: 'Create a Widget Blueprint, set its parent class, or rename/reparent a widget in its tree.',
+    summary: 'Create or restructure a Widget Blueprint, chosen by edit. create makes one named name in path (default /Game/UI), or at widgetPath, from parentClass (default UserWidget; a native widget class or a Widget Blueprint class path, anything else INVALID_PARENT_CLASS), with an empty widget tree, then compiles and saves it (compileSucceeded, saveSucceeded); a taken path is ALREADY_EXISTS. set_parent_class reparents it to a UserWidget class or Widget Blueprint, refreshes, compiles and saves (INVALID_CLASS, CYCLIC_PARENT). rename_widget renames slotName to newName and carries graph references, bindings, animations and navigation along (ALREADY_EXISTS, NAME_CONFLICT). reparent_widget moves slotName under the panel newParent at index (default last; the same parent reorders), keeping its slot layout; a move under its own child is INVALID_PARENT.',
     topics: ['widget blueprint', 'umg', 'rename widget', 'reparent widget', 'widget parent class', 'rename button', 'widget name'],
     members: { create: 'create_widget_blueprint', set_parent_class: 'set_widget_parent_class', rename_widget: 'rename_widget', reparent_widget: 'reparent_widget' },
   },

@@ -4282,3 +4282,42 @@ describe('landscape edits reach the merged landscape, physics and texture settin
     expect(settings).not.toContain('if (bSave) McpSafeAssetSave(Texture);');
   });
 });
+
+describe('sounds, landscape receipts, skeleton saves and UV projections answer what happened', () => {
+  it('play_sound refuses when the engine started no sound', () => {
+    const playback = code('Audio', 'McpAudioPlayback.cpp');
+    expect(playback).toMatch(/if \(!Preview\) \{[\s\S]*?TEXT\("NOT_PLAYED"\)\);\s*return true;/u);
+  });
+
+  it('sculpt and paint name the landscape for the receipt; an export names the file, not the landscape', () => {
+    for (const file of ['McpLandscapeSculpt.cpp', 'McpLandscapeLayerPaint.cpp']) {
+      expect(code('Landscape', file), file).toContain('McpHandlerUtils::AddVerification(Resp, Landscape);');
+    }
+    const heightmapIo = code('Environment', 'Landscape', 'McpEnvLandscapeHeightmap.cpp');
+    const exportBody = heightmapIo.slice(heightmapIo.indexOf('McpExportLandscapeHeightmap'), heightmapIo.indexOf('McpImportLandscapeHeightmap'));
+    expect(exportBody).toContain('TEXT("modifiedPaths")');
+    expect(exportBody).not.toContain('AddVerification(Resp, Landscape)');
+  });
+
+  it('skeleton edits report the save they made', () => {
+    for (const file of [['Bones', 'McpSkeletonSockets.cpp'], ['MorphTargets', 'McpSkeletonMorphTargetEditing.cpp'],
+      ['SkinWeights', 'McpSkeletonWeightProfiles.cpp']]) {
+      const source = code('Skeleton', ...file);
+      expect(source, file.join('/')).not.toMatch(/^\s*SaveIfRequested\(\w+, Payload\);/mu);
+      expect(source, file.join('/')).toContain('SaveAndReport(');
+    }
+  });
+
+  it('a texture group refusal stays short and carries every valid name', () => {
+    const settings = code('Texture', 'McpTextureSettings.cpp');
+    expect(settings).toContain('Response->SetArrayField(TEXT("validValues")');
+    expect(settings).toContain('EngineEnumNames<::TextureGroup>(TEXT("TEXTUREGROUP_"))');
+  });
+
+  it('project_uv sizes its box (tileSize, else the mesh bounds), and transform_uvs refuses a call with nothing to apply', () => {
+    const uv = code('Geometry', 'UV', 'McpGeometryUvGen.cpp');
+    expect(uv).not.toContain('FTransform::Identity');
+    expect(uv).toContain('TryGetNumberField(TEXT("tileSize"), TileSize)');
+    expect(uv).toContain('Nothing to apply: send uvOffset, uvScale or rotation.');
+  });
+});

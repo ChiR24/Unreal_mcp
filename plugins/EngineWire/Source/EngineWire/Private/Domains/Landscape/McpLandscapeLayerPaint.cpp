@@ -222,6 +222,7 @@ bool UEngineWireSubsystem::HandlePaintLandscapeLayer(
   Resp->SetNumberField(TEXT("regionMaxX"), PaintMaxX);
   Resp->SetNumberField(TEXT("regionMaxY"), PaintMaxY);
   Edit.DescribeInto(Resp);
+  McpHandlerUtils::AddVerification(Resp, Landscape);
   SendAutomationResponse(
       RequestingSocket, RequestId, true,
       TEXT("Layer painted successfully"), Resp, FString());

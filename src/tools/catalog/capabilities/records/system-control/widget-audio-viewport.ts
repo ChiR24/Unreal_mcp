@@ -77,8 +77,8 @@ export const WIDGET_AUDIO_VIEWPORT_RECORDS: readonly CapabilityRecordSource[] = 
     action: 'play_sound',
     domain: 'audio',
     family: 'audio',
-    summary: 'Play a 2D sound by path via the play_sound_2d bridge action, with an engine fallback sound.',
-    whenToUse: ['A 2D (non-spatial) sound must be played at runtime.'],
+    summary: 'Play a sound asset (soundPath: a SoundWave, SoundCue or MetaSound Source) as a 2D preview in the editor, tied to no place, at volume and pitch (default 1) from startTime seconds; with no soundPath it plays the editor\'s compile-success chime. A looping sound keeps playing until manage_audio stop_sound. A path that loads no sound is ASSET_NOT_FOUND, and an editor with sound off answers NOT_PLAYED.',
+    whenToUse: ['A sound must be heard now, to check that it plays and how it sounds, without running the game.'],
     whenNotToUse: ['A spatial sound at a location is needed (use manage_audio).'],
     inputProps: {
       soundPath: { type: 'string', description: 'Sound asset path (default the editor CompileSuccess cue).' },

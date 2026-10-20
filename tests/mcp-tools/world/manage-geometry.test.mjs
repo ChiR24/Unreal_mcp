@@ -142,6 +142,8 @@ const testCases = [
   // === ACTION ===
   { scenario: 'ACTION: auto_uv', toolName: 'manage_geometry', arguments: {"action": "auto_uv", "actorName": EDIT_ACTOR}, expected: 'success' },
   { scenario: 'ACTION: project_uv', toolName: 'manage_geometry', arguments: {"action": "project_uv", "actorName": EDIT_ACTOR, "uvChannel": 0}, expected: 'success' },
+  { scenario: 'ACTION: project_uv tiles a texture every metre', toolName: 'manage_geometry', arguments: {"action": "project_uv", "actorName": EDIT_ACTOR, "uvChannel": 0, "tileSize": 100}, expected: 'success', assertions: [{ path: 'structuredContent.result.projectionSize.0', equals: 100, label: 'one repeat per 100 cm' }] },
+  { scenario: 'ERROR: project_uv refuses a tileSize of 0', toolName: 'manage_geometry', arguments: {"action": "project_uv", "actorName": EDIT_ACTOR, "tileSize": 0}, expected: 'error' },
   { scenario: 'ACTION: transform_uvs', toolName: 'manage_geometry', arguments: {"action": "transform_uvs", "actorName": EDIT_ACTOR, "uvChannel": 0, "uvOffset": {"u": 0.1, "v": 0.2}, "uvScale": {"u": 1.1, "v": 0.9}, "rotation": 15}, expected: 'success' },
   { scenario: 'Reset: cleanup geometry actors', toolName: 'control_actor', arguments: { action: 'delete_by_tag', tag: 'GeoTest' }, expected: 'success|not found' },
   { scenario: 'ACTION: unwrap_uv', toolName: 'manage_geometry', arguments: {"action": "unwrap_uv", "actorName": EDIT_ACTOR, "uvChannel": 0}, expected: 'success' },

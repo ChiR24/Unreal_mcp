@@ -19865,6 +19865,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Shell wall thickness (scalar)."
         },
+        "tileSize": {
+          "type": "number",
+          "minimum": 1,
+          "description": "World size in cm one texture repeat covers (100 repeats a brick texture every metre); omitted, the texture spans each side of the mesh once."
+        },
         "toolActor": {
           "type": "string",
           "description": "Tool actor name for boolean operations."

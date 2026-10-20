@@ -77,7 +77,8 @@ bool McpExportLandscapeHeightmap(const TSharedPtr<FJsonObject> &Payload, TShared
     Resp->SetNumberField(TEXT("width"), SizeX);
     Resp->SetNumberField(TEXT("height"), SizeY);
     Resp->SetNumberField(TEXT("sampleCount"), Heights.Num());
-    McpHandlerUtils::AddVerification(Resp, Landscape);
+    // An export only reads the landscape: naming the actor listed it as changed. What changed is the file.
+    Resp->SetArrayField(TEXT("modifiedPaths"), TArray<TSharedPtr<FJsonValue>>{MakeShared<FJsonValueString>(SafePath)});
     OutMessage = TEXT("Landscape heightmap exported");
     return true;
 }

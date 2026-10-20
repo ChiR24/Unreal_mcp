@@ -47,9 +47,10 @@ bool ParseEngineEnum(const FString& Value, const TCHAR* Prefix, TEnum& Out)
     return true;
 }
 
-// The names a refusal lists, hidden entries left out.
+// The names a refusal offers, hidden entries left out and Prefix cut off: every group with its TEXTUREGROUP_ ran past
+// what a refusal message carries.
 template <typename TEnum>
-FString EngineEnumNames()
+TArray<FString> EngineEnumNames(const TCHAR* Prefix)
 {
     const UEnum* Enum = StaticEnum<TEnum>();
     TArray<FString> Names;
@@ -57,17 +58,21 @@ FString EngineEnumNames()
     {
         if (!Enum->HasMetaData(TEXT("Hidden"), Index))
         {
-            Names.Add(Enum->GetNameStringByIndex(Index));
+            Names.Add(Enum->GetNameStringByIndex(Index).RightChop(FCString::Strlen(Prefix)));
         }
     }
-    return FString::Join(Names, TEXT(", "));
+    return Names;
 }
 
-TSharedPtr<FJsonObject> Refuse(const TSharedPtr<FJsonObject>& Response, const FString& Error)
+TSharedPtr<FJsonObject> Refuse(const TSharedPtr<FJsonObject>& Response, const FString& Error, const TArray<FString>& ValidValues = {})
 {
     Response->SetBoolField(TEXT("success"), false);
     Response->SetStringField(TEXT("error"), Error);
     Response->SetStringField(TEXT("errorCode"), TEXT("INVALID_ARGUMENT"));
+    if (ValidValues.Num() > 0)
+    {
+        Response->SetArrayField(TEXT("validValues"), McpHandlerUtils::ToJsonStringArray(ValidValues));
+    }
     return Response;
 }
 }
@@ -89,8 +94,9 @@ TSharedPtr<FJsonObject> HandleTextureSettingsAction(const FString& SubAction, co
         TextureCompressionSettings Compression = TC_Default;
         if (!ParseEngineEnum(CompressionSettingsStr, TEXT("TC_"), Compression))
         {
-            return Refuse(Response, FString::Printf(TEXT("compressionSettings '%s' is not a texture compression setting; use one of %s. Nothing was changed."),
-                *CompressionSettingsStr, *EngineEnumNames<TextureCompressionSettings>()));
+            const TArray<FString> Valid = EngineEnumNames<TextureCompressionSettings>(TEXT("TC_"));
+            return Refuse(Response, FString::Printf(TEXT("compressionSettings '%s' is not a texture compression setting; use one of %s "
+                "(the TC_ prefix is optional). Nothing was changed."), *CompressionSettingsStr, *FString::Join(Valid, TEXT(", "))), Valid);
         }
         Texture->PreEditChange(nullptr);
         Texture->CompressionSettings = Compression;
@@ -111,8 +117,10 @@ TSharedPtr<FJsonObject> HandleTextureSettingsAction(const FString& SubAction, co
         ::TextureGroup Group = TEXTUREGROUP_World;
         if (!ParseEngineEnum(TextureGroup, TEXT("TEXTUREGROUP_"), Group))
         {
-            return Refuse(Response, FString::Printf(TEXT("textureGroup '%s' is not a texture group; use one of %s. Nothing was changed."),
-                *TextureGroup, *EngineEnumNames<::TextureGroup>()));
+            return Refuse(Response, FString::Printf(TEXT("textureGroup '%s' is not a texture group; use an engine group such as World, "
+                "WorldNormalMap, Character, Weapon, Vehicle, Cinematic, Effects, Skybox, UI, Lightmap, Shadowmap, Pixels2D or "
+                "Project01 to Project32, the TEXTUREGROUP_ prefix optional. Nothing was changed."), *TextureGroup),
+                EngineEnumNames<::TextureGroup>(TEXT("TEXTUREGROUP_")));
         }
         Texture->PreEditChange(nullptr);
         Texture->LODGroup = Group;

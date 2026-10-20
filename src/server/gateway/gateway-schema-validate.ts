@@ -8,7 +8,7 @@
 
 import { isRecord } from '../../utils/validation/type-guards.js';
 
-const SUPPORTED_SCHEMA_KEYWORDS = new Set([
+export const SUPPORTED_SCHEMA_KEYWORDS: ReadonlySet<string> = new Set([
   '$schema',
   'type',
   'description',
