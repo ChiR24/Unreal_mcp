@@ -4,6 +4,7 @@
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Engine/SkeletalMesh.h"
 #include "Foundation/BridgeHelpers/Security/McpProjectPaths.h"
+#include "Foundation/BridgeHelpers/Assets/McpAssetCreation.h"
 #include "Safety/McpSafeOperations.h"
 #include "EngineWireSubsystem.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"

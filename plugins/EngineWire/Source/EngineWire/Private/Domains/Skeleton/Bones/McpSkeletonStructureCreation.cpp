@@ -8,6 +8,7 @@
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/BridgeHelpers/Security/McpAssetPathCanonical.h"
+#include "Foundation/BridgeHelpers/Assets/McpAssetCreation.h"
 #include "Misc/PackageName.h"
 #include "Misc/Paths.h"
 #include "ReferenceSkeleton.h"
