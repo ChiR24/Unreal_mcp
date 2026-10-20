@@ -193,7 +193,7 @@ export const LEVEL_STRUCTURE_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildWorldRecord({
     parentTool: 'manage_level_structure', action: 'connect_level_blueprint_nodes', dispatchAction: 'connect_level_blueprint_nodes',
-    family: F, summary: 'Connect two level blueprint graph nodes by pin names.',
+    family: F, summary: 'Link sourceNodeName.sourcePinName to targetNodeName.targetPinName in the level Blueprint through the graph schema: incompatible types or directions are refused with the schema\'s reason (CONNECTION_REFUSED), a cast gets its conversion node, and a pin that takes one link drops its old one. A pin a node lacks is PIN_NOT_FOUND, naming the pins on both nodes. The level stays unsaved unless save is true (saved).',
     whenToUse: ['Two level blueprint nodes must be wired together.'], whenNotToUse: ['A node must be created first; use add_level_blueprint_node.', 'The nodes are in a Blueprint asset, not the level Blueprint; use blueprint.edit_graph (edit=connect_pins).'],
     inputProps: { sourceNodeName: LBP_NODE('Source'), sourcePinName: P.sourcePinName, targetNodeName: LBP_NODE('Target'), targetPinName: P.targetPinName, levelPath: BP_LEVEL, save: P.levelEditSave },
     required: ['sourceNodeName', 'targetNodeName'], effect: 'write', costLatency: 'interactive', costResources: 'low',

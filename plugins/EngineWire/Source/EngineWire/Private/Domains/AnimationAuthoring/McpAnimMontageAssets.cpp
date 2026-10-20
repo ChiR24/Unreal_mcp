@@ -113,10 +113,20 @@ TSharedPtr<FJsonObject> HandleMontageAssetActions(const FString& SubAction, cons
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load montage: %s"), *AssetPath), TEXT("MONTAGE_NOT_FOUND"));
         }
 
-        // Add new section
-        int32 SectionIndex = Montage->AddAnimCompositeSection(FName(*SectionName), StartTime);
+        // The engine answers INDEX_NONE for a name already there, which was reported as "added at index -1".
+        if (StartTime < 0.0f || StartTime > Montage->GetPlayLength() + KINDA_SMALL_NUMBER)
+        {
+            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("startTime must lie in 0..%.3f s (the montage's length); nothing was added."),
+                Montage->GetPlayLength()), TEXT("INVALID_ARGUMENT"));
+        }
+        const int32 SectionIndex = Montage->AddAnimCompositeSection(FName(*SectionName), StartTime);
+        if (SectionIndex == INDEX_NONE)
+        {
+            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Section '%s' already exists (sections: %s); pick another name. Nothing was added."),
+                *SectionName, *McpMontageSectionNames(Montage)), TEXT("SECTION_EXISTS"));
+        }
 
-        SaveAnimAsset(Montage, bSave);
+        SaveAnimAssetAndReport(Montage, bSave, Response);
 
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Section '%s' added at index %d"), *SectionName, SectionIndex));
         McpHandlerUtils::AddVerification(Response, Montage);
@@ -142,8 +152,21 @@ TSharedPtr<FJsonObject> HandleMontageAssetActions(const FString& SubAction, cons
         {
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation: %s"), *AnimationPath), TEXT("ANIMATION_NOT_FOUND"));
         }
+        // Another skeleton's animation plays nothing here (the montage factory asserts on such a mismatch).
+        const USkeleton* MontageSkeleton = Montage->GetSkeleton();
+#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 2
+        const bool bCompatible = MontageSkeleton && MontageSkeleton->IsCompatibleForEditor(Animation->GetSkeleton());
+#else
+        const bool bCompatible = MontageSkeleton && MontageSkeleton->IsCompatible(Animation->GetSkeleton());
+#endif
+        if (!bCompatible || StartTime < 0.0f)
+        {
+            ANIM_ERROR_RESPONSE(bCompatible ? FString(TEXT("startTime must be 0 or more; nothing was added."))
+                : FString::Printf(TEXT("animationPath uses skeleton %s, which the montage's %s does not take; nothing was added."),
+                    *GetPathNameSafe(Animation->GetSkeleton()), *GetPathNameSafe(MontageSkeleton)),
+                bCompatible ? TEXT("INVALID_ARGUMENT") : TEXT("SKELETON_MISMATCH"));
+        }
 
-        // Find or create slot track
         FSlotAnimationTrack* SlotTrack = nullptr;
         for (FSlotAnimationTrack& Track : Montage->SlotAnimTracks)
         {
@@ -152,6 +175,23 @@ TSharedPtr<FJsonObject> HandleMontageAssetActions(const FString& SubAction, cons
                 SlotTrack = &Track;
                 break;
             }
+        }
+        // A slot plays its segments one after another; one laid over another was accepted and broke the montage.
+        float SlotEnd = 0.0f;
+        bool bOverlaps = false;
+        if (SlotTrack)
+        {
+            for (const FAnimSegment& Existing : SlotTrack->AnimTrack.AnimSegments)
+            {
+                SlotEnd = FMath::Max(SlotEnd, Existing.StartPos + Existing.GetLength());
+                bOverlaps |= StartTime < Existing.StartPos + Existing.GetLength() - KINDA_SMALL_NUMBER &&
+                             StartTime + Animation->GetPlayLength() > Existing.StartPos + KINDA_SMALL_NUMBER;
+            }
+        }
+        if (bOverlaps)
+        {
+            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("A segment already exists there on slot '%s', which plays until %.3f s; start the new one at %.3f s or later, or use another slotName. Nothing was added."),
+                *SlotName, SlotEnd, SlotEnd), TEXT("SEGMENT_OVERLAP"));
         }
 
         if (!SlotTrack)
@@ -173,8 +213,11 @@ TSharedPtr<FJsonObject> HandleMontageAssetActions(const FString& SubAction, cons
         Segment.AnimEndTime = Animation->GetPlayLength();
         Segment.AnimPlayRate = 1.0f;
         Segment.LoopingCount = 1;
+        // The montage plays for its stored length: a segment past it was cut off.
+        Montage->SetCompositeLength(Montage->CalculateSequenceLength());
+        Response->SetNumberField(TEXT("montageLength"), Montage->GetPlayLength());
 
-        SaveAnimAsset(Montage, bSave);
+        SaveAnimAssetAndReport(Montage, bSave, Response);
 
         ANIM_SUCCESS_RESPONSE(TEXT("Animation added to montage slot"));
         McpHandlerUtils::AddVerification(Response, Montage);
@@ -191,6 +234,11 @@ TSharedPtr<FJsonObject> HandleMontageAssetActions(const FString& SubAction, cons
         {
             ANIM_ERROR_RESPONSE(TEXT("sectionName is required"), TEXT("MISSING_SECTION_NAME"));
         }
+        // Without startTime it saved and answered "updated" having moved nothing.
+        if (!Params->HasField(TEXT("startTime")))
+        {
+            ANIM_ERROR_RESPONSE(TEXT("startTime (the time the section moves to) is required; nothing was moved."), TEXT("INVALID_ARGUMENT"));
+        }
 
         UAnimMontage* Montage = Cast<UAnimMontage>(StaticLoadObject(UAnimMontage::StaticClass(), nullptr, *AssetPath));
         if (!Montage)
@@ -198,21 +246,21 @@ TSharedPtr<FJsonObject> HandleMontageAssetActions(const FString& SubAction, cons
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load montage: %s"), *AssetPath), TEXT("MONTAGE_NOT_FOUND"));
         }
 
-        int32 SectionIndex = Montage->GetSectionIndex(FName(*SectionName));
+        const int32 SectionIndex = Montage->GetSectionIndex(FName(*SectionName));
         if (SectionIndex == INDEX_NONE)
         {
-            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Section not found: %s"), *SectionName), TEXT("SECTION_NOT_FOUND"));
+            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Section '%s' is not in this montage (sections: %s)"), *SectionName,
+                *McpMontageSectionNames(Montage)), TEXT("SECTION_NOT_FOUND"));
         }
-
-        // Update section timing if startTime is provided
-        if (Params->HasField(TEXT("startTime")))
+        const float StartTime = static_cast<float>(GetJsonNumberField(Params, TEXT("startTime")));
+        if (StartTime < 0.0f || StartTime > Montage->GetPlayLength() + KINDA_SMALL_NUMBER)
         {
-            float StartTime = static_cast<float>(GetJsonNumberField(Params, TEXT("startTime")));
-            FCompositeSection& Section = Montage->CompositeSections[SectionIndex];
-            Section.SetTime(StartTime);
+            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("startTime must lie in 0..%.3f s (the montage's length); nothing was moved."),
+                Montage->GetPlayLength()), TEXT("INVALID_ARGUMENT"));
         }
+        Montage->CompositeSections[SectionIndex].SetTime(StartTime);
 
-        SaveAnimAsset(Montage, bSave);
+        SaveAnimAssetAndReport(Montage, bSave, Response);
 
         ANIM_SUCCESS_RESPONSE(TEXT("Section timing updated"));
         McpHandlerUtils::AddVerification(Response, Montage);

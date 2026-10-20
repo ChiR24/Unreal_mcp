@@ -12,42 +12,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details>
 <summary><b>✨ Added</b></summary>
 
-- **Blueprint runtime errors name their node** (`nodeId`, graph, Blueprint, hits) in frame steps and motion reads; `runtime_report` adds the object's variables.
-- **MCP 2026-07-28 on both transports**: sessionless requests and consent asked through the client (native adds the tasks extension); older clients are unchanged.
-- **`get_editor_state` `focus`**: open editors, the front Blueprint graph and its selected nodes, selected actors, recent errors.
-- **`describe_view` `points`, `labels` and `coveredBy`**: what is under a spot, the frame with listed actors numbered, what covers a named actor.
-- **Large results come in pages** instead of `RESULT_TOO_LARGE`; `page.nextCall` reads the next one without rerunning the call.
-- **Search hands over a clear first hit** with `signature` and `executeCall` when it needs no consent, so describe can be skipped.
+- **Blueprint runtime errors name their node** (`nodeId`, graph, hits) in frame steps and motion reads.
+- **MCP 2026-07-28 on both transports**: sessionless requests and consent through the client (native adds tasks); older clients are unchanged.
+- **`get_editor_state` `focus`**: open editors, the front graph and its selected nodes, selected actors, recent errors.
+- **`describe_view` `points`, `labels` and `coveredBy`**: what is under a spot, numbered actors, what covers one.
+- **Large results come in pages** (`page.nextCall`) instead of `RESULT_TOO_LARGE`.
+- **Search hands over a clear first hit** with `signature` and `executeCall`.
 - **`get_stats` `frame`**: the thread bounding the frame and what in view weighs on it.
-- **`nanite_rebuild_mesh` `assetPaths`**: several meshes under one consent; translucent ones are left alone and the materials get the Nanite flag.
-- **`inspect_asset` `diff`**: a Blueprint, DataTable or data asset against its saved file or another asset.
-- **`get_niagara_info` values**: each user parameter's default, and with `actorName` a placed effect's own values.
-- **Whole parts in one `edit_dynamic_mesh` call**: `append_cuboids`, `append_loft`, `append_mesh` and `delete_triangles`.
-- **Movie Render Queue**: `cancel_render` stops a render; `configure_render_camera` sets shutter timing (FrameOpen), overscan and rendering every camera.
-- **Sequences and animations**: `set_section` `playRate`; `get_properties` `tracks` lists each track's clips; `get_animation_info` the bones a sequence keys.
-- **`setup_global_illumination` `saveToProject`**: the GI method reaches Project Settings and the packaged game, not only this editor session.
-- **Calls that spawn, move or re-mesh actors check them** (and a Blueprint's placed copies) and warn on one left sunk, floating, intersecting, z-fighting, untextured, labelled "Text" or pasted twice.
+- **`nanite_rebuild_mesh` `assetPaths`**, **`inspect_asset` `diff`**, and **`get_niagara_info`** defaults and placed values.
+- **Whole parts in one `edit_dynamic_mesh` call**: `append_cuboids`, `append_loft`, `append_mesh`, `delete_triangles`.
+- **Renders and sequences**: `cancel_render`; shutter timing, overscan and every camera in `configure_render_camera`; `set_section` `playRate`; per-track clips and keyed bones in the readers.
+- **`setup_global_illumination` `saveToProject`** writes the GI method to Project Settings.
+- **Calls that spawn, move or re-mesh actors check them** and warn on one left sunk, floating, intersecting, z-fighting, untextured, labelled "Text" or pasted twice.
 
 </details>
 
 <details>
 <summary><b>🔧 Fixed</b></summary>
 
-- **Crashes**: Ability System Component actions on a non-Actor Blueprint, and creates and mesh bakes over an asset of another class, refuse instead; a bake over a static mesh says `replaced`.
-- **`run_benchmark` measures**: it answers frames, average FPS, frame times and game, render and GPU thread times (it reported no number, opened the GPU Visualizer and wrote a stats file each run); 10 s by default.
-- **Small fixes**: `RayTraced` GI is refused from UE 5.4, where it switched on plugin GI; a `viewDistance` alone no longer turns volumetric fog on; `runtime_report` `filter` matches a whole path; UE 5.0 links again; native `get_task_result` matches the principal exactly; `get_stats` counts the RHI thread; `edit_scs` keeps `save: false`; refusals keep their details; a rate-limited request says when to retry; a landscape size of 1009 builds 16 components.
-- **Removals say what they take or refuse**: only an exact, actor-added component; anything still in use is named (`force` really deletes a struct); `bulk_delete` keeps assets others use; `remove_variable` lists the nodes it deletes; track and key removals undo.
-- **Nothing is overwritten unasked**: a taken name or path is refused by creates, rows, enum values, RPCs, keys, labels, component names, imports and copies; extra sky lights are named, not deleted; edits keep the fields left out; engine content is never saved or edited in place; a lit level refuses unsaved levels and Play; `merge_actors` `replaceSourceActors` places the merged mesh; `rename_widget` carries animations, bindings and navigation; widget parents take a Widget Blueprint path (a cycle is refused).
+- **Crashes**: Ability System actions on a non-Actor Blueprint, and creates or mesh bakes over an asset of another class, are refused.
+- **`run_benchmark` measures** frames, FPS, frame and thread times (it measured nothing and opened the GPU Visualizer).
+- **Small fixes**: plugin GI no longer passes for `RayTraced` from UE 5.4; `viewDistance` alone leaves volumetric fog off; `runtime_report` `filter` matches a whole path; UE 5.0 links again; `get_task_result` matches its principal exactly; `get_stats` counts the RHI thread; rate limits say when to retry; a 1009 landscape builds 16 components.
+- **Removals** take only an exact, actor-added component, name what still uses an asset (`force` really deletes a struct), keep assets others use in `bulk_delete`, list the nodes `remove_variable` deletes, and undo for tracks and keys.
+- **Nothing is overwritten unasked**: a taken name or path is refused by creates, rows, enum values, RPCs, keys, labels, components, imports and copies; edits keep the fields left out; engine content is never saved or edited in place; extra sky lights are named, not deleted; `merge_actors` places the merged mesh; `rename_widget` carries animations and bindings; widget parents refuse a cycle.
 - **A family's variant needs what its action needs** on both transports; describe and search show `requiredFor` and `variantRequired`.
-- **Renders**: a long render keeps its request open for `renderTimeoutMs`; `save_all` and `restart_editor` wait for it.
+- **Renders** keep their request open for `renderTimeoutMs`; `save_all` and `restart_editor` wait for them.
 - **Viewport screenshots wait for streaming** and name video memory over budget; `set_viewport_realtime` reports its state.
 - **Property writes**: a deprecated property is refused with its replacement; Niagara `set_property` restarts placed effects; environment settings take object references.
 - **Placement checks**: `audit_placement` counts simulated bodies, measures player starts by their capsule and skips undersides; `fix_coplanar` handles several neighbours.
 - **Tracks and bones**: a whole track name picks only that track; `set_bone_key` keeps what it is not given.
-- **Undo** covers dynamic mesh edits, landscape sculpting, heightmaps, paint and material, light, sound and reverb spawns, transform `set_property`, attach and detach, components, light channels, splines (every point edit), scatters, volume bounds, Blueprint variable sets, exposure, ambient occlusion, volumetric fog, Lightmass settings, the indirect lighting cache, foliage removal and water body edits.
+- **Undo** covers dynamic mesh and landscape edits, light, sound and reverb spawns, transforms, attach and detach, components, light channels, splines, scatters, volume bounds, Blueprint variables, exposure, ambient occlusion, fog, Lightmass, the indirect lighting cache, foliage removal and water.
 - **Finds stop at `limit`** (default 200) and say how many matched.
-- **Records and replies say what happens**: about a hundred records name their defaults, replies and refusals; writes report `saved` and receipts name the asset; an unknown name, type or shape, or a missing value, is refused instead of substituted (texture compression and groups, physics shapes, spline point types and indexes, material parameter values, a mesh `add_scs_component` cannot apply, a socket edit that changes nothing); `play_sound` answers `NOT_PLAYED` when the editor's sound is off, and a lighting build `PRECOMPUTED_LIGHTING_DISABLED` where the level forces it off (it answered success); a Blueprint create reports its real save and flags a Blueprint already at the path (one of another parent class is refused); data table listings page past 200 rows; perception replies use the configure names.
-- **Successes that did nothing now act**: foliage reads and removals in every sublevel and World Partition cell, a water body's material (its `WaterMaterial`), `stream` and `unload` in Play, AI controller actions, `fade_sound`, thumbnails, enum renames, instance overrides, source effect presets, Blackboard defaults (UE 5.4+), nav links, Simple Parallel, State Trees, Mass spawners and traits, Smart Object slots, physics body mass and simulation, landscape sculpting, heightmaps, paint and imports (a layered landscape never drew or collided with them), Lightmass volumes, a lit level's sky, EQS contexts, tests and generators, `add_tag`, `stop_recording`, mix modifiers, RPCs and RepNotify, attachment sockets, blend samples, virtual bones, bone reparenting, `project_uv` (a texture repeated every centimetre; it now fits the mesh or takes `tileSize`).
+- **Records and replies say what happens**: about two hundred records name their defaults, replies and refusals; writes report `saved` and receipts name the asset; a request that is unknown, misses a value, changes nothing or would break the asset is refused instead of guessed (texture and physics settings, spline points, material values, Blueprint components, sockets, montages, projectiles, level Blueprint links, sequence cameras); an animation edit with `save: false` stays an unsaved change; `play_sound` says `NOT_PLAYED` when sound is off and a lighting build `PRECOMPUTED_LIGHTING_DISABLED`; Blueprint creates report their save and a Blueprint already there; data table listings page past 200 rows.
+- **Successes that did nothing now act**: foliage in every sublevel and World Partition cell, a water body's material, `stream` and `unload` in Play, AI controller actions, `fade_sound`, thumbnails, enum renames, instance overrides, effect presets, Blackboard defaults (5.4+), nav links, Simple Parallel, State Trees, Mass spawners, Smart Object slots, physics bodies, landscape sculpting, heightmaps, paint and imports (a layered landscape ignored them), Lightmass volumes, a lit level's sky, EQS assets, `add_tag`, `stop_recording`, mix modifiers, RPCs and RepNotify, attachment sockets, blend samples, virtual bones, bone reparenting, `project_uv` tiling.
 - **`manage_effect cleanup` needs destructive consent** and `filter`, is one undo step and refuses during Play; clearing debug shapes moved to `debug_shape`.
 - **Sublevels and paths**: object paths work in `open_level`, `load` and `add_sublevel`; a relative `.t3d` export lands in the project.
 

@@ -24449,6 +24449,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
     "outputSchema": {
       "type": "object",
       "properties": {
+        "actorLabel": {
+          "type": "string",
+          "description": "Label of the camera actor placed in the level (a placed camera only)."
+        },
         "actorName": {
           "type": "string",
           "description": "Actor name in the current level."
@@ -24729,6 +24733,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "shutterTiming": {
           "type": "string",
           "description": "The shutter timing now set."
+        },
+        "spawnable": {
+          "type": "boolean",
+          "description": "True for a camera the sequence owns."
         },
         "success": {
           "type": "boolean",

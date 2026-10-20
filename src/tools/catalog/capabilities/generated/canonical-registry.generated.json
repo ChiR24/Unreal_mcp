@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "e949f6992939ee9e",
+  "catalogRevision": "4aa482ffa0f192d5",
   "recordCount": 416,
   "records": [
     {
@@ -4123,7 +4123,7 @@
           "link sections",
           "blend in time"
         ],
-        "summary": "Edit an animation montage: notifies, sections, slots, section links, blend-in/out times and section timing.",
+        "summary": "Edit an animation montage, chosen by edit; each change is saved unless save is false (saved). add_montage_section adds a section at startTime (a name already there is SECTION_EXISTS) and set_section_timing moves one; link_sections makes fromSection play into toSection (SECTION_NOT_FOUND lists the sections); add_montage_slot adds an animation of a skeleton the montage takes as a segment of a slot, refused where it would overlap one already there, and grows the montage to fit; add_montage_notify adds a notify of notifyClass, or a named notify event, at a time within the montage; set_blend_in and set_blend_out set blendTime and blendOption, refusing a call with neither.",
         "whenToUse": [
           "edit=add_montage_notify: Timed event needed in montage.",
           "edit=add_montage_section: Montage needs a section.",
@@ -4254,7 +4254,7 @@
       },
       "examples": [
         {
-          "title": "Edit an animation montage: notifies, sections, slots, section links, blend-in/out times and section timing.",
+          "title": "Edit an animation montage, chosen by edit; each change is saved unless save is false (saved). add_montage_section adds a section at startTime (a name already there is SECTION_EXISTS) and set_section_timing moves one; link_sections makes fromSection play into toSection (SECTION_NOT_FOUND lists the sections); add_montage_slot adds an animation of a skeleton the montage takes as a segment of a slot, refused where it would overlap one already there, and grows the montage to fit; add_montage_notify adds a notify of notifyClass, or a named notify event, at a time within the montage; set_blend_in and set_blend_out set blendTime and blendOption, refusing a call with neither.",
           "input": {
             "action": "edit_montage",
             "assetPath": "/Game/MT_Slash",
@@ -4364,9 +4364,16 @@
                 "animationPath"
               ]
             },
+            "link_sections": {
+              "required": [
+                "fromSection",
+                "toSection"
+              ]
+            },
             "set_section_timing": {
               "required": [
-                "sectionName"
+                "sectionName",
+                "startTime"
               ]
             }
           }
@@ -4375,7 +4382,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "7d8363e77dad40c89a00bd721505ff0840935cecaf667d11f754416b5edd5d9f",
-        "content": "892ca98fcaae042b38c03a7d6d54b52f9c613ad39401a66ea4027c05dcda033d"
+        "content": "f5cffc8b0cad6115403548d943d2675f11cf98d4bf5f65b7f729dcab0df23cbc"
       }
     },
     {
@@ -18551,6 +18558,7 @@
           "math expression node",
           "blueprint math expression",
           "add a math expression",
+          "math expression in a blueprint",
           "for each loop",
           "set timer",
           "ai move to location",
@@ -19385,7 +19393,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "4be643b3adb96937a4b5c6aebd65e52b63299df03c14a6fd229e26e9df0a45dd",
-        "content": "5b60a1c01a2a2e66e98fa4474bd8a30d14d2a7c6666ccd5401b4ee916d7ff632"
+        "content": "cf2187c8df7da8d0e5a65daca950c6fffd1a3dfb7540b2dc505a26032ffec5b4"
       }
     },
     {
@@ -62398,7 +62406,7 @@
           "firearm",
           "new weapon"
         ],
-        "summary": "Create a combat asset: weapon Blueprint, projectile Blueprint (it damages what it hits), or damage type.",
+        "summary": "Create a combat Blueprint named name in path (default /Game), chosen by kind; it is saved, and a path an asset already holds is refused. weapon_blueprint is an Actor with a WeaponMesh component (weaponMeshPath) and BaseDamage, FireRate, Range and Spread variables (defaults 25, 600, 10000, 2), and no firing logic of its own. projectile_blueprint flies (projectileSpeed, default 5000; projectileGravityScale, default 0), stops on what it meets with a collisionRadius sphere (default 5), applies damage (default 20) to it and is destroyed, never hits the actor that fired it, and is gone 5 s after firing when it meets nothing; projectileMeshPath is its mesh. A mesh path that does not load is refused before anything is made. damage_type (damage_type_setup) is a DamageType Blueprint for ApplyDamage to name.",
         "whenToUse": [
           "kind=weapon_blueprint: A new weapon actor must be authored.",
           "kind=projectile_blueprint: A projectile actor must be authored: it stops on what it meets, applies damage to it (ApplyDamage, so health logic on that actor takes it) and never hits the actor that fired it; one that meets nothing is gone 5 seconds after it is fired (configure_projectile setting movement, projectileLifespan, changes that).",
@@ -62529,7 +62537,7 @@
       },
       "examples": [
         {
-          "title": "Create a combat asset: weapon Blueprint, projectile Blueprint (it damages what it hits), or damage type.",
+          "title": "Create a combat Blueprint named name in path (default /Game), chosen by kind; it is saved, and a path an asset already holds is refused. weapon_blueprint is an Actor with a WeaponMesh component (weaponMeshPath) and BaseDamage, FireRate, Range and Spread variables (defaults 25, 600, 10000, 2), and no firing logic of its own. projectile_blueprint flies (projectileSpeed, default 5000; projectileGravityScale, default 0), stops on what it meets with a collisionRadius sphere (default 5), applies damage (default 20) to it and is destroyed, never hits the actor that fired it, and is gone 5 s after firing when it meets nothing; projectileMeshPath is its mesh. A mesh path that does not load is refused before anything is made. damage_type (damage_type_setup) is a DamageType Blueprint for ApplyDamage to name.",
           "input": {
             "action": "create_combat_asset",
             "name": "BP_Rifle",
@@ -62616,7 +62624,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "6d31765e70ebd02b35e50ab9fcbc565adab795274dd71c275626195b271d3153",
-        "content": "311a29851db4f37ec6b2bf30b15ebd6fba2d65d31336d5567ec532cb5ae4fb0f"
+        "content": "fd014b6002ad1d337245f55947b61cc5f5a9dfb1f9a019f50abf562ada46d208"
       }
     },
     {
@@ -80407,7 +80415,7 @@
           "level blueprint pin value",
           "level blueprint literal"
         ],
-        "summary": "Edit the level Blueprint: open it, add or remove nodes, connect nodes, set an input pin's default value.",
+        "summary": "Edit the level Blueprint of the open level (levelPath names another loaded level; by default the persistent level), chosen by edit. open opens its editor; add_node adds a node by class or alias (an event bound to a placed actor with actorName and eventName, a reference to one, a component getter with memberClass and memberName) and lists its pins; connect_nodes links two pins through the graph schema, which refuses incompatible ones (CONNECTION_REFUSED, with its reason) and adds the conversion node a cast needs; remove_node removes a node by id, name or title; set_pin_default_value sets an input pin. The level stays unsaved unless save is true (saved), and a transient /Temp level is refused.",
         "whenToUse": [
           "edit=open: The level blueprint graph must be edited.",
           "edit=add_node: A new node must be added to level scripting.",
@@ -80580,7 +80588,7 @@
       },
       "examples": [
         {
-          "title": "Edit the level Blueprint: open it, add or remove nodes, connect nodes, set an input pin's default value.",
+          "title": "Edit the level Blueprint of the open level (levelPath names another loaded level; by default the persistent level), chosen by edit. open opens its editor; add_node adds a node by class or alias (an event bound to a placed actor with actorName and eventName, a reference to one, a component getter with memberClass and memberName) and lists its pins; connect_nodes links two pins through the graph schema, which refuses incompatible ones (CONNECTION_REFUSED, with its reason) and adds the conversion node a cast needs; remove_node removes a node by id, name or title; set_pin_default_value sets an input pin. The level stays unsaved unless save is true (saved), and a transient /Temp level is refused.",
           "input": {
             "action": "edit_level_blueprint",
             "levelPath": "/Game/Maps/Demo",
@@ -80707,7 +80715,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "aa20e53f8effd12ce1bf411e36c3096dddaf5339c059491c5a33279df505151a",
-        "content": "0788a99bf9545474e2dc5061f2f21efcc1bf19874bc34e06338a13d442e71039"
+        "content": "539f57beccb0cd4d1abf26af611d0462c3d8323dcd2f7efb9a5fe289254177d1"
       }
     },
     {
@@ -93885,7 +93893,7 @@
           "sequence camera",
           "spawn actor in sequence"
         ],
-        "summary": "Edit sequence bindings: add one or more actors, a camera, or a spawnable from a class; remove actors.",
+        "summary": "Bind actors to a Level Sequence at path, chosen by edit; an asset that is not a Level Sequence is refused. add_actor and add_actors bind placed actors by label as possessables, reusing a binding an actor already has, and answer per actor (results, successful, failed; NO_ACTORS_BOUND when none bound); add_camera places a CameraActor at the world origin and binds it (actorName labels it), or with spawnable true adds a camera the sequence owns that exists only while it plays; add_spawnable adds a spawnable of className; remove_actors drops the bindings of the named actors (NO_ACTORS_REMOVED when none was bound). Each answers the bindingGuid it made or found.",
         "whenToUse": [
           "edit=add_actor: An existing actor must be added to the sequence.",
           "edit=add_actors: Multiple actors must be bound at once.",
@@ -93995,6 +94003,14 @@
             "bindingGuid": {
               "type": "string",
               "description": "The binding GUID."
+            },
+            "actorLabel": {
+              "type": "string",
+              "description": "Label of the camera actor placed in the level (a placed camera only)."
+            },
+            "spawnable": {
+              "type": "boolean",
+              "description": "True for a camera the sequence owns."
             }
           },
           "required": [
@@ -94005,7 +94021,7 @@
       },
       "examples": [
         {
-          "title": "Edit sequence bindings: add one or more actors, a camera, or a spawnable from a class; remove actors.",
+          "title": "Bind actors to a Level Sequence at path, chosen by edit; an asset that is not a Level Sequence is refused. add_actor and add_actors bind placed actors by label as possessables, reusing a binding an actor already has, and answer per actor (results, successful, failed; NO_ACTORS_BOUND when none bound); add_camera places a CameraActor at the world origin and binds it (actorName labels it), or with spawnable true adds a camera the sequence owns that exists only while it plays; add_spawnable adds a spawnable of className; remove_actors drops the bindings of the named actors (NO_ACTORS_REMOVED when none was bound). Each answers the bindingGuid it made or found.",
           "input": {
             "action": "edit_sequence_bindings",
             "path": "/Game/Cinematics/SEQ_Master",
@@ -94094,8 +94110,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "75091bf1ee2fcb177e0beb1e3d3d32c154f25e1276755a40b5a77714c427bb3c",
-        "content": "d45fb9c13b1d23721633a2207a7e565910776fee7bde29abb925566f1fadb7e8"
+        "schema": "677715a5864940d03b7dcf38fba014a552272fb9153697f73adcca99f950fd28",
+        "content": "1d6684ff378d80f9780cb1683b309a33a36d8af6ef5be675359a29eb0be69dba"
       }
     },
     {

@@ -167,7 +167,9 @@ const testCases = [
 { scenario: 'ADD: add_montage_section', toolName: 'animation_physics', arguments: {"action": "add_montage_section", "assetPath": `${TEST_FOLDER}/Testmontage`, "sectionName": "Testmontage_section", "startTime": 0}, expected: 'success|already exists' },
 
 // === ADD (Montage Slot - needs assetPath and animationPath) ===
-{ scenario: 'ADD: add_montage_slot', toolName: 'animation_physics', arguments: {"action": "add_montage_slot", "assetPath": `${TEST_FOLDER}/Testmontage`, "animationPath": `${TEST_FOLDER}/Testanimation_sequence`, "slotName": "DefaultSlot", "startTime": 0}, expected: 'success|already exists' },
+{ scenario: 'ADD: add_montage_slot', toolName: 'animation_physics', arguments: {"action": "add_montage_slot", "assetPath": `${TEST_FOLDER}/Testmontage`, "animationPath": `${TEST_FOLDER}/Testanimation_sequence`, "slotName": "UpperBody", "startTime": 0}, expected: 'success|already exists' },
+// A segment laid over one already on the slot was accepted and broke the montage.
+{ scenario: 'ERROR: add_montage_slot over a segment already on the slot', toolName: 'animation_physics', arguments: {"action": "add_montage_slot", "assetPath": `${TEST_FOLDER}/Testmontage`, "animationPath": `${TEST_FOLDER}/Testanimation_sequence`, "slotName": "DefaultSlot", "startTime": 0, "save": false}, expected: 'error|SEGMENT_OVERLAP' },
 
 // === CONFIG (Section Timing - needs assetPath) ===
 { scenario: 'CONFIG: set_section_timing', toolName: 'animation_physics', arguments: {"action": "set_section_timing", "assetPath": `${TEST_FOLDER}/Testmontage`, "sectionName": "Testmontage_section", "startTime": 0}, expected: 'success' },
@@ -175,15 +177,21 @@ const testCases = [
 // === ADD (Montage Notify - needs assetPath; no notifyClass = simple notify event) ===
 { scenario: 'ADD: add_montage_notify', toolName: 'animation_physics', arguments: {"action": "add_montage_notify", "assetPath": `${TEST_FOLDER}/Testmontage`, "time": 0.5, "notifyName": "Testmontage_notify"}, expected: 'success|already exists' },
 { scenario: 'ADD: add_montage_notify via notifyClass', toolName: 'animation_physics', arguments: {"action": "add_montage_notify", "assetPath": `${TEST_FOLDER}/Testmontage`, "time": 0.6, "notifyClass": "AnimNotify_PlaySound"}, expected: 'success|already exists' },
+// A notify past the end never fired.
+{ scenario: 'ERROR: add_montage_notify past the montage end', toolName: 'animation_physics', arguments: {"action": "add_montage_notify", "assetPath": `${TEST_FOLDER}/Testmontage`, "time": 99, "notifyName": "Late", "save": false}, expected: 'error|INVALID_ARGUMENT' },
 
 // === CONFIG (Blend In - needs assetPath) ===
 { scenario: 'CONFIG: set_blend_in', toolName: 'animation_physics', arguments: {"action": "set_blend_in", "assetPath": `${TEST_FOLDER}/Testmontage`, "blendTime": 0.25, "blendOption": "Cubic", "save": true}, expected: 'success' },
 
 // === CONFIG (Blend Out - needs assetPath) ===
 { scenario: 'CONFIG: set_blend_out', toolName: 'animation_physics', arguments: {"action": "set_blend_out", "assetPath": `${TEST_FOLDER}/Testmontage`, "blendTime": 0.25}, expected: 'success' },
+// A call naming neither saved the montage and answered "updated".
+{ scenario: 'ERROR: set_blend_out with nothing to set', toolName: 'animation_physics', arguments: {"action": "set_blend_out", "assetPath": `${TEST_FOLDER}/Testmontage`, "save": false}, expected: 'error|INVALID_ARGUMENT' },
 
 // === CONNECT (Link Sections - needs assetPath) ===
 { scenario: 'CONNECT: link_sections', toolName: 'animation_physics', arguments: {"action": "link_sections", "assetPath": `${TEST_FOLDER}/Testmontage`, "fromSection": "Testmontage_section", "toSection": "Testmontage_section"}, expected: 'success' },
+// A section the montage lacks was skipped behind "Linked".
+{ scenario: 'ERROR: link_sections to a section the montage lacks', toolName: 'animation_physics', arguments: {"action": "link_sections", "assetPath": `${TEST_FOLDER}/Testmontage`, "fromSection": "Testmontage_section", "toSection": "NoSuchSection", "save": false}, expected: 'error|SECTION_NOT_FOUND' },
 
 // === ADD (Notify - needs assetPath and notifyName; no notifyClass = simple notify) ===
 { scenario: 'ADD: add_notify', toolName: 'animation_physics', arguments: {"action": "add_notify", "assetPath": `${TEST_FOLDER}/Testanimation_sequence`, "notifyName": "Testnotify", "frame": 0, "trackIndex": 0, "save": true}, expected: 'success|already exists' },

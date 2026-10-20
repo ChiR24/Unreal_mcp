@@ -61,6 +61,8 @@ const testCases = [
 
   // === BINDINGS ===
   { scenario: 'ADD: add_camera', toolName: 'manage_sequence', arguments: { action: 'add_camera', path: SEQUENCE_PATH, spawnable: true }, expected: 'success|already exists' },
+  // Another kind of asset at the path got a camera spawned into the level and a "bound" success with no binding.
+  { scenario: 'ERROR: add_camera refuses an asset that is not a Level Sequence', toolName: 'manage_sequence', arguments: { action: 'add_camera', path: '/Engine/BasicShapes/Cube' }, expected: 'error|INVALID_SEQUENCE' },
   { scenario: 'ADD: add_actor', toolName: 'manage_sequence', arguments: { action: 'add_actor', path: SEQUENCE_PATH, actorName: ACTOR_A }, expected: 'success|already exists', captureResult: { key: 'actorBindingId', fromField: 'result.bindingGuid' } },
   { scenario: 'ADD: add_actors', toolName: 'manage_sequence', arguments: { action: 'add_actors', path: SEQUENCE_PATH, actorNames: [ACTOR_A, ACTOR_B] }, expected: 'success|already exists' },
   { scenario: 'INFO: get_bindings', toolName: 'manage_sequence', arguments: { action: 'get_bindings', path: SEQUENCE_PATH }, expected: 'success' },

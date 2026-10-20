@@ -28,7 +28,7 @@ export const ANIMATION_PHYSICS_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'edit_montage', selector: 'edit',
-    summary: 'Edit an animation montage: notifies, sections, slots, section links, blend-in/out times and section timing.',
+    summary: 'Edit an animation montage, chosen by edit; each change is saved unless save is false (saved). add_montage_section adds a section at startTime (a name already there is SECTION_EXISTS) and set_section_timing moves one; link_sections makes fromSection play into toSection (SECTION_NOT_FOUND lists the sections); add_montage_slot adds an animation of a skeleton the montage takes as a segment of a slot, refused where it would overlap one already there, and grows the montage to fit; add_montage_notify adds a notify of notifyClass, or a named notify event, at a time within the montage; set_blend_in and set_blend_out set blendTime and blendOption, refusing a call with neither.',
     topics: ['montage section', 'montage slot', 'montage notify', 'blend in', 'blend out', 'link sections', 'blend in time'],
     members: byName(['add_montage_notify', 'add_montage_section', 'add_montage_slot', 'link_sections', 'set_blend_in', 'set_blend_out', 'set_section_timing']),
   },

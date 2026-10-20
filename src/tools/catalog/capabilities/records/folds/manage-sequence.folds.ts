@@ -17,7 +17,7 @@ export const MANAGE_SEQUENCE_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'edit_sequence_bindings', selector: 'edit',
-    summary: 'Edit sequence bindings: add one or more actors, a camera, or a spawnable from a class; remove actors.',
+    summary: 'Bind actors to a Level Sequence at path, chosen by edit; an asset that is not a Level Sequence is refused. add_actor and add_actors bind placed actors by label as possessables, reusing a binding an actor already has, and answer per actor (results, successful, failed; NO_ACTORS_BOUND when none bound); add_camera places a CameraActor at the world origin and binds it (actorName labels it), or with spawnable true adds a camera the sequence owns that exists only while it plays; add_spawnable adds a spawnable of className; remove_actors drops the bindings of the named actors (NO_ACTORS_REMOVED when none was bound). Each answers the bindingGuid it made or found.',
     topics: ['sequence binding', 'add actor to sequence', 'spawnable', 'sequence camera', 'spawn actor in sequence'],
     members: { add_actor: 'add_actor', add_actors: 'add_actors', add_camera: 'add_camera', add_spawnable: 'add_spawnable_from_class', remove_actors: 'remove_actors' },
   },

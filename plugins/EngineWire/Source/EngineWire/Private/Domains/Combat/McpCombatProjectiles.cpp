@@ -15,6 +15,16 @@ bool FCombatActionContext::HandleProjectileActions() const
             SendAutomationError(RequestingSocket, RequestId, TEXT("Missing name."), TEXT("INVALID_ARGUMENT"));
             return true;
         }
+        // The mesh loads before anything is made, as the weapon's does: a path that did not load still made the
+        // projectile, invisible, behind a success.
+        const FString ProjectileMeshPath = GetJsonStringField(Payload, TEXT("projectileMeshPath"));
+        UStaticMesh* ProjectileMesh = ProjectileMeshPath.IsEmpty() ? nullptr : LoadObject<UStaticMesh>(nullptr, *ProjectileMeshPath);
+        if (!ProjectileMeshPath.IsEmpty() && !ProjectileMesh)
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("projectileMeshPath is not a static mesh: %s; nothing was created."), *ProjectileMeshPath), TEXT("NOT_FOUND"));
+            return true;
+        }
 
         FString Error;
         UBlueprint* Blueprint = CreateActorBlueprint(AActor::StaticClass(), Path, Name, Error);
@@ -37,21 +47,12 @@ bool FCombatActionContext::HandleProjectileActions() const
             CollisionComp->SetCollisionProfileName(Profile);
         }
 
-        FString ProjectileMeshPath = GetJsonStringField(Payload, TEXT("projectileMeshPath"));
         bool bProjectileMeshLoaded = false;
-
         UStaticMeshComponent* MeshComp = GetOrCreateSCSComponent<UStaticMeshComponent>(Blueprint, TEXT("ProjectileMesh"), TEXT("CollisionComponent"));
-        if (MeshComp)
+        if (MeshComp && ProjectileMesh)
         {
-            if (!ProjectileMeshPath.IsEmpty())
-            {
-                UStaticMesh* Mesh = LoadObject<UStaticMesh>(nullptr, *ProjectileMeshPath);
-                if (Mesh)
-                {
-                    MeshComp->SetStaticMesh(Mesh);
-                    bProjectileMeshLoaded = true;
-                }
-            }
+            MeshComp->SetStaticMesh(ProjectileMesh);
+            bProjectileMeshLoaded = true;
         }
 
         UProjectileMovementComponent* MovementComp = GetOrCreateSCSComponent<UProjectileMovementComponent>(Blueprint, TEXT("ProjectileMovement"));

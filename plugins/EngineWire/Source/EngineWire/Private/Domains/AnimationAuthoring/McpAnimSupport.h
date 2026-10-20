@@ -175,6 +175,22 @@ USkeleton* LoadSkeletonFromPathAnim(const FString& SkeletonPath);
 USkeletalMesh* LoadSkeletalMeshFromPathAnim(const FString& MeshPath);
 UAnimSequence* LoadAnimSequenceFromPath(const FString& AnimPath);
 bool SaveAnimAsset(UObject* Asset, bool bShouldSave);
+// SaveAnimAsset, then saved in Response: whether the edit reached disk (false for save false, which leaves it unsaved).
+inline void SaveAnimAssetAndReport(UObject* Asset, bool bSave, const TSharedPtr<FJsonObject>& Response)
+{
+    const bool bSaved = SaveAnimAsset(Asset, bSave) && bSave;
+    Response->SetBoolField(TEXT("saved"), bSaved);
+}
+// The montage's section names, comma-separated, for a refusal that names what exists.
+inline FString McpMontageSectionNames(const UAnimMontage* Montage)
+{
+    TArray<FString> Names;
+    for (const FCompositeSection& Section : Montage->CompositeSections)
+    {
+        Names.Add(Section.SectionName.ToString());
+    }
+    return FString::Join(Names, TEXT(", "));
+}
 // analyze_animation (Analysis/McpAnimAnalysis.cpp): a sequence's root path, foot contacts, loop
 // seam and rotation spikes, sampled from its own frames.
 TSharedPtr<FJsonObject> HandleAnalyzeAnimation(const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);

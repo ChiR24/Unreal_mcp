@@ -19,7 +19,7 @@ export const MANAGE_LEVEL_STRUCTURE_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'edit_level_blueprint', selector: 'edit',
-    summary: 'Edit the level Blueprint: open it, add or remove nodes, connect nodes, set an input pin\'s default value.',
+    summary: 'Edit the level Blueprint of the open level (levelPath names another loaded level; by default the persistent level), chosen by edit. open opens its editor; add_node adds a node by class or alias (an event bound to a placed actor with actorName and eventName, a reference to one, a component getter with memberClass and memberName) and lists its pins; connect_nodes links two pins through the graph schema, which refuses incompatible ones (CONNECTION_REFUSED, with its reason) and adds the conversion node a cast needs; remove_node removes a node by id, name or title; set_pin_default_value sets an input pin. The level stays unsaved unless save is true (saved), and a transient /Temp level is refused.',
     topics: ['level blueprint', 'level blueprint node'],
     members: { open: 'open_level_blueprint', add_node: 'add_level_blueprint_node', connect_nodes: 'connect_level_blueprint_nodes', remove_node: 'remove_level_blueprint_node', set_pin_default_value: 'set_level_blueprint_pin_default' },
   },

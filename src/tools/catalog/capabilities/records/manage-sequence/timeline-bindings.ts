@@ -15,19 +15,19 @@ const D = 'sequence';
 export const TIMELINE_BINDINGS_RECORDS: readonly CapabilityRecordSource[] = [
   buildRecord({
     id: 'sequence.add_camera', action: 'add_camera', family: F, domain: D,
-    summary: 'Add a camera binding (possessable or spawnable) to a Level Sequence.',
+    summary: 'Add a camera to a Level Sequence: by default a CameraActor placed at the world origin (actorName labels it, default SequenceCamera; move it with control_actor) and bound as a possessable; spawnable true adds a camera the sequence owns, which exists only while it plays. An asset that is not a Level Sequence is refused before anything is placed, and a camera that could not be bound is removed again (BIND_FAILED).',
     whenToUse: ['A camera must be added to the sequence for cinematic shots.'],
     whenNotToUse: ['The camera already exists as a binding.'],
     inputProps: { path: P.path, actorName: P.actorName, spawnable: { type: 'boolean', description: 'Add a spawnable camera owned by the sequence instead of placing a camera actor in the level (default false).' } },
     required: ['path'],
-    outputProps: { bindingGuid: { type: 'string', description: 'The binding GUID.' } },
+    outputProps: { bindingGuid: { type: 'string', description: 'The binding GUID.' }, actorLabel: { type: 'string', description: 'Label of the camera actor placed in the level (a placed camera only).' }, spawnable: { type: 'boolean', description: 'True for a camera the sequence owns.' } },
     outputRequired: [],
     effect: 'write', latency: 'interactive', resources: 'low', plugins: SEQ_PLUGINS,
     exampleInput: { action: 'add_camera', path: '/Game/Cinematics/SEQ_Master' },
   }),
   buildRecord({
     id: 'sequence.add_actor', action: 'add_actor', family: F, domain: D,
-    summary: 'Bind an existing level actor to a Level Sequence as a possessable.',
+    summary: 'Bind a placed actor (actorName, its label) to a Level Sequence as a possessable, reusing the binding it already has; a missing actor fails with NO_ACTORS_BOUND. Answers results with the bindingGuid.',
     whenToUse: ['An existing actor must be added to the sequence.'],
     whenNotToUse: ['The actor does not exist in the current level.'],
     inputProps: { path: P.path, actorName: P.actorName },
@@ -37,7 +37,7 @@ export const TIMELINE_BINDINGS_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'sequence.add_actors', action: 'add_actors', family: F, domain: D,
-    summary: 'Bind multiple existing level actors to a Level Sequence.',
+    summary: 'Bind several placed actors (actorNames, their labels) to a Level Sequence as possessables, reusing bindings they already have; answers each in results (bindingGuid or error) with successful and failed, and fails with NO_ACTORS_BOUND only when none bound.',
     whenToUse: ['Multiple actors must be bound at once.'],
     whenNotToUse: ['Only a single actor is needed.'],
     inputProps: { path: P.path, actorNames: P.actorNames },
@@ -53,7 +53,7 @@ export const TIMELINE_BINDINGS_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'sequence.remove_actors', action: 'remove_actors', family: F, domain: D,
-    summary: 'Remove actor bindings from a Level Sequence.',
+    summary: 'Remove the bindings of the named actors (actorNames) from a Level Sequence, with their tracks; answers removedActors and removed, and fails with NO_ACTORS_REMOVED when none of them was bound.',
     whenToUse: ['Bound actors must be removed from the sequence.'],
     whenNotToUse: ['The actors are not bound to the sequence.'],
     inputProps: { path: P.path, actorNames: P.actorNames },
@@ -82,7 +82,7 @@ export const TIMELINE_BINDINGS_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'sequence.add_spawnable_from_class', action: 'add_spawnable_from_class', family: F, domain: D,
-    summary: 'Add a spawnable binding from a Unreal class path to a Level Sequence.',
+    summary: 'Add a spawnable of className (a class path or name) to a Level Sequence: an actor the sequence creates while it plays and removes after. An unknown class is CLASS_NOT_FOUND; answers the className resolved and its bindingGuid.',
     whenToUse: ['A spawnable actor must be created from a class.'],
     whenNotToUse: ['An existing level actor should be possessed instead.'],
     inputProps: { path: P.path, className: P.className },

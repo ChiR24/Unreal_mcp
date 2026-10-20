@@ -9,6 +9,17 @@ namespace
 // to Linear, and a blendOption-only call reset the time to 0.25 s.
 bool ApplyMcpMontageBlend(FAlphaBlend& Blend, const TSharedPtr<FJsonObject>& Params, FString& OutError)
 {
+    // A call naming neither saved the montage and answered "updated"; a negative time is no blend.
+    if (!Params->HasField(TEXT("blendOption")) && !Params->HasField(TEXT("blendTime")))
+    {
+        OutError = TEXT("Nothing to set: send blendTime (seconds, 0 or more) or blendOption (Linear, Cubic or Sinusoidal).");
+        return false;
+    }
+    if (GetJsonNumberField(Params, TEXT("blendTime"), 0.0) < 0.0)
+    {
+        OutError = TEXT("blendTime must be 0 or more seconds.");
+        return false;
+    }
     if (Params->HasField(TEXT("blendOption")))
     {
         const FString Option = GetJsonStringField(Params, TEXT("blendOption"), TEXT(""));
@@ -100,8 +111,13 @@ if (SubAction == TEXT("add_montage_notify"))
     {
         ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load montage: %s"), *AssetPath), TEXT("MONTAGE_NOT_FOUND"));
     }
+    // A notify past the end never fired, and one on a negative track sat on no track at all.
+    if (Time < 0.0f || Time > Montage->GetPlayLength() + KINDA_SMALL_NUMBER || TrackIndex < 0)
+    {
+        ANIM_ERROR_RESPONSE(FString::Printf(TEXT("time must lie in 0..%.3f s (the montage's length) and trackIndex be 0 or more; nothing was added."),
+            Montage->GetPlayLength()), TEXT("INVALID_ARGUMENT"));
+    }
 
-    if (TrackIndex >= 0)
     {
         while (!Montage->AnimNotifyTracks.IsValidIndex(TrackIndex))
         {
@@ -135,7 +151,7 @@ if (SubAction == TEXT("add_montage_notify"))
     }
 
         Montage->RefreshCacheData();
-        SaveAnimAsset(Montage, bSave);
+        SaveAnimAssetAndReport(Montage, bSave, Response);
 
         ANIM_SUCCESS_RESPONSE(TEXT("Montage notify added"));
         McpHandlerUtils::AddVerification(Response, Montage);
@@ -156,10 +172,10 @@ if (SubAction == TEXT("add_montage_notify"))
         FString BlendError;
         if (!ApplyMcpMontageBlend(Montage->BlendIn, Params, BlendError))
         {
-            ANIM_ERROR_RESPONSE(BlendError, TEXT("INVALID_BLEND_OPTION"));
+            ANIM_ERROR_RESPONSE(BlendError, TEXT("INVALID_ARGUMENT"));
         }
 
-        SaveAnimAsset(Montage, bSave);
+        SaveAnimAssetAndReport(Montage, bSave, Response);
 
         ANIM_SUCCESS_RESPONSE(TEXT("Blend in settings updated"));
         McpHandlerUtils::AddVerification(Response, Montage);
@@ -180,10 +196,10 @@ if (SubAction == TEXT("add_montage_notify"))
         FString BlendError;
         if (!ApplyMcpMontageBlend(Montage->BlendOut, Params, BlendError))
         {
-            ANIM_ERROR_RESPONSE(BlendError, TEXT("INVALID_BLEND_OPTION"));
+            ANIM_ERROR_RESPONSE(BlendError, TEXT("INVALID_ARGUMENT"));
         }
 
-        SaveAnimAsset(Montage, bSave);
+        SaveAnimAssetAndReport(Montage, bSave, Response);
 
         ANIM_SUCCESS_RESPONSE(TEXT("Blend out settings updated"));
         McpHandlerUtils::AddVerification(Response, Montage);
@@ -208,15 +224,16 @@ if (SubAction == TEXT("add_montage_notify"))
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load montage: %s"), *AssetPath), TEXT("MONTAGE_NOT_FOUND"));
         }
 
-        // Set next section using section index-based API
-        int32 FromSectionIndex = Montage->GetSectionIndex(FName(*FromSection));
-        int32 ToSectionIndex = Montage->GetSectionIndex(FName(*ToSection));
-        if (FromSectionIndex != INDEX_NONE && ToSectionIndex != INDEX_NONE)
+        // A section the montage lacks used to be skipped behind "Linked".
+        const int32 FromSectionIndex = Montage->GetSectionIndex(FName(*FromSection));
+        if (FromSectionIndex == INDEX_NONE || Montage->GetSectionIndex(FName(*ToSection)) == INDEX_NONE)
         {
-            Montage->CompositeSections[FromSectionIndex].NextSectionName = FName(*ToSection);
+            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Section '%s' is not in this montage (sections: %s); nothing was linked."),
+                *(FromSectionIndex == INDEX_NONE ? FromSection : ToSection), *McpMontageSectionNames(Montage)), TEXT("SECTION_NOT_FOUND"));
         }
+        Montage->CompositeSections[FromSectionIndex].NextSectionName = FName(*ToSection);
 
-        SaveAnimAsset(Montage, bSave);
+        SaveAnimAssetAndReport(Montage, bSave, Response);
 
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Linked '%s' to '%s'"), *FromSection, *ToSection));
         McpHandlerUtils::AddVerification(Response, Montage);

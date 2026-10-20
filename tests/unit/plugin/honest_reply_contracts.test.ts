@@ -4492,3 +4492,50 @@ describe('socket edits and mesh bakes refuse what they cannot do', () => {
     expect(code('Geometry', 'Mesh', 'McpGeometryLodOperations.cpp')).toContain('Result->SetBoolField(TEXT("replaced"), bReplacing);');
   });
 });
+
+describe('montage edits refuse what they cannot do and report their save', () => {
+  it('sections, links, slots, notifies and blends refuse a missing, taken, overlapping or empty request', () => {
+    const assets = code('AnimationAuthoring', 'McpAnimMontageAssets.cpp');
+    expect(assets).toContain('TEXT("SECTION_EXISTS")');
+    expect(assets).toContain('TEXT("SEGMENT_OVERLAP")');
+    expect(assets).toContain('TEXT("SKELETON_MISMATCH")');
+    expect(assets).toContain('Montage->SetCompositeLength(Montage->CalculateSequenceLength());');
+    expect(assets).toContain('startTime (the time the section moves to) is required; nothing was moved.');
+    const notifyBlend = code('AnimationAuthoring', 'McpAnimMontageNotifyBlend.cpp');
+    expect(notifyBlend).toContain('TEXT("SECTION_NOT_FOUND")');
+    expect(notifyBlend).toContain('Nothing to set: send blendTime');
+    expect(notifyBlend).toContain("(the montage's length) and trackIndex be 0 or more; nothing was added.");
+    expect(notifyBlend).not.toContain('SaveAnimAsset(Montage, bSave);');
+  });
+
+  it('save false leaves an animation edit as an unsaved change instead of dropping it', () => {
+    const support = code('AnimationAuthoring', 'McpAnimSupport.cpp');
+    const save = support.slice(support.indexOf('bool SaveAnimAsset('));
+    expect(save.indexOf('Asset->MarkPackageDirty();')).toBeLessThan(save.indexOf('if (!bShouldSave)'));
+  });
+
+  it('a projectile refuses a mesh that does not load before it makes anything', () => {
+    const projectiles = code('Combat', 'McpCombatProjectiles.cpp');
+    const create = projectiles.slice(projectiles.indexOf('"create_projectile_blueprint"'));
+    expect(create.indexOf('projectileMeshPath is not a static mesh')).toBeLessThan(create.indexOf('CreateActorBlueprint('));
+  });
+});
+
+describe('level Blueprint wiring goes through the graph schema', () => {
+  it('connect_level_blueprint_nodes links through TryCreateConnection and refuses with the schema reason', () => {
+    const connect = code('LevelStructure', 'McpLevelStructureBPConnect.cpp');
+    expect(connect).not.toContain('SourcePin->MakeLinkTo(TargetPin)');
+    expect(connect).toContain('Schema->TryCreateConnection(SourcePin, TargetPin)');
+    expect(connect).toContain('Response.Message.ToString()');
+  });
+});
+
+describe('a sequence camera is placed only when it can be bound', () => {
+  it('add_camera refuses an asset that is not a Level Sequence before spawning, and removes a camera it could not bind', () => {
+    const bindings = code('Sequence', 'McpSeqBindings.cpp');
+    const camera = bindings.slice(bindings.indexOf('HandleSequenceAddCamera('), bindings.indexOf('HandleSequenceAddActor('));
+    expect(camera.indexOf('is not a Level Sequence; nothing was added.')).toBeLessThan(camera.indexOf('SpawnActorInActiveWorld'));
+    expect(camera).toContain('TEXT("BIND_FAILED")');
+    expect(camera).toContain('->DestroyActor(Spawned)');
+  });
+});
