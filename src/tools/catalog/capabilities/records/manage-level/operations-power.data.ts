@@ -92,7 +92,7 @@ export const OPERATIONS_POWER_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'manage_level', action: 'build_lighting', dispatchAction: 'manage_lighting',
     domain: D, family: 'lighting',
-    summary: 'Build the open level static lighting (Lightmass) at quality (default Production; Preview, Medium, High), the same build as build_environment.build_lighting. Reflection captures are not rebuilt, a level that forces no precomputed lighting answers skipped, and a failed build lists its reasons; it takes minutes, cannot be cancelled once started, and saves nothing.',
+    summary: 'Build the open level static lighting (Lightmass) at quality (default Production; Preview, Medium, High), the same build as build_environment.build_lighting. Reflection captures are not rebuilt, a level whose World Settings force no precomputed lighting is refused (PRECOMPUTED_LIGHTING_DISABLED), an unknown quality is UNKNOWN_QUALITY, and a failed build lists its reasons; it takes minutes, cannot be cancelled once started, and saves nothing.',
     whenToUse: ['Baked lighting must be (re)computed for the level.'],
     whenNotToUse: ['Dynamic lighting is in use and no bake is required.'],
     inputProps: {

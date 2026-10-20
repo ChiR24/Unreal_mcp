@@ -74,25 +74,9 @@ bool HandleBuildLighting(
 
     UWorld* World = GEditor->GetEditorWorldContext().World();
     FString Quality;
-    bool bBuildOnlySelected = false;
-    bool bBuildReflectionCaptures = false;
     if (Payload.IsValid())
     {
         Payload->TryGetStringField(TEXT("quality"), Quality);
-    }
-
-    if (bBuildOnlySelected)
-    {
-        TSharedPtr<FJsonObject> Err = McpHandlerUtils::CreateResultObject();
-        Err->SetStringField(TEXT("option"), TEXT("buildOnlySelected"));
-        Subsystem.SendAutomationResponse(
-            RequestingSocket,
-            RequestId,
-            false,
-            TEXT("Selected-only lighting builds are not supported by this bridge"),
-            Err,
-            TEXT("UNSUPPORTED_BUILD_OPTION"));
-        return true;
     }
 
     ELightingBuildQuality QualityEnum = ELightingBuildQuality::Quality_Production;
@@ -108,25 +92,15 @@ bool HandleBuildLighting(
         return true;
     }
 
-    if (AWorldSettings* WS = World->GetWorldSettings())
+    // It answered success with skipped: true, which read as a lit level.
+    const AWorldSettings* WS = World->GetWorldSettings();
+    if (WS && WS->bForceNoPrecomputedLighting)
     {
-        if (WS->bForceNoPrecomputedLighting)
-        {
-            TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-            Resp->SetBoolField(TEXT("success"), true);
-            Resp->SetBoolField(TEXT("skipped"), true);
-            Resp->SetStringField(TEXT("reason"), TEXT("bForceNoPrecomputedLighting is true"));
-            Resp->SetStringField(
-                TEXT("suggestion"),
-                TEXT("Set WorldSettings.bForceNoPrecomputedLighting to false to enable lighting builds"));
-            Subsystem.SendAutomationResponse(
-                RequestingSocket,
-                RequestId,
-                true,
-                TEXT("Lighting build skipped - precomputed lighting disabled in WorldSettings"),
-                Resp);
-            return true;
-        }
+        Subsystem.SendAutomationError(RequestingSocket, RequestId,
+            TEXT("Nothing was built: this level's World Settings force no precomputed lighting (bForceNoPrecomputedLighting). "
+                 "Set it to false first: inspect set_property with actorName WorldSettings, propertyName bForceNoPrecomputedLighting, value false."),
+            TEXT("PRECOMPUTED_LIGHTING_DISABLED"));
+        return true;
     }
 
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
@@ -142,16 +116,10 @@ bool HandleBuildLighting(
         return true;
     }
     const bool bBuildSucceeded =
-        LevelEditorSubsystem->BuildLightMaps(QualityEnum, bBuildReflectionCaptures);
-    const FString BuildApi = TEXT("LevelEditorSubsystem.BuildLightMaps");
+        LevelEditorSubsystem->BuildLightMaps(QualityEnum, /*bWithReflectionCaptures*/ false);
 #else
     const bool bBuildSucceeded =
         RunLegacyLightingBuild(*World, QualityEnum);
-    if (bBuildSucceeded && bBuildReflectionCaptures)
-    {
-        GEditor->BuildReflectionCaptures();
-    }
-    const FString BuildApi = TEXT("EditorBuildUtils.EditorBuild");
 #endif
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
@@ -206,8 +174,6 @@ bool HandleBuildLighting(
         Resp->SetNumberField(TEXT("staticLightCount"), StaticLights);
         Resp->SetNumberField(TEXT("lightmassImportanceVolumeCount"), ImportanceVolumes);
     }
-    Resp->SetBoolField(TEXT("buildReflectionCaptures"), bBuildReflectionCaptures);
-    Resp->SetStringField(TEXT("buildApi"), BuildApi);
     Subsystem.SendAutomationResponse(
         RequestingSocket,
         RequestId,

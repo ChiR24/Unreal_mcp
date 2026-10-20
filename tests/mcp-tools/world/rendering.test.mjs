@@ -222,10 +222,16 @@ function createRenderingHappyCases(ctx) {
 
     createNamedActionCase('Lightmass: configure lightmass settings', 'configure_lightmass_settings', {
       settings: { StaticLightingLevelScale: 0.5, NumIndirectLightingBounces: 2 }
-    }),
+    }, { assertions: [{ path: 'structuredContent.result.undo.undoable', equals: true, label: 'the World Settings edit is one undo step' }] }),
     createNamedActionCase('Lightmass: build lighting quality', 'build_lighting_quality', {
       quality: 'Preview'
     }, { timeoutMs: 120000 }),
+    // A level that forces no precomputed lighting answered success with skipped: true.
+    { scenario: 'Lightmass: force no precomputed lighting', toolName: 'inspect', arguments: { action: 'set_property', actorName: 'WorldSettings', propertyName: 'bForceNoPrecomputedLighting', value: true, markDirty: false }, expected: 'success' },
+    createNamedActionCase('Lightmass: build lighting refuses a level that forces no precomputed lighting', 'build_lighting_quality', {
+      quality: 'Preview'
+    }, { expected: 'error|PRECOMPUTED_LIGHTING_DISABLED' }),
+    { scenario: 'Lightmass: allow precomputed lighting again', toolName: 'inspect', arguments: { action: 'set_property', actorName: 'WorldSettings', propertyName: 'bForceNoPrecomputedLighting', value: false, markDirty: false }, expected: 'success' },
     createNamedActionCase('Lightmass: configure indirect lighting cache', 'configure_indirect_lighting_cache', {
       actorName: ctx.targetActor,
       settings: { IndirectLightingCacheQuality: 'ILCQ_Volume' }
@@ -233,7 +239,7 @@ function createRenderingHappyCases(ctx) {
     createNamedActionCase('Lightmass: switch the indirect lighting cache off', 'configure_indirect_lighting_cache', {
       actorName: ctx.targetActor,
       enabled: false
-    }, { assertions: [{ path: 'structuredContent.result.appliedSettings', includes: 'IndirectLightingCacheQuality', label: 'enabled drives the cache quality' }] }),
+    }, { assertions: [{ path: 'structuredContent.result.appliedSettings', includes: 'IndirectLightingCacheQuality', label: 'enabled drives the cache quality' }, { path: 'structuredContent.result.undo.undoable', equals: true, label: 'the cache change is one undo step' }] }),
     createNamedActionCase('Lightmass: create lightmass volume through build environment', 'create_lightmass_volume', {
       name: ctx.lightingLightmassVolume,
       location: { x: -500, y: 0, z: 250 },

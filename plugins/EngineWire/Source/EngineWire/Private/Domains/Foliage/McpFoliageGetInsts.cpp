@@ -26,8 +26,7 @@ bool UEngineWireSubsystem::HandleGetFoliageInstances(
     return true;
   }
   UWorld *World = GEditor->GetEditorWorldContext().World();
-  AInstancedFoliageActor *IFA =
-      McpFoliageHandlers::GetOrCreateFoliageActorForWorldSafe(World, false);
+  const TArray<AInstancedFoliageActor *> FoliageActors = McpFoliageHandlers::AllFoliageActors(World);
   UFoliageType *OnlyType = FoliageTypePath.IsEmpty()
       ? nullptr : LoadObject<UFoliageType>(nullptr, *FoliageTypePath, nullptr, LOAD_NoWarn);
   // A typo'd type read the same as a real one with no instances; remove_foliage refuses it.
@@ -37,53 +36,57 @@ bool UEngineWireSubsystem::HandleGetFoliageInstances(
                         TEXT("FOLIAGE_TYPE_NOT_FOUND"));
     return true;
   }
-  if (!IFA) {
-    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-    Resp->SetBoolField(TEXT("success"), true);
-    Resp->SetArrayField(TEXT("instances"), TArray<TSharedPtr<FJsonValue>>());
-    Resp->SetNumberField(TEXT("count"), 0);
-    SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("No foliage actor found"), Resp, FString());
-    return true;
-  }
-
   TArray<TSharedPtr<FJsonValue>> InstancesArray;
-  TArray<TSharedPtr<FJsonValue>> ByType;
+  // Counts per type across every foliage actor (one per loaded level or World Partition cell), in first-seen order.
+  TArray<UFoliageType *> TypeOrder;
+  TMap<UFoliageType *, int32> TypeCounts;
   int32 Total = 0;
-  IFA->ForEachFoliageInfo([&](UFoliageType *Type, FFoliageInfo &Info) {
-    if (OnlyType && Type != OnlyType) {
-      return true;
+  const auto AddInstance = [&](UFoliageType *Type, const FFoliageInstance &Inst) {
+    TSharedPtr<FJsonObject> InstObj = McpHandlerUtils::CreateResultObject();
+    if (!OnlyType) {
+      InstObj->SetStringField(TEXT("foliageType"), Type->GetPathName());
     }
+    InstObj->SetNumberField(TEXT("x"), Inst.Location.X);
+    InstObj->SetNumberField(TEXT("y"), Inst.Location.Y);
+    InstObj->SetNumberField(TEXT("z"), Inst.Location.Z);
+    if (OnlyType) {
+      InstObj->SetNumberField(TEXT("pitch"), Inst.Rotation.Pitch);
+      InstObj->SetNumberField(TEXT("yaw"), Inst.Rotation.Yaw);
+      InstObj->SetNumberField(TEXT("roll"), Inst.Rotation.Roll);
+      // The whole scale: one number (the X axis) hid a non-uniform scale (a tall thin tree read as uniform).
+      TSharedPtr<FJsonObject> Scale = MakeShared<FJsonObject>();
+      Scale->SetNumberField(TEXT("x"), Inst.DrawScale3D.X);
+      Scale->SetNumberField(TEXT("y"), Inst.DrawScale3D.Y);
+      Scale->SetNumberField(TEXT("z"), Inst.DrawScale3D.Z);
+      InstObj->SetObjectField(TEXT("scale"), Scale);
+    }
+    InstancesArray.Add(MakeShared<FJsonValueObject>(InstObj));
+  };
+  for (AInstancedFoliageActor *IFA : FoliageActors) {
+    IFA->ForEachFoliageInfo([&](UFoliageType *Type, FFoliageInfo &Info) {
+      if (OnlyType && Type != OnlyType) {
+        return true;
+      }
+      if (!TypeCounts.Contains(Type)) {
+        TypeOrder.Add(Type);
+      }
+      TypeCounts.FindOrAdd(Type) += Info.Instances.Num();
+      for (const FFoliageInstance &Inst : Info.Instances) {
+        ++Total;
+        if (!bSummary && InstancesArray.Num() < Limit) {
+          AddInstance(Type, Inst);
+        }
+      }
+      return true;
+    });
+  }
+  TArray<TSharedPtr<FJsonValue>> ByType;
+  for (UFoliageType *Type : TypeOrder) {
     TSharedPtr<FJsonObject> Row = MakeShared<FJsonObject>();
     Row->SetStringField(TEXT("foliageType"), Type->GetPathName());
-    Row->SetNumberField(TEXT("count"), Info.Instances.Num());
+    Row->SetNumberField(TEXT("count"), TypeCounts[Type]);
     ByType.Add(MakeShared<FJsonValueObject>(Row));
-    for (const FFoliageInstance &Inst : Info.Instances) {
-      ++Total;
-      if (bSummary || InstancesArray.Num() >= Limit) {
-        continue;
-      }
-      TSharedPtr<FJsonObject> InstObj = McpHandlerUtils::CreateResultObject();
-      if (!OnlyType) {
-        InstObj->SetStringField(TEXT("foliageType"), Type->GetPathName());
-      }
-      InstObj->SetNumberField(TEXT("x"), Inst.Location.X);
-      InstObj->SetNumberField(TEXT("y"), Inst.Location.Y);
-      InstObj->SetNumberField(TEXT("z"), Inst.Location.Z);
-      if (OnlyType) {
-        InstObj->SetNumberField(TEXT("pitch"), Inst.Rotation.Pitch);
-        InstObj->SetNumberField(TEXT("yaw"), Inst.Rotation.Yaw);
-        InstObj->SetNumberField(TEXT("roll"), Inst.Rotation.Roll);
-        // The whole scale: one number (the X axis) hid a non-uniform scale (a tall thin tree read as uniform).
-        TSharedPtr<FJsonObject> Scale = MakeShared<FJsonObject>();
-        Scale->SetNumberField(TEXT("x"), Inst.DrawScale3D.X);
-        Scale->SetNumberField(TEXT("y"), Inst.DrawScale3D.Y);
-        Scale->SetNumberField(TEXT("z"), Inst.DrawScale3D.Z);
-        InstObj->SetObjectField(TEXT("scale"), Scale);
-      }
-      InstancesArray.Add(MakeShared<FJsonValueObject>(InstObj));
-    }
-    return true;
-  });
+  }
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
@@ -93,8 +96,7 @@ bool UEngineWireSubsystem::HandleGetFoliageInstances(
   }
   Resp->SetNumberField(TEXT("count"), Total);
   Resp->SetArrayField(TEXT("byType"), ByType);
-  Resp->SetStringField(TEXT("foliageActorPath"), IFA->GetPathName());
-  Resp->SetBoolField(TEXT("existsAfter"), true);
+  Resp->SetNumberField(TEXT("foliageActors"), FoliageActors.Num());
   SendAutomationResponse(RequestingSocket, RequestId, true,
                          FString::Printf(TEXT("%d foliage instance(s) across %d type(s)"), Total, ByType.Num()),
                          Resp, FString());

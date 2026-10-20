@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "66d59ce2562b0762",
+  "catalogRevision": "8d4d7f7b55f47411",
   "recordCount": 416,
   "records": [
     {
@@ -19457,7 +19457,7 @@
           "add camera component",
           "blueprint component"
         ],
-        "summary": "Edit the Simple Construction Script: add a component template (or a non-SCS instance), reparent, set a property or transform, or apply batched operations.",
+        "summary": "Change the components a Blueprint adds (its Simple Construction Script), chosen by edit; each edit saves the Blueprint unless save is false. add_scs_component (add_component is the same) adds componentName of componentClass under parentComponent (its own part, a parent Blueprint's, or the native root; by default the root), with meshPath and materialPath (refused when they do not load or the class shows no mesh or material), location, rotation, scale and properties, and compiles; a taken name is refused, as is an add during Play. modify applies operations in order (add, modify, attach) or edits one component, naming each failed one in warnings (the call fails when none applied), and compiles only with compile or applyAndSave true; reparent moves a component under another; set_property and set_transform change one template and compile, and placed copies that kept the old value follow (instancesUpdated).",
         "whenToUse": [
           "edit=add_scs_component: A component template must be owned by the SCS tree for instanced property overrides.",
           "edit=add_component: A component must be added to a Blueprint under the add_component verb.",
@@ -19468,6 +19468,7 @@
           "edit=set_transform: An SCS component template transform must be updated."
         ],
         "whenNotToUse": [
+          "edit=add_scs_component: One placed actor needs the component, not every copy of the Blueprint (use control_actor.edit_component with edit=add).",
           "edit=reparent: The component hierarchy does not need restructuring."
         ]
       },
@@ -19661,7 +19662,7 @@
       },
       "examples": [
         {
-          "title": "Edit the Simple Construction Script: add a component template (or a non-SCS instance), reparent, set a property or transform, or apply batched operations.",
+          "title": "Change the components a Blueprint adds (its Simple Construction Script), chosen by edit; each edit saves the Blueprint unless save is false. add_scs_component (add_component is the same) adds componentName of componentClass under parentComponent (its own part, a parent Blueprint's, or the native root; by default the root), with meshPath and materialPath (refused when they do not load or the class shows no mesh or material), location, rotation, scale and properties, and compiles; a taken name is refused, as is an add during Play. modify applies operations in order (add, modify, attach) or edits one component, naming each failed one in warnings (the call fails when none applied), and compiles only with compile or applyAndSave true; reparent moves a component under another; set_property and set_transform change one template and compile, and placed copies that kept the old value follow (instancesUpdated).",
           "input": {
             "action": "edit_scs",
             "blueprintPath": "/Game/Blueprints/BP_Test",
@@ -19840,7 +19841,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "05283ae89944e8654017bea869806f0f98649d840ceb0e2750809e1b034bbf42",
-        "content": "c8619cf753ff94d6a713dbe318342642fe7aa3c8ea168d1743049fedc7256b03"
+        "content": "c9168254b9514678e27bcb0553d7e0148af27b25f1a6748864455ada3279f692"
       }
     },
     {
@@ -25105,7 +25106,7 @@
           "rebuild lighting",
           "bake lightmaps"
         ],
-        "summary": "Build the level's static lighting (Lightmass) at quality (default Production; Preview, Medium, High). Reflection captures are not rebuilt, a level that forces no precomputed lighting answers skipped, and a failed build lists its reasons (no static lights, no Lightmass importance volume). Can take minutes; nothing is saved.",
+        "summary": "Build the level's static lighting (Lightmass) at quality (default Production; Preview, Medium, High). Reflection captures are not rebuilt, a level whose World Settings force no precomputed lighting is refused (PRECOMPUTED_LIGHTING_DISABLED), an unknown quality is UNKNOWN_QUALITY, and a failed build lists its reasons (no static lights, no Lightmass importance volume). Can take minutes; nothing is saved.",
         "whenToUse": [
           "Static lighting must be built."
         ],
@@ -25158,7 +25159,7 @@
       },
       "examples": [
         {
-          "title": "Build the level's static lighting (Lightmass) at quality (default Production; Preview, Medium, High). Reflection captures are not rebuilt, a level that forces no precomputed lighting answers skipped, and a failed build lists its reasons (no static lights, no Lightmass importance volume). Can take minutes; nothing is saved.",
+          "title": "Build the level's static lighting (Lightmass) at quality (default Production; Preview, Medium, High). Reflection captures are not rebuilt, a level whose World Settings force no precomputed lighting is refused (PRECOMPUTED_LIGHTING_DISABLED), an unknown quality is UNKNOWN_QUALITY, and a failed build lists its reasons (no static lights, no Lightmass importance volume). Can take minutes; nothing is saved.",
           "input": {
             "action": "build_lighting",
             "quality": "Preview"
@@ -25196,7 +25197,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "a10f74ed675679247d7a9cf126e8120acaa401aedcf9b80453c4e33f58cbd8ce",
-        "content": "c8d33e182c423aafb00b3be7bd61f7ab582e5b7ab9d38d2baa19680c1ca8fcfa"
+        "content": "c57fce4a9b52820b5134031a72f0af0ba405d4365b0b7b2afa3e5317dda3752d"
       }
     },
     {
@@ -26340,7 +26341,7 @@
           "indirect lighting cache",
           "static lighting"
         ],
-        "summary": "Configure static lighting builds: Lightmass settings, build quality, indirect lighting cache.",
+        "summary": "Static (baked) lighting, chosen by setting. settings writes the level's Lightmass settings (World Settings) from settings, keyed by engine field name (NumIndirectLightingBounces, IndirectLightingQuality, StaticLightingLevelScale, bUseAmbientOcclusion), which the next build uses; build_quality bakes the lighting at quality (default Production; Preview, Medium, High, or 0 to 3) and answers when the bake ends, refused when the level forces no precomputed lighting; indirect_lighting_cache sets how an actor's primitive components sample the indirect lighting cache (enabled: point sampling or off) or other primitive fields (settings). A key the target lacks is listed in unsupportedSettings and a call where none applies is refused; settings and indirect_lighting_cache are one undo step, and nothing is saved.",
         "whenToUse": [
           "Render or lighting quality settings must be configured."
         ],
@@ -26417,7 +26418,7 @@
       },
       "examples": [
         {
-          "title": "Configure static lighting builds: Lightmass settings, build quality, indirect lighting cache.",
+          "title": "Static (baked) lighting, chosen by setting. settings writes the level's Lightmass settings (World Settings) from settings, keyed by engine field name (NumIndirectLightingBounces, IndirectLightingQuality, StaticLightingLevelScale, bUseAmbientOcclusion), which the next build uses; build_quality bakes the lighting at quality (default Production; Preview, Medium, High, or 0 to 3) and answers when the bake ends, refused when the level forces no precomputed lighting; indirect_lighting_cache sets how an actor's primitive components sample the indirect lighting cache (enabled: point sampling or off) or other primitive fields (settings). A key the target lacks is listed in unsupportedSettings and a call where none applies is refused; settings and indirect_lighting_cache are one undo step, and nothing is saved.",
           "input": {
             "action": "configure_lightmass",
             "setting": "settings"
@@ -26485,7 +26486,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "8ac34aef13a24699b3f41d590ba8937028ee8e16cc396b3530fc51e7d2465cce",
-        "content": "42ce50191e099aafd8fbe6413dddf33f6ad5d18b2dde47920223c83cc0832284"
+        "content": "3d1ce5f726079f529fd4b8ed1efc721095a1d33eef2bdda246f0e9f3ad120af1"
       }
     },
     {
@@ -27960,7 +27961,7 @@
           "water material",
           "water collision"
         ],
-        "summary": "Configure a water body: its Gerstner waves (height, wavelength, steepness, direction), material or collision.",
+        "summary": "Change a water body, chosen by setting: the one named by waterBodyName, targetActor or actorName, else the level's first. waves gives it Gerstner waves (waveHeight, waveLength, steepness, direction) that its surface and anything floating on it follow, and fails when the body does not keep them; material sets the material that draws its surface (its WaterMaterial, read back as waterMaterial); collision turns collision on its components on or off (collisionEnabled); settings writes water body actor properties by engine name. material and collision are one undo step; a call with nothing to set, or whose settings name nothing the body has, is refused, and a material that does not load fails the call.",
         "whenToUse": [
           "A water body or water simulation must be created or configured."
         ],
@@ -28078,7 +28079,7 @@
       },
       "examples": [
         {
-          "title": "Configure a water body: its Gerstner waves (height, wavelength, steepness, direction), material or collision.",
+          "title": "Change a water body, chosen by setting: the one named by waterBodyName, targetActor or actorName, else the level's first. waves gives it Gerstner waves (waveHeight, waveLength, steepness, direction) that its surface and anything floating on it follow, and fails when the body does not keep them; material sets the material that draws its surface (its WaterMaterial, read back as waterMaterial); collision turns collision on its components on or off (collisionEnabled); settings writes water body actor properties by engine name. material and collision are one undo step; a call with nothing to set, or whose settings name nothing the body has, is refused, and a material that does not load fails the call.",
           "input": {
             "action": "configure_water",
             "waveHeight": 1,
@@ -28156,7 +28157,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "a111b64ba4b2346e6ee1565d6f33ff94b1075682d8589f328d82592e8d7d8304",
-        "content": "f5e583e3a0dfbc234dea355b44a7edc047fd5da3ed4366c901e7e7a59bcd6ca1"
+        "content": "94be59583331941f3cec365547d793dcbc9433e59147354f3c660ea4cfb40f73"
       }
     },
     {
@@ -32970,7 +32971,7 @@
           "count trees",
           "how many trees"
         ],
-        "summary": "Count foliage instances in the level, in total and per foliage type (byType), and list their positions; one type also returns rotation and scale ({x, y, z}: the whole scale, so a non-uniform one shows). The summary flag drops the list; limit caps it.",
+        "summary": "Count foliage instances in the level, across every foliage actor (each loaded sublevel and World Partition cell keeps its own; foliageActors counts them), in total and per foliage type (byType), and list their positions; one type also returns rotation and scale ({x, y, z}: the whole scale, so a non-uniform one shows). The summary flag drops the list; limit caps it.",
         "whenToUse": [
           "Existing foliage instances must be inspected.",
           "What foliage a level holds must be counted before removing it (summary)."
@@ -33037,7 +33038,7 @@
       },
       "examples": [
         {
-          "title": "Count foliage instances in the level, in total and per foliage type (byType), and list their positions; one type also returns rotation and scale ({x, y, z}: the whole scale, so a non-uniform one shows). The summary flag drops the list; limit caps it.",
+          "title": "Count foliage instances in the level, across every foliage actor (each loaded sublevel and World Partition cell keeps its own; foliageActors counts them), in total and per foliage type (byType), and list their positions; one type also returns rotation and scale ({x, y, z}: the whole scale, so a non-uniform one shows). The summary flag drops the list; limit caps it.",
           "input": {
             "action": "get_foliage_instances",
             "foliageType": "Bush_Type"
@@ -33075,7 +33076,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "15dd7086f7a2646b1b69660bf433f9dadea56bf1b2b4ca362671c56dc78b4265",
-        "content": "3abead6bc1772d147267c9e05ee8ab52ae3716dac06f04e894e06b13af3bd291"
+        "content": "f2df2081f46287b4731fc4d27ada3da4b62c4877da2aa67576084928f9d79c28"
       }
     },
     {
@@ -33717,7 +33718,7 @@
           "remove_foliage",
           "remove trees or grass"
         ],
-        "summary": "Remove foliage instances of a type, all foliage, or only those inside an area box (a pit or a path).",
+        "summary": "Remove foliage from every foliage actor in the level (each loaded sublevel and World Partition cell keeps its own): every instance of foliageType, every type (removeAll true), or only the instances inside an area box or several (areas, each {min, max}; with foliageType, that type only). A whole type also leaves the level's foliage list. One undo step; instancesRemoved counts what went (0 when nothing matched), an unknown type is FOLIAGE_TYPE_NOT_FOUND, and a box without min and max removes nothing.",
         "whenToUse": [
           "Foliage must be added, configured, or removed in the level."
         ],
@@ -33880,7 +33881,7 @@
       },
       "examples": [
         {
-          "title": "Remove foliage instances of a type, all foliage, or only those inside an area box (a pit or a path).",
+          "title": "Remove foliage from every foliage actor in the level (each loaded sublevel and World Partition cell keeps its own): every instance of foliageType, every type (removeAll true), or only the instances inside an area box or several (areas, each {min, max}; with foliageType, that type only). A whole type also leaves the level's foliage list. One undo step; instancesRemoved counts what went (0 when nothing matched), an unknown type is FOLIAGE_TYPE_NOT_FOUND, and a box without min and max removes nothing.",
           "input": {
             "action": "remove_foliage",
             "foliageType": "Bush_Type"
@@ -33918,7 +33919,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "d0165d74018290f8fad602a122c34689f05e6cb2964fde5a6ac8038a3688a1ae",
-        "content": "df02c8a7dc51b279cb9a1b470a3acba26721b52a007002f6fd21f8f41fa24e6c"
+        "content": "ea753163685cb04d803818ab143586fa3a50a550281dfec69fa931b872dfc69d"
       }
     },
     {
@@ -76267,7 +76268,7 @@
         "topics": [
           "build_lighting"
         ],
-        "summary": "Build the open level static lighting (Lightmass) at quality (default Production; Preview, Medium, High), the same build as build_environment.build_lighting. Reflection captures are not rebuilt, a level that forces no precomputed lighting answers skipped, and a failed build lists its reasons; it takes minutes, cannot be cancelled once started, and saves nothing.",
+        "summary": "Build the open level static lighting (Lightmass) at quality (default Production; Preview, Medium, High), the same build as build_environment.build_lighting. Reflection captures are not rebuilt, a level whose World Settings force no precomputed lighting is refused (PRECOMPUTED_LIGHTING_DISABLED), an unknown quality is UNKNOWN_QUALITY, and a failed build lists its reasons; it takes minutes, cannot be cancelled once started, and saves nothing.",
         "whenToUse": [
           "Baked lighting must be (re)computed for the level."
         ],
@@ -76320,7 +76321,7 @@
       },
       "examples": [
         {
-          "title": "Build the open level static lighting (Lightmass) at quality (default Production; Preview, Medium, High), the same build as build_environment.build_lighting. Reflection captures are not rebuilt, a level that forces no precomputed lighting answers skipped, and a failed build lists its reasons; it takes minutes, cannot be cancelled once started, and saves nothing.",
+          "title": "Build the open level static lighting (Lightmass) at quality (default Production; Preview, Medium, High), the same build as build_environment.build_lighting. Reflection captures are not rebuilt, a level whose World Settings force no precomputed lighting is refused (PRECOMPUTED_LIGHTING_DISABLED), an unknown quality is UNKNOWN_QUALITY, and a failed build lists its reasons; it takes minutes, cannot be cancelled once started, and saves nothing.",
           "input": {
             "action": "build_lighting",
             "quality": "Preview"
@@ -76358,7 +76359,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "e76038a80aca6ce80d30d2309088f215d86b0312fa0d5a70f3620c63224e9a9c",
-        "content": "e7d3341fdfdb837f6f683703c42147f1dd2ee06f803e6aca42838276ce4f6aa7"
+        "content": "81effbbec74c8ca88503c08aa4bee82598ab9824325bb4f7298f91f89735fc60"
       }
     },
     {
@@ -91119,7 +91120,7 @@
           "vector parameter",
           "recolor several material instances"
         ],
-        "summary": "Set a material or instance parameter value: any parameter by type, or a scalar, vector, texture or static-switch parameter.",
+        "summary": "Set material parameter values, chosen by parameterKind. On a material instance it overrides a parameter its parent publishes (a name it does not publish is PARAMETER_NOT_FOUND, listing the published ones); on a base material it sets the parameter node's default, refused while the material is open in its editor (ASSET_EDITOR_OPEN; the editor would write its own copy back on close). scalar takes a number value, vector value {r, g, b, a} or [r, g, b, a], texture texturePath, static_switch value true or false, and a missing value is refused; parameter takes parameterType (scalar, the default, vector or texture) with value, several at once with parameters, or several instances under one consent with assets. The asset is saved unless save is false (saved).",
         "whenToUse": [
           "parameterKind=parameter: Several parameter values on a base material or an instance must change in one call (parameters list).",
           "parameterKind=parameter: Several material instances must be retuned at once, a palette recoloured (assets), under one consent instead of one per instance.",
@@ -91223,7 +91224,7 @@
       },
       "examples": [
         {
-          "title": "Set a material or instance parameter value: any parameter by type, or a scalar, vector, texture or static-switch parameter.",
+          "title": "Set material parameter values, chosen by parameterKind. On a material instance it overrides a parameter its parent publishes (a name it does not publish is PARAMETER_NOT_FOUND, listing the published ones); on a base material it sets the parameter node's default, refused while the material is open in its editor (ASSET_EDITOR_OPEN; the editor would write its own copy back on close). scalar takes a number value, vector value {r, g, b, a} or [r, g, b, a], texture texturePath, static_switch value true or false, and a missing value is refused; parameter takes parameterType (scalar, the default, vector or texture) with value, several at once with parameters, or several instances under one consent with assets. The asset is saved unless save is false (saved).",
           "input": {
             "assetPath": "/Game/Materials/M_Base",
             "parameterName": "Roughness",
@@ -91333,7 +91334,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "7b8212bca2f165d7e24722d624c833f93a6fbd4c2c978042c563134d71971b89",
-        "content": "13f2298f8a13964fbb1fee2c1844ab638373960928e9900cf9b9be6ae73b46de"
+        "content": "6ed161d31638350c0d6b8ec56d75395859886e310e46cfb6c7b15454f8aa8c00"
       }
     },
     {
@@ -97305,7 +97306,7 @@
           "killcam",
           "demo playback speed"
         ],
-        "summary": "Replay system: play, pause or seek a demo, set playback speed, start or stop recording, start a killcam.",
+        "summary": "Record and play back gameplay replays in the running game, chosen by control; outside Play every control is NOT_IN_PIE. start_recording records replayName (else the configured default, else McpReplay_<time>) until stop_recording, which answers the name, and is refused while a replay plays or records (ALREADY_PLAYING, ALREADY_RECORDING). play plays replayName back (refused while recording); pause pauses or resumes it (paused; without it, toggles); seek jumps to timeSeconds, clamped to the replay's length, and answers once playback gets there (REPLAY_SEEK_TIMEOUT after 10 s); set_playback_speed sets speed (at most 16); start_killcam plays the last durationSeconds of the playing replay, or of replayName. pause, seek and set_playback_speed need a replay playing (NOT_PLAYING). Replies give the replay state (activeReplayName, recording, playing, currentTimeSeconds, totalTimeSeconds, paused, playbackSpeed).",
         "whenToUse": [
           "control=play: A recorded demo replay must be played back.",
           "control=pause: Demo playback must be paused.",
@@ -97426,7 +97427,7 @@
       },
       "examples": [
         {
-          "title": "Replay system: play, pause or seek a demo, set playback speed, start or stop recording, start a killcam.",
+          "title": "Record and play back gameplay replays in the running game, chosen by control; outside Play every control is NOT_IN_PIE. start_recording records replayName (else the configured default, else McpReplay_<time>) until stop_recording, which answers the name, and is refused while a replay plays or records (ALREADY_PLAYING, ALREADY_RECORDING). play plays replayName back (refused while recording); pause pauses or resumes it (paused; without it, toggles); seek jumps to timeSeconds, clamped to the replay's length, and answers once playback gets there (REPLAY_SEEK_TIMEOUT after 10 s); set_playback_speed sets speed (at most 16); start_killcam plays the last durationSeconds of the playing replay, or of replayName. pause, seek and set_playback_speed need a replay playing (NOT_PLAYING). Replies give the replay state (activeReplayName, recording, playing, currentTimeSeconds, totalTimeSeconds, paused, playbackSpeed).",
           "input": {
             "action": "play_demo",
             "demoName": "Demo_01",
@@ -97519,7 +97520,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "f8d744e76d3bf545c162ba2a503379438fcd2da8c71fc3ad4e72bb81535d4b94",
-        "content": "9732ce0fbc527aef62cb7f2d54351ebcb85b510a2ab665a747b94d64be1c2c3c"
+        "content": "dbd1dc4a767ca54c484e4e58daa1b1699107be1dda498067f043406f917f0290"
       }
     },
     {

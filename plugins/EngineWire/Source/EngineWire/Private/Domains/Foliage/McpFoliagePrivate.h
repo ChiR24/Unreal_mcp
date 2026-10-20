@@ -24,6 +24,21 @@
 namespace McpFoliageHandlers {
 AInstancedFoliageActor* GetOrCreateFoliageActorForWorldSafe(UWorld* World, bool bCreateIfNone);
 
+// Every foliage actor in World: each loaded level, and each World Partition cell, keeps its own. Reading or removing
+// through the first one alone missed every instance a sublevel or another cell held.
+inline TArray<AInstancedFoliageActor*> AllFoliageActors(UWorld* World)
+{
+    TArray<AInstancedFoliageActor*> Actors;
+    if (World)
+    {
+        for (TActorIterator<AInstancedFoliageActor> It(World); It; ++It)
+        {
+            Actors.Add(*It);
+        }
+    }
+    return Actors;
+}
+
 // The foliage type at InOutPath or, for a StaticMesh path, the /Game/Foliage/Auto_<mesh> type made from it (made
 // once, then reused). Replies ASSET_NOT_FOUND and returns null when neither loads; InOutPath becomes the type's path.
 UFoliageType* ResolveFoliageTypeOrMesh(UEngineWireSubsystem& Bridge, const FString& RequestId,

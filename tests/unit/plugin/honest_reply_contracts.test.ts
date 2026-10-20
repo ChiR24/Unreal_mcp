@@ -1041,7 +1041,8 @@ describe('foliage edit receipts', () => {
     expect(code('Foliage', 'McpFoliagePrivate.h')).toContain('Resp->SetArrayField(TEXT("affectedActors"), Changed);');
     expect(code('Foliage', 'McpFoliagePaint.cpp')).toContain('McpFoliageHandlers::SetFoliageActorChanged(Resp, IFA);');
     expect(code('Foliage', 'McpFoliageInsts.cpp')).toContain('McpFoliageHandlers::SetFoliageActorChanged(Resp, IFA);');
-    expect(code('Foliage', 'McpFoliageQueries.cpp')).toMatch(/if \(RemovedCount > 0\) \{\s*McpFoliageHandlers::SetFoliageActorChanged\(Resp, IFA\);\s*\}/u);
+    // A removal can touch several foliage actors (one per loaded level or World Partition cell): it names each.
+    expect(code('Foliage', 'McpFoliageQueries.cpp')).toMatch(/if \(Changed\.Num\(\) > 0\) \{\s*Resp->SetArrayField\(TEXT\("affectedActors"\), Changed\);\s*\}/u);
     expect(code('Foliage', 'McpFoliageGetInsts.cpp')).not.toContain('SetFoliageActorChanged');
   });
 });
@@ -4405,7 +4406,71 @@ describe('run_benchmark measures what it ran', () => {
     expect(benchmark).not.toContain('profilegpu');
     expect(benchmark).not.toContain('stat startfile');
     expect(benchmark).toContain('Resp->SetNumberField(TEXT("averageFps")');
-    expect(benchmark).toContain("is not a benchmark type; use cpu, gpu or all.");
+    expect(benchmark).toContain('is not a benchmark type; use cpu, gpu or all.');
     expect(benchmark).toMatch(/if \(Samples->Elapsed < BenchmarkDuration\)\s*\{\s*return true;/u);
+  });
+});
+
+describe('add_scs_component adds nothing it cannot mesh', () => {
+  it('loads meshPath and materialPath before the node exists and refuses what does not load or show', () => {
+    const add = code('SCS', 'McpSCSAddComponent.cpp');
+    const refusal = add.indexOf('does not load as a %s; nothing was added.');
+    expect(refusal).toBeGreaterThan(-1);
+    expect(refusal).toBeLessThan(add.indexOf('SCS->CreateNode('));
+    expect(add).toContain('shows no %s; send %s only for a %s. Nothing was added.');
+    expect(add).toContain('bCanHold ? TEXT("ASSET_NOT_FOUND") : TEXT("INVALID_ARGUMENT")');
+  });
+});
+
+describe('material parameter setters refuse a missing value', () => {
+  it('scalar, vector and static switch refuse instead of writing 0, white or false', () => {
+    const scalar = code('MaterialAuthoring', 'Parameters', 'McpMatSetScalarParamValue.cpp');
+    expect(scalar).toMatch(/if \(!Payload->TryGetNumberField\(TEXT\("value"\), Value\)\) \{\s*Bridge->SendAutomationError/u);
+    const toggle = code('MaterialAuthoring', 'Parameters', 'McpMatSetStaticSwitchParamValue.cpp');
+    expect(toggle).toMatch(/if \(!Payload->TryGetBoolField\(TEXT\("value"\), Value\)\) \{\s*Bridge->SendAutomationError/u);
+    const vector = code('MaterialAuthoring', 'Parameters', 'McpMatSetVectorParamValue.cpp');
+    expect(vector).not.toContain('else if (Payload->HasField(TEXT("value")))');
+    expect(vector).toMatch(/\} else \{\s*Bridge->SendAutomationError\(\s*Socket, RequestId,\s*TEXT\("'value' must be an object/u);
+  });
+});
+
+describe('static lighting edits undo and a build that cannot run says so', () => {
+  it('Lightmass settings and the indirect lighting cache write inside a transaction', () => {
+    const lighting = code('Render', 'McpRenderLighting.cpp');
+    const lightmass = lighting.slice(lighting.indexOf('"configure_lightmass_settings"'), lighting.indexOf('ReadActorReference(Payload, Reference)'));
+    expect(lightmass).toContain('FMcpScopedEditorTransaction Transaction(');
+    expect(lightmass).toContain('Transaction.DescribeInto(Result);');
+    const cache = lighting.slice(lighting.lastIndexOf('if (SubAction == TEXT("configure_indirect_lighting_cache"))'));
+    expect(cache).toContain('FMcpScopedEditorTransaction Transaction(');
+    expect(cache).toContain('Transaction.DescribeInto(Result);');
+  });
+
+  it('foliage reads and removals cover every foliage actor, and a removal undoes', () => {
+    const remove = code('Foliage', 'McpFoliageQueries.cpp');
+    expect(remove).toContain('McpFoliageHandlers::AllFoliageActors(World)');
+    expect(remove).not.toContain('GetOrCreateFoliageActorForWorldSafe');
+    expect(remove).toContain('Transaction.DescribeInto(Resp);');
+    expect(remove).toContain('Nothing matched: no foliage instances were removed.');
+    const read = code('Foliage', 'McpFoliageGetInsts.cpp');
+    expect(read).toContain('McpFoliageHandlers::AllFoliageActors(World)');
+    expect(read).not.toContain('GetOrCreateFoliageActorForWorldSafe');
+  });
+
+  it('a water body takes its material as WaterMaterial, undoes, and refuses a call that sets nothing', () => {
+    const surface = code('Environment', 'Runtime', 'McpEnvActorSurface.cpp');
+    expect(surface).toContain('FindFProperty<FObjectProperty>(Component->GetClass(), TEXT("WaterMaterial"))');
+    expect(surface).toContain('Component->PostEditChangeProperty(Changed);');
+    const water = code('Environment', 'Runtime', 'McpEnvWeatherActors.cpp');
+    const configure = water.slice(water.indexOf('bool McpConfigureWaterBodyActor('));
+    expect(configure).toContain('Nothing to set: send materialPath, collisionEnabled or settings.');
+    expect(configure).toContain('Transaction.DescribeInto(Resp);');
+    expect(configure).toMatch(/if \(Applied == 0\)/u);
+  });
+
+  it('build lighting refuses a level that forces no precomputed lighting', () => {
+    const build = code('Lighting', 'McpLightingBuild.cpp');
+    expect(build).toContain('TEXT("PRECOMPUTED_LIGHTING_DISABLED")');
+    expect(build).not.toContain('TEXT("skipped")');
+    expect(build).not.toContain('TEXT("buildApi")');
   });
 });

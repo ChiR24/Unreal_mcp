@@ -169,6 +169,9 @@ const testCases = [
   { scenario: 'CONFIG: configure_water_waves takes amplitude for the wave height', toolName: 'build_environment', arguments: { action: 'configure_water_waves', waterBodyName: `Lake_${ts}`, amplitude: 30 }, expected: 'success|not found|class not found' },
   { scenario: 'CONFIG: configure_water_material', toolName: 'build_environment', arguments: { action: 'configure_water_material', waterBodyName: `Lake_${ts}`, materialPath: TEST_MATERIAL_ALIAS, materialIndex: 0 }, expected: 'success|not found|class not found' },
   { scenario: 'CONFIG: configure_water_collision', toolName: 'build_environment', arguments: { action: 'configure_water_collision', waterBodyName: `Lake_${ts}`, collisionEnabled: true }, expected: 'success|not found|class not found' },
+  // The material lands on the body's WaterMaterial, which draws the surface (a slot material never reached it), in one undo step.
+  { scenario: 'CONFIG: configure_water_material sets the surface material', toolName: 'build_environment', arguments: { action: 'configure_water_material', waterBodyName: `Lake_${ts}`, materialPath: TEST_MATERIAL_ALIAS }, expected: 'success|not found|class not found', assertions: [{ path: 'structuredContent.result.waterMaterial', includes: '/', label: 'the water material is read back' }, { path: 'structuredContent.result.undo.undoable', equals: true, label: 'one undo step' }] },
+  { scenario: 'ERROR: configure_water_material with nothing to set', toolName: 'build_environment', arguments: { action: 'configure_water_material', waterBodyName: `Lake_${ts}` }, expected: 'error|INVALID_ARGUMENT' },
   { scenario: 'CREATE: create_buoyancy_component', toolName: 'build_environment', arguments: { action: 'create_buoyancy_component', targetActor: `TestActor_${ts}`, settings: { PontoonRadius: 50 } }, expected: 'success|not found|class not found' },
 
   // === CLEANUP ===

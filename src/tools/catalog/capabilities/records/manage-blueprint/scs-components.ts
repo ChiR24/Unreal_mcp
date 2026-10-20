@@ -1,9 +1,8 @@
 /**
  * SCS (Simple Construction Script) component records.
  *
- * add_component is a separate action that adds a component instance to the
- * Blueprint without SCS node ownership (no template). The SCS actions
- * construct component templates through SCS->CreateNode()/AddNode() so the
+ * add_component is add_scs_component under another verb (one native
+ * implementation). The SCS actions construct component templates through SCS->CreateNode()/AddNode() so the
  * template is owned by the SCS node, per the UE 5.7 safety rules in
  * plugins/EngineWire/AGENTS.md.
  *
@@ -67,9 +66,9 @@ export const SCS_COMPONENTS_RECORDS: readonly CapabilityRecordSource[] = [
     domain: DOMAIN,
     topics: ['add component', 'attach component', 'static mesh component', 'mesh component', 'component template', 'add mesh to blueprint', 'add camera component', 'add component to blueprint', 'blueprint component'],
     aliases: ['blueprint.add_component_to_blueprint'],
-    summary: 'Add an SCS-owned component template node to the Blueprint\'s Simple Construction Script.',
+    summary: 'Add a component named componentName of componentClass (a component class name such as StaticMeshComponent, or its /Script path) to a Blueprint, under parentComponent (attachTo): its own part, a parent Blueprint\'s, or the native root, by default the root. meshPath and materialPath give a mesh component its mesh and first material and are refused, adding nothing, when they do not load or the class shows none; location, rotation, scale and properties set the template, and a property that does not take fails the call. A taken name is refused. The Blueprint compiles and saves unless save is false (compiled, saved); the reply names the parent the component got, and mesh_applied and material_applied.',
     whenToUse: ['A component template must be owned by the SCS tree for instanced property overrides.'],
-    whenNotToUse: ['A non-template component instance is sufficient (use add_component).'],
+    whenNotToUse: ['Several components or other SCS edits must be batched (use modify_scs).', 'One placed actor needs the component, not every copy of the Blueprint (use control_actor.edit_component with edit=add).'],
     inputProps: {
       blueprintPath: P.blueprintPath, componentClass: P.componentClass, componentType: P.componentType, componentName: P.componentName, parentComponent: P.parentComponent, attachTo: P.attachTo, meshPath: P.meshPath, materialPath: P.materialPath,
       location: P.location, rotation: P.rotation, scale: P.scale, properties: P.properties, save: SCS_SAVE,

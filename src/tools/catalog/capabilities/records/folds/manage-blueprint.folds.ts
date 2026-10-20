@@ -16,7 +16,7 @@ export const MANAGE_BLUEPRINT_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'edit_scs', selector: 'edit',
-    summary: 'Edit the Simple Construction Script: add a component template (or a non-SCS instance), reparent, set a property or transform, or apply batched operations.',
+    summary: 'Change the components a Blueprint adds (its Simple Construction Script), chosen by edit; each edit saves the Blueprint unless save is false. add_scs_component (add_component is the same) adds componentName of componentClass under parentComponent (its own part, a parent Blueprint\'s, or the native root; by default the root), with meshPath and materialPath (refused when they do not load or the class shows no mesh or material), location, rotation, scale and properties, and compiles; a taken name is refused, as is an add during Play. modify applies operations in order (add, modify, attach) or edits one component, naming each failed one in warnings (the call fails when none applied), and compiles only with compile or applyAndSave true; reparent moves a component under another; set_property and set_transform change one template and compile, and placed copies that kept the old value follow (instancesUpdated).',
     topics: ['add component', 'add component to blueprint', 'static mesh component', 'scs component', 'component transform', 'component property', 'light component', 'collision box component', 'spring arm component', 'make a component a child of another'],
     members: {
       add_scs_component: 'add_scs_component', add_component: 'add_component', modify: 'modify_scs', reparent: 'reparent_scs_component',

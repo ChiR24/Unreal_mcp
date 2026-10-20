@@ -1,4 +1,5 @@
 #include "Domains/Environment/McpEnvShared.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 
 namespace McpEnvironmentHandlers {
 
@@ -148,17 +149,33 @@ bool McpConfigureWaterBodyActor(const TSharedPtr<FJsonObject> &Payload, TSharedP
         return false;
     }
 
-    WaterActor->Modify();
-    McpApplyEnvironmentSettings(WaterActor, Payload, Resp);
-    McpSetMaterialOnActor(WaterActor, Payload, Resp);
-    McpSetCollisionOnActor(WaterActor, Payload, Resp);
-    WaterActor->MarkPackageDirty();
+    // A call with nothing to set, or settings naming nothing the body has, answered "configured".
+    if (!Payload->HasField(TEXT("materialPath")) && !Payload->HasTypedField<EJson::Boolean>(TEXT("collisionEnabled")) &&
+        !Payload->HasTypedField<EJson::Object>(TEXT("settings")))
+    {
+        OutMessage = TEXT("Nothing to set: send materialPath, collisionEnabled or settings.");
+        OutErrorCode = TEXT("INVALID_ARGUMENT");
+        return false;
+    }
+    // Modify() with no transaction open recorded nothing, so undo left the change.
+    FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Configure Water Body")), EMcpMutationDurability::EditorStateOnly,
+                                            TArray<UObject *>());
+    const int32 Applied = McpApplyEnvironmentSettings(WaterActor, Payload, Resp) + McpSetMaterialOnActor(WaterActor, Payload, Resp) +
+                          McpSetCollisionOnActor(WaterActor, Payload, Resp);
     Resp->SetStringField(TEXT("waterBodyName"), WaterActor->GetActorLabel());
     Resp->SetStringField(TEXT("actorPath"), WaterActor->GetPathName());
     if (McpWaterBodyEditFailed(Resp, OutMessage, OutErrorCode))
     {
         return false;
     }
+    if (Applied == 0)
+    {
+        OutMessage = TEXT("Nothing applied: no settings key names a property of the water body actor.");
+        OutErrorCode = TEXT("INVALID_ARGUMENT");
+        return false;
+    }
+    WaterActor->MarkPackageDirty();
+    Transaction.DescribeInto(Resp);
     McpHandlerUtils::AddVerification(Resp, WaterActor);
     OutMessage = TEXT("Water body configured");
     return true;

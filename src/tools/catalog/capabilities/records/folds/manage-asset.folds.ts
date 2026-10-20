@@ -179,7 +179,7 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'set_material_parameter', selector: 'parameterKind',
-    summary: 'Set a material or instance parameter value: any parameter by type, or a scalar, vector, texture or static-switch parameter.',
+    summary: 'Set material parameter values, chosen by parameterKind. On a material instance it overrides a parameter its parent publishes (a name it does not publish is PARAMETER_NOT_FOUND, listing the published ones); on a base material it sets the parameter node\'s default, refused while the material is open in its editor (ASSET_EDITOR_OPEN; the editor would write its own copy back on close). scalar takes a number value, vector value {r, g, b, a} or [r, g, b, a], texture texturePath, static_switch value true or false, and a missing value is refused; parameter takes parameterType (scalar, the default, vector or texture) with value, several at once with parameters, or several instances under one consent with assets. The asset is saved unless save is false (saved).',
     topics: ['material parameter', 'scalar parameter value', 'vector parameter value', 'texture parameter', 'static switch', 'change material color', 'set material color', 'set roughness', 'set metallic', 'set base color', 'override material parameter', 'set parameter on material instance'],
     members: { parameter: 'set_material_parameter', scalar: 'set_scalar_parameter_value', vector: 'set_vector_parameter_value', texture: 'set_texture_parameter_value', static_switch: 'set_static_switch_parameter_value' },
   },

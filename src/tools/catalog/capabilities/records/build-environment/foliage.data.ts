@@ -51,7 +51,7 @@ export const FOLIAGE_RECORDS: readonly CapabilityRecordSource[] = [
   buildRecord({
     id: 'build_environment.get_foliage_instances', action: 'get_foliage_instances', family: F,
     topics: ['count per type', 'vegetation count', 'positions and scale', 'count trees', 'how many trees'],
-    summary: 'Count foliage instances in the level, in total and per foliage type (byType), and list their positions; one type also returns rotation and scale ({x, y, z}: the whole scale, so a non-uniform one shows). The summary flag drops the list; limit caps it.',
+    summary: 'Count foliage instances in the level, across every foliage actor (each loaded sublevel and World Partition cell keeps its own; foliageActors counts them), in total and per foliage type (byType), and list their positions; one type also returns rotation and scale ({x, y, z}: the whole scale, so a non-uniform one shows). The summary flag drops the list; limit caps it.',
     whenToUse: ['Existing foliage instances must be inspected.', 'What foliage a level holds must be counted before removing it (summary).'],
     whenNotToUse: ['Foliage should be removed rather than inspected.'],
     inputProps: {
@@ -64,7 +64,7 @@ export const FOLIAGE_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'build_environment.remove_foliage', action: 'remove_foliage', family: F,
-    summary: 'Remove foliage: every instance of a type, all foliage, or only the instances inside an area box (or several boxes with areas).',
+    summary: 'Remove foliage from every foliage actor in the level (each loaded sublevel and World Partition cell keeps its own): every instance of foliageType, every type (removeAll true), or only the instances inside an area box or several (areas, each {min, max}; with foliageType, that type only). A whole type also leaves the level\'s foliage list. One undo step; instancesRemoved counts what went (0 when nothing matched), an unknown type is FOLIAGE_TYPE_NOT_FOUND, and a box without min and max removes nothing.',
     whenToUse: WU, whenNotToUse: ['Foliage should be hidden rather than removed.'],
     inputProps: { foliageType: P.foliageType, foliageTypePath: P.foliageTypePath, removeAll: P.removeAll, area: P.area, areas: AREAS },
     effect: 'destructive', latency: 'interactive', resources: 'low',

@@ -91,7 +91,7 @@ export const MANAGE_SEQUENCE_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'play_demo', selector: 'control',
-    summary: 'Replay system: play, pause or seek a demo, set playback speed, start or stop recording, start a killcam.',
+    summary: 'Record and play back gameplay replays in the running game, chosen by control; outside Play every control is NOT_IN_PIE. start_recording records replayName (else the configured default, else McpReplay_<time>) until stop_recording, which answers the name, and is refused while a replay plays or records (ALREADY_PLAYING, ALREADY_RECORDING). play plays replayName back (refused while recording); pause pauses or resumes it (paused; without it, toggles); seek jumps to timeSeconds, clamped to the replay\'s length, and answers once playback gets there (REPLAY_SEEK_TIMEOUT after 10 s); set_playback_speed sets speed (at most 16); start_killcam plays the last durationSeconds of the playing replay, or of replayName. pause, seek and set_playback_speed need a replay playing (NOT_PLAYING). Replies give the replay state (activeReplayName, recording, playing, currentTimeSeconds, totalTimeSeconds, paused, playbackSpeed).',
     topics: ['replay', 'demo recording', 'play demo', 'killcam', 'demo playback speed'],
     members: { play: 'play_demo', pause: 'pause_demo', seek: 'seek_demo', set_playback_speed: 'set_demo_playback_speed', start_recording: 'start_demo_recording', stop_recording: 'stop_demo_recording', start_killcam: 'start_killcam' },
   },

@@ -51,7 +51,7 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
     topics: ['foliage mesh', 'foliage placement', 'foliage collision', 'foliage culling', 'foliage lod'],
     members: byTarget('configure_foliage_', ['configure_foliage_mesh', 'configure_foliage_placement', 'configure_foliage_collision', 'configure_foliage_culling', 'configure_foliage_lod']),
   },
-  { primary: 'remove_foliage', topics: ['remove trees or grass'], summary: 'Remove foliage instances of a type, all foliage, or only those inside an area box (a pit or a path).', members: ['remove_foliage_instances'] },
+  { primary: 'remove_foliage', topics: ['remove trees or grass'], summary: 'Remove foliage from every foliage actor in the level (each loaded sublevel and World Partition cell keeps its own): every instance of foliageType, every type (removeAll true), or only the instances inside an area box or several (areas, each {min, max}; with foliageType, that type only). A whole type also leaves the level\'s foliage list. One undo step; instancesRemoved counts what went (0 when nothing matched), an unknown type is FOLIAGE_TYPE_NOT_FOUND, and a box without min and max removes nothing.', members: ['remove_foliage_instances'] },
   // lighting
   {
     primary: 'create_light', summary: LIGHT_SUMMARY, whenToUse: LIGHT_WHEN_TO_USE, whenNotToUse: LIGHT_WHEN_NOT_TO_USE,
@@ -109,7 +109,7 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'configure_lightmass', selector: 'setting',
-    summary: 'Configure static lighting builds: Lightmass settings, build quality, indirect lighting cache.',
+    summary: 'Static (baked) lighting, chosen by setting. settings writes the level\'s Lightmass settings (World Settings) from settings, keyed by engine field name (NumIndirectLightingBounces, IndirectLightingQuality, StaticLightingLevelScale, bUseAmbientOcclusion), which the next build uses; build_quality bakes the lighting at quality (default Production; Preview, Medium, High, or 0 to 3) and answers when the bake ends, refused when the level forces no precomputed lighting; indirect_lighting_cache sets how an actor\'s primitive components sample the indirect lighting cache (enabled: point sampling or off) or other primitive fields (settings). A key the target lacks is listed in unsupportedSettings and a call where none applies is refused; settings and indirect_lighting_cache are one undo step, and nothing is saved.',
     topics: ['lightmass', 'lighting quality', 'indirect lighting cache', 'static lighting'],
     members: { settings: 'configure_lightmass_settings', build_quality: 'build_lighting_quality', indirect_lighting_cache: 'configure_indirect_lighting_cache' },
   },
@@ -173,7 +173,7 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'configure_water', selector: 'setting',
-    summary: 'Configure a water body: its Gerstner waves (height, wavelength, steepness, direction), material or collision.',
+    summary: 'Change a water body, chosen by setting: the one named by waterBodyName, targetActor or actorName, else the level\'s first. waves gives it Gerstner waves (waveHeight, waveLength, steepness, direction) that its surface and anything floating on it follow, and fails when the body does not keep them; material sets the material that draws its surface (its WaterMaterial, read back as waterMaterial); collision turns collision on its components on or off (collisionEnabled); settings writes water body actor properties by engine name. material and collision are one undo step; a call with nothing to set, or whose settings name nothing the body has, is refused, and a material that does not load fails the call.',
     topics: ['water waves', 'water material', 'water collision'],
     members: byTarget('configure_water_', ['configure_water_waves', 'configure_water_material', 'configure_water_collision']),
   },

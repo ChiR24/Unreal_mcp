@@ -101,6 +101,8 @@ const testCases = [
 
   // === ADD: add_scs_component with mesh/material assignment ===
   { scenario: 'ADD: add_scs_component with mesh material', toolName: 'manage_blueprint', arguments: { action: 'add_scs_component', blueprintPath: BP_PATH, componentClass: 'StaticMeshComponent', componentName: 'TestStaticMeshSCSComp', parentComponent: 'DefaultSceneRoot', meshPath: ENGINE_CUBE_MESH, materialPath: ENGINE_BASIC_MATERIAL }, expected: 'success|already exists', assertions: [{ path: 'structuredContent.result.mesh_applied', equals: true, label: 'SCS static mesh assignment applied' }, { path: 'structuredContent.result.material_applied', equals: true, label: 'SCS material assignment applied' }] },
+  { scenario: 'ERROR: add_scs_component refuses a mesh that does not load', toolName: 'manage_blueprint', arguments: { action: 'add_scs_component', blueprintPath: BP_PATH, componentClass: 'StaticMeshComponent', componentName: 'TestMissingMeshComp', meshPath: '/Game/MCPTest/NoSuchMesh' }, expected: 'error|ASSET_NOT_FOUND' },
+  { scenario: 'ERROR: add_scs_component refuses a mesh for a component that shows none', toolName: 'manage_blueprint', arguments: { action: 'add_scs_component', blueprintPath: BP_PATH, componentClass: 'PointLightComponent', componentName: 'TestLightWithMesh', meshPath: ENGINE_CUBE_MESH }, expected: 'error|INVALID_ARGUMENT' },
 
   // === DELETE: remove_scs_component (blueprintPath + componentName) ===
   { scenario: 'DELETE: remove_scs_component', toolName: 'manage_blueprint', arguments: { action: 'remove_scs_component', blueprintPath: BP_PATH, componentName: 'TestSCSComp' }, expected: 'success|not found' },

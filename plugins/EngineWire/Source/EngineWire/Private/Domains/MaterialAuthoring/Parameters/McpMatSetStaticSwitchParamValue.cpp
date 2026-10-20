@@ -8,7 +8,11 @@ bool HandleSetStaticSwitchParameterValue(UEngineWireSubsystem* Bridge, const FSt
     return false;
   }
   bool Value = false;
-  Payload->TryGetBoolField(TEXT("value"), Value);
+  if (!Payload->TryGetBoolField(TEXT("value"), Value)) {
+    Bridge->SendAutomationError(Socket, RequestId,
+        TEXT("'value' must be true or false for a static switch parameter."), TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
   FParameterValueWriter Writer;
   Writer.Kind = TEXT("Static switch");
   Writer.Type = EMaterialParameterType::StaticSwitch;
