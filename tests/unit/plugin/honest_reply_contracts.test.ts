@@ -4321,3 +4321,26 @@ describe('sounds, landscape receipts, skeleton saves and UV projections answer w
     expect(uv).toContain('Nothing to apply: send uvOffset, uvScale or rotation.');
   });
 });
+
+describe('Blueprint creates report the save and the Blueprint already there, receipts name assets, not class defaults', () => {
+  it('a new Blueprint is saved before the reply, which reports the save', () => {
+    const assets = code('BlueprintCreation', 'McpBPCreateAssets.cpp');
+    const save = assets.indexOf('const bool bSaved = SaveLoadedAssetThrottled(CreatedBlueprint, true);');
+    expect(save).toBeGreaterThan(-1);
+    expect(save).toBeLessThan(assets.indexOf('Message, ResultPayload, FString());'));
+    expect(code('BlueprintCreation', 'McpBPCreateCompletion.cpp')).not.toContain('SetBoolField(TEXT("saved"), true)');
+  });
+
+  it('a Blueprint already at the path is flagged, and one of another parent class is refused', () => {
+    const assets = code('BlueprintCreation', 'McpBPCreateAssets.cpp');
+    expect(assets).toContain('ResultPayload->SetBoolField(TEXT("alreadyExists"), true);');
+    expect(assets).toMatch(/Blueprint->ParentClass != Wanted->ParentClass[\s\S]*?TEXT\("ASSET_ALREADY_EXISTS"\)\);/u);
+  });
+
+  it('a class default object answers as its asset, and create_skeleton names its skeleton', () => {
+    const resolution = readFileSync(join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'Foundation', 'HandlerUtils',
+      'McpHandlerUtilsObjectResolution.cpp'), 'utf8');
+    expect(resolution).toContain('!AsActor->HasAnyFlags(RF_ClassDefaultObject | RF_ArchetypeObject)');
+    expect(code('Skeleton', 'Bones', 'McpSkeletonStructureCreation.cpp')).toContain('McpHandlerUtils::AddVerification(Result, NewSkeleton);');
+  });
+});

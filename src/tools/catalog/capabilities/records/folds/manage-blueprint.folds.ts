@@ -5,7 +5,7 @@ import type { FoldSpec } from '../shared/fold-types.js';
 export const MANAGE_BLUEPRINT_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'create', selector: 'createMode',
-    summary: 'Create a Blueprint asset from a parent class; optionally typed, or only if it does not exist yet.',
+    summary: 'Create a Blueprint asset, chosen by createMode (ensure checks first), named name in savePath (default /Game) and save it (saved). parentClass is a native class as /Script/Module.Class or a short name (Actor, Pawn, Character, PlayerController), or a Blueprint class path ending in _C; blueprintType Actor, Pawn, Character or FunctionLibrary stands in for a missing parentClass, and Interface without one makes a Blueprint Interface. A parent that resolves to nothing is CLASS_NOT_FOUND, naming classes of that name. properties sets class defaults, Component.Property and struct members by dotted path, reported as appliedProperties and failedProperties (the create stands either way). A Blueprint already at the path is answered with alreadyExists and left unchanged; one with another parent class is ASSET_ALREADY_EXISTS.',
     members: { create: 'create', blueprint: 'create_blueprint', ensure: 'ensure_exists' },
   },
   {

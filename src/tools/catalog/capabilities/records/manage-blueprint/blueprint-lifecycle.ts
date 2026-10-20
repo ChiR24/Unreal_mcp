@@ -16,6 +16,9 @@ const CREATE_OUTPUT = {
   blueprintPath: P.blueprintPath,
   appliedProperties: { type: 'array', items: { type: 'string' }, description: 'The properties names set on the class defaults; a subobject property reads Holder.Property.' },
   failedProperties: { type: 'array', items: { type: 'string' }, description: 'Each properties name that was not set, as "Name: reason"; the Blueprint is created anyway.' },
+  saved: { type: 'boolean', description: 'Whether the new Blueprint reached disk.' },
+  alreadyExists: { type: 'boolean', description: 'True when a Blueprint of that parent class was already at the path; it is answered unchanged.' },
+  parentClass: { type: 'string', description: 'Path of the Blueprint\'s parent class.' },
 };
 
 export const BLUEPRINT_LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
@@ -26,7 +29,7 @@ export const BLUEPRINT_LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
     domain: DOMAIN,
     topics: ['new blueprint', 'blueprint class', 'actor blueprint', 'make blueprint', 'blueprint asset', 'subclass', 'derive from', 'parent class', 'blueprint from parent class', 'child blueprint', 'camera shake class', 'camera shake blueprint', 'screen shake', 'make a blueprint interface', 'create an interface'],
     aliases: ['blueprint.make_blueprint', 'blueprint.new_blueprint'],
-    summary: 'Create a new Blueprint asset from a parent class.',
+    summary: 'Create a Blueprint asset named name in savePath (default /Game) and save it (saved). parentClass is a native class as /Script/Module.Class or a short name (Actor, Pawn, Character, PlayerController), or a Blueprint class path ending in _C; blueprintType Actor, Pawn, Character or FunctionLibrary stands in for a missing parentClass, and Interface without one makes a Blueprint Interface. A parent that resolves to nothing is CLASS_NOT_FOUND, naming classes of that name. properties sets class defaults, Component.Property and struct members by dotted path, reported as appliedProperties and failedProperties (the create stands either way). A Blueprint already at the path is answered with alreadyExists and left unchanged; one with another parent class is ASSET_ALREADY_EXISTS.',
     whenToUse: ['A new Blueprint of a known parent class is needed.', 'A pickup or hazard is needed; its parts come from edit_scs, its logic from add_behaviour.'],
     whenNotToUse: ['An existing Blueprint should be opened or modified instead.'],
     // blueprint-core-actions.ts:87 forwards `properties` into blueprint_create and
@@ -49,7 +52,7 @@ export const BLUEPRINT_LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'create_blueprint',
     family: FAMILY,
     domain: DOMAIN,
-    summary: 'Create a Blueprint asset with explicit type and path.',
+    summary: 'Same as create: a Blueprint named name in savePath from parentClass, or from blueprintType when parentClass is left out.',
     whenToUse: ['A Blueprint must be created with a specific type hint.'],
     whenNotToUse: ['The simpler create action suffices when only a parent class is needed.'],
     inputProps: { name: P.name, savePath: P.savePath, parentClass: P.parentClass, blueprintType: P.blueprintType, properties: P.properties },
@@ -128,7 +131,7 @@ export const BLUEPRINT_LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
     family: FAMILY,
     domain: DOMAIN,
     topics: ['get or create blueprint', 'idempotent create', 'create if missing'],
-    summary: 'Ensure a Blueprint asset exists, creating it if absent.',
+    summary: 'Make sure a Blueprint of parentClass is at savePath/name: one already there is answered with alreadyExists and left unchanged (another parent class is ASSET_ALREADY_EXISTS); otherwise it is created as create does, unless createIfMissing is false, which only reports whether it exists.',
     whenToUse: ['Idempotent setup requires a Blueprint to exist without failing on duplicates.'],
     whenNotToUse: ['A fresh Blueprint is always required even if one exists.'],
     inputProps: {

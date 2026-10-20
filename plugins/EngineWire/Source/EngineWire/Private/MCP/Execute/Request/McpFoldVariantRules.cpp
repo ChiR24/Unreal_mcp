@@ -101,7 +101,8 @@ TSharedPtr<FJsonObject> McpVariantRequired(const FMcpCapabilityRecord& Record)
 		if (!Requirement.IsValid()) continue;
 		TArray<FString> Names = RequirementNames(Requirement, TEXT("required"));
 		const TArray<FString> Group = RequirementNames(Requirement, TEXT("oneOf"));
-		if (Group.Num() > 0) Names.Add(FString::Join(Group, TEXT("|")));
+		// A one-name group the variant also requires ("blueprintPath", "blueprintPath") is listed once.
+		if (Group.Num() > 0) Names.AddUnique(FString::Join(Group, TEXT("|")));
 		Out->SetArrayField(Entry.Key, GatewayStringArray(Names));
 	}
 	return Out->Values.Num() > 0 ? Out : nullptr;

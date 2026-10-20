@@ -78,6 +78,8 @@ describe('a folded variant is held to its own required parameters', () => {
     expect(rows.find((row) => row.name === 'radius')).not.toHaveProperty('requiredFor');
     expect(capabilitySignature(record('manage_effect.debug_shape')).variantRequired).toEqual({ draw: ['location'] });
     expect(variantRequired(record('blueprint.inspect_graph'))?.node).toEqual(['blueprintPath', 'nodeId|nodeGuid']);
+    // spawn_blueprint requires blueprintPath and names it as its one-of group too; it is listed once.
+    expect(variantRequired(record('control_actor.spawn'))?.blueprint).toEqual(['blueprintPath']);
     const one = describeGatewayCapability({ operation: 'describe', capability: 'manage_effect.debug_shape', param: 'location' });
     expect(one.requiredFor).toEqual(['draw']);
   });

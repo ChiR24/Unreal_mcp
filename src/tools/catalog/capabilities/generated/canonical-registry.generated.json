@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "3b967bd35f947183",
+  "catalogRevision": "3e29197d9d02baf7",
   "recordCount": 416,
   "records": [
     {
@@ -17188,7 +17188,7 @@
           "idempotent create",
           "create if missing"
         ],
-        "summary": "Create a Blueprint asset from a parent class; optionally typed, or only if it does not exist yet.",
+        "summary": "Create a Blueprint asset, chosen by createMode (ensure checks first), named name in savePath (default /Game) and save it (saved). parentClass is a native class as /Script/Module.Class or a short name (Actor, Pawn, Character, PlayerController), or a Blueprint class path ending in _C; blueprintType Actor, Pawn, Character or FunctionLibrary stands in for a missing parentClass, and Interface without one makes a Blueprint Interface. A parent that resolves to nothing is CLASS_NOT_FOUND, naming classes of that name. properties sets class defaults, Component.Property and struct members by dotted path, reported as appliedProperties and failedProperties (the create stands either way). A Blueprint already at the path is answered with alreadyExists and left unchanged; one with another parent class is ASSET_ALREADY_EXISTS.",
         "whenToUse": [
           "createMode=create: A new Blueprint of a known parent class is needed.",
           "createMode=create: A pickup or hazard is needed; its parts come from edit_scs, its logic from add_behaviour.",
@@ -17287,6 +17287,18 @@
                 "type": "string"
               },
               "description": "Each properties name that was not set, as \"Name: reason\"; the Blueprint is created anyway."
+            },
+            "saved": {
+              "type": "boolean",
+              "description": "Whether the new Blueprint reached disk."
+            },
+            "alreadyExists": {
+              "type": "boolean",
+              "description": "True when a Blueprint of that parent class was already at the path; it is answered unchanged."
+            },
+            "parentClass": {
+              "type": "string",
+              "description": "Path of the Blueprint's parent class."
             }
           },
           "required": [
@@ -17298,7 +17310,7 @@
       },
       "examples": [
         {
-          "title": "Create a Blueprint asset from a parent class; optionally typed, or only if it does not exist yet.",
+          "title": "Create a Blueprint asset, chosen by createMode (ensure checks first), named name in savePath (default /Game) and save it (saved). parentClass is a native class as /Script/Module.Class or a short name (Actor, Pawn, Character, PlayerController), or a Blueprint class path ending in _C; blueprintType Actor, Pawn, Character or FunctionLibrary stands in for a missing parentClass, and Interface without one makes a Blueprint Interface. A parent that resolves to nothing is CLASS_NOT_FOUND, naming classes of that name. properties sets class defaults, Component.Property and struct members by dotted path, reported as appliedProperties and failedProperties (the create stands either way). A Blueprint already at the path is answered with alreadyExists and left unchanged; one with another parent class is ASSET_ALREADY_EXISTS.",
           "input": {
             "action": "create",
             "name": "BP_TestActor",
@@ -17381,8 +17393,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "3b5b2f9168f97b345a91c9b63fd5080c189651f1d95b85f9207dd06db8401b6b",
-        "content": "2f59d42aed7bb914fb9a83cc1c9393f968aea130c0487bbe28f8f833e9b24adf"
+        "schema": "c1a52cdfdc1fba4920be1b78e80730666bc4f610051b63153f2867cb3ec6e161",
+        "content": "174ef643153fc6e0190e5ef0ca9dca0fb4c8f14d6f5df97e33e50c05087ff18b"
       }
     },
     {

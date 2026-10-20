@@ -14988,6 +14988,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Index shown first by a widget switcher."
         },
+        "alreadyExists": {
+          "type": "boolean",
+          "description": "True when a Blueprint of that parent class was already at the path; it is answered unchanged."
+        },
         "animationAsset": {
           "type": "string",
           "description": "An animation graph node that plays an asset (a Sequence Player, a Blend Space Player ...): the path of the animation it plays. Absent on other nodes and on a player with no asset."

@@ -214,7 +214,10 @@ void AddVerification(TSharedPtr<FJsonObject>& Result, UObject* Object)
         return;
     }
 
-    if (AActor* AsActor = Cast<AActor>(Object))
+    // A class default (a Blueprint's CDO that get_property read) is an AActor but no placed actor: its receipt handle
+    // named an actor nothing could find. It answers as the asset it belongs to.
+    AActor* AsActor = Cast<AActor>(Object);
+    if (AsActor && !AsActor->HasAnyFlags(RF_ClassDefaultObject | RF_ArchetypeObject))
     {
         AddActorVerification(Result, AsActor);
     }

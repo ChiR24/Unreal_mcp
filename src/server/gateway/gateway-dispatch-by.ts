@@ -145,7 +145,8 @@ export function variantRequired(record: CapabilityRecord): Record<string, string
   for (const [value, action] of Object.entries(dispatchBy.actions)) {
     const requirement = Object.hasOwn(dispatchBy.requires, action) ? dispatchBy.requires[action] : undefined;
     if (requirement === undefined) continue;
-    out[value] = [...(requirement.required ?? []), ...(requirement.oneOf === undefined ? [] : [requirement.oneOf.join('|')])];
+    // A one-name group the variant also requires (spawn_blueprint's blueprintPath) is listed once.
+    out[value] = [...new Set([...(requirement.required ?? []), ...(requirement.oneOf === undefined ? [] : [requirement.oneOf.join('|')])])];
   }
   return Object.keys(out).length === 0 ? undefined : out;
 }

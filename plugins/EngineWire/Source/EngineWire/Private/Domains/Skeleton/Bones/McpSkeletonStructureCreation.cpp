@@ -124,6 +124,8 @@ bool HandleCreateSkeletonAction(UEngineWireSubsystem* Subsystem, const FString& 
         Result->SetStringField(TEXT("skeletonPath"), NewSkeleton->GetPathName());
         Result->SetStringField(TEXT("rootBoneName"), RootBoneName);
         Result->SetNumberField(TEXT("boneCount"), 1);
+        // skeletonPath is no field a receipt reads, so the new skeleton was missing from it.
+        McpHandlerUtils::AddVerification(Result, NewSkeleton);
 
         Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true,
             FString::Printf(TEXT("Skeleton created with root bone '%s'"), *RootBoneName), Result);
