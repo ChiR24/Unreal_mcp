@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "8ab812ae6ba6acb5",
+  "catalogRevision": "66d59ce2562b0762",
   "recordCount": 416,
   "records": [
     {
@@ -38628,7 +38628,7 @@
           "group actors in outliner",
           "actor folder"
         ],
-        "summary": "Move placed actors into an outliner folder (one actor, or many with actorNames), or back to the root.",
+        "summary": "Move placed actors into an outliner folder path such as Level/Signs (made when missing), or back to the root with folder \"\": one actor by actorName, or many with actorNames, as one undo step. Names that match no actor are listed under missing while the rest move; none matching is ACTOR_NOT_FOUND.",
         "whenToUse": [
           "Actors already in the level must be filed under an outliner folder; a spawn takes folder only when it places the actor."
         ],
@@ -38725,7 +38725,7 @@
       },
       "examples": [
         {
-          "title": "Move placed actors into an outliner folder (one actor, or many with actorNames), or back to the root.",
+          "title": "Move placed actors into an outliner folder path such as Level/Signs (made when missing), or back to the root with folder \"\": one actor by actorName, or many with actorNames, as one undo step. Names that match no actor are listed under missing while the rest move; none matching is ACTOR_NOT_FOUND.",
           "input": {
             "action": "set_folder",
             "actorNames": [
@@ -38775,7 +38775,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "56c7c8858975e45221645aa1139521fa7c6e45e2a6077702ff1bc2dc369961eb",
-        "content": "08ea5710769e7c8119aee54fe1dd96d8f511e769b7591a42bebbd3b77530ccfa"
+        "content": "08c718b423ec94d8ba2a157d5301e454c77ed7d6388728a9e323d83d7bbbe6e3"
       }
     },
     {
@@ -103383,7 +103383,7 @@
           "profile the game",
           "find what is slow"
         ],
-        "summary": "Profile performance: start or stop profiling, run a benchmark, generate a memory report, show stats.",
+        "summary": "Measure performance, chosen by control. benchmark samples every frame for duration seconds (default 10) and answers averageFps, frame times and game, render and GPU thread times; start and stop record a .uestats file under Saved/Profiling for Unreal Insights (no MCP action reads it); memory_report runs memreport (detailed: memreport -full) and answers the .memreport file it wrote (reportPath, reportIsNew); show_stats turns an on-screen stat overlay on or off. A minimized or unfocused editor is throttled and measures slow. To find what makes a frame slow, inspect get_stats with stats frame names the busiest thread and what in view weighs on it.",
         "whenToUse": [
           "control=start: A named profiling capture must begin for CPU, GPU, memory, or thread analysis.",
           "control=stop: A profiling capture started by start_profiling must be stopped.",
@@ -103411,7 +103411,7 @@
             },
             "type": {
               "type": "string",
-              "description": "Optional benchmark type."
+              "description": "What to report: cpu (frame and thread times), gpu (GPU frame time) or all (default); another value is refused."
             },
             "detailed": {
               "type": "boolean",
@@ -103477,7 +103477,7 @@
       },
       "examples": [
         {
-          "title": "Profile performance: start or stop profiling, run a benchmark, generate a memory report, show stats.",
+          "title": "Measure performance, chosen by control. benchmark samples every frame for duration seconds (default 10) and answers averageFps, frame times and game, render and GPU thread times; start and stop record a .uestats file under Saved/Profiling for Unreal Insights (no MCP action reads it); memory_report runs memreport (detailed: memreport -full) and answers the .memreport file it wrote (reportPath, reportIsNew); show_stats turns an on-screen stat overlay on or off. A minimized or unfocused editor is throttled and measures slow. To find what makes a frame slow, inspect get_stats with stats frame names the busiest thread and what in view weighs on it.",
           "input": {
             "action": "profile_performance",
             "duration": 10,
@@ -103543,8 +103543,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "6151889906909554a91a7beb95faf7b8e2c01e15c38c5530d819af017153c011",
-        "content": "a0daa132cf7543fdb6036fb3acf0631bfbf467bccbcdcbe3ad1155933c1cd6d7"
+        "schema": "d89560cda2f3994bcfb510d17258d004de4f561711ad78bd8e2afa0d108bf6e8",
+        "content": "43f5c98cc736262642324726635155e9b2d5ae69726472d6c03105129c773325"
       }
     },
     {

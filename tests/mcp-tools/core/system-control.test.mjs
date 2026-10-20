@@ -233,6 +233,7 @@ const testCases = [
     { scenario: 'PLAYBACK: stop_profiling', toolName: 'system_control', arguments: {"action": "stop_profiling"}, expected: 'success' },
     // === ACTION ===
     { scenario: 'ACTION: run_benchmark', toolName: 'system_control', arguments: {"action": "run_benchmark", "duration": 1, "type": "CPU"}, expected: 'success' },
+    { scenario: 'ERROR: run_benchmark refuses an unknown type', toolName: 'system_control', arguments: {"action": "run_benchmark", "duration": 1, "type": "memory"}, expected: 'error|not a benchmark type' },
     { scenario: 'ACTION: show_fps', toolName: 'system_control', arguments: {"action": "show_fps"}, expected: 'success' },
     { scenario: 'ACTION: show_stats', toolName: 'system_control', arguments: {"action": "show_stats", "category": "Unit", "enabled": true}, expected: 'success' },
     { scenario: 'ACTION: generate_memory_report', toolName: 'system_control', arguments: {"action": "generate_memory_report", "detailed": true}, expected: 'success|already exists' },

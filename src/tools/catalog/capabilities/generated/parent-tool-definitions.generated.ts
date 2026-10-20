@@ -25743,7 +25743,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "type": {
           "type": "string",
-          "description": "Optional benchmark type."
+          "description": "What to report: cpu (frame and thread times), gpu (GPU frame time) or all (default); another value is refused."
         },
         "userIndex": {
           "type": "integer",

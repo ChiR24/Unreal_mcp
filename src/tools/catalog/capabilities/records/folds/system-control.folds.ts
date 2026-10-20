@@ -21,7 +21,7 @@ export const SYSTEM_CONTROL_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'profile_performance', selector: 'control',
-    summary: 'Profile performance: start or stop profiling, run a benchmark, generate a memory report, show stats.',
+    summary: 'Measure performance, chosen by control. benchmark samples every frame for duration seconds (default 10) and answers averageFps, frame times and game, render and GPU thread times; start and stop record a .uestats file under Saved/Profiling for Unreal Insights (no MCP action reads it); memory_report runs memreport (detailed: memreport -full) and answers the .memreport file it wrote (reportPath, reportIsNew); show_stats turns an on-screen stat overlay on or off. A minimized or unfocused editor is throttled and measures slow. To find what makes a frame slow, inspect get_stats with stats frame names the busiest thread and what in view weighs on it.',
     topics: ['profiling', 'benchmark', 'memory report', 'stat unit', 'show stats', 'profile the game', 'find what is slow'],
     members: { start: 'start_profiling', stop: 'stop_profiling', benchmark: 'run_benchmark', memory_report: 'generate_memory_report', show_stats: 'show_stats' },
   },

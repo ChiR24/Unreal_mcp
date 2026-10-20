@@ -110,7 +110,7 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
     family: FAMILY_TAGS,
     // Only a spawn could file an actor, so a level built call by call stayed one flat outliner list.
     topics: ['move actor to folder', 'outliner folder', 'organize actors', 'organise outliner', 'put actors in a folder', 'group actors in outliner', 'actor folder'],
-    summary: 'Move placed actors into an outliner folder (one actor, or many with actorNames), or back to the root.',
+    summary: 'Move placed actors into an outliner folder path such as Level/Signs (made when missing), or back to the root with folder "": one actor by actorName, or many with actorNames, as one undo step. Names that match no actor are listed under missing while the rest move; none matching is ACTOR_NOT_FOUND.',
     whenToUse: ['Actors already in the level must be filed under an outliner folder; a spawn takes folder only when it places the actor.'],
     whenNotToUse: ['Actors must be grouped for lookup or deletion (use add_tag; delete_by_tag removes them).'],
     inputProps: {

@@ -4397,3 +4397,15 @@ describe('lighting settings refuse an empty call before spawning anything, undo,
     expect(config).toContain('Spline->SetFlags(RF_Transactional);');
   });
 });
+
+describe('run_benchmark measures what it ran', () => {
+  it('samples every frame and reports the times, opens no GPU Visualizer, and refuses an unknown type', () => {
+    const profiling = code('Performance', 'McpPerfProfiling.cpp');
+    const benchmark = profiling.slice(profiling.indexOf('if (Context.Lower == TEXT("run_benchmark"))'), profiling.indexOf('if (Context.Lower == TEXT("enable_gpu_timing"))'));
+    expect(benchmark).not.toContain('profilegpu');
+    expect(benchmark).not.toContain('stat startfile');
+    expect(benchmark).toContain('Resp->SetNumberField(TEXT("averageFps")');
+    expect(benchmark).toContain("is not a benchmark type; use cpu, gpu or all.");
+    expect(benchmark).toMatch(/if \(Samples->Elapsed < BenchmarkDuration\)\s*\{\s*return true;/u);
+  });
+});
