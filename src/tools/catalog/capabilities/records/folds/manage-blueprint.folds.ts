@@ -10,7 +10,7 @@ export const MANAGE_BLUEPRINT_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'get_blueprint', selector: 'info',
-    summary: 'Read a Blueprint summary (variables, functions, components) or one of its default property values.',
+    summary: 'Read a Blueprint, chosen by info. blueprint returns its parent class, type, compile status (hasCompileErrors), variables (name, type, category, replication, default), functions with their parameters, events, graphs with node counts, components (name, class, parent, root) and class defaults; property reads one value from its class defaults: propertyName is a variable or inherited property, or Component.Property for a component it adds, and a name found nowhere is PROPERTY_NOT_FOUND, listing its variables.',
     topics: ['get blueprint info', 'blueprint info', 'list blueprint variables', 'blueprint details', 'blueprint property'],
     members: { blueprint: 'get_blueprint', property: 'get' },
   },
@@ -25,7 +25,7 @@ export const MANAGE_BLUEPRINT_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'edit_variable', selector: 'edit',
-    summary: 'Add or rename a Blueprint variable, set variable or Blueprint metadata, or set a class default value.',
+    summary: 'Change a Blueprint\'s variables, chosen by edit. add_variable adds variableName of variableType with defaultValue, category and the isPublic, isReplicated and exposeOnSpawn flags (a taken name is VARIABLE_NAME_CONFLICT, a type that resolves to nothing TYPE_RESOLUTION_FAILED, a default the type refuses DEFAULT_NOT_APPLIED; nothing is added then); rename_variable renames a variable or a component and its graph nodes follow; set_variable_metadata sets a variable\'s tooltip, category or replication; set_metadata sets metadata pairs on the class or one variable; set_default writes a class default value, an inherited property included.',
     topics: ['add variable', 'blueprint variable', 'rename variable', 'default value', 'variable metadata', 'class defaults', 'expose on spawn', 'make variable public'],
     members: byName(['add_variable', 'rename_variable', 'set_variable_metadata', 'set_metadata', 'set_default']),
   },

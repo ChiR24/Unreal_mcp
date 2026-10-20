@@ -3422,6 +3422,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether to save after the operation."
         },
+        "saveToProject": {
+          "type": "boolean",
+          "description": "Also write the method to Project Settings > Rendering (DefaultEngine.ini), so it survives an editor restart and reaches the packaged game (default false: this session only)."
+        },
         "screenPercentage": {
           "type": "number",
           "description": "Screen percentage (0-100)."

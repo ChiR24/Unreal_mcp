@@ -66,7 +66,7 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'configure_lighting', selector: 'setting',
-    summary: 'Configure scene lighting: shadows, ambient occlusion, exposure, global illumination, volumetric fog.',
+    summary: 'Change scene lighting, chosen by setting. global_illumination sets the dynamic GI method (LumenGI, ScreenSpace, None, Lightmass) for this editor session, or in DefaultEngine.ini as well with saveToProject; shadows sets engine-wide shadow quality, distance and features for the session, or the shadow settings of the actor actorName names; exposure and ambient_occlusion write overrides on a post-process volume (actorName, else the level\'s one unbound volume, spawned when there is none); volumetric_fog enables or disables volumetric fog on the level\'s height fog. exposure, ambient_occlusion and volumetric_fog refuse a call that sets nothing (NO_SETTING_SUPPLIED).',
     topics: ['shadows', 'ambient occlusion', 'exposure', 'global illumination', 'lumen', 'volumetric fog', 'turn on lumen'],
     members: { shadows: 'configure_shadows', ambient_occlusion: 'set_ambient_occlusion', exposure: 'set_exposure', global_illumination: 'setup_global_illumination', volumetric_fog: 'setup_volumetric_fog' },
   },
@@ -130,7 +130,7 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'edit_spline', selector: 'edit',
-    summary: 'Edit spline points: add a point, set a point\'s position, rotation, scale or tangents, set the spline type.',
+    summary: 'Change the points of an actor\'s first spline component, chosen by edit; positions, rotations and tangents are in the spline actor\'s local space (subtract its location from a world point), and each edit is one undo step. add_point appends position, or inserts it at index, with pointType (default Curve) and optional tangents; set_point_position, set_point_rotation, set_point_scale and set_point_tangents change the point at pointIndex, which they require with their value (a lone arriveTangent sets both tangents); set_type sets splineType on pointIndex, or on every point when it is left out. An index past the last point is INVALID_INDEX and an unknown point type is refused.',
     topics: ['spline point', 'spline tangent', 'spline type'],
     members: { add_point: 'add_spline_point', set_point_position: 'set_spline_point_position', set_point_rotation: 'set_spline_point_rotation', set_point_scale: 'set_spline_point_scale', set_point_tangents: 'set_spline_point_tangents', set_type: 'set_spline_type' },
   },

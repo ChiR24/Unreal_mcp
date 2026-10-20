@@ -20,6 +20,9 @@ bool UEngineWireSubsystem::HandleControlActorSetBlueprintVariables(
       return true;
     }
     FMcpResponseCaptureRegistry &Capture = FMcpResponseCaptureRegistry::Get();
+    // One undo step for the whole batch; its items, run captured, open none of their own.
+    FMcpScopedEditorTransaction BatchTransaction(FText::FromString(TEXT("Set Blueprint Variables")),
+                                                 EMcpMutationDurability::EditorStateOnly, TArray<UObject *>());
     TArray<TSharedPtr<FJsonValue>> Results;
     TArray<FString> Failures;
     // The actors that took at least one variable, each by the name its one-actor run replied with, once
@@ -85,6 +88,7 @@ bool UEngineWireSubsystem::HandleControlActorSetBlueprintVariables(
     Data->SetArrayField(TEXT("results"), Results);
     Data->SetNumberField(TEXT("updatedActors"), Done);
     Data->SetArrayField(TEXT("affectedActors"), McpHandlerUtils::ToJsonStringArray(Affected));
+    BatchTransaction.DescribeInto(Data);
     if (Failures.Num() > 0) {
       SendAutomationResponse(Socket, RequestId, false,
                              FString::Printf(TEXT("Variables set on %d of %d actors; %s"), Done,
@@ -136,6 +140,11 @@ bool UEngineWireSubsystem::HandleControlActorSetBlueprintVariables(
                         *McpBlueprintVariableList(ActorClass)), nullptr);
     return true;
   }
+  // A variable set ran outside any transaction, so undo answered NOTHING_TO_UNDO; a batch item uses the batch's.
+  const TUniquePtr<FMcpScopedEditorTransaction> Transaction = FMcpResponseCaptureRegistry::Get().IsCapturing(RequestId)
+      ? nullptr
+      : MakeUnique<FMcpScopedEditorTransaction>(FText::FromString(TEXT("Set Blueprint Variables")),
+                                                EMcpMutationDurability::EditorStateOnly, TArray<UObject *>{Found});
   Found->Modify();
   TArray<FString> Applied;
   TArray<FString> Warnings;
@@ -166,6 +175,9 @@ bool UEngineWireSubsystem::HandleControlActorSetBlueprintVariables(
     Data->SetArrayField(TEXT("updated"), McpHandlerUtils::ToJsonStringArray(Applied));
     // The instance whose variables changed (the Blueprint asset itself did not), so the receipt names it.
     Data->SetStringField(TEXT("actorName"), McpActorRef(Found));
+  }
+  if (Transaction) {
+    Transaction->DescribeInto(Data);
   }
   // A value that did not take (a reference that resolves to nothing) answered "Variables updated" with the miss
   // only in a warning.
@@ -201,15 +213,11 @@ bool UEngineWireSubsystem::HandleControlActorExport(
   }
 
   FMcpOutputCapture OutputCapture;
-  UExporter::ExportToOutputDevice(nullptr, Found, nullptr, OutputCapture,
-                                  TEXT("T3D"), 0, 0, false);
-  FString OutputString = FString::Join(OutputCapture.Consume(), TEXT("\n"));
-
+  UExporter::ExportToOutputDevice(nullptr, Found, nullptr, OutputCapture, TEXT("T3D"), 0, 0, false);
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
-  Data->SetStringField(TEXT("t3d"), OutputString);
+  Data->SetStringField(TEXT("t3d"), FString::Join(OutputCapture.Consume(), TEXT("\n")));
   Data->SetStringField(TEXT("actorName"), McpActorRef(Found));
-  SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Actor exported"),
-                              Data);
+  SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Actor exported"), Data);
   return true;
 }
 
@@ -301,14 +309,8 @@ bool UEngineWireSubsystem::HandleControlActorCallFunction(
   // promises {"success":true,...,"value":true}, but only `outputs` was ever emitted -- so a caller that read
   // the documented field got nothing while the real return sat under outputs.ReturnValue. Surface the return
   // value under the documented name too; `outputs` stays for callers that already use it.
-  if (Outputs.IsValid())
-  {
-    const TSharedPtr<FJsonValue>* ReturnValue = Outputs->Values.Find(TEXT("ReturnValue"));
-    if (ReturnValue && ReturnValue->IsValid())
-    {
-      Data->SetField(TEXT("value"), *ReturnValue);
-    }
-  }
+  const TSharedPtr<FJsonValue>* ReturnValue = Outputs.IsValid() ? Outputs->Values.Find(TEXT("ReturnValue")) : nullptr;
+  if (ReturnValue && ReturnValue->IsValid()) Data->SetField(TEXT("value"), *ReturnValue);
   SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Function called"), Data);
   return true;
 }

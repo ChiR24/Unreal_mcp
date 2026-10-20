@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "3e29197d9d02baf7",
+  "catalogRevision": "8ab812ae6ba6acb5",
   "recordCount": 416,
   "records": [
     {
@@ -20129,7 +20129,7 @@
           "variable default",
           "set property default"
         ],
-        "summary": "Add or rename a Blueprint variable, set variable or Blueprint metadata, or set a class default value.",
+        "summary": "Change a Blueprint's variables, chosen by edit. add_variable adds variableName of variableType with defaultValue, category and the isPublic, isReplicated and exposeOnSpawn flags (a taken name is VARIABLE_NAME_CONFLICT, a type that resolves to nothing TYPE_RESOLUTION_FAILED, a default the type refuses DEFAULT_NOT_APPLIED; nothing is added then); rename_variable renames a variable or a component and its graph nodes follow; set_variable_metadata sets a variable's tooltip, category or replication; set_metadata sets metadata pairs on the class or one variable; set_default writes a class default value, an inherited property included.",
         "whenToUse": [
           "edit=add_variable: A Blueprint needs a new member variable with a type and default.",
           "edit=rename_variable: A member variable needs a new name.",
@@ -20275,7 +20275,7 @@
       },
       "examples": [
         {
-          "title": "Add or rename a Blueprint variable, set variable or Blueprint metadata, or set a class default value.",
+          "title": "Change a Blueprint's variables, chosen by edit. add_variable adds variableName of variableType with defaultValue, category and the isPublic, isReplicated and exposeOnSpawn flags (a taken name is VARIABLE_NAME_CONFLICT, a type that resolves to nothing TYPE_RESOLUTION_FAILED, a default the type refuses DEFAULT_NOT_APPLIED; nothing is added then); rename_variable renames a variable or a component and its graph nodes follow; set_variable_metadata sets a variable's tooltip, category or replication; set_metadata sets metadata pairs on the class or one variable; set_default writes a class default value, an inherited property included.",
           "input": {
             "action": "edit_variable",
             "blueprintPath": "/Game/Blueprints/BP_Test",
@@ -20407,7 +20407,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "ce9af8dcadc103377b4d7a72c7497d5faa031646790ba167ba42e2790cc67f72",
-        "content": "c10958a7c8553ee6bc3de7b38c023bb6a390501c65c5f56164fc086b427ce0f6"
+        "content": "05694c16a04f294cbb93a9ec5a89304cafdd95aca4f362fb883f01a5a6fab764"
       }
     },
     {
@@ -21098,7 +21098,7 @@
           "blueprint functions",
           "blueprint components"
         ],
-        "summary": "Read a Blueprint summary (variables, functions, components) or one of its default property values.",
+        "summary": "Read a Blueprint, chosen by info. blueprint returns its parent class, type, compile status (hasCompileErrors), variables (name, type, category, replication, default), functions with their parameters, events, graphs with node counts, components (name, class, parent, root) and class defaults; property reads one value from its class defaults: propertyName is a variable or inherited property, or Component.Property for a component it adds, and a name found nowhere is PROPERTY_NOT_FOUND, listing its variables.",
         "whenToUse": [
           "info=blueprint: Blueprint parent class, components, or variables must be inspected.",
           "info=property: A single property must be read from the Blueprint CDO.",
@@ -21249,7 +21249,7 @@
       },
       "examples": [
         {
-          "title": "Read a Blueprint summary (variables, functions, components) or one of its default property values.",
+          "title": "Read a Blueprint, chosen by info. blueprint returns its parent class, type, compile status (hasCompileErrors), variables (name, type, category, replication, default), functions with their parameters, events, graphs with node counts, components (name, class, parent, root) and class defaults; property reads one value from its class defaults: propertyName is a variable or inherited property, or Component.Property for a component it adds, and a name found nowhere is PROPERTY_NOT_FOUND, listing its variables.",
           "input": {
             "action": "get_blueprint",
             "blueprintPath": "/Game/Blueprints/BP_TestActor",
@@ -21306,7 +21306,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "389bb91bb53afc2d7868c54404fd4c95676bfe6641c0e211752f3ff70b3e014a",
-        "content": "e68747aaf14764e40358743cc3018066dfceda3651b3ab365d301da9d8852fb9"
+        "content": "aa915119274fa0fb14929b5700998d6580d76830a2debf298335470cf46fd84a"
       }
     },
     {
@@ -25981,7 +25981,7 @@
           "volumetric fog",
           "turn on lumen"
         ],
-        "summary": "Configure scene lighting: shadows, ambient occlusion, exposure, global illumination, volumetric fog.",
+        "summary": "Change scene lighting, chosen by setting. global_illumination sets the dynamic GI method (LumenGI, ScreenSpace, None, Lightmass) for this editor session, or in DefaultEngine.ini as well with saveToProject; shadows sets engine-wide shadow quality, distance and features for the session, or the shadow settings of the actor actorName names; exposure and ambient_occlusion write overrides on a post-process volume (actorName, else the level's one unbound volume, spawned when there is none); volumetric_fog enables or disables volumetric fog on the level's height fog. exposure, ambient_occlusion and volumetric_fog refuse a call that sets nothing (NO_SETTING_SUPPLIED).",
         "whenToUse": [
           "setting=shadows: Shadow quality or method must be tuned.",
           "setting=ambient_occlusion: AO intensity or method must be tuned.",
@@ -26108,6 +26108,10 @@
               "type": "integer",
               "description": "Lightmass indirect lighting bounces (World Settings), used by baked lighting."
             },
+            "saveToProject": {
+              "type": "boolean",
+              "description": "Also write the method to Project Settings > Rendering (DefaultEngine.ini), so it survives an editor restart and reaches the packaged game (default false: this session only)."
+            },
             "viewDistance": {
               "type": "number",
               "description": "Volumetric fog view distance in world units."
@@ -26156,7 +26160,7 @@
       },
       "examples": [
         {
-          "title": "Configure scene lighting: shadows, ambient occlusion, exposure, global illumination, volumetric fog.",
+          "title": "Change scene lighting, chosen by setting. global_illumination sets the dynamic GI method (LumenGI, ScreenSpace, None, Lightmass) for this editor session, or in DefaultEngine.ini as well with saveToProject; shadows sets engine-wide shadow quality, distance and features for the session, or the shadow settings of the actor actorName names; exposure and ambient_occlusion write overrides on a post-process volume (actorName, else the level's one unbound volume, spawned when there is none); volumetric_fog enables or disables volumetric fog on the level's height fog. exposure, ambient_occlusion and volumetric_fog refuse a call that sets nothing (NO_SETTING_SUPPLIED).",
           "input": {
             "action": "configure_lighting",
             "actorName": "Light_1",
@@ -26270,6 +26274,9 @@
             "bounces": [
               "global_illumination"
             ],
+            "saveToProject": [
+              "global_illumination"
+            ],
             "viewDistance": [
               "volumetric_fog"
             ]
@@ -26285,8 +26292,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "1a07d7857fe583d5fbb8cb4fdaf06d8edd114d21f2c25a8f0485e99697deded4",
-        "content": "cae1ee835321582ca8b8457105b950867a8e25af11ffe716aa1f83fd8713291e"
+        "schema": "379304108f42e0b3c85ec5ddc34877f44145eb4ca2befd3856883c72e633f4e8",
+        "content": "a305af593db30f91441ce42451672866a3d2bd2134e1e7f83364fd32e855af8c"
       }
     },
     {
@@ -32345,7 +32352,7 @@
           "spline tangent",
           "spline type"
         ],
-        "summary": "Edit spline points: add a point, set a point's position, rotation, scale or tangents, set the spline type.",
+        "summary": "Change the points of an actor's first spline component, chosen by edit; positions, rotations and tangents are in the spline actor's local space (subtract its location from a world point), and each edit is one undo step. add_point appends position, or inserts it at index, with pointType (default Curve) and optional tangents; set_point_position, set_point_rotation, set_point_scale and set_point_tangents change the point at pointIndex, which they require with their value (a lone arriveTangent sets both tangents); set_type sets splineType on pointIndex, or on every point when it is left out. An index past the last point is INVALID_INDEX and an unknown point type is refused.",
         "whenToUse": [
           "A spline actor or spline mesh must be created or modified."
         ],
@@ -32531,7 +32538,7 @@
       },
       "examples": [
         {
-          "title": "Edit spline points: add a point, set a point's position, rotation, scale or tangents, set the spline type.",
+          "title": "Change the points of an actor's first spline component, chosen by edit; positions, rotations and tangents are in the spline actor's local space (subtract its location from a world point), and each edit is one undo step. add_point appends position, or inserts it at index, with pointType (default Curve) and optional tangents; set_point_position, set_point_rotation, set_point_scale and set_point_tangents change the point at pointIndex, which they require with their value (a lone arriveTangent sets both tangents); set_type sets splineType on pointIndex, or on every point when it is left out. An index past the last point is INVALID_INDEX and an unknown point type is refused.",
           "input": {
             "action": "edit_spline",
             "actorName": "Spline_1",
@@ -32616,13 +32623,47 @@
             "splineType": [
               "set_type"
             ]
+          },
+          "requires": {
+            "add_spline_point": {
+              "required": [
+                "position"
+              ]
+            },
+            "set_spline_point_position": {
+              "required": [
+                "pointIndex",
+                "position"
+              ]
+            },
+            "set_spline_point_rotation": {
+              "required": [
+                "pointIndex",
+                "pointRotation"
+              ]
+            },
+            "set_spline_point_scale": {
+              "required": [
+                "pointIndex",
+                "pointScale"
+              ]
+            },
+            "set_spline_point_tangents": {
+              "required": [
+                "pointIndex"
+              ],
+              "oneOf": [
+                "arriveTangent",
+                "leaveTangent"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "e1a7ae8f2d406def165109717aa61715e14c01b41b326084443b6d78c1d1463a",
-        "content": "97ddb6bb9a0f473b7ff4d6d74b26122e5aa59f2d5b3583cb75d95c5be68be9e1"
+        "content": "480f0e1a28cd9dbb556c637ada5316382c98e6be9f2834de6b063138d2624b67"
       }
     },
     {
@@ -38433,7 +38474,7 @@
           "set_blueprint_variables",
           "actor variable"
         ],
-        "summary": "Set one or more Blueprint instance variables on a spawned actor, or on many actors in one call with actors.",
+        "summary": "Set Blueprint variables on one placed actor (actorName, the playing copy during Play) from variables {name: value}, or on many actors with actors, each with its own; an actor reference takes an actor's name. Every name is checked first: one the class lacks refuses the call (PROPERTY_NOT_FOUND, listing its variables) and nothing is set. The construction script reruns, as a Details panel edit does, and the call is one undo step (a batch too). A value a variable will not take fails with VARIABLE_NOT_SET naming it (VARIABLE_BATCH_INCOMPLETE for actors); updated lists what was set.",
         "whenToUse": [
           "Instance variables on a Blueprint actor must be configured.",
           "Several actors each need their own variable values (actors)."
@@ -38521,7 +38562,7 @@
       },
       "examples": [
         {
-          "title": "Set one or more Blueprint instance variables on a spawned actor, or on many actors in one call with actors.",
+          "title": "Set Blueprint variables on one placed actor (actorName, the playing copy during Play) from variables {name: value}, or on many actors with actors, each with its own; an actor reference takes an actor's name. Every name is checked first: one the class lacks refuses the call (PROPERTY_NOT_FOUND, listing its variables) and nothing is set. The construction script reruns, as a Details panel edit does, and the call is one undo step (a batch too). A value a variable will not take fails with VARIABLE_NOT_SET naming it (VARIABLE_BATCH_INCOMPLETE for actors); updated lists what was set.",
           "input": {
             "action": "set_blueprint_variables",
             "actorName": "Lamp1",
@@ -38562,7 +38603,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "b489ea3a3cfadfc17572a4fed5a4430281fde42e2e6c78a681777c3e89897687",
-        "content": "6ba9f3a1501d6153e94d49c4f689eb80caa4f8c9527e3ad081c81db2d393dc4d"
+        "content": "918b2c299558b1b9554449acd6116956ad317d432e9017fe54b1922af7c7330e"
       }
     },
     {
@@ -79939,7 +79980,7 @@
           "death zone",
           "lava kills the player"
         ],
-        "summary": "Create a volume actor of the chosen class in the level, or attach it to an actor when actorPath is given.",
+        "summary": "Place a volume of volumeClass in the editor level as a box brush: extent is half its size on each axis (each class has its own default), at location (default the origin) and rotation, labelled volumeName (default the class name). Each class reads only its own settings and refuses one it would ignore: pain (bPainCausing, damagePerSec), physics (fluidFriction, terminalVelocity, bWaterVolume), audio and reverb (bEnabled, reverbVolume, fadeTime), cull distance (cullDistances), post-process (bUnbound, blendRadius, blendWeight, priority, postProcessSettings), KillZ (killZHeight); the trigger box, sphere and capsule take boxExtent, sphereRadius, or capsuleRadius and capsuleHalfHeight. actorPath attaches the volume to an actor instead (Trigger, Blocking, KillZ, Physics, CullDistance and PostProcess). save saves the level too (default false).",
         "whenToUse": [
           "Any volume actor must be placed: trigger, blocking, kill-Z, pain, physics, audio, reverb, cull distance, precomputed visibility, Lightmass importance, nav bounds, nav modifier, camera blocking or post-process."
         ],
@@ -80207,7 +80248,7 @@
       },
       "examples": [
         {
-          "title": "Create a volume actor of the chosen class in the level, or attach it to an actor when actorPath is given.",
+          "title": "Place a volume of volumeClass in the editor level as a box brush: extent is half its size on each axis (each class has its own default), at location (default the origin) and rotation, labelled volumeName (default the class name). Each class reads only its own settings and refuses one it would ignore: pain (bPainCausing, damagePerSec), physics (fluidFriction, terminalVelocity, bWaterVolume), audio and reverb (bEnabled, reverbVolume, fadeTime), cull distance (cullDistances), post-process (bUnbound, blendRadius, blendWeight, priority, postProcessSettings), KillZ (killZHeight); the trigger box, sphere and capsule take boxExtent, sphereRadius, or capsuleRadius and capsuleHalfHeight. actorPath attaches the volume to an actor instead (Trigger, Blocking, KillZ, Physics, CullDistance and PostProcess). save saves the level too (default false).",
           "input": {
             "action": "create_volume",
             "volumeClass": "TriggerVolume",
@@ -80277,7 +80318,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "a32f86d0821ce12e07016e5d6ab88999f6828db65c2e31d817ad68db1eec7271",
-        "content": "ad35583abc8d23077663ddf2fab148508adf5257fd016a7d8a1190b3add1e0bd"
+        "content": "b6d49a9cbd03e148380a816b956e0aa08b97b25e2fe6bce31395397ea0757e84"
       }
     },
     {
@@ -81875,7 +81916,7 @@
           "respawn time",
           "enable spectator mode"
         ],
-        "summary": "Configure a game mode: default classes (pawn, controller, state, HUD), rules, respawn, spectating.",
+        "summary": "Change a game mode Blueprint (gameModeBlueprint or blueprintPath), chosen by setting, then compile and save it: default_pawn_class (pawnClass), player_controller_class, game_state_class, player_state_class and hud_class set the class it spawns for that role (a class that does not load is NOT_FOUND); rules sets bDelayedStart, respawn sets respawnDelay (both on GameMode children only, a GameModeBase child is NOT_SUPPORTED), spectating sets spectatorClass. A class setting never changes which game mode plays: makeDefault true makes this one the project default (DefaultEngine.ini), and the reply says whether the open level plays with it (effectiveInOpenLevel, openLevelGameMode).",
         "whenToUse": [
           "setting=default_pawn_class: Use it to set a GameMode default pawn class. Pass makeDefault: true to also make this game mode the project default; the reply says whether the open level runs it (effectiveInOpenLevel).",
           "setting=player_controller_class: Use it to set a GameMode PlayerController class. Pass makeDefault: true to also make this game mode the project default; the reply says whether the open level runs it (effectiveInOpenLevel).",
@@ -82014,7 +82055,7 @@
       },
       "examples": [
         {
-          "title": "Configure a game mode: default classes (pawn, controller, state, HUD), rules, respawn, spectating.",
+          "title": "Change a game mode Blueprint (gameModeBlueprint or blueprintPath), chosen by setting, then compile and save it: default_pawn_class (pawnClass), player_controller_class, game_state_class, player_state_class and hud_class set the class it spawns for that role (a class that does not load is NOT_FOUND); rules sets bDelayedStart, respawn sets respawnDelay (both on GameMode children only, a GameModeBase child is NOT_SUPPORTED), spectating sets spectatorClass. A class setting never changes which game mode plays: makeDefault true makes this one the project default (DefaultEngine.ini), and the reply says whether the open level plays with it (effectiveInOpenLevel, openLevelGameMode).",
           "input": {
             "action": "configure_game_mode",
             "gameModeBlueprint": "/Game/Blueprints/Framework/BP_ArenaGameMode",
@@ -82140,7 +82181,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "abd2cfa8c517a8f8d7cc4375bff090ee9873b693845b20a34152d17b9aac76de",
-        "content": "ef8293f0583f3735dcd52114441ed3927011ddc5a35ebf7982e389078a65db4d"
+        "content": "9f6e197f6dccf35a9bb287b6e2ed845972a11cc4e2fcab97ca6bd94bb0f97651"
       }
     },
     {

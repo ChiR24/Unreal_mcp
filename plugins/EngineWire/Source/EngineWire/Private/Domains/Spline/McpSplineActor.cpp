@@ -29,6 +29,11 @@ bool HandleCreateSplineActor(
         return true;
     }
 
+    ESplinePointType::Type PointType;
+    if (!ParseSplinePointType(SplineType, PointType))
+    {
+        return RefuseSplinePointType(Self, RequestId, Socket, SplineType);
+    }
     USplineComponent* SplineComp = SpawnSplineActor(World, ActorName, Location, Rotation);
     if (!SplineComp)
     {
@@ -39,7 +44,6 @@ bool HandleCreateSplineActor(
     AActor* NewActor = SplineComp->GetOwner();
     SplineComp->SetClosedLoop(bClosedLoop);
 
-    ESplinePointType::Type PointType = ParseSplinePointType(SplineType);
     for (int32 i = 0; i < SplineComp->GetNumberOfSplinePoints(); i++)
     {
         SplineComp->SetSplinePointType(i, PointType, true);

@@ -18,7 +18,7 @@ export const VARIABLES_METADATA_RECORDS: readonly CapabilityRecordSource[] = [
     family: FAMILY,
     domain: DOMAIN,
     topics: ['new variable', 'member variable', 'add property', 'float variable', 'bool variable', 'integer variable', 'declare variable'],
-    summary: 'Add a new member variable to a Blueprint.',
+    summary: 'Add a member variable named variableName of variableType (basic types, object and class references, structs, enums, arrays, sets and maps, as variableType lists) with defaultValue, category, and the isPublic (instance editable), isReplicated and exposeOnSpawn flags, then compile and save the Blueprint (saved). A name the Blueprint or a parent class already uses is VARIABLE_NAME_CONFLICT, a type that resolves to nothing TYPE_RESOLUTION_FAILED, and a default its type refuses DEFAULT_NOT_APPLIED; nothing is added then.',
     whenToUse: ['A Blueprint needs a new member variable with a type and default.'],
     whenNotToUse: ['A graph-local variable is needed (use create_node with a local variable).'],
     inputProps: {

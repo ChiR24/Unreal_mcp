@@ -67,6 +67,12 @@ USplineComponent* ResolveSplineTarget(UEngineWireSubsystem* Self, const FString&
         Self->SendAutomationResponse(Socket, RequestId, false,
             TEXT("No spline component found on actor"), nullptr, TEXT("NO_SPLINE"));
     }
+    // A component made without RF_Transactional (every spline create_spline_actor made) kept each point edit out of
+    // the undo buffer; flagged, Modify() records it.
+    if (Spline && !Spline->HasAnyFlags(RF_Transactional))
+    {
+        Spline->SetFlags(RF_Transactional);
+    }
     return Spline;
 }
 
@@ -94,7 +100,7 @@ USplineComponent* SpawnSplineActor(UWorld* World, const FString& Name, const FVe
         return nullptr;
     }
     Actor->SetActorLabel(*Name);
-    USplineComponent* Spline = NewObject<USplineComponent>(Actor, TEXT("SplineComponent"));
+    USplineComponent* Spline = NewObject<USplineComponent>(Actor, TEXT("SplineComponent"), RF_Transactional);
     Spline->RegisterComponent();
     Actor->AddInstanceComponent(Spline);
     Actor->SetRootComponent(Spline);
@@ -138,15 +144,23 @@ ESplineMeshAxis::Type ParseSplineMeshAxis(const FString& ForwardAxis)
     return ESplineMeshAxis::X;
 }
 
-ESplinePointType::Type ParseSplinePointType(const FString& TypeStr)
+bool ParseSplinePointType(const FString& TypeStr, ESplinePointType::Type& OutType)
 {
-    FString LowerStr = TypeStr.ToLower();
-    if (LowerStr == TEXT("linear")) return ESplinePointType::Linear;
-    if (LowerStr == TEXT("curve")) return ESplinePointType::Curve;
-    if (LowerStr == TEXT("constant")) return ESplinePointType::Constant;
-    if (LowerStr == TEXT("curveclamped")) return ESplinePointType::CurveClamped;
-    if (LowerStr == TEXT("curvecustomtangent")) return ESplinePointType::CurveCustomTangent;
-    return ESplinePointType::Curve;
+    const FString LowerStr = TypeStr.ToLower();
+    OutType = LowerStr == TEXT("linear") ? ESplinePointType::Linear
+        : LowerStr == TEXT("constant") ? ESplinePointType::Constant
+        : LowerStr == TEXT("curveclamped") ? ESplinePointType::CurveClamped
+        : LowerStr == TEXT("curvecustomtangent") ? ESplinePointType::CurveCustomTangent
+        : ESplinePointType::Curve;
+    return OutType != ESplinePointType::Curve || LowerStr == TEXT("curve");
+}
+
+bool RefuseSplinePointType(UEngineWireSubsystem* Self, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket,
+                           const FString& TypeStr)
+{
+    Self->SendAutomationResponse(Socket, RequestId, false, FString::Printf(TEXT("'%s' is not a spline point type; use Linear, "
+        "Curve, Constant, CurveClamped or CurveCustomTangent. Nothing was changed."), *TypeStr), nullptr, TEXT("INVALID_ARGUMENT"));
+    return true;
 }
 
 FString SplinePointTypeToString(ESplinePointType::Type Type)

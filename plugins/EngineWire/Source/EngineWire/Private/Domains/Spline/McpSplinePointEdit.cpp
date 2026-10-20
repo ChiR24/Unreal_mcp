@@ -20,6 +20,18 @@ bool HandleAddSplinePoint(
     FVector Position = ExtractVectorField(Payload, TEXT("position"), FVector::ZeroVector);
     int32 Index = GetJsonIntField(Payload, TEXT("index"), -1);
     FString PointType = GetJsonStringField(Payload, TEXT("pointType"), TEXT("Curve"));
+    ESplinePointType::Type ParsedType;
+    if (!ParseSplinePointType(PointType, ParsedType))
+    {
+        return RefuseSplinePointType(Self, RequestId, Socket, PointType);
+    }
+    // Left out, the point landed on the actor's own origin.
+    if (!Payload->HasField(TEXT("position")))
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("position is required. Nothing was changed."), nullptr,
+                                     TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
 
     AActor* Actor = nullptr;
     USplineComponent* SplineComp = ResolveSplineTarget(Self, RequestId, Socket, ActorName, Actor);
@@ -40,7 +52,7 @@ bool HandleAddSplinePoint(
         SplineComp->AddSplinePointAtIndex(Position, Index, ESplineCoordinateSpace::Local, true);
     }
 
-    SplineComp->SetSplinePointType(Index, ParseSplinePointType(PointType), true);
+    SplineComp->SetSplinePointType(Index, ParsedType, true);
     // The declared tangents were never read, so every added point took automatic ones.
     ApplySplinePointTangents(SplineComp, Index, Payload);
     SplineComp->UpdateSpline();
@@ -104,6 +116,13 @@ bool HandleSetSplinePointPosition(
     FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
     int32 PointIndex = GetJsonIntField(Payload, TEXT("pointIndex"), 0);
     FVector Position = ExtractVectorField(Payload, TEXT("position"), FVector::ZeroVector);
+    // Left out, these moved point 0, or moved the point to the actor's origin.
+    if (!Payload->HasField(TEXT("pointIndex")) || !Payload->HasField(TEXT("position")))
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("pointIndex and position are required. Nothing was changed."),
+                                     nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
 
     AActor* Actor = nullptr;
     USplineComponent* SplineComp = ResolveSplineTarget(Self, RequestId, Socket, ActorName, Actor);
@@ -127,6 +146,7 @@ bool HandleSetSplinePointPosition(
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetNumberField(TEXT("pointIndex"), PointIndex);
+    Transaction.DescribeInto(Result);
     McpHandlerUtils::AddVerification(Result, Actor);
 
     Self->SendAutomationResponse(Socket, RequestId, true,

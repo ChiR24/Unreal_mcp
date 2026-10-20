@@ -58,7 +58,7 @@ export const ADVANCED_RECORDS: readonly CapabilityRecordSource[] = [
     topics: ['actor variable'],
     domain: DOMAIN,
     family: FAMILY_BLUEPRINT,
-    summary: 'Set one or more Blueprint instance variables on a spawned actor, or on many actors in one call with actors.',
+    summary: 'Set Blueprint variables on one placed actor (actorName, the playing copy during Play) from variables {name: value}, or on many actors with actors, each with its own; an actor reference takes an actor\'s name. Every name is checked first: one the class lacks refuses the call (PROPERTY_NOT_FOUND, listing its variables) and nothing is set. The construction script reruns, as a Details panel edit does, and the call is one undo step (a batch too). A value a variable will not take fails with VARIABLE_NOT_SET naming it (VARIABLE_BATCH_INCOMPLETE for actors); updated lists what was set.',
     whenToUse: ['Instance variables on a Blueprint actor must be configured.', 'Several actors each need their own variable values (actors).'],
     whenNotToUse: ['The actor is not a Blueprint instance (variables are undefined).'],
     inputProps: {

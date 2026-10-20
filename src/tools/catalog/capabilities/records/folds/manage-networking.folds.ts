@@ -40,7 +40,7 @@ export const MANAGE_NETWORKING_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'configure_game_mode', selector: 'setting',
-    summary: 'Configure a game mode: default classes (pawn, controller, state, HUD), rules, respawn, spectating.',
+    summary: 'Change a game mode Blueprint (gameModeBlueprint or blueprintPath), chosen by setting, then compile and save it: default_pawn_class (pawnClass), player_controller_class, game_state_class, player_state_class and hud_class set the class it spawns for that role (a class that does not load is NOT_FOUND); rules sets bDelayedStart, respawn sets respawnDelay (both on GameMode children only, a GameModeBase child is NOT_SUPPORTED), spectating sets spectatorClass. A class setting never changes which game mode plays: makeDefault true makes this one the project default (DefaultEngine.ini), and the reply says whether the open level plays with it (effectiveInOpenLevel, openLevelGameMode).',
     topics: ['default pawn', 'game rules', 'respawn', 'spectating', 'set game mode', 'change game mode', 'respawn time', 'enable spectator mode'],
     members: {
       default_pawn_class: 'set_default_pawn_class', player_controller_class: 'set_player_controller_class', game_state_class: 'set_game_state_class', player_state_class: 'set_player_state_class',

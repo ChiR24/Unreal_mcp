@@ -28,7 +28,12 @@ USplineComponent* SpawnSplineActor(UWorld* World, const FString& Name, const FVe
 FString RequireSplineProjectPath(UEngineWireSubsystem* Self, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket, const TCHAR* Field, const FString& Path);
 USplineMeshComponent* FindSplineMeshComponent(AActor* Actor, const FString& ComponentName = TEXT(""));
 ESplineMeshAxis::Type ParseSplineMeshAxis(const FString& ForwardAxis);
-ESplinePointType::Type ParseSplinePointType(const FString& TypeStr);
+// False for a name that is no point type (OutType is then Curve): every unknown name became Curve while the reply named
+// the type asked for.
+bool ParseSplinePointType(const FString& TypeStr, ESplinePointType::Type& OutType);
+// The refusal for a name ParseSplinePointType did not know; sends it and returns true.
+bool RefuseSplinePointType(UEngineWireSubsystem* Self, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket,
+                           const FString& TypeStr);
 // Sets the point's arriveTangent and leaveTangent (local space) from the payload: a lone
 // arriveTangent sets both, a lone leaveTangent keeps the current arrive. False when neither is given.
 inline bool ApplySplinePointTangents(USplineComponent* Spline, int32 Index, const TSharedPtr<FJsonObject>& Payload)

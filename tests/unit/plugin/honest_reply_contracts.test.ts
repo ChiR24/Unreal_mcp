@@ -4344,3 +4344,56 @@ describe('Blueprint creates report the save and the Blueprint already there, rec
     expect(code('Skeleton', 'Bones', 'McpSkeletonStructureCreation.cpp')).toContain('McpHandlerUtils::AddVerification(Result, NewSkeleton);');
   });
 });
+
+describe('spline point edits and Blueprint variable sets undo, and refuse what they would guess', () => {
+  it('an unknown point type is refused, not turned into Curve, and the reply names the type set', () => {
+    const config = code('Spline', 'McpSplineValueAndConfig.cpp');
+    expect(config).toContain('return OutType != ESplinePointType::Curve || LowerStr == TEXT("curve");');
+    for (const file of ['McpSplineActor.cpp', 'McpSplinePointEdit.cpp', 'McpSplinePointTransform.cpp']) {
+      expect(code('Spline', file), file).toContain('RefuseSplinePointType(Self, RequestId, Socket,');
+    }
+    expect(code('Spline', 'McpSplinePointTransform.cpp')).toContain('SetStringField(TEXT("splineType"), SplinePointTypeToString(PointType))');
+  });
+
+  it('a point edit needs its index and value, and is one undo step', () => {
+    const transform = code('Spline', 'McpSplinePointTransform.cpp');
+    expect(transform).toContain('if (!Payload->HasField(TEXT("pointIndex")) || (ValueField && !Payload->HasField(ValueField)))');
+    expect(transform.match(/FMcpScopedEditorTransaction Transaction\(/gu)?.length).toBe(4);
+    const edit = code('Spline', 'McpSplinePointEdit.cpp');
+    expect(edit).toContain('pointIndex and position are required. Nothing was changed.');
+    expect(edit).toContain('position is required. Nothing was changed.');
+  });
+
+  it('set_blueprint_variables is one undo step, a batch included', () => {
+    const advanced = code('ControlActor', 'McpActorAdvanced.cpp');
+    expect(advanced).toContain('FMcpScopedEditorTransaction BatchTransaction(FText::FromString(TEXT("Set Blueprint Variables"))');
+    expect(advanced).toMatch(/IsCapturing\(RequestId\)\s*\?\s*nullptr\s*:\s*MakeUnique<FMcpScopedEditorTransaction>/u);
+  });
+});
+
+describe('lighting settings refuse an empty call before spawning anything, undo, and say how long they last', () => {
+  it('exposure, ambient occlusion and fog check their settings before a volume or fog actor can be spawned', () => {
+    const post = code('Lighting', 'McpLightingPostProcess.cpp');
+    for (const handler of ['HandleSetExposure', 'HandleSetAmbientOcclusion']) {
+      const body = post.slice(post.indexOf(`bool ${handler}(`));
+      expect(body.indexOf('RefuseIfNothingSet('), handler).toBeLessThan(body.indexOf('ResolvePostProcessOrReply('));
+      expect(body.indexOf('FMcpScopedEditorTransaction Transaction('), handler).toBeLessThan(body.indexOf('ResolvePostProcessOrReply('));
+    }
+    const fog = code('Lighting', 'McpLightingAtmosphere.cpp');
+    expect(fog.indexOf('Nothing to set: pass enabled or viewDistance.')).toBeLessThan(fog.indexOf('SpawnActorInActiveWorld<AActor>(AExponentialHeightFog'));
+    expect(fog).toContain('bool bEnabled = FogComp->bEnableVolumetricFog;');
+  });
+
+  it('GI refuses RayTraced from 5.4, where method 3 is Plugin, and saves to the project only when asked', () => {
+    const gi = code('Lighting', 'McpLightingGlobalIllumination.cpp');
+    expect(gi).toMatch(/#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION < 4[\s\S]*?TEXT\("RayTraced"\), 3[\s\S]*?#else(?:(?!RayTraced"\), 3)[\s\S])*?#endif/u);
+    expect(gi).toContain('if (GetJsonBoolField(Payload, TEXT("saveToProject"), false))');
+    expect(gi).toContain('Renderer->TryUpdateDefaultConfigFile()');
+  });
+
+  it('spline components carry RF_Transactional, so their point edits reach the undo buffer', () => {
+    const config = code('Spline', 'McpSplineValueAndConfig.cpp');
+    expect(config).toContain('NewObject<USplineComponent>(Actor, TEXT("SplineComponent"), RF_Transactional)');
+    expect(config).toContain('Spline->SetFlags(RF_Transactional);');
+  });
+});

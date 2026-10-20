@@ -5,6 +5,7 @@
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 #include "Foundation/Render/McpPostProcessVolumeResolution.h"
 #include "Dom/JsonObject.h"
 #include "Editor.h"
@@ -32,6 +33,21 @@ APostProcessVolume* ResolvePostProcessOrReply(UEngineWireSubsystem& Subsystem, c
     }
     return PPV;
 }
+
+// Checked before the volume is resolved: a call that set nothing could spawn a volume and then be refused.
+bool RefuseIfNothingSet(UEngineWireSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, std::initializer_list<const TCHAR*> Fields)
+{
+    for (const TCHAR* Field : Fields)
+    {
+        if (Payload->HasField(Field)) return false;
+    }
+    TArray<FString> Names;
+    for (const TCHAR* Field : Fields) Names.Add(Field);
+    Subsystem.SendAutomationError(RequestingSocket, RequestId,
+        FString::Printf(TEXT("Nothing to set: pass %s."), *FString::Join(Names, TEXT(", "))), TEXT("NO_SETTING_SUPPLIED"));
+    return true;
+}
 }
 
 bool HandleSetExposure(
@@ -40,12 +56,11 @@ bool HandleSetExposure(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    APostProcessVolume* PPV = ResolvePostProcessOrReply(Subsystem, RequestId, Payload, RequestingSocket);
-    if (!PPV)
+    if (RefuseIfNothingSet(Subsystem, RequestId, Payload, RequestingSocket,
+            {TEXT("method"), TEXT("minBrightness"), TEXT("maxBrightness"), TEXT("compensationValue")}))
     {
         return true;
     }
-
     // Each value sets its bOverride_ flag: without it the volume overrides nothing and the
     // written value never takes effect. method was declared and never read.
     static const TMap<FString, EAutoExposureMethod> Methods = {
@@ -57,6 +72,14 @@ bool HandleSetExposure(
         Subsystem.SendAutomationError(RequestingSocket, RequestId,
             FString::Printf(TEXT("Invalid exposure method: %s. Valid values: Manual, AutoExposureHistogram, AutoExposureBasic"), *Method),
             TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+    // One undo step, a volume spawned for it included; it wrote outside any transaction.
+    FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Set Exposure")), EMcpMutationDurability::EditorStateOnly,
+                                            TArray<UObject*>());
+    APostProcessVolume* PPV = ResolvePostProcessOrReply(Subsystem, RequestId, Payload, RequestingSocket);
+    if (!PPV)
+    {
         return true;
     }
     PPV->Modify();
@@ -100,6 +123,7 @@ bool HandleSetExposure(
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("actorName"), McpActorRef(PPV));
     Resp->SetArrayField(TEXT("appliedSettings"), McpHandlerUtils::ToJsonStringArray(Applied));
+    Transaction.DescribeInto(Resp);
     McpHandlerUtils::AddVerification(Resp, PPV);
     Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Exposure settings applied"), Resp);
     return true;
@@ -111,12 +135,12 @@ bool HandleSetAmbientOcclusion(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    APostProcessVolume* PPV = ResolvePostProcessOrReply(Subsystem, RequestId, Payload, RequestingSocket);
-    if (!PPV)
+    // A call that set nothing answered "configured".
+    if (RefuseIfNothingSet(Subsystem, RequestId, Payload, RequestingSocket,
+            {TEXT("enabled"), TEXT("intensity"), TEXT("radius"), TEXT("quality")}))
     {
         return true;
     }
-
     // quality was declared and never read; the volume's AO quality runs 0 to 100.
     static const TMap<FString, float> QualityLevels = {{TEXT("Low"), 25.0f}, {TEXT("Medium"), 50.0f}, {TEXT("High"), 100.0f}};
     const FString Quality = GetJsonStringField(Payload, TEXT("quality"));
@@ -126,6 +150,13 @@ bool HandleSetAmbientOcclusion(
         Subsystem.SendAutomationError(RequestingSocket, RequestId,
             FString::Printf(TEXT("Invalid ambient occlusion quality: %s. Valid values: Low, Medium, High"), *Quality),
             TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+    FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Set Ambient Occlusion")), EMcpMutationDurability::EditorStateOnly,
+                                            TArray<UObject*>());
+    APostProcessVolume* PPV = ResolvePostProcessOrReply(Subsystem, RequestId, Payload, RequestingSocket);
+    if (!PPV)
+    {
         return true;
     }
     PPV->Modify();
@@ -160,6 +191,10 @@ bool HandleSetAmbientOcclusion(
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("actorName"), McpActorRef(PPV));
+    Resp->SetNumberField(TEXT("intensity"), PPV->Settings.AmbientOcclusionIntensity);
+    Resp->SetNumberField(TEXT("radius"), PPV->Settings.AmbientOcclusionRadius);
+    Resp->SetNumberField(TEXT("qualityPercent"), PPV->Settings.AmbientOcclusionQuality);
+    Transaction.DescribeInto(Resp);
     McpHandlerUtils::AddVerification(Resp, PPV);
     Subsystem.SendAutomationResponse(
         RequestingSocket, RequestId, true, TEXT("Ambient Occlusion settings configured"), Resp);

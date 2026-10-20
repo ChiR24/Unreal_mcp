@@ -5,6 +5,7 @@
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 #include "Components/ExponentialHeightFogComponent.h"
 #include "Components/LightComponent.h"
 #include "Dom/JsonObject.h"
@@ -22,6 +23,16 @@ bool HandleSetupVolumetricFog(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
     UEditorActorSubsystem* ActorSS)
 {
+    // Checked before a fog actor can be spawned for a call that sets nothing.
+    if (!Payload->HasField(TEXT("enabled")) && !Payload->HasField(TEXT("viewDistance")))
+    {
+        Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Nothing to set: pass enabled or viewDistance."),
+                                      TEXT("NO_SETTING_SUPPLIED"));
+        return true;
+    }
+    // One undo step, a fog actor spawned for it included; it wrote outside any transaction.
+    FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Set Volumetric Fog")), EMcpMutationDurability::EditorStateOnly,
+                                            TArray<UObject*>());
     AExponentialHeightFog* FogActor = nullptr;
     for (AActor* Actor : ActorSS->GetAllLevelActors())
     {
@@ -51,25 +62,31 @@ bool HandleSetupVolumetricFog(
     // `enabled` was hard-coded true here while the TS handler ran
     // `r.VolumetricFog 0` first for enabled:false, so disabling fog turned the
     // cvar off and the component flag straight back on.
-    bool bEnabled = true;
-    Payload->TryGetBoolField(TEXT("enabled"), bEnabled);
-
+    // Left out, enabled read as true and switched volumetric fog on for a call that only set viewDistance.
     UExponentialHeightFogComponent* FogComp = FogActor->GetComponent();
-    FogComp->bEnableVolumetricFog = bEnabled;
-
+    FogComp->Modify();
+    bool bEnabled = FogComp->bEnableVolumetricFog;
+    if (Payload->TryGetBoolField(TEXT("enabled"), bEnabled))
+    {
+        FogComp->bEnableVolumetricFog = bEnabled;
+    }
     double Distance;
     if (Payload->TryGetNumberField(TEXT("viewDistance"), Distance))
     {
         FogComp->VolumetricFogDistance = static_cast<float>(Distance);
     }
+    FogComp->MarkRenderStateDirty();
+    FogActor->MarkPackageDirty();
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("actorName"), McpActorRef(FogActor));
-    Resp->SetBoolField(TEXT("enabled"), bEnabled);
+    Resp->SetBoolField(TEXT("enabled"), FogComp->bEnableVolumetricFog);
+    Resp->SetNumberField(TEXT("viewDistance"), FogComp->VolumetricFogDistance);
+    Transaction.DescribeInto(Resp);
     McpHandlerUtils::AddVerification(Resp, FogActor);
     Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true,
-        bEnabled ? TEXT("Volumetric fog enabled") : TEXT("Volumetric fog disabled"), Resp);
+        FogComp->bEnableVolumetricFog ? TEXT("Volumetric fog enabled") : TEXT("Volumetric fog disabled"), Resp);
     return true;
 }
 

@@ -7,6 +7,7 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Dom/JsonObject.h"
 #include "Engine/PostProcessVolume.h"
+#include "Engine/RendererSettings.h"
 #include "Foundation/Render/McpPostProcessVolumeResolution.h"
 #include "GameFramework/WorldSettings.h"
 #include "HAL/IConsoleManager.h"
@@ -31,18 +32,24 @@ bool HandleSetupGlobalIllumination(
         return true;
     }
 
-    // r.DynamicGlobalIlluminationMethod per method (Lightmass is baked: no dynamic GI).
+    // r.DynamicGlobalIlluminationMethod per method (Lightmass is baked: no dynamic GI). Standalone ray-traced GI left
+    // the engine in 5.4, where method 3 became Plugin: RayTraced switched on a GI plugin there.
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION < 4
     static const TMap<FString, int32> GIMethods = {
         {TEXT("None"), 0}, {TEXT("LumenGI"), 1}, {TEXT("ScreenSpace"), 2}, {TEXT("RayTraced"), 3}, {TEXT("Lightmass"), 0}};
+    const TCHAR* ValidMethods = TEXT("LumenGI, ScreenSpace, None, RayTraced, Lightmass");
+#else
+    static const TMap<FString, int32> GIMethods = {
+        {TEXT("None"), 0}, {TEXT("LumenGI"), 1}, {TEXT("ScreenSpace"), 2}, {TEXT("Lightmass"), 0}};
+    const TCHAR* ValidMethods = TEXT("LumenGI, ScreenSpace, None, Lightmass (RayTraced left the engine in 5.4: use LumenGI with hardware ray tracing)");
+#endif
     const int32* GIMethod = GIMethods.Find(Method);
     if (!GIMethod)
     {
         Subsystem.SendAutomationError(
             RequestingSocket,
             RequestId,
-            FString::Printf(
-                TEXT("Invalid GI method: %s. Valid values: LumenGI, ScreenSpace, None, RayTraced, Lightmass"),
-                *Method),
+            FString::Printf(TEXT("Invalid GI method: %s. Valid values: %s"), *Method, ValidMethods),
             TEXT("INVALID_GI_METHOD"));
         return true;
     }
@@ -129,6 +136,19 @@ bool HandleSetupGlobalIllumination(
     if (WorldSettings && Payload->HasTypedField<EJson::Number>(TEXT("bounces")))
     {
         Resp->SetNumberField(TEXT("bounces"), WorldSettings->LightmassSettings.NumIndirectLightingBounces);
+    }
+    // The console variables above last for this editor session; Project Settings > Rendering keeps the method for the
+    // project and its packaged game (DefaultEngine.ini), written only when asked.
+    if (GetJsonBoolField(Payload, TEXT("saveToProject"), false))
+    {
+        URendererSettings* Renderer = GetMutableDefault<URendererSettings>();
+        Renderer->DynamicGlobalIllumination = static_cast<EDynamicGlobalIlluminationMethod::Type>(*GIMethod);
+        if (*GIMethod == 1)
+        {
+            Renderer->Reflections = EReflectionMethod::Lumen;
+        }
+        Renderer->SaveConfig();
+        Resp->SetBoolField(TEXT("savedToProject"), Renderer->TryUpdateDefaultConfigFile());
     }
     Subsystem.SendAutomationResponse(
         RequestingSocket,

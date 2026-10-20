@@ -103,7 +103,7 @@ export const LEVEL_VOLUME_RECORDS: readonly CapabilityRecordSource[] = [
     aliases: ADVERTISED_ALIASES,
     topics: ['create volume', 'trigger volume', 'trigger box', 'trigger sphere', 'trigger capsule', 'blocking volume', 'kill z volume', 'post process volume', 'kill zone', 'damage zone', 'death zone', 'lava kills the player'],
     family: F,
-    summary: 'Create a volume actor of the chosen class in the level, or attach it to an actor when actorPath is given.',
+    summary: 'Place a volume of volumeClass in the editor level as a box brush: extent is half its size on each axis (each class has its own default), at location (default the origin) and rotation, labelled volumeName (default the class name). Each class reads only its own settings and refuses one it would ignore: pain (bPainCausing, damagePerSec), physics (fluidFriction, terminalVelocity, bWaterVolume), audio and reverb (bEnabled, reverbVolume, fadeTime), cull distance (cullDistances), post-process (bUnbound, blendRadius, blendWeight, priority, postProcessSettings), KillZ (killZHeight); the trigger box, sphere and capsule take boxExtent, sphereRadius, or capsuleRadius and capsuleHalfHeight. actorPath attaches the volume to an actor instead (Trigger, Blocking, KillZ, Physics, CullDistance and PostProcess). save saves the level too (default false).',
     whenToUse: [
       'Any volume actor must be placed: trigger, blocking, kill-Z, pain, physics, audio, reverb, cull distance, '
       + 'precomputed visibility, Lightmass importance, nav bounds, nav modifier, camera blocking or post-process.',

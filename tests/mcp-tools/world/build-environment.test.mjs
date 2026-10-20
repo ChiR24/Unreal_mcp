@@ -216,11 +216,14 @@ const testCases = [
     { scenario: 'CREATE: create_dynamic_light', toolName: 'build_environment', arguments: {"action": "create_dynamic_light", "name": "Testdynamic_light", "lightType": "Point"}, expected: 'success|already exists' },
     // === ACTION ===
     { scenario: 'ACTION: setup_global_illumination', toolName: 'build_environment', arguments: {"action": "setup_global_illumination", "method": "LumenGI", "quality": "High", "indirectLightingIntensity": 1.0, "bounces": 3}, expected: 'success|already exists' },
+    { scenario: 'ACTION: setup_global_illumination for this session only', toolName: 'build_environment', arguments: {"action": "setup_global_illumination", "method": "LumenGI", "saveToProject": false}, expected: 'success' },
+    { scenario: 'ERROR: setup_volumetric_fog refuses a call that sets nothing', toolName: 'build_environment', arguments: {"action": "setup_volumetric_fog"}, expected: 'error|NO_SETTING_SUPPLIED' },
     // === CONFIG ===
     { scenario: 'CONFIG: configure_shadows', toolName: 'build_environment', arguments: {"action": "configure_shadows", "shadowQuality": "High", "shadowDistance": 1.0, "contactShadows": true, "rayTracedShadows": false, "virtualShadowMaps": true}, expected: 'success', assertions: [{ path: 'structuredContent.result.appliedSettings', includes: 'shadowQuality', label: 'shadow quality is applied' }] },
     { scenario: 'CONFIG: configure_shadows on one light', toolName: 'build_environment', arguments: { action: 'configure_shadows', actorName: 'Testlight', castShadows: true, shadowBias: 0.5, shadowSlopeBias: 0.5, shadowResolutionScale: 1.5 }, expected: 'success|not found' },
     { scenario: 'CONFIG: set_exposure', toolName: 'build_environment', arguments: {"action": "set_exposure", "method": "Manual", "minBrightness": 1, "maxBrightness": 1, "compensationValue": 0}, expected: 'success' },
     { scenario: 'CONFIG: set_ambient_occlusion', toolName: 'build_environment', arguments: {"action": "set_ambient_occlusion", "enabled": true, "intensity": 0.5, "radius": 2000, "quality": "High"}, expected: 'success' },
+    { scenario: 'ERROR: set_ambient_occlusion refuses a call that sets nothing', toolName: 'build_environment', arguments: {"action": "set_ambient_occlusion"}, expected: 'error|NO_SETTING_SUPPLIED' },
     // === ACTION ===
     { scenario: 'ACTION: setup_volumetric_fog', toolName: 'build_environment', arguments: {"action": "setup_volumetric_fog", "enabled": true, "viewDistance": 6000}, expected: 'success|already exists' },
     // === CREATE ===
@@ -284,6 +287,7 @@ const testCases = [
     { scenario: 'CONFIG: set_spline_point_rotation', toolName: 'build_environment', arguments: { action: 'set_spline_point_rotation', actorName: SPLINE_ACTOR, pointIndex: 1, pointRotation: { pitch: 0, yaw: 20, roll: 0 } }, expected: 'success' },
     { scenario: 'CONFIG: set_spline_point_scale', toolName: 'build_environment', arguments: { action: 'set_spline_point_scale', actorName: SPLINE_ACTOR, pointIndex: 1, pointScale: { x: 1.25, y: 1.25, z: 1 } }, expected: 'success' },
     { scenario: 'CONFIG: set_spline_type', toolName: 'build_environment', arguments: { action: 'set_spline_type', actorName: SPLINE_ACTOR, splineType: 'Linear' }, expected: 'success' },
+    { scenario: 'ERROR: set_spline_type refuses an unknown point type', toolName: 'build_environment', arguments: { action: 'set_spline_type', actorName: SPLINE_ACTOR, splineType: 'Bezier' }, expected: 'error|not a spline point type' },
     { scenario: 'CONFIG: set_spline_point_scale by actorPath', toolName: 'build_environment', arguments: { action: 'set_spline_point_scale', actorPath: '${captured:splineActorPath}', pointIndex: 0, pointScale: { x: 1, y: 1, z: 1 } }, expected: 'success' },
     // === CREATE ===
     { scenario: 'CREATE: create_spline_mesh_component', toolName: 'build_environment', arguments: { action: 'create_spline_mesh_component', blueprintPath: SPLINE_MESH_BP_PATH, componentName: SPLINE_MESH_COMPONENT, meshPath: TEST_MESH_OBJECT, forwardAxis: 'X', save: true }, expected: 'success|already exists' },

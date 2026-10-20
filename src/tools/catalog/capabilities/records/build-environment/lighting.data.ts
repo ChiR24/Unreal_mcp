@@ -82,7 +82,7 @@ export const LIGHTING_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'build_environment.setup_global_illumination', action: 'setup_global_illumination', family: F,
-    summary: 'Configure global illumination settings.',
+    summary: 'Switch the dynamic global illumination method (method: LumenGI, which also turns on Lumen reflections, ScreenSpace, None or Lightmass for baked lighting only; RayTraced only before UE 5.4) through r.DynamicGlobalIlluminationMethod, read back, and refused with GI_METHOD_NOT_APPLIED when a higher-priority setting holds it. That lasts for this editor session; saveToProject true also writes it to Project Settings > Rendering (DefaultEngine.ini), so the project and its packaged game keep it (savedToProject). quality sets the GI scalability level for the session (sg.GlobalIlluminationQuality), indirectLightingIntensity a post-process volume\'s override (actorName names a post-process volume, else the level\'s one unbound volume is used (several are AMBIGUOUS; with none, an unbound one is spawned)), bounces the level\'s Lightmass bounces.',
     whenToUse: ['GI must be enabled or tuned.'],
     whenNotToUse: ['GI is not needed for the scene.'],
     inputProps: {
@@ -97,6 +97,7 @@ export const LIGHTING_RECORDS: readonly CapabilityRecordSource[] = [
         description: 'Global illumination scalability level (sg.GlobalIlluminationQuality).',
       },
       indirectLightingIntensity: P.indirectLightingIntensity, bounces: P.bounces,
+      saveToProject: { type: 'boolean', description: 'Also write the method to Project Settings > Rendering (DefaultEngine.ini), so it survives an editor restart and reaches the packaged game (default false: this session only).' },
     },
     required: ['method'],
     effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'interactive', resources: 'low',
@@ -104,7 +105,7 @@ export const LIGHTING_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'build_environment.configure_shadows', action: 'configure_shadows', family: F,
-    summary: 'Configure shadow settings for lights.',
+    summary: 'Set shadows. Engine-wide values go to console variables for this editor session only (not saved to the project): shadowQuality Low, Medium, High, Epic or Cinematic (sg.ShadowQuality), shadowDistance (r.Shadow.DistanceScale), contactShadows, rayTracedShadows and virtualShadowMaps. With actorName, that light\'s own castShadows, shadowBias, shadowSlopeBias and shadowResolutionScale change, saved with the level. settings may carry the same keys nested; a value there wins.',
     whenToUse: ['Shadow quality or method must be tuned.'],
     whenNotToUse: ['Shadows are not needed.'],
     inputProps: {
@@ -119,7 +120,7 @@ export const LIGHTING_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'build_environment.set_exposure', action: 'set_exposure', family: F,
-    summary: 'Set exposure settings for the camera or auto-exposure.',
+    summary: 'Set auto-exposure on a post-process volume: actorName names a post-process volume, else the level\'s one unbound volume is used (several are AMBIGUOUS; with none, an unbound one is spawned). method (Manual, AutoExposureHistogram or AutoExposureBasic), compensationValue (the exposure bias), minBrightness and maxBrightness each turn on their override; a call that sets none is NO_SETTING_SUPPLIED. The reply lists appliedSettings; one undo step, a spawned volume included.',
     whenToUse: ['Exposure must be adjusted.'],
     whenNotToUse: ['Default exposure is sufficient.'],
     inputProps: {
@@ -136,7 +137,7 @@ export const LIGHTING_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'build_environment.set_ambient_occlusion', action: 'set_ambient_occlusion', family: F,
-    summary: 'Set ambient occlusion settings.',
+    summary: 'Set ambient occlusion on a post-process volume: actorName names a post-process volume, else the level\'s one unbound volume is used (several are AMBIGUOUS; with none, an unbound one is spawned). intensity, radius and quality (Low 25, Medium 50 or High 100 percent) each turn on their override; enabled true sets intensity 0.5 and false sets 0, unless intensity is sent too. A call that sets none is NO_SETTING_SUPPLIED. The reply gives intensity, radius and qualityPercent; one undo step, a spawned volume included.',
     whenToUse: ['AO intensity or method must be tuned.'],
     whenNotToUse: ['AO is not needed.'],
     inputProps: {
@@ -154,7 +155,7 @@ export const LIGHTING_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'build_environment.setup_volumetric_fog', action: 'setup_volumetric_fog', family: F,
-    summary: 'Configure volumetric fog settings.',
+    summary: 'Turn volumetric fog on or off (enabled) and set how far it reaches (viewDistance) on the level\'s first Exponential Height Fog, spawning one at the origin when there is none. What is left out keeps its value; a call that sets neither is NO_SETTING_SUPPLIED. The reply reads both back; one undo step.',
     whenToUse: ['Volumetric fog must be enabled or tuned.'],
     whenNotToUse: ['Standard exponential height fog is sufficient.'],
     inputProps: { enabled: P.enabled, viewDistance: P.viewDistance },
