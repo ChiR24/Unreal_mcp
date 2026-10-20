@@ -1,6 +1,7 @@
 #include "Domains/Skeleton/Assets/McpSkeletonPayload.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 #include "Safety/McpSafeOperations.h"
+#include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
 namespace McpSkeletonHandlers
 {
@@ -64,5 +65,17 @@ bool SaveIfRequested(UObject* Asset, const TSharedPtr<FJsonObject>& Payload)
         Payload->TryGetBoolField(TEXT("save"), bSave);
     }
     return !bSave || McpSafeAssetSave(Asset);
+}
+
+void SaveAndReport(UObject* Asset, const TSharedPtr<FJsonObject>& Payload, const TSharedPtr<FJsonObject>& Result)
+{
+    bool bSave = true;
+    if (Payload.IsValid())
+    {
+        Payload->TryGetBoolField(TEXT("save"), bSave);
+    }
+    Result->SetBoolField(TEXT("saved"), bSave && McpSafeAssetSave(Asset));
+    TSharedPtr<FJsonObject> Target = Result;
+    McpHandlerUtils::AddVerification(Target, Asset);
 }
 }

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "dd8594b86401d01d",
+  "catalogRevision": "697297cec66b22ec",
   "recordCount": 416,
   "records": [
     {
@@ -341,7 +341,7 @@
           "bind_cloth_to_skeletal_mesh",
           "add cloth simulation"
         ],
-        "summary": "Bind or assign a cloth asset to a skeletal mesh section.",
+        "summary": "Bind a cloth asset to a skeletal mesh section so that section simulates as cloth, chosen by clothOp. bind takes a cloth asset already on the mesh (clothAssetName, as availableClothAssets lists them); assign also takes clothAssetPath and adds that asset to the mesh first. meshLodIndex, sectionIndex and assetLodIndex (default 0 each) pick where; a LOD or section that does not exist is BIND_FAILED, and naming no asset lists the candidates (CLOTH_ASSET_REQUIRED). Saved unless save is false (saved).",
         "whenToUse": [
           "clothOp=bind: Cloth simulation is needed (Chaos Cloth).",
           "clothOp=assign: A cloth asset must be assigned."
@@ -424,7 +424,7 @@
       },
       "examples": [
         {
-          "title": "Bind or assign a cloth asset to a skeletal mesh section.",
+          "title": "Bind a cloth asset to a skeletal mesh section so that section simulates as cloth, chosen by clothOp. bind takes a cloth asset already on the mesh (clothAssetName, as availableClothAssets lists them); assign also takes clothAssetPath and adds that asset to the mesh first. meshLodIndex, sectionIndex and assetLodIndex (default 0 each) pick where; a LOD or section that does not exist is BIND_FAILED, and naming no asset lists the candidates (CLOTH_ASSET_REQUIRED). Saved unless save is false (saved).",
           "input": {
             "action": "bind_cloth_to_skeletal_mesh",
             "skeletalMeshPath": "/Game/SM_Char",
@@ -475,7 +475,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "b123aadf23d6ae050c093ffd37d6f222d5a63c1a43ee234107998150f5accfd5",
-        "content": "cdfb3f8d4125b363897dfbcd7826ec7766d3db9e7709824cfbd0551a9f03752f"
+        "content": "68a82dd07418cc75d6a9ba5733c2cc893e1b0cc8d692ea955b5ad3714b2b32c5"
       }
     },
     {
@@ -3473,7 +3473,7 @@
           "interpolation settings",
           "rebuild blend space"
         ],
-        "summary": "Edit a blend space: add samples, set axis and interpolation settings, force a rebuild.",
+        "summary": "Edit a Blend Space or Aim Offset (assetPath), chosen by edit. add_sample places animationPath at sampleValue (a number on a 1D blend space, {x, y} on a 2D one; the axis range grows to fit) and returns sampleIndex; a position another sample holds, or an animation of another skeleton or additive type, is refused (SAMPLE_REJECTED). set_axis_settings changes one axis (Horizontal, the default, or Vertical; a 1D blend space has Horizontal only): only the axisName, minValue, maxValue and gridDivisions sent change, minValue stays below maxValue, and the reply gives the axis as it now is. set_interpolation_settings sets input smoothing on every axis and the sample weight speed, only the fields sent. rebuild drops invalid samples, rebuilds the grid and recompiles the Animation Blueprints that use it (compileReferencers, default true), listing any that fail. Saved unless save is false (saved).",
         "whenToUse": [
           "edit=add_sample: Blend sample needed.",
           "edit=set_axis_settings: Axis labels/ranges must change.",
@@ -3611,7 +3611,7 @@
       },
       "examples": [
         {
-          "title": "Edit a blend space: add samples, set axis and interpolation settings, force a rebuild.",
+          "title": "Edit a Blend Space or Aim Offset (assetPath), chosen by edit. add_sample places animationPath at sampleValue (a number on a 1D blend space, {x, y} on a 2D one; the axis range grows to fit) and returns sampleIndex; a position another sample holds, or an animation of another skeleton or additive type, is refused (SAMPLE_REJECTED). set_axis_settings changes one axis (Horizontal, the default, or Vertical; a 1D blend space has Horizontal only): only the axisName, minValue, maxValue and gridDivisions sent change, minValue stays below maxValue, and the reply gives the axis as it now is. set_interpolation_settings sets input smoothing on every axis and the sample weight speed, only the fields sent. rebuild drops invalid samples, rebuilds the grid and recompiles the Animation Blueprints that use it (compileReferencers, default true), listing any that fail. Saved unless save is false (saved).",
           "input": {
             "action": "edit_blend_space",
             "assetPath": "/Game/BS_Locomotion",
@@ -3708,7 +3708,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "e89732af7575efdd98675ffbaf8cbef42dfe790c7aa999b173a1e768c7b0b99c",
-        "content": "2272353e3cc15f87270839e63014bed66ee85e422cd8f41e813cd2c276caae5e"
+        "content": "0d3161633ed005d4a527aeba8bace321399298761dfadeb2622cd44888aa0da8"
       }
     },
     {
@@ -5367,7 +5367,7 @@
           "bone transform",
           "virtual bone"
         ],
-        "summary": "Edit a skeleton: add, rename or reparent bones, set bone transforms, add virtual bones.",
+        "summary": "Edit a skeleton (skeletonPath), chosen by edit. add_bone adds boneName under parentBoneName (needed once the skeleton has bones; a taken name is BONE_EXISTS) at location, rotation and scale relative to the parent. set_bone_parent moves boneName under parentBoneName (UE 5.3 and later): its own descendants are refused, and the parent it already has changes nothing (changed false). Both change the skeleton asset only; the skeletal meshes on it keep their own bones. set_bone_transform rewrites boneName in the reference pose of the skeletal mesh (skeletalMeshPath, or the skeleton's preview mesh), only the location, rotation or scale sent. create_virtual_bone adds a virtual bone from sourceBoneName to targetBoneName named boneName, or VB <source>_<target>; the engine's VB prefix is added when missing. rename_bone renames virtual bones only; a real bone takes a reimport of the mesh (OPERATION_NOT_SUPPORTED). Saved unless save is false (saved).",
         "whenToUse": [
           "edit=add_bone: A skeleton, bone, socket, physics body or morph target must be authored.",
           "edit=rename_bone: A virtual bone needs renaming.",
@@ -5485,7 +5485,7 @@
       },
       "examples": [
         {
-          "title": "Edit a skeleton: add, rename or reparent bones, set bone transforms, add virtual bones.",
+          "title": "Edit a skeleton (skeletonPath), chosen by edit. add_bone adds boneName under parentBoneName (needed once the skeleton has bones; a taken name is BONE_EXISTS) at location, rotation and scale relative to the parent. set_bone_parent moves boneName under parentBoneName (UE 5.3 and later): its own descendants are refused, and the parent it already has changes nothing (changed false). Both change the skeleton asset only; the skeletal meshes on it keep their own bones. set_bone_transform rewrites boneName in the reference pose of the skeletal mesh (skeletalMeshPath, or the skeleton's preview mesh), only the location, rotation or scale sent. create_virtual_bone adds a virtual bone from sourceBoneName to targetBoneName named boneName, or VB <source>_<target>; the engine's VB prefix is added when missing. rename_bone renames virtual bones only; a real bone takes a reimport of the mesh (OPERATION_NOT_SUPPORTED). Saved unless save is false (saved).",
           "input": {
             "action": "edit_skeleton",
             "skeletonPath": "/Game/SK_Char",
@@ -5598,7 +5598,8 @@
             "create_virtual_bone": {
               "required": [
                 "skeletonPath",
-                "sourceBoneName"
+                "sourceBoneName",
+                "targetBoneName"
               ]
             }
           }
@@ -5607,7 +5608,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "b10235ae6dc1ce1582a70039603b9ad0d42b93232be76450cd43831594bfe26c",
-        "content": "3e90406fc187cef062e2f688bebd36f21e5617216299cd46afd4ddd861d2abca"
+        "content": "7ec2255be971211dcf332ffb137182f845afe424b12af6a265528b01fdff5541"
       }
     },
     {
@@ -7164,7 +7165,7 @@
           "remove socket",
           "remove physics body"
         ],
-        "summary": "Remove a bone, socket or physics body from a skeleton or physics asset.",
+        "summary": "Remove part of a skeleton or physics asset, chosen by element. bone removes boneName from the skeleton (UE 5.3 and later): with removeChildren its whole branch goes, otherwise its children move up to its parent, and the root bone is refused. socket removes socketName from the skeleton (a socket defined on a mesh is not found here). physics_body removes the body of boneName from physicsAssetPath together with every constraint that uses it. A missing bone, socket or body is refused. Saved unless save is false (saved).",
         "whenToUse": [
           "element=bone: A bone must be removed.",
           "element=socket: An attach point must be taken off a skeleton.",
@@ -7274,7 +7275,7 @@
       },
       "examples": [
         {
-          "title": "Remove a bone, socket or physics body from a skeleton or physics asset.",
+          "title": "Remove part of a skeleton or physics asset, chosen by element. bone removes boneName from the skeleton (UE 5.3 and later): with removeChildren its whole branch goes, otherwise its children move up to its parent, and the root bone is refused. socket removes socketName from the skeleton (a socket defined on a mesh is not found here). physics_body removes the body of boneName from physicsAssetPath together with every constraint that uses it. A missing bone, socket or body is refused. Saved unless save is false (saved).",
           "input": {
             "action": "remove_skeleton_element",
             "skeletonPath": "/Game/SK_Char",
@@ -7375,7 +7376,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "d14b8d8892ac5325a63d5cedbf49bfc93b5d0bbad48f17fa4b94791aac6b987d",
-        "content": "d2f95cc1b1c26f0819238ed62bbba031daa921c59384dd5a37b962ab5e018e74"
+        "content": "2b8edc347db462caabd161b3cde9a8a38713064a294266361b6a2b1272558b52"
       }
     },
     {
@@ -7861,7 +7862,7 @@
           "make body go limp",
           "make character go limp"
         ],
-        "summary": "Set up ragdoll physics on an actor, or activate/deactivate an existing ragdoll.",
+        "summary": "Make a skeletal actor go limp in the running game (Play or Simulate), chosen by ragdoll. setup switches every physics body of its skeletal mesh to simulate, assigning physicsAssetPath first when given; activate turns that on or off (activate, default true). A mesh with no physics asset is refused (NO_PHYSICS_ASSET), and ragdollActive reads back whether it now simulates. A Character keeps its capsule and movement running, so stop those as well for a body that falls.",
         "whenToUse": [
           "ragdoll=setup: A skeletal actor must enter ragdoll simulation at runtime (editor build).",
           "ragdoll=activate: Ragdoll must be switched on/off at runtime (editor build)."
@@ -7937,7 +7938,7 @@
       },
       "examples": [
         {
-          "title": "Set up ragdoll physics on an actor, or activate/deactivate an existing ragdoll.",
+          "title": "Make a skeletal actor go limp in the running game (Play or Simulate), chosen by ragdoll. setup switches every physics body of its skeletal mesh to simulate, assigning physicsAssetPath first when given; activate turns that on or off (activate, default true). A mesh with no physics asset is refused (NO_PHYSICS_ASSET), and ragdollActive reads back whether it now simulates. A Character keeps its capsule and movement running, so stop those as well for a body that falls.",
           "input": {
             "action": "setup_ragdoll",
             "actorName": "Char_1",
@@ -7997,7 +7998,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "246c4d761a435b36c947057d53e67595da6fc0519b597fa9bbe14b1d1512384e",
-        "content": "7f08a835bff1aa6e79f55d72e521bda129ecabb17c823bf45cb549a8b23508c4"
+        "content": "a7d3e491fadbda7ebe5bdf8f3250c432c29182b73e7adde854fb2e819e9613ed"
       }
     },
     {

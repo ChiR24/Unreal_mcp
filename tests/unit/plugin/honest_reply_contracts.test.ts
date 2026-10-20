@@ -3982,3 +3982,38 @@ describe('hitboxes, attachments, inventory receipts and the Ability System Compo
     expect(code('GAS', 'McpGASAttributes.cpp')).toContain('Blueprint->ParentClass->IsChildOf(UAttributeSet::StaticClass())');
   });
 });
+
+describe('no save rewrites engine content', () => {
+  it('McpSafeAssetSave refuses every /Engine/ package, not only /Engine/Transient', () => {
+    const save = code('..', 'Safety', 'McpSafeOperationsAssetSave.h');
+    expect(save).toMatch(/if \(PackageName\.StartsWith\(TEXT\("\/Engine\/"\)\)\)\s*\{[\s\S]*?return false;/u);
+    expect(save.indexOf('PackageName.StartsWith(TEXT("/Engine/"))')).toBeLessThan(save.indexOf('Package->SetDirtyFlag(true);'));
+  });
+});
+
+describe('blend spaces, skeletons and ragdolls answer for what they did', () => {
+  it('a refused blend sample is an error, and axis edits need a known axis, a field and a forward range', () => {
+    const samples = code('AnimationAuthoring', 'McpAnimBlendSpaceSamples.cpp');
+    expect(samples).toContain('const int32 SampleIndex = BlendSpace->AddSample(Animation, SampleValue);');
+    expect(samples.indexOf('if (SampleIndex == INDEX_NONE)')).toBeLessThan(samples.indexOf('BlendSpace->PostEditChange();'));
+    expect(samples).toContain('(bVertical && BlendSpace->IsA<UBlendSpace1D>()) || !bAnyField');
+    expect(samples.indexOf('if (Updated.Min >= Updated.Max || Updated.GridNum < 1)')).toBeLessThan(samples.indexOf('BlendParams[bVertical ? 1 : 0] = Updated;'));
+  });
+
+  it('skeleton edits report the save and name their asset; reparenting refuses a descendant and skips its own parent', () => {
+    expect(code('Skeleton', 'Assets', 'McpSkeletonPayload.cpp')).toContain('Result->SetBoolField(TEXT("saved"), bSave && McpSafeAssetSave(Asset));');
+    for (const file of [['Bones', 'McpSkeletonStructureCreation.cpp'], ['Bones', 'McpSkeletonStructureEditing.cpp'], ['Bones', 'McpSkeletonVirtualBones.cpp'],
+      ['Bones', 'McpSkeletonSocketRemoval.cpp'], ['Bones', 'McpSkeletonBoneTransforms.cpp'], ['Physics', 'McpSkeletonPhysicsBodyRemoval.cpp'], ['Physics', 'McpSkeletonCloth.cpp']]) {
+      expect(code('Skeleton', ...file), file.join('/')).toMatch(/SaveAndReport\(\w+, Payload, (Outcome\.)?Result\);/u);
+    }
+    const editing = code('Skeleton', 'Bones', 'McpSkeletonStructureEditing.cpp');
+    expect(editing).toContain('RefSkeleton.BoneIsChildOf(NewParentIndex, BoneIndex)');
+    expect(editing.indexOf('RefSkeleton.GetParentIndex(BoneIndex) == NewParentIndex')).toBeLessThan(editing.indexOf('Modifier.SetParent('));
+    expect(code('Skeleton', 'Bones', 'McpSkeletonVirtualBones.cpp')).toContain('VirtualBoneNameHelpers::AddVirtualBonePrefix(');
+  });
+
+  it('a ragdoll needs a physics asset before it is told to simulate', () => {
+    const ragdoll = code('Animation', 'Physics', 'McpAnimSetupRagdoll.cpp');
+    expect(ragdoll.indexOf('TEXT("NO_PHYSICS_ASSET")')).toBeLessThan(ragdoll.indexOf('SkelMeshComp->SetSimulatePhysics(true);'));
+  });
+});

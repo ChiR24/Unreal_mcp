@@ -17,4 +17,7 @@ void WriteTransformToJson(const FTransform& Transform, const TSharedPtr<FJsonObj
 // left only in memory is silently lost when the editor restarts. True when the
 // save succeeded or was not requested.
 bool SaveIfRequested(UObject* Asset, const TSharedPtr<FJsonObject>& Payload);
+// SaveIfRequested for a reply: saved is true only for a save that wrote the file, and the asset fields
+// (assetPath ...) let the receipt list the asset as changed. These edits used to say neither.
+void SaveAndReport(UObject* Asset, const TSharedPtr<FJsonObject>& Payload, const TSharedPtr<FJsonObject>& Result);
 }

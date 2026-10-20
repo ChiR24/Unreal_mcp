@@ -6,7 +6,7 @@ export const ANIMATION_PHYSICS_FOLDS: readonly FoldSpec[] = [
   { primary: 'play_montage', summary: 'Play an animation montage on a placed skeletal actor (the playing one while Play In Editor runs): Montage_Play through its Anim Instance at playRate, or the montage as a single-node animation when the mesh has none, which switches that component\'s animation mode. The reply gives playMode and montageLength; outside play the actor does not tick, so nothing moves, playing is false and a warning says so.', members: ['play_anim_montage'] },
   {
     primary: 'setup_ragdoll', topics: ['go limp', 'make body go limp', 'make character go limp'], selector: 'ragdoll',
-    summary: 'Set up ragdoll physics on an actor, or activate/deactivate an existing ragdoll.',
+    summary: 'Make a skeletal actor go limp in the running game (Play or Simulate), chosen by ragdoll. setup switches every physics body of its skeletal mesh to simulate, assigning physicsAssetPath first when given; activate turns that on or off (activate, default true). A mesh with no physics asset is refused (NO_PHYSICS_ASSET), and ragdollActive reads back whether it now simulates. A Character keeps its capsule and movement running, so stop those as well for a body that falls.',
     members: { setup: 'setup_ragdoll', activate: 'activate_ragdoll' },
   },
   {
@@ -41,7 +41,7 @@ export const ANIMATION_PHYSICS_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'edit_blend_space', selector: 'edit',
-    summary: 'Edit a blend space: add samples, set axis and interpolation settings, force a rebuild.',
+    summary: 'Edit a Blend Space or Aim Offset (assetPath), chosen by edit. add_sample places animationPath at sampleValue (a number on a 1D blend space, {x, y} on a 2D one; the axis range grows to fit) and returns sampleIndex; a position another sample holds, or an animation of another skeleton or additive type, is refused (SAMPLE_REJECTED). set_axis_settings changes one axis (Horizontal, the default, or Vertical; a 1D blend space has Horizontal only): only the axisName, minValue, maxValue and gridDivisions sent change, minValue stays below maxValue, and the reply gives the axis as it now is. set_interpolation_settings sets input smoothing on every axis and the sample weight speed, only the fields sent. rebuild drops invalid samples, rebuilds the grid and recompiles the Animation Blueprints that use it (compileReferencers, default true), listing any that fail. Saved unless save is false (saved).',
     topics: ['blend space sample', 'blend space axis', 'interpolation settings', 'rebuild blend space'],
     members: { add_sample: 'add_blend_sample', set_axis_settings: 'set_axis_settings', set_interpolation_settings: 'set_interpolation_settings', rebuild: 'force_rebuild_blend_space' },
   },
@@ -53,7 +53,7 @@ export const ANIMATION_PHYSICS_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'edit_skeleton', selector: 'edit',
-    summary: 'Edit a skeleton: add, rename or reparent bones, set bone transforms, add virtual bones.',
+    summary: 'Edit a skeleton (skeletonPath), chosen by edit. add_bone adds boneName under parentBoneName (needed once the skeleton has bones; a taken name is BONE_EXISTS) at location, rotation and scale relative to the parent. set_bone_parent moves boneName under parentBoneName (UE 5.3 and later): its own descendants are refused, and the parent it already has changes nothing (changed false). Both change the skeleton asset only; the skeletal meshes on it keep their own bones. set_bone_transform rewrites boneName in the reference pose of the skeletal mesh (skeletalMeshPath, or the skeleton\'s preview mesh), only the location, rotation or scale sent. create_virtual_bone adds a virtual bone from sourceBoneName to targetBoneName named boneName, or VB <source>_<target>; the engine\'s VB prefix is added when missing. rename_bone renames virtual bones only; a real bone takes a reimport of the mesh (OPERATION_NOT_SUPPORTED). Saved unless save is false (saved).',
     topics: ['add bone', 'rename bone', 'bone parent', 'bone transform', 'virtual bone'],
     members: byName(['add_bone', 'rename_bone', 'set_bone_parent', 'set_bone_transform', 'create_virtual_bone']),
   },
@@ -87,7 +87,7 @@ export const ANIMATION_PHYSICS_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'bind_cloth_to_skeletal_mesh', topics: ['add cloth simulation'], selector: 'clothOp',
-    summary: 'Bind or assign a cloth asset to a skeletal mesh section.',
+    summary: 'Bind a cloth asset to a skeletal mesh section so that section simulates as cloth, chosen by clothOp. bind takes a cloth asset already on the mesh (clothAssetName, as availableClothAssets lists them); assign also takes clothAssetPath and adds that asset to the mesh first. meshLodIndex, sectionIndex and assetLodIndex (default 0 each) pick where; a LOD or section that does not exist is BIND_FAILED, and naming no asset lists the candidates (CLOTH_ASSET_REQUIRED). Saved unless save is false (saved).',
     members: { bind: 'bind_cloth_to_skeletal_mesh', assign: 'assign_cloth_asset_to_mesh' },
   },
   { primary: 'create_animation_blueprint', summary: 'Create an Animation Blueprint named name in path (default /Game/Blueprints) for the skeleton at skeletonPath, or the one skeletalMeshPath is built on (SKELETON_NOT_FOUND when that does not load; without either it has no skeleton), from parentClass (default AnimInstance; a class that is no AnimInstance is INVALID_PARENT_CLASS). An Animation Blueprint already there is kept and answered with existingAsset; any other asset there is ASSET_TYPE_MISMATCH and is left alone. It is compiled and saved unless save is false (saved).', members: ['create_anim_blueprint', 'create_animation_bp'] },
@@ -108,7 +108,7 @@ export const ANIMATION_PHYSICS_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'remove_skeleton_element', selector: 'element',
-    summary: 'Remove a bone, socket or physics body from a skeleton or physics asset.',
+    summary: 'Remove part of a skeleton or physics asset, chosen by element. bone removes boneName from the skeleton (UE 5.3 and later): with removeChildren its whole branch goes, otherwise its children move up to its parent, and the root bone is refused. socket removes socketName from the skeleton (a socket defined on a mesh is not found here). physics_body removes the body of boneName from physicsAssetPath together with every constraint that uses it. A missing bone, socket or body is refused. Saved unless save is false (saved).',
     topics: ['remove bone', 'remove socket', 'remove physics body'],
     members: { bone: 'remove_bone', socket: 'remove_socket', physics_body: 'remove_physics_body' },
   },

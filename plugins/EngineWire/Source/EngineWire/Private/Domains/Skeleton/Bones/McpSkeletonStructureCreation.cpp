@@ -182,6 +182,7 @@ bool HandleAddBoneAction(UEngineWireSubsystem* Subsystem, const FString& Request
         FVector Scale = ExtractVectorField(Payload, TEXT("scale"), FVector::OneVector);
         FTransform BoneTransform(Rotation, Location, Scale);
 
+        Skeleton->Modify();
         FReferenceSkeletonModifier Modifier(Skeleton);
         FMeshBoneInfo NewBone;
         NewBone.Name = FName(*BoneName);
@@ -197,12 +198,11 @@ bool HandleAddBoneAction(UEngineWireSubsystem* Subsystem, const FString& Request
         Modifier.Add(NewBone, BoneTransform);
 #endif
 
-        SaveIfRequested(Skeleton, Payload);
-
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("boneName"), BoneName);
         Result->SetStringField(TEXT("parentBone"), ParentName);
         Result->SetNumberField(TEXT("boneCount"), Skeleton->GetReferenceSkeleton().GetRawBoneNum());
+        SaveAndReport(Skeleton, Payload, Result);
 
         Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true,
             FString::Printf(TEXT("Bone '%s' added to skeleton"), *BoneName), Result);

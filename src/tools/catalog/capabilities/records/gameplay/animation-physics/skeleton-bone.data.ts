@@ -55,7 +55,7 @@ export const SKELETON_BONE_RECORDS: readonly CapabilityRecordSource[] = [
   buildRecord({ parentTool: T, id: `${T}.create_virtual_bone`, action: 'create_virtual_bone', family: F,
     summary: 'Create a virtual bone between two bones.', whenToUse: ['A virtual bone is needed for IK.'], whenNotToUse: ['Use a real bone.'],
     inputProps: { skeletonPath: P.skeletonPath, boneName: P.boneName, sourceBoneName: P.sourceBoneName, targetBoneName: P.targetBoneName, save: A.save },
-    required: ['skeletonPath', 'sourceBoneName'], effect: 'write', latency: 'interactive', resources: 'low',
-    plugins: ESU, exampleInput: { action: 'create_virtual_bone', skeletonPath: '/Game/SK_Char', sourceBoneName: 'hand_l', targetBoneName: 'hand_r', boneName: 'VB_Hands', save: true },
+    required: ['skeletonPath', 'sourceBoneName', 'targetBoneName'], effect: 'write', latency: 'interactive', resources: 'low',
+    plugins: ESU, exampleInput: { action: 'create_virtual_bone', skeletonPath: '/Game/SK_Char', sourceBoneName: 'hand_l', targetBoneName: 'hand_r', boneName: 'Hands', save: true },
     exampleOutput: { success: true, message: 'Virtual bone created' } }),
 ];

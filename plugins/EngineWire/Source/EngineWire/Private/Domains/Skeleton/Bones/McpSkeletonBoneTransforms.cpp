@@ -73,7 +73,6 @@ bool UEngineWireSubsystem::HandleSetBoneTransform(
     Mesh->CalculateInvRefMatrices();
     Mesh->PostEditChange();
     Mesh->MarkPackageDirty();
-    SaveIfRequested(Mesh, Payload);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("boneName"), BoneName);
@@ -86,7 +85,7 @@ bool UEngineWireSubsystem::HandleSetBoneTransform(
     Result->SetNumberField(TEXT("appliedComponents"), AppliedComponents);
     // Echo what the reference skeleton now holds, not what was requested.
     WriteTransformToJson(Mesh->GetRefSkeleton().GetRefBonePose()[BoneIndex], Result);
-    McpHandlerUtils::AddVerification(Result, Mesh);
+    SaveAndReport(Mesh, Payload, Result);
 
     SendAutomationResponse(RequestingSocket, RequestId, true,
         FString::Printf(TEXT("Bone '%s' reference transform updated on %s"), *BoneName, *Mesh->GetName()), Result);

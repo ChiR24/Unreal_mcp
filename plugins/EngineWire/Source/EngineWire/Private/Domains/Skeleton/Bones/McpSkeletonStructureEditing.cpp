@@ -52,14 +52,15 @@ bool HandleRemoveBoneAction(UEngineWireSubsystem* Subsystem, const FString& Requ
 
         // Remove the bone using FReferenceSkeletonModifier
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
+        Skeleton->Modify();
         FReferenceSkeletonModifier Modifier(Skeleton);
         Modifier.Remove(FName(*BoneName), bRemoveChildren);
-        SaveIfRequested(Skeleton, Payload);
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("removedBone"), BoneName);
         Result->SetBoolField(TEXT("childrenRemoved"), bRemoveChildren);
         Result->SetNumberField(TEXT("boneCount"), Skeleton->GetReferenceSkeleton().GetRawBoneNum());
+        SaveAndReport(Skeleton, Payload, Result);
 
         Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true,
             FString::Printf(TEXT("Bone '%s' removed from skeleton"), *BoneName), Result);
@@ -108,13 +109,35 @@ bool HandleSetBoneParentAction(UEngineWireSubsystem* Subsystem, const FString& R
 
         // Set new parent using FReferenceSkeletonModifier
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
-        FReferenceSkeletonModifier Modifier(Skeleton);
-        if (RefSkeleton.FindBoneIndex(FName(*NewParentName)) == INDEX_NONE)
+        const int32 NewParentIndex = RefSkeleton.FindBoneIndex(FName(*NewParentName));
+        if (NewParentIndex == INDEX_NONE)
         {
             Subsystem->SendAutomationError(RequestingSocket, RequestId,
                 FString::Printf(TEXT("Parent bone '%s' not found (use list_bones)"), *NewParentName), TEXT("PARENT_NOT_FOUND"));
             return true;
         }
+        // SetParent answers INDEX_NONE for the parent the bone already has and for one of its own descendants; both
+        // used to be reported as "may not exist or operation invalid".
+        if (RefSkeleton.GetParentIndex(BoneIndex) == NewParentIndex)
+        {
+            TSharedPtr<FJsonObject> Unchanged = McpHandlerUtils::CreateResultObject();
+            Unchanged->SetStringField(TEXT("boneName"), BoneName);
+            Unchanged->SetStringField(TEXT("newParent"), NewParentName);
+            Unchanged->SetBoolField(TEXT("changed"), false);
+            McpHandlerUtils::MarkNoAssetsChanged(Unchanged);
+            Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true,
+                FString::Printf(TEXT("Bone '%s' already has the parent '%s'; nothing changed"), *BoneName, *NewParentName), Unchanged);
+            return true;
+        }
+        if (NewParentIndex == BoneIndex || RefSkeleton.BoneIsChildOf(NewParentIndex, BoneIndex))
+        {
+            Subsystem->SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("'%s' is '%s' itself or one of its descendants; a bone cannot be parented under its own branch"), *NewParentName, *BoneName),
+                TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+        Skeleton->Modify();
+        FReferenceSkeletonModifier Modifier(Skeleton);
         int32 NewBoneIndex = Modifier.SetParent(FName(*BoneName), FName(*NewParentName), false);
 
         if (NewBoneIndex == INDEX_NONE)
@@ -125,12 +148,12 @@ bool HandleSetBoneParentAction(UEngineWireSubsystem* Subsystem, const FString& R
             return true;
         }
 
-        SaveIfRequested(Skeleton, Payload);
-
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("boneName"), BoneName);
         Result->SetStringField(TEXT("newParent"), NewParentName);
         Result->SetNumberField(TEXT("newBoneIndex"), NewBoneIndex);
+        Result->SetBoolField(TEXT("changed"), true);
+        SaveAndReport(Skeleton, Payload, Result);
 
         Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true,
             FString::Printf(TEXT("Bone '%s' parent changed to '%s'"), *BoneName, *NewParentName), Result);

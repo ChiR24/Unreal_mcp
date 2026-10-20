@@ -288,8 +288,9 @@ const testCases = [
   const MESH_BONE_B = 'Bone02';
   const CHILD_BONE = `McpChild_${ts}`;
   const TEMP_BONE = `McpTemp_${ts}`;
-  const VIRTUAL_BONE = `VB_Mcp_${ts}`;
-  const RENAMED_VIRTUAL_BONE = `VB_McpRenamed_${ts}`;
+  // The engine names virtual bones "VB <name>"; a name without that prefix gets it.
+  const VIRTUAL_BONE = `VB Mcp_${ts}`;
+  const RENAMED_VIRTUAL_BONE = `VB McpRenamed_${ts}`;
   const SOCKET_NAME = `McpSocket_${ts}`;
   const MORPH_TARGET_NAME = `McpMorph_${ts}`;
   const RENDER_ONLY_MORPH = `McpRenderOnly_${ts}`;
@@ -312,6 +313,8 @@ const testCases = [
     { scenario: 'CONFIG: set mesh bone transform', toolName: 'animation_physics', arguments: { action: 'set_bone_transform', skeletalMeshPath: SKELETAL_MESH_PATH, boneName: MESH_BONE_A, location: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1], save: false }, expected: 'success' },
     { scenario: 'ADD: add temp bone', toolName: 'animation_physics', arguments: { action: 'add_bone', skeletonPath: SKELETON_PATH, boneName: TEMP_BONE, parentBoneName: ROOT_BONE, location: [0, 10, 0], save: true }, expected: 'success|already exists' },
     { scenario: 'CONFIG: set temp bone parent', toolName: 'animation_physics', arguments: { action: 'set_bone_parent', skeletonPath: SKELETON_PATH, boneName: TEMP_BONE, parentBoneName: CHILD_BONE, save: true }, expected: 'success' },
+    { scenario: 'CONFIG: set_bone_parent to the parent it has changes nothing', toolName: 'animation_physics', arguments: { action: 'set_bone_parent', skeletonPath: SKELETON_PATH, boneName: TEMP_BONE, parentBoneName: CHILD_BONE, save: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.changed', equals: false, label: 'same parent leaves the skeleton alone' }] },
+    { scenario: 'CONFIG: set_bone_parent refuses a descendant as parent', toolName: 'animation_physics', arguments: { action: 'set_bone_parent', skeletonPath: SKELETON_PATH, boneName: CHILD_BONE, parentBoneName: TEMP_BONE, save: true }, expected: 'error|INVALID_ARGUMENT' },
     { scenario: 'DELETE: remove temp bone', toolName: 'animation_physics', arguments: { action: 'remove_bone', skeletonPath: SKELETON_PATH, boneName: TEMP_BONE, removeChildren: true, save: true }, expected: 'success|not found' },
 
     // === SOCKETS ===

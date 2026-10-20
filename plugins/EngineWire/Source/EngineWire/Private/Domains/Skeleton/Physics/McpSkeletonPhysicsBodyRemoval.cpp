@@ -67,12 +67,12 @@ bool UEngineWireSubsystem::HandleRemovePhysicsBody(
     PhysAsset->UpdateBoundsBodiesArray();
     PhysAsset->UpdateBodySetupIndexMap();
     PhysAsset->MarkPackageDirty();
-    McpSafeAssetSave(PhysAsset);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("physicsAssetPath"), PhysicsAssetPath);
     Result->SetStringField(TEXT("boneName"), BoneName);
     Result->SetNumberField(TEXT("remainingBodies"), PhysAsset->SkeletalBodySetups.Num());
+    SaveAndReport(PhysAsset, Payload, Result);
 
     SendAutomationResponse(RequestingSocket, RequestId, true,
         FString::Printf(TEXT("Physics body for bone '%s' removed"), *BoneName), Result);

@@ -73,9 +73,16 @@ inline bool McpSafeAssetSave(UObject* Asset)
     const FString PackageName = Package->GetName();
     if (PackageName.StartsWith(TEXT("/Temp/")) ||
         PackageName.StartsWith(TEXT("/Transient/")) ||
-        PackageName.StartsWith(TEXT("/Engine/Transient")) ||
         Package->HasAnyFlags(RF_Transient))
     {
+        return false;
+    }
+    // Engine content is shared by every project on this engine install: a handler that edited a /Engine asset
+    // and saved it (LOD rebuilds, texture edits, reference poses) rewrote it for all of them. Only refusing
+    // /Engine/Transient left every other engine package writable.
+    if (PackageName.StartsWith(TEXT("/Engine/")))
+    {
+        UE_LOG(LogMcpSafeOperations, Warning, TEXT("McpSafeAssetSave: %s is engine content and was not saved; edit a copy under /Game instead."), *PackageName);
         return false;
     }
 

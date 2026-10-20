@@ -38,12 +38,12 @@ bool UEngineWireSubsystem::HandleDeleteSocket(
 
     Skeleton->Modify();
     Skeleton->Sockets.RemoveAt(SocketIndex);
-    McpSafeAssetSave(Skeleton);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("socketName"), SocketName);
     Result->SetStringField(TEXT("skeletonPath"), Skeleton->GetPathName());
     Result->SetNumberField(TEXT("remainingSockets"), Skeleton->Sockets.Num());
+    SaveAndReport(Skeleton, Payload, Result);
 
     SendAutomationResponse(RequestingSocket, RequestId, true,
         FString::Printf(TEXT("Socket '%s' deleted"), *SocketName), Result);
