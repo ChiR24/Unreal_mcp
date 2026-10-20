@@ -239,12 +239,13 @@ export const GEOMETRY_OPTIMIZE_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'convert_to_nanite', plugins: PLUGIN,
-    family: F, summary: 'Bake a dynamic mesh into a Nanite-enabled static mesh asset, with a material per slot and a collision choice; the reply reads naniteEnabled back from the saved mesh. An asset already at outputPath is replaced, and its material slots come back empty unless materials fills them (asset.process_asset process=mesh_materials sets them later).',
+    family: F, summary: 'Bake a dynamic mesh actor into a Nanite-enabled static mesh asset at outputPath (a folder gets <actor>_Nanite; default /Game/GeneratedMeshes/<actor>_Nanite), with a material per slot (materials, entry i for material id i; slots left out get the default material) and collision box (default), complex or none; the asset is saved and naniteEnabled is read back from it. A static mesh already at outputPath is replaced in place (replaced true), so everything drawing it follows; another kind of asset there is refused (ASSET_EXISTS). A material that does not load, or more materials than slots, is refused before anything is created.',
     whenToUse: ['A baked static mesh must use Nanite for virtualized geometry. The end of the subdivision-surface workflow: append_polygons a cage, subdivide with catmull_clark, set_material_id per part, bake_vertex_colors, then convert here with materials (entry i is the material of id i).'],
     whenNotToUse: ['The baked mesh must not use Nanite; use convert_to_static_mesh.'],
     inputProps: { actorName: P.actorName, outputPath: P.outputPath, targetActor: P.targetActor, materials: CONVERT_MATERIALS, collision: CONVERT_COLLISION }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', behavior: { idempotency: 'idempotent' }, costLatency: 'interactive', costResources: 'medium',
     outputProps: {
       assetPath: { type: 'string', description: 'Path of the new static mesh asset.' },
+      replaced: { type: 'boolean', description: 'True when a static mesh already at the path was replaced in place; everything drawing it shows the new mesh.' },
       naniteEnabled: { type: 'boolean', description: 'Whether Nanite is on for the asset.' },
       collision: { type: 'string', description: 'Collision the asset got.' },
       slots: { type: 'array', description: 'The asset\'s material slots; an empty material is the default material.', items: SLOT },
@@ -255,13 +256,14 @@ export const GEOMETRY_OPTIMIZE_RECORDS: readonly CapabilityRecordSource[] = [
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'convert_to_static_mesh', plugins: PLUGIN,
     topics: ['static mesh from geometry', 'bake to static mesh', 'convert mesh', 'dynamic mesh to static'],
-    family: F, summary: 'Bake a dynamic mesh actor into a static mesh asset, with a material per slot and a collision choice.',
+    family: F, summary: 'Bake a dynamic mesh actor into a static mesh asset at outputPath (a folder gets the actor\'s name; default /Game/GeneratedMeshes/<actor>), with a material per slot (materials, entry i for material id i; slots left out get the default material) and collision box (default), complex or none; the asset is saved and the actor keeps its dynamic mesh. A static mesh already at outputPath is replaced in place (replaced true), so everything drawing it follows; another kind of asset there is refused (ASSET_EXISTS). A material that does not load, or more materials than slots, is refused before anything is created.',
     whenToUse: ['A dynamic mesh must be persisted as a static mesh. Give the triangles material ids with edit_dynamic_mesh set_material_id first, then list one material per id in materials (entry i is the material of id i).',
       'Colours baked with bake_vertex_colors come through to the material\'s VertexColor node unchanged.'],
     whenNotToUse: ['A static mesh must use Nanite; use convert_to_nanite.'],
     inputProps: { actorName: P.actorName, outputPath: P.outputPath, targetActor: P.targetActor, materials: CONVERT_MATERIALS, collision: CONVERT_COLLISION }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'medium',
     outputProps: {
       assetPath: { type: 'string', description: 'Path of the new static mesh asset.' },
+      replaced: { type: 'boolean', description: 'True when a static mesh already at the path was replaced in place; everything drawing it shows the new mesh.' },
       naniteEnabled: { type: 'boolean', description: 'Whether Nanite is on for the asset.' },
       collision: { type: 'string', description: 'Collision the asset got.' },
       slots: { type: 'array', description: 'The asset\'s material slots; an empty material is the default material.', items: SLOT },

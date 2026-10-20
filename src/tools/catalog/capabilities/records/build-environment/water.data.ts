@@ -73,7 +73,7 @@ export const WATER_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'build_environment.configure_water_material', action: 'configure_water_material', family: F,
-    summary: 'Set the material that draws a water body\'s surface: its WaterBodyComponent\'s WaterMaterial, read back as waterMaterial (a slot material on the body\'s components never reached the water). One undo step; a material that does not load fails the call, and a call with nothing to set is refused. settings also writes water body actor properties by engine name.',
+    summary: 'Set the material that draws a water body\'s surface: its WaterBodyComponent\'s WaterMaterial, read back as waterMaterial; a material without the Used with Water usage gains it, as in the editor, and is left unsaved (a slot material on the body\'s components never reached the water). One undo step; a material that does not load fails the call, and a call with nothing to set is refused. settings also writes water body actor properties by engine name.',
     whenToUse: WU, whenNotToUse: ['Default water material is sufficient.'],
     inputProps: { materialPath: P.materialPath, materialIndex: P.materialIndex, settings: P.settings, ...TARGET },
     required: [], effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'interactive', resources: 'low',

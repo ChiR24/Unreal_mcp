@@ -129,10 +129,11 @@ bool UEngineWireSubsystem::HandleRemoveFoliage(
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetNumberField(TEXT("instancesRemoved"), RemovedCount);
+  // A removal that matched nothing changed nothing, so it names no undo step.
   if (Changed.Num() > 0) {
     Resp->SetArrayField(TEXT("affectedActors"), Changed);
+    Transaction.DescribeInto(Resp);
   }
-  Transaction.DescribeInto(Resp);
   SendAutomationResponse(RequestingSocket, RequestId, true,
                          RemovedCount == 0 ? FString(TEXT("Nothing matched: no foliage instances were removed."))
                          : Boxes.Num() > 0 ? FString::Printf(TEXT("Removed %d foliage instances inside %d area(s)."), RemovedCount, Boxes.Num())

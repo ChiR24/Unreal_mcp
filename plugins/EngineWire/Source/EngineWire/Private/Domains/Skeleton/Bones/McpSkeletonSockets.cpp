@@ -134,6 +134,15 @@ bool UEngineWireSubsystem::HandleConfigureSocket(
         SendAutomationError(RequestingSocket, RequestId, TEXT("socketName is required"), TEXT("MISSING_PARAM"));
         return true;
     }
+    const FString NewBoneName = GetJsonStringField(Payload, TEXT("attachBoneName"));
+    // A call naming nothing to change saved the skeleton and answered "configured".
+    if (NewBoneName.IsEmpty() && !Payload->HasField(TEXT("relativeLocation")) && !Payload->HasField(TEXT("relativeRotation")) &&
+        !Payload->HasField(TEXT("relativeScale")))
+    {
+        SendAutomationError(RequestingSocket, RequestId,
+            TEXT("Nothing to change: send attachBoneName, relativeLocation, relativeRotation or relativeScale."), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
 
     USkeleton* Skeleton = LoadPayloadSkeletonOrReply(*this, RequestId, RequestingSocket, Payload);
     if (!Skeleton)
@@ -151,7 +160,6 @@ bool UEngineWireSubsystem::HandleConfigureSocket(
         return true;
     }
 
-    FString NewBoneName = GetJsonStringField(Payload, TEXT("attachBoneName"));
     if (!NewBoneName.IsEmpty() &&
         Skeleton->GetReferenceSkeleton().FindBoneIndex(FName(*NewBoneName)) == INDEX_NONE)
     {

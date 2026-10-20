@@ -22,14 +22,14 @@ const TRANSFER_OUT = {
 
 export const SKELETON_SOCKET_WEIGHT_RECORDS: readonly CapabilityRecordSource[] = [
   buildRecord({ parentTool: T, id: `${T}.create_socket`, action: 'create_socket', family: F,
-    summary: 'Create a socket on a bone.', whenToUse: ['An attach point is needed.'], whenNotToUse: ['Use an existing socket.'],
+    summary: 'Put a socket named socketName on attachBoneName of a skeleton (skeletonPath; a skeletal mesh path uses its skeleton), at relativeLocation, relativeRotation and relativeScale (default zero, zero and one). A bone the skeleton lacks is BONE_NOT_FOUND and a name already taken SOCKET_EXISTS. The skeleton is saved unless save is false (saved).', whenToUse: ['An attach point is needed.'], whenNotToUse: ['Use an existing socket.'],
     inputProps: { skeletonPath: P.skeletonPath, socketName: P.socketName, attachBoneName: A.attachBoneName, relativeLocation: A.relativeLocation, relativeRotation: A.relativeRotation, relativeScale: A.relativeScale, save: A.save },
-    required: ['skeletonPath', 'socketName'], effect: 'write', latency: 'interactive', resources: 'low',
+    required: ['skeletonPath', 'socketName', 'attachBoneName'], effect: 'write', latency: 'interactive', resources: 'low',
     plugins: ESU, outputProps: { socketName: P.socketName, boneName: P.boneName, skeletonPath: P.skeletonPath }, outputRequired: [],
     exampleInput: { action: 'create_socket', skeletonPath: '/Game/SK_Char', socketName: 'Weapon', attachBoneName: 'hand_r', relativeLocation: [1, 2, 3], save: true },
     exampleOutput: { success: true, message: 'Socket created' } }),
   buildRecord({ parentTool: T, id: `${T}.configure_socket`, action: 'configure_socket', family: F,
-    summary: 'Configure an existing socket transform.', whenToUse: ['Socket offset must change.'], whenNotToUse: ['Use create_socket.'],
+    summary: 'Change an existing socket of a skeleton (skeletonPath; a skeletal mesh path uses its skeleton): attachBoneName moves it to another bone, and relativeLocation, relativeRotation and relativeScale replace only the parts given. A missing socket is SOCKET_NOT_FOUND, an unknown bone BONE_NOT_FOUND, and a call naming nothing to change is refused. The skeleton is saved unless save is false (saved).', whenToUse: ['Socket offset must change.'], whenNotToUse: ['Use create_socket.'],
     inputProps: { skeletonPath: P.skeletonPath, socketName: P.socketName, attachBoneName: A.attachBoneName, relativeLocation: A.relativeLocation, relativeRotation: A.relativeRotation, relativeScale: A.relativeScale, save: A.save },
     required: ['skeletonPath', 'socketName'], effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'interactive', resources: 'low',
     plugins: ESU, outputProps: { socketName: P.socketName, skeletonPath: P.skeletonPath }, outputRequired: [],

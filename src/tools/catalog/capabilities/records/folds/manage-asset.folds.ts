@@ -203,7 +203,7 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'get_struct', selector: 'info',
-    summary: 'Read a struct: definition, members, usage, comparison, export, instanced property values, or list structs.',
+    summary: 'Read structs, chosen by info. struct (read, members and export give the same reply) reads a Blueprint or native struct: name, status, validity and every member { guid, name, type, default, tooltip, containerType, metaData }, the members array import_struct takes back; list lists the Blueprint struct assets under path (default /Game/Structs, recursive); usage lists the assets that reference a Blueprint struct (assetPath, className, referencerType Blueprint, Struct, DataAsset or Other), narrowed by a searchScope path prefix; compare diffs two Blueprint structs member by member, paired by member guid so a rename reads as renamedFrom and renamedTo, each diff added, removed or changed with its type and default in each, plus tooltip and metadata mismatches (metadata from UE 5.5); instanced_property reads an FInstancedStruct property of an asset. Nothing is written.',
     topics: ['struct members', 'list structs', 'compare structs', 'export struct', 'struct usage', 'look at struct'],
     members: {
       struct: 'get_struct', read: 'read_struct', members: 'list_struct_members', list: 'list_structs', usage: 'search_struct_usage',

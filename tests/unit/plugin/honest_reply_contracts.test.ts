@@ -1042,7 +1042,7 @@ describe('foliage edit receipts', () => {
     expect(code('Foliage', 'McpFoliagePaint.cpp')).toContain('McpFoliageHandlers::SetFoliageActorChanged(Resp, IFA);');
     expect(code('Foliage', 'McpFoliageInsts.cpp')).toContain('McpFoliageHandlers::SetFoliageActorChanged(Resp, IFA);');
     // A removal can touch several foliage actors (one per loaded level or World Partition cell): it names each.
-    expect(code('Foliage', 'McpFoliageQueries.cpp')).toMatch(/if \(Changed\.Num\(\) > 0\) \{\s*Resp->SetArrayField\(TEXT\("affectedActors"\), Changed\);\s*\}/u);
+    expect(code('Foliage', 'McpFoliageQueries.cpp')).toMatch(/if \(Changed\.Num\(\) > 0\) \{\s*Resp->SetArrayField\(TEXT\("affectedActors"\), Changed\);\s*Transaction\.DescribeInto\(Resp\);\s*\}/u);
     expect(code('Foliage', 'McpFoliageGetInsts.cpp')).not.toContain('SetFoliageActorChanged');
   });
 });
@@ -4472,5 +4472,23 @@ describe('static lighting edits undo and a build that cannot run says so', () =>
     expect(build).toContain('TEXT("PRECOMPUTED_LIGHTING_DISABLED")');
     expect(build).not.toContain('TEXT("skipped")');
     expect(build).not.toContain('TEXT("buildApi")');
+  });
+});
+
+describe('socket edits and mesh bakes refuse what they cannot do', () => {
+  it('configure_socket refuses a call naming nothing to change before it loads anything', () => {
+    const sockets = code('Skeleton', 'Bones', 'McpSkeletonSockets.cpp');
+    const configure = sockets.slice(sockets.indexOf('HandleConfigureSocket('));
+    const refusal = configure.indexOf('Nothing to change: send attachBoneName');
+    expect(refusal).toBeGreaterThan(-1);
+    expect(refusal).toBeLessThan(configure.indexOf('LoadPayloadSkeletonOrReply'));
+  });
+
+  it('a bake refuses a path another kind of asset holds and says when it replaced a static mesh', () => {
+    const conversion = code('Geometry', 'Support', 'McpGeometryAssetConversion.cpp');
+    expect(conversion).toContain('McpAssetExists(OutAssetPath) && !Cast<UStaticMesh>(McpLoadAsset(OutAssetPath))');
+    expect(conversion).toContain('OutCode = TEXT("ASSET_EXISTS");');
+    expect(conversion).toContain('Result->SetBoolField(TEXT("replaced"), bReplacing);');
+    expect(code('Geometry', 'Mesh', 'McpGeometryLodOperations.cpp')).toContain('Result->SetBoolField(TEXT("replaced"), bReplacing);');
   });
 });

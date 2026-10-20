@@ -57,11 +57,13 @@ bool HandleGenerateLODsGeometry(UEngineWireSubsystem* Self, const FString& Reque
     // /Game/GeneratedMeshes).
     FString TargetPath;
     FString PathError;
-    if (!ResolveConversionAssetPath(Payload, ActorName + TEXT("_LOD"), TargetPath, PathError))
+    FString PathCode;
+    if (!ResolveConversionAssetPath(Payload, ActorName + TEXT("_LOD"), TargetPath, PathError, PathCode))
     {
-        Self->SendAutomationError(Socket, RequestId, PathError, TEXT("INVALID_PATH"));
+        Self->SendAutomationError(Socket, RequestId, PathError, PathCode);
         return true;
     }
+    const bool bReplacing = McpAssetExists(TargetPath);
     FGeometryScriptCreateNewStaticMeshAssetOptions AssetOptions;
     AssetOptions.bEnableRecomputeNormals = true;
     AssetOptions.bEnableRecomputeTangents = true;
@@ -78,6 +80,7 @@ bool HandleGenerateLODsGeometry(UEngineWireSubsystem* Self, const FString& Reque
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("assetPath"), TargetPath);
+    Result->SetBoolField(TEXT("replaced"), bReplacing);
     Result->SetNumberField(TEXT("lodCount"), LODCount);
     Result->SetNumberField(TEXT("triangles"), StaticMesh->GetNumTriangles(0));
 

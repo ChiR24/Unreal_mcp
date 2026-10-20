@@ -37,8 +37,10 @@ const testCases = [
 
   // === SOCKETS (alias spellings of create_socket / configure_socket) ===
   { scenario: 'SOCKET: add_socket with full transform', toolName: 'animation_physics', arguments: skel('add_socket', { socketName: SOCKET_NAME, attachBoneName: ROOT_BONE, relativeLocation: [1, 2, 3], relativeRotation: [0, 0, 0], relativeScale: [1, 1, 1], save: true }), expected: 'success|already exists' },
-  { scenario: 'SOCKET: add_socket with required fields only', toolName: 'animation_physics', arguments: skel('add_socket', { socketName: `${SOCKET_NAME}_Min` }), expected: 'success|already exists' },
+  { scenario: 'SOCKET: add_socket with required fields only', toolName: 'animation_physics', arguments: skel('add_socket', { socketName: `${SOCKET_NAME}_Min`, attachBoneName: ROOT_BONE }), expected: 'success|already exists' },
   { scenario: 'SOCKET: modify_socket retargets the offset', toolName: 'animation_physics', arguments: skel('modify_socket', { socketName: SOCKET_NAME, attachBoneName: ROOT_BONE, relativeLocation: [4, 5, 6], relativeRotation: [0, 90, 0], relativeScale: [2, 2, 2], save: true }), expected: 'success|not found' },
+  // A call naming nothing to change saved the skeleton and answered "configured".
+  { scenario: 'ERROR: modify_socket with nothing to change', toolName: 'animation_physics', arguments: skel('modify_socket', { socketName: SOCKET_NAME, save: false }), expected: 'error|INVALID_ARGUMENT' },
 
   // === PHYSICS ASSET ===
   { scenario: 'PHYSICS: set_physics_asset via skeletalMeshPath', toolName: 'animation_physics', arguments: phys('set_physics_asset', { skeletalMeshPath: MESH_PATH }), expected: 'success|not found' },

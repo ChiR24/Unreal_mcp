@@ -144,9 +144,11 @@ TArray<TSharedPtr<FJsonValue>> MaterialIdsInUseJson(UDynamicMesh* Mesh);
 double FaceOpDistance(const TSharedPtr<FJsonObject>& Payload, double Default);
 int32 ClampSegments(int32 Value, int32 Default = 1);
 // Where a baked static mesh goes: outputPath (a folder gets DefaultName appended),
-// else /Game/GeneratedMeshes/DefaultName. False, with OutError, for an unsafe path.
+// else /Game/GeneratedMeshes/DefaultName. False, with OutError and OutCode, for an unsafe
+// path (INVALID_PATH) or one an asset other than a static mesh holds (ASSET_EXISTS); a static
+// mesh there is replaced by the bake.
 bool ResolveConversionAssetPath(const TSharedPtr<FJsonObject>& Payload, const FString& DefaultName,
-                                FString& OutAssetPath, FString& OutError);
+                                FString& OutAssetPath, FString& OutError, FString& OutCode);
 // What a bake gives its asset (see GeometryConversionSlots.cpp): the slot count a mesh needs (highest material id + 1),
 // the payload `materials` loaded for those slots (false, with OutError, for a path that is unsafe or is no material),
 // the materials put into the asset's slots, and its collision: box, complex or none.

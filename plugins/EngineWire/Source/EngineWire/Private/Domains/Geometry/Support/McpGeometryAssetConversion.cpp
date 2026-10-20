@@ -11,28 +11,40 @@ namespace McpGeometryHandlers
 // (trailing '/' or an existing content folder) gets DefaultName appended; anything else
 // is the full asset path. Everything passes the project path sanitizer first.
 bool ResolveConversionAssetPath(const TSharedPtr<FJsonObject>& Payload, const FString& DefaultName,
-                                FString& OutAssetPath, FString& OutError)
+                                FString& OutAssetPath, FString& OutError, FString& OutCode)
 {
     const FString OutRequested = GetJsonStringField(Payload, TEXT("outputPath"));
     if (OutRequested.IsEmpty())
     {
         OutAssetPath = TEXT("/Game/GeneratedMeshes/") + DefaultName;
-        return true;
     }
-    const bool bExplicitFolder = OutRequested.EndsWith(TEXT("/"));
-    FString Sanitized = SanitizeProjectRelativePath(OutRequested);
-    if (Sanitized.IsEmpty())
+    else
     {
-        OutError = McpPathRefusalMessage(TEXT("outputPath"), OutRequested);
+        const bool bExplicitFolder = OutRequested.EndsWith(TEXT("/"));
+        FString Sanitized = SanitizeProjectRelativePath(OutRequested);
+        if (Sanitized.IsEmpty())
+        {
+            OutError = McpPathRefusalMessage(TEXT("outputPath"), OutRequested);
+            OutCode = TEXT("INVALID_PATH");
+            return false;
+        }
+        Sanitized = FPackageName::ObjectPathToPackageName(Sanitized);
+        Sanitized.RemoveFromEnd(TEXT("/"));
+        if (bExplicitFolder || UEditorAssetLibrary::DoesDirectoryExist(Sanitized))
+        {
+            Sanitized += TEXT("/") + DefaultName;
+        }
+        OutAssetPath = Sanitized;
+    }
+    // The engine's creator makes the mesh with NewObject at the path: a static mesh there is replaced in place (every
+    // user follows), but an asset of another class there is a fatal error.
+    if (McpAssetExists(OutAssetPath) && !Cast<UStaticMesh>(McpLoadAsset(OutAssetPath)))
+    {
+        OutError = FString::Printf(TEXT("%s already holds an asset that is not a static mesh; give another outputPath. Nothing was created."),
+                                   *OutAssetPath);
+        OutCode = TEXT("ASSET_EXISTS");
         return false;
     }
-    Sanitized = FPackageName::ObjectPathToPackageName(Sanitized);
-    Sanitized.RemoveFromEnd(TEXT("/"));
-    if (bExplicitFolder || UEditorAssetLibrary::DoesDirectoryExist(Sanitized))
-    {
-        Sanitized += TEXT("/") + DefaultName;
-    }
-    OutAssetPath = Sanitized;
     return true;
 }
 
@@ -45,11 +57,13 @@ bool HandleConvertToStaticMesh(UEngineWireSubsystem* Self, const FString& Reques
     if (!Target) return true;
     FString AssetPath;
     FString PathError;
-    if (!ResolveConversionAssetPath(Payload, bNanite ? ActorName + TEXT("_Nanite") : ActorName, AssetPath, PathError))
+    FString PathCode;
+    if (!ResolveConversionAssetPath(Payload, bNanite ? ActorName + TEXT("_Nanite") : ActorName, AssetPath, PathError, PathCode))
     {
-        Self->SendAutomationError(Socket, RequestId, PathError, TEXT("INVALID_ASSET_PATH"));
+        Self->SendAutomationError(Socket, RequestId, PathError, PathCode);
         return true;
     }
+    const bool bReplacing = McpAssetExists(AssetPath);
     const FString CollisionMode = GetJsonStringField(Payload, TEXT("collision"), TEXT("box")).ToLower();
     if (CollisionMode != TEXT("box") && CollisionMode != TEXT("complex") && CollisionMode != TEXT("none"))
     {
@@ -141,6 +155,7 @@ bool HandleConvertToStaticMesh(UEngineWireSubsystem* Self, const FString& Reques
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetStringField(TEXT("assetPath"), AssetPath);
+    Result->SetBoolField(TEXT("replaced"), bReplacing);
     Result->SetBoolField(TEXT("naniteEnabled"), bNaniteOn);
     Result->SetStringField(TEXT("collision"), CollisionMode);
     Result->SetArrayField(TEXT("slots"), SlotsJson);

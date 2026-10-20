@@ -20345,6 +20345,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Red channel, 0-1."
         },
+        "replaced": {
+          "type": "boolean",
+          "description": "True when a static mesh already at the path was replaced in place; everything drawing it shows the new mesh."
+        },
         "resolution": {
           "type": "integer",
           "description": "Grid cells along the longest side, as used."

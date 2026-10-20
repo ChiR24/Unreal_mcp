@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "8d4d7f7b55f47411",
+  "catalogRevision": "e949f6992939ee9e",
   "recordCount": 416,
   "records": [
     {
@@ -886,7 +886,7 @@
           "modify socket",
           "create socket"
         ],
-        "summary": "Configure a skeleton socket: upsert its attachment and offsets, or strictly add, create or modify one.",
+        "summary": "Sockets on a skeleton (skeletonPath; a skeletal mesh path uses its skeleton), chosen by socketOp; each change is saved unless save is false (saved). create (add) puts socketName on attachBoneName, which both require, at relativeLocation, relativeRotation and relativeScale (default zero, zero and one); a bone the skeleton lacks is BONE_NOT_FOUND and a taken name SOCKET_EXISTS. configure (modify) changes an existing socket: attachBoneName moves it, and relativeLocation, relativeRotation and relativeScale replace only the parts given; a missing socket is SOCKET_NOT_FOUND and a call naming nothing to change is refused.",
         "whenToUse": [
           "socketOp=configure|modify: Socket offset must change.",
           "socketOp=add|create: An attach point is needed."
@@ -999,7 +999,7 @@
       },
       "examples": [
         {
-          "title": "Configure a skeleton socket: upsert its attachment and offsets, or strictly add, create or modify one.",
+          "title": "Sockets on a skeleton (skeletonPath; a skeletal mesh path uses its skeleton), chosen by socketOp; each change is saved unless save is false (saved). create (add) puts socketName on attachBoneName, which both require, at relativeLocation, relativeRotation and relativeScale (default zero, zero and one); a bone the skeleton lacks is BONE_NOT_FOUND and a taken name SOCKET_EXISTS. configure (modify) changes an existing socket: attachBoneName moves it, and relativeLocation, relativeRotation and relativeScale replace only the parts given; a missing socket is SOCKET_NOT_FOUND and a call naming nothing to change is refused.",
           "input": {
             "action": "configure_socket",
             "skeletonPath": "/Game/SK_Char",
@@ -1051,13 +1051,25 @@
             "add": "add_socket",
             "create": "create_socket",
             "modify": "modify_socket"
+          },
+          "requires": {
+            "add_socket": {
+              "required": [
+                "attachBoneName"
+              ]
+            },
+            "create_socket": {
+              "required": [
+                "attachBoneName"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
         "schema": "0aa867f8cc97d0c487d8a3b798b040628578205673bc2cd452fda43cb1deb99e",
-        "content": "c9b32a7fb9906cdeb413a32661a6fced9c5d11f73601e5c06cca3be3f4c8a8a0"
+        "content": "9d920b6ca56fdd432745259e33ed26df3ff896744b3f6c1aae0feb18e94b982b"
       }
     },
     {
@@ -27961,7 +27973,7 @@
           "water material",
           "water collision"
         ],
-        "summary": "Change a water body, chosen by setting: the one named by waterBodyName, targetActor or actorName, else the level's first. waves gives it Gerstner waves (waveHeight, waveLength, steepness, direction) that its surface and anything floating on it follow, and fails when the body does not keep them; material sets the material that draws its surface (its WaterMaterial, read back as waterMaterial); collision turns collision on its components on or off (collisionEnabled); settings writes water body actor properties by engine name. material and collision are one undo step; a call with nothing to set, or whose settings name nothing the body has, is refused, and a material that does not load fails the call.",
+        "summary": "Change a water body, chosen by setting: the one named by waterBodyName, targetActor or actorName, else the level's first. waves gives it Gerstner waves (waveHeight, waveLength, steepness, direction) that its surface and anything floating on it follow, and fails when the body does not keep them; material sets the material that draws its surface (its WaterMaterial, read back as waterMaterial; a material without the Used with Water usage gains it and is left unsaved); collision turns collision on its components on or off (collisionEnabled); settings writes water body actor properties by engine name. material and collision are one undo step; a call with nothing to set, or whose settings name nothing the body has, is refused, and a material that does not load fails the call.",
         "whenToUse": [
           "A water body or water simulation must be created or configured."
         ],
@@ -28079,7 +28091,7 @@
       },
       "examples": [
         {
-          "title": "Change a water body, chosen by setting: the one named by waterBodyName, targetActor or actorName, else the level's first. waves gives it Gerstner waves (waveHeight, waveLength, steepness, direction) that its surface and anything floating on it follow, and fails when the body does not keep them; material sets the material that draws its surface (its WaterMaterial, read back as waterMaterial); collision turns collision on its components on or off (collisionEnabled); settings writes water body actor properties by engine name. material and collision are one undo step; a call with nothing to set, or whose settings name nothing the body has, is refused, and a material that does not load fails the call.",
+          "title": "Change a water body, chosen by setting: the one named by waterBodyName, targetActor or actorName, else the level's first. waves gives it Gerstner waves (waveHeight, waveLength, steepness, direction) that its surface and anything floating on it follow, and fails when the body does not keep them; material sets the material that draws its surface (its WaterMaterial, read back as waterMaterial; a material without the Used with Water usage gains it and is left unsaved); collision turns collision on its components on or off (collisionEnabled); settings writes water body actor properties by engine name. material and collision are one undo step; a call with nothing to set, or whose settings name nothing the body has, is refused, and a material that does not load fails the call.",
           "input": {
             "action": "configure_water",
             "waveHeight": 1,
@@ -28157,7 +28169,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "a111b64ba4b2346e6ee1565d6f33ff94b1075682d8589f328d82592e8d7d8304",
-        "content": "94be59583331941f3cec365547d793dcbc9433e59147354f3c660ea4cfb40f73"
+        "content": "46d8dedf9a05002699cbdffdbcc47661ecdcaf4120049dfd6188272e8a35c72e"
       }
     },
     {
@@ -68467,7 +68479,7 @@
         "topics": [
           "convert_to_nanite"
         ],
-        "summary": "Bake a dynamic mesh into a Nanite-enabled static mesh asset, with a material per slot and a collision choice; the reply reads naniteEnabled back from the saved mesh. An asset already at outputPath is replaced, and its material slots come back empty unless materials fills them (asset.process_asset process=mesh_materials sets them later).",
+        "summary": "Bake a dynamic mesh actor into a Nanite-enabled static mesh asset at outputPath (a folder gets <actor>_Nanite; default /Game/GeneratedMeshes/<actor>_Nanite), with a material per slot (materials, entry i for material id i; slots left out get the default material) and collision box (default), complex or none; the asset is saved and naniteEnabled is read back from it. A static mesh already at outputPath is replaced in place (replaced true), so everything drawing it follows; another kind of asset there is refused (ASSET_EXISTS). A material that does not load, or more materials than slots, is refused before anything is created.",
         "whenToUse": [
           "A baked static mesh must use Nanite for virtualized geometry. The end of the subdivision-surface workflow: append_polygons a cage, subdivide with catmull_clark, set_material_id per part, bake_vertex_colors, then convert here with materials (entry i is the material of id i)."
         ],
@@ -68543,6 +68555,10 @@
               "type": "string",
               "description": "Path of the new static mesh asset."
             },
+            "replaced": {
+              "type": "boolean",
+              "description": "True when a static mesh already at the path was replaced in place; everything drawing it shows the new mesh."
+            },
             "naniteEnabled": {
               "type": "boolean",
               "description": "Whether Nanite is on for the asset."
@@ -68592,7 +68608,7 @@
       },
       "examples": [
         {
-          "title": "Bake a dynamic mesh into a Nanite-enabled static mesh asset, with a material per slot and a collision choice; the reply reads naniteEnabled back from the saved mesh. An asset already at outputPath is replaced, and its material slots come back empty unless materials fills them (asset.process_asset process=mesh_materials sets them later).",
+          "title": "Bake a dynamic mesh actor into a Nanite-enabled static mesh asset at outputPath (a folder gets <actor>_Nanite; default /Game/GeneratedMeshes/<actor>_Nanite), with a material per slot (materials, entry i for material id i; slots left out get the default material) and collision box (default), complex or none; the asset is saved and naniteEnabled is read back from it. A static mesh already at outputPath is replaced in place (replaced true), so everything drawing it follows; another kind of asset there is refused (ASSET_EXISTS). A material that does not load, or more materials than slots, is refused before anything is created.",
           "input": {
             "action": "convert_to_nanite",
             "targetActor": "DM_Cage",
@@ -68635,8 +68651,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "1c84682c6b45480cfaecfe71c770f87642e5cbc45cd3c5b79566f1a3e86bda25",
-        "content": "6da237bcdc3dcd4c19b21a08f807ccef9e8dc5869e54a7ba300ee1b7f97537a4"
+        "schema": "96e9c022da9dcbe085b7b3d9457002cc47c09d37f7605d7ce332229eaada3dfa",
+        "content": "38422f2eb85e0ba56f3497575963c2901f3ac143defc26a50dea94df24861af4"
       }
     },
     {
@@ -68658,7 +68674,7 @@
           "convert mesh",
           "dynamic mesh to static"
         ],
-        "summary": "Bake a dynamic mesh actor into a static mesh asset, with a material per slot and a collision choice.",
+        "summary": "Bake a dynamic mesh actor into a static mesh asset at outputPath (a folder gets the actor's name; default /Game/GeneratedMeshes/<actor>), with a material per slot (materials, entry i for material id i; slots left out get the default material) and collision box (default), complex or none; the asset is saved and the actor keeps its dynamic mesh. A static mesh already at outputPath is replaced in place (replaced true), so everything drawing it follows; another kind of asset there is refused (ASSET_EXISTS). A material that does not load, or more materials than slots, is refused before anything is created.",
         "whenToUse": [
           "A dynamic mesh must be persisted as a static mesh. Give the triangles material ids with edit_dynamic_mesh set_material_id first, then list one material per id in materials (entry i is the material of id i).",
           "Colours baked with bake_vertex_colors come through to the material's VertexColor node unchanged."
@@ -68735,6 +68751,10 @@
               "type": "string",
               "description": "Path of the new static mesh asset."
             },
+            "replaced": {
+              "type": "boolean",
+              "description": "True when a static mesh already at the path was replaced in place; everything drawing it shows the new mesh."
+            },
             "naniteEnabled": {
               "type": "boolean",
               "description": "Whether Nanite is on for the asset."
@@ -68784,7 +68804,7 @@
       },
       "examples": [
         {
-          "title": "Bake a dynamic mesh actor into a static mesh asset, with a material per slot and a collision choice.",
+          "title": "Bake a dynamic mesh actor into a static mesh asset at outputPath (a folder gets the actor's name; default /Game/GeneratedMeshes/<actor>), with a material per slot (materials, entry i for material id i; slots left out get the default material) and collision box (default), complex or none; the asset is saved and the actor keeps its dynamic mesh. A static mesh already at outputPath is replaced in place (replaced true), so everything drawing it follows; another kind of asset there is refused (ASSET_EXISTS). A material that does not load, or more materials than slots, is refused before anything is created.",
           "input": {
             "action": "convert_to_static_mesh",
             "targetActor": "DM_A",
@@ -68827,8 +68847,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "1c84682c6b45480cfaecfe71c770f87642e5cbc45cd3c5b79566f1a3e86bda25",
-        "content": "9a07b0254b98667d15eef69427379fba13857ae60e9bf2108d6076a02b20b766"
+        "schema": "96e9c022da9dcbe085b7b3d9457002cc47c09d37f7605d7ce332229eaada3dfa",
+        "content": "56b6e6f2fe122ed616621272b23c117f25da8bc0a97b2af76044b64bb78e16e4"
       }
     },
     {
@@ -99206,7 +99226,7 @@
           "struct usage",
           "look at struct"
         ],
-        "summary": "Read a struct: definition, members, usage, comparison, export, instanced property values, or list structs.",
+        "summary": "Read structs, chosen by info. struct (read, members and export give the same reply) reads a Blueprint or native struct: name, status, validity and every member { guid, name, type, default, tooltip, containerType, metaData }, the members array import_struct takes back; list lists the Blueprint struct assets under path (default /Game/Structs, recursive); usage lists the assets that reference a Blueprint struct (assetPath, className, referencerType Blueprint, Struct, DataAsset or Other), narrowed by a searchScope path prefix; compare diffs two Blueprint structs member by member, paired by member guid so a rename reads as renamedFrom and renamedTo, each diff added, removed or changed with its type and default in each, plus tooltip and metadata mismatches (metadata from UE 5.5); instanced_property reads an FInstancedStruct property of an asset. Nothing is written.",
         "whenToUse": [
           "info=struct|read|members: A struct's member names, types, defaults and tooltips must be known before rows or edits are written; native /Script structs such as Vector can be read too.",
           "info=list: The Blueprint structs under a folder must be found; the search is recursive and defaults to /Game/Structs.",
@@ -99294,7 +99314,7 @@
       },
       "examples": [
         {
-          "title": "Read a struct: definition, members, usage, comparison, export, instanced property values, or list structs.",
+          "title": "Read structs, chosen by info. struct (read, members and export give the same reply) reads a Blueprint or native struct: name, status, validity and every member { guid, name, type, default, tooltip, containerType, metaData }, the members array import_struct takes back; list lists the Blueprint struct assets under path (default /Game/Structs, recursive); usage lists the assets that reference a Blueprint struct (assetPath, className, referencerType Blueprint, Struct, DataAsset or Other), narrowed by a searchScope path prefix; compare diffs two Blueprint structs member by member, paired by member guid so a rename reads as renamedFrom and renamedTo, each diff added, removed or changed with its type and default in each, plus tooltip and metadata mismatches (metadata from UE 5.5); instanced_property reads an FInstancedStruct property of an asset. Nothing is written.",
           "input": {
             "structPath": "/Game/Structs/S_WeaponRow",
             "action": "get_struct",
@@ -99412,7 +99432,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "0fdd4e06e7138904bb3f40e63152b0b8c9c1bbe5918da9fa152065f696015df5",
-        "content": "d4f0eea95f2425a4c8688a6df3c443928b6bbe3f045e0ad8fc4682639a98b577"
+        "content": "db3eaa1c34f902247dc092098dfeb216b1a188c441d97f177f6d584d470a8160"
       }
     },
     {
