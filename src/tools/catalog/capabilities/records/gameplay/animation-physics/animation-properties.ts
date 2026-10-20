@@ -14,6 +14,8 @@ const objectList = (desc: string): JsonObject => ({
 export const A: PropertyMap = {
   save: bool('Save the asset to disk after the change (default true). With false the change stays in memory only and is lost when the editor restarts.'),
   savePath: str('Canonical /Game directory for generated assets.'),
+  bodyMass: num('Body mass in kg, above 0: sets the body\'s mass override (without one its mass comes from density and volume).'),
+  bodySimulatePhysics: bool('true: the body simulates whenever the mesh simulates physics (PhysicsType Default, as in a ragdoll); false: it follows the animation (Kinematic).'),
   positionX: num('Graph X position of the new node (default 0).'),
   positionY: num('Graph Y position of the new node (default 0).'),
   graphBlueprintPath: str('Animation Blueprint whose AnimGraph is edited.'),
@@ -58,7 +60,7 @@ export const A: PropertyMap = {
   notifyClass: str('AnimNotify (or AnimNotifyState) class name; prefixed with AnimNotify_/AnimNotifyState_ automatically when missing.'),
   basePoseFrame: num('Frame used as the additive base pose.'),
   forceRootLock: bool('Whether root motion is force-locked to the reference pose.'),
-  bodyType: str('Physics body primitive type (Sphere, Box, Capsule).'),
+  bodyType: str('Shape added to the bone\'s body: Capsule (default), Sphere or Box; any other name is refused.'),
   center: vec3('Physics body centre offset relative to its bone as [x, y, z].'),
   constraintName: str('Name of the created physics constraint.'),
   physicsAssetName: str('Name of the generated Physics Asset.'),

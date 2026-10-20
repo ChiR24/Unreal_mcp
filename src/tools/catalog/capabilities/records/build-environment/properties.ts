@@ -48,7 +48,7 @@ export const P = {
   minX: num('Region min X.'), minY: num('Region min Y.'),
   maxX: num('Region max X.'), maxY: num('Region max Y.'),
   updateNormals: bool('Recompute normals after modification.'),
-  skipFlush: bool('Skip flushing rendering after the operation.'),
+  skipFlush: bool('Do not wait for the GPU (default false): the upload and the edit layer merge finish on a later editor tick, so read heights, paint or collision back only after that. Faster for many edits in a row.'),
   sizeX: num('Landscape size along X, in vertices like the editor Overall Resolution (1009 is 16 components of 63 quads) or in quads; it becomes the fewest whole components that cover it.'),
   sizeY: num('Landscape size along Y, in vertices like the editor Overall Resolution (1009 is 16 components of 63 quads) or in quads; it becomes the fewest whole components that cover it.'),
   sectionSize: num('Quads per section (same as quadsPerSection): 7, 15, 31, 63 (default), 127 or 255.'),

@@ -400,6 +400,11 @@ const testCases = [
     { scenario: 'CONFIG: set_lod_bias', toolName: 'manage_asset', arguments: { action: 'set_lod_bias', assetPath: NOISE_TEXTURE, lodBias: 1 }, expected: 'success' },
     { scenario: 'CONFIG: configure_virtual_texture', toolName: 'manage_asset', arguments: { action: 'configure_virtual_texture', assetPath: NOISE_TEXTURE, virtualTextureStreaming: false }, expected: 'success' },
     { scenario: 'CONFIG: set_streaming_priority', toolName: 'manage_asset', arguments: { action: 'set_streaming_priority', assetPath: NOISE_TEXTURE, neverStream: true }, expected: 'success' },
+    { scenario: 'CONFIG: set_compression_settings takes the name without TC_', toolName: 'manage_asset', arguments: { action: 'set_compression_settings', assetPath: NOISE_TEXTURE, compressionSettings: 'Masks', save: false }, expected: 'success' },
+    { scenario: 'ERROR: set_compression_settings refuses an unknown name', toolName: 'manage_asset', arguments: { action: 'set_compression_settings', assetPath: NOISE_TEXTURE, compressionSettings: 'TC_Bogus' }, expected: 'error|not a texture compression setting' },
+    { scenario: 'ERROR: set_texture_group refuses an unknown group', toolName: 'manage_asset', arguments: { action: 'set_texture_group', assetPath: NOISE_TEXTURE, textureGroup: 'Building' }, expected: 'error|not a texture group' },
+    { scenario: 'ERROR: configure_virtual_texture refuses a call without the flag', toolName: 'manage_asset', arguments: { action: 'configure_virtual_texture', assetPath: NOISE_TEXTURE }, expected: 'error' },
+    { scenario: 'ERROR: set_streaming_priority refuses a call without neverStream', toolName: 'manage_asset', arguments: { action: 'set_streaming_priority', assetPath: NOISE_TEXTURE }, expected: 'error' },
     // === INFO ===
     { scenario: 'INFO: get_texture_info', toolName: 'manage_asset', arguments: { action: 'get_texture_info', assetPath: NOISE_TEXTURE }, expected: 'success' },
 

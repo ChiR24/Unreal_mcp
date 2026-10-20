@@ -89,7 +89,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "assignToMesh": {
           "type": "boolean",
-          "description": "Assign the new asset to the skeletal mesh."
+          "description": "Make the skeletal mesh use the new asset and save the mesh too (default false)."
         },
         "attachBoneName": {
           "type": "string",
@@ -181,7 +181,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "bodyType": {
           "type": "string",
-          "description": "Physics body primitive type (Sphere, Box, Capsule)."
+          "description": "Shape added to the bone's body: Capsule (default), Sphere or Box; any other name is refused."
         },
         "boneName": {
           "type": "string",
@@ -462,7 +462,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "geomType": {
           "type": "string",
-          "description": "Body primitive: Sphyl, Box, Sphere, TaperedCapsule, MultiConvexHull or SingleConvexHull."
+          "description": "Body shape for every bone: Capsule (default; Sphyl too), Box, Sphere, TaperedCapsule (cloth only), SingleConvexHull or MultiConvexHull; any other name is refused and nothing is created."
         },
         "global": {
           "type": "boolean",
@@ -640,7 +640,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "mass": {
           "type": "number",
-          "description": "Mass value."
+          "description": "Body mass in kg, above 0: sets the body's mass override (without one its mass comes from density and volume)."
         },
         "maxSamples": {
           "type": "number",
@@ -660,7 +660,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "minBoneSize": {
           "type": "number",
-          "description": "Bones smaller than this get no body."
+          "description": "Bones shorter than this (cm, editor default 20) get no body unless bodyForAll."
         },
         "minValue": {
           "type": "number",
@@ -963,7 +963,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "simulatePhysics": {
           "type": "boolean",
-          "description": "Whether physics simulation is enabled."
+          "description": "true: the body simulates whenever the mesh simulates physics (PhysicsType Default, as in a ragdoll); false: it follows the animation (Kinematic)."
         },
         "skeletalMeshPath": {
           "type": "string",
@@ -2604,7 +2604,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "number",
             "description": "Height value."
           },
-          "description": "Heightmap values."
+          "description": "Raw heights, 0-65535: 32768 sits at the landscape's own Z and 128 units are one landscape Z-scale step (ScaleZ cm). set takes one for the whole region or one per vertex; flatten takes the first (default 32768)."
         },
         "heightScale": {
           "type": "number",
@@ -3020,7 +3020,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "operation": {
           "type": "string",
-          "description": "Heightmap operation: set, add, subtract, smooth."
+          "description": "set (default), raise (add), lower (subtract), flatten or smooth."
         },
         "outputPath": {
           "type": "string",
@@ -3615,7 +3615,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "skipFlush": {
           "type": "boolean",
-          "description": "Skip flushing rendering after the operation."
+          "description": "Do not wait for the GPU (default false): the upload and the edit layer merge finish on a later editor tick, so read heights, paint or collision back only after that. Faster for many edits in a row."
         },
         "skyLightActorPath": {
           "type": "string",
@@ -9727,7 +9727,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "compressionSettings": {
           "type": "string",
-          "description": "Compression format."
+          "description": "Engine compression name, with or without TC_: Default, Normalmap, Masks, Grayscale, Displacementmap, VectorDisplacementmap, HDR, EditorIcon (UserInterface2D), Alpha, DistanceFieldFont, HDR_Compressed, BC7, HalfFloat, and from UE 5.1 SingleFloat and HDR_F32."
         },
         "constA": {
           "type": "number",
@@ -10191,7 +10191,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "lodBias": {
           "type": "number",
-          "description": "LOD bias value."
+          "description": "Whole mips to drop (a fraction is cut off): 1 halves each side, 0 restores full size."
         },
         "lodCount": {
           "type": "number",
@@ -10352,7 +10352,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "neverStream": {
           "type": "boolean",
-          "description": "Never stream this texture."
+          "description": "true keeps every mip resident, false lets the texture stream; leaving it out is refused."
         },
         "newEnumName": {
           "type": "string",
@@ -10987,7 +10987,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "textureGroup": {
           "type": "string",
-          "description": "Texture group name."
+          "description": "Engine texture group, with or without TEXTUREGROUP_: World, WorldNormalMap, WorldSpecular, Character, CharacterNormalMap, Weapon, Vehicle, Cinematic, Effects, Skybox, UI, Lightmap, Shadowmap, ColorLookupTable, Bokeh, Pixels2D and the rest."
         },
         "texturePath": {
           "type": "string",
@@ -11089,7 +11089,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "virtualTextureStreaming": {
           "type": "boolean",
-          "description": "Enable VT streaming."
+          "description": "true streams the texture as a virtual texture (the project must have virtual texturing enabled), false stops; leaving it out is refused."
         },
         "width": {
           "type": "number",
@@ -18275,7 +18275,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
   },
   {
     "name": "manage_geometry",
-    "description": "Create procedural meshes using Geometry Script: booleans, deformers, UVs, collision, and LOD generation.",
+    "description": "Create procedural meshes using Geometry Script: booleans, deformers, UVs, collision, and LOD generation. Each edit of a placed dynamic mesh is one undo step.",
     "category": "world",
     "inputSchema": {
       "type": "object",

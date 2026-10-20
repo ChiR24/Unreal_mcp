@@ -182,6 +182,19 @@ struct FMcpGeometryTarget
 };
 // The named actor's dynamic mesh; unset after replying with the error when it cannot be resolved.
 TOptional<FMcpGeometryTarget> ResolveGeometryTarget(UEngineWireSubsystem* Self, const FString& RequestId, const FString& ActorName, TSharedPtr<FMcpBridgeWebSocket> Socket);
+// One undo step for a geometry request that edits the placed dynamic mesh actorName names. UDynamicMesh keeps its mesh
+// out of transactions, so the editor's modeling tools record an FMeshReplacementChange of the mesh before and after; this
+// does the same around the request, and records nothing when the mesh did not change (reads, refusals).
+class FMcpGeometryUndoScope
+{
+public:
+	explicit FMcpGeometryUndoScope(const TSharedPtr<FJsonObject>& Payload);
+	~FMcpGeometryUndoScope();
+private:
+	TWeakObjectPtr<UDynamicMeshComponent> Component;
+	TSharedPtr<const UE::Geometry::FDynamicMesh3, ESPMode::ThreadSafe> Before;
+	uint32 BeforeHash = 0;
+};
 UTexture2D* ResolveGeometryTexture(const FString& TexturePath, FString& OutResolvedPath);
 bool SampleTextureLuminance(UTexture2D* Texture, double U, double V, double& OutLuminance);
 // The payload `axis` (X/Y/Z) as a unit vector or 0/1/2 index; Default when absent or unknown.

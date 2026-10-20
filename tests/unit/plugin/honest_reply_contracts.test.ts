@@ -4223,3 +4223,62 @@ describe('lighting setup does not destroy work and builds what it names', () => 
     expect(build).not.toContain('SetActorScale3D(Size / 200.0f)');
   });
 });
+
+describe('physics bodies, heightmaps and geometry edits do what they say', () => {
+  it('a body mass is written, and simulatePhysics sets the body physics type', () => {
+    const bodies = code('Skeleton', 'Physics', 'McpSkeletonPhysicsBodies.cpp');
+    expect(bodies).toContain('SetMassOverride(static_cast<float>(Mass), true)');
+    expect(bodies).toContain('BodySetup->PhysicsType = bSimulatePhysics');
+    expect(bodies).not.toContain('DefaultInstance.bSimulatePhysics = bSimulatePhysics');
+  });
+
+  it('modify_heightmap refuses an unknown operation and a heightData count that fits neither form, and smooths', () => {
+    const heightmap = code('Landscape', 'McpLandscapeHeightmap.cpp');
+    expect(heightmap).toContain('operation must be set, raise (add), lower (subtract), flatten or smooth.');
+    expect(heightmap).toContain('takes 1 for all of');
+    expect(heightmap).toContain('Operation == TEXT("smooth")');
+  });
+
+  it('a geometry edit of a placed dynamic mesh records one undo step', () => {
+    expect(code('Geometry', 'McpGeometryHandlers.cpp')).toContain('const FMcpGeometryUndoScope Undo(Payload);');
+    expect(code('Geometry', 'Support', 'McpGeometryUndo.cpp')).toContain('GUndo->StoreUndo(Target, MakeUnique<FMeshReplacementChange>(Before, After))');
+  });
+});
+
+describe('landscape edits reach the merged landscape, physics and texture settings refuse what they cannot set', () => {
+  it('every height and paint edit writes an edit layer, uploads its region and merges', () => {
+    const scope = code('Landscape', 'McpLandscapeLookup.cpp');
+    expect(scope).toContain('Landscape->SetEditingLayer(PreviousLayer.IsValid() ? PreviousLayer : FirstEditLayerGuid(Landscape));');
+    expect(scope).toContain('Landscape->ForceUpdateLayersContent();');
+    for (const file of [['Landscape', 'McpLandscapeHeightmap.cpp'], ['Landscape', 'McpLandscapeSculpt.cpp'],
+      ['Landscape', 'McpLandscapeLayerPaint.cpp'], ['Environment', 'Landscape', 'McpEnvLandscapeHeightmap.cpp']]) {
+      const source = code(...file);
+      expect(source, file.join('/')).toContain('McpLandscapeHandlers::FMcpLandscapeEditScope Edit(Landscape,');
+      expect(source, file.join('/')).toMatch(/FLandscapeEditDataInterface \w+\(LandscapeInfo\);/u);
+      expect(source, file.join('/')).toContain('Edit.DescribeInto(');
+    }
+  });
+
+  it('physics asset edits report the save they made and refuse a shape they do not know', () => {
+    const bodies = code('Skeleton', 'Physics', 'McpSkeletonPhysicsBodies.cpp');
+    const constraints = code('Skeleton', 'Physics', 'McpSkeletonPhysicsConstraints.cpp');
+    const assets = code('Skeleton', 'Physics', 'McpSkeletonPhysicsAssets.cpp');
+    for (const source of [bodies, constraints, assets]) {
+      expect(source).not.toMatch(/^\s*SaveIfRequested\(PhysicsAsset, Payload\);/mu);
+      expect(source).toContain('SaveAndReport(');
+    }
+    expect(bodies).toContain('is not a body shape; use Capsule (the default), ');
+    expect(assets).toContain('Params.GeomType = EFG_TaperedCapsule;');
+    expect(assets).toMatch(/if \(!ApplyCreateParams\(Payload, Params, GeomTypeName\)\)[\s\S]*?McpCreatePackageForNewAsset/u);
+  });
+
+  it('texture compression and group names are engine enum names, and the streaming flags are required', () => {
+    const settings = code('Texture', 'McpTextureSettings.cpp');
+    expect(settings).toContain('ParseEngineEnum(CompressionSettingsStr, TEXT("TC_"), Compression)');
+    expect(settings).toContain('ParseEngineEnum(TextureGroup, TEXT("TEXTUREGROUP_"), Group)');
+    expect(settings).not.toContain('ParseCompressionSetting');
+    expect(settings).toContain('if (!Params->HasField(TEXT("virtualTextureStreaming")))');
+    expect(settings).toContain('if (!Params->HasField(TEXT("neverStream")))');
+    expect(settings).not.toContain('if (bSave) McpSafeAssetSave(Texture);');
+  });
+});

@@ -39,6 +39,14 @@ bool UEngineWireSubsystem::HandleAddPhysicsBody(
         SendAutomationError(RequestingSocket, RequestId, TEXT("boneName is required"), TEXT("MISSING_PARAM"));
         return true;
     }
+    // Any other bodyType built a capsule without a word.
+    if (!BodyType.IsEmpty() && !BodyType.Equals(TEXT("Capsule"), ESearchCase::IgnoreCase) && !BodyType.Equals(TEXT("Sphyl"), ESearchCase::IgnoreCase)
+        && !BodyType.Equals(TEXT("Sphere"), ESearchCase::IgnoreCase) && !BodyType.Equals(TEXT("Box"), ESearchCase::IgnoreCase))
+    {
+        SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("bodyType '%s' is not a body shape; use Capsule (the default), "
+            "Sphere or Box. Nothing was changed."), *BodyType), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
 
     FString Error;
     UPhysicsAsset* PhysicsAsset = LoadPhysicsAssetFromPath(PhysicsAssetPath, Error);
@@ -72,6 +80,7 @@ bool UEngineWireSubsystem::HandleAddPhysicsBody(
     USkeletalBodySetup* BodySetup = nullptr;
     bool bCreated = false;
 
+    PhysicsAsset->Modify();
     if (BodyIndex == INDEX_NONE)
     {
         BodySetup = NewObject<USkeletalBodySetup>(PhysicsAsset, NAME_None, RF_Transactional);
@@ -88,6 +97,7 @@ bool UEngineWireSubsystem::HandleAddPhysicsBody(
     else
     {
         BodySetup = PhysicsAsset->SkeletalBodySetups[BodyIndex];
+        BodySetup->Modify();
     }
 
     if (BodyType.IsEmpty()) BodyType = TEXT("Capsule");
@@ -135,13 +145,13 @@ bool UEngineWireSubsystem::HandleAddPhysicsBody(
 
     PhysicsAsset->UpdateBodySetupIndexMap();
     PhysicsAsset->UpdateBoundsBodiesArray();
-    SaveIfRequested(PhysicsAsset, Payload);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("boneName"), BoneName);
     Result->SetStringField(TEXT("bodyType"), BodyType);
     Result->SetNumberField(TEXT("bodyIndex"), BodyIndex);
     Result->SetBoolField(TEXT("created"), bCreated);
+    SaveAndReport(PhysicsAsset, Payload, Result);
 
     SendAutomationResponse(RequestingSocket, RequestId, true,
         FString::Printf(TEXT("Physics body %s for bone '%s'"), bCreated ? TEXT("created") : TEXT("modified"), *BoneName), Result);
@@ -186,14 +196,29 @@ bool UEngineWireSubsystem::HandleConfigurePhysicsBody(
     }
 
     USkeletalBodySetup* BodySetup = PhysicsAsset->SkeletalBodySetups[BodyIndex];
-
-    double Mass = 0.0;
-    if (Payload->TryGetNumberField(TEXT("mass"), Mass))
+    static const TCHAR* Fields[] = {TEXT("mass"), TEXT("linearDamping"), TEXT("angularDamping"), TEXT("collisionEnabled"), TEXT("simulatePhysics")};
+    bool bAnySent = false;
+    for (const TCHAR* Field : Fields)
     {
-        // Mass is set via DefaultInstance
-        BodySetup->DefaultInstance.MassScale = 1.0f;
-        BodySetup->DefaultInstance.bOverrideMass = true;
-        // Note: Actual mass is calculated from density and volume
+        bAnySent |= Payload->HasField(Field);
+    }
+    if (!bAnySent)
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Nothing to set: send mass, linearDamping, angularDamping, collisionEnabled or simulatePhysics."), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+    double Mass = 0.0;
+    if (Payload->TryGetNumberField(TEXT("mass"), Mass) && Mass <= 0.0)
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("mass must be above 0 kg. Nothing was changed."), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+    PhysicsAsset->Modify();
+    BodySetup->Modify();
+    if (Payload->HasField(TEXT("mass")))
+    {
+        // It turned the override on and never wrote the mass, so the body took the default override instead.
+        BodySetup->DefaultInstance.SetMassOverride(static_cast<float>(Mass), true);
     }
 
     double LinearDamping = 0.0;
@@ -217,16 +242,23 @@ bool UEngineWireSubsystem::HandleConfigurePhysicsBody(
     bool bSimulatePhysics = true;
     if (Payload->TryGetBoolField(TEXT("simulatePhysics"), bSimulatePhysics))
     {
-        // Note: In UE 5.7+, SetSimulatePhysics is not available on FBodyInstance
-        // The simulation is controlled at the component level at runtime
-        BodySetup->DefaultInstance.bSimulatePhysics = bSimulatePhysics;
+        // A physics asset decides per body through PhysicsType: Default simulates when the mesh does (a ragdoll), Kinematic
+        // follows the animation. DefaultInstance.bSimulatePhysics, which this wrote, is not read for its bodies.
+        BodySetup->PhysicsType = bSimulatePhysics ? EPhysicsType::PhysType_Default : EPhysicsType::PhysType_Kinematic;
     }
 
-    SaveIfRequested(PhysicsAsset, Payload);
-
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    SaveAndReport(PhysicsAsset, Payload, Result);
     Result->SetStringField(TEXT("boneName"), BoneName);
     Result->SetNumberField(TEXT("bodyIndex"), BodyIndex);
+    if (BodySetup->DefaultInstance.bOverrideMass)
+    {
+        Result->SetNumberField(TEXT("mass"), BodySetup->DefaultInstance.GetMassOverride());
+    }
+    Result->SetNumberField(TEXT("linearDamping"), BodySetup->DefaultInstance.LinearDamping);
+    Result->SetNumberField(TEXT("angularDamping"), BodySetup->DefaultInstance.AngularDamping);
+    Result->SetStringField(TEXT("physicsType"), BodySetup->PhysicsType == EPhysicsType::PhysType_Kinematic ? TEXT("Kinematic")
+        : BodySetup->PhysicsType == EPhysicsType::PhysType_Simulated ? TEXT("Simulated") : TEXT("Default"));
 
     SendAutomationResponse(RequestingSocket, RequestId, true,
         FString::Printf(TEXT("Physics body '%s' configured"), *BoneName), Result);

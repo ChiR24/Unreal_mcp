@@ -233,7 +233,7 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'configure_texture', selector: 'setting',
-    summary: 'Configure texture settings: compression, LOD bias, streaming priority, texture group, virtual texturing.',
+    summary: 'Change one setting of a 2D texture asset (assetPath), chosen by setting; the texture is saved unless save is false (saved). compression sets compressionSettings by engine name, with or without the TC_ prefix (Normalmap, Masks, Grayscale, HDR, EditorIcon for UI, BC7 ...); texture_group sets textureGroup, with or without TEXTUREGROUP_ (World, Character, UI, Effects ...), so the texture follows that group\'s LOD and streaming rules; an unknown name in either is refused with the valid names. lod_bias drops lodBias top mips at runtime (1 halves each side, 0 restores full size). virtual_texture sets virtualTextureStreaming (required); materials sampling the texture then need the matching sampler type (Virtual Color and so on, or back) or they stop compiling. streaming_priority sets neverStream (required): true keeps every mip resident; there is no per-texture streaming priority.',
     topics: ['texture compression', 'lod bias', 'streaming priority', 'texture group', 'virtual texture', 'reduce texture size'],
     members: { compression: 'set_compression_settings', lod_bias: 'set_lod_bias', streaming_priority: 'set_streaming_priority', texture_group: 'set_texture_group', virtual_texture: 'configure_virtual_texture' },
   },

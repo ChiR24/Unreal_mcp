@@ -4,6 +4,7 @@
 import type { CapabilityRecordSource } from '../../model.js';
 import { buildRecord } from './helpers.js';
 import { P } from './properties.js';
+import { num, str } from '../shared/schema-props.js';
 
 const F = 'landscape';
 const WU = ['A landscape must be created or modified in the current level.'];
@@ -27,7 +28,7 @@ export const LANDSCAPE_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'build_environment.sculpt', action: 'sculpt', family: F,
-    summary: 'Sculpt the landscape heightmap at a location with a brush.',
+    summary: 'Sculpt a landscape at location (world space) with a round brush: tool Raise (default) or Lower moves the ground strength x 100 cm at the brush centre (strength default 0.1), Flatten pulls it toward location.z by the strength fraction. radius is in world units (default 1000) and falloff (default 0.5) is the outer share of it that fades out. modifiedVertices counts the vertices that moved (0 when all were clamped); an unknown tool, or a location off the landscape (OUT_OF_BOUNDS), is refused. The edit goes into the landscape\'s edit layer (the one being edited in Landscape mode, else the first; other layers still add on top), is one undo step (undo), and the layers are merged before the reply, so the drawn landscape and its collision show it.',
     whenToUse: WU, whenNotToUse: ['The landscape should be modified via raw heightmap data.'],
     inputProps: { ...LANDSCAPE,
       tool: P.tool, location: P.location, radius: P.radius, strength: P.strength,
@@ -39,18 +40,21 @@ export const LANDSCAPE_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'build_environment.modify_heightmap', action: 'modify_heightmap', family: F,
-    summary: 'Modify landscape heightmap data in a region.',
+    summary: 'Change a landscape\'s heights over a region of its vertices (minX..maxX and minY..maxY, or region; default the whole landscape) by operation: set (default) writes heightData raw heights, one for the whole region or one per vertex row by row; raise and lower (add, subtract) move it by amount cm; flatten sets it to heightData[0]; smooth runs one 3x3 averaging pass. An unknown operation, a heightData count that fits neither form, or raise/lower without amount is refused; modifiedVertices counts the vertices that changed. The edit goes into the landscape\'s edit layer (the one being edited in Landscape mode, else the first; other layers still add on top), is one undo step (undo), and the layers are merged before the reply, so the drawn landscape and its collision show it.',
     whenToUse: WU, whenNotToUse: ['The landscape should be sculpted interactively.'],
     inputProps: { ...LANDSCAPE,
-      operation: P.operation, heightData: P.heightData, minX: P.minX, minY: P.minY,
+      operation: str('set (default), raise (add), lower (subtract), flatten or smooth.'),
+      heightData: { ...P.heightData, description: 'Raw heights, 0-65535: 32768 sits at the landscape\'s own Z and 128 units are one landscape Z-scale step (ScaleZ cm). set takes one for the whole region or one per vertex; flatten takes the first (default 32768).' },
+      amount: num('raise and lower: the centimetres to move every vertex in the region, above 0.'),
+      minX: P.minX, minY: P.minY,
       maxX: P.maxX, maxY: P.maxY, region: P.region, updateNormals: P.updateNormals, skipFlush: P.skipFlush },
     effect: 'write', latency: 'interactive', resources: 'medium',
     dispatchAction: 'modify_heightmap',
-    exampleInput: { action: 'modify_heightmap', landscapeName: 'Landscape_1', operation: 'set', heightData: [100, 200] },
+    exampleInput: { action: 'modify_heightmap', landscapeName: 'Landscape_1', operation: 'raise', amount: 200, minX: 0, minY: 0, maxX: 15, maxY: 15 },
   }),
   buildRecord({
     id: 'build_environment.set_landscape_material', action: 'set_landscape_material', family: F,
-    summary: 'Set the material applied to a landscape.',
+    summary: 'Set the material a landscape renders with, in one undo step: materialPath must load as a material or material instance (ASSET_NOT_FOUND when nothing is there, LOAD_FAILED for another asset type). paint_landscape_layer then paints the layers its Landscape Layer Blend names.',
     whenToUse: ['A landscape needs a different material assignment.'],
     whenNotToUse: ['The material should be configured with layer blends.'],
     inputProps: { ...LANDSCAPE, materialPath: P.materialPath },
@@ -60,7 +64,7 @@ export const LANDSCAPE_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'build_environment.paint_landscape', action: 'paint_landscape', family: F,
-    summary: 'Paint a landscape layer over a brush disc (location + radius), a vertex region, or the whole landscape.',
+    summary: 'Paint a landscape layer (layerName) at strength over a brush disc (location + radius), a vertex region, or the whole landscape. The edit goes into the landscape\'s edit layer (the one being edited in Landscape mode, else the first; other layers still add on top), is one undo step (undo), and the layers are merged before the reply, so the drawn landscape and its collision show it.',
     whenToUse: WU, whenNotToUse: ['The landscape layer weight should be set via raw data.'],
     inputProps: { ...LANDSCAPE, layerName: P.layerName,
       location: { ...P.location, description: 'Brush centre in world space; paints the disc of radius around it (radius required).' },
@@ -70,7 +74,7 @@ export const LANDSCAPE_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'build_environment.paint_landscape_layer', action: 'paint_landscape_layer', family: F,
-    summary: 'Paint a landscape layer at a uniform weight over a vertex region, or the whole landscape.',
+    summary: 'Paint a landscape layer (layerName) at one weight (strength) over a vertex region, or the whole landscape. The edit goes into the landscape\'s edit layer (the one being edited in Landscape mode, else the first; other layers still add on top), is one undo step (undo), and the layers are merged before the reply, so the drawn landscape and its collision show it.',
     whenToUse: WU, whenNotToUse: ['The landscape should be painted interactively.'],
     inputProps: { ...LANDSCAPE, layerName: P.layerName,
       layerInfoPath: { ...P.layerInfoPath, description: 'Layer info asset to use when the landscape has no layer of that name yet (else one lives only inside the landscape).' },
@@ -80,7 +84,7 @@ export const LANDSCAPE_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'build_environment.import_heightmap', action: 'import_heightmap', family: F,
-    summary: 'Import a heightmap file into a landscape.',
+    summary: 'Write a raw 16-bit heightmap file (heightmapPath, project-relative, no header, machine byte order, as export_heightmap writes it) into a landscape\'s heights, over its whole extent or region; the file must hold at least one sample per vertex of that area, row by row. The edit goes into the landscape\'s edit layer (the one being edited in Landscape mode, else the first; other layers still add on top), is one undo step (undo), and the layers are merged before the reply, so the drawn landscape and its collision show it.',
     whenToUse: ['A heightmap file must be imported to create or update a landscape.'],
     whenNotToUse: ['The heightmap should be generated procedurally.'],
     inputProps: { ...LANDSCAPE, heightmapPath: { type: 'string', description: 'Raw 16-bit heightmap file, project-relative.' },

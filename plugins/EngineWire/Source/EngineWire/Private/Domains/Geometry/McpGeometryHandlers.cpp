@@ -43,6 +43,8 @@ bool UEngineWireSubsystem::HandleGeometryAction(
             Payload->SetStringField(TEXT("actorName"), TargetActor);
         }
     }
+    // Every edit of a placed dynamic mesh is one editor undo step; none of these edits could be undone before.
+    const FMcpGeometryUndoScope Undo(Payload);
 
     // Primitives
     if (SubAction == TEXT("create_box")) return HandleCreateBox(this, RequestId, Payload, RequestingSocket);

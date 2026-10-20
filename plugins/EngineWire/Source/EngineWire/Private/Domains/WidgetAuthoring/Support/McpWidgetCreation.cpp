@@ -12,11 +12,8 @@
 #include "EngineWireSubsystem.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
-#include "Subsystems/AssetEditorSubsystem.h"
 #include "UObject/Package.h"
 #include "WidgetBlueprint.h"
-#include "Widgets/Notifications/SNotificationList.h"
-#include "Framework/Notifications/NotificationManager.h"
 
 namespace WidgetAuthoringHandlers
 {
@@ -102,73 +99,6 @@ bool HandleWidgetAuthoringCreation(
         return true;
     }
 
-    if (SubAction.Equals(TEXT("show_widget"), ESearchCase::IgnoreCase))
-    {
-        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
-        FString WidgetId = GetJsonStringField(Payload, TEXT("widgetId"));
-        FString Message = GetJsonStringField(Payload, TEXT("message"));
-
-        if (WidgetId.Equals(TEXT("notification"), ESearchCase::IgnoreCase))
-        {
-            FString NotificationText = Message.IsEmpty() ? TEXT("Notification") : Message;
-
-            FNotificationInfo Info(FText::FromString(NotificationText));
-            Info.ExpireDuration = 3.0f;
-            Info.bUseLargeFont = true;
-
-            FSlateNotificationManager::Get().AddNotification(Info);
-
-            ResultJson->SetBoolField(TEXT("success"), true);
-            ResultJson->SetStringField(TEXT("message"), TEXT("Notification shown"));
-            ResultJson->SetStringField(TEXT("widgetId"), WidgetId);
-
-            Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Notification shown"), ResultJson);
-            return true;
-        }
-
-        FString EffectivePath = WidgetPath.IsEmpty() ? GetJsonStringField(Payload, TEXT("name")) : WidgetPath;
-        if (EffectivePath.IsEmpty())
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId,
-                TEXT("Missing required parameter: widgetPath or name"), TEXT("MISSING_PARAMETER"));
-            return true;
-        }
-
-        // SECURITY: Validate widget path
-        FString SanitizedPath = SanitizeProjectRelativePath(EffectivePath);
-        if (SanitizedPath.IsEmpty())
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId,
-                McpPathRefusalMessage(TEXT("widgetPath"), EffectivePath),
-                TEXT("SECURITY_VIOLATION"));
-            return true;
-        }
-        EffectivePath = SanitizedPath;
-
-        UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(EffectivePath);
-        if (!WidgetBP)
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId,
-                FString::Printf(TEXT("Widget blueprint not found: %s"), *EffectivePath),
-                TEXT("NOT_FOUND"));
-            return true;
-        }
-
-        // Note: Actually showing the widget in viewport requires PIE (Play In Editor)
-        if (GEditor)
-        {
-            GEditor->GetEditorSubsystem<UAssetEditorSubsystem>()->OpenEditorForAsset(WidgetBP);
-        }
-
-        ResultJson->SetBoolField(TEXT("success"), true);
-        ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Widget opened: %s"), *EffectivePath));
-        ResultJson->SetStringField(TEXT("widgetPath"), EffectivePath);
-
-        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true,
-            FString::Printf(TEXT("Widget opened: %s"), *EffectivePath), ResultJson);
-        return true;
-    }
-
     if (SubAction.Equals(TEXT("set_widget_parent_class"), ESearchCase::IgnoreCase))
     {
         FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
@@ -229,6 +159,7 @@ bool HandleWidgetAuthoringCreation(
         ResultJson->SetBoolField(TEXT("saved"), WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP));
 
         ResultJson->SetBoolField(TEXT("success"), true);
+        ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
         ResultJson->SetStringField(TEXT("parentClass"), NewParentClass->GetPathName());
         ResultJson->SetStringField(TEXT("previousParentClass"), PreviousParent);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Set parent class to: %s"), *ParentClass));

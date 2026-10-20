@@ -13,7 +13,7 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'sculpt', selector: 'sculptOp',
-    summary: 'Sculpt a landscape with a brush, modify its heightmap data directly, or set its material.',
+    summary: 'Shape a landscape, chosen by sculptOp: sculpt raises, lowers or flattens the ground under a round brush at a world location; heightmap sets, raises, lowers, flattens or smooths a region of its vertices (raw heights or centimetres); material sets the material it renders with. sculpt and heightmap count the vertices that changed, write the landscape\'s edit layer (the one being edited, else the first) as one undo step, and merge the layers before the reply so rendering and collision follow; an unknown tool or operation is refused.',
     topics: ['sculpt landscape', 'heightmap', 'landscape material', 'raise or flatten the terrain or ground'],
     members: { sculpt: 'sculpt', heightmap: 'modify_heightmap', material: 'set_landscape_material' },
     aliasMembers: ['sculpt_landscape'],
