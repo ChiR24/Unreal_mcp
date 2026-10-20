@@ -70,9 +70,10 @@ bool HandleAddLandscapeLayer(UEngineWireSubsystem* Bridge, const FString& Reques
       }
     }
 
-    UPackage* Package = CreatePackage(*PackagePath);
+    FString CreateError, CreateCode;
+    UPackage* Package = McpCreatePackageForNewAsset(PackagePath, CreateError, CreateCode);
     if (!Package) {
-      Bridge->SendAutomationError(Socket, RequestId, TEXT("Failed to create package."), TEXT("PACKAGE_ERROR"));
+      Bridge->SendAutomationError(Socket, RequestId, CreateError, CreateCode);
       return true;
     }
 

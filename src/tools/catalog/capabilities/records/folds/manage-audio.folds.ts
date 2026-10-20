@@ -35,7 +35,7 @@ export const MANAGE_AUDIO_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'create_audio_asset', selector: 'kind',
-    summary: 'Create an audio asset: sound cue, sound class, sound mix, attenuation settings, reverb effect, dialogue voice or wave, source effect chain, submix effect.',
+    summary: 'Create an audio asset named name in path, chosen by kind: sound_cue (playing wavePath when given), sound_class, sound_mix, attenuation_settings, reverb_effect, dialogue_voice, dialogue_wave, source_effect_chain or submix_effect. An asset already at that path is refused (ASSET_ALREADY_EXISTS) rather than rebuilt over, and a reference that does not load is refused before anything is made. Saved unless save is false.',
     topics: ['sound cue', 'sound class', 'sound mix', 'attenuation settings', 'reverb effect', 'dialogue wave', 'submix effect', 'make sound'],
     members: {
       sound_cue: 'create_sound_cue', sound_class: 'create_sound_class', sound_mix: 'create_sound_mix', attenuation_settings: 'create_attenuation_settings',
@@ -45,7 +45,7 @@ export const MANAGE_AUDIO_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'edit_sound_cue', selector: 'edit',
-    summary: 'Edit a sound cue graph: add or connect nodes, set attenuation or concurrency, add a Doppler pitch shift at the root, add a source effect.',
+    summary: 'Edit a sound cue graph (assetPath): add or connect nodes, set attenuation or concurrency, add a Doppler pitch shift at the root. add_source_effect works on a Source Effect Chain at assetPath instead: it appends effectPresetPath, or a new preset of effectType saved as its own asset beside the chain (<chain>_<effectType>, numbered when taken).',
     topics: ['sound cue node', 'cue attenuation', 'cue concurrency', 'doppler effect', 'source effect', 'add wave player to cue'],
     members: { add_node: 'add_cue_node', connect_nodes: 'connect_cue_nodes', set_attenuation: 'set_cue_attenuation', set_concurrency: 'set_cue_concurrency', doppler: 'set_doppler_effect', add_source_effect: 'add_source_effect' },
   },

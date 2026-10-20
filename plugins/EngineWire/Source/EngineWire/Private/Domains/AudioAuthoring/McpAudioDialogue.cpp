@@ -26,8 +26,9 @@ TSharedPtr<FJsonObject> HandleDialogueActions(const FString& SubAction, const TS
 			return McpHandlerUtils::BuildErrorResponse(TEXT("INVALID_ARGUMENT"), FString::Printf(TEXT("plurality '%s' is not Singular or Plural"), *Plurality));
 		}
 
-		UPackage* Package = CreatePackage(*(Path / Name));
-		if (!Package) { return McpHandlerUtils::BuildErrorResponse(TEXT("PACKAGE_ERROR"), TEXT("Failed to create package")); }
+		FString CreateError, CreateCode;
+		UPackage* Package = McpCreatePackageForNewAsset(Path / Name, CreateError, CreateCode);
+		if (!Package) { return McpHandlerUtils::BuildErrorResponse(CreateCode, CreateError); }
 
 		UDialogueVoiceFactory* Factory = NewObject<UDialogueVoiceFactory>();
 		UDialogueVoice* NewVoice = Cast<UDialogueVoice>(Factory->FactoryCreateNew(UDialogueVoice::StaticClass(), Package, FName(*Name), RF_Public | RF_Standalone, nullptr, GWarn));
@@ -62,8 +63,9 @@ TSharedPtr<FJsonObject> HandleDialogueActions(const FString& SubAction, const TS
 		if (!WavePath.IsEmpty() && !ContextWave) { return McpHandlerUtils::BuildErrorResponse(TEXT("SOUNDWAVE_NOT_FOUND"), FString::Printf(TEXT("Could not load SoundWave: %s"), *WavePath)); }
 		if (!SpeakerPath.IsEmpty() && !Speaker) { return McpHandlerUtils::BuildErrorResponse(TEXT("SPEAKER_NOT_FOUND"), FString::Printf(TEXT("Could not load speaker DialogueVoice: %s"), *SpeakerPath)); }
 
-		UPackage* Package = CreatePackage(*(Path / Name));
-		if (!Package) { return McpHandlerUtils::BuildErrorResponse(TEXT("PACKAGE_ERROR"), TEXT("Failed to create package")); }
+		FString CreateError, CreateCode;
+		UPackage* Package = McpCreatePackageForNewAsset(Path / Name, CreateError, CreateCode);
+		if (!Package) { return McpHandlerUtils::BuildErrorResponse(CreateCode, CreateError); }
 
 		UDialogueWaveFactory* Factory = NewObject<UDialogueWaveFactory>();
 		UDialogueWave* NewWave = Cast<UDialogueWave>(Factory->FactoryCreateNew(UDialogueWave::StaticClass(), Package, FName(*Name), RF_Public | RF_Standalone, nullptr, GWarn));

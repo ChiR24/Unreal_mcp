@@ -74,10 +74,11 @@ bool HandleCreateSkeletonAction(UEngineWireSubsystem* Subsystem, const FString& 
         FString FullPackagePath = PackagePath / SkeletonName;
 
         // Create package
-        UPackage* Package = CreatePackage(*FullPackagePath);
+        FString CreateError, CreateCode;
+        UPackage* Package = McpCreatePackageForNewAsset(FullPackagePath, CreateError, CreateCode);
         if (!Package)
         {
-            Subsystem->SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create package"), TEXT("PACKAGE_ERROR"));
+            Subsystem->SendAutomationError(RequestingSocket, RequestId, CreateError, CreateCode);
             return true;
         }
 

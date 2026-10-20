@@ -108,23 +108,24 @@ bool UEngineWireSubsystem::HandleAddFoliageType(
   FString FullPackagePath =
       FString::Printf(TEXT("%s/%s"), *PackagePath, *AssetName);
 
-  UPackage *Package = CreatePackage(*FullPackagePath);
-  if (!Package) {
-    SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("Failed to create package"),
-                        TEXT("PACKAGE_CREATION_FAILED"));
-    return true;
-  }
-
+  // A foliage type already there is updated; another kind of asset under the name is refused (NewObject over it
+  // brought the editor down).
   UFoliageType_InstancedStaticMesh *FoliageType = nullptr;
   if (McpAssetExists(FullPackagePath)) {
-    FoliageType =
-        LoadObject<UFoliageType_InstancedStaticMesh>(Package, *AssetName);
+    FoliageType = Cast<UFoliageType_InstancedStaticMesh>(McpLoadAsset(FullPackagePath));
+    if (!FoliageType) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          FString::Printf(TEXT("%s already holds an asset that is not a static mesh foliage type; pick another name. Nothing was changed."), *FullPackagePath),
+                          TEXT("ASSET_ALREADY_EXISTS"));
+      return true;
+    }
+    FoliageType->Modify();
   }
   const bool bCreated = FoliageType == nullptr;
   if (!FoliageType) {
-    FoliageType = NewObject<UFoliageType_InstancedStaticMesh>(
-        Package, FName(*AssetName), RF_Public | RF_Standalone);
+    UPackage *Package = CreatePackage(*FullPackagePath);
+    FoliageType = Package ? NewObject<UFoliageType_InstancedStaticMesh>(
+        Package, FName(*AssetName), RF_Public | RF_Standalone) : nullptr;
   }
   if (!FoliageType) {
     SendAutomationError(RequestingSocket, RequestId,
@@ -134,23 +135,32 @@ bool UEngineWireSubsystem::HandleAddFoliageType(
   }
 
   FoliageType->SetStaticMesh(StaticMesh);
-  FoliageType->Density = static_cast<float>(Density);
-  FoliageType->Scaling = EFoliageScaling::Uniform;
-  // Uniform scaling reads ScaleX only.
-  FoliageType->ScaleX.Min = static_cast<float>(MinScale);
-  FoliageType->ScaleX.Max = static_cast<float>(MaxScale);
-  FoliageType->AlignToNormal = AlignToNormal;
-  FoliageType->RandomYaw = RandomYaw;
+  if (bCreated || Payload->HasField(TEXT("density"))) {
+    FoliageType->Density = static_cast<float>(Density);
+  }
+  if (bCreated || Payload->HasField(TEXT("minScale")) || Payload->HasField(TEXT("maxScale"))) {
+    FoliageType->Scaling = EFoliageScaling::Uniform;
+    // Uniform scaling reads ScaleX only.
+    FoliageType->ScaleX.Min = static_cast<float>(MinScale);
+    FoliageType->ScaleX.Max = static_cast<float>(MaxScale);
+  }
+  if (bCreated || Payload->HasField(TEXT("alignToNormal"))) {
+    FoliageType->AlignToNormal = AlignToNormal;
+  }
+  if (bCreated || Payload->HasField(TEXT("randomYaw"))) {
+    FoliageType->RandomYaw = RandomYaw;
+  }
   if (CullDistance > 0) {
     FoliageType->CullDistance.Min = 0;
     FoliageType->CullDistance.Max = CullDistance;
   }
   FoliageType->ReapplyDensity = true;
 
-  McpSafeAssetSave(FoliageType);
+  const bool bSaved = McpSafeAssetSave(FoliageType);
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("created"), bCreated);
+  Resp->SetBoolField(TEXT("saved"), bSaved);
   Resp->SetBoolField(TEXT("exists_after"), true);
   Resp->SetStringField(TEXT("asset_path"), FoliageType->GetPathName());
   Resp->SetStringField(TEXT("used_mesh"), MeshPath);
@@ -158,7 +168,7 @@ bool UEngineWireSubsystem::HandleAddFoliageType(
   McpHandlerUtils::AddVerification(Resp, FoliageType);
 
   SendAutomationResponse(RequestingSocket, RequestId, true,
-                         TEXT("Foliage type created successfully"), Resp,
+                         bCreated ? TEXT("Foliage type created") : TEXT("Foliage type updated; settings not sent were kept"), Resp,
                          FString());
 
   return true;

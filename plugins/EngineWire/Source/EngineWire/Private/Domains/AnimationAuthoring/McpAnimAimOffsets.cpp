@@ -29,10 +29,11 @@ TSharedPtr<FJsonObject> HandleAimOffsetActions(const FString& SubAction, const T
 
     // Create package and asset directly to avoid UI dialogs
         FString PackagePath = Path / Name;
-        UPackage* Package = CreatePackage(*PackagePath);
+        FString CreateError, CreateCode;
+        UPackage* Package = McpCreatePackageForNewAsset(PackagePath, CreateError, CreateCode);
         if (!Package)
         {
-            ANIM_ERROR_RESPONSE(TEXT("Failed to create package"), TEXT("PACKAGE_ERROR"));
+            ANIM_ERROR_RESPONSE(CreateError, CreateCode);
         }
 
         UBlendSpaceFactoryNew* Factory = NewObject<UBlendSpaceFactoryNew>();

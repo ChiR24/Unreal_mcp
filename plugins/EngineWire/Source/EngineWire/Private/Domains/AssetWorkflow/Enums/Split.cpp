@@ -60,8 +60,9 @@ bool HandleEnumSplit(
     FString PackageName;
     if (!ValidateAssetCreationPath(Path, SanitizedName, PackageName, PathError)) { SetEnumResultFields(OutResult, false, PathError); return true; }
 
-    UPackage* Package = CreatePackage(*PackageName);
-    if (!Package) { SetEnumResultFields(OutResult, false, TEXT("Failed to create package")); return true; }
+    FString CreateError, CreateCode;
+    UPackage* Package = McpCreatePackageForNewAsset(PackageName, CreateError, CreateCode);
+    if (!Package) { SetEnumResultFields(OutResult, false, CreateError, *CreateCode); return true; }
 
     UUserDefinedEnum* NewEnum = Cast<UUserDefinedEnum>(FEnumEditorUtils::CreateUserDefinedEnum(Package, FName(*SanitizedName), RF_Public | RF_Standalone));
     if (!NewEnum) { SetEnumResultFields(OutResult, false, TEXT("Failed to create split enum")); return true; }

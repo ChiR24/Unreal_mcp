@@ -4017,3 +4017,30 @@ describe('blend spaces, skeletons and ragdolls answer for what they did', () => 
     expect(ragdoll.indexOf('TEXT("NO_PHYSICS_ASSET")')).toBeLessThan(ragdoll.indexOf('SkelMeshComp->SetSimulatePhysics(true);'));
   });
 });
+
+describe('a create never rebuilds an asset already at its path', () => {
+  it('the shared package helper refuses an occupied path before CreatePackage', () => {
+    const helper = readFileSync(join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'Foundation', 'BridgeHelpers', 'Assets', 'McpAssetCreation.h'), 'utf8');
+    const body = helper.slice(helper.indexOf('McpCreatePackageForNewAsset('));
+    expect(body.indexOf('McpAssetExists(PackagePath)')).toBeLessThan(body.indexOf('CreatePackage(*PackagePath)'));
+    expect(body).toContain('OutCode = TEXT("ASSET_ALREADY_EXISTS");');
+  });
+
+  it('creators of a caller-named asset go through it', () => {
+    for (const file of [['Animation', 'Rigging', 'McpAnimSkinMesh.cpp'], ['AnimationAuthoring', 'McpAnimAimOffsets.cpp'], ['AnimationAuthoring', 'McpAnimControlRig.cpp'],
+      ['AnimationAuthoring', 'McpAnimIKRetargeting.cpp'], ['AssetWorkflow', 'Enums', 'Split.cpp'], ['AssetWorkflow', 'Structs', 'McpAssetStructsImport.cpp'],
+      ['AudioAuthoring', 'McpAudioAttenuation.cpp'], ['AudioAuthoring', 'McpAudioSoundClasses.cpp'], ['AudioAuthoring', 'McpAudioSoundCueAssets.cpp'],
+      ['AudioAuthoring', 'McpAudioSoundMixes.cpp'], ['AudioAuthoring', 'McpAudioDialogue.cpp'], ['AudioAuthoring', 'McpAudioEffects.cpp'],
+      ['Environment', 'Runtime', 'McpEnvFoliageAssets.cpp'], ['LevelStructure', 'McpLevelStructureDataLayerCreation.cpp'], ['LevelStructure', 'McpLevelStructureHlod.cpp'],
+      ['MaterialAuthoring', 'Nodes', 'McpMatAddLandscapeLayer.cpp'], ['Skeleton', 'Bones', 'McpSkeletonStructureCreation.cpp'], ['Skeleton', 'Physics', 'McpSkeletonPhysicsAssets.cpp'],
+      ['Texture', 'McpTextureExtract.cpp'], ['Audio', 'McpAudioOcclusionAndAttenuation.cpp'], ['Foliage', 'McpFoliageProcedural.cpp']]) {
+      expect(code(...file), file.join('/')).toContain('McpCreatePackageForNewAsset(');
+    }
+  });
+
+  it('a source effect preset is an asset in its own package, not a transient object', () => {
+    const support = code('AudioAuthoring', 'McpAudioAssetSupport.cpp');
+    expect(support).toContain('NewObject<UObject>(Outer, PresetClass, PresetName, RF_Public | RF_Standalone)');
+    expect(support).not.toContain('NewObject<UObject>(GetTransientPackage(), PresetClass');
+  });
+});

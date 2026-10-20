@@ -34,6 +34,15 @@ bool CreateReflectionActor(
     }
     if (AActor* Existing = FindRenderActor(Name))
     {
+        // An actor of another class under the name answered "already exists" as if it were the capture asked for.
+        if (!Existing->IsA<TActor>())
+        {
+            Subsystem->SendAutomationError(Socket, RequestId,
+                FString::Printf(TEXT("An actor named %s already exists and is a %s, not a %s; pick another name. Nothing was created."),
+                    *Name, *Existing->GetClass()->GetName(), *TActor::StaticClass()->GetName()),
+                TEXT("NAME_TAKEN"));
+            return true;
+        }
         TSharedPtr<FJsonObject> Result = MakeRenderResult(SubAction);
         Result->SetBoolField(TEXT("alreadyExists"), true);
         McpHandlerUtils::AddVerification(Result, Existing);
@@ -176,6 +185,8 @@ bool HandleRenderReflectionAction(
         {
             return false;
         }
+        // Modify marks the level changed; without it a save could miss the new offset.
+        Capture->Modify();
         Capture->CaptureOffset = ExtractVectorField(Payload, TEXT("captureOffset"), Capture->CaptureOffset);
         Capture->MarkDirtyForRecaptureOrUpload();
         TSharedPtr<FJsonObject> Result = MakeRenderResult(SubAction);
@@ -214,6 +225,7 @@ bool HandleRenderReflectionAction(
         TArray<FString> Unsupported;
         FString Error;
         const TSharedPtr<FJsonObject> Settings = GetSettingsObject(Payload);
+        Component->Modify();
         if (!ValidateBoundedNumberSetting(Settings, TEXT("ScreenPercentage"), 1.0, 200.0, Error) ||
             !ApplyJsonSettings(Component, Component->GetClass(), Settings, false, Applied, Unsupported, Error))
         {

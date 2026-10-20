@@ -131,7 +131,7 @@ bool UEngineWireSubsystem::HandleRenameBone(
         SaveAndReport(Skeleton, Payload, Result);
 
         SendAutomationResponse(RequestingSocket, RequestId, true,
-            FString::Printf(TEXT("Virtual bone renamed from '%s' to '%s'"), *BoneName, *NewBoneName), Result);
+            FString::Printf(TEXT("Virtual bone renamed from '%s' to '%s'"), *BoneName, *NewVirtualName), Result);
         return true;
     }
 

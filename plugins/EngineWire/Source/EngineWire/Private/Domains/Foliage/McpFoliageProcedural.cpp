@@ -47,7 +47,12 @@ bool UEngineWireSubsystem::HandleCreateProceduralFoliage(
   FString FullPackagePath =
       FString::Printf(TEXT("%s/%s"), *PackagePath, *AssetName);
 
-  UPackage *Package = CreatePackage(*FullPackagePath);
+  FString CreateError, CreateCode;
+  UPackage *Package = McpCreatePackageForNewAsset(FullPackagePath, CreateError, CreateCode);
+  if (!Package) {
+    SendAutomationError(RequestingSocket, RequestId, CreateError, CreateCode);
+    return true;
+  }
   UProceduralFoliageSpawner *Spawner = NewObject<UProceduralFoliageSpawner>(
       Package, FName(*AssetName), RF_Public | RF_Standalone);
   if (!Spawner) {
@@ -76,10 +81,13 @@ bool UEngineWireSubsystem::HandleCreateProceduralFoliage(
         if (!MeshPath.IsEmpty()) {
           UStaticMesh *Mesh = LoadObject<UStaticMesh>(nullptr, *MeshPath);
           if (Mesh) {
-            FString FTName =
-                FString::Printf(TEXT("%s_FT_%d"), *AssetName, TypeIndex++);
-            FString FTPackagePath =
-                FString::Printf(TEXT("%s/%s"), *PackagePath, *FTName);
+            // The next free <spawner>_FT_<n>: an asset left under that name was rebuilt over before.
+            FString FTName;
+            FString FTPackagePath;
+            do {
+              FTName = FString::Printf(TEXT("%s_FT_%d"), *AssetName, TypeIndex++);
+              FTPackagePath = FString::Printf(TEXT("%s/%s"), *PackagePath, *FTName);
+            } while (McpAssetExists(FTPackagePath));
             UPackage *FTPackage = CreatePackage(*FTPackagePath);
             UFoliageType_InstancedStaticMesh *FT =
                 NewObject<UFoliageType_InstancedStaticMesh>(

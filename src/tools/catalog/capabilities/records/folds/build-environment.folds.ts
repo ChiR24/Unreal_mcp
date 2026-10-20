@@ -7,7 +7,8 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
   // landscape
   {
     primary: 'create_landscape', selector: 'kind',
-    summary: 'Create a landscape actor, or a landscape grass type asset.',
+    summary: 'Create a new landscape in the level, or a grass type for one, chosen by kind. landscape spawns a flat Landscape actor labelled name (or landscapeName), its corner at location: componentCount {x, y} components (default 8 x 8), or as many as sizeX and sizeY quads need, each component holding sectionsPerComponent (1 or 2) squared sections of quadsPerSection quads (7, 15, 31, 63 by default, 127 or 255), with materialPath on it (default the engine grid material). builtComponents and extentX/extentY (half the built size; a quad is 100 units) are measured from what was built, a build that makes no components fails (LANDSCAPE_BUILD_FAILED), and the level is left unsaved. grass_type saves a landscape grass type asset named name in path (default /Game/Landscape) that grows meshPath at density 1 per 10 square metres, scaled 0.8 to 1.2, randomly turned and aligned to the surface.',
+    topics: ['create a new landscape'],
     members: { landscape: 'create_landscape', grass_type: 'create_landscape_grass_type' },
   },
   {
@@ -25,7 +26,7 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'create_landscape_asset', selector: 'kind',
-    summary: 'Create a landscape layer info asset or a landscape streaming proxy.',
+    summary: 'Create a landscape asset, chosen by kind. layer_info makes a landscape layer info asset (the layer a landscape material paints) named layerName or name in path (default /Game/Landscape), with hardness, physicalMaterialPath (refused when it does not load) and noWeightBlend; an asset already at that path is refused (ASSET_ALREADY_EXISTS). streaming_proxy places a World Partition streaming proxy linked to the landscape, at location and rotation (default the landscape\'s), reusing a proxy already labelled actorName.',
     members: { layer_info: 'create_landscape_layer_info', streaming_proxy: 'create_landscape_streaming_proxy' },
   },
   // foliage
@@ -41,12 +42,12 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'create_foliage_type', selector: 'kind',
-    summary: 'Create a foliage type asset or a procedural foliage spawner.',
+    summary: 'Create foliage assets, chosen by kind. type makes a static mesh foliage type named name in path (default /Game/Foliage) that places meshPath, with density (instances per 1000 x 1000 units, default 100), minScale and maxScale (default 1), alignToNormal and randomYaw (default true) and cullDistance. A foliage type already there is updated instead, keeping the settings not sent (created false); another kind of asset under the name is refused (ASSET_ALREADY_EXISTS). procedural places a procedural foliage volume and a spawner asset named <name>_Spawner (refused when it exists) with one foliage type per foliageTypes entry ({meshPath, density}), simulated with seed over bounds; a simulation that places nothing fails.',
     members: { type: 'create_foliage_type', procedural: 'create_procedural_foliage' },
   },
   {
     primary: 'configure_foliage', selector: 'setting',
-    summary: 'Configure a foliage type: mesh, placement, collision, culling, LOD.',
+    summary: 'Change a foliage type asset (foliageTypePath, or foliageType), chosen by setting: mesh (meshPath; previousMesh, placedInstances and instancesShowingNewMesh tell how the placed instances followed), placement (density, minScale, maxScale, alignToNormal, randomYaw), collision (collisionEnabled), culling (cullDistance; the fade start moves in when it was further) or lod (settings: UFoliageType properties by name). Only the fields sent are written, and configuredProperties names them; a call that sets nothing is refused, as is a value a property will not take (CONFIGURATION_FAILED). Saved (SAVE_FAILED otherwise; engine content is never saved).',
     topics: ['foliage mesh', 'foliage placement', 'foliage collision', 'foliage culling', 'foliage lod'],
     members: byTarget('configure_foliage_', ['configure_foliage_mesh', 'configure_foliage_placement', 'configure_foliage_collision', 'configure_foliage_culling', 'configure_foliage_lod']),
   },
@@ -93,7 +94,7 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'create_capture_actor', selector: 'kind',
-    summary: 'Create a scene capture (2D or cube) or a reflection capture (sphere, box or planar).',
+    summary: 'Place a capture actor labelled name at location and rotation, chosen by kind: scene_capture_2d or scene_capture_cube (renders the view into a render target, assigned with configure_scene_capture setting=render_target), or a sphere_reflection, box_reflection or planar_reflection capture (settings: properties of its capture component). A capture of the same kind already labelled name is kept (alreadyExists); an actor of another class under that label is refused (NAME_TAKEN).',
     topics: ['scene capture', 'reflection capture', 'planar reflection', 'render target capture', 'place a reflection capture', 'add a reflection capture'],
     members: { scene_capture_2d: 'create_scene_capture_2d', scene_capture_cube: 'create_scene_capture_cube', sphere_reflection: 'create_sphere_reflection_capture', box_reflection: 'create_box_reflection_capture', planar_reflection: 'create_planar_reflection' },
   },

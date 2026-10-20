@@ -36,6 +36,14 @@ bool CreateCaptureActor(
     }
     if (AActor* Existing = FindRenderActor(Name))
     {
+        if (!Existing->IsA<TActor>())
+        {
+            Subsystem->SendAutomationError(Socket, RequestId,
+                FString::Printf(TEXT("An actor named %s already exists and is a %s, not a %s; pick another name. Nothing was created."),
+                    *Name, *Existing->GetClass()->GetName(), *TActor::StaticClass()->GetName()),
+                TEXT("NAME_TAKEN"));
+            return true;
+        }
         TSharedPtr<FJsonObject> Result = MakeRenderResult(SubAction);
         Result->SetBoolField(TEXT("alreadyExists"), true);
         McpHandlerUtils::AddVerification(Result, Existing);
@@ -154,11 +162,16 @@ bool HandleRenderSceneCaptureAction(
         return false;
     }
 
+    UObject* CaptureComponent = Capture2D ? static_cast<UObject*>(Capture2D) : static_cast<UObject*>(CaptureCube);
+    // The settings below change the placed actor; without Modify its level was not marked changed and a save missed them.
+    if (SubAction != TEXT("capture_scene"))
+    {
+        CaptureComponent->Modify();
+    }
     if (SubAction == TEXT("configure_capture_source"))
     {
         FString Error;
-        if (!ApplyCaptureSource(Capture2D ? static_cast<UObject*>(Capture2D) : static_cast<UObject*>(CaptureCube),
-                GetJsonStringField(Payload, TEXT("captureSource")), Error))
+        if (!ApplyCaptureSource(CaptureComponent, GetJsonStringField(Payload, TEXT("captureSource")), Error))
         {
             Subsystem->SendAutomationError(RequestingSocket, RequestId, Error, TEXT("INVALID_SETTING"));
             return true;

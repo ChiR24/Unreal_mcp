@@ -64,11 +64,12 @@ bool HandleConfigureHlodLayer(
         FullPath = TEXT("/Game/") + FullPath;
     }
 
-    UPackage* AssetPackage = CreatePackage(*FullPath);
+    FString CreateError, CreateCode;
+    UPackage* AssetPackage = McpCreatePackageForNewAsset(FullPath, CreateError, CreateCode);
     if (!AssetPackage)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Failed to create package for HLOD layer at: %s"), *FullPath), nullptr, TEXT("PACKAGE_CREATION_FAILED"));
+            CreateError, nullptr, CreateCode);
         return true;
     }
 

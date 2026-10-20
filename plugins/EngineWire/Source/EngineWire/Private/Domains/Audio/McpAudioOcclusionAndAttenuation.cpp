@@ -71,10 +71,16 @@ bool HandleSpatialActions(
           const FString AttenName = Sound->GetName() + TEXT("_Attenuation");
           const FString AttenPackageName =
               FPackageName::GetLongPackagePath(Sound->GetOutermost()->GetName()) + TEXT("/") + AttenName;
-          UPackage* AttenPackage = CreatePackage(*AttenPackageName);
-          AttenuationSettings = AttenPackage
-              ? NewObject<USoundAttenuation>(AttenPackage, FName(*AttenName), RF_Public | RF_Standalone)
-              : nullptr;
+          // An attenuation an earlier call made for this sound is reused; NewObject over it rebuilt it empty, and
+          // another kind of asset under that name is refused.
+          AttenuationSettings = LoadObject<USoundAttenuation>(nullptr, *(AttenPackageName + TEXT(".") + AttenName));
+          if (!AttenuationSettings) {
+            FString CreateError, CreateCode;
+            UPackage* AttenPackage = McpCreatePackageForNewAsset(AttenPackageName, CreateError, CreateCode);
+            AttenuationSettings = AttenPackage
+                ? NewObject<USoundAttenuation>(AttenPackage, FName(*AttenName), RF_Public | RF_Standalone)
+                : nullptr;
+          }
           if (!AttenuationSettings) {
             Self->SendAutomationError(RequestingSocket, RequestId,
                                 FString::Printf(TEXT("Failed to create %s"), *AttenPackageName),
@@ -172,10 +178,10 @@ bool HandleSpatialActions(
        return true;
      }
 
-     UPackage *Package = CreatePackage(*FullPath);
+     FString CreateError, CreateCode;
+     UPackage *Package = McpCreatePackageForNewAsset(FullPath, CreateError, CreateCode);
      if (!Package) {
-       Self->SendAutomationError(RequestingSocket, RequestId,
-                           TEXT("Failed to create package"), TEXT("PACKAGE_ERROR"));
+       Self->SendAutomationError(RequestingSocket, RequestId, CreateError, CreateCode);
        return true;
      }
 

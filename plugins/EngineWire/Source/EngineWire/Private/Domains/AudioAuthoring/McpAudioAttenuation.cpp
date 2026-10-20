@@ -17,10 +17,11 @@ TSharedPtr<FJsonObject> HandleAttenuationActions(const FString& SubAction, const
 		}
 
 		FString PackagePath = Path / Name;
-		UPackage* Package = CreatePackage(*PackagePath);
+		FString CreateError, CreateCode;
+		UPackage* Package = McpCreatePackageForNewAsset(PackagePath, CreateError, CreateCode);
 		if (!Package)
 		{
-			return McpHandlerUtils::BuildErrorResponse(TEXT("PACKAGE_ERROR"), TEXT("Failed to create package"));
+			return McpHandlerUtils::BuildErrorResponse(CreateCode, CreateError);
 		}
 
 		USoundAttenuationFactory* Factory = NewObject<USoundAttenuationFactory>();

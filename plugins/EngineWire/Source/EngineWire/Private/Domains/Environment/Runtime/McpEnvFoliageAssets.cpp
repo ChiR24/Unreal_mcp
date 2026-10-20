@@ -133,6 +133,12 @@ bool McpConfigureFoliageType(const TSharedPtr<FJsonObject> &Payload, TSharedPtr<
         return McpFailEnvironmentAction(OutMessage, OutErrorCode,
             FString::Printf(TEXT("Could not apply: %s"), *FString::Join(Failed, TEXT("; "))), TEXT("CONFIGURATION_FAILED"));
     }
+    // A call that set nothing used to save the untouched type and answer "configured".
+    if (Applied.Num() == 0)
+    {
+        return McpFailEnvironmentAction(OutMessage, OutErrorCode,
+            TEXT("Nothing to set: send meshPath, density, minScale, maxScale, alignToNormal, randomYaw, collisionEnabled, cullDistance or settings."), TEXT("INVALID_ARGUMENT"));
+    }
     FoliageType->PostEditChange();
     FoliageType->MarkPackageDirty();
     if (!McpSafeAssetSave(FoliageType))
@@ -196,11 +202,11 @@ bool McpCreateLandscapeLayerInfo(const TSharedPtr<FJsonObject> &Payload, TShared
             FString::Printf(TEXT("Physical material not found: %s"), *PhysicalMaterialPath), TEXT("ASSET_NOT_FOUND"));
     }
 
-    UPackage *Package = CreatePackage(*PackagePath);
+    FString CreateError, CreateCode;
+    UPackage* Package = McpCreatePackageForNewAsset(PackagePath, CreateError, CreateCode);
     if (!Package)
     {
-        return McpFailEnvironmentAction(OutMessage, OutErrorCode,
-            TEXT("Failed to create landscape layer package"), TEXT("PACKAGE_CREATION_FAILED"));
+        return McpFailEnvironmentAction(OutMessage, OutErrorCode, CreateError, *CreateCode);
     }
     ULandscapeLayerInfoObject *LayerInfo = NewObject<ULandscapeLayerInfoObject>(Package, FName(*LayerName), RF_Public | RF_Standalone);
     if (!LayerInfo)

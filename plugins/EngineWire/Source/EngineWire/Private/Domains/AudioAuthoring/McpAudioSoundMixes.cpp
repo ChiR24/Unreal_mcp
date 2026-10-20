@@ -23,10 +23,11 @@ TSharedPtr<FJsonObject> HandleSoundMixActions(const FString& SubAction, const TS
 			return McpHandlerUtils::BuildErrorResponse(TEXT("INVALID_ASSET_PATH"), PathError);
 		}
 
-		UPackage* Package = CreatePackage(*PackagePath);
+		FString CreateError, CreateCode;
+		UPackage* Package = McpCreatePackageForNewAsset(PackagePath, CreateError, CreateCode);
 		if (!Package)
 		{
-			return McpHandlerUtils::BuildErrorResponse(TEXT("PACKAGE_ERROR"), TEXT("Failed to create package"));
+			return McpHandlerUtils::BuildErrorResponse(CreateCode, CreateError);
 		}
 
 		USoundMixFactory* Factory = NewObject<USoundMixFactory>();

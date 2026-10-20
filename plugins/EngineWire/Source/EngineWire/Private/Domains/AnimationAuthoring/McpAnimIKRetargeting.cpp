@@ -26,10 +26,11 @@ TSharedPtr<FJsonObject> HandleIKRetargetActions(const FString& SubAction, const 
         // Create the IK Retargeter using factory
         FString FullPath = Path / Name;
         FString PackageName = FullPath;
-        UPackage* Package = CreatePackage(*PackageName);
+        FString CreateError, CreateCode;
+        UPackage* Package = McpCreatePackageForNewAsset(PackageName, CreateError, CreateCode);
         if (!Package)
         {
-            ANIM_ERROR_RESPONSE(TEXT("Failed to create package for IK Retargeter"), TEXT("PACKAGE_ERROR"));
+            ANIM_ERROR_RESPONSE(CreateError, CreateCode);
         }
 
         UIKRetargetFactory* Factory = NewObject<UIKRetargetFactory>();

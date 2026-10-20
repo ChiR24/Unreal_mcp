@@ -113,10 +113,11 @@ bool UEngineWireSubsystem::HandleCreatePhysicsAsset(
     const FString AssetName = FPaths::GetBaseFilename(SanitizedOutputPath);
     const FString FullPackagePath = PackagePath / AssetName;
 
-    UPackage* Package = CreatePackage(*FullPackagePath);
+    FString PackageError, PackageCode;
+    UPackage* Package = McpCreatePackageForNewAsset(FullPackagePath, PackageError, PackageCode);
     if (!Package)
     {
-        SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create package"), TEXT("PACKAGE_ERROR"));
+        SendAutomationError(RequestingSocket, RequestId, PackageError, PackageCode);
         return true;
     }
 

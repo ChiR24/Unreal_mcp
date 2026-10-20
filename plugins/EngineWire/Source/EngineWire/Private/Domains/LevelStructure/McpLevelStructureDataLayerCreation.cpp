@@ -122,11 +122,12 @@ bool HandleCreateDataLayer(
         FullAssetPath = TEXT("/Game/") + FullAssetPath;
     }
 
-    UPackage* AssetPackage = CreatePackage(*FullAssetPath);
+    FString CreateError, CreateCode;
+    UPackage* AssetPackage = McpCreatePackageForNewAsset(FullAssetPath, CreateError, CreateCode);
     if (!AssetPackage)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Failed to create package for DataLayerAsset at: %s"), *FullAssetPath), nullptr, TEXT("PACKAGE_CREATION_FAILED"));
+            CreateError, nullptr, CreateCode);
         return true;
     }
 

@@ -24,6 +24,7 @@ const testCases = [
 { scenario: 'Setup: create test folder', toolName: 'manage_asset', arguments: { action: 'create_folder', path: TEST_FOLDER }, expected: 'success|already exists' },
 { scenario: 'Setup: create test sound cue', toolName: 'manage_audio', arguments: { action: 'create_sound_cue', name: 'TestSoundCue', path: TEST_FOLDER_ALIAS }, expected: 'success|already exists' },
 { scenario: 'Setup: create test sound class', toolName: 'manage_audio', arguments: { action: 'create_sound_class', name: 'TestSoundClass', path: TEST_FOLDER }, expected: 'success|already exists' },
+{ scenario: 'CREATE: create_sound_class refuses a path an asset already holds', toolName: 'manage_audio', arguments: { action: 'create_sound_class', name: 'TestSoundClass', path: TEST_FOLDER }, expected: 'error|ASSET_ALREADY_EXISTS' },
 { scenario: 'Setup: create test sound mix', toolName: 'manage_audio', arguments: { action: 'create_sound_mix', name: 'TestSoundMix', path: TEST_FOLDER }, expected: 'success|already exists' },
 { scenario: 'Setup: create test metasound', toolName: 'manage_audio', arguments: { action: 'create_metasound', name: 'TestMetaSound', path: TEST_FOLDER_ALIAS }, expected: 'success|already exists' },
 { scenario: 'Setup: create test attenuation settings', toolName: 'manage_audio', arguments: { action: 'create_attenuation_settings', name: 'TestAttenuation', path: TEST_FOLDER }, expected: 'success|already exists' },

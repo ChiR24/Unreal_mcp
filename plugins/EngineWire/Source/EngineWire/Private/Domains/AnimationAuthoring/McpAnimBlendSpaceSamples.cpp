@@ -66,6 +66,7 @@ TSharedPtr<FJsonObject> HandleBlendSpaceSampleActions(const FString& SubAction, 
 
         Response->SetNumberField(TEXT("sampleIndex"), SampleIndex);
         Response->SetBoolField(TEXT("saved"), bSave && SaveAnimAsset(BlendSpace, bSave));
+        McpHandlerUtils::AddVerification(Response, BlendSpace);
         ANIM_SUCCESS_RESPONSE(TEXT("Blend sample added"));
         return Response;
     }
@@ -240,6 +241,7 @@ TSharedPtr<FJsonObject> HandleBlendSpaceSampleActions(const FString& SubAction, 
         Response->SetNumberField(TEXT("maxValue"), Updated.Max);
         Response->SetNumberField(TEXT("gridDivisions"), Updated.GridNum);
         Response->SetBoolField(TEXT("saved"), bSave && SaveAnimAsset(BlendSpace, bSave));
+        McpHandlerUtils::AddVerification(Response, BlendSpace);
         ANIM_SUCCESS_RESPONSE(TEXT("Axis settings updated"));
         return Response;
     }
@@ -301,6 +303,7 @@ TSharedPtr<FJsonObject> HandleBlendSpaceSampleActions(const FString& SubAction, 
         Response->SetNumberField(TEXT("interpolationTime"), BlendSpace->InterpolationParam[0].InterpolationTime);
         Response->SetStringField(TEXT("interpolationType"), StaticEnum<EFilterInterpolationType>()->GetNameStringByValue(BlendSpace->InterpolationParam[0].InterpolationType));
         Response->SetNumberField(TEXT("targetWeightInterpolationSpeed"), BlendSpace->TargetWeightInterpolationSpeedPerSec);
+        McpHandlerUtils::AddVerification(Response, BlendSpace);
 
         ANIM_SUCCESS_RESPONSE(TEXT("Interpolation settings updated"));
         return Response;

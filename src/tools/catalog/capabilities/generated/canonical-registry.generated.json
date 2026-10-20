@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "697297cec66b22ec",
+  "catalogRevision": "731f45a985a45240",
   "recordCount": 416,
   "records": [
     {
@@ -25675,7 +25675,7 @@
           "foliage culling",
           "foliage lod"
         ],
-        "summary": "Configure a foliage type: mesh, placement, collision, culling, LOD.",
+        "summary": "Change a foliage type asset (foliageTypePath, or foliageType), chosen by setting: mesh (meshPath; previousMesh, placedInstances and instancesShowingNewMesh tell how the placed instances followed), placement (density, minScale, maxScale, alignToNormal, randomYaw), collision (collisionEnabled), culling (cullDistance; the fade start moves in when it was further) or lod (settings: UFoliageType properties by name). Only the fields sent are written, and configuredProperties names them; a call that sets nothing is refused, as is a value a property will not take (CONFIGURATION_FAILED). Saved (SAVE_FAILED otherwise; engine content is never saved).",
         "whenToUse": [
           "setting=mesh: A foliage type needs a different mesh.",
           "setting=placement: Foliage placement density or scale must be tuned.",
@@ -25817,7 +25817,7 @@
       },
       "examples": [
         {
-          "title": "Configure a foliage type: mesh, placement, collision, culling, LOD.",
+          "title": "Change a foliage type asset (foliageTypePath, or foliageType), chosen by setting: mesh (meshPath; previousMesh, placedInstances and instancesShowingNewMesh tell how the placed instances followed), placement (density, minScale, maxScale, alignToNormal, randomYaw), collision (collisionEnabled), culling (cullDistance; the fade start moves in when it was further) or lod (settings: UFoliageType properties by name). Only the fields sent are written, and configuredProperties names them; a call that sets nothing is refused, as is a value a property will not take (CONFIGURATION_FAILED). Saved (SAVE_FAILED otherwise; engine content is never saved).",
           "input": {
             "action": "configure_foliage",
             "foliageType": "Bush_Type",
@@ -25899,7 +25899,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "c36aa7c88088a5919e5a17c9f7a4dd2f81d6069dc0e23ab40ddef7a8b1e9b88d",
-        "content": "c5d6251fa1c9d98e739ba9f78f9d14354ad46336c4f97503887e1b18b225e1f2"
+        "content": "63ad1fa4ba6895225efb94bd0e640aac4c9fac109507eaa95e74226ff104b71f"
       }
     },
     {
@@ -28802,7 +28802,7 @@
           "place a reflection capture",
           "add a reflection capture"
         ],
-        "summary": "Create a scene capture (2D or cube) or a reflection capture (sphere, box or planar).",
+        "summary": "Place a capture actor labelled name at location and rotation, chosen by kind: scene_capture_2d or scene_capture_cube (renders the view into a render target, assigned with configure_scene_capture setting=render_target), or a sphere_reflection, box_reflection or planar_reflection capture (settings: properties of its capture component). A capture of the same kind already labelled name is kept (alreadyExists); an actor of another class under that label is refused (NAME_TAKEN).",
         "whenToUse": [
           "kind=scene_capture_2d|scene_capture_cube: Exposure, ambient occlusion, screen, or capture settings must be configured.",
           "kind=sphere_reflection|box_reflection|planar_reflection: Render or lighting quality settings must be configured."
@@ -28917,7 +28917,7 @@
       },
       "examples": [
         {
-          "title": "Create a scene capture (2D or cube) or a reflection capture (sphere, box or planar).",
+          "title": "Place a capture actor labelled name at location and rotation, chosen by kind: scene_capture_2d or scene_capture_cube (renders the view into a render target, assigned with configure_scene_capture setting=render_target), or a sphere_reflection, box_reflection or planar_reflection capture (settings: properties of its capture component). A capture of the same kind already labelled name is kept (alreadyExists); an actor of another class under that label is refused (NAME_TAKEN).",
           "input": {
             "action": "create_capture_actor",
             "kind": "scene_capture_2d"
@@ -28991,7 +28991,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "fe77fba6a4f30b30a70c29b5c3fdc24fa5243daf941ef5b2a7f04acadfe39ed2",
-        "content": "fb3694bc1402e37e2fb5f60fd9f437de10a609190a847e2076764dff12e28ab4"
+        "content": "d820715de695d1b0bc89008debdf5772fefe42a2a4e5aa0826c80e4a9a4ba64a"
       }
     },
     {
@@ -29018,7 +29018,7 @@
         "topics": [
           "create_foliage_type"
         ],
-        "summary": "Create a foliage type asset or a procedural foliage spawner.",
+        "summary": "Create foliage assets, chosen by kind. type makes a static mesh foliage type named name in path (default /Game/Foliage) that places meshPath, with density (instances per 1000 x 1000 units, default 100), minScale and maxScale (default 1), alignToNormal and randomYaw (default true) and cullDistance. A foliage type already there is updated instead, keeping the settings not sent (created false); another kind of asset under the name is refused (ASSET_ALREADY_EXISTS). procedural places a procedural foliage volume and a spawner asset named <name>_Spawner (refused when it exists) with one foliage type per foliageTypes entry ({meshPath, density}), simulated with seed over bounds; a simulation that places nothing fails.",
         "whenToUse": [
           "kind=type: A new foliage type asset is needed.",
           "kind=procedural: Large-area procedural foliage scatter is needed."
@@ -29190,7 +29190,7 @@
       },
       "examples": [
         {
-          "title": "Create a foliage type asset or a procedural foliage spawner.",
+          "title": "Create foliage assets, chosen by kind. type makes a static mesh foliage type named name in path (default /Game/Foliage) that places meshPath, with density (instances per 1000 x 1000 units, default 100), minScale and maxScale (default 1), alignToNormal and randomYaw (default true) and cullDistance. A foliage type already there is updated instead, keeping the settings not sent (created false); another kind of asset under the name is refused (ASSET_ALREADY_EXISTS). procedural places a procedural foliage volume and a spawner asset named <name>_Spawner (refused when it exists) with one foliage type per foliageTypes entry ({meshPath, density}), simulated with seed over bounds; a simulation that places nothing fails.",
           "input": {
             "action": "create_foliage_type",
             "name": "Bush_Type",
@@ -29275,7 +29275,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "5664f7469158bc16a7bf9865016451fbd858d043e709fe2451e54c6531e54038",
-        "content": "fc0dfb880fa2ca0dc70414243fd8a2a4f2ba80286a9d001008eb08f02b76670d"
+        "content": "90c829ef03a18104c19cfb7f0e6d05b5378d73d7c36fe2fcf1025c4eb540e707"
       }
     },
     {
@@ -29301,13 +29301,14 @@
         "family": "landscape",
         "topics": [
           "create_landscape",
+          "create a new landscape",
           "landscape",
           "terrain",
           "new landscape",
           "heightfield",
           "add a landscape"
         ],
-        "summary": "Create a landscape actor, or a landscape grass type asset.",
+        "summary": "Create a new landscape in the level, or a grass type for one, chosen by kind. landscape spawns a flat Landscape actor labelled name (or landscapeName), its corner at location: componentCount {x, y} components (default 8 x 8), or as many as sizeX and sizeY quads need, each component holding sectionsPerComponent (1 or 2) squared sections of quadsPerSection quads (7, 15, 31, 63 by default, 127 or 255), with materialPath on it (default the engine grid material). builtComponents and extentX/extentY (half the built size; a quad is 100 units) are measured from what was built, a build that makes no components fails (LANDSCAPE_BUILD_FAILED), and the level is left unsaved. grass_type saves a landscape grass type asset named name in path (default /Game/Landscape) that grows meshPath at density 1 per 10 square metres, scaled 0.8 to 1.2, randomly turned and aligned to the surface.",
         "whenToUse": [
           "kind=landscape: A landscape must be created or modified in the current level.",
           "kind=grass_type: A grass type asset is needed for landscape grass rendering."
@@ -29449,7 +29450,7 @@
       },
       "examples": [
         {
-          "title": "Create a landscape actor, or a landscape grass type asset.",
+          "title": "Create a new landscape in the level, or a grass type for one, chosen by kind. landscape spawns a flat Landscape actor labelled name (or landscapeName), its corner at location: componentCount {x, y} components (default 8 x 8), or as many as sizeX and sizeY quads need, each component holding sectionsPerComponent (1 or 2) squared sections of quadsPerSection quads (7, 15, 31, 63 by default, 127 or 255), with materialPath on it (default the engine grid material). builtComponents and extentX/extentY (half the built size; a quad is 100 units) are measured from what was built, a build that makes no components fails (LANDSCAPE_BUILD_FAILED), and the level is left unsaved. grass_type saves a landscape grass type asset named name in path (default /Game/Landscape) that grows meshPath at density 1 per 10 square metres, scaled 0.8 to 1.2, randomly turned and aligned to the surface.",
           "input": {
             "action": "create_landscape",
             "name": "Landscape_1",
@@ -29548,7 +29549,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "b7018f018fa2b27b651061c1ec11863c92725d64d99dba9b1a1b914234bd251d",
-        "content": "617eb34ee08c9af65819f2f0a8a4f3f08eba4713e7b88698f4c58d2881ce5604"
+        "content": "042f110b2fd7dc83a710b3ad35b39d06e9ad84648a5c80c3ae8a04499e464f47"
       }
     },
     {
@@ -29583,7 +29584,7 @@
         "topics": [
           "create_landscape_asset"
         ],
-        "summary": "Create a landscape layer info asset or a landscape streaming proxy.",
+        "summary": "Create a landscape asset, chosen by kind. layer_info makes a landscape layer info asset (the layer a landscape material paints) named layerName or name in path (default /Game/Landscape), with hardness, physicalMaterialPath (refused when it does not load) and noWeightBlend; an asset already at that path is refused (ASSET_ALREADY_EXISTS). streaming_proxy places a World Partition streaming proxy linked to the landscape, at location and rotation (default the landscape's), reusing a proxy already labelled actorName.",
         "whenToUse": [
           "kind=layer_info: A new landscape layer info asset is needed for painting.",
           "kind=streaming_proxy: A landscape streaming proxy is needed for World Partition tiles."
@@ -29721,7 +29722,7 @@
       },
       "examples": [
         {
-          "title": "Create a landscape layer info asset or a landscape streaming proxy.",
+          "title": "Create a landscape asset, chosen by kind. layer_info makes a landscape layer info asset (the layer a landscape material paints) named layerName or name in path (default /Game/Landscape), with hardness, physicalMaterialPath (refused when it does not load) and noWeightBlend; an asset already at that path is refused (ASSET_ALREADY_EXISTS). streaming_proxy places a World Partition streaming proxy linked to the landscape, at location and rotation (default the landscape's), reusing a proxy already labelled actorName.",
           "input": {
             "action": "create_landscape_asset",
             "name": "LI_Grass",
@@ -29806,7 +29807,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "832fd4a627bf2e39c3943fa5b919742040e81f71930c36216ca5a27938a4d2c2",
-        "content": "f1f454a6e2fa82ec04ff7144e7d8ddaf7672436e2a06d9382a8b7293aa7eacf8"
+        "content": "5a397188fde748dc57b29c652065f87fe6151ef6367ec647ca428c756f0c8953"
       }
     },
     {
@@ -56756,7 +56757,7 @@
           "new sound cue",
           "audio cue"
         ],
-        "summary": "Create an audio asset: sound cue, sound class, sound mix, attenuation settings, reverb effect, dialogue voice or wave, source effect chain, submix effect.",
+        "summary": "Create an audio asset named name in path, chosen by kind: sound_cue (playing wavePath when given), sound_class, sound_mix, attenuation_settings, reverb_effect, dialogue_voice, dialogue_wave, source_effect_chain or submix_effect. An asset already at that path is refused (ASSET_ALREADY_EXISTS) rather than rebuilt over, and a reference that does not load is refused before anything is made. Saved unless save is false.",
         "whenToUse": [
           "kind=sound_cue: Use it to create a Sound Cue asset and return its asset path; volume and pitch add a modulator over the wave player.",
           "kind=sound_class: Use it to create a Sound Class asset and return its asset path.",
@@ -56917,7 +56918,7 @@
       },
       "examples": [
         {
-          "title": "Create an audio asset: sound cue, sound class, sound mix, attenuation settings, reverb effect, dialogue voice or wave, source effect chain, submix effect.",
+          "title": "Create an audio asset named name in path, chosen by kind: sound_cue (playing wavePath when given), sound_class, sound_mix, attenuation_settings, reverb_effect, dialogue_voice, dialogue_wave, source_effect_chain or submix_effect. An asset already at that path is refused (ASSET_ALREADY_EXISTS) rather than rebuilt over, and a reference that does not load is refused before anything is made. Saved unless save is false.",
           "input": {
             "action": "create_audio_asset",
             "name": "Cue_FootstepConcrete",
@@ -57038,7 +57039,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "1b635564a7ac35793079826e889baa0e9a1598db99ee1364d314e6d67dc4b6f8",
-        "content": "a344ab5a9f43fd3fc91a84738d58c681183eeb752260295d2f2226de7fc5dbf0"
+        "content": "b3512a68fbed4fa36ed5c8380745c6b2753f461121d5ce1dedd71f4d07636b1a"
       }
     },
     {
@@ -57602,14 +57603,14 @@
           "add wave player to cue",
           "pitch shift moving sound"
         ],
-        "summary": "Edit a sound cue graph: add or connect nodes, set attenuation or concurrency, add a Doppler pitch shift at the root, add a source effect.",
+        "summary": "Edit a sound cue graph (assetPath): add or connect nodes, set attenuation or concurrency, add a Doppler pitch shift at the root. add_source_effect works on a Source Effect Chain at assetPath instead: it appends effectPresetPath, or a new preset of effectType saved as its own asset beside the chain (<chain>_<effectType>, numbered when taken).",
         "whenToUse": [
           "edit=add_node: Use it to add a node to a Sound Cue graph: wave_player (wavePath), mixer, random, modulator (volume, pitch), looping (indefinite, loopCount), attenuation (attenuationPath), concatenator, delay (delay), switch or branch.",
           "edit=connect_nodes: Use it to connect two Sound Cue graph nodes.",
           "edit=set_attenuation: Use it to assign attenuation settings to a Sound Cue; omit attenuationPath to clear them.",
           "edit=set_concurrency: Use it to assign concurrency settings to a Sound Cue.",
           "edit=doppler: Use it to add a Doppler node at the root of a Sound Cue (or update the one already there) so the cue shifts pitch as its source moves toward or away from the listener. Sound Cues only; a SoundWave or MetaSound is refused.",
-          "edit=add_source_effect: Use it to add an effect to a Source Effect Chain: a new preset of effectType, or an existing preset asset by effectPresetPath."
+          "edit=add_source_effect: Use it to add an effect to a Source Effect Chain: a new preset of effectType (an asset of its own beside the chain), or an existing preset asset by effectPresetPath."
         ],
         "whenNotToUse": []
       },
@@ -57776,7 +57777,7 @@
       },
       "examples": [
         {
-          "title": "Edit a sound cue graph: add or connect nodes, set attenuation or concurrency, add a Doppler pitch shift at the root, add a source effect.",
+          "title": "Edit a sound cue graph (assetPath): add or connect nodes, set attenuation or concurrency, add a Doppler pitch shift at the root. add_source_effect works on a Source Effect Chain at assetPath instead: it appends effectPresetPath, or a new preset of effectType saved as its own asset beside the chain (<chain>_<effectType>, numbered when taken).",
           "input": {
             "action": "edit_sound_cue",
             "assetPath": "/Game/Audio/Cues/Cue_FootstepConcrete",
@@ -57902,7 +57903,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "77ab96f66cc7db6f5a4994361d48cf99ef9c775783f9502fc1d9e74cac288b7f",
-        "content": "b6b083514a066356ed0dbca3542209fb7de1092968531314e831495018fcd2d0"
+        "content": "fe39371f6291c1b512392c4de58e56f10a560807f01e3e3b7f48b3425860fe03"
       }
     },
     {
