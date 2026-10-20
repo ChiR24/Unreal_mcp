@@ -10,6 +10,9 @@
 
 #include "Dom/JsonObject.h"
 #include "Engine/SkeletalMesh.h"
+#if __has_include("Engine/SkinnedAssetCommon.h") // FSkeletalMaterial on 5.1+; SkeletalMesh.h includes it only from 5.5
+#include "Engine/SkinnedAssetCommon.h"
+#endif
 #include "Engine/StaticMesh.h"
 #include "Materials/MaterialInterface.h"
 

@@ -198,15 +198,12 @@ TSharedPtr<FJsonObject> HandleMetaSoundNodeConnect(const TSharedPtr<FJsonObject>
 
 		if (!bSuccess && (SourceOutputName.IsEmpty() || SourceOutputName.Equals(TEXT("Value"))))
 		{
-			const FMcpNodeSnapshot* SrcSnapshot = GraphNodes.FindByPredicate(
-				[&SourceGuid](const FMcpNodeSnapshot& Snap) { return Snap.Id == SourceGuid; });
-			if (SrcSnapshot && SrcSnapshot->Outputs.Num() == 1)
+			// The builder's own lookup (5.3+), not the 5.5+ snapshot: a single-output node is wired by "Value" or no pin.
+			const TArray<const FMetasoundFrontendVertex*> SourceOutputs = Builder.FindNodeOutputs(SourceGuid);
+			if (SourceOutputs.Num() == 1 && SourceOutputs[0])
 			{
-				FString ResolvedOutput = SrcSnapshot->Outputs[0];
-				int32 SpaceIdx = ResolvedOutput.Find(TEXT(" ("));
-				if (SpaceIdx != INDEX_NONE) { ResolvedOutput = ResolvedOutput.Left(SpaceIdx); }
 				TSet<Metasound::Frontend::FNamedEdge> AliasEdges;
-				AliasEdges.Add(Metasound::Frontend::FNamedEdge{SourceGuid, FName(*ResolvedOutput), TargetGuid, FName(*TargetInputName)});
+				AliasEdges.Add(Metasound::Frontend::FNamedEdge{SourceGuid, SourceOutputs[0]->Name, TargetGuid, FName(*TargetInputName)});
 				CreatedEdges.Reset();
 				bSuccess = Builder.AddNamedEdges(AliasEdges, &CreatedEdges, true);
 			}

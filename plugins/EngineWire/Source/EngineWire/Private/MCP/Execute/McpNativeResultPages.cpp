@@ -12,6 +12,7 @@
 #include "HAL/PlatformTime.h"
 #include "Misc/Guid.h"
 #include "Misc/ScopeLock.h"
+#include "Policies/CondensedJsonPrintPolicy.h"
 #include "Serialization/JsonSerializer.h"
 #include "Serialization/JsonWriter.h"
 
