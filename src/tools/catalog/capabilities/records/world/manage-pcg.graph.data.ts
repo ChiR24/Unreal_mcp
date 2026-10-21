@@ -20,14 +20,14 @@ export const PCG_GRAPH_RECORDS: readonly CapabilityRecordSource[] = [
   buildWorldRecord({
     parentTool: 'manage_pcg', action: 'create_pcg_graph', plugins: PLUGIN,
     topics: ['pcg graph', 'procedural generation', 'pcg asset', 'new pcg graph'],
-    family: F, summary: 'Create a new PCG graph asset.', whenToUse: ['A PCG graph asset must be created.'], whenNotToUse: ['A subgraph is needed; use create_pcg_subgraph.'],
+    family: F, summary: 'Create a PCG graph asset at graphPath (or assetPath, or name in path, default /Game/PCG), saved unless save is false. A PCG graph already at the path is refused (ASSET_ALREADY_EXISTS) unless overwrite is true, which returns that graph unchanged (created false); another kind of asset there is refused. The reply gives graphPath, name, created and saved. Needs the PCG plugin.', whenToUse: ['Procedural content (scattered rocks, trees, props along splines) needs a graph to build it.'], whenNotToUse: ['A graph that runs inside another one (create_pcg_subgraph with parentGraphPath).'],
     inputProps: { assetPath: { ...P.assetPath, description: 'Alias of graphPath.' }, path: { ...P.path, description: 'Folder for name (default /Game/PCG).' }, overwrite: P.overwrite, graphPath: P.graphPath, name: { ...P.name, description: 'Name of the new graph, created in path; used when graphPath and assetPath are absent.' }, save: PCG_SAVE }, required: [], requiredOneOf: ['graphPath', 'assetPath', 'name'], effect: 'write', costLatency: 'interactive', costResources: 'medium',
     exampleInput: { action: 'create_pcg_graph', graphPath: '/Game/PCG/PCG_MyGraph' }, exampleOutput: { success: true, message: 'PCG graph created', graphPath: '/Game/PCG/PCG_MyGraph' },
-    outputProps: { graphPath: { type: 'string', description: 'Created PCG graph asset path.' } },
+    outputProps: { graphPath: { type: 'string', description: 'The PCG graph asset path.' }, name: { type: 'string', description: 'The asset name.' }, created: { type: 'boolean', description: 'False when overwrite handed back a graph already there.' }, saved: { type: 'boolean', description: 'Whether the graph reached disk.' } },
   }),
   buildWorldRecord({
     parentTool: 'manage_pcg', action: 'create_pcg_subgraph', plugins: PLUGIN,
-    family: F, summary: 'Create a PCG subgraph asset for reuse.', whenToUse: ['A reusable PCG subgraph must be created.'], whenNotToUse: ['A top-level graph is needed; use create_pcg_graph.'],
+    family: F, summary: 'Create a PCG graph at subgraphPath to run inside other graphs (the same rules as create_pcg_graph: one already there is refused unless overwrite is true, which reuses it), and with parentGraphPath add a Subgraph node running it to that graph, titled nodeName and placed at x, y. The reply gives subgraphPath, created and saved, and with a parent also parentGraphPath, nodeId (the new node, for connect_pcg_pins) and parentSaved. A parent that does not load is ASSET_NOT_FOUND. Saved unless save is false.', whenToUse: ['Steps several PCG graphs share (scatter rules, cleanup) should live in one graph run from each.'], whenNotToUse: ['A standalone graph (create_pcg_graph).'],
     inputProps: { nodeName: P.nodeName, x: P.x, y: P.y, overwrite: P.overwrite, subgraphPath: P.subgraphPath, parentGraphPath: P.parentGraphPath, name: P.name, save: PCG_SAVE }, required: ['subgraphPath'], effect: 'write', costLatency: 'interactive', costResources: 'medium',
     exampleInput: { action: 'create_pcg_subgraph', subgraphPath: '/Game/PCG/PCG_Sub' },
   }),
@@ -40,13 +40,13 @@ export const PCG_GRAPH_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildWorldRecord({
     parentTool: 'manage_pcg', action: 'connect_pcg_pins', plugins: PLUGIN,
-    family: F, summary: 'Connect an output pin of one PCG node to an input pin of another.', whenToUse: ['Two PCG nodes must be wired together.'], whenNotToUse: ['A node must be added; use add_pcg_node.'],
+    family: F, summary: 'Wire sourcePin (or outputName) of sourceNodeId to targetPin (or inputName) of targetNodeId in a PCG graph (graphPath or assetPath). A node is found by its nodeId (object name), its title, its index in the graph, or input and output for the graph\'s own ends (NODE_NOT_FOUND). A pin left out is the node\'s Out or In pin, else its first; a label it lacks is PIN_NOT_FOUND listing the labels. An edge already there is kept, not doubled. The reply gives both node ids, both pin labels and saved; saved unless save is false.', whenToUse: ['Points must flow from one PCG node into the next, such as a sampler into a spawner.'], whenNotToUse: ['A node is added (add_pcg_node).'],
     inputProps: { inputName: P.inputName, outputName: P.outputName, graphPath: P.graphPath, assetPath: { ...P.assetPath, description: 'Alias of graphPath.' }, sourceNodeId: P.sourceNodeId, sourcePin: P.sourcePin, targetNodeId: P.targetNodeId, targetPin: P.targetPin, save: PCG_SAVE }, required: ['sourceNodeId', 'targetNodeId'], requiredOneOf: ['graphPath', 'assetPath'], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'connect_pcg_pins', graphPath: '/Game/PCG/PCG_MyGraph', sourceNodeId: 'Node_1', targetNodeId: 'Node_2' },
   }),
   buildWorldRecord({
     parentTool: 'manage_pcg', action: 'set_pcg_node_settings', plugins: PLUGIN,
-    family: F, summary: 'Set settings on an existing PCG node.', whenToUse: ['A PCG node settings must be updated.'], whenNotToUse: ['The node must be created; use add_pcg_node.'],
+    family: F, summary: 'Change a node of a PCG graph, found by nodeId or nodeName (an object name, title, index, or input and output; NODE_NOT_FOUND): settings sets properties by name (INVALID_SETTINGS for one it lacks), texturePath, meshPath and actorClass set the texture, mesh or spawned class of nodes that take them (each checked to load), title renames it and x, y move it. An edit that changes nothing, or sends only a meshPath or class the node has no slot for, is refused. The reply gives nodeId, title, nodeType, settingsApplied and saved; saved unless save is false.', whenToUse: ['A PCG node must scatter, filter or spawn differently, such as a denser sampler or another mesh.'], whenNotToUse: ['A new node (add_pcg_node).'],
     inputProps: { nodeName: P.nodeName, title: P.title, classPath: P.classPath, texturePath: P.texturePath, meshPath: P.meshPath, actorClass: P.actorClass, x: P.x, y: P.y, settings: P.settings, graphPath: P.graphPath, assetPath: { ...P.assetPath, description: 'Alias of graphPath.' }, nodeId: { ...P.nodeId, description: 'The node to change; required, or send it as nodeName.' }, save: PCG_SAVE }, required: [], requiredOneOf: ['graphPath', 'assetPath'], effect: 'write', behavior: { idempotency: 'idempotent' }, costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'set_pcg_node_settings', graphPath: '/Game/PCG/PCG_MyGraph', nodeId: 'Node_3' },
   }),
@@ -190,8 +190,8 @@ export const PCG_GRAPH_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildWorldRecord({
     parentTool: 'manage_pcg', action: 'set_pcg_partition_grid_size', plugins: PLUGIN,
-    family: F, summary: 'Set the PCG partition grid cell size for a graph or component.',
-    whenToUse: ['PCG partition resolution must be tuned.'], whenNotToUse: ['A node must be added; use add_pcg_node.'],
+    family: F, summary: 'Set the size of the cells partitioned PCG generates in (gridSize, a whole number of world units above 0): scope world (the default) sets the PCG world actor\'s partition grid, scope component one PCG component\'s generation grid (actorName, componentName or componentPath; COMPONENT_NOT_FOUND). The reply gives previousGridSize and gridSize. Saved with the level unless save is false, which saves every unsaved change in that level too.',
+    whenToUse: ['Partitioned PCG makes too many small cells, or cells too large to stream well.'], whenNotToUse: ['A node is added (add_pcg_node).'],
     inputProps: {
       scope: P.pcgScope, gridSize: P.pcgGridSize,
       actorName: P.actorName, componentName: P.componentName, componentPath: P.componentPath, save: P.save,

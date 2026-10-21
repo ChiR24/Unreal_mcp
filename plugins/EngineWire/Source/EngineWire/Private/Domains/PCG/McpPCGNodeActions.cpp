@@ -6,10 +6,10 @@ namespace McpPCGHandlers
 namespace
 {
 // Applies the payload's settings object, convenience settings and metadata to Node, saves when asked and replies
-// with the node result.
+// with the node result. bEdit: an existing node, found by nodeName rather than titled by it.
 bool ConfigurePCGNode(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& SubAction,
     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket, bool bSave, UPCGGraph* Graph,
-    const FString& GraphPath, UPCGNode* Node, UPCGSettings* Settings, const TCHAR* Message)
+    const FString& GraphPath, UPCGNode* Node, UPCGSettings* Settings, const TCHAR* Message, bool bEdit)
 {
     FString Error;
     int32 AppliedSettings = 0;
@@ -30,7 +30,15 @@ bool ConfigurePCGNode(UEngineWireSubsystem* Bridge, const FString& RequestId, co
         return true;
     }
 
-    ApplyNodeMetadata(Node, Payload);
+    // An edit that changed nothing (or sent only a meshPath or class the node has no slot for) answered "updated".
+    const bool bMoves = Payload->HasField(TEXT("x")) || Payload->HasField(TEXT("y")) || Payload->HasField(TEXT("posX")) || Payload->HasField(TEXT("posY"));
+    if (bEdit && AppliedSettings + AppliedConvenienceSettings == 0 && !bMoves && !Payload->HasField(TEXT("title")))
+    {
+        Bridge->SendAutomationError(Socket, RequestId, TEXT("Nothing to change: send settings (property values), title, x and y, "
+            "texturePath, meshPath (a node with a mesh) or actorClass (an actor spawner). Nothing was changed."), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+    ApplyNodeMetadata(Node, Payload, !bEdit);
     Node->UpdateAfterSettingsChangeDuringCreation();
     Settings->PostEditChange();
 
@@ -74,7 +82,7 @@ bool HandleAddPCGNode(UEngineWireSubsystem* Bridge, const FString& RequestId, co
     }
 
     return ConfigurePCGNode(Bridge, RequestId, SubAction, Payload, Socket, bSave, Graph, GraphPath, Node, DefaultSettings,
-        TEXT("PCG node added."));
+        TEXT("PCG node added."), false);
 }
 
 bool HandleConnectPCGPins(UEngineWireSubsystem* Bridge, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket, bool bSave, UPCGGraph* Graph, const FString& GraphPath)
@@ -157,7 +165,7 @@ bool HandleSetPCGNodeSettings(UEngineWireSubsystem* Bridge, const FString& Reque
     }
 
     return ConfigurePCGNode(Bridge, RequestId, SubAction, Payload, Socket, bSave, Graph, GraphPath, Node, Settings,
-        TEXT("PCG node settings updated."));
+        TEXT("PCG node settings updated."), true);
 }
 }
 #endif

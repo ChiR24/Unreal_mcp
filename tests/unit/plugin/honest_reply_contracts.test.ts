@@ -4599,3 +4599,25 @@ describe('dialogue contexts are whole and audio edits keep save false', () => {
     expect(save.indexOf('Asset->MarkPackageDirty();')).toBeLessThan(save.indexOf('if (!bShouldSave)'));
   });
 });
+
+describe('PCG node edits change what they say', () => {
+  // A node found by nodeName was re-titled with that name, and an edit that changed nothing answered "updated".
+  it('set_pcg_node_settings finds its node by nodeName and refuses an edit that changes nothing', () => {
+    const nodes = code('PCG', 'McpPCGNodeActions.cpp');
+    expect(nodes).toContain('if (bEdit && AppliedSettings + AppliedConvenienceSettings == 0 && !bMoves && !Payload->HasField(TEXT("title")))');
+    expect(nodes).toContain('ApplyNodeMetadata(Node, Payload, !bEdit);');
+    expect(code('PCG', 'McpPCGGraph.cpp')).toContain(': GetJsonStringField(Payload, TEXT("title"));');
+  });
+});
+
+describe('audio actions act on the sound being heard', () => {
+  // During Play the editor world is muted, so mixes and plays aimed at it answered success with nothing heard.
+  it('mix and play actions use the running game while one plays', () => {
+    expect(code('Audio', 'McpAudioPrivate.h')).toContain('inline UWorld* McpAudibleWorld()');
+    const mixes = code('Audio', 'McpAudioMixes.cpp');
+    expect(mixes).toContain('UWorld *World = McpAudibleWorld();');
+    expect(mixes).toContain('Resp->SetBoolField(TEXT("inGame"), World->IsPlayInEditor());');
+    expect(mixes).not.toContain('GetEditorWorldContext');
+    expect(code('Audio', 'McpAudioPlayback.cpp')).not.toContain('GetEditorWorldContext');
+  });
+});

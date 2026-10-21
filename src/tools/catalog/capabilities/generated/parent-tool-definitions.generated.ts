@@ -13203,6 +13203,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Outputs of the MetaSound itself: name, type and the nodeId that carries each."
         },
+        "inGame": {
+          "type": "boolean",
+          "description": "True when the change went to the running game (Play In Editor), whose sound is the one heard; false for the editor."
+        },
         "inserted": {
           "type": "boolean",
           "description": "True when the node was newly inserted; false when an existing one was updated."
@@ -23236,6 +23240,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
     "outputSchema": {
       "type": "object",
       "properties": {
+        "created": {
+          "type": "boolean",
+          "description": "False when overwrite handed back a graph already there."
+        },
         "details": {
           "type": "object",
           "x-unreal-reflection-boundary": true,
@@ -23243,7 +23251,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "graphPath": {
           "type": "string",
-          "description": "Created PCG graph asset path."
+          "description": "The PCG graph asset path."
         },
         "gridSize": {
           "type": "number",
@@ -23252,6 +23260,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "message": {
           "type": "string",
           "description": "Human-readable result message."
+        },
+        "name": {
+          "type": "string",
+          "description": "The asset name."
         },
         "nodeId": {
           "type": "string",
@@ -23263,7 +23275,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "saved": {
           "type": "boolean",
-          "description": "Whether the level/asset was saved."
+          "description": "Whether the graph reached disk."
         },
         "scope": {
           "type": "string",
@@ -23412,7 +23424,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "clearSources": {
           "type": "boolean",
-          "description": "Whether to clear existing Take Recorder sources first."
+          "description": "Remove every existing source before adding the ones sent (default false); alone it empties the take."
         },
         "componentName": {
           "type": "string",
@@ -23491,7 +23503,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "disableOthers": {
           "type": "boolean",
-          "description": "Whether non-matching recorded tracks are disabled."
+          "description": "Turn off every recorded property not named (default false), so the take records only those."
         },
         "displayName": {
           "type": "string",
@@ -23561,7 +23573,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "enabled": {
           "type": "boolean",
-          "description": "Whether the matched recorded tracks are enabled."
+          "description": "Turn the matched recorded properties on (default true) or off."
         },
         "end": {
           "type": "number",
@@ -24019,19 +24031,19 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "recordInto": {
           "type": "boolean",
-          "description": "Whether to record into the supplied sequence rather than a new take."
+          "description": "Record into the sequence named by sequencePath instead of a new take based on it (default false)."
         },
         "recordParentHierarchy": {
           "type": "boolean",
-          "description": "Whether the source records its parent hierarchy."
+          "description": "Also record the actors the source actor is attached under, so its motion keeps its parents."
         },
         "recordType": {
           "type": "string",
-          "description": "Take recording source type."
+          "description": "How an actor source records the actor: possessable (onto the actor in the level), spawnable (the take spawns its own copy) or projectDefault (the Take Recorder project setting). Anything else is INVALID_ARGUMENT."
         },
         "recordingSequencePath": {
           "type": "string",
-          "description": "Canonical /Game recording sequence path."
+          "description": "Level Sequence the take is set up from: recorded as a new take based on it, or into it with recordInto true; the same as sequencePath. One that is not a Level Sequence is INVALID_SEQUENCE."
         },
         "reduceKeys": {
           "type": "boolean",
@@ -24284,7 +24296,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "string",
             "description": "Source class path."
           },
-          "description": "Take Recorder source class paths."
+          "description": "Take Recorder source classes to add besides actors, each listed in the plugin setting TakeRecorderSourceClassAllowlist (by default /Script/TakeRecorderSources.TakeRecorderCameraCutSource and TakeRecorderLevelVisibilitySource); another class is INVALID_SOURCE_CLASS."
         },
         "sourcePath": {
           "type": "string",
@@ -24336,11 +24348,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "takePresetPath": {
           "type": "string",
-          "description": "Canonical /Game take preset path."
+          "description": "Take Preset whose template sequence seeds a new take; cannot be combined with a sequence path or recordInto (INVALID_ARGUMENT), and one that does not load is TAKE_PRESET_NOT_FOUND."
         },
         "takeSequencePath": {
           "type": "string",
-          "description": "Canonical /Game take sequence path."
+          "description": "Level Sequence the take is set up from, the same as sequencePath."
         },
         "targetActor": {
           "type": "string",
@@ -24402,7 +24414,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "string",
             "description": "Track name."
           },
-          "description": "Track names to record per source."
+          "description": "Recorded properties to turn on or off, by the names the actor source lists (such as Transform), matched without case."
         },
         "useCurrentLevel": {
           "type": "boolean",
@@ -24508,6 +24520,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether the cancellation deadline expired."
         },
+        "bindingCount": {
+          "type": "number",
+          "description": "Object bindings in the recorded sequence."
+        },
         "bindingGuid": {
           "type": "string",
           "description": "Binding GUID of the targeted camera or created cut."
@@ -24589,7 +24605,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "hasRecordedData": {
           "type": "boolean",
-          "description": "Whether recorded data was captured."
+          "description": "Whether the take is marked recorded and has bindings or tracks."
+        },
+        "isRecorded": {
+          "type": "boolean",
+          "description": "Whether the sequence is marked as a recorded take."
         },
         "jobId": {
           "type": "string",
@@ -24685,6 +24705,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "integer",
           "description": "Jobs left in the queue."
         },
+        "recording": {
+          "type": "boolean",
+          "description": "False once stopped."
+        },
         "removedCount": {
           "type": "integer",
           "description": "Jobs removed."
@@ -24727,6 +24751,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Name of the created section, assigned by Sequencer."
         },
+        "sequencePackagePath": {
+          "type": "string",
+          "description": "Package of the recorded sequence."
+        },
         "sequencePath": {
           "type": "string",
           "description": "Canonical /Game sequence asset path."
@@ -24758,6 +24786,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "True for a camera the sequence owns."
         },
+        "state": {
+          "type": "string",
+          "description": "Recorder state after the stop."
+        },
+        "subsceneFolderPath": {
+          "type": "string",
+          "description": "Folder of the per-source subsequences."
+        },
         "success": {
           "type": "boolean",
           "description": "Whether the action succeeded."
@@ -24775,7 +24811,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "UMovieSceneTrack subclass that was created."
         },
         "trackCount": {
-          "type": "integer",
+          "type": [
+            "integer",
+            "number"
+          ],
           "description": "Total number of tracks reported."
         },
         "trackId": {

@@ -61,7 +61,7 @@ bool HandlePlaybackActions(
                           TEXT("Editor not available"), TEXT("NO_EDITOR"));
       return true;
     }
-    UWorld *World = GEditor->GetEditorWorldContext().World();
+    UWorld *World = McpAudibleWorld();
     if (!World) {
       Self->SendAutomationError(RequestingSocket, RequestId,
                           TEXT("No world context available"), TEXT("NO_WORLD"));
@@ -116,7 +116,7 @@ bool HandlePlaybackActions(
                           TEXT("EDITOR_NOT_AVAILABLE"));
       return true;
     }
-    UWorld *World = GEditor->GetEditorWorldContext().World();
+    UWorld *World = McpAudibleWorld();
     if (!World) {
       Self->SendAutomationError(RequestingSocket, RequestId, TEXT("No World Context"),
                           TEXT("NO_WORLD"));
@@ -217,7 +217,7 @@ bool HandlePlaybackActions(
                           TEXT("Editor not available"), TEXT("NO_EDITOR"));
       return true;
     }
-    UWorld *World = GEditor->GetEditorWorldContext().World();
+    UWorld *World = McpAudibleWorld();
     if (!World) {
       Self->SendAutomationError(RequestingSocket, RequestId, TEXT("No World Context"),
                           TEXT("NO_WORLD"));

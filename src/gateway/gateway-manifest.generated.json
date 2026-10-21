@@ -17488,7 +17488,7 @@
           },
           "clearSources": {
             "type": "boolean",
-            "description": "Whether to clear existing Take Recorder sources first."
+            "description": "Remove every existing source before adding the ones sent (default false); alone it empties the take."
           },
           "componentName": {
             "type": "string",
@@ -17567,7 +17567,7 @@
           },
           "disableOthers": {
             "type": "boolean",
-            "description": "Whether non-matching recorded tracks are disabled."
+            "description": "Turn off every recorded property not named (default false), so the take records only those."
           },
           "displayName": {
             "type": "string",
@@ -17637,7 +17637,7 @@
           },
           "enabled": {
             "type": "boolean",
-            "description": "Whether the matched recorded tracks are enabled."
+            "description": "Turn the matched recorded properties on (default true) or off."
           },
           "end": {
             "type": "number",
@@ -18095,19 +18095,19 @@
           },
           "recordInto": {
             "type": "boolean",
-            "description": "Whether to record into the supplied sequence rather than a new take."
+            "description": "Record into the sequence named by sequencePath instead of a new take based on it (default false)."
           },
           "recordParentHierarchy": {
             "type": "boolean",
-            "description": "Whether the source records its parent hierarchy."
+            "description": "Also record the actors the source actor is attached under, so its motion keeps its parents."
           },
           "recordType": {
             "type": "string",
-            "description": "Take recording source type."
+            "description": "How an actor source records the actor: possessable (onto the actor in the level), spawnable (the take spawns its own copy) or projectDefault (the Take Recorder project setting). Anything else is INVALID_ARGUMENT."
           },
           "recordingSequencePath": {
             "type": "string",
-            "description": "Canonical /Game recording sequence path."
+            "description": "Level Sequence the take is set up from: recorded as a new take based on it, or into it with recordInto true; the same as sequencePath. One that is not a Level Sequence is INVALID_SEQUENCE."
           },
           "reduceKeys": {
             "type": "boolean",
@@ -18360,7 +18360,7 @@
               "type": "string",
               "description": "Source class path."
             },
-            "description": "Take Recorder source class paths."
+            "description": "Take Recorder source classes to add besides actors, each listed in the plugin setting TakeRecorderSourceClassAllowlist (by default /Script/TakeRecorderSources.TakeRecorderCameraCutSource and TakeRecorderLevelVisibilitySource); another class is INVALID_SOURCE_CLASS."
           },
           "sourcePath": {
             "type": "string",
@@ -18412,11 +18412,11 @@
           },
           "takePresetPath": {
             "type": "string",
-            "description": "Canonical /Game take preset path."
+            "description": "Take Preset whose template sequence seeds a new take; cannot be combined with a sequence path or recordInto (INVALID_ARGUMENT), and one that does not load is TAKE_PRESET_NOT_FOUND."
           },
           "takeSequencePath": {
             "type": "string",
-            "description": "Canonical /Game take sequence path."
+            "description": "Level Sequence the take is set up from, the same as sequencePath."
           },
           "targetActor": {
             "type": "string",
@@ -18478,7 +18478,7 @@
               "type": "string",
               "description": "Track name."
             },
-            "description": "Track names to record per source."
+            "description": "Recorded properties to turn on or off, by the names the actor source lists (such as Transform), matched without case."
           },
           "useCurrentLevel": {
             "type": "boolean",

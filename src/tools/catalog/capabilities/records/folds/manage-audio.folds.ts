@@ -23,7 +23,7 @@ export const MANAGE_AUDIO_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'control_sound_mix', selector: 'control',
-    summary: 'Control sound mixes at runtime: push or pop a mix, set the base mix, set or clear a class override.',
+    summary: 'Change the mix of the sound being heard (the running game while one plays, else the editor; inGame says which), chosen by control: push and pop put a Sound Mix on the mix stack and take it off, set_base sets the base mix beneath them, and set_class_override and clear_class_override change how a mix adjusts the volume and pitch of one Sound Class, which applies while that mix is pushed or base. Mixes and classes are named by asset path or bare name (ASSET_NOT_FOUND when one does not load). Runtime state only: nothing is saved.',
     topics: ['sound mix', 'push sound mix', 'base sound mix', 'sound class override', 'duck music'],
     members: { push: 'push_sound_mix', pop: 'pop_sound_mix', set_base: 'set_base_sound_mix', set_class_override: 'set_sound_mix_class_override', clear_class_override: 'clear_sound_mix_class_override' },
   },

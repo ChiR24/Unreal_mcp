@@ -130,11 +130,11 @@ export const A = {
   /** Alias list TakeRecorderTracks.cpp:179, SourcePreparation.cpp:62. */
   actors: strArr('Actor name.', 'Actor names to record (alias of actorNames).'),
   /** ReadBool TakeRecorderTracks.cpp:161. */
-  enabled: bool('Whether the matched recorded tracks are enabled.'),
+  enabled: bool('Turn the matched recorded properties on (default true) or off.'),
   /** ReadBool TakeRecorderTracks.cpp:162. */
-  disableOthers: bool('Whether non-matching recorded tracks are disabled.'),
+  disableOthers: bool('Turn off every recorded property not named (default false), so the take records only those.'),
   /** HasField TakeRecorderTracks.cpp:109,171; SourceReflection.cpp:32,118. */
-  recordParentHierarchy: bool('Whether the source records its parent hierarchy.'),
+  recordParentHierarchy: bool('Also record the actors the source actor is attached under, so its motion keeps its parents.'),
 
   /** GetCreationString JobCreation.cpp:75; GetString State.cpp:90. */
   jobName: str('Render job name (alias of renderJobName).'),

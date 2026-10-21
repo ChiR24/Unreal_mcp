@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "f936d0a86603d95d",
+  "catalogRevision": "c1ad3ae42a850f2a",
   "recordCount": 416,
   "records": [
     {
@@ -11897,6 +11897,7 @@
           "source control state",
           "list all widget blueprints",
           "asset name",
+          "look up asset",
           "project assets",
           "list all meshes",
           "is asset checked out",
@@ -12346,7 +12347,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "3d4ff7c734139c1db40706a40c3b341e43180f132a49de387d56c7e7e97909b0",
-        "content": "a84ee3ae5d162a761f2fb83646ff32a782eb3abff7f327e65a5c72affc591787"
+        "content": "2fd53081bf7bdc8a7f95a6b34d99aa1ca95ca7d5a4ca8fc8a032fcdb872245e2"
       }
     },
     {
@@ -56403,13 +56404,13 @@
           "sound class override",
           "duck music"
         ],
-        "summary": "Control sound mixes at runtime: push or pop a mix, set the base mix, set or clear a class override.",
+        "summary": "Change the mix of the sound being heard (the running game while one plays, else the editor; inGame says which), chosen by control: push and pop put a Sound Mix on the mix stack and take it off, set_base sets the base mix beneath them, and set_class_override and clear_class_override change how a mix adjusts the volume and pitch of one Sound Class, which applies while that mix is pushed or base. Mixes and classes are named by asset path or bare name (ASSET_NOT_FOUND when one does not load). Runtime state only: nothing is saved.",
         "whenToUse": [
-          "control=push: Use it to push a Sound Mix onto the runtime mix stack.",
-          "control=pop: Use it to pop a Sound Mix from the runtime mix stack.",
-          "control=set_base: Use it to set the runtime base Sound Mix.",
-          "control=set_class_override: Use it to set a Sound Mix class override.",
-          "control=clear_class_override: Use it to clear a Sound Mix class override."
+          "control=push: Use it to push a Sound Mix (mixName: an asset path or a bare asset name) onto the mix stack of the sound being heard: the running game while one plays, else the editor (inGame says which). While pushed, its sound class adjustments (volume, pitch, EQ) apply, such as ducking music under dialogue; pop_sound_mix removes it. A name that loads no Sound Mix is ASSET_NOT_FOUND. Runtime state only: nothing is saved.",
+          "control=pop: Use it to pop a Sound Mix that push_sound_mix pushed, on the sound being heard: the running game while one plays, else the editor (inGame says which); its adjustments fade out over the fade-out time of the mix. A mix pushed twice needs two pops, and popping one that is not pushed changes nothing.",
+          "control=set_base: Use it to make a Sound Mix the base mix of the sound being heard: the running game while one plays, else the editor (inGame says which): the one mix that always applies beneath any pushed ones, replacing the previous base. Runtime state only.",
+          "control=set_class_override: Use it to override how a Sound Mix adjusts one Sound Class (soundClassName) and its child classes: volume and pitch multipliers (default 1), reached over fadeTime seconds (default 1); the class joins the mix when the mix lacks it. It acts on the sound being heard: the running game while one plays, else the editor (inGame says which), only while that mix is pushed or the base mix, and leaves the asset unchanged. A name that loads no mix or class is ASSET_NOT_FOUND.",
+          "control=clear_class_override: Use it to remove the override set_sound_mix_class_override put on a Sound Mix for soundClassName, fading back over fadeOutTime seconds (default 1), on the sound being heard: the running game while one plays, else the editor (inGame says which)."
         ],
         "whenNotToUse": []
       },
@@ -56481,6 +56482,10 @@
               "type": "object",
               "x-unreal-reflection-boundary": true,
               "description": "Additional handler result fields not named by the contract."
+            },
+            "inGame": {
+              "type": "boolean",
+              "description": "True when the change went to the running game (Play In Editor), whose sound is the one heard; false for the editor."
             }
           },
           "required": [
@@ -56491,7 +56496,7 @@
       },
       "examples": [
         {
-          "title": "Control sound mixes at runtime: push or pop a mix, set the base mix, set or clear a class override.",
+          "title": "Change the mix of the sound being heard (the running game while one plays, else the editor; inGame says which), chosen by control: push and pop put a Sound Mix on the mix stack and take it off, set_base sets the base mix beneath them, and set_class_override and clear_class_override change how a mix adjusts the volume and pitch of one Sound Class, which applies while that mix is pushed or base. Mixes and classes are named by asset path or bare name (ASSET_NOT_FOUND when one does not load). Runtime state only: nothing is saved.",
           "input": {
             "action": "control_sound_mix",
             "mixName": "CombatMix",
@@ -56572,8 +56577,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "97d8ac7cfd0899e14e86c94bb8467f2bd79ed0e32ebfe540a18f1c782644f78a",
-        "content": "571b2be5e963c637e6f049fe1c287e08fd0a2cdf2252052931736fd304309722"
+        "schema": "67ef41217ba85c0be1afaefc1116583c33f2f549254da70062e588cea05f628b",
+        "content": "a953c684b988168e06a5350b9dc2c4a1d260d3f133effc30563ce3db8cf8f518"
       }
     },
     {
@@ -58976,10 +58981,10 @@
         ],
         "summary": "Play a sound: 2D, at a location (played or spawned), attached to an actor, or prime it for playback. A 2D sound (looping music too) plays until stop_sound. measure plays it 2D and reports how loud it played (peak and average dB, silent). The sounds already playing are listed by console_command au.DumpActiveSounds.",
         "whenToUse": [
-          "playback=2d: Use it to play a sound asset 2D, tied to no place, at volume and pitch (default 1) from startTime seconds; it plays to its end, a looping one until stop_sound. A path that loads no sound is ASSET_NOT_FOUND, and an editor with sound off answers NOT_PLAYED.",
-          "playback=at_location: Use it to play a sound at a world location.",
+          "playback=2d: Use it to play a sound asset 2D, tied to no place, at volume and pitch (default 1) from startTime seconds, on the running game while one plays, else in the editor; it plays to its end, a looping one until stop_sound. A path that loads no sound is ASSET_NOT_FOUND, and an editor with sound off answers NOT_PLAYED.",
+          "playback=at_location: Use it to play a sound once at location (and rotation), at volume and pitch (default 1) from startTime seconds, with an optional attenuationPath and concurrencyPath (ASSET_NOT_FOUND when one does not load). It plays in the running game while one plays, heard from its listener, else in the editor. Fire and forget: only stop_sound with all true stops it.",
           "playback=spawn_at_location: Use it to spawn a transient sound at a world location.",
-          "playback=attached: Use it to play a sound attached to an actor component.",
+          "playback=attached: Use it to play a sound attached to an actor (actorName; in the running game while one plays, else in the level) on the component or socket attachPointName names, else on its root, at volume and pitch. The reply gives componentName, attachedTo and playing; an unknown actor is ACTOR_NOT_FOUND and an unknown attach point ATTACH_POINT_NOT_FOUND.",
           "playback=prime: Use it to prime a sound asset for playback.",
           "playback=measure: Use it to play a sound 2D and measure how loud it played, from the mixer's own meter: peak and average level in dB and a timeline, with silent: true when it played but produced no audio (an empty Sound Cue, a MetaSound whose audio output is unconnected). A Sound Wave also gets the peak, RMS and length of the recording itself (wavePeakDb, waveRmsDb, waveSeconds), which hold however slowly the editor draws. Answers when the sound ends or after maxSeconds."
         ],
@@ -59260,7 +59265,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "ae08078f5b5eb70cfd49aded13cab1d7238149edb1107f678e90e09697a36d19",
-        "content": "fb43dbc5169cac19366f69264a261b237f5fe4cd1c88dbfe858747ace640aaf8"
+        "content": "ef661e6dd41aeacc7a29c628084fcf6320ac96e8542bb96650563d55f9c86b1d"
       }
     },
     {
@@ -86165,7 +86170,7 @@
           "spline sampler",
           "transform points"
         ],
-        "summary": "Add a node to a PCG graph: any settings class by name, or a typed node (samplers, spawners, filters, data nodes, point operations).",
+        "summary": "Add a node to a PCG graph (graphPath), chosen by nodeKind. node takes any PCG settings class by name (settingsClass or nodeType, such as PCGStaticMeshSpawnerSettings or StaticMeshSpawner; CLASS_NOT_FOUND otherwise). The other kinds add a ready node: surface_sampler, spline_sampler, mesh_sampler (meshPath, checked to load), volume_sampler, static_mesh_spawner (meshPath), actor_spawner (actorClass), spline_spawner, density_filter, distance_filter, height_filter (an attribute range filter), slope_filter (Normal To Density), bounds_filter (culls points outside actor bounds), bounds_modifier, the landscape, spline, actor, texture (texturePath) and volume data nodes, transform_points, copy_points, merge_points, project_to_surface and self_pruning. settings sets any property of the new node by name (INVALID_SETTINGS for one it lacks); nodeName titles it and x, y place it. The reply gives nodeId (for connect_pcg_pins), title, nodeType, settingsApplied and saved; saved unless save is false.",
         "whenToUse": [
           "nodeKind=node: A node must be added to a PCG graph.",
           "nodeKind=surface_sampler: Points must be sampled on surfaces.",
@@ -86335,7 +86340,7 @@
       },
       "examples": [
         {
-          "title": "Add a node to a PCG graph: any settings class by name, or a typed node (samplers, spawners, filters, data nodes, point operations).",
+          "title": "Add a node to a PCG graph (graphPath), chosen by nodeKind. node takes any PCG settings class by name (settingsClass or nodeType, such as PCGStaticMeshSpawnerSettings or StaticMeshSpawner; CLASS_NOT_FOUND otherwise). The other kinds add a ready node: surface_sampler, spline_sampler, mesh_sampler (meshPath, checked to load), volume_sampler, static_mesh_spawner (meshPath), actor_spawner (actorClass), spline_spawner, density_filter, distance_filter, height_filter (an attribute range filter), slope_filter (Normal To Density), bounds_filter (culls points outside actor bounds), bounds_modifier, the landscape, spline, actor, texture (texturePath) and volume data nodes, transform_points, copy_points, merge_points, project_to_surface and self_pruning. settings sets any property of the new node by name (INVALID_SETTINGS for one it lacks); nodeName titles it and x, y place it. The reply gives nodeId (for connect_pcg_pins), title, nodeType, settingsApplied and saved; saved unless save is false.",
           "input": {
             "action": "add_pcg_node",
             "graphPath": "/Game/PCG/PCG_MyGraph",
@@ -86443,7 +86448,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "e895d906d22c64c85487139e679632f2ed5cfd7215a5bf3fc5d1c872e20a5918",
-        "content": "fbb4ce57af4fe817b7164f6a5917962b79dc9292110090e0b1e09d60fd1ad5bb"
+        "content": "3d9f031dcab18e6d3d04aa8c1bb737a8fa3cf29aa6d12b5f04086da15c319a3d"
       }
     },
     {
@@ -86510,17 +86515,17 @@
           "pcg asset",
           "new pcg graph"
         ],
-        "summary": "Create a PCG graph or subgraph, connect pins, set node settings, or set the partition grid size.",
+        "summary": "Build a PCG graph, chosen by edit. create makes a graph asset and create_subgraph one to run inside another (with parentGraphPath it adds the Subgraph node there too); a graph already at the path is refused unless overwrite is true, which hands back that graph unchanged (created false). connect_pins wires an output pin of one node to an input pin of another (labels default to Out and In; PIN_NOT_FOUND lists the labels). set_node_settings changes an existing node (found by nodeId or nodeName) and refuses an edit that changes nothing. set_partition_grid_size sets the world or one component's generation grid and saves the level unless save is false. Graph edits save the graph unless save is false (saved).",
         "whenToUse": [
-          "edit=create: A PCG graph asset must be created.",
-          "edit=create_subgraph: A reusable PCG subgraph must be created.",
-          "edit=connect_pins: Two PCG nodes must be wired together.",
-          "edit=set_node_settings: A PCG node settings must be updated.",
-          "edit=set_partition_grid_size: PCG partition resolution must be tuned."
+          "edit=create: Procedural content (scattered rocks, trees, props along splines) needs a graph to build it.",
+          "edit=create_subgraph: Steps several PCG graphs share (scatter rules, cleanup) should live in one graph run from each.",
+          "edit=connect_pins: Points must flow from one PCG node into the next, such as a sampler into a spawner.",
+          "edit=set_node_settings: A PCG node must scatter, filter or spawn differently, such as a denser sampler or another mesh.",
+          "edit=set_partition_grid_size: Partitioned PCG makes too many small cells, or cells too large to stream well."
         ],
         "whenNotToUse": [
-          "edit=connect_pins|set_partition_grid_size: A node must be added; use add_pcg_node.",
-          "edit=set_node_settings: The node must be created; use add_pcg_node."
+          "edit=connect_pins|set_partition_grid_size: A node is added (add_pcg_node).",
+          "edit=set_node_settings: A new node (add_pcg_node)."
         ]
       },
       "schemas": {
@@ -86687,7 +86692,19 @@
             },
             "graphPath": {
               "type": "string",
-              "description": "Created PCG graph asset path."
+              "description": "The PCG graph asset path."
+            },
+            "name": {
+              "type": "string",
+              "description": "The asset name."
+            },
+            "created": {
+              "type": "boolean",
+              "description": "False when overwrite handed back a graph already there."
+            },
+            "saved": {
+              "type": "boolean",
+              "description": "Whether the graph reached disk."
             },
             "scope": {
               "type": "string",
@@ -86700,10 +86717,6 @@
             "gridSize": {
               "type": "number",
               "description": "New partition grid cell size."
-            },
-            "saved": {
-              "type": "boolean",
-              "description": "Whether the level/asset was saved."
             }
           },
           "required": [
@@ -86714,7 +86727,7 @@
       },
       "examples": [
         {
-          "title": "Create a PCG graph or subgraph, connect pins, set node settings, or set the partition grid size.",
+          "title": "Build a PCG graph, chosen by edit. create makes a graph asset and create_subgraph one to run inside another (with parentGraphPath it adds the Subgraph node there too); a graph already at the path is refused unless overwrite is true, which hands back that graph unchanged (created false). connect_pins wires an output pin of one node to an input pin of another (labels default to Out and In; PIN_NOT_FOUND lists the labels). set_node_settings changes an existing node (found by nodeId or nodeName) and refuses an edit that changes nothing. set_partition_grid_size sets the world or one component's generation grid and saves the level unless save is false. Graph edits save the graph unless save is false (saved).",
           "input": {
             "action": "edit_pcg_graph",
             "graphPath": "/Game/PCG/PCG_MyGraph",
@@ -86896,8 +86909,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "534e4c9beded50a17409e6e0c0a0f9c4eccb3e97f7ebc110bfece8174a1e08ee",
-        "content": "0c7a29e3ec60832af1d0043e77fda88c8628731d1232a34b64687f79a9d12a9f"
+        "schema": "0ffb1a45cc4dcc0fdb201e813fd9f7b99065828388c5c966fda5d1c6dca12824",
+        "content": "81fe5c06e3dd23da552c8308f9aec7c5494ea0992120b24eaa9f4e0a350073ca"
       }
     },
     {
@@ -98103,19 +98116,16 @@
           "start take recording",
           "record actor animation"
         ],
-        "summary": "Take Recorder: configure sources and recorded tracks, open the panel, start or stop recording.",
+        "summary": "Record a take with the Take Recorder (Takes plugin), chosen by setting: sources picks the actors and allowlisted source classes to record and the sequence or preset to record from; recorded_tracks turns recorded properties of actor sources on or off; panel opens the panel and reads its mode, sequence, frame rate and source count; start_recording begins a take once its countdown ends, for duration seconds or until stop_recording; stop_recording finalizes the take and says whether it recorded anything (RECORDING_OUTPUT_EMPTY when not). Setup changes are refused while a take records (RECORDING_ACTIVE), and a refused call leaves the panel and sources as they were.",
         "whenToUse": [
-          "setting=sources: Recording sources must be specified before starting a take.",
-          "setting=recorded_tracks: Specific tracks (transform, animation, etc.) must be recorded per source.",
-          "setting=panel: The Take Recorder panel must be opened for recording.",
+          "setting=sources: Actors (characters, cameras, props) must be chosen for recording before a take starts.",
+          "setting=recorded_tracks: A take should record only some properties of an actor, such as its transform but not its lights.",
+          "setting=panel: The Take Recorder state (mode, sequence, frame rate, sources) must be read before setting up a take.",
           "setting=start_recording: A take recording must be started.",
           "setting=stop_recording: An in-progress take recording must be stopped and finalized."
         ],
         "whenNotToUse": [
-          "setting=sources: Sources are already configured.",
-          "setting=recorded_tracks: Default track recording is sufficient.",
-          "setting=panel: The panel is already open.",
-          "setting=start_recording: A recording is already in progress (ALREADY_RECORDING).",
+          "setting=start_recording: A take is already recording (RECORDING_ACTIVE).",
           "setting=stop_recording: No recording is in progress (NOT_RECORDING)."
         ]
       },
@@ -98154,19 +98164,19 @@
                 "type": "string",
                 "description": "Source class path."
               },
-              "description": "Take Recorder source class paths."
+              "description": "Take Recorder source classes to add besides actors, each listed in the plugin setting TakeRecorderSourceClassAllowlist (by default /Script/TakeRecorderSources.TakeRecorderCameraCutSource and TakeRecorderLevelVisibilitySource); another class is INVALID_SOURCE_CLASS."
             },
             "clearSources": {
               "type": "boolean",
-              "description": "Whether to clear existing Take Recorder sources first."
+              "description": "Remove every existing source before adding the ones sent (default false); alone it empties the take."
             },
             "takePresetPath": {
               "type": "string",
-              "description": "Canonical /Game take preset path."
+              "description": "Take Preset whose template sequence seeds a new take; cannot be combined with a sequence path or recordInto (INVALID_ARGUMENT), and one that does not load is TAKE_PRESET_NOT_FOUND."
             },
             "recordType": {
               "type": "string",
-              "description": "Take recording source type."
+              "description": "How an actor source records the actor: possessable (onto the actor in the level), spawnable (the take spawns its own copy) or projectDefault (the Take Recorder project setting). Anything else is INVALID_ARGUMENT."
             },
             "actors": {
               "type": "array",
@@ -98178,7 +98188,7 @@
             },
             "recordParentHierarchy": {
               "type": "boolean",
-              "description": "Whether the source records its parent hierarchy."
+              "description": "Also record the actors the source actor is attached under, so its motion keeps its parents."
             },
             "reduceKeys": {
               "type": "boolean",
@@ -98186,11 +98196,11 @@
             },
             "recordingSequencePath": {
               "type": "string",
-              "description": "Canonical /Game recording sequence path."
+              "description": "Level Sequence the take is set up from: recorded as a new take based on it, or into it with recordInto true; the same as sequencePath. One that is not a Level Sequence is INVALID_SEQUENCE."
             },
             "takeSequencePath": {
               "type": "string",
-              "description": "Canonical /Game take sequence path."
+              "description": "Level Sequence the take is set up from, the same as sequencePath."
             },
             "sequencePath": {
               "type": "string",
@@ -98205,7 +98215,7 @@
             },
             "recordInto": {
               "type": "boolean",
-              "description": "Whether to record into the supplied sequence rather than a new take."
+              "description": "Record into the sequence named by sequencePath instead of a new take based on it (default false)."
             },
             "tracks": {
               "type": "array",
@@ -98213,7 +98223,7 @@
                 "type": "string",
                 "description": "Track name."
               },
-              "description": "Track names to record per source."
+              "description": "Recorded properties to turn on or off, by the names the actor source lists (such as Transform), matched without case."
             },
             "properties": {
               "type": "array",
@@ -98233,11 +98243,11 @@
             },
             "enabled": {
               "type": "boolean",
-              "description": "Whether the matched recorded tracks are enabled."
+              "description": "Turn the matched recorded properties on (default true) or off."
             },
             "disableOthers": {
               "type": "boolean",
-              "description": "Whether non-matching recorded tracks are disabled."
+              "description": "Turn off every recorded property not named (default false), so the take records only those."
             },
             "duration": {
               "type": "number",
@@ -98282,11 +98292,39 @@
             },
             "hasRecordedData": {
               "type": "boolean",
-              "description": "Whether recorded data was captured."
+              "description": "Whether the take is marked recorded and has bindings or tracks."
             },
             "sequencePath": {
               "type": "string",
               "description": "Canonical /Game sequence asset path."
+            },
+            "sequencePackagePath": {
+              "type": "string",
+              "description": "Package of the recorded sequence."
+            },
+            "subsceneFolderPath": {
+              "type": "string",
+              "description": "Folder of the per-source subsequences."
+            },
+            "state": {
+              "type": "string",
+              "description": "Recorder state after the stop."
+            },
+            "recording": {
+              "type": "boolean",
+              "description": "False once stopped."
+            },
+            "isRecorded": {
+              "type": "boolean",
+              "description": "Whether the sequence is marked as a recorded take."
+            },
+            "bindingCount": {
+              "type": "number",
+              "description": "Object bindings in the recorded sequence."
+            },
+            "trackCount": {
+              "type": "number",
+              "description": "Tracks in the recorded sequence, master and bound."
             }
           },
           "required": [
@@ -98297,7 +98335,7 @@
       },
       "examples": [
         {
-          "title": "Take Recorder: configure sources and recorded tracks, open the panel, start or stop recording.",
+          "title": "Record a take with the Take Recorder (Takes plugin), chosen by setting: sources picks the actors and allowlisted source classes to record and the sequence or preset to record from; recorded_tracks turns recorded properties of actor sources on or off; panel opens the panel and reads its mode, sequence, frame rate and source count; start_recording begins a take once its countdown ends, for duration seconds or until stop_recording; stop_recording finalizes the take and says whether it recorded anything (RECORDING_OUTPUT_EMPTY when not). Setup changes are refused while a take records (RECORDING_ACTIVE), and a refused call leaves the panel and sources as they were.",
           "input": {
             "action": "configure_take_recorder",
             "sourceActors": [
@@ -98439,8 +98477,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "a644179f8db367fe14eb2421769d5d1b5808f6045c5aeb28f47241e6a99f4426",
-        "content": "8cd0c285bf81c3ecf34cab120f4b87fe66bf2030a55ad519ed520899937c7e37"
+        "schema": "0c24fed124613843fee159392c3beda93c723a551b1fbccff57d33f45218c0f0",
+        "content": "b2030d0a2ca2738cc40bea24ef6bc1cb5848c4fe200bc6a0c74efb113ea33712"
       }
     },
     {

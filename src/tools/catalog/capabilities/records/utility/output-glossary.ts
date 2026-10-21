@@ -120,6 +120,7 @@ export const UTILITY_OUTPUT_FIELDS: Readonly<Record<string, JsonObject>> = Objec
   saved: bool('Whether the asset was saved to disk.'),
   replaced: bool('True when the call swapped a context the speaker already had with the same listeners; false when it added one.'),
   contextCount: num('Number of contexts the Dialogue Wave now has.'),
+  inGame: bool('True when the change went to the running game (Play In Editor), whose sound is the one heard; false for the editor.'),
   oneShot: bool('Whether the new MetaSound is a one-shot source; false when it was made continuous (no On Finished output).'),
   nodes: { type: 'array', items: { type: 'object', additionalProperties: true, [REFLECTION_BOUNDARY]: true }, description: 'Every node: nodeId, name, className, kind (Node, GraphInput, GraphOutput, Literal, Variable...), inputs [{name, type, literal}] and outputs [{name, type}].' },
   nodeIds: reflected('Batch step id -> node id for every node the batch created.'),

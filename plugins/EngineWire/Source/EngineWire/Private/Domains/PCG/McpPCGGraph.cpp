@@ -183,16 +183,17 @@ bool HasPCGEdge(const UPCGPin* SourcePin, const UPCGPin* TargetPin)
     return false;
 }
 
-void ApplyNodeMetadata(UPCGNode* Node, const TSharedPtr<FJsonObject>& Payload)
+void ApplyNodeMetadata(UPCGNode* Node, const TSharedPtr<FJsonObject>& Payload, bool bNameIsTitle)
 {
     if (!Node || !Payload.IsValid())
     {
         return;
     }
 
-    // An explicit title wins: set_pcg_node_settings may LOCATE the node by nodeName, and reading nodeName
-    // first re-titled the node with its own locator while the requested title was ignored.
-    const FString Title = McpGetFirstStringField(Payload, {TEXT("title"), TEXT("nodeName"), TEXT("name")});
+    // An explicit title wins: set_pcg_node_settings LOCATES the node by nodeName, and reading nodeName as the title
+    // re-titled the node with its own locator (its object name, when found by that).
+    const FString Title = bNameIsTitle ? McpGetFirstStringField(Payload, {TEXT("title"), TEXT("nodeName"), TEXT("name")})
+        : GetJsonStringField(Payload, TEXT("title"));
     if (!Title.IsEmpty())
     {
         Node->NodeTitle = FName(*Title);

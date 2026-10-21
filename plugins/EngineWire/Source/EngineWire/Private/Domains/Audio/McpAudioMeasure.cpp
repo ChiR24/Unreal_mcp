@@ -128,8 +128,7 @@ bool HandleMeasureActions(UEngineWireSubsystem *Self, const FString &RequestId, 
     return true;
   }
   // A running game's world while PIE plays: its audio device is the active one and the editor world's is muted.
-  UWorld *PlayWorld = GEditor ? GEditor->PlayWorld.Get() : nullptr;
-  UWorld *World = PlayWorld ? PlayWorld : GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+  UWorld *World = McpAudibleWorld();
   FAudioDeviceHandle Device = World ? World->GetAudioDevice() : FAudioDeviceHandle();
   double Volume = 1.0, MaxSeconds = 5.0;
   Payload->TryGetNumberField(TEXT("volume"), Volume);

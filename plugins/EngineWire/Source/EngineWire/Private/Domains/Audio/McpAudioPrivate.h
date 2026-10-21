@@ -72,6 +72,13 @@ TArray<TWeakObjectPtr<UAudioComponent>>& McpPreviewSounds();
 USoundBase* ResolveSoundAsset(const FString& SoundPath);
 USoundMix* ResolveSoundMix(const FString& MixPath);
 USoundClass* ResolveSoundClass(const FString& ClassPath);
+// The world whose sound is heard: a running game's while one plays (its audio device is the active one and the
+// editor world's is muted), else the editor's.
+inline UWorld* McpAudibleWorld()
+{
+    UWorld* PlayWorld = GEditor ? GEditor->PlayWorld.Get() : nullptr;
+    return PlayWorld ? PlayWorld : GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+}
 
 using FAudioActionHandler = bool (*)(
     UEngineWireSubsystem* Self,

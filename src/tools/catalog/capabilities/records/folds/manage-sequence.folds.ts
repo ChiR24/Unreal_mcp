@@ -102,7 +102,7 @@ export const MANAGE_SEQUENCE_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'configure_take_recorder', selector: 'setting',
-    summary: 'Take Recorder: configure sources and recorded tracks, open the panel, start or stop recording.',
+    summary: 'Record a take with the Take Recorder (Takes plugin), chosen by setting: sources picks the actors and allowlisted source classes to record and the sequence or preset to record from; recorded_tracks turns recorded properties of actor sources on or off; panel opens the panel and reads its mode, sequence, frame rate and source count; start_recording begins a take once its countdown ends, for duration seconds or until stop_recording; stop_recording finalizes the take and says whether it recorded anything (RECORDING_OUTPUT_EMPTY when not). Setup changes are refused while a take records (RECORDING_ACTIVE), and a refused call leaves the panel and sources as they were.',
     topics: ['take recorder', 'take sources', 'recorded tracks', 'start take recording', 'record actor animation'],
     members: { sources: 'configure_take_sources', recorded_tracks: 'configure_recorded_tracks', panel: 'create_take_recorder_panel', start_recording: 'start_recording', stop_recording: 'stop_recording' },
   },
