@@ -75,13 +75,25 @@ static bool CreateNiagaraEmitter(FActionContext& Context)
         Context.SendError(TEXT("Failed to create package."), TEXT("PACKAGE_ERROR"));
         return true;
     }
-    UNiagaraEmitter* NewEmitter = NewObject<UNiagaraEmitter>(Package, FName(*Context.Name), RF_Public | RF_Standalone | RF_Transactional);
+    const EObjectFlags EmitterFlags = RF_Public | RF_Standalone | RF_Transactional;
+#if MCP_HAS_NIAGARA_EMITTER_FACTORY_NEW && ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION < 3
+    // InitializeEmitter is exported only from UE 5.3, so 5.1 and 5.2 go through the factory: its
+    // virtual FactoryCreateNew makes the emitter and runs InitializeEmitter inside NiagaraEditor.
+    FModuleManager::Get().LoadModule(TEXT("NiagaraEditor"));
+    UNiagaraEmitterFactoryNew* Factory = NewObject<UNiagaraEmitterFactoryNew>();
+    Factory->bAddDefaultModulesAndRenderersToEmptyEmitter = true;
+    UNiagaraEmitter* NewEmitter = Cast<UNiagaraEmitter>(static_cast<UFactory*>(Factory)->FactoryCreateNew(
+        UNiagaraEmitter::StaticClass(), Package, FName(*Context.Name), EmitterFlags, nullptr, GWarn));
+    if (NewEmitter) { NewEmitter->SetUniqueEmitterName(Context.Name); }
+#else
+    UNiagaraEmitter* NewEmitter = NewObject<UNiagaraEmitter>(Package, FName(*Context.Name), EmitterFlags);
+#endif
     if (!NewEmitter)
     {
         Context.SendError(TEXT("Failed to create Niagara Emitter."), TEXT("CREATE_FAILED"));
         return true;
     }
-#if MCP_HAS_NIAGARA_EMITTER_FACTORY_NEW
+#if MCP_HAS_NIAGARA_EMITTER_FACTORY_NEW && (ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 3)
     FModuleManager::Get().LoadModule(TEXT("NiagaraEditor"));
     UNiagaraEmitterFactoryNew::InitializeEmitter(NewEmitter, true);
     NewEmitter->SetUniqueEmitterName(Context.Name);

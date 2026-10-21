@@ -5,7 +5,7 @@
 
 #if MCP_HAS_STATE_TREE && MCP_STATE_TREE_HEADERS_AVAILABLE
 #include "StateTreeNodeBase.h"
-#include MCP_INSTANCED_STRUCT_HEADER
+#include "Foundation/Reflection/McpInstancedStructView.h"
 #endif
 
 namespace McpAIHandlers
@@ -15,18 +15,20 @@ namespace
 {
 FString StateTreeTaskName(const FStateTreeEditorNode& Task)
 {
-    if (const FStateTreeNodeBase* Node = Task.Node.GetPtr<FStateTreeNodeBase>())
+    const FMcpInstancedStructView Node(Task.Node);
+    if (Node.IsValid() && Node.Type->IsChildOf(TBaseStructure<FStateTreeNodeBase>::Get()))
     {
-        if (!Node->Name.IsNone())
+        const FName Name = reinterpret_cast<const FStateTreeNodeBase*>(Node.Memory)->Name;
+        if (!Name.IsNone())
         {
-            return Node->Name.ToString();
+            return Name.ToString();
         }
     }
     if (Task.InstanceObject)
     {
         return Task.InstanceObject->GetClass()->GetName();
     }
-    return Task.Node.IsValid() ? Task.Node.GetScriptStruct()->GetName() : FString(TEXT("None"));
+    return Node.IsValid() ? Node.Type->GetName() : FString(TEXT("None"));
 }
 
 // Properties land on the task's Blueprint instance object, its instance-data
@@ -42,15 +44,14 @@ int32 ApplyStateTreeTaskProperties(FStateTreeEditorNode& Task, const TSharedPtr<
         Count += ApplyAIJsonProperties(InstanceObject->GetClass(), InstanceObject, Properties, Applied, Failed);
         ListAIPropertyNames(InstanceObject->GetClass(), Available);
     }
-    if (Task.Instance.IsValid())
+    for (const FInstancedStruct* Value : {&Task.Instance, &Task.Node})
     {
-        Count += ApplyAIJsonProperties(Task.Instance.GetScriptStruct(), Task.Instance.GetMutableMemory(), Properties, Applied, Failed);
-        ListAIPropertyNames(Task.Instance.GetScriptStruct(), Available);
-    }
-    if (Task.Node.IsValid())
-    {
-        Count += ApplyAIJsonProperties(Task.Node.GetScriptStruct(), Task.Node.GetMutableMemory(), Properties, Applied, Failed);
-        ListAIPropertyNames(Task.Node.GetScriptStruct(), Available);
+        const FMcpInstancedStructView View(*Value);
+        if (View.IsValid())
+        {
+            Count += ApplyAIJsonProperties(View.Type, View.Memory, Properties, Applied, Failed);
+            ListAIPropertyNames(View.Type, Available);
+        }
     }
     return Count;
 }

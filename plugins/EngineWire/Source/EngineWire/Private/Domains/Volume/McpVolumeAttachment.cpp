@@ -63,7 +63,7 @@ bool AttachVolumeToTarget(AActor* VolumeActor, AActor* TargetActor)
             }
         }
     }
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 2 // AttachToActor returns void on 5.0 and 5.1
     return VolumeActor->AttachToActor(TargetActor, FAttachmentTransformRules::KeepWorldTransform);
 #else
     VolumeActor->AttachToActor(TargetActor, FAttachmentTransformRules::KeepWorldTransform);

@@ -2,7 +2,7 @@
 #include "Dom/JsonObject.h"
 #include "UObject/UnrealType.h"
 #include "Core/Compatibility/McpVersionCompatibility.h"
-#include MCP_INSTANCED_STRUCT_HEADER
+#include "Foundation/Reflection/McpInstancedStructView.h"
 #include "Foundation/Reflection/McpPropertyReflection.h"
 #include "Safety/McpSafeOperationsAssetSave.h"
 
@@ -14,9 +14,9 @@
 // write, persisted only via the safe save wrapper (McpSafeAssetSave). This shard
 // never touches the raw package save API directly.
 //
-// Before UE 5.5 FInstancedStruct belongs to the Experimental StructUtils plugin,
-// which the Fab build does not link (LNK2019 on every exported member). So this
-// file calls none of them: it uses the inline getters and the type's
+// Before UE 5.5 FInstancedStruct belongs to the Experimental StructUtils module,
+// which the plugin does not link. So this file calls none of its members: it
+// reads the value through FMcpInstancedStructView and works through the type's
 // UScriptStruct, whose struct ops (construct, destroy, copy, text import) the
 // owning module registers when it loads - and a property of the type exists only
 // once that module is loaded.
@@ -66,7 +66,7 @@ struct FScratchInstance
 
     uint8* Inner() const
     {
-        return const_cast<uint8*>(reinterpret_cast<const FInstancedStruct*>(Memory)->GetMemory());
+        return FMcpInstancedStructView(*reinterpret_cast<const FInstancedStruct*>(Memory)).Memory;
     }
 };
 
@@ -81,7 +81,7 @@ static bool InitializeInstanceAs(FStructProperty* Prop, void* Value, UScriptStru
 #else
     const bool bImported = Prop->ImportText(*Text, Value, PPF_None, Owner) != nullptr;
 #endif
-    return bImported && reinterpret_cast<const FInstancedStruct*>(Value)->GetScriptStruct() == Target;
+    return bImported && FMcpInstancedStructView(*reinterpret_cast<const FInstancedStruct*>(Value)).Type == Target;
 }
 
 // Build a throwaway FStructProperty bound to the inner script struct so the
@@ -162,8 +162,8 @@ bool HandleStructPropertyAction(
             return true;
         }
 
-        const FInstancedStruct* Inst = StructProp->ContainerPtrToValuePtr<FInstancedStruct>(Asset);
-        const UScriptStruct* InnerStruct = Inst->GetScriptStruct();
+        const FMcpInstancedStructView Inst(*StructProp->ContainerPtrToValuePtr<FInstancedStruct>(Asset));
+        const UScriptStruct* InnerStruct = Inst.Type;
         if (!InnerStruct)
         {
             OutResult->SetBoolField(TEXT("success"), false);
@@ -173,7 +173,7 @@ bool HandleStructPropertyAction(
             return true;
         }
 
-        const uint8* Memory = Inst->GetMemory();
+        const uint8* Memory = Inst.Memory;
 
         TSharedPtr<FJsonObject> Value = MakeShared<FJsonObject>();
         Value->SetStringField(TEXT("structType"), InnerStruct->GetName());

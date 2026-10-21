@@ -7,7 +7,9 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "MovieScene.h"
 #include "WidgetBlueprint.h"
+#if __has_include("WidgetBlueprintEditorUtils.h") // private to UMGEditor on 5.0
 #include "WidgetBlueprintEditorUtils.h"
+#endif
 
 namespace WidgetAuthoringHelpers
 {
