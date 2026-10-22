@@ -56,8 +56,8 @@ bool ReadVector3f(const TSharedPtr<FJsonValue>& Value, FVector3f& Out)
     return false;
 }
 
-// First present field among the aliases, or null.
-TSharedPtr<FJsonValue> FindField(const FJsonObject& Item, std::initializer_list<const TCHAR*> Names)
+// First present field among the aliases, or null. (Not FindField: that is a global engine template before UE 5.4.)
+TSharedPtr<FJsonValue> FirstPresentField(const FJsonObject& Item, std::initializer_list<const TCHAR*> Names)
 {
     for (const TCHAR* Name : Names)
     {
@@ -101,7 +101,7 @@ bool ParseMorphTargetDeltas(const TSharedPtr<FJsonObject>& Payload, TArray<FMorp
         const FJsonObject& Item = **ItemObject;
 
         double VertexIndex = -1.0;
-        const TSharedPtr<FJsonValue> IndexField = FindField(Item, {TEXT("vertexIndex"), TEXT("index")});
+        const TSharedPtr<FJsonValue> IndexField = FirstPresentField(Item, {TEXT("vertexIndex"), TEXT("index")});
         if (!IndexField.IsValid() || !IndexField->TryGetNumber(VertexIndex) || VertexIndex < 0.0)
         {
             return FailItem(ItemIndex, TEXT("needs a non-negative vertexIndex (alias: index)"), OutError, OutErrorCode);
@@ -111,11 +111,11 @@ bool ParseMorphTargetDeltas(const TSharedPtr<FJsonObject>& Payload, TArray<FMorp
         Delta.SourceIdx = static_cast<uint32>(VertexIndex);
         Delta.PositionDelta = FVector3f::ZeroVector;
         Delta.TangentZDelta = FVector3f::ZeroVector;
-        if (!ReadVector3f(FindField(Item, {TEXT("positionDelta"), TEXT("delta"), TEXT("position")}), Delta.PositionDelta))
+        if (!ReadVector3f(FirstPresentField(Item, {TEXT("positionDelta"), TEXT("delta"), TEXT("position")}), Delta.PositionDelta))
         {
             return FailItem(ItemIndex, TEXT("needs positionDelta (aliases: delta, position) as [x,y,z] or {x,y,z}"), OutError, OutErrorCode);
         }
-        const TSharedPtr<FJsonValue> NormalField = FindField(Item, {TEXT("normalDelta"), TEXT("tangentDelta"), TEXT("normal")});
+        const TSharedPtr<FJsonValue> NormalField = FirstPresentField(Item, {TEXT("normalDelta"), TEXT("tangentDelta"), TEXT("normal")});
         if (NormalField.IsValid() && !ReadVector3f(NormalField, Delta.TangentZDelta))
         {
             return FailItem(ItemIndex, TEXT("has a normalDelta that is not [x,y,z] or {x,y,z}"), OutError, OutErrorCode);

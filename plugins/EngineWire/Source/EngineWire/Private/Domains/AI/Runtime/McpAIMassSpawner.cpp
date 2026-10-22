@@ -29,8 +29,10 @@ struct FMassSpawnerFields
     FObjectProperty* QueryTemplate = nullptr;
 };
 
+// Not named FindField: the engine's own FindField<T>(const UStruct*, const TCHAR*) is found by argument-dependent
+// lookup on these UClass/UStruct arguments, and the two would be an ambiguous call.
 template <typename TProperty>
-TProperty* FindField(const UStruct* Owner, const TCHAR* Name)
+TProperty* FindTypedProperty(const UStruct* Owner, const TCHAR* Name)
 {
     return Owner ? CastField<TProperty>(Owner->FindPropertyByName(Name)) : nullptr;
 }
@@ -49,13 +51,13 @@ bool ResolveMassSpawnerFields(FMassSpawnerFields& F)
     }
     F.Spawner = FindObject<UClass>(nullptr, TEXT("/Script/MassSpawner.MassSpawner"));
     F.Generator = FindObject<UClass>(nullptr, TEXT("/Script/MassSpawner.MassEntityEQSSpawnPointsGenerator"));
-    F.Count = FindField<FIntProperty>(F.Spawner, TEXT("Count"));
-    F.EntityTypes = FindField<FArrayProperty>(F.Spawner, TEXT("EntityTypes"));
-    F.EntityConfig = FindField<FSoftObjectProperty>(ElementStruct(F.EntityTypes), TEXT("EntityConfig"));
-    F.Generators = FindField<FArrayProperty>(F.Spawner, TEXT("SpawnDataGenerators"));
-    F.GeneratorInstance = FindField<FObjectProperty>(ElementStruct(F.Generators), TEXT("GeneratorInstance"));
-    F.Request = FindField<FStructProperty>(F.Generator, TEXT("EQSRequest"));
-    F.QueryTemplate = FindField<FObjectProperty>(F.Request ? F.Request->Struct : nullptr, TEXT("QueryTemplate"));
+    F.Count = FindTypedProperty<FIntProperty>(F.Spawner, TEXT("Count"));
+    F.EntityTypes = FindTypedProperty<FArrayProperty>(F.Spawner, TEXT("EntityTypes"));
+    F.EntityConfig = FindTypedProperty<FSoftObjectProperty>(ElementStruct(F.EntityTypes), TEXT("EntityConfig"));
+    F.Generators = FindTypedProperty<FArrayProperty>(F.Spawner, TEXT("SpawnDataGenerators"));
+    F.GeneratorInstance = FindTypedProperty<FObjectProperty>(ElementStruct(F.Generators), TEXT("GeneratorInstance"));
+    F.Request = FindTypedProperty<FStructProperty>(F.Generator, TEXT("EQSRequest"));
+    F.QueryTemplate = FindTypedProperty<FObjectProperty>(F.Request ? F.Request->Struct : nullptr, TEXT("QueryTemplate"));
     return F.Count && F.EntityConfig && F.GeneratorInstance && F.QueryTemplate;
 }
 
