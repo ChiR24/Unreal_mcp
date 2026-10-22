@@ -301,18 +301,15 @@
 //   5.0.3          -> SetSourceIKRig + SetTargetIKRig; SetIKRig absent
 //   5.1.1          -> SetSourceIKRig ONLY; SetTargetIKRig was dropped and SetIKRig had not landed
 //   5.2.1 - 5.6.1  -> SetIKRig(ERetargetSourceOrTarget, ...); the pair is gone
-// UE 5.1 needs a third path: its UIKRetargeter still carries the target as the public
-// TargetIKRigAsset UPROPERTY, so the asset is assigned directly (no controller setter exists).
+// Before 5.2 nothing public assigns the target rig (5.0's SetTargetIKRig only remaps the chains, and
+// UIKRetargeter keeps TargetIKRigAsset private), so McpSetRetargetTargetRig (McpAnimSupport.h) writes it
+// through its UPROPERTY.
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 2
     #define MCP_IKRETARGETER_SET_SOURCE_IKRIG(Controller, Rig) (Controller)->SetIKRig(ERetargetSourceOrTarget::Source, Rig)
     #define MCP_IKRETARGETER_SET_TARGET_IKRIG(Controller, Rig) (Controller)->SetIKRig(ERetargetSourceOrTarget::Target, Rig)
-#elif ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 1
-    #define MCP_IKRETARGETER_SET_SOURCE_IKRIG(Controller, Rig) (Controller)->SetSourceIKRig(Rig)
-    #define MCP_IKRETARGETER_SET_TARGET_IKRIG(Controller, Rig) (Controller)->GetAsset()->TargetIKRigAsset = Rig
 #else
-    // UE 5.0: the separate-method pair
     #define MCP_IKRETARGETER_SET_SOURCE_IKRIG(Controller, Rig) (Controller)->SetSourceIKRig(Rig)
-    #define MCP_IKRETARGETER_SET_TARGET_IKRIG(Controller, Rig) (Controller)->SetTargetIKRig(Rig)
+    #define MCP_IKRETARGETER_SET_TARGET_IKRIG(Controller, Rig) McpSetRetargetTargetRig(Controller, Rig)
 #endif
 
 // CreateNewIKRigAsset macro (only when available)

@@ -49,7 +49,7 @@ TSharedPtr<FJsonObject> HandleIKRetargetActions(const FString& SubAction, const 
             ANIM_ERROR_RESPONSE(TEXT("Failed to create IK Retargeter"), TEXT("CREATION_FAILED"));
         }
 
-// Set source and target IK Rigs using the controller (UE 5.1+ requires this as direct access is private)
+// Source and target IK Rigs go through the controller: UIKRetargeter keeps both private on every version
 #if MCP_HAS_IKRETARGETER_CONTROLLER
 if (UIKRetargeterController* Controller = UIKRetargeterController::GetController(Retargeter))
 {
@@ -74,24 +74,6 @@ MCP_IKRETARGETER_SET_TARGET_IKRIG(Controller, TargetRig);
 // factory makes an empty one; these are the ops the editor's own new-retargeter setup adds.
 Controller->AddDefaultOps();
 #endif
-}
-#else
-// Fallback for UE 5.0 where direct access was public
-if (!SourceIKRigPath.IsEmpty())
-{
-UIKRigDefinition* SourceRig = Cast<UIKRigDefinition>(StaticLoadObject(UIKRigDefinition::StaticClass(), nullptr, *SourceIKRigPath));
-if (SourceRig)
-{
-Retargeter->SourceIKRigAsset = SourceRig;
-}
-}
-if (!TargetIKRigPath.IsEmpty())
-{
-UIKRigDefinition* TargetRig = Cast<UIKRigDefinition>(StaticLoadObject(UIKRigDefinition::StaticClass(), nullptr, *TargetIKRigPath));
-if (TargetRig)
-{
-Retargeter->TargetIKRigAsset = TargetRig;
-}
 }
 #endif
 

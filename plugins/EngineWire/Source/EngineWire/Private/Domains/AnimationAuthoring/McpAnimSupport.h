@@ -128,6 +128,29 @@
 #define MCP_HAS_IKRETARGETER_CONTROLLER 0
 #endif
 
+#if MCP_HAS_IKRETARGETER && MCP_HAS_IKRETARGETER_CONTROLLER && ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION <= 1
+#include "UObject/UnrealType.h"
+// Before UE 5.2 no controller call assigns a retargeter's target rig (5.0's SetTargetIKRig only remaps the chains,
+// 5.1 has no target setter) and UIKRetargeter keeps the rig and its preview mesh private. So both are written
+// through their UPROPERTYs, what the details panel edits, and the chains remap, as 5.2's SetIKRig does.
+// MCP_IKRETARGETER_SET_TARGET_IKRIG calls this on 5.0 and 5.1.
+inline void McpSetRetargetTargetRig(UIKRetargeterController* Controller, UIKRigDefinition* Rig)
+{
+    UIKRetargeter* Asset = Controller->GetAsset();
+    auto SetObject = [Asset](const TCHAR* Name, UObject* Value)
+    {
+        if (FObjectPropertyBase* Prop = FindFProperty<FObjectPropertyBase>(UIKRetargeter::StaticClass(), Name))
+        {
+            Prop->SetObjectPropertyValue_InContainer(Asset, Value);
+        }
+    };
+    SetObject(TEXT("TargetIKRigAsset"), Rig);
+    SetObject(TEXT("TargetPreviewMesh"), Rig ? Rig->GetPreviewMesh() : nullptr);
+    Controller->CleanChainMapping();
+    Controller->AutoMapChains();
+}
+#endif
+
 // Animation Blueprint Graph
 #include "AnimationGraph.h"
 #include "AnimGraphNode_StateMachine.h"
