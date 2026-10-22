@@ -1,13 +1,16 @@
 #include "Transport/Connection/McpConnectionManagerPrivate.h"
 
 #include "Core/Security/McpPrequeueGate.h"
+#include "Core/Requests/McpRequestOriginRegistry.h"
 #include "Foundation/McpCapabilityPrincipal.h"
 #include "Interfaces/IPluginManager.h"
 #include "Misc/App.h"
 
 bool FMcpConnectionManager::AuthenticateSocketPrincipal(
-    FMcpBridgeWebSocket* SocketPtr, const FString& PresentedToken, bool bLegacyTokenMatch)
+    FMcpBridgeWebSocket* SocketPtr, const FString& PresentedToken, bool bLegacyTokenMatch,
+    EMcpBridgeAuthenticationRefusal& OutRefusal)
 {
+	OutRefusal = EMcpBridgeAuthenticationRefusal::None;
 	const UEngineWireSettings* Settings = GetDefault<UEngineWireSettings>();
 
 	FMcpPrincipalResolveRequest Request;
@@ -28,6 +31,7 @@ bool FMcpConnectionManager::AuthenticateSocketPrincipal(
 	if ((Settings->bRequireCapabilityToken || !PresentedToken.IsEmpty()) &&
 		!Principal.bAuthenticated)
 	{
+		OutRefusal = EMcpBridgeAuthenticationRefusal::InvalidCapabilityToken;
 		UE_LOG(LogEngineWireSubsystem, Warning, TEXT("Capability token mismatch."));
 		return false;
 	}
@@ -38,7 +42,8 @@ bool FMcpConnectionManager::AuthenticateSocketPrincipal(
 	    McpCapabilityAuthorization::CheckProject(Principal, FApp::GetProjectName());
 	if (!ProjectDecision.bAllowed)
 	{
-		UE_LOG(LogEngineWireSubsystem, Warning, TEXT("%s"), *ProjectDecision.Message);
+		OutRefusal = EMcpBridgeAuthenticationRefusal::ProjectNotPermitted;
+		UE_LOG(LogEngineWireSubsystem, Warning, TEXT("Capability principal is not permitted for this project."));
 		return false;
 	}
 
@@ -215,6 +220,9 @@ bool FMcpConnectionManager::AuthorizeAutomationRequest(
 	const FMcpAuthorizationDecision Decision = McpPrequeueGate::Authorize(Request);
 	if (Decision.bAllowed)
 	{
+		FMcpRequestOriginRegistry& Origins = FMcpRequestOriginRegistry::Get();
+		Origins.Record(RequestId, ERequestOrigin::WebSocket);
+		if (Principal.bAuthenticated) Origins.RecordPrincipal(RequestId, Principal.Identity);
 		return true;
 	}
 

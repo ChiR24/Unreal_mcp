@@ -1,4 +1,5 @@
 #include "Domains/PCG/McpPCGPrivate.h"
+#include "Domains/PCG/Execution/McpPCGExecution.h"
 
 #if MCP_HAS_PCG
 namespace McpPCGHandlers
@@ -63,14 +64,38 @@ bool HandleExecutePCGGraph(UEngineWireSubsystem* Bridge, const FString& RequestI
         return true;
     }
 
+#if MCP_HAS_PCG_EXECUTION
+    if (Component->IsGenerating() || Component->IsCleaningUp() || HasActivePCGOperation(Component))
+    {
+        Bridge->SendAutomationError(Socket, RequestId, TEXT("PCG generation was not scheduled because this component already has native work in progress."), TEXT("GENERATION_NOT_SCHEDULED"));
+        return true;
+    }
+#endif
     Component->Modify();
     if (Graph)
     {
         Component->SetGraphLocal(Graph);
     }
+#if MCP_HAS_PCG_EXECUTION
+    TSharedPtr<FPCGOperation> Tracked;
+    if (!Component->IsPartitioned() && !Component->IsManagedByRuntimeGenSystem())
+    {
+        FString TrackingError;
+        Tracked = BeginPCGOperation(Bridge, RequestId, Socket, Component, TEXT("generate"), false, false, 600, TrackingError);
+        if (Tracked.IsValid()) ClearPCGExecutionDiagnostics(Component);
+    }
+#endif
 
     const bool bForceGenerate = GetJsonBoolField(Payload, TEXT("force"), true);
     const FPCGTaskId TaskId = Component->GenerateLocalGetTaskId(bForceGenerate);
+#if MCP_HAS_PCG_EXECUTION
+    if (Tracked.IsValid())
+    {
+        Tracked->TaskId = TaskId;
+        if (TaskId == InvalidPCGTaskId) FinishPCGOperation(Tracked, TEXT("failed"), TEXT("Legacy execution did not schedule this generation."), TEXT("GENERATION_NOT_SCHEDULED"));
+        else StartPCGOperationObserver(Tracked);
+    }
+#endif
     if (TaskId == InvalidPCGTaskId)
     {
         Bridge->SendAutomationError(Socket, RequestId, TEXT("PCG generation was not scheduled. The component may already be generating, be up to date with force=false, have no graph, or have invalid bounds."), TEXT("GENERATION_NOT_SCHEDULED"));
@@ -92,6 +117,10 @@ bool HandleExecutePCGGraph(UEngineWireSubsystem* Bridge, const FString& RequestI
     Result->SetBoolField(TEXT("createdComponent"), bCreatedComponent);
     Result->SetStringField(TEXT("componentPath"), Component->GetPathName());
     Result->SetNumberField(TEXT("taskId"), static_cast<double>(TaskId));
+#if MCP_HAS_PCG_EXECUTION
+    Result->SetBoolField(TEXT("operationTracking"), Tracked.IsValid());
+    if (Tracked.IsValid()) Result->SetStringField(TEXT("operationId"), Tracked->Id);
+#endif
     Result->SetBoolField(TEXT("force"), bForceGenerate);
     Result->SetBoolField(TEXT("saved"), bLevelSaved);
     McpHandlerUtils::AddVerification(Result, Component);

@@ -45,6 +45,34 @@ describe('plugin security contracts', () => {
     );
   });
 
+  it('preserves the authenticated project refusal across the WebSocket handshake only', () => {
+    const authority = privateSource(
+      'Transport',
+      'Connection',
+      'McpConnectionManagerAuthority.cpp',
+    );
+    const messages = privateSource(
+      'Transport',
+      'Connection',
+      'McpConnectionManagerMessages.cpp',
+    );
+    const header = readFileSync(
+      resolve(
+        process.cwd(),
+        'plugins/EngineWire/Source/EngineWire/Public/McpConnectionManager.h',
+      ),
+      'utf8',
+    );
+
+    expect(header).toContain('EMcpBridgeAuthenticationRefusal');
+    expect(authority).toContain('OutRefusal = EMcpBridgeAuthenticationRefusal::ProjectNotPermitted');
+    expect(authority.indexOf('CheckProject')).toBeLessThan(authority.indexOf('SocketPrincipals.Add'));
+    expect(messages).toContain('TEXT("PROJECT_NOT_PERMITTED")');
+    expect(messages).toContain('TEXT("INVALID_CAPABILITY_TOKEN")');
+    expect(messages).toContain('McpConstantTimeTokenEquals(ReceivedToken, CapabilityToken)');
+    expect(messages).not.toMatch(/SendBridgeErrorAndClose\(Socket,\s*\*ProjectDecision\.ErrorCode/u);
+  });
+
   it('compares capability tokens in constant time on both transports', () => {
     // The shared helper exists and performs a length-safe, byte-wise constant
     // comparison (no data-dependent early exit that would leak match length).

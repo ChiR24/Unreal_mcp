@@ -105,6 +105,54 @@ describe('HandshakeHandler', () => {
         expect(socket.listenerCount('message')).toBe(0);
     });
 
+    it('preserves only the closed-set project refusal from bridge_error without peer text', async () => {
+        const socket = new FakeSocket();
+        const promise = new HandshakeHandler().initiateHandshake(socket, 1000);
+        const assertion = expect(promise).rejects.toMatchObject({
+            name: 'BridgeHandshakeRefusalError',
+            refusalCode: 'PROJECT_NOT_PERMITTED',
+            message: 'The connected Unreal project is not permitted for this capability profile.'
+        });
+
+        await vi.advanceTimersByTimeAsync(0);
+        socket.emit('message', JSON.stringify({
+            type: 'bridge_error',
+            error: 'PROJECT_NOT_PERMITTED',
+            message: 'C:/Private/Project.uproject and secret-token'
+        }));
+
+        await assertion;
+        expect(socket.listenerCount('message')).toBe(0);
+    });
+
+    it.each([null, 1, [], { type: 'bridge_error', error: 42 }, { type: 'bridge_error', error: 'PROJECT_NOT_PERMITTED', message: 42 }])('refuses malformed handshake data %j without throwing from the listener', async payload => {
+        const socket = new FakeSocket();
+        const promise = new HandshakeHandler().initiateHandshake(socket, 1000);
+        const assertion = expect(promise).rejects.toThrow('Handshake expected bridge_ack');
+        await vi.advanceTimersByTimeAsync(0);
+        expect(() => socket.emit('message', JSON.stringify(payload))).not.toThrow();
+        await assertion;
+        expect(socket.close).toHaveBeenCalledOnce();
+        expect(socket.listenerCount('message')).toBe(0);
+    });
+
+    it('does not promote an unknown bridge_error code or surface its peer message', async () => {
+        const socket = new FakeSocket();
+        const promise = new HandshakeHandler().initiateHandshake(socket, 1000);
+        const assertion = expect(promise).rejects.toMatchObject({
+            message: 'Handshake expected bridge_ack'
+        });
+
+        await vi.advanceTimersByTimeAsync(0);
+        socket.emit('message', JSON.stringify({
+            type: 'bridge_error',
+            error: 'SECRET_PEER_CODE',
+            message: 'C:/Private/Project.uproject'
+        }));
+
+        await assertion;
+    });
+
     it('refuses a bridge_ack whose contentRoots is not a list of strings', async () => {
         const socket = new FakeSocket();
         const promise = new HandshakeHandler().initiateHandshake(socket, 1000);

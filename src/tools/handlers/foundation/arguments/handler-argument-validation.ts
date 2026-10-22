@@ -1,4 +1,5 @@
 import * as path from 'node:path';
+import { normalizeSubobjectPath } from '../../../../utils/paths/subobject-path.js';
 
 import {
   getConfiguredContentRoots,
@@ -132,6 +133,17 @@ function validateStringSecurity(
     '\\Program Files',
   ];
   const lowerValue = value.toLowerCase();
+  let rootCheckValue = value;
+  // Component locators and rooted subobject values are not ordinary asset paths.
+  // Keep :: reflection-member syntax outside this stricter object-address check.
+  const absoluteComponent = normalizeKey(key) === 'componentpath' && /^(?:[/\\]|[A-Za-z]:)/u.test(value);
+  if (absoluteComponent || /^[/\\].+\.[^/\\:]+:(?!:)/u.test(value)) {
+    try {
+      rootCheckValue = normalizeSubobjectPath(value);
+    } catch {
+      return `Security violation: '${key}' is not a valid absolute subobject path.`;
+    }
+  }
 
   if (hasParentDirectorySegment(value)) {
     return `Security violation: '${key}' contains blocked path pattern. Path traversal is not allowed.`;
@@ -143,7 +155,7 @@ function validateStringSecurity(
     }
   }
 
-  if (isPathLikeKey(key) && value.startsWith('/') && !isAllowedAbsolutePath(key, value, args)) {
+  if (isPathLikeKey(key) && rootCheckValue.startsWith('/') && !isAllowedAbsolutePath(key, rootCheckValue, args)) {
     if (isLocalFilesystemKey(key, effectiveAction(args), value)) {
       return `Security violation: '${key}' uses unauthorized absolute path. A file path must be under /Game/, /Engine/, /Script/, /Temp/, /Niagara/, /Saved/ or /tmp/, or a prefix listed in MCP_ADDITIONAL_PATH_PREFIXES.`;
     }

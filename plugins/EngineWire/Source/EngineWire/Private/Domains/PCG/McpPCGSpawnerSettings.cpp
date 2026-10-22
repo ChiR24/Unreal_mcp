@@ -1,5 +1,8 @@
 #include "Domains/PCG/McpPCGPrivate.h"
 #include "Engine/Texture.h"
+#if MCP_HAS_PCG && (ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7))
+#include "Elements/PCGUserParameterGet.h"
+#endif
 
 #if MCP_HAS_PCG
 namespace McpPCGHandlers
@@ -66,7 +69,14 @@ bool ApplyStaticMeshSpawnerMeshPath(UPCGSettings* Settings, const FString& MeshP
     SpawnerSettings->Modify();
     if (!SpawnerSettings->MeshSelectorParameters || !SpawnerSettings->MeshSelectorParameters->IsA<UPCGMeshSelectorWeighted>())
     {
+#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7)
+        auto Fields = MakeShared<FJsonObject>();
+        Fields->SetStringField(TEXT("MeshSelectorType"), TEXT("/Script/PCG.PCGMeshSelectorWeighted"));
+        int32 Applied = 0;
+        if (!ApplySettingsObject(SpawnerSettings, Fields, OutError, Applied)) return false;
+#else
         SpawnerSettings->SetMeshSelectorType(UPCGMeshSelectorWeighted::StaticClass());
+#endif
     }
 
     UPCGMeshSelectorWeighted* WeightedSelector = Cast<UPCGMeshSelectorWeighted>(SpawnerSettings->MeshSelectorParameters);
@@ -92,6 +102,24 @@ bool ApplyPCGConvenienceSettings(const FString& SubAction, UPCGSettings* Setting
         return true;
     }
 
+#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7)
+    if (Payload->HasField(TEXT("parameterName")))
+    {
+        UPCGUserParameterGetSettings* Getter = Cast<UPCGUserParameterGetSettings>(Settings);
+        FString GraphPath;
+        UPCGGraph* Graph = LoadPCGAsset<UPCGGraph>(GetJsonStringField(Payload, TEXT("graphPath")), TEXT("parameter graph"), GraphPath, OutError);
+        const FInstancedPropertyBag* Bag = Graph ? Graph->GetUserParametersStruct() : nullptr;
+        const FPropertyBagPropertyDesc* Parameter = Bag ? Bag->FindPropertyDescByName(FName(*GetJsonStringField(Payload, TEXT("parameterName")))) : nullptr;
+        if (!Getter || !Parameter)
+        {
+            OutError = TEXT("parameterName must identify a current parameter and requires PCGUserParameterGetSettings.");
+            return false;
+        }
+        Getter->PropertyGuid = Parameter->ID;
+        Getter->PropertyName = Parameter->Name;
+        ++OutAppliedCount;
+    }
+#endif
     if (SubAction == TEXT("add_texture_data_node") || Payload->HasField(TEXT("texturePath")))
     {
         const FString TexturePath = GetJsonStringField(Payload, TEXT("texturePath"));
@@ -134,6 +162,25 @@ bool ApplyPCGConvenienceSettings(const FString& SubAction, UPCGSettings* Setting
         const FString MeshPath = GetJsonStringField(Payload, TEXT("meshPath"));
         if (!MeshPath.IsEmpty())
         {
+#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7)
+            const TSharedPtr<FJsonObject>* Fields = nullptr;
+            if (Payload->TryGetObjectField(TEXT("settings"), Fields) && Fields && Fields->IsValid())
+            {
+                for (const auto& Field : (*Fields)->Values)
+                {
+                    TArray<FString> Segments;
+                    const FString FieldName(Field.Key.Len(), *Field.Key);
+                    FieldName.ParseIntoArray(Segments, TEXT("."), true);
+                    const auto* Spawner = Cast<UPCGStaticMeshSpawnerSettings>(Settings);
+                    if (Segments.Num() == 1 && Segments[0].Equals(TEXT("MeshSelectorType"), ESearchCase::IgnoreCase) &&
+                        Spawner && Spawner->MeshSelectorType != UPCGMeshSelectorWeighted::StaticClass())
+                    {
+                        OutError = TEXT("meshPath resets a weighted selector; it cannot be combined with an explicit different selector type.");
+                        return false;
+                    }
+                }
+            }
+#endif
             if (!ApplyStaticMeshSpawnerMeshPath(Settings, MeshPath, OutError))
             {
                 return false;

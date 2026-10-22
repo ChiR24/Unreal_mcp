@@ -314,7 +314,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'save the environment snapshot', accepted: ['build_environment.export_snapshot'] },
   { query: 'load an environment snapshot', accepted: ['build_environment.import_snapshot'] },
   { query: 'run the pcg graph', accepted: ['manage_pcg.execute_pcg_graph'] },
-  { query: 'generate pcg', accepted: ['manage_pcg.execute_pcg_graph'] },
+  { query: 'generate pcg', accepted: ['manage_pcg.execute_pcg_graph', 'manage_pcg.generate_pcg_graph'] },
   { query: 'make a cube', accepted: ['manage_geometry.create_primitive'] },
   { query: 'make a ramp', accepted: ['manage_geometry.create_primitive'] },
   { query: 'cut a hole in a mesh', accepted: ['manage_geometry.boolean_mesh'] },

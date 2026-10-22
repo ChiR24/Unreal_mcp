@@ -1,5 +1,6 @@
 #include "Foundation/Reflection/McpPropertyReflectionPrivate.h"
 #include "JsonObjectConverter.h"
+#include <cstdlib>
 
 namespace McpPropertyReflection
 {
@@ -10,10 +11,19 @@ bool JsonNumberOrStringToDouble(const TSharedPtr<FJsonValue>& ValueField, double
     if (ValueField->Type == EJson::Number)
     {
         OutValue = ValueField->AsNumber();
-        return true;
+        return FMath::IsFinite(OutValue);
     }
-    // A string must read as a number: Atod alone turned "abc" into 0.
-    return ValueField->Type == EJson::String && LexTryParseString(OutValue, *ValueField->AsString().TrimStartAndEnd());
+    // Require a complete finite number, not a numeric prefix or an Atod fallback to zero.
+    if (ValueField->Type == EJson::String)
+    {
+        const FString Text = ValueField->AsString().TrimStartAndEnd();
+        if (Text.IsEmpty() || Text.Len() != FCString::Strlen(*Text)) return false;
+        const FTCHARToUTF8 Utf8(*Text);
+        char* End = nullptr;
+        OutValue = std::strtod(Utf8.Get(), &End);
+        return End && End != Utf8.Get() && *End == '\0' && FMath::IsFinite(OutValue);
+    }
+    return false;
 }
 
 bool DoubleToInt64(const double Value, int64& OutValue)
@@ -176,13 +186,13 @@ bool ApplyJsonValueToProperty(void* TargetContainer, FProperty* Property, const 
     double NumberValue = 0.0;
     if (FFloatProperty* FloatProp = CastField<FFloatProperty>(Property))
     {
-        if (!JsonNumberOrStringToDouble(ValueField, NumberValue)) { OutError = TEXT("Float property requires a number"); return false; }
+        if (!JsonNumberOrStringToDouble(ValueField, NumberValue) || FMath::Abs(NumberValue) > MAX_flt) { OutError = TEXT("Float property requires a finite number in range"); return false; }
         FloatProp->SetPropertyValue_InContainer(TargetContainer, static_cast<float>(NumberValue));
         return true;
     }
     if (FDoubleProperty* DoubleProp = CastField<FDoubleProperty>(Property))
     {
-        if (!JsonNumberOrStringToDouble(ValueField, NumberValue)) { OutError = TEXT("Double property requires a number"); return false; }
+        if (!JsonNumberOrStringToDouble(ValueField, NumberValue)) { OutError = TEXT("Double property requires a finite number"); return false; }
         DoubleProp->SetPropertyValue_InContainer(TargetContainer, NumberValue);
         return true;
     }

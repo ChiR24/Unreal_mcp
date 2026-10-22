@@ -6,7 +6,7 @@ import type { AutomationBridgeRuntimeState } from './bridge-state.js';
 import { buildAutomationBridgeStatus } from './bridge-status.js';
 import { CapabilityTokenProvider } from './capability-token-provider.js';
 import { ConnectionManager } from './connection-manager.js';
-import { HandshakeHandler } from './handshake.js';
+import { BridgeHandshakeRefusalError, HandshakeHandler } from './handshake.js';
 import { AutomationLogger } from './log-redaction.js';
 import {
     CONTENT_ROOTS_CHANGED_EVENT,
@@ -42,6 +42,7 @@ export class AutomationBridge extends EventEmitter {
     private readonly log = new AutomationLogger('AutomationBridge');
     private progressListener: AutomationProgressListener | undefined;
     private cancelledListener: ((mcpRequestId: string) => void) | undefined;
+    private lastConnectionRefusalCode: 'PROJECT_NOT_PERMITTED' | undefined;
 
     constructor(options: AutomationBridgeOptions = {}) {
         super();
@@ -173,10 +174,22 @@ export class AutomationBridge extends EventEmitter {
     /** Connect now (the same lazy connect a request runs); false when Unreal is unreachable. */
     async connect(): Promise<boolean> {
         if (!this.isConnected()) {
-            // The lifecycle logs the failure reason; the caller only needs the outcome.
-            await this.requestDispatcher.connect().catch(() => undefined);
+            // A refusal belongs to one attempt only. Clear it before dialing so a
+            // later listener/TLS failure cannot inherit an earlier project denial.
+            this.lastConnectionRefusalCode = undefined;
+            await this.requestDispatcher.connect().catch((error: unknown) => {
+                if (error instanceof BridgeHandshakeRefusalError) {
+                    this.lastConnectionRefusalCode = error.refusalCode;
+                }
+            });
+        } else {
+            this.lastConnectionRefusalCode = undefined;
         }
         return this.isConnected();
+    }
+
+    getConnectionRefusalCode(): 'PROJECT_NOT_PERMITTED' | undefined {
+        return this.lastConnectionRefusalCode;
     }
 
     isConnected(): boolean {
@@ -236,6 +249,7 @@ export class AutomationBridge extends EventEmitter {
         event: K,
         ...args: Parameters<AutomationBridgeEvents[K]>
     ): void {
+        if (event === 'connected') this.lastConnectionRefusalCode = undefined;
         this.emit(event, ...args);
     }
 }

@@ -6,8 +6,10 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import net from 'node:net';
 import { expectedCondition as conditionFromExpectation, splitExpectedConditions } from './expectation-utils.mjs';
-import { evaluateAssertions, selectCaptureValues, withServerTimeout } from './test-runner-response-utils.mjs';
+import { evaluateAssertions, resolveResponsePath, selectCaptureValues, withServerTimeout } from './test-runner-response-utils.mjs';
 import { withFoldTwins } from './fold-twins.mjs';
+import { assertIsolatedProject } from './test-runner-isolation.mjs';
+import { pollPCGRead } from './test-runner-pcg-wait.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -539,7 +541,11 @@ export function evaluateExpectation(testCase, response) {
   const hasTimeout = /\btimeout\b/i.test(combined) || combined.includes('timed out');
   const explicitlyExpectsTimeout = primaryCondition === 'timeout' || primaryCondition.includes('timeout');
 
-  if (hasTimeout && !explicitlyExpectsTimeout) {
+  const retainedPCGTimeout = actualSuccess && testCase.toolName === 'manage_pcg' &&
+    testCase.arguments?.action === 'get_pcg_operation_status' &&
+    resolveResponsePath(response, 'structuredContent.result.state') === 'timed_out' &&
+    resolveResponsePath(response, 'structuredContent.result.operationErrorCode') === 'PCG_OPERATION_TIMEOUT';
+  if (hasTimeout && !explicitlyExpectsTimeout && !retainedPCGTimeout) {
     return {
       passed: false,
       reason: `Timeout detected (infrastructure failure) but test did not expect timeout as primary condition (expected: ${primaryCondition}): ${actualError || actualMessage}`
@@ -1059,7 +1065,7 @@ export function resolveCapturedValues(value, capturedValues, onMissingCapture = 
 /**
  * Main test runner function
  */
-export async function runToolTests(toolName, suiteCases, { folder } = {}) {
+export async function runToolTests(toolName, suiteCases, { folder, isolatedProject, foldTwins = true } = {}) {
   // `folder` brackets the suite: created first, deleted last.
   const bracketed = folder === undefined ? suiteCases : [
     { scenario: 'Setup: create test folder', toolName: 'manage_asset', arguments: { action: 'create_folder', path: folder }, expected: 'success|already exists' },
@@ -1073,7 +1079,7 @@ export async function runToolTests(toolName, suiteCases, { folder } = {}) {
   }
   // Every folded family's advertised primary runs once, derived from the first
   // case that exercises one of the names it folded (tests/fold-twins.mjs).
-  const testCases = withFoldTwins(bracketed);
+  const testCases = foldTwins ? withFoldTwins(bracketed) : bracketed;
   console.log(`Total test cases: ${testCases.length}`);
   console.log('='.repeat(60));
   console.log('');
@@ -1113,6 +1119,11 @@ export async function runToolTests(toolName, suiteCases, { folder } = {}) {
     // Forward timeoutMs to the server while allowing the MCP client timeout to
     // stay longer so server-side progress can extend long-running automation.
     callToolOnce = createToolCaller(client, { useProgressTimeouts: true });
+    if (isolatedProject !== undefined) {
+      const identity = await callToolOnce({ name: 'inspect', arguments: { action: 'get_project_settings' } }, 10000);
+      assertIsolatedProject(identity, isolatedProject);
+      console.log('✅ Isolated editor identity verified; shared fixture cleanup/setup disabled.');
+    }
 
     // Retry helper with exponential backoff for setup operations
     // Helps handle transient failures like Intel GPU driver crashes
@@ -1156,6 +1167,7 @@ export async function runToolTests(toolName, suiteCases, { folder } = {}) {
       throw lastError;
     }
 
+    if (isolatedProject === undefined) {
     // === CLEANUP: Delete existing test assets from previous runs ===
     console.log('🧹 Cleaning up existing test assets...');
     try {
@@ -1409,6 +1421,7 @@ export async function runToolTests(toolName, suiteCases, { folder } = {}) {
     } catch (setupErr) {
       console.warn('⚠️  Test asset setup had issues (tests may fail if assets missing):', setupErr?.message || setupErr);
     }
+    }
 
     // Helper function to reset geometry for manage_geometry tests
     // This prevents polygon explosion from accumulating across tests
@@ -1487,19 +1500,26 @@ export async function runToolTests(toolName, suiteCases, { folder } = {}) {
           capturedValues,
           captureKey => missingCaptures.push(captureKey)
         );
+        const resolvedCase = {
+          ...testCase,
+          assertions: resolveCapturedValues(testCase.assertions, capturedValues, captureKey => missingCaptures.push(captureKey)),
+        };
         if (missingCaptures.length > 0) {
           throw new Error(
             `Missing captured test values: ${Array.from(new Set(missingCaptures)).join(', ')}`
           );
         }
-        const response = await callToolOnce(
+        const response = await pollPCGRead(resolvedCase, remaining => callToolOnce(
           {
             name: testCase.toolName,
             arguments: resolvedArgs,
             ...(testCase.consent === undefined ? {} : { consent: testCase.consent })
           },
-          testCaseTimeoutMs
-        );
+          Math.min(testCaseTimeoutMs, remaining ?? testCaseTimeoutMs)
+        ), candidate => {
+          const normalized = normalizeResponseForEvaluation(candidate);
+          return !evaluateExpectation(resolvedCase, normalized).passed || evaluateAssertions(resolvedCase, normalized).passed;
+        });
 
         const endTime = performance.now();
         const durationMs = endTime - startTime;
@@ -1510,7 +1530,7 @@ export async function runToolTests(toolName, suiteCases, { folder } = {}) {
         }
         let { passed, reason } = evaluateExpectation(testCase, normalizedResponse);
         if (passed && testCase.assertions) {
-          const assertionResult = evaluateAssertions(testCase, normalizedResponse);
+          const assertionResult = evaluateAssertions(resolvedCase, normalizedResponse);
           if (!assertionResult.passed) {
             passed = false;
             reason = assertionResult.reason;
@@ -1536,6 +1556,10 @@ export async function runToolTests(toolName, suiteCases, { folder } = {}) {
             ...responseSummary,
             response: normalizedResponse
           });
+          if (testCase.abortOnFailure === true) {
+            console.log('🛑 Required safety assertion failed; preserving owned fixtures and stopping the suite.');
+            break;
+          }
           if (isBridgeDisconnectedSignal(normalizedResponse) || isBridgeDisconnectedSignal(reason)) {
             console.log('🛑 Automation bridge is not connected; aborting remaining tests to avoid wasting time.');
             break;
@@ -1631,6 +1655,10 @@ export async function runToolTests(toolName, suiteCases, { folder } = {}) {
           responseIsError: true,
           responseError: errorMessage
         });
+        if (testCase.abortOnFailure === true) {
+          console.log('🛑 Required safety step failed; preserving owned fixtures and stopping the suite.');
+          break;
+        }
         if (isBridgeDisconnectedSignal(errorMessage)) {
           console.log('🛑 Automation bridge is not connected; aborting remaining tests to avoid wasting time.');
           break;

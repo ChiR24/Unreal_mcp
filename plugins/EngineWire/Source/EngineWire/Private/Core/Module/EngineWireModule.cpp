@@ -4,6 +4,7 @@
 #include "Modules/ModuleManager.h"
 #include "ToolMenus.h"
 #include "UI/SMcpStatusBarWidget.h"
+#include "Domains/PCG/Execution/McpPCGExecution.h"
 
 // Save current LOCTEXT_NAMESPACE if defined, then set our own
 #pragma push_macro("LOCTEXT_NAMESPACE")
@@ -43,6 +44,9 @@ public:
      */
     virtual void ShutdownModule() override
     {
+#if MCP_HAS_PCG_EXECUTION
+        McpPCGHandlers::ShutdownPCGOperations();
+#endif
         UE_LOG(LogEngineWire, Log, TEXT("EngineWire module shut down."));
 
         UToolMenus::UnRegisterStartupCallback(this);

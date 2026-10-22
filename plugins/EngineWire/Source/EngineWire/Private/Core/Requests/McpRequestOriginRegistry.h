@@ -36,6 +36,10 @@ public:
 	/** Record the transport that admitted `RequestId`. */
 	void Record(const FString& RequestId, ERequestOrigin Origin);
 
+	/** Bind an already-authorized, non-secret transport principal before queue admission. */
+	void RecordPrincipal(const FString& RequestId, const FString& PrincipalIdentity);
+	bool ResolvePrincipal(const FString& RequestId, FString& OutPrincipalIdentity) const;
+
 	/** True when `RequestId` was recorded; `OutOrigin` then names its transport. */
 	bool Resolve(const FString& RequestId, ERequestOrigin& OutOrigin) const;
 
@@ -54,5 +58,6 @@ public:
 private:
 	mutable FCriticalSection Mutex;
 	TMap<FString, ERequestOrigin> Origins;
+	TMap<FString, FString> Principals;
 	TArray<FString> InsertionOrder;
 };

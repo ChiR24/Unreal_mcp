@@ -134,6 +134,7 @@ FMcpScopedEditorTransaction::FMcpScopedEditorTransaction(
 		}
 	}
 
+	bOwnsOutermostRecording = !GEditor->IsTransactionActive();
 	Transaction = MakeUnique<FScopedTransaction>(Title);
 	for (UObject* Object : InObjects)
 	{
@@ -168,6 +169,18 @@ FMcpScopedEditorTransaction::~FMcpScopedEditorTransaction()
 				 "scope; undo restores the object and not the file."),
 			*Title.ToString(), *McpDurableWrites::GetLastPackageName());
 	}
+}
+
+bool FMcpScopedEditorTransaction::DiscardOwnedRecording()
+{
+	if (!bOwnsOutermostRecording || !Transaction.IsValid() || !Transaction->IsOutstanding() ||
+		GetState() != EMcpTransactionState::Recording) return false;
+	Transaction->Cancel();
+	Transaction.Reset();
+	OpenState = EMcpTransactionState::RecordingDiscarded;
+	OpenCode = TEXT("UNDO_RECORDING_DISCARDED");
+	OpenDetail = TEXT("This owned recording was discarded without undoing its object mutations.");
+	return true;
 }
 
 bool FMcpScopedEditorTransaction::IsRecordingUndo() const

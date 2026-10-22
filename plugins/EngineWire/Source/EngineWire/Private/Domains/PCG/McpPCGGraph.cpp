@@ -58,6 +58,11 @@ UPCGNode* FindPCGNode(UPCGGraph* Graph, const FString& NodeId)
     {
         return Graph->GetOutputNode();
     }
+    for (UPCGNode* Boundary : {Graph->GetInputNode(), Graph->GetOutputNode()})
+    {
+        if (Boundary && (Boundary->GetName().Equals(Needle, ESearchCase::IgnoreCase) ||
+            Boundary->GetPathName().Equals(Needle, ESearchCase::IgnoreCase))) return Boundary;
+    }
     if (Needle.IsNumeric())
     {
         const int32 Index = FCString::Atoi(*Needle);

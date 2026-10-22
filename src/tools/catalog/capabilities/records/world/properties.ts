@@ -247,7 +247,7 @@ export const P = {
   y: num('Node graph Y position (alias of posY).'),
   title: str('Node title (alias of nodeName).'),
   settings: {
-    type: 'object', description: 'UPCGSettings property key-value pairs applied by reflection.',
+    type: 'object', description: 'UPCGSettings property paths with staged native preflight. On UE 5.7+, exact native static mesh spawners support MeshSelectorType (PCGMeshSelectorWeighted or PCGMeshSelectorByAttribute) and InstanceDataPackerType (PCGInstanceDataPackerByAttribute or null) before owned dependent paths. Existing parameter pointers are read-only; same types preserve parameters. Type changes require native PCG work idle and do not support Blueprint/custom classes. Packer AttributeSelectors accept native export text, e.g. PCGBegin($Density)PCGEnd. meshPath retains weighted single-entry reset semantics; a conflicting explicit selector type is refused.',
     additionalProperties: true, 'x-unreal-reflection-boundary': true,
   } as JsonObject,
   // shared

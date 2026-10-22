@@ -69,6 +69,10 @@ describe('a confident first hit', () => {
     }
   }
 
+  it('keeps the PCG generation request a clear completion-aware hit', () => {
+    expect(nativeHit('generate pcg')).toBe('manage_pcg.generate_pcg_graph');
+  });
+
   it('a wrong hit fails the measure', () => {
     expect(measure(() => 'definitely.not.a.capability', CASES.corpus).precision).toBe(0);
   });

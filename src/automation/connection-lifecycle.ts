@@ -1,4 +1,5 @@
 import { bridgeNotConnectedMessage, describeBridgeFailure } from './bridge-config.js';
+import { BridgeHandshakeRefusalError } from './handshake.js';
 import type {
     ConnectionControlDependencies
 } from './types.js';
@@ -57,6 +58,7 @@ export class ConnectionLifecycle {
             // The full exception stays in the log; the caller only ever sees the
             // closed-set reason, never OS, TLS or peer-supplied text.
             this.deps.log.error('Lazy connection failed', error);
+            if (error instanceof BridgeHandshakeRefusalError) throw error;
             throw new Error(bridgeNotConnectedMessage(this.deps.describeTarget?.(), describeBridgeFailure(error)));
         }
     }
@@ -88,9 +90,11 @@ export class ConnectionLifecycle {
                 cleanup();
                 reject(error);
             };
-            const onHandshakeFail = (info: { reason: string }) => {
+            const onHandshakeFail = (info: { reason: string; refusalCode?: 'PROJECT_NOT_PERMITTED' }) => {
                 cleanup();
-                reject(new Error(`Handshake failed: ${String(info.reason)}`));
+                reject(info.refusalCode === 'PROJECT_NOT_PERMITTED'
+                    ? new BridgeHandshakeRefusalError(info.refusalCode)
+                    : new Error('Handshake failed'));
             };
             const cleanup = () => {
                 this.deps.off('connected', onConnect);

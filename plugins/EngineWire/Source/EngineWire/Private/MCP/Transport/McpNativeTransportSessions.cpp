@@ -1,5 +1,6 @@
 #include "MCP/Transport/McpNativeTransportPrivate.h"
 #include "Foundation/Diagnostics/McpDiagnosticsSnapshot.h"
+#include "Core/Requests/McpRequestOriginRegistry.h"
 
 FMcpNativeTransport::ESessionValidationResult FMcpNativeTransport::ValidateSession(
 	const FString& SessionId, const FString& PresentedToken, FString& OutError)
@@ -169,6 +170,12 @@ bool FMcpNativeTransport::QueueAutomationRequestForSession(
 	// only thing that keeps its queue fairness lane and per-session cap distinct
 	// from every other session's. The rejection is surfaced so the /mcp surface
 	// can answer each refusal with its precise typed code.
+	FMcpRequestOriginRegistry& Origins = FMcpRequestOriginRegistry::Get();
+	Origins.Record(RequestId, ERequestOrigin::NativeHTTP);
+	if (const FMcpCapabilityPrincipal* Principal = SessionPrincipals.Find(SessionId))
+	{
+		if (Principal->bAuthenticated) Origins.RecordPrincipal(RequestId, Principal->Identity);
+	}
 	const EAutomationQueueRejection Rejection =
 		Subsystem->QueueAutomationRequest(
 			RequestId, DispatchAction, Arguments, nullptr,
@@ -176,6 +183,7 @@ bool FMcpNativeTransport::QueueAutomationRequestForSession(
 			ExpectedRevisions,
 			FString(TEXT("native:")) + SessionId);
 	OutRejection = Rejection;
+	if (Rejection != EAutomationQueueRejection::None) Origins.Forget(RequestId);
 	return Rejection == EAutomationQueueRejection::None;
 }
 

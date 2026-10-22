@@ -4604,7 +4604,9 @@ describe('PCG node edits change what they say', () => {
   // A node found by nodeName was re-titled with that name, and an edit that changed nothing answered "updated".
   it('set_pcg_node_settings finds its node by nodeName and refuses an edit that changes nothing', () => {
     const nodes = code('PCG', 'McpPCGNodeActions.cpp');
-    expect(nodes).toContain('if (bEdit && AppliedSettings + AppliedConvenienceSettings == 0 && !bMoves && !Payload->HasField(TEXT("title")))');
+    expect(nodes).toContain('ApplyPCGSettingsPayload(Settings, SubAction, Payload, Error, AppliedSettings)');
+    expect(code('PCG', 'Editing/McpPCGEditState.cpp')).toContain('OutCount += ConvenienceCount;');
+    expect(nodes).toContain('if (bEdit && AppliedSettings == 0 && !bMoves && !Payload->HasField(TEXT("title")))');
     expect(nodes).toContain('ApplyNodeMetadata(Node, Payload, !bEdit);');
     expect(code('PCG', 'McpPCGGraph.cpp')).toContain(': GetJsonStringField(Payload, TEXT("title"));');
   });

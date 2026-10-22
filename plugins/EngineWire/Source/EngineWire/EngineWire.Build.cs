@@ -53,6 +53,9 @@ public class EngineWire : ModuleRules {
         bool bPcgExportsData = Target.Version.MajorVersion > 5 || (Target.Version.MajorVersion == 5 && Target.Version.MinorVersion >= 8);
         bool bHasPCG = ((Project?.Plugins?.Any(Reference => string.Equals(Reference.Name, "PCG", StringComparison.OrdinalIgnoreCase) && Reference.bEnabled) ?? false) || (Bridge.Plugins?.Any(Reference => string.Equals(Reference.Name, "PCG", StringComparison.OrdinalIgnoreCase) && Reference.bEnabled && !Reference.bOptional) ?? false)) && AddOptionalModule(Target, EngineDir, "PCG", "PCG", !bPcgExportsData);
         PublicDefinitions.Add(bHasPCG ? "MCP_HAS_PCG=1" : "MCP_HAS_PCG=0");
+        bool bHasPcgEditorApi = bHasPCG && Target.Type == TargetType.Editor && (Target.Version.MajorVersion > 5 || Target.Version.MinorVersion >= 7)
+            && AddOptionalModule(Target, EngineDir, "PCGEditor", "PCGEditor", true);
+        PublicDefinitions.Add(bHasPcgEditorApi ? "MCP_HAS_PCG_EDITOR=1" : "MCP_HAS_PCG_EDITOR=0");
         bool bHasCinematicCamera = AddOptionalModuleGroup(EngineDir, "CinematicCamera", new string[] { "CinematicCamera" });
         bool bHasMediaAssets = AddOptionalModuleGroup(EngineDir, "MediaAssets", new string[] { "MediaAssets" });
         // UE 5.0's MRQ job has no IsEnabled/SetIsEnabled, no OnIndividualJobFinished and no bRenderMainPass,

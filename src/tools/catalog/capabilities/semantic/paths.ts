@@ -4,6 +4,7 @@ import {
   getConfiguredContentRoots,
   getContentRoots,
   isUnderAllowedContentRoot,
+  normalizeContentToGame,
   sanitizePath
 } from '../../../../utils/paths/path-security.js';
 import { SemanticBoundaryError } from './errors.js';
@@ -22,18 +23,6 @@ import { SemanticBoundaryError } from './errors.js';
 // directly, which throws a typed `SemanticBoundaryError` with a precise code
 // (PATH_TRAVERSAL / INVALID_PATH_ROOT). Direct `.parse()` on a schema throws a
 // ZodError (acceptable ZodError semantics); `.safeParse()` never throws.
-
-// Case-insensitive /Content -> /Game mount normalization, applied exactly once
-// at the boundary (a /Game result can never re-trigger it). Matches the
-// case-insensitive root policy of the shared sanitizePath helper.
-function normalizeContentToGame(raw: string): string {
-  let normalized = raw.replace(/\\/g, '/');
-  if (/^\/?content\//i.test(normalized)) {
-    const idx = normalized.toLowerCase().indexOf('content/');
-    normalized = `/Game/${normalized.slice(idx + 'content/'.length)}`;
-  }
-  return normalized;
-}
 
 // The traversal gate, in one place: both the asset path and the object/class
 // path reach it, so a change to the rule cannot apply to only one of them.

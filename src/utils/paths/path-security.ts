@@ -15,6 +15,16 @@ let editorContentRoots: readonly string[] = [];
 let contentRootsRevision = 0;
 let cachedDefaultRoots: { revision: number; roots: string[] } | undefined;
 
+/** Shared separator and /Content alias normalization for semantic object paths. */
+export function normalizeContentToGame(raw: string): string {
+    let normalized = raw.replace(/\\/g, '/');
+    if (/^\/?content\//i.test(normalized)) {
+        const index = normalized.toLowerCase().indexOf('content/');
+        normalized = `/Game/${normalized.slice(index + 'content/'.length)}`;
+    }
+    return normalized;
+}
+
 function normalizeRoots(sourceRoots: readonly string[]): string[] {
     return [...new Set(
         sourceRoots
