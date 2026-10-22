@@ -4,7 +4,7 @@ import type { FoldSpec } from '../shared/fold-types.js';
 export const MANAGE_LEVEL_STRUCTURE_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'create_level_structure', selector: 'kind',
-    summary: 'Create level structure: a level, sublevel, level instance, packed level blueprint, data layer, or minimap volume.',
+    summary: 'Create level structure, chosen by kind: level (a new map asset, optionally opened), sublevel (a new level streamed into the open one), level_instance (an actor loading a saved level, to reuse a room or building), packed_level_actor (a saved level baked into one instanced-mesh Blueprint), data_layer (World Partition), or minimap_volume (the area a World Partition minimap captures).',
     topics: ['create level', 'create sublevel', 'level instance', 'packed level actor', 'data layer', 'minimap volume'],
     members: { level: 'create_level', sublevel: 'create_sublevel', level_instance: 'create_level_instance', packed_level_actor: 'create_packed_level_actor', data_layer: 'create_data_layer', minimap_volume: 'create_minimap_volume' },
   },

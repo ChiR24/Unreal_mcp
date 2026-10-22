@@ -2295,7 +2295,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "bounds": {
           "type": "object",
-          "description": "Procedural foliage bounds {location, size}.",
+          "description": "The area {location, size}: a box of size (default 1000 on each axis) centred on location (default the origin); it must enclose a surface to place on.",
           "properties": {
             "location": {
               "type": "object",
@@ -2600,7 +2600,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             },
             "additionalProperties": false
           },
-          "description": "Foliage type specs."
+          "description": "At least one {meshPath, density}: the static mesh to scatter and its density, the seeds per 10 m x 10 m the simulation starts from (default 10). Its steps then spread, age and thin them (instances keep a collision radius apart), so the count placed differs; get_foliage_instances reads it."
         },
         "forwardAxis": {
           "type": "string",
@@ -3596,7 +3596,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "seed": {
           "type": "integer",
-          "description": "Random seed for procedural generation."
+          "description": "Random seed of the scatter (default 12345); the same seed gives the same placement."
         },
         "setting": {
           "type": "string",
@@ -3836,7 +3836,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "tileSize": {
           "type": "number",
-          "description": "Procedural foliage tile size."
+          "description": "Side of one simulated tile in world units (default 1000); the scatter repeats 10 unique tiles across the area."
         },
         "time": {
           "type": "number",
@@ -21932,7 +21932,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "dataLayerType": {
           "type": "string",
-          "description": "Type of data layer: Runtime or Editor."
+          "enum": [
+            "Runtime",
+            "Editor"
+          ],
+          "description": "Runtime (default: loaded and unloaded in the game) or Editor (editor-only organisation)."
         },
         "edit": {
           "type": "string",
@@ -22022,7 +22026,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "layerType": {
           "type": "string",
-          "description": "Layer type for runtime hash set grid."
+          "description": "HLOD layer type: Instancing, MeshMerge (default), MeshSimplify or MeshApproximate (SimplifiedMesh and ApproximatedMesh are accepted for the last two); another is refused."
         },
         "levelAssetPath": {
           "type": "string",
@@ -22128,7 +22132,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "parentLevel": {
           "type": "string",
-          "description": "Parent level asset path."
+          "description": "The level to stream it into; must be the level open in the editor (omit for the open level)."
         },
         "pinName": {
           "type": "string",
@@ -22224,7 +22228,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "streamingDistance": {
           "type": "number",
-          "description": "Distance/radius for streaming volume."
+          "description": "How far the volume reaches from its centre on each axis, in world units, over 0 (default 10000)."
         },
         "streamingMethod": {
           "type": "string",
@@ -22236,7 +22240,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "streamingUsage": {
           "type": "string",
-          "description": "Streaming volume usage mode."
+          "enum": [
+            "LoadingAndVisibility",
+            "Loading",
+            "VisibilityBlockingOnLoad",
+            "BlockingOnLoad",
+            "LoadingNotVisible"
+          ],
+          "description": "What the volume controls (default LoadingAndVisibility: load and show the level while a viewer is inside)."
         },
         "sublevelName": {
           "type": "string",
@@ -22244,7 +22255,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "sublevelPath": {
           "type": "string",
-          "description": "Sub-level asset path."
+          "description": "Folder for the new level, or its full package path ending in sublevelName (default: the open level's folder)."
         },
         "targetNodeName": {
           "type": "string",
@@ -22305,23 +22316,47 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "additionalProperties": false
         },
         "volumeLocation": {
-          "type": "object",
-          "description": "Location of the volume.",
-          "properties": {
-            "x": {
-              "type": "number",
-              "description": "X"
+          "oneOf": [
+            {
+              "type": "object",
+              "description": "Location of the volume.",
+              "properties": {
+                "x": {
+                  "type": "number",
+                  "description": "X"
+                },
+                "y": {
+                  "type": "number",
+                  "description": "Y"
+                },
+                "z": {
+                  "type": "number",
+                  "description": "Z"
+                }
+              },
+              "additionalProperties": false
             },
-            "y": {
-              "type": "number",
-              "description": "Y"
-            },
-            "z": {
-              "type": "number",
-              "description": "Z"
+            {
+              "type": "object",
+              "description": "World location of the volume's centre {x, y, z} (default the origin).",
+              "properties": {
+                "x": {
+                  "type": "number",
+                  "description": "X"
+                },
+                "y": {
+                  "type": "number",
+                  "description": "Y"
+                },
+                "z": {
+                  "type": "number",
+                  "description": "Z"
+                }
+              },
+              "additionalProperties": false
             }
-          },
-          "additionalProperties": false
+          ],
+          "description": "Location of the volume."
         },
         "volumeName": {
           "type": "string",

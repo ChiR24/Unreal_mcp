@@ -41,11 +41,15 @@ const testCases = [
 
   // === CREATE ===
   { scenario: 'CREATE: create_level', toolName: 'manage_level_structure', arguments: { action: 'create_level', levelName: LEVEL_NAME, levelPath: TEST_FOLDER_ALIAS, bCreateWorldPartition: false, bUseExternalActors: false, loadAfterCreate: false, save: true }, expected: 'success|already exists' },
-  { scenario: 'CREATE: create_sublevel', toolName: 'manage_level_structure', arguments: { action: 'create_sublevel', sublevelName: SUBLEVEL_NAME, sublevelPath: SUBLEVEL_PATH_ALIAS, parentLevel: LEVEL_PATH_ALIAS, streamingMethod: 'Blueprint', save: true }, expected: 'success|already exists' },
+  // parentLevel naming a level that is not open was checked to exist and then ignored: the sublevel streamed into the open one.
+  { scenario: 'ERROR: create_sublevel refuses a parent level that is not open', toolName: 'manage_level_structure', arguments: { action: 'create_sublevel', sublevelName: SUBLEVEL_NAME, sublevelPath: SUBLEVEL_PATH_ALIAS, parentLevel: LEVEL_PATH_ALIAS, streamingMethod: 'Blueprint', save: true }, expected: 'error|PARENT_LEVEL_NOT_LOADED' },
+  { scenario: 'CREATE: create_sublevel', toolName: 'manage_level_structure', arguments: { action: 'create_sublevel', sublevelName: SUBLEVEL_NAME, sublevelPath: SUBLEVEL_PATH_ALIAS, streamingMethod: 'Blueprint', save: true }, expected: 'success|already exists' },
 
   // === LEVEL CONFIG ===
   { scenario: 'CONFIG: configure_level_streaming', toolName: 'manage_level_structure', arguments: { action: 'configure_level_streaming', levelName: SUBLEVEL_PATH_ALIAS, streamingMethod: 'Blueprint', bShouldBeVisible: true, bShouldBlockOnLoad: false, bDisableDistanceStreaming: false }, expected: 'success|not found' },
-  { scenario: 'CONFIG: set_streaming_distance', toolName: 'manage_level_structure', arguments: { action: 'set_streaming_distance', levelName: SUBLEVEL_PATH_ALIAS, streamingDistance: 5000, streamingUsage: 'Blueprint', volumeLocation: { x: 0, y: 0, z: 0 }, createVolume: true }, expected: 'success|not found' },
+  { scenario: 'CONFIG: set_streaming_distance', toolName: 'manage_level_structure', arguments: { action: 'set_streaming_distance', levelName: SUBLEVEL_PATH_ALIAS, streamingDistance: 5000, streamingUsage: 'LoadingAndVisibility', volumeLocation: { x: 0, y: 0, z: 0 }, createVolume: true }, expected: 'success|not found' },
+  // The volume used to be scaled with no brush, bounds of zero that no viewer is ever inside.
+  { scenario: 'ERROR: set_streaming_distance refuses a distance of 0', toolName: 'manage_level_structure', arguments: { action: 'set_streaming_distance', levelName: SUBLEVEL_PATH_ALIAS, streamingDistance: 0 }, expected: 'error|greater than 0' },
 
   // === WORLD PARTITION GUARDED ACTIONS ===
   { scenario: 'TOGGLE: enable_world_partition', toolName: 'manage_level_structure', arguments: { action: 'enable_world_partition', bEnableWorldPartition: true, bUseExternalActors: false }, expected: 'success|cannot enable' },
@@ -53,6 +57,8 @@ const testCases = [
   { scenario: 'CREATE: create_data_layer', toolName: 'manage_level_structure', arguments: { action: 'create_data_layer', dataLayerName: DATA_LAYER, dataLayerType: 'Runtime', bIsInitiallyVisible: true, bIsInitiallyLoaded: true, dataLayerAssetPath: '/Game/DataLayers', bIsPrivate: false }, expected: 'success|world partition|already exists' },
   { scenario: 'CONNECT: assign_actor_to_data_layer', toolName: 'manage_level_structure', arguments: { action: 'assign_actor_to_data_layer', actorName: TEST_ACTOR, dataLayerName: DATA_LAYER }, expected: 'success|world partition|not found' },
   { scenario: 'CONNECT: assign_actor_to_data_layer by actor path', toolName: 'manage_level_structure', arguments: { action: 'assign_actor_to_data_layer', actorPath: TEST_ACTOR, dataLayerName: DATA_LAYER }, expected: 'success|world partition|not found' },
+  // An unknown layer type was written as nothing and answered success with layerTypeApplied false.
+  { scenario: 'ERROR: configure_hlod_layer refuses an unknown layer type', toolName: 'manage_level_structure', arguments: { action: 'configure_hlod_layer', hlodLayerName: `${HLOD_LAYER}_Bad`, hlodLayerPath: HLOD_FOLDER, layerType: 'Nanite' }, expected: 'error|not an HLOD layer type' },
   { scenario: 'CONFIG: configure_hlod_layer', toolName: 'manage_level_structure', arguments: { action: 'configure_hlod_layer', hlodLayerName: HLOD_LAYER, hlodLayerPath: HLOD_FOLDER, cellSize: 12800, loadingDistance: 25600, layerType: 'Instancing', bIsSpatiallyLoaded: true }, expected: 'success|already exists' },
   { scenario: 'CREATE: create_minimap_volume', toolName: 'manage_level_structure', arguments: { action: 'create_minimap_volume', volumeName: MINIMAP_VOLUME, location: { x: 0, y: 0, z: 0 }, extent: { x: 1000, y: 1000, z: 1000 }, volumeLocation: { x: 0, y: 0, z: 0 }, volumeExtent: { x: 1000, y: 1000, z: 1000 } }, expected: 'success|world partition|already exists' },
 

@@ -1398,7 +1398,7 @@ describe('configure_rendering', () => {
   it('checks every value before writing any, applies the console variable live and names restart-only changes', () => {
     const render = code('Ui', 'McpUiRenderSettings.cpp');
     expect(render.indexOf('Writes.Add(Write);')).toBeLessThan(render.indexOf('McpWriteSetting(Write.Property, Settings, Write.Value);'));
-    expect(render).toContain('Variable->Set(*LexToString(Write.Value), ECVF_SetByProjectSetting);');
+    expect(render).toContain('McpSetConsoleVariable(*Variable, LexToString(Write.Value), ECVF_SetByProjectSetting)');
     expect(render).toContain('Write.Property->HasMetaData(TEXT("ConfigRestartRequired"))');
     expect(render).toContain('Settings->TryUpdateDefaultConfigFile(FString(), false)');
     // The settings object's own change handler can raise dialogs no one is there to answer.
@@ -4686,10 +4686,8 @@ describe('render console settings say what took', () => {
   // A console variable held by the console or read-only was listed as applied; a settings key the action does not
   // read was dropped; nothing taking still answered success; ray tracing off for the project went unmentioned.
   it('reads each variable back, refuses unread keys and empty results, and warns when ray tracing is off', () => {
-    const support = code('Render', 'McpRenderSupportSettings.h');
-    expect(support).toContain('Variable->GetFloat(), Wanted');
-    expect(support).toContain('Variable->Set(*Value, ECVF_SetByConsole);');
-    expect(support).toContain('Variable->TestFlags(ECVF_ReadOnly)');
+    const helper = code('..', 'Foundation', 'Render', 'McpConsoleVariableWrite.h');
+    expect(helper).toContain('Variable.GetFloat(), Wanted');
     const console = code('Render', 'McpRenderConsole.cpp');
     expect(console).toContain('does not read settings %s; it reads %s');
     expect(console).toContain('TEXT("CVAR_UNAVAILABLE")');
@@ -4703,6 +4701,26 @@ describe('render console settings say what took', () => {
     expect(color).not.toContain('r.TonemapperFilm');
     expect(color).toContain('{TEXT("ToneCurveAmount"), TEXT("ExpandGamut")}');
     expect(color).toContain('is not a tonemapper');
+  });
+});
+
+describe('console variable writes are read back', () => {
+  // IConsoleVariable::Set at code priority loses to any console set and to read-only variables with only a log line,
+  // and every site listed the variable as applied.
+  it('one helper sets at console priority, refuses read-only variables and reads the value back', () => {
+    const helper = code('..', 'Foundation', 'Render', 'McpConsoleVariableWrite.h');
+    expect(helper).toContain('EConsoleVariableFlags Priority = ECVF_SetByConsole');
+    expect(helper).toContain('Variable.TestFlags(ECVF_ReadOnly)');
+    expect(code('Render', 'McpRenderSupportSettings.h')).toContain('McpSetConsoleVariable(*Variable, Value)');
+    expect(code('ControlEditor', 'McpEditorPreferences.cpp')).toContain('McpSetConsoleVariable(*CVar, Value)');
+    const shadows = code('Lighting', 'McpLightingAtmosphere.cpp');
+    expect(shadows).toContain('McpSetConsoleVariable(*CVar, Value)');
+    expect(shadows).not.toContain('CVar->Set(');
+    const gi = code('Lighting', 'McpLightingGlobalIllumination.cpp');
+    expect(gi).not.toContain('CVar->Set(');
+    expect(gi).not.toContain('GICVar->Set(');
+    // A project setting a console value outranks only takes effect after a restart, and says so.
+    expect(code('Ui', 'McpUiRenderSettings.cpp')).toContain('McpSetConsoleVariable(*Variable, LexToString(Write.Value), ECVF_SetByProjectSetting).IsEmpty()');
   });
 });
 
@@ -4746,5 +4764,62 @@ describe('Gameplay Effect, data interface and framework creates say what they di
 
   it('a framework class create reports whether it saved', () => {
     expect(code('GameFramework', 'McpGameFrameworkCreation.cpp')).toContain('Response->SetBoolField(TEXT("saved"), bSaved);');
+  });
+});
+
+describe('sublevels and minimap volumes land where they say', () => {
+  // parentLevel was checked to exist and then ignored, so the sublevel streamed into whatever level was open.
+  it('create_sublevel refuses a parent that is not the open level and never builds a /Game//Temp path', () => {
+    const sublevels = code('LevelStructure', 'McpLevelStructureSublevels.cpp');
+    expect(sublevels).toContain('TEXT("PARENT_LEVEL_NOT_LOADED")');
+    expect(sublevels).toContain('OpenLevel.StartsWith(TEXT("/Game/")) ? FPaths::GetPath(OpenLevel) : FString(TEXT("/Game/Maps"))');
+    expect(sublevels).not.toContain('TEXT("Parent level not found: %s")');
+  });
+
+  // A volume from SpawnActor has no brush: scaling it left bounds of zero, so the minimap captured nothing.
+  it('the minimap volume gets a real box brush', () => {
+    const hlod = code('LevelStructure', 'McpLevelStructureHlod.cpp');
+    expect(hlod).toContain('VolumeHelpers::CreateBoxBrushForVolume(MiniMapVolume, VolumeExtent);');
+    expect(hlod).not.toContain('SetActorScale3D(DesiredScale)');
+  });
+
+  // Same empty brush for the streaming volume, which also stayed unbound from its level until the level was reloaded.
+  it('the streaming volume gets a box brush and is bound to its level at once', () => {
+    const distance = code('LevelStructure', 'McpLevelStructureStreamingDistance.cpp');
+    expect(distance).toContain('VolumeHelpers::CreateBoxBrushForVolume(NewVolume, FVector(StreamingDistance));');
+    expect(distance).toContain('FoundLevel->PostEditChangeProperty(VolumesChanged);');
+    expect(distance).not.toContain('SetActorScale3D(DesiredScale)');
+    expect(distance).toContain('is not one: use Loading, LoadingAndVisibility');
+  });
+
+  // Anything but an exact "Runtime" made an Editor data layer; an unknown HLOD layer type answered success unapplied.
+  it('data layer and HLOD layer types are refused when unknown, before anything is created', () => {
+    const dataLayer = code('LevelStructure', 'McpLevelStructureDataLayerCreation.cpp');
+    expect(dataLayer).toContain('DataLayerType.Equals(TEXT("Runtime"), ESearchCase::IgnoreCase)');
+    expect(dataLayer).not.toContain('if (DataLayerType == TEXT("Runtime"))');
+    const hlod = code('LevelStructure', 'McpLevelStructureHlod.cpp');
+    expect(hlod.indexOf('StaticEnum<EHLODLayerType>()')).toBeLessThan(hlod.indexOf('McpCreatePackageForNewAsset('));
+  });
+
+  // Setting one grid value reset the others to their defaults; a hash set row with no layer answered success.
+  it('grid edits keep the fields left out, and a partition row with no layer is refused', () => {
+    const grid = code('LevelStructure', 'McpLevelStructureWorldPartition.cpp');
+    expect(grid).toContain('if (Payload->HasField(TEXT("loadingRange"))) { Grid->LoadingRange = LoadingRange; }');
+    expect(grid.indexOf('SpatialHash->Modify();')).toBeLessThan(grid.indexOf('Grid->CellSize = GridCellSize;'));
+    expect(code('LevelStructure', 'McpLevelStructureRuntimeHashSetGrid.cpp')).toContain('TEXT("PARTITION_HAS_NO_LAYER")');
+  });
+});
+
+describe('procedural foliage places instances', () => {
+  // The volume had no brush, the simulation ran with a callback that added nothing, and density set the painting
+  // value the simulation never reads, yet the call answered "Procedural foliage created".
+  it('builds the volume brush, resimulates through the editor library and reads back what spawned', () => {
+    const procedural = code('Foliage', 'McpFoliageProcedural.cpp');
+    expect(procedural).toContain('VolumeHelpers::CreateBoxBrushForVolume(Volume, Size * 0.5);');
+    expect(procedural).toContain('TEXT("/Script/FoliageEdit.ProceduralFoliageEditorLibrary")');
+    expect(procedural).toContain('McpResimulateInEditor(Volume) && ProcComp->HasSpawnedAnyInstances()');
+    expect(procedural).not.toContain('[](const TArray<FDesiredFoliageInstance> &) {}');
+    expect(procedural).toContain('FT->InitialSeedDensity =');
+    expect(procedural.indexOf('TEXT("MESH_NOT_FOUND")')).toBeLessThan(procedural.indexOf('McpCreatePackageForNewAsset('));
   });
 });

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "7582aa91ffeb535c",
+  "catalogRevision": "edf48b096cf051c6",
   "recordCount": 416,
   "records": [
     {
@@ -29175,11 +29175,11 @@
                 },
                 "additionalProperties": false
               },
-              "description": "Foliage type specs."
+              "description": "At least one {meshPath, density}: the static mesh to scatter and its density, the seeds per 10 m x 10 m the simulation starts from (default 10). Its steps then spread, age and thin them (instances keep a collision radius apart), so the count placed differs; get_foliage_instances reads it."
             },
             "bounds": {
               "type": "object",
-              "description": "Procedural foliage bounds {location, size}.",
+              "description": "The area {location, size}: a box of size (default 1000 on each axis) centred on location (default the origin); it must enclose a surface to place on.",
               "properties": {
                 "location": {
                   "type": "object",
@@ -29224,11 +29224,11 @@
             },
             "seed": {
               "type": "integer",
-              "description": "Random seed for procedural generation."
+              "description": "Random seed of the scatter (default 12345); the same seed gives the same placement."
             },
             "tileSize": {
               "type": "number",
-              "description": "Procedural foliage tile size."
+              "description": "Side of one simulated tile in world units (default 1000); the scatter repeats 10 unique tiles across the area."
             },
             "kind": {
               "type": "string",
@@ -29355,8 +29355,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "5664f7469158bc16a7bf9865016451fbd858d043e709fe2451e54c6531e54038",
-        "content": "90c829ef03a18104c19cfb7f0e6d05b5378d73d7c36fe2fcf1025c4eb540e707"
+        "schema": "f2050b78657c1e514706383e0e8a27ac556c0c2b3b0d50dd04673df98dcdc6e1",
+        "content": "9d1925117336a610af7361809a44dedf25fb50c6807bc79a507f371023ad1c7c"
       }
     },
     {
@@ -40768,7 +40768,7 @@
           "viewport stats",
           "show stats"
         ],
-        "summary": "Configure the editor viewport: view mode, editor mode, game view, immersive mode, realtime, show or hide stats.",
+        "summary": "Change what the editor viewport shows, chosen by setting: view_mode (any engine view mode by name: Lit, Unlit, Wireframe, LightingOnly, ShaderComplexity, CollisionPawn, PathTracing and the rest; the running game's view while Play runs), editor_mode (activate a mode such as EM_Landscape, EM_Foliage or EM_Default, checked active), game_view (hide editor icons), immersive_mode (the viewport fills its window), realtime (keep effects and animated materials moving), show_stats or hide_stats (stat overlays: FPS and Unit by default; hide_stats with no stat hides them all). Each answers with the state it reads back; with no level viewport open, NO_VIEWPORT.",
         "whenToUse": [
           "setting=view_mode: The viewport render mode must be changed for debugging or visualization.",
           "setting=editor_mode: A specific editor mode must be activated.",
@@ -40865,7 +40865,7 @@
       },
       "examples": [
         {
-          "title": "Configure the editor viewport: view mode, editor mode, game view, immersive mode, realtime, show or hide stats.",
+          "title": "Change what the editor viewport shows, chosen by setting: view_mode (any engine view mode by name: Lit, Unlit, Wireframe, LightingOnly, ShaderComplexity, CollisionPawn, PathTracing and the rest; the running game's view while Play runs), editor_mode (activate a mode such as EM_Landscape, EM_Foliage or EM_Default, checked active), game_view (hide editor icons), immersive_mode (the viewport fills its window), realtime (keep effects and animated materials moving), show_stats or hide_stats (stat overlays: FPS and Unit by default; hide_stats with no stat hides them all). Each answers with the state it reads back; with no level viewport open, NO_VIEWPORT.",
           "input": {
             "action": "configure_viewport",
             "viewMode": "Wireframe",
@@ -40948,7 +40948,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "60a97085918a840db26b8580e532b49bf142c40a1a65c99f1aac3672b78d4620",
-        "content": "4b4f22d5a6c0fe176772790e27effb3c661a329e58a4d6867b370c0117df962e"
+        "content": "ca526a80919afc2fbfd8c270c92b8e0f66ac738c654f167a16676e5302b15855"
       }
     },
     {
@@ -79055,7 +79055,7 @@
             },
             "volumeLocation": {
               "type": "object",
-              "description": "Location of the volume.",
+              "description": "World location of the volume's centre {x, y, z} (default the origin).",
               "properties": {
                 "x": {
                   "type": "number",
@@ -79074,11 +79074,18 @@
             },
             "streamingDistance": {
               "type": "number",
-              "description": "Distance/radius for streaming volume."
+              "description": "How far the volume reaches from its centre on each axis, in world units, over 0 (default 10000)."
             },
             "streamingUsage": {
               "type": "string",
-              "description": "Streaming volume usage mode."
+              "enum": [
+                "LoadingAndVisibility",
+                "Loading",
+                "VisibilityBlockingOnLoad",
+                "BlockingOnLoad",
+                "LoadingNotVisible"
+              ],
+              "description": "What the volume controls (default LoadingAndVisibility: load and show the level while a viewer is inside)."
             },
             "createVolume": {
               "type": "boolean",
@@ -79118,7 +79125,7 @@
             },
             "layerType": {
               "type": "string",
-              "description": "Layer type for runtime hash set grid."
+              "description": "HLOD layer type: Instancing, MeshMerge (default), MeshSimplify or MeshApproximate (SimplifiedMesh and ApproximatedMesh are accepted for the last two); another is refused."
             },
             "hlodLayerName": {
               "type": "string",
@@ -79355,8 +79362,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "a06970e4ff787f734f5726736dc2895b845ff81765ec0f71f02012b9e2555554",
-        "content": "dd4ed9dd608cb344fdf7321835a27fa3b70f1165e2637580f27bfa127622b553"
+        "schema": "64d3037a99a8af68c534ccfe8fe0be7e747594fef54a028239a00b85af57433c",
+        "content": "feceb5cb52a0413c18c7dcb26cd13afd38fe94aad645e95995801b0b0afe28f0"
       }
     },
     {
@@ -79438,7 +79445,7 @@
           "packed level blueprint",
           "bake level into instanced meshes"
         ],
-        "summary": "Create level structure: a level, sublevel, level instance, packed level blueprint, data layer, or minimap volume.",
+        "summary": "Create level structure, chosen by kind: level (a new map asset, optionally opened), sublevel (a new level streamed into the open one), level_instance (an actor loading a saved level, to reuse a room or building), packed_level_actor (a saved level baked into one instanced-mesh Blueprint), data_layer (World Partition), or minimap_volume (the area a World Partition minimap captures).",
         "whenToUse": [
           "kind=level: A brand-new level must be created and opened.",
           "kind=sublevel: A streaming child level must be created.",
@@ -79492,11 +79499,11 @@
             },
             "sublevelPath": {
               "type": "string",
-              "description": "Sub-level asset path."
+              "description": "Folder for the new level, or its full package path ending in sublevelName (default: the open level's folder)."
             },
             "parentLevel": {
               "type": "string",
-              "description": "Parent level asset path."
+              "description": "The level to stream it into; must be the level open in the editor (omit for the open level)."
             },
             "streamingMethod": {
               "type": "string",
@@ -79566,7 +79573,11 @@
             },
             "dataLayerType": {
               "type": "string",
-              "description": "Type of data layer: Runtime or Editor."
+              "enum": [
+                "Runtime",
+                "Editor"
+              ],
+              "description": "Runtime (default: loaded and unloaded in the game) or Editor (editor-only organisation)."
             },
             "bIsInitiallyVisible": {
               "type": "boolean",
@@ -79734,7 +79745,7 @@
       },
       "examples": [
         {
-          "title": "Create level structure: a level, sublevel, level instance, packed level blueprint, data layer, or minimap volume.",
+          "title": "Create level structure, chosen by kind: level (a new map asset, optionally opened), sublevel (a new level streamed into the open one), level_instance (an actor loading a saved level, to reuse a room or building), packed_level_actor (a saved level baked into one instanced-mesh Blueprint), data_layer (World Partition), or minimap_volume (the area a World Partition minimap captures).",
           "input": {
             "action": "create_level_structure",
             "levelName": "NewMap",
@@ -79896,8 +79907,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "74a72acbeef5243a4cfda4dbfd5ce468b410a2c8b34d82f89e6e559c5f22ab96",
-        "content": "80f9f8c34900bfd70e6faac8f27aae0c9948667cb90027d3fc99ec1794b5a51b"
+        "schema": "b7db510a15f080391acfa87ec23e937c64d0e202ee6c2e031499f65065d37d23",
+        "content": "0ce85c02b5ba8c4ffe3f70312a246e0614f1ffcf4f7e94c378627ce3cc58e692"
       }
     },
     {

@@ -90,7 +90,7 @@ export const P = {
     maxItems: 6,
   } as JsonObject,
   createIfMissing: bool('Create the grid if missing.'),
-  layerType: str('Layer type for runtime hash set grid.'),
+  layerType: str('HLOD layer type: Instancing, MeshMerge (default), MeshSimplify or MeshApproximate (SimplifiedMesh and ApproximatedMesh are accepted for the last two); another is refused.'),
   nodeClass: str('Level blueprint graph node class.'),
   nodePosition: { type: 'object', description: 'Node graph position {x, y}.', properties: { x: num('X'), y: num('Y') }, additionalProperties: false } as JsonObject,
   nodeName: str('Level blueprint node name.'),

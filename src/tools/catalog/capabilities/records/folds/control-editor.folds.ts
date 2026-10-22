@@ -30,7 +30,7 @@ export const CONTROL_EDITOR_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'configure_viewport', selector: 'setting',
-    summary: 'Configure the editor viewport: view mode, editor mode, game view, immersive mode, realtime, show or hide stats.',
+    summary: 'Change what the editor viewport shows, chosen by setting: view_mode (any engine view mode by name: Lit, Unlit, Wireframe, LightingOnly, ShaderComplexity, CollisionPawn, PathTracing and the rest; the running game\'s view while Play runs), editor_mode (activate a mode such as EM_Landscape, EM_Foliage or EM_Default, checked active), game_view (hide editor icons), immersive_mode (the viewport fills its window), realtime (keep effects and animated materials moving), show_stats or hide_stats (stat overlays: FPS and Unit by default; hide_stats with no stat hides them all). Each answers with the state it reads back; with no level viewport open, NO_VIEWPORT.',
     topics: ['view mode', 'editor mode', 'game view', 'immersive mode', 'realtime viewport', 'viewport stats', 'show stats'],
     members: { view_mode: 'set_view_mode', editor_mode: 'set_editor_mode', game_view: 'set_game_view', immersive_mode: 'set_immersive_mode', realtime: 'set_viewport_realtime', show_stats: 'show_stats', hide_stats: 'hide_stats' },
   },

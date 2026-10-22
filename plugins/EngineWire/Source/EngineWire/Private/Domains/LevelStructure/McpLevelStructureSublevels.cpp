@@ -63,19 +63,23 @@ bool HandleCreateSublevel(
         return true;
     }
 
+    // The sublevel always streams into the open level: a parentLevel naming another one was checked to exist and then
+    // ignored, so the call reported the open level as the parent of a level it was never asked to change.
+    const FString OpenLevel = World->GetOutermost()->GetName();
     if (!ParentLevel.IsEmpty())
     {
-        FString NormalizedParentPath = ParentLevel;
-        if (!NormalizedParentPath.StartsWith(TEXT("/Game/")))
+        FString NormalizedParentPath = FPackageName::ObjectPathToPackageName(ParentLevel);
+        NormalizedParentPath.RemoveFromEnd(TEXT(".umap"));
+        if (!NormalizedParentPath.StartsWith(TEXT("/")))
         {
             NormalizedParentPath = TEXT("/Game/") + NormalizedParentPath;
         }
-        NormalizedParentPath.RemoveFromEnd(TEXT(".umap"));
-
-        if (!FPackageName::DoesPackageExist(NormalizedParentPath))
+        if (!NormalizedParentPath.Equals(OpenLevel, ESearchCase::IgnoreCase))
         {
             Subsystem->SendAutomationResponse(Socket, RequestId, false,
-                FString::Printf(TEXT("Parent level not found: %s"), *ParentLevel), nullptr, TEXT("LEVEL_NOT_FOUND"));
+                FString::Printf(TEXT("parentLevel %s is not the level open in the editor (%s); open it first (control_editor "
+                    "open_level), then create the sublevel. Nothing was created."), *NormalizedParentPath, *OpenLevel),
+                nullptr, TEXT("PARENT_LEVEL_NOT_LOADED"));
             return true;
         }
     }
@@ -83,8 +87,8 @@ bool HandleCreateSublevel(
     FString FullSublevelPath;
     if (SublevelPath.IsEmpty())
     {
-        FString WorldPath = World->GetOutermost()->GetName();
-        FullSublevelPath = FPaths::GetPath(WorldPath) / SublevelName;
+        // Beside the open level; a level never saved lives under /Temp, which made "/Game//Temp/<name>".
+        FullSublevelPath = (OpenLevel.StartsWith(TEXT("/Game/")) ? FPaths::GetPath(OpenLevel) : FString(TEXT("/Game/Maps"))) / SublevelName;
     }
     else
     {
@@ -141,8 +145,13 @@ bool HandleCreateSublevel(
         ResponseJson->SetBoolField(TEXT("alreadyExisted"), true);
         ResponseJson->SetBoolField(TEXT("streamingAdded"), ExistingStreamingLevel != nullptr);
 
+        // Nothing is created or added here, so the reply says whether the open level streams it already.
         Subsystem->SendAutomationResponse(Socket, RequestId, true,
-            FString::Printf(TEXT("Sublevel already exists: %s"), *FullSublevelPath), ResponseJson);
+            ExistingStreamingLevel
+                ? FString::Printf(TEXT("Sublevel already exists and streams in the open level: %s"), *FullSublevelPath)
+                : FString::Printf(TEXT("Sublevel already exists: %s; the open level does not stream it (manage_level add_sublevel "
+                      "adds it). Nothing was created."), *FullSublevelPath),
+            ResponseJson);
         return true;
     }
 

@@ -6,6 +6,7 @@
 #include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/McpScopedEditorTransaction.h"
+#include "Foundation/Render/McpConsoleVariableWrite.h"
 #include "Components/ExponentialHeightFogComponent.h"
 #include "Components/LightComponent.h"
 #include "Dom/JsonObject.h"
@@ -118,12 +119,19 @@ bool HandleConfigureShadows(
     TArray<TSharedPtr<FJsonValue>> Applied;
     // shadowQuality, shadowDistance, contactShadows and rayTracedShadows were declared and
     // never applied (rayTracedShadows only returned a note). Each drives its engine-wide cvar.
-    auto SetCVar = [&Applied](const TCHAR* CVarName, const FString& Value, const TCHAR* Key)
+    // Set as the console does and read back: one a higher-priority source held was listed as applied.
+    TArray<FString> NotSet;
+    auto SetCVar = [&Applied, &NotSet](const TCHAR* CVarName, const FString& Value, const TCHAR* Key)
     {
-        if (IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(CVarName))
+        IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(CVarName);
+        const FString NotTaken = CVar ? McpSetConsoleVariable(*CVar, Value) : FString(TEXT("not in this engine version"));
+        if (NotTaken.IsEmpty())
         {
-            CVar->Set(*Value);
             Applied.Add(MakeShared<FJsonValueString>(Key));
+        }
+        else
+        {
+            NotSet.Add(FString::Printf(TEXT("%s (%s %s)"), Key, CVarName, *NotTaken));
         }
     };
     FString ShadowQuality;
@@ -161,12 +169,7 @@ bool HandleConfigureShadows(
     bool bVirtual = false;
     if (ReadBool(TEXT("virtualShadowMaps"), bVirtual))
     {
-        if (IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.Shadow.Virtual.Enable")))
-        {
-            CVar->Set(bVirtual ? 1 : 0);
-            Resp->SetBoolField(TEXT("virtualShadowMaps"), bVirtual);
-            Applied.Add(MakeShared<FJsonValueString>(TEXT("virtualShadowMaps")));
-        }
+        SetCVar(TEXT("r.Shadow.Virtual.Enable"), bVirtual ? TEXT("1") : TEXT("0"), TEXT("virtualShadowMaps"));
     }
 
     FString ActorName;
@@ -211,16 +214,24 @@ bool HandleConfigureShadows(
 
     if (Applied.Num() == 0)
     {
-        Subsystem.SendAutomationError(RequestingSocket, RequestId,
-            TEXT("No shadow settings supplied. Pass shadowQuality, shadowDistance, contactShadows, rayTracedShadows or virtualShadowMaps, or actorName plus one of castShadows, shadowBias, shadowSlopeBias or shadowResolutionScale (top level or inside `settings`)."),
-            TEXT("INVALID_ARGUMENT"));
+        Subsystem.SendAutomationError(RequestingSocket, RequestId, NotSet.Num() > 0
+            ? FString::Printf(TEXT("No shadow setting took: %s."), *FString::Join(NotSet, TEXT("; ")))
+            : FString(TEXT("No shadow settings supplied. Pass shadowQuality, shadowDistance, contactShadows, rayTracedShadows or virtualShadowMaps, or actorName plus one of castShadows, shadowBias, shadowSlopeBias or shadowResolutionScale (top level or inside `settings`).")),
+            NotSet.Num() > 0 ? TEXT("CVAR_UNAVAILABLE") : TEXT("INVALID_ARGUMENT"));
         return true;
     }
 
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetArrayField(TEXT("appliedSettings"), Applied);
+    TArray<TSharedPtr<FJsonValue>> NotSetJson;
+    for (const FString& Entry : NotSet)
+    {
+        NotSetJson.Add(MakeShared<FJsonValueString>(Entry));
+    }
+    Resp->SetArrayField(TEXT("notSet"), NotSetJson);
     Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true,
-        FString::Printf(TEXT("Shadows configured (%d setting(s) applied)"), Applied.Num()), Resp);
+        FString::Printf(TEXT("Shadows configured (%d setting(s) applied)%s"), Applied.Num(),
+                        NotSet.Num() > 0 ? *(TEXT("; not set: ") + FString::Join(NotSet, TEXT("; "))) : TEXT("")), Resp);
     return true;
 }
 

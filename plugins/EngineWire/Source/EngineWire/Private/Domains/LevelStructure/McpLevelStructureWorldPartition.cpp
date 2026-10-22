@@ -125,10 +125,13 @@ bool HandleConfigureGridSize(
         {
             if (GridName.IsEmpty() || Grid->GridName == TargetGridName)
             {
-                Grid->CellSize = GridCellSize;
-                Grid->LoadingRange = LoadingRange;
-                Grid->bBlockOnSlowStreaming = bBlockOnSlowStreaming;
-                Grid->Priority = Priority;
+                // Before the change, so undo returns to it (the snapshot was taken after, so undo restored the new
+                // values); only what was sent changes: the defaults of the fields left out overwrote the grid's own.
+                SpatialHash->Modify();
+                if (Payload->HasField(TEXT("gridCellSize"))) { Grid->CellSize = GridCellSize; }
+                if (Payload->HasField(TEXT("loadingRange"))) { Grid->LoadingRange = LoadingRange; }
+                if (Payload->HasField(TEXT("bBlockOnSlowStreaming"))) { Grid->bBlockOnSlowStreaming = bBlockOnSlowStreaming; }
+                if (Payload->HasField(TEXT("priority"))) { Grid->Priority = Priority; }
 
                 bFound = true;
                 ModifiedIndex = i;
@@ -139,6 +142,7 @@ bool HandleConfigureGridSize(
 
     if (!bFound && bCreateIfMissing && !GridName.IsEmpty())
     {
+        SpatialHash->Modify();
         int32 NewIndex = ArrayHelper.AddValue();
         FSpatialHashRuntimeGrid* NewGrid = reinterpret_cast<FSpatialHashRuntimeGrid*>(ArrayHelper.GetRawPtr(NewIndex));
         if (NewGrid)
@@ -181,7 +185,6 @@ bool HandleConfigureGridSize(
         return true;
     }
 
-    SpatialHash->Modify();
     SpatialHash->MarkPackageDirty();
     World->MarkPackageDirty();
 

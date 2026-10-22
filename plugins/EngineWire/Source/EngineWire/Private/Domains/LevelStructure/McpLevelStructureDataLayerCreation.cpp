@@ -88,6 +88,14 @@ bool HandleCreateDataLayer(
     bool bIsInitiallyLoaded = GetJsonBoolField(Payload, TEXT("bIsInitiallyLoaded"), true);
     FString DataLayerType = GetJsonStringField(Payload, TEXT("dataLayerType"), TEXT("Runtime"));
     bool bIsPrivate = GetJsonBoolField(Payload, TEXT("bIsPrivate"), false);
+    // Anything but an exact "Runtime" (even "runtime") made an Editor layer, which never streams in the game.
+    const bool bRuntime = DataLayerType.Equals(TEXT("Runtime"), ESearchCase::IgnoreCase);
+    if (!bRuntime && !DataLayerType.Equals(TEXT("Editor"), ESearchCase::IgnoreCase))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false, FString::Printf(TEXT("dataLayerType '%s' is not one: use Runtime "
+            "(streams in the game) or Editor (organises the editor only). Nothing was created."), *DataLayerType), nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
 #if !(ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3)
     if (bIsPrivate)
     {
@@ -139,14 +147,7 @@ bool HandleCreateDataLayer(
         return true;
     }
 
-    if (DataLayerType == TEXT("Runtime"))
-    {
-        NewDataLayerAsset->SetType(EDataLayerType::Runtime);
-    }
-    else
-    {
-        NewDataLayerAsset->SetType(EDataLayerType::Editor);
-    }
+    NewDataLayerAsset->SetType(bRuntime ? EDataLayerType::Runtime : EDataLayerType::Editor);
 
     AssetPackage->MarkPackageDirty();
     FAssetRegistryModule::AssetCreated(NewDataLayerAsset);
@@ -166,7 +167,7 @@ bool HandleCreateDataLayer(
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
             FString::Printf(TEXT("Created DataLayerAsset '%s' but failed to create DataLayerInstance. The asset exists at: %s"),
-                *DataLayerName, *FullAssetPath), nullptr);
+                *DataLayerName, *FullAssetPath), nullptr, TEXT("DATA_LAYER_INSTANCE_FAILED"));
         return true;
     }
 
@@ -179,7 +180,7 @@ bool HandleCreateDataLayer(
     McpHandlerUtils::AddVerification(ResponseJson, NewDataLayerAsset);
     ResponseJson->SetStringField(TEXT("dataLayerName"), DataLayerName);
     ResponseJson->SetStringField(TEXT("dataLayerAssetPath"), FullAssetPath);
-    ResponseJson->SetStringField(TEXT("dataLayerType"), DataLayerType);
+    ResponseJson->SetStringField(TEXT("dataLayerType"), bRuntime ? TEXT("Runtime") : TEXT("Editor"));
     ResponseJson->SetBoolField(TEXT("initiallyVisible"), bIsInitiallyVisible);
     ResponseJson->SetBoolField(TEXT("initiallyLoaded"), bIsInitiallyLoaded);
     ResponseJson->SetBoolField(TEXT("isPrivate"), bIsPrivate);

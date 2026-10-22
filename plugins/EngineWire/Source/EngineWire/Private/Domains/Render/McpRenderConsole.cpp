@@ -94,9 +94,8 @@ void SendConsoleResult(
     // Nothing taking answered success ("settings not available"), so a missing variable read as configured.
     if (Applied.Num() == 0)
     {
-        Subsystem->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Settings not available: no console variable took (a bare "
-            "name does not exist in this engine version): %s. Nothing was changed."), *FString::Join(Unsupported, TEXT("; "))),
-            TEXT("CVAR_UNAVAILABLE"));
+        Subsystem->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Settings not available: no console variable took: %s. "
+            "Nothing was changed."), *FString::Join(Unsupported, TEXT("; "))), TEXT("CVAR_UNAVAILABLE"));
         return;
     }
     TSharedPtr<FJsonObject> Result = MakeRenderResult(SubAction);

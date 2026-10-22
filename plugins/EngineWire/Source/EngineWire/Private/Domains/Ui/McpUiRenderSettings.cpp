@@ -1,5 +1,6 @@
 #include "Domains/Ui/McpUiPrivate.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsResponses.h"
+#include "Foundation/Render/McpConsoleVariableWrite.h"
 
 #include "Engine/RendererSettings.h"
 #include "HAL/IConsoleManager.h"
@@ -146,12 +147,11 @@ bool HandleRenderSettingsAction(const FString &LowerSub, const TSharedPtr<FJsonO
     }
     McpWriteSetting(Write.Property, Settings, Write.Value);
     Changed.Add(MakeShared<FJsonValueString>(Write.Setting->Param));
-    // The console variable carries the setting into the running editor; a read-only one only changes on restart.
+    // The console variable carries the setting into the running editor. A read-only one only changes on restart, and so
+    // does one a console or code value outranks (it read as live while the editor kept the other value).
     IConsoleVariable *Variable = IConsoleManager::Get().FindConsoleVariable(*Write.Property->GetMetaData(TEXT("ConsoleVariable")));
-    if (Variable && !Variable->TestFlags(ECVF_ReadOnly)) {
-      Variable->Set(*LexToString(Write.Value), ECVF_SetByProjectSetting);
-    }
-    if (Write.Property->HasMetaData(TEXT("ConfigRestartRequired")) || !Variable || Variable->TestFlags(ECVF_ReadOnly)) {
+    const bool bLive = Variable && McpSetConsoleVariable(*Variable, LexToString(Write.Value), ECVF_SetByProjectSetting).IsEmpty();
+    if (Write.Property->HasMetaData(TEXT("ConfigRestartRequired")) || !bLive) {
       Restart.Add(MakeShared<FJsonValueString>(Write.Setting->Param));
     }
   }

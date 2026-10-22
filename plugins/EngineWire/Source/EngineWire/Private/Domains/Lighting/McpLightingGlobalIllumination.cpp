@@ -8,6 +8,7 @@
 #include "Dom/JsonObject.h"
 #include "Engine/PostProcessVolume.h"
 #include "Engine/RendererSettings.h"
+#include "Foundation/Render/McpConsoleVariableWrite.h"
 #include "Foundation/Render/McpPostProcessVolumeResolution.h"
 #include "GameFramework/WorldSettings.h"
 #include "HAL/IConsoleManager.h"
@@ -65,18 +66,15 @@ bool HandleSetupGlobalIllumination(
             TEXT("INVALID_ARGUMENT"));
         return true;
     }
-    // Read back: a cvar set at higher priority (command line, device profile) ignores
-    // a code-priority Set, and the reply said "configured" either way.
+    // Set as the console does and read back: a code-priority Set lost to any console set of the same variable, and
+    // the reply said "configured" either way.
     IConsoleVariable* GICVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.DynamicGlobalIlluminationMethod"));
-    if (GICVar)
+    const FString GINotTaken = GICVar ? McpSetConsoleVariable(*GICVar, FString::FromInt(*GIMethod))
+                                      : FString(TEXT("is not registered in this editor"));
+    if (!GINotTaken.IsEmpty())
     {
-        GICVar->Set(*GIMethod);
-    }
-    if (!GICVar || GICVar->GetInt() != *GIMethod)
-    {
-        Subsystem.SendAutomationError(RequestingSocket, RequestId, GICVar
-            ? FString::Printf(TEXT("r.DynamicGlobalIlluminationMethod stayed %d: a higher-priority setting (command line or device profile) holds it"), GICVar->GetInt())
-            : FString(TEXT("r.DynamicGlobalIlluminationMethod is not registered in this editor")), TEXT("GI_METHOD_NOT_APPLIED"));
+        Subsystem.SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("r.DynamicGlobalIlluminationMethod %s"), *GINotTaken), TEXT("GI_METHOD_NOT_APPLIED"));
         return true;
     }
     APostProcessVolume* PPV = nullptr;
@@ -98,11 +96,14 @@ bool HandleSetupGlobalIllumination(
         PPV->Settings.IndirectLightingIntensity = static_cast<float>(Payload->GetNumberField(TEXT("indirectLightingIntensity")));
         PPV->MarkPackageDirty();
     }
+    TArray<FString> NotSet;
     if (QualityLevel)
     {
-        if (IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("sg.GlobalIlluminationQuality")))
+        IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("sg.GlobalIlluminationQuality"));
+        const FString NotTaken = CVar ? McpSetConsoleVariable(*CVar, FString::FromInt(*QualityLevel)) : FString(TEXT("not in this engine version"));
+        if (!NotTaken.IsEmpty())
         {
-            CVar->Set(*QualityLevel);
+            NotSet.Add(FString::Printf(TEXT("quality (sg.GlobalIlluminationQuality %s)"), *NotTaken));
         }
     }
     // Baked (Lightmass) bounces live on the World Settings.
@@ -118,15 +119,28 @@ bool HandleSetupGlobalIllumination(
     IConsoleVariable* CVarRefl = IConsoleManager::Get().FindConsoleVariable(TEXT("r.ReflectionMethod"));
     if (*GIMethod == 1 && CVarRefl)
     {
-        CVarRefl->Set(1);
+        const FString NotTaken = McpSetConsoleVariable(*CVarRefl, TEXT("1"));
+        if (!NotTaken.IsEmpty())
+        {
+            NotSet.Add(FString::Printf(TEXT("Lumen reflections (r.ReflectionMethod %s)"), *NotTaken));
+        }
     }
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("method"), Method);
-    if (QualityLevel)
+    if (QualityLevel && !NotSet.ContainsByPredicate([](const FString& Entry) { return Entry.StartsWith(TEXT("quality")); }))
     {
         Resp->SetStringField(TEXT("quality"), Quality);
+    }
+    if (NotSet.Num() > 0)
+    {
+        TArray<TSharedPtr<FJsonValue>> NotSetJson;
+        for (const FString& Entry : NotSet)
+        {
+            NotSetJson.Add(MakeShared<FJsonValueString>(Entry));
+        }
+        Resp->SetArrayField(TEXT("notSet"), NotSetJson);
     }
     if (PPV)
     {
@@ -154,7 +168,8 @@ bool HandleSetupGlobalIllumination(
         RequestingSocket,
         RequestId,
         true,
-        FString::Printf(TEXT("GI method configured: %s"), *Method),
+        FString::Printf(TEXT("GI method configured: %s%s"), *Method,
+                        NotSet.Num() > 0 ? *(TEXT("; not set: ") + FString::Join(NotSet, TEXT("; "))) : TEXT("")),
         Resp);
     return true;
 }

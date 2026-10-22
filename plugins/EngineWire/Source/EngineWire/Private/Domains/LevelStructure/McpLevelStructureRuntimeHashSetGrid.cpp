@@ -132,6 +132,20 @@ bool HandleConfigureRuntimeHashSetGrid(
         bLoadingRangeApplied = SetField({TEXT("LoadingRange")}, LoadingRange);
         bCellSizeApplied = SetField({TEXT("CellSize"), TEXT("GridSize")}, GridCellSize);
     }
+    // A row with no grid layer holds neither value: it answered success with both flags false, and a created row
+    // stayed in the hash set with nothing to stream by.
+    if (!bLoadingRangeApplied && !bCellSizeApplied)
+    {
+        if (bCreated)
+        {
+            ArrayHelper.RemoveValues(Index);
+        }
+        Subsystem->SendAutomationResponse(Socket, RequestId, false, FString::Printf(TEXT("Partition '%s' has no grid layer to hold a "
+            "cell size or loading range%s. Give it a Main Layer under World Settings > World Partition > Runtime Partitions, then "
+            "retry."), *TargetPartitionName.ToString(), bCreated ? TEXT(" (a new row is made without one, so it was taken back)") : TEXT("")),
+            nullptr, TEXT("PARTITION_HAS_NO_LAYER"));
+        return true;
+    }
 
     HashSet->MarkPackageDirty();
 
