@@ -300,11 +300,13 @@ const testCases = [
     // === CONFIG ===
     { scenario: 'CONFIG: set_spline_mesh_asset', toolName: 'build_environment', arguments: { action: 'set_spline_mesh_asset', actorName: SPLINE_MESH_ACTOR, componentName: SPLINE_MESH_COMPONENT, meshPath: TEST_MESH_OBJECT }, expected: 'success' },
     { scenario: 'CONFIG: configure_spline_mesh_axis', toolName: 'build_environment', arguments: { action: 'configure_spline_mesh_axis', actorName: SPLINE_MESH_ACTOR, componentName: SPLINE_MESH_COMPONENT, forwardAxis: 'Y' }, expected: 'success' },
+    { scenario: 'ERROR: configure_spline_mesh_axis refuses a name that is no axis', toolName: 'build_environment', arguments: { action: 'configure_spline_mesh_axis', actorName: SPLINE_MESH_ACTOR, componentName: SPLINE_MESH_COMPONENT, forwardAxis: 'W' }, expected: 'error|not a spline mesh axis' },
     { scenario: 'CONFIG: set_spline_mesh_material', toolName: 'build_environment', arguments: { action: 'set_spline_mesh_material', actorName: SPLINE_MESH_ACTOR, componentName: SPLINE_MESH_COMPONENT, materialPath: TEST_MATERIAL_OBJECT, materialIndex: 0 }, expected: 'success' },
     // === ACTION ===
     { scenario: 'ACTION: scatter_meshes_along_spline', toolName: 'build_environment', arguments: { action: 'scatter_meshes_along_spline', actorName: SPLINE_ACTOR, meshPath: TEST_MESH_OBJECT, spacing: 100, alignToSpline: true }, expected: 'success' },
     // === CONFIG ===
     { scenario: 'CONFIG: configure_mesh_spacing', toolName: 'build_environment', arguments: { action: 'configure_mesh_spacing', spacing: 125, useRandomOffset: true, randomOffsetRange: 10 }, expected: 'success' },
+    { scenario: 'ERROR: configure_mesh_spacing refuses a call that stores nothing', toolName: 'build_environment', arguments: { action: 'configure_mesh_spacing' }, expected: 'error|Pass spacing' },
     { scenario: 'CONFIG: configure_mesh_randomization', toolName: 'build_environment', arguments: { action: 'configure_mesh_randomization', randomizeScale: true, minScale: 0.9, maxScale: 1.1, randomizeRotation: true, rotationRange: 45 }, expected: 'success' },
     // === CREATE ===
     { scenario: 'CREATE: create_road_spline', toolName: 'build_environment', arguments: { action: 'create_road_spline', actorName: ROAD_SPLINE, location: { x: 0, y: 500, z: 0 } }, expected: 'success|already exists' },

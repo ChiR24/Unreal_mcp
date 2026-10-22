@@ -14,7 +14,7 @@ export const MANAGE_CHARACTER_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'set_movement_property', selector: 'movementProperty',
-    summary: 'Set one character movement property: walk speed, jump height, gravity scale, ground friction, braking deceleration.',
+    summary: 'Set one character movement property: walk speed, jump height (set as its launch speed, JumpZVelocity), gravity scale, ground friction, braking deceleration; compiled, saved and read back.',
     topics: ['walk speed', 'jump height', 'gravity scale', 'ground friction', 'braking'],
     members: byTarget('set_', ['set_walk_speed', 'set_jump_height', 'set_gravity_scale', 'set_ground_friction', 'set_braking_deceleration']),
   },

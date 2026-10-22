@@ -28,6 +28,7 @@ static bool SendArrayResult(UEngineWireSubsystem* Self, const FString& RequestId
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), GetJsonStringField(Payload, TEXT("actorName")));
     Result->SetNumberField(TEXT("count"), Count);
+    Result->SetNumberField(TEXT("triangleCount"), Target.Mesh->GetTriangleCount());
     Self->SendAutomationResponse(Socket, RequestId, true, Message, Result);
     return true;
 }

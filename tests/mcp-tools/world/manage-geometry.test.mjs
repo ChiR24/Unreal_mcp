@@ -112,6 +112,8 @@ const testCases = [
   { scenario: 'ACTION: quadrangulate groups triangle pairs', toolName: 'manage_geometry', arguments: { action: 'quadrangulate', actorName: 'Testplane', respectUVSeams: true, respectHardNormals: false }, expected: 'success', assertions: [{ path: 'structuredContent.result.quadsFormed', gte: 1, label: 'at least one quad PolyGroup' }] },
   { scenario: 'ACTION: quadrangulate a missing actor is refused', toolName: 'manage_geometry', arguments: { action: 'quadrangulate', actorName: `NoSuchMesh_${ts}` }, expected: 'error|ACTOR_NOT_FOUND' },
   { scenario: 'ACTION: bend', toolName: 'manage_geometry', arguments: {"action": "bend", "actorName": EDIT_ACTOR}, expected: 'success' },
+  { scenario: 'ERROR: bend refuses an axis that is not X, Y or Z', toolName: 'manage_geometry', arguments: { action: 'bend', actorName: EDIT_ACTOR, axis: 'Q' }, expected: 'error|axis must be' },
+  { scenario: 'ERROR: smooth refuses a strength of 0', toolName: 'manage_geometry', arguments: { action: 'smooth', actorName: EDIT_ACTOR, strength: 0 }, expected: 'error|iterations must be at least 1' },
   { scenario: 'ACTION: twist', toolName: 'manage_geometry', arguments: {"action": "twist", "actorName": EDIT_ACTOR}, expected: 'success' },
   { scenario: 'ACTION: taper', toolName: 'manage_geometry', arguments: {"action": "taper", "actorName": EDIT_ACTOR}, expected: 'success' },
   { scenario: 'ACTION: noise_deform', toolName: 'manage_geometry', arguments: {"action": "noise_deform", "actorName": EDIT_ACTOR}, expected: 'success' },

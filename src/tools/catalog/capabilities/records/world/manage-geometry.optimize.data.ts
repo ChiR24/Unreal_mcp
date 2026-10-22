@@ -56,7 +56,7 @@ export const GEOMETRY_OPTIMIZE_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'array_linear', plugins: PLUGIN,
-    family: F, summary: 'Repeat a dynamic mesh in a row inside the same mesh: count copies in all, each one offset further from the last.', whenToUse: ['Instances must be arrayed linearly.'], whenNotToUse: ['A radial array is needed; use array_radial.'],
+    family: F, summary: 'Repeat a dynamic mesh in a row inside the same mesh: count copies in all, each one offset further from the last. The reply gives the triangleCount after the copies.', whenToUse: ['Instances must be arrayed linearly.'], whenNotToUse: ['A radial array is needed; use array_radial.'],
     inputProps: {
       actorName: P.actorName, targetActor: P.targetActor, count: ARRAY_COUNT,
       offset: { ...P.offset, description: 'Row: the step from one copy to the next in the mesh\'s local space, cm (default 100 along x); copy k sits k steps from the original.' },
@@ -65,7 +65,7 @@ export const GEOMETRY_OPTIMIZE_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'array_radial', plugins: PLUGIN,
-    family: F, summary: 'Repeat a dynamic mesh round its local Z axis inside the same mesh: count copies in all, angle / count apart.', whenToUse: ['Instances must be arrayed radially.'], whenNotToUse: ['A linear array is needed; use array_linear.'],
+    family: F, summary: 'Repeat a dynamic mesh round its local Z axis inside the same mesh: count copies in all, angle / count apart. The reply gives the triangleCount after the copies.', whenToUse: ['Instances must be arrayed radially.'], whenNotToUse: ['A linear array is needed; use array_linear.'],
     inputProps: {
       actorName: P.actorName, targetActor: P.targetActor, count: ARRAY_COUNT,
       angle: { ...P.angle, description: 'Ring: the total sweep in degrees (default 360). Copies sit angle / count apart, so 360 closes a ring of count; an open arc of N copies 22.5 degrees apart takes angle 22.5 * N.' },

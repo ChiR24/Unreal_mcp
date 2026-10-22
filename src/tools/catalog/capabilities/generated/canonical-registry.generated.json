@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "3e8d3deb2b3acfff",
+  "catalogRevision": "70aca977813cd65d",
   "recordCount": 416,
   "records": [
     {
@@ -4541,10 +4541,6 @@
             "value": {
               "description": "Property value (any type)."
             },
-            "addMissing": {
-              "type": "boolean",
-              "description": "Whether to add the morph target when the component does not already carry it."
-            },
             "edit": {
               "type": "string",
               "enum": [
@@ -4758,9 +4754,6 @@
             ],
             "value": [
               "set_value"
-            ],
-            "addMissing": [
-              "set_value"
             ]
           },
           "requires": {
@@ -4793,8 +4786,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "07610052e16d1cb24beb51dc71dcabd89df89a4002cf0d97a66407113fde21f3",
-        "content": "d72e06fc136536c2775d1485d4c1cf332025f66ae9a386307ce0f1e0793aec78"
+        "schema": "5260a963663dcd56b6607e08d6897024b011e56201a0865d05d2d2da847c61aa",
+        "content": "b207e0461837bca1486aa2a7dd6e12cb3326b44c0f8904d06809e8569edbabc4"
       }
     },
     {
@@ -7485,13 +7478,13 @@
         "whenToUse": [
           "kind=setup: IK chains must be authored in a Control Rig.",
           "kind=rig: IK retargeting source needed.",
-          "kind=retargeter: Retarget between two skeletons.",
+          "kind=retargeter: Animation must be retargeted between two skeletons.",
           "kind=chain_mapping: A limb retargets from the wrong source chain after setup_retargeting or create_ik_retargeter."
         ],
         "whenNotToUse": [
           "kind=setup: An IK Rig asset is needed (kind rig).",
           "kind=rig: Use create_control_rig.",
-          "kind=retargeter: Single skeleton.",
+          "kind=retargeter: Both characters share one skeleton.",
           "kind=chain_mapping: The retargeter does not exist yet (kind retargeter)."
         ]
       },
@@ -7729,7 +7722,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "30cab5c53492a4cd94f7ba226aa424ccdc232e492948a408831866e66a01159c",
-        "content": "a883e1766409ba105c68ce842d1776e4386e506b3e7bc5e0d0f5f3f7e3b7f149"
+        "content": "def9456394834b8f88e544d019090485db711178cca7b4df785141280f8aec04"
       }
     },
     {
@@ -27783,7 +27776,7 @@
             },
             "forwardAxis": {
               "type": "string",
-              "description": "Spline mesh forward axis (X, Y, Z)."
+              "description": "Mesh axis laid along the spline: X (the default), Y or Z, any case; another name is refused."
             },
             "useRandomOffset": {
               "type": "boolean",
@@ -27971,8 +27964,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "ede689c24d45e49c1f01535c6687d4497ccc45889d2cc48b8a9c52e0cec1dcaf",
-        "content": "7539219dfd87e3b1e15fb5110eb253f861bffe90a8cfe56eee3d1705ea7d881c"
+        "schema": "cf9a23e4695e8220775059a0532fb0f69b9fd3f3a79ab9cfc6cf2088c2ddaa63",
+        "content": "c6e9d3c3f4b12ee01bce7f82a7ad45b01bf7d2be83506fe489f49ea6526d0187"
       }
     },
     {
@@ -31072,7 +31065,7 @@
             },
             "forwardAxis": {
               "type": "string",
-              "description": "Spline mesh forward axis (X, Y, Z)."
+              "description": "Mesh axis laid along the spline: X (the default), Y or Z, any case; another name is refused."
             },
             "materialPath": {
               "type": "string",
@@ -31317,8 +31310,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "d766009aa43a27f4823a7509132b35dfc0c85c15142610f404eb47c3d2756a98",
-        "content": "a4be98f00c5f9a6facbe50b14ea646d591ae2ac63c77206dbb6f31910e697cf6"
+        "schema": "ac1bb3363ee1c9c7b21344708f078f654c1b0633d2b34bce756b9ff6d79659dc",
+        "content": "8bac913b20f031dc8e7eeb7978b5d48be4e56e75c332e428c261d9ac20153535"
       }
     },
     {
@@ -55660,11 +55653,11 @@
         "summary": "Configure sound attenuation: distance falloff and air absorption, spatialization, occlusion, reverb send, or a named attenuation preset.",
         "whenToUse": [
           "setting=distance: Use it to configure distance attenuation: inner radius (or a box's size per axis), falloff distance and curve, and air absorption (a low-pass that muffles the sound with distance).",
-          "setting=spatialization: Use it to configure audio spatialization.",
+          "setting=spatialization: Use it to set how a Sound Attenuation asset places its sounds in space: spatialize on or off, and spatialization Default (panning) or Binaural (HRTF, for headphones). Only what is sent changes, a call with neither is refused, and another algorithm is INVALID_ARGUMENT. Saved unless save is false.",
           "setting=occlusion: Use it to configure audio occlusion.",
           "setting=reverb_send: Use it to configure an audio reverb send.",
           "setting=audio_occlusion: Use it to configure occlusion settings on a sound asset.",
-          "setting=preset: Use it to create or update sound attenuation settings; a Box shape takes its size per axis with extent."
+          "setting=preset: Use it to create a Sound Attenuation asset name in path (default /Game/Audio/Attenuation): innerRadius (default 400), falloffDistance (default 3600), attenuationShape Sphere (the default), Capsule, Box (sized per axis with extent) or Cone, and falloffMode Linear (the default), Logarithmic, Inverse or NaturalSound; another shape or mode is refused. An asset already at the path is ASSET_ALREADY_EXISTS (change one with configure_distance_attenuation). Saved unless save is false; the reply reads the values back."
         ],
         "whenNotToUse": []
       },
@@ -55803,7 +55796,7 @@
             },
             "falloffMode": {
               "type": "string",
-              "description": "Attenuation falloff mode."
+              "description": "Attenuation falloff curve: Linear (the default), Logarithmic, Inverse or NaturalSound."
             },
             "setting": {
               "type": "string",
@@ -56026,8 +56019,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "e064f3107471a4d0b9b41721fc5888bcca13777381ac155dc32e1c8f044b6060",
-        "content": "cd03c9df9a1d0683da7d54764a1566c9807ffb9c1f1579570a79934dc39bac1b"
+        "schema": "519054b58a8425c4425c30659f6d768663cb2fc6b757295d4b9f0aaf70d1933f",
+        "content": "693d519b3cb68c455bc421314fd3925ebde83bf6c267a2041baddc90085d983a"
       }
     },
     {
@@ -61288,13 +61281,13 @@
           "ground friction",
           "braking"
         ],
-        "summary": "Set one character movement property: walk speed, jump height, gravity scale, ground friction, braking deceleration.",
+        "summary": "Set one character movement property: walk speed, jump height (set as its launch speed, JumpZVelocity), gravity scale, ground friction, braking deceleration; compiled, saved and read back.",
         "whenToUse": [
           "movementProperty=walk_speed: Walk speed must change.",
-          "movementProperty=jump_height: Jump height must change.",
+          "movementProperty=jump_height: A character must jump higher or lower.",
           "movementProperty=gravity_scale: Gravity must change.",
           "movementProperty=ground_friction: Friction must change.",
-          "movementProperty=braking_deceleration: Decel must change."
+          "movementProperty=braking_deceleration: A character must stop sooner or slide further."
         ],
         "whenNotToUse": [
           "movementProperty=walk_speed: Use configure_movement_speeds.",
@@ -61374,7 +61367,7 @@
       },
       "examples": [
         {
-          "title": "Set one character movement property: walk speed, jump height, gravity scale, ground friction, braking deceleration.",
+          "title": "Set one character movement property: walk speed, jump height (set as its launch speed, JumpZVelocity), gravity scale, ground friction, braking deceleration; compiled, saved and read back.",
           "input": {
             "action": "set_movement_property",
             "blueprintPath": "/Game/BP_Char",
@@ -61468,7 +61461,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "4099d095fe39c8d6dd1ddc33d1920aa21439cb38bb323682f61b18eddc0f9a8c",
-        "content": "e97f92273c8ed2bd7af31f68c5470ae02c19cd43f225f65263dae67c26ffb4f5"
+        "content": "ea4228ddcb8e5879d211c16435c0df9595efc64ee32a9059e5ac268778eda99b"
       }
     },
     {
@@ -66184,15 +66177,15 @@
         ],
         "summary": "Configure a gameplay ability: tags, cooldown, costs, activation and instancing policies; add it to an ability set.",
         "whenToUse": [
-          "setting=tags: Ability tags must change.",
-          "setting=cooldown: Ability needs cooldown.",
-          "setting=costs: Ability has a cost.",
+          "setting=tags: An ability must carry, cancel, block or require gameplay tags.",
+          "setting=cooldown: The ability needs a wait between uses.",
+          "setting=costs: Activating the ability must spend an attribute such as mana or stamina.",
           "setting=activation_policy: An ability must run on the server or be predicted by the client.",
-          "setting=instancing_policy: Instancing must change.",
+          "setting=instancing_policy: An ability must keep or drop state between activations.",
           "setting=add_to_set: An ability must join a set that already exists."
         ],
         "whenNotToUse": [
-          "setting=tags: Use create_gameplay_ability.",
+          "setting=tags: The ability does not exist yet (use create_gameplay_ability).",
           "setting=activation_policy: The default LocalPredicted policy is wanted.",
           "setting=add_to_set: The ability is granted directly to an actor: that is Blueprint logic on its Ability System Component (blueprint edit_graph, Give Ability)."
         ]
@@ -66464,7 +66457,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "2bc4edbf45b240afa176e8f85b380c05ecc0b9c069c59f577da9dfe593b0cca3",
-        "content": "69377dd2fa62e526b2d9fb4b90a78cde2257589a7a55d7b284a4baf079039541"
+        "content": "afa8a8c4f31d73b6080728955d6369be185fd51b0077ac4a96cef54d0208b82e"
       }
     },
     {
@@ -67705,7 +67698,7 @@
             },
             "targetActor": {
               "type": "string",
-              "description": "Target actor name for boolean operations."
+              "description": "The dynamic mesh actor to edit, by label or name (actorName is the same and wins when both are sent)."
             },
             "count": {
               "type": "integer",
@@ -67863,8 +67856,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "9cc3e8d687e02399273066c01bb05eff5f7da1a2cd9a2da3dc175746c4e9ff1a",
-        "content": "41c65b13ddb82ef08aec7114e0455a99f34425c0c45c441ddff2d2bcf3ff0a3c"
+        "schema": "42b840963d0bfbae897ad82f23be2ac58da138a9e1cefa155a6351d634428c60",
+        "content": "bb1e29968131337f30a78180b4f061c0dd892cf91ce9d830a6d91b713291beb0"
       }
     },
     {
@@ -67953,7 +67946,7 @@
             },
             "targetActor": {
               "type": "string",
-              "description": "Target actor name for boolean operations."
+              "description": "The dynamic mesh actor to edit, by label or name (actorName is the same and wins when both are sent)."
             },
             "toolActor": {
               "type": "string",
@@ -68127,8 +68120,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "c94f97e71f46888d70dde858c2e93bc9ea8dbcd0236b0d44ab399eaa7729ff22",
-        "content": "6ae455bef0705cef173ae73414d6d17499b6baabc7669a6b434c99371019104a"
+        "schema": "221bfc3a1c849cc124161802a37af58ada2199ee16da0f4ab2060160715941d7",
+        "content": "313e6f29c0fa9074b9601ecb37e853b596f5af10b9de957641b781e0992946ae"
       }
     },
     {
@@ -68198,7 +68191,7 @@
             },
             "targetActor": {
               "type": "string",
-              "description": "Target actor name for boolean operations."
+              "description": "The dynamic mesh actor to edit, by label or name (actorName is the same and wins when both are sent)."
             },
             "collisionType": {
               "type": "string",
@@ -68340,8 +68333,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "a7ec49e692447d12745cdaec1d4ca997a4e7bab62f0afe997a05191562a56712",
-        "content": "8dd82f7e20139a9f40c1160d4fd9f0f51055942a788c70b073b5c3aa56e59eff"
+        "schema": "1cd2883dd4c92348bd86b3f4dff0a3fe45f06ab0f0848bedbcd5c507c079f2f7",
+        "content": "7b11c7ed68d196fad20ace1efd87798326f3dc97e7e9edff13a70bb00270f45a"
       }
     },
     {
@@ -68414,7 +68407,7 @@
             },
             "targetActor": {
               "type": "string",
-              "description": "Target actor name for boolean operations."
+              "description": "The dynamic mesh actor to edit, by label or name (actorName is the same and wins when both are sent)."
             },
             "outputPath": {
               "type": "string",
@@ -68568,8 +68561,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "23e9c89796ce49134caa7130d6dbfb2912e20874453dc21972640fc5639c34d2",
-        "content": "0992f8026d5d2e2fd4bf86d13a6e55496f2bca8515a17df62cf692a73e8ffa80"
+        "schema": "8dc3e3cf578aa041784fc7d949784d884724025b3ea2baa79b323fa64f1afb8b",
+        "content": "28bae2401a466cc3a205d9f8c937f34295aa46c5828519094b371376e9132bbc"
       }
     },
     {
@@ -68614,7 +68607,7 @@
             },
             "targetActor": {
               "type": "string",
-              "description": "Target actor name for boolean operations."
+              "description": "The dynamic mesh actor to edit, by label or name (actorName is the same and wins when both are sent)."
             },
             "materials": {
               "type": "array",
@@ -68759,8 +68752,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "96e9c022da9dcbe085b7b3d9457002cc47c09d37f7605d7ce332229eaada3dfa",
-        "content": "38422f2eb85e0ba56f3497575963c2901f3ac143defc26a50dea94df24861af4"
+        "schema": "99456cb96550ac71fdfa8324907cd3293042b6e3d41fd598de59527363eebfa3",
+        "content": "31ff64d5c6fa134278d7f6b51024fdedd85c99fbaee556d46a07b86d233e6f56"
       }
     },
     {
@@ -68810,7 +68803,7 @@
             },
             "targetActor": {
               "type": "string",
-              "description": "Target actor name for boolean operations."
+              "description": "The dynamic mesh actor to edit, by label or name (actorName is the same and wins when both are sent)."
             },
             "materials": {
               "type": "array",
@@ -68955,8 +68948,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "96e9c022da9dcbe085b7b3d9457002cc47c09d37f7605d7ce332229eaada3dfa",
-        "content": "56b6e6f2fe122ed616621272b23c117f25da8bc0a97b2af76044b64bb78e16e4"
+        "schema": "99456cb96550ac71fdfa8324907cd3293042b6e3d41fd598de59527363eebfa3",
+        "content": "0e8ecacaa3b35c8bb2e26b91cf5c9e2756ce1d79f8dd079d5abcbbfedbad99f5"
       }
     },
     {
@@ -70005,7 +69998,7 @@
             },
             "targetActor": {
               "type": "string",
-              "description": "Target actor name for boolean operations."
+              "description": "The dynamic mesh actor to edit, by label or name (actorName is the same and wins when both are sent)."
             },
             "axis": {
               "type": "string",
@@ -70228,8 +70221,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "be12ba53d1e6f1b107f3cd7e16c3e2c369a05c49807d5e22d92974c44c85ed83",
-        "content": "a2e469bc73938abb17e5bcadfd63aa9ca85620259fc39886a0f6c0c50fbeefe6"
+        "schema": "16c8ea1eb82254c2b0ea9d779626aa0dc2e823e6399f52123a5d0aadc8252719",
+        "content": "3e871b40bcd6fbe351628e7966a14c62af69cf638a18fe428da154fb1ea961b6"
       }
     },
     {
@@ -71304,7 +71297,7 @@
             },
             "targetActor": {
               "type": "string",
-              "description": "Target actor name for boolean operations."
+              "description": "The dynamic mesh actor to edit, by label or name (actorName is the same and wins when both are sent)."
             },
             "toolActor": {
               "type": "string",
@@ -71885,8 +71878,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "23270d448e9abeec7442049de5ff41dd2c857fe95d5314780ca3eb9ed9e5e682",
-        "content": "d6d2b50a44b2b4ea2079389e4c552b085077f23358fd07ddb99f0e93266da6c8"
+        "schema": "81dcf81d6838d0632ed3b66ffb08ac40618d528ea93532897ba3d225d8c7977f",
+        "content": "a66baeb33ea81599ec7ef0fddd76b5abb742eec3257fd615095f530363a99ae2"
       }
     },
     {
@@ -71975,7 +71968,7 @@
             },
             "targetActor": {
               "type": "string",
-              "description": "Target actor name for boolean operations."
+              "description": "The dynamic mesh actor to edit, by label or name (actorName is the same and wins when both are sent)."
             },
             "uvChannel": {
               "type": "integer",
@@ -72133,8 +72126,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "86be27366da9fdb232e790a5e1648c17600567b5c71a014253a7555db98460a6",
-        "content": "12169eb88f0f8d327fef9e386d68195e7f31f2662280d1680973391bf2123609"
+        "schema": "21dee5dfc0399b13b2154456934a96b2b89910d58a2199dfdfbfa73cf19c036f",
+        "content": "805049c7b0df581d2b8e6419fb81cf86e719829d8d79a95d8f9e101e772b84d2"
       }
     },
     {
@@ -72180,7 +72173,7 @@
             },
             "targetActor": {
               "type": "string",
-              "description": "Target actor name for boolean operations."
+              "description": "The dynamic mesh actor to edit, by label or name (actorName is the same and wins when both are sent)."
             }
           },
           "required": [
@@ -72268,8 +72261,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "9738f83d1bce302b716d4e63a228619ba0e9df32abf70cd4914cdae35813d180",
-        "content": "834260748c7e3a74c3b3b32edbf6a9ddda492d9eb0c771814842522555dac16f"
+        "schema": "af4796f982d14b236a4f4b7f893ed2bf1cda2f0d66a518407814f03231ccbf7a",
+        "content": "63e4405801c71e0b9943bac084fe0bca2d7a6af16e5dd7356ad4c26867aeb09a"
       }
     },
     {
@@ -72466,7 +72459,7 @@
             },
             "targetActor": {
               "type": "string",
-              "description": "Target actor name for boolean operations."
+              "description": "The dynamic mesh actor to edit, by label or name (actorName is the same and wins when both are sent)."
             },
             "axis": {
               "type": "string",
@@ -72568,8 +72561,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "6286c02e0a776d0631309e57233789535497b4f97f70b4acb6ae0ae82e97f740",
-        "content": "e45feceb4382dd1d7526c8d014cd549328c33da4745874ecfbb8fc94359defd6"
+        "schema": "b830831d46a0ac10b89af2f66ec38b281e0b8b0af09fa9afa6f6e411ff3c36a7",
+        "content": "f6180cba8692aea9558569201e5874b0f990a4441b67a00afa85e6aa5dc675f2"
       }
     },
     {
@@ -72780,7 +72773,7 @@
             },
             "targetActor": {
               "type": "string",
-              "description": "Target actor name for boolean operations."
+              "description": "The dynamic mesh actor to edit, by label or name (actorName is the same and wins when both are sent)."
             },
             "offset": {
               "type": "object",
@@ -73014,7 +73007,7 @@
             },
             "axis": {
               "type": "string",
-              "description": "Axis: X, Y, or Z."
+              "description": "Axis: X, Y or Z, any case; another name is refused."
             },
             "numCuts": {
               "type": "integer",
@@ -73440,8 +73433,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "9c038de08de72a7a6d92266127b7ad71103a03713d7bd7b57b4996888ed131fa",
-        "content": "c48d4b1f954edaf775af217a067f9c7d66c45bd7c39f66691825f9cbd7b931a2"
+        "schema": "70f650e05b461e41bcc25641bcdaa739c7c57619fbfeac0ae524fba945ad2a8e",
+        "content": "55cc548d66ddadb326948424b551b088b720b21ee37ae94cc468fe51179b442c"
       }
     },
     {
@@ -73619,7 +73612,7 @@
             },
             "targetActor": {
               "type": "string",
-              "description": "Target actor name for boolean operations."
+              "description": "The dynamic mesh actor to edit, by label or name (actorName is the same and wins when both are sent)."
             },
             "targetTriangleCount": {
               "type": "number",
@@ -73866,8 +73859,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "abd8c5e3e5e593a48de5332a4bec4cca69e49d44c6485fce0d671300d0eded54",
-        "content": "e24d1410863557a3258c140dfda4a5a4cda4d749fc37d53c6be6337c69201547"
+        "schema": "9ecbc58d72bd5a2cf0618534c3051c50ea5f10d245df327ed8c104432d2c96f2",
+        "content": "e69ecfda88a6c251bf10c8942407399d88ac4c7d2ee901ed6514f08b1faa94d2"
       }
     },
     {
@@ -74171,7 +74164,12 @@
             },
             "switchType": {
               "type": "string",
-              "description": "Switch type (button, lever, or pressure_plate)."
+              "enum": [
+                "button",
+                "lever",
+                "pressure_plate"
+              ],
+              "description": "button (the default) or lever flip on each press; pressure_plate is on only while stood on."
             },
             "canToggle": {
               "type": "boolean",
@@ -74363,8 +74361,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "8f3465a285eaefa630d10b246380c294ff0500d395bedff47187c9f663455932",
-        "content": "491cec4407b5cf14395beb422aa4ea80ffb2c55903ff2907b0cf876f63812a79"
+        "schema": "d7590307b5afd16e17eb0231db8d6da1bc2456a1a34b84530e5d85d57f3af5f2",
+        "content": "83fd9a9bf1502e481a6bc612fd94fb62730df7fdfbdfab690c911a4cd21eeae8"
       }
     },
     {
@@ -74514,7 +74512,12 @@
             },
             "switchType": {
               "type": "string",
-              "description": "Switch type (button, lever, or pressure_plate)."
+              "enum": [
+                "button",
+                "lever",
+                "pressure_plate"
+              ],
+              "description": "button (the default) or lever flip on each press; pressure_plate is on only while stood on."
             },
             "triggerShape": {
               "type": "string",
@@ -74728,8 +74731,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "50961ef71f7f42e763b2cbf8cf89d65cf4bed6d5c1192ed65313e4ed85b1f0f9",
-        "content": "aea68d233c1ba56cbe9f65a5aca3657ea38f7f7c73cd6f0da63d7759f6cbfa2f"
+        "schema": "3a354f112e0455e26fc62a129e5449044f2c5762fb9bf3e640006ef973dd28ed",
+        "content": "5499db227cf22fdfceb780d8fe6bb8b34c7d82ec8b76328d5e4ab210418cadcb"
       }
     },
     {
@@ -82420,7 +82423,7 @@
           "setting=map_action: Use it to map an Enhanced Input Action to a key in a context, with an optional trigger and modifier on that mapping; mapping the same action and key again redefines it, and replaceKey moves the mapping of the action from that key to this one.",
           "setting=set_trigger: Use it to add a trigger to an Enhanced Input Action; a trigger of that class already on the action is kept, not stacked.",
           "setting=set_modifier: Use it to add a modifier to an Enhanced Input Action, or to one mapping when contextPath and key are given; a modifier of that class already there is kept, not stacked.",
-          "setting=enable_mapping: Use it to enable an Enhanced Input Mapping Context on the PIE local player at a priority; outside PIE it fails with PIE_NOT_RUNNING."
+          "setting=enable_mapping: Use it to enable an Enhanced Input Mapping Context on the first local player of the running Play In Editor session at priority (default 0; higher wins where mappings overlap); a context already enabled is re-added at the new priority. Outside Play In Editor it fails with PIE_NOT_RUNNING; for the packaged game, add it from the player controller BeginPlay (Add Mapping Context)."
         ],
         "whenNotToUse": []
       },
@@ -82671,7 +82674,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "da1433c50e7d8500faf44a92e5bbe6d0f83112cb0b4e3c9429530cc6581735b3",
-        "content": "a85a118c10b060c0357c6719d1dac3ec1dc4239bdf0100c4a8fec0f613c63aec"
+        "content": "87878839bac5c85f96875607fa8da80c171214638741968bec57633e298ee10a"
       }
     },
     {
@@ -82874,9 +82877,9 @@
         ],
         "summary": "Configure client-side prediction: client, movement, server correction, or add prediction data (a variable replicated only to the owning client).",
         "whenToUse": [
-          "setting=client: Use it to set whether a Character Blueprint always replicates its movement transform timestamp (CharacterMovement bNetworkAlwaysReplicateTransformUpdateTimestamp); other Blueprints are refused.",
-          "setting=movement: Use it to set a Character Blueprint's movement network smoothing mode and smoothing distances; only the fields sent are written, other Blueprints are refused.",
-          "setting=server_correction: Use it to set how long a Character Blueprint's simulated proxies smooth server corrections; other Blueprints are refused.",
+          "setting=client: Use it to set whether a Character Blueprint always sends clients the server time stamp of its last movement update (CharacterMovement bNetworkAlwaysReplicateTransformUpdateTimestamp), which the linear smoothing of simulated proxies uses; it changes nothing unless the character replicates its movement. Other Blueprints are refused; saved (SAVE_FAILED when it cannot be written).",
+          "setting=movement: Use it to set a Character Blueprint's movement network smoothing mode and smoothing distances; only the fields sent are written, other Blueprints are refused; saved (SAVE_FAILED when it cannot be written).",
+          "setting=server_correction: Use it to set how long, in seconds, a Character Blueprint smooths the moves other machines see (smoothingRate: CharacterMovement NetworkSimulatedSmoothLocationTime and RotationTime and the listen-server pair, all four together). Other Blueprints are refused; saved (SAVE_FAILED when it cannot be written).",
           "setting=add_data: Use it to add a Blueprint variable, or convert an existing one of the same type, that replicates only to the owning client (COND_AutonomousOnly) for client-side prediction state. Pawn, Character, Controller and ActorComponent Blueprints only (no other actor is an autonomous proxy); the reply says whether the Blueprint itself replicates."
         ],
         "whenNotToUse": []
@@ -83084,7 +83087,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "164b168b5322efc6b0e6591774db3712660a4a37cf26081c24a128949e1a0944",
-        "content": "5ea46a3b7bd30bbe12c6b7644991f6e8617909ca192eafeed304572250b08b67"
+        "content": "e8bf45d6ca66c442e4cffac559090acd48d8e95a726b5e49381b566f5317e478"
       }
     },
     {
@@ -97926,15 +97929,15 @@
             },
             "lengthInFrames": {
               "type": "integer",
-              "description": "Sequence length in frames."
+              "description": "Playback length in display-rate frames, counted from playbackStart (or the current start); playbackEnd wins when both are sent."
             },
             "playbackStart": {
               "type": "integer",
-              "description": "Playback start frame."
+              "description": "Playback start, in display-rate frames."
             },
             "playbackEnd": {
               "type": "integer",
-              "description": "Playback end frame."
+              "description": "Playback end, in display-rate frames."
             },
             "resolution": {
               "type": [
@@ -97949,11 +97952,11 @@
             },
             "start": {
               "type": "number",
-              "description": "Range start frame or time."
+              "description": "Start in seconds."
             },
             "end": {
               "type": "number",
-              "description": "Range end frame or time."
+              "description": "End in seconds, after start."
             },
             "sequenceProperty": {
               "type": "string",
@@ -98094,6 +98097,12 @@
                 "speed"
               ]
             },
+            "set_view_range": {
+              "required": [
+                "start",
+                "end"
+              ]
+            },
             "set_work_range": {
               "required": [
                 "start",
@@ -98105,8 +98114,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "c2e46aae20cfec15dfa42de024309d3a546459156454f4502719d707d3c79a67",
-        "content": "08dd7ec58e43e7b83f50036930dafac532f2fd052c5f45375f0b946d1a08fb2b"
+        "schema": "2df8e81b6b2050cf0234090d42f6a7320bd4d0457d16e2d00873b09ba35850d1",
+        "content": "63f908af4eb5e312990a8cb4b52db706047eec1200a4d2506c8517f2f248d433"
       }
     },
     {
@@ -101639,7 +101648,7 @@
           "execute script",
           "py code"
         ],
-        "summary": "Execute inline Python code or a .py file in the editor via the native HandleExecutePython handler.",
+        "summary": "Run Python in the editor: inline code (1 MB at most) or a .py file inside the project (a path outside it, or reached through a symlink, is SECURITY_VIOLATION). Needs the Python Editor Script Plugin (PYTHON_NOT_AVAILABLE otherwise) and an explicit consent grant; dialogs answer their default. The reply gives what the script printed (output) and, when it raised, the traceback (error).",
         "whenToUse": [
           "Editor-side Python automation must run inline or from a script file."
         ],
@@ -101718,7 +101727,7 @@
       },
       "examples": [
         {
-          "title": "Execute inline Python code or a .py file in the editor via the native HandleExecutePython handler.",
+          "title": "Run Python in the editor: inline code (1 MB at most) or a .py file inside the project (a path outside it, or reached through a symlink, is SECURITY_VIOLATION). Needs the Python Editor Script Plugin (PYTHON_NOT_AVAILABLE otherwise) and an explicit consent grant; dialogs answer their default. The reply gives what the script printed (output) and, when it raised, the traceback (error).",
           "input": {
             "action": "execute_python",
             "code": "print(\"hello\")"
@@ -101758,7 +101767,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "547325520fd68582a8185ca72f11028bdae6fbe51ef1c6fbb27bcde504c3f704",
-        "content": "5c0231f94712226649b80a2b24631394fde2d823c3fba840e96c1481ccbea770"
+        "content": "f8c85941aa9521183ec9f5aa48019994abdb38be88490dbd6759065ceb51d5cd"
       }
     },
     {

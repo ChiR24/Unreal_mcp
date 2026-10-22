@@ -121,7 +121,7 @@ export const P = {
   arriveTangent: vec3('Arrive tangent.'), leaveTangent: vec3('Leave tangent.'),
   splineType: str('Spline point type.'),
   bClosedLoop: bool('Whether the spline is a closed loop.'),
-  forwardAxis: str('Spline mesh forward axis (X, Y, Z).'),
+  forwardAxis: str('Mesh axis laid along the spline: X (the default), Y or Z, any case; another name is refused.'),
   componentName: str('Component name.'),
   blueprintPath: str('Canonical /Game blueprint path.'),
   spacing: num('Mesh spacing along the spline.'),

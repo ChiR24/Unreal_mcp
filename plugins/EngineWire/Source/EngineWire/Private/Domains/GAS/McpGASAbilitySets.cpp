@@ -118,7 +118,14 @@ bool HandleGASAbilitySets(const FGASRequestContext& Context, const FString& SubA
             FBlueprintEditorUtils::MarkBlueprintAsModified(SetBlueprint);
         }
         SetAsset->MarkPackageDirty();
-        const bool bSaved = McpSafeAssetSave(SetAsset);
+        // A set that could not be written answered "Ability added to set", with only saved false to tell.
+        if (!McpSafeAssetSave(SetAsset))
+        {
+            Bridge->SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("%s is in the set in this editor session, "
+                "but %s could NOT be written to disk (file may be read-only or held by source control)."),
+                *AbilityClass->GetName(), *SetPath), TEXT("SAVE_FAILED"));
+            return true;
+        }
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("setPath"), SetPath);
@@ -129,7 +136,7 @@ bool HandleGASAbilitySets(const FGASRequestContext& Context, const FString& SubA
         Result->SetNumberField(TEXT("abilityCount"), AbilityCount);
         Result->SetBoolField(TEXT("added"), !bAlreadyPresent);
         Result->SetBoolField(TEXT("alreadyPresent"), bAlreadyPresent);
-        Result->SetBoolField(TEXT("saved"), bSaved);
+        Result->SetBoolField(TEXT("saved"), true);
 
         Bridge->SendAutomationResponse(RequestingSocket, RequestId, true,
             bAlreadyPresent ? TEXT("Ability already present in set") : TEXT("Ability added to set"), Result);

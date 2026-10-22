@@ -103,7 +103,7 @@ export const FIELD_DESCRIPTIONS: Readonly<Record<string, string>> = {
   fadeTime: 'Fade duration in seconds.',
   fadeType: 'Fade curve type (FadeTo, FadeIn, FadeOut).',
   falloffDistance: 'Distance over which attenuation falls off, in centimetres.',
-  falloffMode: 'Attenuation falloff mode.',
+  falloffMode: 'Attenuation falloff curve: Linear (the default), Logarithmic, Inverse or NaturalSound.',
   innerRadius: 'Inner radius of full volume, in centimetres: a Box shape takes it as its half-size on every axis, a Capsule as its radius (half height at least that), a Sphere or Cone as its radius.',
   inputName: 'Graph input name.',
   inputType: 'Graph input data type (Float, Int32, Bool, String, Trigger, Audio).',

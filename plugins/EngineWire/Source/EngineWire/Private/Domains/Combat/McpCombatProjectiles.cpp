@@ -114,16 +114,23 @@ bool FCombatActionContext::HandleProjectileActions() const
             return true;
         }
 
-        const double Lifespan = GetJsonNumberField(Payload, TEXT("projectileLifespan"), 5.0);
+        // A Blueprint with no component tree changed nothing and answered with the values asked for.
         UProjectileMovementComponent* MovementComp = GetOrCreateSCSComponent<UProjectileMovementComponent>(Blueprint, TEXT("ProjectileMovement"));
-        if (MovementComp)
+        if (!MovementComp)
         {
-            double Speed = GetJsonNumberField(Payload, TEXT("projectileSpeed"), 5000.0);
-            double GravityScale = GetJsonNumberField(Payload, TEXT("projectileGravityScale"), 0.0);
-
-            MovementComp->InitialSpeed = static_cast<float>(Speed);
-            MovementComp->MaxSpeed = static_cast<float>(Speed);
-            MovementComp->ProjectileGravityScale = static_cast<float>(GravityScale);
+            SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("%s has no component tree to hold a %s component (it is not an Actor Blueprint). Nothing was changed."), *BlueprintPath,
+                TEXT("Projectile Movement")), TEXT("INVALID_BLUEPRINT"));
+            return true;
+        }
+        // Only what was sent changes: the defaults of the fields left out (5000, 0, 5 s) overwrote the projectile's own.
+        if (Payload->HasField(TEXT("projectileSpeed")))
+        {
+            MovementComp->InitialSpeed = static_cast<float>(GetJsonNumberField(Payload, TEXT("projectileSpeed"), 5000.0));
+            MovementComp->MaxSpeed = MovementComp->InitialSpeed;
+        }
+        if (Payload->HasField(TEXT("projectileGravityScale")))
+        {
+            MovementComp->ProjectileGravityScale = static_cast<float>(GetJsonNumberField(Payload, TEXT("projectileGravityScale"), 0.0));
         }
 
         McpSafeCompileBlueprint(Blueprint);
@@ -131,11 +138,10 @@ bool FCombatActionContext::HandleProjectileActions() const
         // applied, so a projectile asked to live 1.5s still lived the class
         // default forever. Lifespan belongs to the ACTOR, not the movement
         // component -- UProjectileMovementComponent has no such property.
-        if (AActor* ProjectileCdo = Blueprint->GeneratedClass
-                ? Cast<AActor>(Blueprint->GeneratedClass->GetDefaultObject())
-                : nullptr)
+        AActor* ProjectileCdo = Blueprint->GeneratedClass ? Cast<AActor>(Blueprint->GeneratedClass->GetDefaultObject()) : nullptr;
+        if (ProjectileCdo && Payload->HasField(TEXT("projectileLifespan")))
         {
-            ProjectileCdo->InitialLifeSpan = static_cast<float>(Lifespan);
+            ProjectileCdo->InitialLifeSpan = static_cast<float>(GetJsonNumberField(Payload, TEXT("projectileLifespan"), 5.0));
         }
         if (!McpSafeAssetSave(Blueprint))
         {
@@ -147,10 +153,13 @@ bool FCombatActionContext::HandleProjectileActions() const
         Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
 
         McpHandlerUtils::AddVerification(Result, Blueprint);
-        // Echo the applied values (dogfood #43).
-        Result->SetNumberField(TEXT("projectileSpeed"), GetJsonNumberField(Payload, TEXT("projectileSpeed"), 5000.0));
-        Result->SetNumberField(TEXT("projectileGravityScale"), GetJsonNumberField(Payload, TEXT("projectileGravityScale"), 0.0));
-        Result->SetNumberField(TEXT("projectileLifespan"), GetJsonNumberField(Payload, TEXT("projectileLifespan"), 5.0));
+        // The values the projectile now holds, not the ones asked for (dogfood #43 echoed the request).
+        Result->SetNumberField(TEXT("projectileSpeed"), MovementComp->InitialSpeed);
+        Result->SetNumberField(TEXT("projectileGravityScale"), MovementComp->ProjectileGravityScale);
+        if (ProjectileCdo)
+        {
+            Result->SetNumberField(TEXT("projectileLifespan"), ProjectileCdo->InitialLifeSpan);
+        }
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Projectile movement configured."), Result);
         return true;
     }
@@ -170,23 +179,26 @@ bool FCombatActionContext::HandleProjectileActions() const
         }
 
         USphereComponent* CollisionComp = GetOrCreateSCSComponent<USphereComponent>(Blueprint, TEXT("CollisionComponent"));
-        if (CollisionComp)
+        // Bounce lives on the movement component.
+        UProjectileMovementComponent* MovementComp = GetOrCreateSCSComponent<UProjectileMovementComponent>(Blueprint, TEXT("ProjectileMovement"));
+        if (!CollisionComp || !MovementComp)
         {
-            double CollisionRadius = GetJsonNumberField(Payload, TEXT("collisionRadius"), 5.0);
-            CollisionComp->SetSphereRadius(static_cast<float>(CollisionRadius));
-
-            bool bBounceEnabled = GetJsonBoolField(Payload, TEXT("bounceEnabled"), false);
-            // Bounce settings would be on the movement component
-            UProjectileMovementComponent* MovementComp = GetOrCreateSCSComponent<UProjectileMovementComponent>(Blueprint, TEXT("ProjectileMovement"));
-            if (MovementComp)
-            {
-                MovementComp->bShouldBounce = bBounceEnabled;
-                if (bBounceEnabled)
-                {
-                    double BounceRatio = GetJsonNumberField(Payload, TEXT("bounceVelocityRatio"), 0.6);
-                    MovementComp->Bounciness = static_cast<float>(BounceRatio);
-                }
-            }
+            SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("%s has no component tree to hold a %s component (it is not an Actor Blueprint). Nothing was changed."), *BlueprintPath,
+                TEXT("collision sphere")), TEXT("INVALID_BLUEPRINT"));
+            return true;
+        }
+        // Only what was sent changes: a radius alone used to switch bouncing off.
+        if (Payload->HasField(TEXT("collisionRadius")))
+        {
+            CollisionComp->SetSphereRadius(static_cast<float>(GetJsonNumberField(Payload, TEXT("collisionRadius"), 5.0)));
+        }
+        if (Payload->HasField(TEXT("bounceEnabled")))
+        {
+            MovementComp->bShouldBounce = GetJsonBoolField(Payload, TEXT("bounceEnabled"), false);
+        }
+        if (Payload->HasField(TEXT("bounceVelocityRatio")))
+        {
+            MovementComp->Bounciness = static_cast<float>(GetJsonNumberField(Payload, TEXT("bounceVelocityRatio"), 0.6));
         }
 
         McpSafeCompileBlueprint(Blueprint);
@@ -199,9 +211,9 @@ bool FCombatActionContext::HandleProjectileActions() const
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
 
-        Result->SetNumberField(TEXT("collisionRadius"), GetJsonNumberField(Payload, TEXT("collisionRadius"), 5.0));
-        Result->SetBoolField(TEXT("bounceEnabled"), GetJsonBoolField(Payload, TEXT("bounceEnabled"), false));
-        Result->SetNumberField(TEXT("bounceVelocityRatio"), GetJsonNumberField(Payload, TEXT("bounceVelocityRatio"), 0.6));
+        Result->SetNumberField(TEXT("collisionRadius"), CollisionComp->GetUnscaledSphereRadius());
+        Result->SetBoolField(TEXT("bounceEnabled"), MovementComp->bShouldBounce);
+        Result->SetNumberField(TEXT("bounceVelocityRatio"), MovementComp->Bounciness);
         McpHandlerUtils::AddVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Projectile collision configured."), Result);
         return true;
@@ -222,13 +234,17 @@ bool FCombatActionContext::HandleProjectileActions() const
         }
 
         UProjectileMovementComponent* MovementComp = GetOrCreateSCSComponent<UProjectileMovementComponent>(Blueprint, TEXT("ProjectileMovement"));
-        if (MovementComp)
+        if (!MovementComp)
         {
-            bool bHomingEnabled = GetJsonBoolField(Payload, TEXT("homingEnabled"), true);
-            double HomingAcceleration = GetJsonNumberField(Payload, TEXT("homingAcceleration"), 20000.0);
-
-            MovementComp->bIsHomingProjectile = bHomingEnabled;
-            MovementComp->HomingAccelerationMagnitude = static_cast<float>(HomingAcceleration);
+            SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("%s has no component tree to hold a %s component (it is not an Actor Blueprint). Nothing was changed."), *BlueprintPath,
+                TEXT("Projectile Movement")), TEXT("INVALID_BLUEPRINT"));
+            return true;
+        }
+        MovementComp->bIsHomingProjectile = GetJsonBoolField(Payload, TEXT("homingEnabled"), true);
+        // The acceleration changes only when sent; its default overwrote a tuned one.
+        if (Payload->HasField(TEXT("homingAcceleration")))
+        {
+            MovementComp->HomingAccelerationMagnitude = static_cast<float>(GetJsonNumberField(Payload, TEXT("homingAcceleration"), 20000.0));
         }
 
         McpSafeCompileBlueprint(Blueprint);
@@ -241,8 +257,8 @@ bool FCombatActionContext::HandleProjectileActions() const
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
 
-        Result->SetBoolField(TEXT("homingEnabled"), GetJsonBoolField(Payload, TEXT("homingEnabled"), true));
-        Result->SetNumberField(TEXT("homingAcceleration"), GetJsonNumberField(Payload, TEXT("homingAcceleration"), 20000.0));
+        Result->SetBoolField(TEXT("homingEnabled"), MovementComp->bIsHomingProjectile);
+        Result->SetNumberField(TEXT("homingAcceleration"), MovementComp->HomingAccelerationMagnitude);
         McpHandlerUtils::AddVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Projectile homing configured."), Result);
         return true;

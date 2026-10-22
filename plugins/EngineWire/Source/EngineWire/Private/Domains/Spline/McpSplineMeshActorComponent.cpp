@@ -60,7 +60,8 @@ bool HandleCreateSplineMeshComponentOnActor(
     {
         MeshComp->SetStaticMesh(Mesh);
     }
-    const ESplineMeshAxis::Type Axis = ParseSplineMeshAxis(ForwardAxis);
+    ESplineMeshAxis::Type Axis = ESplineMeshAxis::X;
+    ParseSplineMeshAxis(ForwardAxis, Axis); // checked by the caller
     MeshComp->SetForwardAxis(Axis);
     // Follow the first spline segment when the actor already carries a spline.
     if (USplineComponent* Spline = FindSplineComponent(Actor))
@@ -87,7 +88,7 @@ bool HandleCreateSplineMeshComponentOnActor(
     Result->SetStringField(TEXT("componentName"), MeshComp->GetName());
     Result->SetStringField(TEXT("componentPath"), MeshComp->GetPathName());
     Result->SetStringField(TEXT("meshPath"), Mesh ? Mesh->GetPathName() : FString());
-    Result->SetStringField(TEXT("forwardAxis"), ForwardAxis);
+    Result->SetStringField(TEXT("forwardAxis"), SplineMeshAxisName(MeshComp->GetForwardAxis()));
     McpHandlerUtils::AddVerification(Result, Actor);
     Self->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Spline mesh component '%s' added to %s"), *MeshComp->GetName(), *Actor->GetActorLabel()), Result);

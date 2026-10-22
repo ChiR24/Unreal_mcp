@@ -4,6 +4,14 @@
 #include "Domains/Sequence/McpSeqEditorSupport.h"
 #include "Domains/Sequence/Validation/McpSeqFrameMath.h"
 
+namespace {
+// Why Object at Path has no playback properties to read or set.
+FString McpNotALevelSequence(const FString &Path, const UObject *Object) {
+  return Cast<ULevelSequence>(Object) ? FString::Printf(TEXT("%s has no movie scene"), *Path)
+                                      : FString::Printf(TEXT("%s is a %s, not a Level Sequence"), *Path, *Object->GetClass()->GetName());
+}
+} // namespace
+
 bool UEngineWireSubsystem::HandleSequenceSetProperties(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
@@ -41,6 +49,13 @@ bool UEngineWireSubsystem::HandleSequenceSetProperties(
           TEXT("playbackStart"), PlaybackStartValue);
       const bool bHasPlaybackEnd = LocalPayload->TryGetNumberField(
           TEXT("playbackEnd"), PlaybackEndValue);
+      // A call that set nothing answered "properties updated".
+      if (!bHasFrameRate && !bHasLengthInFrames && !bHasPlaybackStart && !bHasPlaybackEnd) {
+        SendAutomationResponse(Socket, RequestId, false,
+                               TEXT("Pass frameRate, playbackStart, playbackEnd or lengthInFrames. Nothing was changed."),
+                               nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+      }
 
       FFrameRate NewRate = MovieScene->GetDisplayRate();
       if (bHasFrameRate) {
@@ -108,24 +123,19 @@ bool UEngineWireSubsystem::HandleSequenceSetProperties(
         bRangeChanged = true;
       }
 
-      if (NewRate != MovieScene->GetDisplayRate()) {
-        MovieScene->SetDisplayRate(NewRate);
-        bModified = true;
-      }
-      if (bRangeChanged) {
-        MovieScene->SetPlaybackRange(NewRange);
-        bModified = true;
-      }
-
+      // Modify before the change, so undo restores the old values (after it, undo held the new ones).
+      bModified = NewRate != MovieScene->GetDisplayRate() ||
+                  (bRangeChanged && NewRange != MovieScene->GetPlaybackRange());
       if (bModified)
         MovieScene->Modify();
+      if (NewRate != MovieScene->GetDisplayRate())
+        MovieScene->SetDisplayRate(NewRate);
+      if (bRangeChanged)
+        MovieScene->SetPlaybackRange(NewRange);
 
+      // A number, as get_properties gives it.
       FFrameRate FR = MovieScene->GetDisplayRate();
-      TSharedPtr<FJsonObject> FrameRateObj =
-          McpHandlerUtils::CreateResultObject();
-      FrameRateObj->SetNumberField(TEXT("numerator"), FR.Numerator);
-      FrameRateObj->SetNumberField(TEXT("denominator"), FR.Denominator);
-      Resp->SetObjectField(TEXT("frameRate"), FrameRateObj);
+      Resp->SetNumberField(TEXT("frameRate"), FR.AsDecimal());
 
       TRange<FFrameNumber> Range = MovieScene->GetPlaybackRange();
       // Playback range is stored in tick resolution; publish display-rate frames
@@ -140,21 +150,14 @@ bool UEngineWireSubsystem::HandleSequenceSetProperties(
       Resp->SetBoolField(TEXT("applied"), bModified);
 
       SendAutomationResponse(Socket, RequestId, true,
-                                        TEXT("properties updated"), Resp,
-                                        FString());
+                             bModified ? TEXT("Sequence properties set; the sequence is unsaved")
+                                       : TEXT("Sequence properties already had those values"),
+                             Resp, FString());
       return true;
     }
   }
-  Resp->SetObjectField(TEXT("frameRate"), McpHandlerUtils::CreateResultObject());
-  Resp->SetNumberField(TEXT("playbackStart"), 0.0);
-  Resp->SetNumberField(TEXT("playbackEnd"), 0.0);
-  Resp->SetNumberField(TEXT("duration"), 0.0);
-  Resp->SetBoolField(TEXT("applied"), false);
-  SendAutomationResponse(
-      Socket, RequestId, false,
-      TEXT("sequence_set_properties is not available in this editor build or "
-           "for this sequence type"),
-      Resp, TEXT("NOT_IMPLEMENTED"));
+  SendAutomationResponse(Socket, RequestId, false, McpNotALevelSequence(SeqPath, SeqObj), nullptr,
+                         TEXT("INVALID_SEQUENCE"));
   return true;
 }
 
@@ -201,14 +204,8 @@ bool UEngineWireSubsystem::HandleSequenceGetProperties(
       return true;
     }
   }
-  // This fallback still answers success, so it is held to the same declared
-  // number|string union as the branch above; an empty object here was the same
-  // violation under a different code path.
-  Resp->SetNumberField(TEXT("frameRate"), 0.0);
-  Resp->SetNumberField(TEXT("playbackStart"), 0.0);
-  Resp->SetNumberField(TEXT("playbackEnd"), 0.0);
-  Resp->SetNumberField(TEXT("duration"), 0.0);
-  SendAutomationResponse(Socket, RequestId, true, TEXT("properties retrieved"),
-                         Resp, FString());
+  // Any other asset answered success with every value 0, the same as a real sequence at 0.
+  SendAutomationResponse(Socket, RequestId, false, McpNotALevelSequence(SeqPath, SeqObj), nullptr,
+                         TEXT("INVALID_SEQUENCE"));
   return true;
 }

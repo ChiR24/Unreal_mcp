@@ -23,7 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Whole parts in one `edit_dynamic_mesh` call**: `append_cuboids`, `append_loft`, `append_mesh`, `delete_triangles`.
 - **Renders and sequences**: `cancel_render`, camera shutter and overscan, `set_section` `playRate`, clips and keyed bones in the readers.
 - **`setup_global_illumination` `saveToProject`** writes the GI method to Project Settings.
-- **Calls that spawn, move or re-mesh actors check them** and warn on one left sunk, floating, intersecting, z-fighting, untextured, labelled "Text" or pasted twice.
+- **Spawns, moves and re-meshes are checked** and warn on an actor left sunk, floating, intersecting, z-fighting, untextured, labelled "Text" or pasted twice.
 
 </details>
 
@@ -43,8 +43,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Tracks and bones**: a whole track name picks only that track; `set_bone_key` keeps what it is not given.
 - **Undo** covers mesh, landscape, light, sound, foliage, spline, water, post-process, lighting and camera edits, spawns, transforms, attachments, components, scatters, volume bounds and Blueprint variables.
 - **Finds stop at `limit`** (default 200) and say how many matched.
-- **Records and replies say what happens**: about two hundred records name their defaults, replies and refusals; writes report `saved`; unknown, incomplete or empty requests are refused instead of guessed; `save: false` edits stay unsaved; `play_sound` says `NOT_PLAYED` and lighting builds `PRECOMPUTED_LIGHTING_DISABLED` when they cannot run; data tables page past 200 rows; console settings say which values took.
-- **Successes that did nothing now act**: foliage everywhere, procedural foliage, water materials, Character nav sizes, Slot nodes, audio and streaming during Play, typed splines, minimap and streaming volumes, the tonemapper type, every view mode, AI controllers, fades, thumbnails, enum renames, instance overrides, effect presets, Blackboard defaults (5.4+), nav links, State Trees, Mass, Smart Objects, physics bodies, landscape sculpt, paint, imports and LOD, Lightmass volumes, EQS, tags, RPCs, sockets, blend samples, virtual bones, `project_uv` tiling, editor vsync, World Partition streaming and grid settings, saved scalability, gameplay debugger categories.
+- **Records and replies say what happens**: about 250 records name their defaults, replies and refusals; replies read back what the engine holds; failed saves and compiles say so (`SAVE_FAILED`, the compiler error); unknown, incomplete or empty requests are refused; `save: false` edits stay unsaved; `play_sound` (`NOT_PLAYED`) and lighting builds (`PRECOMPUTED_LIGHTING_DISABLED`) say when they cannot run; data tables page past 200 rows.
+- **Successes that did nothing now act**: painted and procedural foliage, water materials, Character nav sizes, Slot nodes, audio and streaming during Play, typed splines, minimap and streaming volumes, the tonemapper type, every view mode, AI controllers, fades, thumbnails, enum renames, instance overrides, effect presets, Blackboard defaults (5.4+), nav links, State Trees, Mass, Smart Objects, physics bodies, landscape sculpt, paint, imports and LOD, Lightmass volumes, EQS, tags, RPCs, sockets, blend samples, virtual bones, `project_uv` tiling, animation asset saves, editor vsync, World Partition streaming, saved scalability, debugger categories.
 - **`manage_effect cleanup` needs destructive consent** and `filter`, is one undo step and refuses during Play; clearing debug shapes moved to `debug_shape`.
 - **Sublevels and paths**: object paths work in `open_level`, `load` and `add_sublevel`; `create_sublevel` refuses a parent that is not open; a relative `.t3d` export lands in the project.
 - **Git commits** take any commit message safely (a quote could inject git options); checkout and submit list the paths they skip; `enable` switches providers.

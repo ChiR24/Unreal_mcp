@@ -27,7 +27,12 @@ USplineMeshComponent* ResolveSplineMeshTarget(UEngineWireSubsystem* Self, const 
 USplineComponent* SpawnSplineActor(UWorld* World, const FString& Name, const FVector& Location, const FRotator& Rotation);
 FString RequireSplineProjectPath(UEngineWireSubsystem* Self, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket, const TCHAR* Field, const FString& Path);
 USplineMeshComponent* FindSplineMeshComponent(AActor* Actor, const FString& ComponentName = TEXT(""));
-ESplineMeshAxis::Type ParseSplineMeshAxis(const FString& ForwardAxis);
+// False for a name that is not X, Y or Z, any case (OutAxis is then X): "y" and every unknown name became X.
+bool ParseSplineMeshAxis(const FString& ForwardAxis, ESplineMeshAxis::Type& OutAxis);
+const TCHAR* SplineMeshAxisName(ESplineMeshAxis::Type Axis);
+// The refusal for a name ParseSplineMeshAxis did not know; sends it and returns true.
+bool RefuseSplineMeshAxis(UEngineWireSubsystem* Self, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket,
+                          const FString& ForwardAxis);
 // False for a name that is no point type (OutType is then Curve): every unknown name became Curve while the reply named
 // the type asked for.
 bool ParseSplinePointType(const FString& TypeStr, ESplinePointType::Type& OutType);

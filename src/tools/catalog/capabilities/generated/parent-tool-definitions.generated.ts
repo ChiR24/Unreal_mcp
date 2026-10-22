@@ -25,10 +25,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "A placed actor: a prop simulates on its root when that is a physics body, else on its first static mesh; a skeletal mesh actor gets a Physics Asset for its mesh."
         },
-        "addMissing": {
-          "type": "boolean",
-          "description": "Whether to add the morph target when the component does not already carry it."
-        },
         "additive": {
           "type": "boolean",
           "description": "Make the poses additive against pose 0, as facial and corrective poses are (default false)."
@@ -2604,7 +2600,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "forwardAxis": {
           "type": "string",
-          "description": "Spline mesh forward axis (X, Y, Z)."
+          "description": "Mesh axis laid along the spline: X (the default), Y or Z, any case; another name is refused."
         },
         "hardness": {
           "type": "number",
@@ -12847,7 +12843,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "falloffMode": {
           "type": "string",
-          "description": "Attenuation falloff mode."
+          "description": "Attenuation falloff curve: Linear (the default), Logarithmic, Inverse or NaturalSound."
         },
         "filter": {
           "type": "string",
@@ -20041,7 +20037,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "targetActor": {
           "type": "string",
-          "description": "Target actor name for boolean operations."
+          "description": "The dynamic mesh actor to edit, by label or name (actorName is the same and wins when both are sent)."
         },
         "targetEdgeLength": {
           "type": "number",
@@ -20811,7 +20807,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "switchType": {
           "type": "string",
-          "description": "Switch type (button, lever, or pressure_plate)."
+          "enum": [
+            "button",
+            "lever",
+            "pressure_plate"
+          ],
+          "description": "button (the default) or lever flip on each press; pressure_plate is on only while stood on."
         },
         "traceDistance": {
           "type": "number",
@@ -23778,7 +23779,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "end": {
           "type": "number",
-          "description": "Range end frame or time."
+          "description": "End in seconds, after start."
         },
         "endFrame": {
           "oneOf": [
@@ -23987,7 +23988,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "lengthInFrames": {
           "type": "integer",
-          "description": "Sequence length in frames."
+          "description": "Playback length in display-rate frames, counted from playbackStart (or the current start); playbackEnd wins when both are sent."
         },
         "lens": {
           "type": "object",
@@ -24172,7 +24173,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "playbackEnd": {
           "type": "integer",
-          "description": "Playback end frame."
+          "description": "Playback end, in display-rate frames."
         },
         "playbackSpeed": {
           "type": "number",
@@ -24180,7 +24181,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "playbackStart": {
           "type": "integer",
-          "description": "Playback start frame."
+          "description": "Playback start, in display-rate frames."
         },
         "playerPath": {
           "type": "string",
@@ -24529,7 +24530,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "start": {
           "type": "number",
-          "description": "Range start frame or time."
+          "description": "Section start in display-rate frames (default 0)."
         },
         "startFrame": {
           "type": [

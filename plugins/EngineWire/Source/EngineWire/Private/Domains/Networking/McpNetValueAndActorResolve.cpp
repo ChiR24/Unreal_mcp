@@ -23,7 +23,15 @@ bool SaveBlueprintAndReply(FNetworkingActionContext& Context, UBlueprint* Bluepr
 {
     Blueprint->Modify();
     FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-    Context.ResultJson->SetBoolField(TEXT("saved"), McpSafeAssetSave(Blueprint));
+    // A Blueprint that could not be written answered success, with only saved false to tell.
+    if (!McpSafeAssetSave(Blueprint))
+    {
+        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, FString::Printf(TEXT("%s in this editor "
+            "session, but %s could NOT be written to disk (file may be read-only or held by source control)."), *Detail,
+            *Blueprint->GetPathName()), TEXT("SAVE_FAILED"));
+        return true;
+    }
+    Context.ResultJson->SetBoolField(TEXT("saved"), true);
     Context.ResultJson->SetBoolField(TEXT("success"), true);
     Context.ResultJson->SetStringField(TEXT("message"), Detail);
     McpHandlerUtils::AddVerification(Context.ResultJson, Blueprint);

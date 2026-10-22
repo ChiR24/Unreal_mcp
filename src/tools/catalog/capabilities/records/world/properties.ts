@@ -164,7 +164,7 @@ export const P = {
   heightScale: num('Texture displacement height scale.'),
   midpoint: num('Texture luminance midpoint for displacement.'),
   texturePath: str('Canonical /Game texture asset path.'),
-  targetActor: str('Target actor name for boolean operations.'),
+  targetActor: str('The dynamic mesh actor to edit, by label or name (actorName is the same and wins when both are sent).'),
   triangleIndices: arr('Triangle ids the operation is limited to; omit to apply it to the whole mesh. Give this or region, not both.', { type: 'integer' }),
   region: {
     type: 'object',
@@ -194,7 +194,7 @@ export const P = {
   keepTool: bool('Keep the tool actor after the operation.'),
   keepInside: bool('Keep geometry inside the tool.'),
   cap: bool('Cap open ends of tubes.'),
-  axis: str('Axis: X, Y, or Z.'),
+  axis: str('Axis: X, Y or Z, any case; another name is refused.'),
   center: vec3('Center of operation.'),
   offset: vec3('Offset vector.'),
   // geometry: DynamicMesh authoring. Names match the native payload fields

@@ -3,6 +3,7 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 
 #include "Abilities/GameplayAbility.h"
+#include "Engine/Blueprint.h"
 #include "GameplayTagContainer.h"
 #include "UObject/UnrealType.h"
 
@@ -59,6 +60,15 @@ static bool GetAbilityPropertyValue(const UGameplayAbility* Ability, const FName
 
     OutValue = *static_cast<const T*>(ValuePtr);
     return true;
+}
+
+// PropertyName as the default object of Blueprint's compiled class holds it; false when there is none to read.
+template<typename T>
+static bool ReadCompiledAbilityValue(const UBlueprint* Blueprint, const FName& PropertyName, T& OutValue)
+{
+    const UGameplayAbility* Compiled = Blueprint && Blueprint->GeneratedClass
+        ? Cast<UGameplayAbility>(Blueprint->GeneratedClass->GetDefaultObject()) : nullptr;
+    return GetAbilityPropertyValue(Compiled, PropertyName, OutValue);
 }
 
 static inline bool AddTagToAbilityContainer(

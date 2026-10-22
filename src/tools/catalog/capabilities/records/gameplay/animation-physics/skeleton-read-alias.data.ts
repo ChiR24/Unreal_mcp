@@ -75,8 +75,8 @@ export const SKELETON_READ_ALIAS_RECORDS: readonly CapabilityRecordSource[] = [
     exampleInput: { action: 'list_morph_targets', skeletalMeshPath: '/Game/SKM_Char' },
     exampleOutput: { success: true, message: 'Morph targets listed', skeletalMeshPath: '/Game/SKM_Char', count: 2, morphTargets: [{ name: 'Smile', numDeltas: 128 }] } }),
   buildRecord({ parentTool: T, id: `${T}.set_morph_target_value`, action: 'set_morph_target_value', family: F,
-    summary: 'Drive a morph target weight on a Skeletal Mesh actor in the level.', whenToUse: ['A morph target weight must be previewed on a placed actor.'], whenNotToUse: ['The morph target asset itself must change (use set_morph_target_deltas).'],
-    inputProps: { actorName: P.actorName, morphTargetName: P.morphTargetName, value: P.value, addMissing: P.addMissing },
+    summary: 'Set a morph target weight (value 0 to 1, clamped) on the skeletal mesh component of a placed actor for this editor session (not saved with the level); a weight of 0 clears it. The morph must exist on the mesh (MORPH_TARGET_NOT_FOUND otherwise); the reply gives the weight the component holds and every active morph.', whenToUse: ['A morph target weight must be previewed on a placed actor.'], whenNotToUse: ['The morph target asset itself must change (use set_morph_target_deltas).'],
+    inputProps: { actorName: P.actorName, morphTargetName: P.morphTargetName, value: P.value },
     required: ['actorName', 'morphTargetName'],
     effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'instant', resources: 'low', plugins: ESU,
     outputProps: {

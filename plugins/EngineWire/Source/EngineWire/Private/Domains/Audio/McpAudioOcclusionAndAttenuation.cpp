@@ -161,6 +161,20 @@ bool HandleSpatialActions(
       Payload->TryGetStringField(TEXT("falloffMode"), FalloffMode);
      bool bSave = true;
      Payload->TryGetBoolField(TEXT("save"), bSave);
+     // Any other name became a Sphere or Linear falloff, with only the reply to tell.
+     const bool bKnownShape = AttenuationShape.Equals(TEXT("Sphere"), ESearchCase::IgnoreCase) ||
+         AttenuationShape.Equals(TEXT("Capsule"), ESearchCase::IgnoreCase) || AttenuationShape.Equals(TEXT("Box"), ESearchCase::IgnoreCase) ||
+         AttenuationShape.Equals(TEXT("Cone"), ESearchCase::IgnoreCase);
+     const bool bKnownFalloff = FalloffMode.Equals(TEXT("Linear"), ESearchCase::IgnoreCase) ||
+         FalloffMode.Equals(TEXT("Logarithmic"), ESearchCase::IgnoreCase) || FalloffMode.Equals(TEXT("Inverse"), ESearchCase::IgnoreCase) ||
+         FalloffMode.Equals(TEXT("NaturalSound"), ESearchCase::IgnoreCase);
+     if (!bKnownShape || !bKnownFalloff) {
+       Self->SendAutomationError(RequestingSocket, RequestId, bKnownShape
+           ? FString::Printf(TEXT("falloffMode must be Linear, Logarithmic, Inverse or NaturalSound, got '%s'. Nothing was created."), *FalloffMode)
+           : FString::Printf(TEXT("attenuationShape must be Sphere, Capsule, Box or Cone, got '%s'. Nothing was created."), *AttenuationShape),
+           TEXT("INVALID_ARGUMENT"));
+       return true;
+     }
      // Checked before the asset is made.
      TOptional<FVector> BoxExtent;
      FString ExtentError;
@@ -245,7 +259,7 @@ bool HandleSpatialActions(
       Resp->SetStringField(TEXT("name"), Name);
       // Read back: extent replaces the size innerRadius gives a box.
       Resp->SetNumberField(TEXT("innerRadius"), McpAudioAuthoring::GetAttenuationInnerRadius(Atten->Attenuation));
-      Resp->SetNumberField(TEXT("falloffDistance"), FalloffDistance);
+      Resp->SetNumberField(TEXT("falloffDistance"), Atten->Attenuation.FalloffDistance);
       Resp->SetStringField(TEXT("attenuationShape"), AppliedShape);
       McpAudioAuthoring::AddAttenuationBoxExtent(Resp, Atten->Attenuation);
       Resp->SetStringField(TEXT("falloffMode"), AppliedFalloffMode);

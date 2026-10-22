@@ -80,6 +80,11 @@ bool HandleEnableInputMapping(
             return true;
         }
 
+        // A context already on the player kept the priority it was first added with, while the reply named the new one.
+        if (InputSubsystem->HasMappingContext(Context))
+        {
+            InputSubsystem->RemoveMappingContext(Context);
+        }
         InputSubsystem->AddMappingContext(Context, Priority);
         const bool bEnabled = InputSubsystem->HasMappingContext(Context);
         Result->SetBoolField(TEXT("enabled"), bEnabled);

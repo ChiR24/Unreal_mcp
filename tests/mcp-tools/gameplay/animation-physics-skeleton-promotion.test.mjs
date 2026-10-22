@@ -55,7 +55,7 @@ const testCases = [
   // === MORPH TARGETS ===
   { scenario: 'MORPH: list_morph_targets via skeletalMeshPath', toolName: 'animation_physics', arguments: { action: 'list_morph_targets', skeletalMeshPath: MESH_PATH }, expected: 'success|not found' },
   { scenario: 'MORPH: list_morph_targets via meshPath alias', toolName: 'animation_physics', arguments: { action: 'list_morph_targets', meshPath: MESH_PATH }, expected: 'success|not found' },
-  { scenario: 'MORPH: set_morph_target_value on a live actor', toolName: 'animation_physics', arguments: { action: 'set_morph_target_value', actorName: MORPH_ACTOR, morphTargetName: 'Smile', value: 0.5, addMissing: true }, expected: 'success|not found' },
+  { scenario: 'MORPH: set_morph_target_value on a live actor', toolName: 'animation_physics', arguments: { action: 'set_morph_target_value', actorName: MORPH_ACTOR, morphTargetName: 'Smile', value: 0.5 }, expected: 'success|not found' },
 
   // === BONES ===
   { scenario: 'BONE: get_bone_transform via skeletonPath', toolName: 'animation_physics', arguments: skel('get_bone_transform', { boneName: ROOT_BONE }), expected: 'success|not found' },

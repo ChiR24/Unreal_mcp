@@ -10,7 +10,8 @@ static bool HandleMovementScalar(
     const TCHAR* InputField,
     const TCHAR* ResponseField,
     const FString& Message,
-    float UCharacterMovementComponent::* Property)
+    float UCharacterMovementComponent::* Property,
+    bool bAllowNegative = false)
 {
     const FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
     UBlueprint* Blueprint = LoadCharacterBlueprint(Self, RequestId, BlueprintPath, Socket);
@@ -28,6 +29,11 @@ static bool HandleMovementScalar(
         Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("%s is required"), InputField), TEXT("INVALID_ARGUMENT"));
         return true;
     }
+    if (Value < 0.0 && !bAllowNegative)
+    {
+        Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("%s cannot be negative. Nothing was changed."), InputField), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
     ACharacter* CharCDO = Blueprint->GeneratedClass ? Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject()) : nullptr;
     if (!CharCDO || !CharCDO->GetCharacterMovement())
     {
@@ -39,9 +45,18 @@ static bool HandleMovementScalar(
 
     FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
     if (!CommitCharacterEdit(Self, RequestId, Blueprint, Socket)) return true;
+    // The value the recompiled class holds (compiling reinstances the default object), not the one asked for.
+    const ACharacter* Compiled = Blueprint->GeneratedClass ? Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject()) : nullptr;
+    const UCharacterMovementComponent* Movement = Compiled ? Compiled->GetCharacterMovement() : nullptr;
+    if (!Movement || !FMath::IsNearlyEqual(Movement->*Property, static_cast<float>(Value)))
+    {
+        Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("%s did not persist onto the compiled class of %s."),
+            InputField, *BlueprintPath), TEXT("EDIT_NOT_APPLIED"));
+        return true;
+    }
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
-    Result->SetNumberField(FString(ResponseField), Value);
+    Result->SetNumberField(FString(ResponseField), Movement->*Property);
     Self->SendAutomationResponse(Socket, RequestId, true, Message, Result);
     return true;
 }
@@ -53,12 +68,12 @@ bool HandleSetWalkSpeed(UEngineWireSubsystem* Self, const FString& RequestId, co
 
 bool HandleSetJumpHeight(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, FCharacterSocket Socket)
 {
-    return HandleMovementScalar(Self, RequestId, Payload, Socket, TEXT("jumpHeight"), TEXT("jumpHeight"), TEXT("Jump height set"), &UCharacterMovementComponent::JumpZVelocity);
+    return HandleMovementScalar(Self, RequestId, Payload, Socket, TEXT("jumpHeight"), TEXT("jumpHeight"), TEXT("Jump launch speed set"), &UCharacterMovementComponent::JumpZVelocity);
 }
 
 bool HandleSetGravityScale(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, FCharacterSocket Socket)
 {
-    return HandleMovementScalar(Self, RequestId, Payload, Socket, TEXT("gravityScale"), TEXT("gravityScale"), TEXT("Gravity scale set"), &UCharacterMovementComponent::GravityScale);
+    return HandleMovementScalar(Self, RequestId, Payload, Socket, TEXT("gravityScale"), TEXT("gravityScale"), TEXT("Gravity scale set"), &UCharacterMovementComponent::GravityScale, /*bAllowNegative=*/true);
 }
 
 bool HandleSetGroundFriction(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, FCharacterSocket Socket)

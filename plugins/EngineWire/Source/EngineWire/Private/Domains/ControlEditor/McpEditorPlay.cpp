@@ -124,7 +124,8 @@ bool UEngineWireSubsystem::HandleControlEditorSetGameSpeed(
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
-  Resp->SetNumberField(TEXT("speed"), Speed);
+  // The dilation the world now holds (SetTimeDilation clamps to the game's limits), not the one asked for.
+  Resp->SetNumberField(TEXT("speed"), World->GetWorldSettings()->TimeDilation);
   Resp->SetNumberField(TEXT("timeDilation"), World->GetWorldSettings()->GetEffectiveTimeDilation());
   SendAutomationResponse(Socket, RequestId, true, TEXT("Game speed set"), Resp,
                          FString());

@@ -4891,3 +4891,102 @@ describe('performance settings take, or say why not', () => {
     expect(code('LevelStructure', 'McpLevelStructureEditorWorld.cpp')).toContain('(Message.EndsWith(TEXT(".")) ? Message : Message + TEXT("."))');
   });
 });
+
+describe('ability edits are measured on the compiled class and saved, or refused', () => {
+  // A policy or effect class written on a class without the property, or lost by the recompile, answered "set".
+  it('policies and effect classes are read back before the save', () => {
+    const commit = code('GAS', 'McpGASRequestContext.h');
+    expect(commit).toContain('TFunctionRef<bool()> IsPersisted = [] { return true; }');
+    expect(commit.indexOf('if (!IsPersisted())')).toBeLessThan(commit.lastIndexOf('McpSafeOperations::McpSafeAssetSave(Blueprint)'));
+    const policies = code('GAS', 'McpGASAbilityPolicies.cpp');
+    expect(policies).toContain('This ability class has no NetExecutionPolicy property. Nothing was changed.');
+    expect(policies).toContain('Result->SetStringField(TEXT("instancingPolicy"), GASEnumName(InstPolicy));');
+    expect(code('GAS', 'McpGASAbilityBasics.cpp')).toContain('ReadCompiledAbilityValue(Blueprint, ClassProperty, Held) && Held.Get() == EffectClass');
+  });
+
+  it('a set that cannot be written is SAVE_FAILED', () => {
+    const sets = code('GAS', 'McpGASAbilitySets.cpp');
+    expect(sets).toContain('if (!McpSafeAssetSave(SetAsset))');
+    expect(sets).not.toContain('const bool bSaved = McpSafeAssetSave(SetAsset);');
+  });
+});
+
+describe('edits answer with what the engine holds', () => {
+  it('movement scalars refuse negatives and read the compiled class back', () => {
+    const modes = code('Character', 'McpCharacterMovementModes.cpp');
+    expect(modes).toContain('%s cannot be negative. Nothing was changed.');
+    expect(modes).toContain('Result->SetNumberField(FString(ResponseField), Movement->*Property);');
+    expect(modes).toMatch(/&UCharacterMovementComponent::GravityScale,\s+true\);/u);
+  });
+
+  it('projectile edits change only what was sent and report the component values', () => {
+    const projectiles = code('Combat', 'McpCombatProjectiles.cpp');
+    expect(projectiles).toContain('TEXT("INVALID_BLUEPRINT")');
+    expect(projectiles).toContain('Result->SetNumberField(TEXT("projectileSpeed"), MovementComp->InitialSpeed);');
+    expect(projectiles).not.toContain('Result->SetNumberField(TEXT("collisionRadius"), GetJsonNumberField(');
+    expect(projectiles).toContain('if (Payload->HasField(TEXT("bounceEnabled")))');
+  });
+
+  it('game speed, attenuation, morph weights and spline axes report the held value', () => {
+    expect(code('ControlEditor', 'McpEditorPlay.cpp')).toContain('Resp->SetNumberField(TEXT("speed"), World->GetWorldSettings()->TimeDilation);');
+    expect(code('Audio', 'McpAudioOcclusionAndAttenuation.cpp')).toContain('Resp->SetNumberField(TEXT("falloffDistance"), Atten->Attenuation.FalloffDistance);');
+    const morph = code('Skeleton', 'MorphTargets', 'McpSkeletonMorphTargetQueries.cpp');
+    expect(morph).not.toContain('addMissing');
+    expect(morph).toContain('SkelMeshComp->GetMorphTargetCurves().Find(FName(*MorphTargetName))');
+    expect(code('Spline', 'McpSplineMeshAsset.cpp')).toContain('SplineMeshAxisName(TargetComp->GetForwardAxis())');
+    expect(code('Geometry', 'Support', 'McpGeometryArrays.cpp')).toContain('Result->SetNumberField(TEXT("triangleCount"), Target.Mesh->GetTriangleCount());');
+  });
+});
+
+describe('names the engine does not know are refused before anything changes', () => {
+  it('switch types, spline axes, attenuation shapes, deform axes and animation asset types', () => {
+    expect(code('Interaction', 'McpInteractionSwitch.cpp')).toContain('switchType must be button, lever or "');
+    const axis = code('Spline', 'McpSplineValueAndConfig.cpp');
+    expect(axis).toContain('bool ParseSplineMeshAxis(const FString& ForwardAxis, ESplineMeshAxis::Type& OutAxis)');
+    const bp = code('Spline', 'McpSplineMeshBP.cpp');
+    expect(bp.indexOf('RefuseSplineMeshAxis(')).toBeLessThan(bp.indexOf('SCS->CreateNode('));
+    const atten = code('Audio', 'McpAudioOcclusionAndAttenuation.cpp');
+    expect(atten.indexOf('attenuationShape must be Sphere, Capsule, Box or Cone')).toBeLessThan(atten.lastIndexOf('McpCreatePackageForNewAsset('));
+    expect(code('Geometry', 'McpGeometryHandlers.cpp')).toContain('axis must be X, Y or Z, got \'%s\'. Nothing was changed.');
+    const anim = code('Animation', 'Assets', 'McpAnimCreateAnimAsset.cpp');
+    expect(anim).toContain('assetType must be sequence or montage');
+    expect(anim).toContain('!bExisting && !McpSafeOperations::McpSafeAssetSave(Asset)');
+  });
+
+  it('an IK Rig path must load before the retargeter is made', () => {
+    const ik = code('AnimationAuthoring', 'McpAnimIKRetargeting.cpp');
+    expect(ik.indexOf('TEXT("IK_RIG_NOT_FOUND")')).toBeLessThan(ik.indexOf('McpCreatePackageForNewAsset('));
+  });
+});
+
+describe('calls that would change nothing are refused', () => {
+  it('sequence properties, scatter settings, spatialization and smoothing', () => {
+    const props = code('Sequence', 'McpSeqProps.cpp');
+    expect(props).toContain('Pass frameRate, playbackStart, playbackEnd or lengthInFrames. Nothing was changed.');
+    expect(props).not.toContain('TEXT("NOT_IMPLEMENTED")');
+    expect(props).not.toContain('Resp->SetNumberField(TEXT("frameRate"), 0.0);');
+    const ranges = code('Sequence', 'McpSeqRanges.cpp');
+    expect(ranges).toContain('start and end are required, in seconds, with end after start');
+    expect(ranges.indexOf('MovieScene->Modify();')).toBeLessThan(ranges.indexOf('MovieScene->SetViewRange(Start, End);'));
+    const config = code('Spline', 'McpSplineConfig.cpp');
+    expect(config).toContain('Pass spacing, useRandomOffset or randomOffsetRange. Nothing was stored.');
+    expect(config).toContain('GetConfiguredSplineNumber(Target, World, TEXT("meshSpacing"), 100.0)');
+    const spatial = code('AudioAuthoring', 'McpAudioAttenuation.cpp');
+    expect(spatial).toContain('Pass spatialize and/or spatialization. Nothing was changed.');
+    expect(spatial).toContain('if (bHasSpatialize)');
+    expect(code('Geometry', 'Deformers', 'McpGeometryDeformersSmoothing.cpp')).toContain('if (Iterations < 1 || Step <= 0.0)');
+  });
+});
+
+describe('saves and runtime state are reported as they are', () => {
+  it('networking Blueprint edits that cannot be written are SAVE_FAILED', () => {
+    const net = code('Networking', 'McpNetValueAndActorResolve.cpp');
+    expect(net).toContain('if (!McpSafeAssetSave(Blueprint))');
+    expect(net).not.toContain('SetBoolField(TEXT("saved"), McpSafeAssetSave(Blueprint))');
+  });
+
+  it('a mapping context already on the player is re-added at the new priority', () => {
+    const input = code('Input', 'McpInputRuntimeQueries.cpp');
+    expect(input.indexOf('InputSubsystem->RemoveMappingContext(Context);')).toBeLessThan(input.indexOf('InputSubsystem->AddMappingContext(Context, Priority);'));
+  });
+});

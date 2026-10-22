@@ -457,7 +457,7 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
     domain: 'python',
     family: 'python',
     topics: ['python', 'run python', 'python script', 'execute script', 'py code'],
-    summary: 'Execute inline Python code or a .py file in the editor via the native HandleExecutePython handler.',
+    summary: 'Run Python in the editor: inline code (1 MB at most) or a .py file inside the project (a path outside it, or reached through a symlink, is SECURITY_VIOLATION). Needs the Python Editor Script Plugin (PYTHON_NOT_AVAILABLE otherwise) and an explicit consent grant; dialogs answer their default. The reply gives what the script printed (output) and, when it raised, the traceback (error).',
     whenToUse: ['Editor-side Python automation must run inline or from a script file.'],
     whenNotToUse: ['Untrusted code without review; runs arbitrary editor-side code.'],
     inputProps: {

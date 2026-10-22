@@ -112,13 +112,22 @@ TSharedPtr<FJsonObject> HandleAttenuationActions(const FString& SubAction, const
 
 		// The contract names the algorithm `spatialization`; only `spatializationAlgorithm` was read.
 		const FString Algorithm = McpGetFirstStringField(Params, {TEXT("spatialization"), TEXT("spatializationAlgorithm")}).ToLower();
+		const bool bHasSpatialize = Params->HasField(TEXT("spatialize"));
+		if (Algorithm.IsEmpty() && !bHasSpatialize)
+		{
+			return McpHandlerUtils::BuildErrorResponse(TEXT("INVALID_ARGUMENT"), TEXT("Pass spatialize and/or spatialization. Nothing was changed."));
+		}
 		if (Algorithm == TEXT("default") || Algorithm == TEXT("panner")) { Atten->Attenuation.SpatializationAlgorithm = ESoundSpatializationAlgorithm::SPATIALIZATION_Default; }
 		else if (Algorithm == TEXT("binaural") || Algorithm == TEXT("hrtf")) { Atten->Attenuation.SpatializationAlgorithm = ESoundSpatializationAlgorithm::SPATIALIZATION_HRTF; }
 		else if (!Algorithm.IsEmpty())
 		{
 			return McpHandlerUtils::BuildErrorResponse(TEXT("INVALID_ARGUMENT"), FString::Printf(TEXT("spatialization '%s' is not Default or Binaural"), *Algorithm));
 		}
-		Atten->Attenuation.bSpatialize = GetJsonBoolField(Params, TEXT("spatialize"), true);
+		// spatialize defaulted to true, so setting only the algorithm switched spatialization on.
+		if (bHasSpatialize)
+		{
+			Atten->Attenuation.bSpatialize = GetJsonBoolField(Params, TEXT("spatialize"), true);
+		}
 
 		SaveAudioAsset(Atten, bSave);
 		Response->SetBoolField(TEXT("spatialize"), Atten->Attenuation.bSpatialize);

@@ -76,16 +76,19 @@ bool HandleGASAbilityBasics(const FGASRequestContext& Context, const FString& Su
             return true;
         }
         // The properties are protected, so they are set by name through reflection.
-        const bool bAssigned = SetAbilityPropertyValue(AbilityCDO,
-            FName(bCost ? TEXT("CostGameplayEffectClass") : TEXT("CooldownGameplayEffectClass")),
-            TSubclassOf<UGameplayEffect>(EffectClass));
+        const FName ClassProperty(bCost ? TEXT("CostGameplayEffectClass") : TEXT("CooldownGameplayEffectClass"));
+        const bool bAssigned = SetAbilityPropertyValue(AbilityCDO, ClassProperty, TSubclassOf<UGameplayEffect>(EffectClass));
         if (!bAssigned)
         {
             Bridge->SendAutomationError(RequestingSocket, RequestId,
                 FString::Printf(TEXT("%s GameplayEffect class property could not be written on this ability."), Noun), TEXT("PROPERTY_NOT_FOUND"));
             return true;
         }
-        if (!CommitGASBlueprintEdit(Context, Blueprint, bCost ? TEXT("Ability cost") : TEXT("Ability cooldown")))
+        if (!CommitGASBlueprintEdit(Context, Blueprint, bCost ? TEXT("Ability cost") : TEXT("Ability cooldown"), [&]
+            {
+                TSubclassOf<UGameplayEffect> Held;
+                return ReadCompiledAbilityValue(Blueprint, ClassProperty, Held) && Held.Get() == EffectClass;
+            }))
         {
             return true;
         }
@@ -93,7 +96,9 @@ bool HandleGASAbilityBasics(const FGASRequestContext& Context, const FString& Su
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
         Result->SetStringField(PathKey, EffectPath);
-        Result->SetBoolField(AssignedKey, bAssigned);
+        // The class the compiled ability holds, which a redirector or a Blueprint path may spell differently.
+        Result->SetStringField(bCost ? TEXT("costEffectClass") : TEXT("cooldownEffectClass"), EffectClass->GetPathName());
+        Result->SetBoolField(AssignedKey, true);
         Bridge->SendAutomationResponse(RequestingSocket, RequestId, true,
             bCost ? TEXT("Ability cost set") : TEXT("Ability cooldown set"), Result);
         return true;

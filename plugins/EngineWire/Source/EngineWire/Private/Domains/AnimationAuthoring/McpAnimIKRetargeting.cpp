@@ -22,6 +22,16 @@ TSharedPtr<FJsonObject> HandleIKRetargetActions(const FString& SubAction, const 
         {
             ANIM_ERROR_RESPONSE(TEXT("Name is required"), TEXT("MISSING_NAME"));
         }
+        // A rig path that did not load was skipped and the retargeter made without that rig; set_retarget_chain_mapping
+        // then failed with RIGS_NOT_SET two calls later.
+        for (const FString* RigPath : {&SourceIKRigPath, &TargetIKRigPath})
+        {
+            if (!RigPath->IsEmpty() &&
+                !Cast<UIKRigDefinition>(StaticLoadObject(UIKRigDefinition::StaticClass(), nullptr, **RigPath, nullptr, LOAD_NoWarn)))
+            {
+                ANIM_ERROR_RESPONSE(FString::Printf(TEXT("IK Rig not found: %s. Nothing was created."), **RigPath), TEXT("IK_RIG_NOT_FOUND"));
+            }
+        }
 
         // Create the IK Retargeter using factory
         FString FullPath = Path / Name;

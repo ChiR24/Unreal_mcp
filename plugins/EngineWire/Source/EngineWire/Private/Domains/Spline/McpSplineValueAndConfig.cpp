@@ -139,11 +139,24 @@ USplineMeshComponent* FindSplineMeshComponent(AActor* Actor, const FString& Comp
     return MeshComponents.Num() > 0 ? MeshComponents[0] : nullptr;
 }
 
-ESplineMeshAxis::Type ParseSplineMeshAxis(const FString& ForwardAxis)
+bool ParseSplineMeshAxis(const FString& ForwardAxis, ESplineMeshAxis::Type& OutAxis)
 {
-    if (ForwardAxis == TEXT("Y")) return ESplineMeshAxis::Y;
-    if (ForwardAxis == TEXT("Z")) return ESplineMeshAxis::Z;
-    return ESplineMeshAxis::X;
+    OutAxis = ForwardAxis.Equals(TEXT("Y"), ESearchCase::IgnoreCase) ? ESplineMeshAxis::Y
+        : ForwardAxis.Equals(TEXT("Z"), ESearchCase::IgnoreCase) ? ESplineMeshAxis::Z : ESplineMeshAxis::X;
+    return OutAxis != ESplineMeshAxis::X || ForwardAxis.Equals(TEXT("X"), ESearchCase::IgnoreCase);
+}
+
+const TCHAR* SplineMeshAxisName(ESplineMeshAxis::Type Axis)
+{
+    return Axis == ESplineMeshAxis::Y ? TEXT("Y") : Axis == ESplineMeshAxis::Z ? TEXT("Z") : TEXT("X");
+}
+
+bool RefuseSplineMeshAxis(UEngineWireSubsystem* Self, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket,
+                          const FString& ForwardAxis)
+{
+    Self->SendAutomationResponse(Socket, RequestId, false, FString::Printf(TEXT("'%s' is not a spline mesh axis; use X, Y or Z. "
+        "Nothing was changed."), *ForwardAxis), nullptr, TEXT("INVALID_ARGUMENT"));
+    return true;
 }
 
 bool ParseSplinePointType(const FString& TypeStr, ESplinePointType::Type& OutType)
@@ -187,6 +200,8 @@ void SetSplineConfigValue(AActor* Target, const FString& Key, const FString& Val
 {
     if (!Target) return;
 
+    // Before the old value goes, so undo restores it.
+    Target->Modify();
     const FString Prefix = MakeSplineConfigTagPrefix(Key);
     for (int32 Index = Target->Tags.Num() - 1; Index >= 0; --Index)
     {
@@ -195,8 +210,6 @@ void SetSplineConfigValue(AActor* Target, const FString& Key, const FString& Val
             Target->Tags.RemoveAt(Index);
         }
     }
-
-    Target->Modify();
     Target->Tags.Add(FName(*(Prefix + Value)));
     Target->MarkPackageDirty();
 }

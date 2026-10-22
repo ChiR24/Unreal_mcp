@@ -41,13 +41,13 @@ export const GEOMETRY_DEFORM_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'smooth', plugins: PLUGIN,
-    family: F, summary: 'Smooth a dynamic mesh (iterative relaxation).', whenToUse: ['A mesh must be smoothed.'], whenNotToUse: ['A mesh must be relaxed; use relax.'],
+    family: F, summary: 'Smooth a dynamic mesh: iterations (default 10) of Laplacian smoothing, each moving every vertex strength (default 0.2) of the way toward its neighbours; the mesh shrinks a little. Fewer than 1 iteration or a strength of 0 is refused.', whenToUse: ['A mesh must be smoothed.'], whenNotToUse: ['A mesh must be relaxed; use relax.'],
     inputProps: { actorName: P.actorName, targetActor: P.targetActor, iterations: P.iterations, strength: SMOOTH_STEP }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'smooth', targetActor: 'DM_A', iterations: 4 },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'relax', plugins: PLUGIN,
-    family: F, summary: 'Relax a dynamic mesh (shape-preserving).', whenToUse: ['A mesh must be relaxed without shrinking.'], whenNotToUse: ['A mesh must be smoothed; use smooth.'],
+    family: F, summary: 'Relax a dynamic mesh: the same smoothing as smooth with other defaults (3 iterations, strength 0.5), to even out vertex spacing. Fewer than 1 iteration or a strength of 0 is refused.', whenToUse: ['A mesh must be relaxed without shrinking.'], whenNotToUse: ['A mesh must be smoothed; use smooth.'],
     inputProps: { actorName: P.actorName, targetActor: P.targetActor, iterations: P.iterations, strength: SMOOTH_STEP }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'relax', targetActor: 'DM_A', iterations: 2 },
   }),

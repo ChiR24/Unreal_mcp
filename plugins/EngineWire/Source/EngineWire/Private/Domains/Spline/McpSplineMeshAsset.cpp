@@ -74,6 +74,11 @@ bool HandleConfigureSplineMeshAxis(
     FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
     FString ComponentName = GetJsonStringField(Payload, TEXT("componentName"));
     FString ForwardAxis = GetJsonStringField(Payload, TEXT("forwardAxis"), TEXT("X"));
+    ESplineMeshAxis::Type Axis = ESplineMeshAxis::X;
+    if (!ParseSplineMeshAxis(ForwardAxis, Axis))
+    {
+        return RefuseSplineMeshAxis(Self, RequestId, Socket, ForwardAxis);
+    }
 
     AActor* Actor = nullptr;
     USplineMeshComponent* TargetComp = ResolveSplineMeshTarget(Self, RequestId, Socket, ActorName, ComponentName, Actor);
@@ -82,16 +87,17 @@ bool HandleConfigureSplineMeshAxis(
         return true;
     }
 
-    const ESplineMeshAxis::Type Axis = ParseSplineMeshAxis(ForwardAxis);
-
+    TargetComp->Modify();
     TargetComp->SetForwardAxis(Axis);
     Actor->MarkPackageDirty();
 
+    // The axis the component holds, not the name sent.
+    const TCHAR* Held = SplineMeshAxisName(TargetComp->GetForwardAxis());
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(TEXT("forwardAxis"), ForwardAxis);
+    Result->SetStringField(TEXT("forwardAxis"), Held);
     McpHandlerUtils::AddVerification(Result, Actor);
 
     Self->SendAutomationResponse(Socket, RequestId, true,
-        FString::Printf(TEXT("Spline mesh forward axis set to %s"), *ForwardAxis), Result);
+        FString::Printf(TEXT("Spline mesh forward axis set to %s"), Held), Result);
     return true;
 }

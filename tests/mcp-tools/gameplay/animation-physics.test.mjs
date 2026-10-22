@@ -108,6 +108,7 @@ const testCases = [
 
 // === CREATE (IK Rig - explicit retargeter dependency; unavailable on some engine builds) ===
 { scenario: 'SETUP: create IK Rig for retargeter', toolName: 'animation_physics', arguments: {"action": "create_ik_rig", "name": "Testik_rig", "path": TEST_FOLDER, "skeletonPath": TEST_SKELETON_PATH}, expected: 'success|IKRIG_FACTORY_UNAVAILABLE|NOT_SUPPORTED|already exists' },
+{ scenario: 'ERROR: create_ik_retargeter refuses a rig that does not load', toolName: 'animation_physics', arguments: { action: 'create_ik_retargeter', name: 'Testik_retargeter_missing_rig', path: TEST_FOLDER, sourceIKRigPath: `${TEST_FOLDER}/IKR_DoesNotExist` }, expected: 'error|IK Rig not found' },
 { scenario: 'CREATE: create_ik_retargeter', toolName: 'animation_physics', arguments: {"action": "create_ik_retargeter", "name": "Testik_retargeter", "path": TEST_FOLDER, "sourceIKRigPath": TEST_IK_RIG_PATH, "targetIKRigPath": TEST_IK_RIG_PATH, "save": true}, expected: 'success|IKRETARGET_FACTORY_UNAVAILABLE|NOT_SUPPORTED|already exists' },
 // The test IK Rig carries no retarget chains, so auto-mapping succeeds with what exists and a named chain is refused.
 // The rig above is built on a bare skeleton and has no retarget chains, so auto-mapping has nothing to map.

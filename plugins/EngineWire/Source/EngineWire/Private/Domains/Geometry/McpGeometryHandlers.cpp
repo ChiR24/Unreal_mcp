@@ -43,6 +43,15 @@ bool UEngineWireSubsystem::HandleGeometryAction(
             Payload->SetStringField(TEXT("actorName"), TargetActor);
         }
     }
+    // An axis other than X, Y or Z fell back to each action's default axis without a word.
+    FString Axis;
+    if (Payload->TryGetStringField(TEXT("axis"), Axis) && !Axis.IsEmpty() && !Axis.Equals(TEXT("X"), ESearchCase::IgnoreCase) &&
+        !Axis.Equals(TEXT("Y"), ESearchCase::IgnoreCase) && !Axis.Equals(TEXT("Z"), ESearchCase::IgnoreCase))
+    {
+        SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("axis must be X, Y or Z, got '%s'. Nothing was changed."), *Axis),
+                            TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
     // Every edit of a placed dynamic mesh is one editor undo step; none of these edits could be undone before.
     const FMcpGeometryUndoScope Undo(Payload);
 

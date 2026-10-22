@@ -99,6 +99,8 @@ const testCases = [
   { scenario: 'CONFIG: set_tick_resolution', toolName: 'manage_sequence', arguments: { action: 'set_tick_resolution', path: SEQUENCE_PATH, resolution: '24000/1' }, expected: 'success' },
   { scenario: 'CONFIG: set_work_range', toolName: 'manage_sequence', arguments: { action: 'set_work_range', path: SEQUENCE_PATH, start: 0, end: 5 }, expected: 'success' },
   { scenario: 'CONFIG: set_view_range', toolName: 'manage_sequence', arguments: { action: 'set_view_range', path: SEQUENCE_PATH, start: 0, end: 5 }, expected: 'success' },
+  { scenario: 'ERROR: set_view_range refuses an end before its start', toolName: 'manage_sequence', arguments: { action: 'set_view_range', path: SEQUENCE_PATH, start: 5, end: 1 }, expected: 'error|end after start' },
+  { scenario: 'ERROR: set_properties refuses a call that sets nothing', toolName: 'manage_sequence', arguments: { action: 'set_properties', path: SEQUENCE_PATH }, expected: 'error|Pass frameRate' },
 
   // === METADATA / LISTING ===
   { scenario: 'ACTION: list', toolName: 'manage_sequence', arguments: { action: 'list', path: TEST_FOLDER }, expected: 'success' },

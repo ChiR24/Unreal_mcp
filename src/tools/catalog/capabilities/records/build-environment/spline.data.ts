@@ -124,7 +124,7 @@ export const SPLINE_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'build_environment.configure_spline_mesh_axis', action: 'configure_spline_mesh_axis', family: F,
-    summary: 'Set the forward axis of a spline mesh component.',
+    summary: 'Set which local axis of its mesh a spline mesh component lays along the spline (forwardAxis X, the default, Y or Z, any case; another name is refused before anything changes). The reply gives the axis the component holds; the level is left unsaved.',
     whenToUse: WU, whenNotToUse: ['Default axis is sufficient.'],
     inputProps: { actorName: P.actorName, actorPath: ACTOR_PATH, componentName: P.componentName, forwardAxis: P.forwardAxis },
     required: [], effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'interactive', resources: 'low',
@@ -150,7 +150,7 @@ export const SPLINE_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'build_environment.configure_mesh_spacing', action: 'configure_mesh_spacing', family: F,
-    summary: 'Configure mesh spacing along a spline.',
+    summary: 'Store the spacing scatter_meshes_along_spline uses for a spline actor (actorName; with none, for every spline in the level): spacing in cm between meshes (default 100), useRandomOffset and randomOffsetRange (cm). Nothing is placed until scatter runs, and a value sent to scatter wins over the stored one. Only the fields sent are stored, a call with none is refused, and the reply gives what scatter will read.',
     whenToUse: WU, whenNotToUse: ['Default spacing is sufficient.'],
     inputProps: { useRandomOffset: P.useRandomOffset, randomOffsetRange: P.randomOffsetRange, actorName: P.actorName, actorPath: ACTOR_PATH, spacing: P.spacing },
     required: [], effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'interactive', resources: 'low',
@@ -158,7 +158,7 @@ export const SPLINE_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'build_environment.configure_mesh_randomization', action: 'configure_mesh_randomization', family: F,
-    summary: 'Configure randomization for meshes scattered along a spline.',
+    summary: 'Store the randomization scatter_meshes_along_spline uses for a spline actor (or, with no actorName, for every spline in the level): randomizeScale between minScale and maxScale (defaults 0.8 and 1.2), randomizeRotation within rotationRange degrees (default 360). Nothing is placed until scatter runs; only the fields sent are stored (a scale sent alone is checked against the stored other), a call with none is refused, and the reply gives what scatter will read.',
     whenToUse: WU, whenNotToUse: ['Uniform placement is desired.'],
     inputProps: { rotationRange: P.rotationRange, actorName: P.actorName, actorPath: ACTOR_PATH,
       randomizeRotation: P.randomizeRotation, randomizeScale: P.randomizeScale, minScale: P.minScale, maxScale: P.maxScale },

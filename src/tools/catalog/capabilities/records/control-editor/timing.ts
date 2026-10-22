@@ -15,7 +15,7 @@ const STEP_DILATION = { type: 'number', description: 'The game speed the steps r
 export const TIMING_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_editor', action: 'set_game_speed', domain: D, family: F,
-    summary: 'Set the speed of the running game (PIE time dilation), for slow motion while testing.',
+    summary: 'Set the speed of the running game (Play In Editor time dilation, above 0 and up to 20; 1 is normal), for slow motion while testing. The reply gives speed, the dilation the world holds after the game clamps it, and timeDilation, the effective one. Refused when Play In Editor is not running (NO_ACTIVE_SESSION).',
     whenToUse: ['Game speed must be changed for testing, e.g. slowed down to observe a short-lived actor.'],
     whenNotToUse: ['PIE is not running (start it with control_editor play first).'],
     inputProps: { speed: P.speed },
