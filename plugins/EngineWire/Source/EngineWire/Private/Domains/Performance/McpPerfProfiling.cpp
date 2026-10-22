@@ -1,6 +1,8 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 
 #include "Domains/Performance/McpPerfPrivate.h"
+#include "Foundation/Render/McpConsoleVariableWrite.h"
+#include "Foundation/Render/McpViewportStats.h"
 
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
@@ -258,23 +260,29 @@ bool HandleProfilingAction(const FPerformanceActionContext& Context)
         bool bEnabled = true;
         Context.Payload->TryGetBoolField(TEXT("enabled"), bEnabled);
 
-        if (IConsoleVariable* CVar =
-                IConsoleManager::Get().FindConsoleVariable(TEXT("r.GPUStatsEnabled")))
+        if (!RequireEditor(Context))
         {
-            CVar->Set(bEnabled ? 1 : 0);
+            return true;
         }
-
-        if (bEnabled)
+        // Set as the console does and read back; a code-priority Set lost to any console set without a word. The variable
+        // gates GPU timing up to UE 5.7; UE 5.8 times the GPU always and has none.
+        IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.GPUStatsEnabled"));
+        const FString NotTaken = CVar ? McpSetConsoleVariable(*CVar, bEnabled ? TEXT("1") : TEXT("0")) : FString();
+        if (!NotTaken.IsEmpty())
         {
-            if (!RequireEditor(Context))
-            {
-                return true;
-            }
+            Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId,
+                FString::Printf(TEXT("r.GPUStatsEnabled %s; GPU timing was not changed."), *NotTaken), TEXT("CVAR_UNAVAILABLE"));
+            return true;
+        }
+        // "stat gpu" toggles: run while the overlay was already up it hid it, and enabled false never hid it.
+        if (McpIsStatShown(TEXT("GPU")) != bEnabled)
+        {
             GEngine->Exec(GEditor->GetEditorWorldContext().World(), TEXT("stat gpu"));
         }
 
         TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
         Resp->SetBoolField(TEXT("enabled"), bEnabled);
+        Resp->SetBoolField(TEXT("overlayShown"), McpIsStatShown(TEXT("GPU")));
         Context.Bridge.SendAutomationResponse(
             Context.RequestingSocket, Context.RequestId, true,
             FString::Printf(TEXT("GPU timing %s"),

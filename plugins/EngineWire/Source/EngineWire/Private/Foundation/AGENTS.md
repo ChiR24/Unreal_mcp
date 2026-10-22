@@ -13,7 +13,7 @@ domain-local copy of reflection, path, JSON, or response helpers.
 | `Blueprint/` | 5 .cpp | BP pin/type introspection (no public .h; pull via subsystem) |
 | `Diagnostics/` | 6 files | diagnostics snapshot capture/load/rotation + file-name/schema helpers |
 | `GraphLayout/` | 1 file | graph node extent geometry |
-| `Render/` | 4 files | post-process volume resolution, console variable writes |
+| `Render/` | 5 files | post-process volume resolution, console variable writes, stat overlay state |
 | `BridgeHelpers/` | umbrella + 7 groups | asset/actor/BP/property/response/security facade |
 | root | `McpSecureTokenCompare.h` | constant-time token equality |
 
@@ -42,6 +42,7 @@ domain-local copy of reflection, path, JSON, or response helpers.
 | Resolve a UClass by name | `BridgeHelpers/Reflection/McpClassResolve.h` |
 | Build / verify response, capture output, JSON fields | `BridgeHelpers/Responses/{Responses,ResponseVerification,OutputCapture,JsonFields}.h` |
 | Set a console variable and know it took | `Render/McpConsoleVariableWrite.h` `McpSetConsoleVariable` (console priority by default, read-only refused, read back; `IConsoleVariable::Set` alone loses to a console set silently) |
+| Show or hide a stat overlay without toggling it twice | `Render/McpViewportStats.h` `McpIsStatShown` (the viewport a Stat command lands on: the running game, else the last level viewport; Stat commands toggle) |
 | Give a spawned volume real bounds | `../Domains/Volume/McpVolumeGeometry.h` `VolumeHelpers::CreateBoxBrushForVolume` (a volume from `SpawnActor` has no brush; scaling it leaves zero bounds) |
 | Everything at once | `BridgeHelpers/McpHelpers.h` (umbrella) |
 

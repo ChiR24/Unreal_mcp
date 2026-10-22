@@ -433,11 +433,11 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'spawn_category',
     domain: 'logs',
     family: 'logs',
-    summary: 'Turn a Gameplay Debugger category on or off in game (its ActiveInGame setting), adding the category entry when it is missing.',
+    summary: 'Turn a registered Gameplay Debugger category (AI, BehaviorTree, EQS, Navigation, Perception and the like) on or off: its ActiveInGame and ActiveInSimulate settings for this editor session (not saved to the project\'s config), and at once in a running game\'s debugger (replicatorUpdated). A name that is not registered is refused (CATEGORY_NOT_FOUND) with the ones that are.',
     whenToUse: ['A Gameplay Debugger category (AI, BehaviorTree, EQS, Perception, ...) must show or hide in the in-game debugger.'],
     whenNotToUse: ['Editor log output is wanted (use subscribe or read_log).'],
     inputProps: {
-      categoryName: { type: 'string', description: 'Category name (letters, digits, underscore, hyphen only).' },
+      categoryName: { type: 'string', description: 'A registered category name, case ignored (letters, digits, underscore, hyphen only).' },
       category: { type: 'string', description: 'Same as categoryName; categoryName wins when both are given.' },
       enabled: { type: 'boolean', description: 'Show (true, default) or hide (false) the category in game.' },
     },

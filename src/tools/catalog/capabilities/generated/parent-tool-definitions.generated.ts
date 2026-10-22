@@ -25454,10 +25454,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Bloom on by default."
         },
-        "boostPlayerLocation": {
-          "type": "boolean",
-          "description": "Prioritize streaming around the player."
-        },
         "build": {
           "type": "boolean",
           "description": "Compile the game target first (default true)."
@@ -25468,11 +25464,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "categoryName": {
           "type": "string",
-          "description": "Category name (letters, digits, underscore, hyphen only)."
+          "description": "A registered category name, case ignored (letters, digits, underscore, hyphen only)."
         },
         "cellSize": {
           "type": "number",
-          "description": "Partition cell size."
+          "description": "Cell size of the first runtime grid, in cm."
         },
         "channels": {
           "type": "string",
@@ -25561,11 +25557,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "enableInstancing": {
           "type": "boolean",
-          "description": "Dynamic instancing of mesh draw commands (r.MeshDrawCommands.DynamicInstancing)."
+          "description": "Dynamic instancing of compatible draws (r.MeshDrawCommands.DynamicInstancing), default true."
         },
         "enabled": {
           "type": "boolean",
-          "description": "Enable (true) or disable (false) VSync."
+          "description": "Fullscreen (true) or windowed (false)."
         },
         "enabledOnly": {
           "type": "boolean",
@@ -25594,11 +25590,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "forceLOD": {
           "type": "number",
-          "description": "Forced LOD level."
+          "description": "LOD index every static mesh draws (0 is the most detailed); -1 returns to distance-based LOD."
         },
         "forceRecompile": {
           "type": "boolean",
-          "description": "Force a shader recompile."
+          "description": "Recompile every shader, overriding mode (default false); slow on a large project."
         },
         "globalIllumination": {
           "type": "string",
@@ -25674,7 +25670,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "lodBias": {
           "type": "number",
-          "description": "Additional LOD bias."
+          "description": "Texture mip bias, -15 to 15 (r.MipMapLODBias); positive is blurrier, 0 the default."
         },
         "map": {
           "type": "string",
@@ -25694,7 +25690,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "maxFPS": {
           "type": "number",
-          "description": "Maximum frames per second."
+          "description": "Maximum frames per second; 0 for no cap."
         },
         "maxTests": {
           "type": "number",
@@ -25718,10 +25714,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true
         },
-        "minScreenRadius": {
-          "type": "number",
-          "description": "Smallest screen radius an object needs to be occlusion tested (r.OcclusionCullMinScreenRadius)."
-        },
         "minVerbosity": {
           "type": "string",
           "enum": [
@@ -25735,7 +25727,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "mode": {
           "type": "string",
-          "description": "Optimization mode."
+          "enum": [
+            "changed",
+            "global",
+            "editor_viewport",
+            "game_viewport",
+            "full_editor_window"
+          ],
+          "description": "What to capture: editor_viewport (default, the level viewport), game_viewport (the running game frame without its UMG widgets) or full_editor_window (the editor window as displayed, game UI and asset editors included)."
         },
         "moduleName": {
           "type": "string",
@@ -25825,7 +25824,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "poolSize": {
           "type": "number",
-          "description": "Streaming pool size in MB."
+          "description": "Streaming pool size in megabytes, at least 1, or -1 for the engine default."
         },
         "port": {
           "type": "number",
@@ -25833,7 +25832,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "profile": {
           "type": "string",
-          "description": "Baseline profile name (default balanced)."
+          "enum": [
+            "performance",
+            "balanced",
+            "quality"
+          ],
+          "description": "performance (Low), balanced (High, the default) or quality (Epic)."
         },
         "profileType": {
           "type": "string",
@@ -25902,7 +25906,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "scale": {
           "type": "number",
-          "description": "Resolution scale percentage."
+          "description": "Percent of the window resolution per axis (100 is full resolution); 0 for the engine default."
         },
         "seconds": {
           "type": "number",
@@ -25945,10 +25949,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Shadow map method: virtual shadow maps or classic shadow maps."
         },
-        "slop": {
-          "type": "number",
-          "description": "Occlusion query bounds padding in world units (r.OcclusionSlop)."
-        },
         "slotName": {
           "type": "string",
           "description": "Slot to change, as list_save_games lists it: its file name without .sav."
@@ -25977,7 +25977,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "streamingDistance": {
           "type": "number",
-          "description": "Loading/streaming range."
+          "description": "Loading range of the first runtime grid, in cm: cells this close to a streaming source load."
         },
         "subfolder": {
           "type": "string",

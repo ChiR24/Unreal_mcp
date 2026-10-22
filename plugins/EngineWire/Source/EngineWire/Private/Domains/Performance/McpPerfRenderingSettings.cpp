@@ -3,19 +3,19 @@
 
 #include "Domains/Performance/McpPerfPrivate.h"
 
-#include "ContentStreaming.h"
-
-#include "Engine/Engine.h"
-#include "HAL/IConsoleManager.h"
+#include "CoreGlobals.h"
 #include "Scalability.h"
-
-#include "Camera/PlayerCameraManager.h"
-#include "Editor/UnrealEd/Public/Editor.h"
-#include "Kismet/GameplayStatics.h"
-#include "Misc/ConfigCacheIni.h"
 
 namespace McpPerformanceHandlers
 {
+namespace
+{
+const TCHAR* McpCVarSwitch(bool bOn)
+{
+    return bOn ? TEXT("1") : TEXT("0");
+}
+}
+
 bool HandleRenderingSettingsAction(const FPerformanceActionContext& Context)
 {
     if (Context.Lower == TEXT("set_scalability"))
@@ -64,7 +64,9 @@ bool HandleRenderingSettingsAction(const FPerformanceActionContext& Context)
             *Target = Level;
         }
         Scalability::SetQualityLevels(Quals);
-        Scalability::SaveState(GEditorIni);
+        // The editor loads its scalability from the editor settings ini at startup (LaunchEngineLoop); saved to the
+        // editor ini, it was never read back and the next session started at the old levels.
+        Scalability::SaveState(GEditorSettingsIni);
 
         TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
         Resp->SetStringField(TEXT("category"), Category.IsEmpty() ? TEXT("Overall") : Category);
@@ -75,21 +77,25 @@ bool HandleRenderingSettingsAction(const FPerformanceActionContext& Context)
         return true;
     }
 
+    // The rest set console variables as the console does and read them back: set at code priority, a value typed in
+    // the console kept its place and the reply still said the setting was made.
+    TArray<FString> Applied, NotSet;
     if (Context.Lower == TEXT("set_resolution_scale"))
     {
-        double Scale = 100.0;
-        if (!Context.Payload->TryGetNumberField(TEXT("scale"), Scale))
+        double Scale = 0.0;
+        if (!Context.Payload->TryGetNumberField(TEXT("scale"), Scale) || Scale < 0.0)
         {
-            Context.Bridge.SendAutomationResponse(
-                Context.RequestingSocket, Context.RequestId, false,
-                TEXT("Scale required"), nullptr, TEXT("INVALID_ARGUMENT"));
+            Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId,
+                TEXT("scale is required: the render resolution in percent (100 is full resolution), or 0 for the engine default"), TEXT("INVALID_ARGUMENT"));
             return true;
         }
-
-        SetCVarIfExists(TEXT("r.ScreenPercentage"), static_cast<float>(Scale));
-        Context.Bridge.SendAutomationResponse(
-            Context.RequestingSocket, Context.RequestId, true,
-            TEXT("Resolution scale set"), nullptr);
+        SetPerfCVar(TEXT("r.ScreenPercentage"), FString::SanitizeFloat(Scale), Applied, NotSet);
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION < 3
+        // Before 5.3 Play In Editor takes the level viewport's screen percentage over r.ScreenPercentage while this is on.
+        SetPerfCVar(TEXT("r.Editor.Viewport.OverridePIEScreenPercentage"), TEXT("0"), Applied, NotSet);
+#endif
+        SendPerfCVarResult(Context, Scale > 0.0 ? FString::Printf(TEXT("Game views render at %g%% resolution"), Scale)
+                                                : FString(TEXT("Game views back to the engine default resolution")), Applied, NotSet);
         return true;
     }
 
@@ -97,28 +103,26 @@ bool HandleRenderingSettingsAction(const FPerformanceActionContext& Context)
     {
         bool bEnabled = true;
         Context.Payload->TryGetBoolField(TEXT("enabled"), bEnabled);
-        SetCVarIfExists(TEXT("r.VSync"), bEnabled ? 1 : 0);
-        Context.Bridge.SendAutomationResponse(
-            Context.RequestingSocket, Context.RequestId, true,
-            TEXT("VSync configured"), nullptr);
+        // The editor's windows, Play In Editor included, present by r.VSyncEditor and never read r.VSync, so setting
+        // only r.VSync changed nothing on screen.
+        SetPerfCVar(TEXT("r.VSyncEditor"), McpCVarSwitch(bEnabled), Applied, NotSet);
+        SetPerfCVar(TEXT("r.VSync"), McpCVarSwitch(bEnabled), Applied, NotSet);
+        SendPerfCVarResult(Context, bEnabled ? TEXT("VSync on") : TEXT("VSync off"), Applied, NotSet);
         return true;
     }
 
     if (Context.Lower == TEXT("set_frame_rate_limit"))
     {
         double Limit = 0.0;
-        if (!Context.Payload->TryGetNumberField(TEXT("maxFPS"), Limit))
+        if (!Context.Payload->TryGetNumberField(TEXT("maxFPS"), Limit) || Limit < 0.0)
         {
-            Context.Bridge.SendAutomationResponse(
-                Context.RequestingSocket, Context.RequestId, false,
-                TEXT("maxFPS required"), nullptr, TEXT("INVALID_ARGUMENT"));
+            Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId,
+                TEXT("maxFPS is required: frames per second, 0 for no cap"), TEXT("INVALID_ARGUMENT"));
             return true;
         }
-
-        GEngine->SetMaxFPS(static_cast<float>(Limit));
-        Context.Bridge.SendAutomationResponse(
-            Context.RequestingSocket, Context.RequestId, true,
-            TEXT("Max FPS set"), nullptr);
+        SetPerfCVar(TEXT("t.MaxFPS"), FString::SanitizeFloat(Limit), Applied, NotSet);
+        SendPerfCVarResult(Context, Limit > 0.0 ? FString::Printf(TEXT("Frame rate capped at %g"), Limit)
+                                                : FString(TEXT("Frame rate cap removed")), Applied, NotSet);
         return true;
     }
 
@@ -126,69 +130,64 @@ bool HandleRenderingSettingsAction(const FPerformanceActionContext& Context)
     {
         bool bEnabled = true;
         Context.Payload->TryGetBoolField(TEXT("enabled"), bEnabled);
-        SetCVarIfExists(TEXT("r.Nanite"), bEnabled ? 1 : 0);
-        Context.Bridge.SendAutomationResponse(
-            Context.RequestingSocket, Context.RequestId, true,
-            TEXT("Nanite configured"), nullptr);
+        SetPerfCVar(TEXT("r.Nanite"), McpCVarSwitch(bEnabled), Applied, NotSet);
+        SendPerfCVarResult(Context, bEnabled ? TEXT("Nanite meshes render with Nanite")
+                                             : TEXT("Nanite meshes render their fallback meshes"), Applied, NotSet);
         return true;
     }
 
     if (Context.Lower == TEXT("configure_lod"))
     {
-        TSharedPtr<FJsonObject> LodResult = McpHandlerUtils::CreateResultObject(); // dogfood #175: echo the CVars applied
-        TSharedPtr<FJsonObject> AppliedCVars = MakeShared<FJsonObject>();
         double LODBias = 0.0;
-        if (Context.Payload->TryGetNumberField(TEXT("lodBias"), LODBias))
-        {
-            SetCVarIfExists(TEXT("r.MipMapLODBias"), static_cast<float>(LODBias));
-            AppliedCVars->SetNumberField(TEXT("r.MipMapLODBias"), LODBias);
-        }
         double ForceLOD = -1.0;
-        if (Context.Payload->TryGetNumberField(TEXT("forceLOD"), ForceLOD))
+        const bool bHasBias = Context.Payload->TryGetNumberField(TEXT("lodBias"), LODBias);
+        const bool bHasForce = Context.Payload->TryGetNumberField(TEXT("forceLOD"), ForceLOD);
+        if (!bHasBias && !bHasForce)
         {
-            SetCVarIfExists(TEXT("r.ForceLOD"), static_cast<int32>(ForceLOD));
-            AppliedCVars->SetNumberField(TEXT("r.ForceLOD"), static_cast<int32>(ForceLOD));
+            Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId,
+                TEXT("Pass lodBias and/or forceLOD. Nothing was changed."), TEXT("INVALID_ARGUMENT"));
+            return true;
         }
-        LodResult->SetObjectField(TEXT("appliedCVars"), AppliedCVars);
-        LodResult->SetNumberField(TEXT("appliedCount"), AppliedCVars->Values.Num());
-        Context.Bridge.SendAutomationResponse(
-            Context.RequestingSocket, Context.RequestId, true,
-            AppliedCVars->Values.Num() > 0 ? TEXT("LOD settings configured") : TEXT("No LOD setting supplied (pass lodBias and/or forceLOD)"), LodResult);
+        if (bHasBias)
+        {
+            SetPerfCVar(TEXT("r.MipMapLODBias"), FString::SanitizeFloat(LODBias), Applied, NotSet);
+        }
+        if (bHasForce)
+        {
+            SetPerfCVar(TEXT("r.ForceLOD"), FString::FromInt(FMath::RoundToInt(ForceLOD)), Applied, NotSet);
+        }
+        SendPerfCVarResult(Context, TEXT("LOD settings set"), Applied, NotSet);
         return true;
     }
 
     if (Context.Lower == TEXT("configure_texture_streaming"))
     {
         bool bEnabled = true;
-        Context.Payload->TryGetBoolField(TEXT("enabled"), bEnabled);
-
         double PoolSize = 0.0;
-        if (Context.Payload->TryGetNumberField(TEXT("poolSize"), PoolSize))
+        const bool bHasEnabled = Context.Payload->TryGetBoolField(TEXT("enabled"), bEnabled);
+        const bool bHasPool = Context.Payload->TryGetNumberField(TEXT("poolSize"), PoolSize);
+        if (!bHasEnabled && !bHasPool)
         {
-            SetCVarIfExists(
-                TEXT("r.Streaming.PoolSize"), static_cast<float>(PoolSize));
+            Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId,
+                TEXT("Pass enabled and/or poolSize. Nothing was changed."), TEXT("INVALID_ARGUMENT"));
+            return true;
         }
-
-        bool bBoost = false;
-        if (Context.Payload->TryGetBoolField(TEXT("boostPlayerLocation"), bBoost) &&
-            bBoost &&
-            GEditor &&
-            GEditor->GetEditorWorldContext().World())
+        // A pool of 0 MB holds no streamed mip, so every streamed texture would drop to its lowest one.
+        if (bHasPool && FMath::RoundToInt(PoolSize) != -1 && PoolSize < 1.0)
         {
-            APlayerCameraManager* Cam = UGameplayStatics::GetPlayerCameraManager(
-                GEditor->GetEditorWorldContext().World(), 0);
-            if (Cam)
-            {
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-                IStreamingManager::Get().AddViewLocation(Cam->GetCameraLocation());
-#endif
-            }
+            Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId,
+                TEXT("poolSize is megabytes, at least 1, or -1 for the engine's default pool. Nothing was changed."), TEXT("INVALID_ARGUMENT"));
+            return true;
         }
-
-        SetCVarIfExists(TEXT("r.TextureStreaming"), bEnabled ? 1 : 0);
-        Context.Bridge.SendAutomationResponse(
-            Context.RequestingSocket, Context.RequestId, true,
-            TEXT("Texture streaming configured"), nullptr);
+        if (bHasEnabled)
+        {
+            SetPerfCVar(TEXT("r.TextureStreaming"), McpCVarSwitch(bEnabled), Applied, NotSet);
+        }
+        if (bHasPool)
+        {
+            SetPerfCVar(TEXT("r.Streaming.PoolSize"), FString::FromInt(FMath::RoundToInt(PoolSize)), Applied, NotSet);
+        }
+        SendPerfCVarResult(Context, TEXT("Texture streaming set"), Applied, NotSet);
         return true;
     }
 

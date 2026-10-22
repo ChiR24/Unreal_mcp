@@ -11,7 +11,7 @@ export const SYSTEM_CONTROL_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'configure_performance', selector: 'setting',
-    summary: 'Configure performance settings: scalability, frame rate limit, resolution scale, vsync, LOD, Nanite, occlusion culling, texture streaming, World Partition streaming, GPU timing, draw-call and shader optimization, baseline profile.',
+    summary: 'Configure performance settings, chosen by setting: scalability levels or a baseline profile (saved, kept across restarts); session-only console settings (frame rate cap, resolution scale, vsync, LOD and mip bias, Nanite, occlusion culling, texture streaming, draw-call batching, GPU timing), each set as the console does and read back, with appliedCVars and notSet in the reply and CVAR_UNAVAILABLE when none took; World Partition streaming and grid; a shader recompile.',
     topics: ['scalability', 'frame rate limit', 'vsync', 'resolution scale', 'nanite', 'occlusion culling', 'texture streaming', 'performance'],
     members: {
       scalability: 'set_scalability', frame_rate_limit: 'set_frame_rate_limit', resolution_scale: 'set_resolution_scale', vsync: 'set_vsync', lod: 'configure_lod',

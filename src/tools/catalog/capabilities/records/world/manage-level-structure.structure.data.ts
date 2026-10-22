@@ -25,7 +25,7 @@ const LBP_NODE_ID = { type: 'string', description: 'The node: the nodeId or node
 export const LEVEL_STRUCTURE_RECORDS: readonly CapabilityRecordSource[] = [
   buildWorldRecord({
     parentTool: 'manage_level_structure', action: 'create_level', dispatchAction: 'create_level',
-    family: F, summary: 'Create a new level asset; loadAfterCreate opens it in the editor.',
+    family: F, summary: 'Create an empty level asset, levelName in levelPath (default /Game/Maps), saved unless save is false. bCreateWorldPartition makes it a World Partition level (external actors then default on; bUseExternalActors false keeps them in the level). A level already at that path is reported (alreadyExisted), never replaced. loadAfterCreate opens it, refused with DIRTY_PACKAGES (naming them) when open levels have unsaved changes the load would drop.',
     whenToUse: ['A brand-new level must be created and opened.'], whenNotToUse: ['An existing level should be loaded instead.'],
     inputProps: { levelName: P.levelName, levelPath: P.levelPath, bCreateWorldPartition: P.bCreateWorldPartition, bUseExternalActors: P.bUseExternalActors, save: P.save, loadAfterCreate: { type: 'boolean', description: 'Open the new level in the editor after creating it (default false). When open levels have unsaved changes the load would drop, the call is refused with DIRTY_PACKAGES (listing them in unsavedPackages) before anything is created.' } },
     required: ['levelName'], effect: 'write', costLatency: 'interactive', costResources: 'medium',
@@ -66,7 +66,7 @@ export const LEVEL_STRUCTURE_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildWorldRecord({
     parentTool: 'manage_level_structure', action: 'configure_grid_size', dispatchAction: 'configure_grid_size',
-    family: F, summary: 'Set a World Partition streaming grid of the open level (gridName; omitted, the first grid, or MainPartition on a Runtime Hash Set level): gridCellSize, loadingRange (how far from the player its cells load), bBlockOnSlowStreaming and priority; only the fields sent change, and a grid missing by name is added with createIfMissing (default true), the others at their defaults (cell 12800, range 25600). On a Runtime Hash Set level the grid is a runtime partition row, which must have a Main Layer to hold the values (PARTITION_HAS_NO_LAYER otherwise). The reply lists every grid; the level stays unsaved unless save is true.',
+    family: F, summary: 'Set a World Partition streaming grid of the open level (gridName; omitted, the first grid, or MainPartition on a Runtime Hash Set level): gridCellSize, loadingRange (how far from the player its cells load), bBlockOnSlowStreaming and priority; only the fields sent change, and a grid missing by name is added with createIfMissing (default true), the others at their defaults (cell 12800, range 25600). On a Runtime Hash Set level the grid is a runtime partition row, which must have a Main Layer to hold the values (PARTITION_HAS_NO_LAYER otherwise). The reply gives the edited grid values as they now stand (on a Runtime Hash Set level, the values it set) and lists every grid; a grid found with nothing sent to change is refused. The level stays unsaved unless save is true.',
     whenToUse: ['World Partition grid resolution must be tuned.'], whenNotToUse: ['World Partition is not enabled for the level.'],
     inputProps: { gridName: P.gridName, createIfMissing: P.createIfMissing, bBlockOnSlowStreaming: P.bBlockOnSlowStreaming, gridCellSize: P.gridCellSize, loadingRange: P.loadingRange, priority: P.gridPriority, save: P.levelEditSave },
     required: [], effect: 'write', behavior: { idempotency: 'idempotent' }, costLatency: 'interactive', costResources: 'low',
@@ -153,7 +153,7 @@ export const LEVEL_STRUCTURE_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildWorldRecord({
     parentTool: 'manage_level_structure', action: 'open_level_blueprint', dispatchAction: 'open_level_blueprint',
-    family: F, summary: 'Open the level blueprint (level scripting) editor.',
+    family: F, summary: 'Open the Level Blueprint editor of the open level (levelPath picks a loaded sublevel; default the persistent level), creating the Level Blueprint when the level has none yet. A level never saved (/Temp) has none to open, and an editor that does not open is EDITOR_NOT_OPENED; a headless editor only checks the Blueprint is there (headlessSafeMode). Nothing is changed or saved.',
     whenToUse: ['The level blueprint graph must be edited.'], whenNotToUse: ['A sub-level blueprint is needed; use the asset path directly.'],
     inputProps: { levelPath: P.levelPath },
     required: [], effect: 'write', costLatency: 'interactive', costResources: 'low',

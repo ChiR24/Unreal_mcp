@@ -139,6 +139,8 @@ const testCases = [
   { scenario: 'READ: list_save_games on a deleted slot', toolName: 'system_control', arguments: { action: 'list_save_games', slotName: 'McpSuiteSlot' }, expected: 'error|SAVE_SLOT_NOT_FOUND' },
   // === CREATE ===
   { scenario: 'CREATE: spawn_category', toolName: 'system_control', arguments: { action: 'spawn_category', categoryName: 'AI', enabled: true }, expected: 'success' },
+  // A mistyped category was added to the config as a new entry nothing reads, and the call answered enabled.
+  { scenario: 'ERROR: spawn_category refuses a category that is not registered', toolName: 'system_control', arguments: { action: 'spawn_category', categoryName: 'NoSuchCategory', enabled: true }, expected: 'error|CATEGORY_NOT_FOUND' },
   // === ACTION ===
   { scenario: 'ACTION: start_session', toolName: 'system_control', arguments: { action: 'start_session', channels: 'cpu' }, expected: 'success' },
   { scenario: 'INFO: get_trace_status', toolName: 'system_control', arguments: { action: 'get_trace_status' }, expected: 'success' },
@@ -240,16 +242,26 @@ const testCases = [
     // === CONFIG ===
     { scenario: 'CONFIG: set_scalability', toolName: 'system_control', arguments: {"action": "set_scalability", "level": 1, "category": "ViewDistance"}, expected: 'success' },
     { scenario: 'CONFIG: set_resolution_scale', toolName: 'system_control', arguments: {"action": "set_resolution_scale", "scale": 75}, expected: 'success' },
+    { scenario: 'CONFIG: set_resolution_scale 0 returns to the engine default', toolName: 'system_control', arguments: { action: 'set_resolution_scale', scale: 0 }, expected: 'success' },
+    { scenario: 'ERROR: set_resolution_scale refuses a negative scale', toolName: 'system_control', arguments: { action: 'set_resolution_scale', scale: -10 }, expected: 'error|scale is required' },
     { scenario: 'CONFIG: set_vsync', toolName: 'system_control', arguments: {"action": "set_vsync", "enabled": true}, expected: 'success' },
+    { scenario: 'CONFIG: set_vsync off again', toolName: 'system_control', arguments: { action: 'set_vsync', enabled: false }, expected: 'success' },
     { scenario: 'CONFIG: set_frame_rate_limit', toolName: 'system_control', arguments: {"action": "set_frame_rate_limit", "maxFPS": 60}, expected: 'success' },
+    { scenario: 'CONFIG: set_frame_rate_limit 0 removes the cap', toolName: 'system_control', arguments: { action: 'set_frame_rate_limit', maxFPS: 0 }, expected: 'success' },
+    { scenario: 'ERROR: set_frame_rate_limit refuses a negative cap', toolName: 'system_control', arguments: { action: 'set_frame_rate_limit', maxFPS: -5 }, expected: 'error|maxFPS is required' },
     // === TOGGLE ===
     { scenario: 'TOGGLE: enable_gpu_timing', toolName: 'system_control', arguments: {"action": "enable_gpu_timing"}, expected: 'success' },
     // === CONFIG ===
-    { scenario: 'CONFIG: configure_texture_streaming', toolName: 'system_control', arguments: {"action": "configure_texture_streaming", "poolSize": 128, "boostPlayerLocation": false}, expected: 'success' },
+    { scenario: 'CONFIG: configure_texture_streaming', toolName: 'system_control', arguments: {"action": "configure_texture_streaming", "poolSize": 128}, expected: 'success' },
+    { scenario: 'CONFIG: configure_texture_streaming back to the default pool, streaming on', toolName: 'system_control', arguments: { action: 'configure_texture_streaming', enabled: true, poolSize: -1 }, expected: 'success' },
+    { scenario: 'ERROR: configure_texture_streaming refuses a 0 MB pool', toolName: 'system_control', arguments: { action: 'configure_texture_streaming', poolSize: 0 }, expected: 'error|poolSize is megabytes' },
     { scenario: 'CONFIG: configure_lod', toolName: 'system_control', arguments: {"action": "configure_lod", "forceLOD": -1, "lodBias": 0}, expected: 'success' },
+    { scenario: 'ERROR: configure_lod refuses a call that sets nothing', toolName: 'system_control', arguments: { action: 'configure_lod' }, expected: 'error|Pass lodBias' },
     // === ACTION ===
+    // Saved where the editor loads its scalability, so the suite ends on the performance (Low) profile.
     { scenario: 'ACTION: apply_baseline_settings', toolName: 'system_control', arguments: {"action": "apply_baseline_settings"}, expected: 'success' },
-    { scenario: 'OPTIONAL: apply_baseline_settings with profile', toolName: 'system_control', arguments: { action: 'apply_baseline_settings', profile: 'balanced' }, expected: 'success' },
+    { scenario: 'OPTIONAL: apply_baseline_settings with profile', toolName: 'system_control', arguments: { action: 'apply_baseline_settings', profile: 'performance' }, expected: 'success' },
+    { scenario: 'ERROR: apply_baseline_settings refuses an unknown profile', toolName: 'system_control', arguments: { action: 'apply_baseline_settings', profile: 'fast' }, expected: 'error|not an allowed value' },
     { scenario: 'ACTION: optimize_draw_calls', toolName: 'system_control', arguments: {"action": "optimize_draw_calls", "enableInstancing": false, "enableBatching": true}, expected: 'success' },
     { scenario: 'ACTION: merge_actors', toolName: 'system_control', arguments: {"action": "merge_actors", "actors": [MERGE_PARENT_ACTOR, MERGE_CHILD_ACTOR], "replaceSourceActors": false, "outputPath": MERGED_ACTOR_ASSET}, expected: 'success' },
     { scenario: 'ACTION: merge_actors via packageName', toolName: 'system_control', arguments: {"action": "merge_actors", "actors": [MERGE_PARENT_ACTOR, MERGE_CHILD_ACTOR], "replaceSourceActors": false, "packageName": MERGED_ACTOR_PACKAGE_ASSET}, expected: 'success' },
@@ -257,14 +269,16 @@ const testCases = [
     { scenario: 'ERROR: merge_actors refuses an asset already at the path', toolName: 'system_control', arguments: { action: 'merge_actors', actors: [MERGE_PARENT_ACTOR, MERGE_CHILD_ACTOR], packageName: MERGED_ACTOR_PACKAGE_ASSET }, expected: 'error|ASSET_ALREADY_EXISTS' },
     { scenario: 'ERROR: merge_actors refuses a name that matches no actor', toolName: 'system_control', arguments: { action: 'merge_actors', actors: [MERGE_PARENT_ACTOR, `NoSuchMergeActor_${ts}`] }, expected: 'error|ACTOR_NOT_FOUND' },
     // === CONFIG ===
+    { scenario: 'CONFIG: configure_occlusion_culling off', toolName: 'system_control', arguments: { action: 'configure_occlusion_culling', enabled: false }, expected: 'success' },
     { scenario: 'CONFIG: configure_occlusion_culling', toolName: 'system_control', arguments: {"action": "configure_occlusion_culling"}, expected: 'success' },
-  { scenario: 'CONFIG: configure_occlusion_culling slop and min screen radius', toolName: 'system_control', arguments: { action: 'configure_occlusion_culling', enabled: true, slop: 1, minScreenRadius: 0.01 }, expected: 'success' },
     // === ACTION ===
     { scenario: 'ACTION: optimize_shaders', toolName: 'system_control', arguments: {"action": "optimize_shaders"}, expected: 'success' },
-    { scenario: 'OPTIONAL: optimize_shaders without forced recompile', toolName: 'system_control', arguments: { action: 'optimize_shaders', forceRecompile: false }, expected: 'success' },
+    { scenario: 'OPTIONAL: optimize_shaders without forced recompile', toolName: 'system_control', arguments: { action: 'optimize_shaders', mode: 'changed', forceRecompile: false }, expected: 'success' },
+    { scenario: 'ERROR: optimize_shaders refuses an unknown mode', toolName: 'system_control', arguments: { action: 'optimize_shaders', mode: 'material' }, expected: 'error|not an allowed value' },
     // === CONFIG ===
     { scenario: 'CONFIG: configure_nanite', toolName: 'system_control', arguments: {"action": "configure_nanite"}, expected: 'success' },
-    { scenario: 'CONFIG: configure_world_partition', toolName: 'system_control', arguments: {"action": "configure_world_partition", "cellSize": 6400, "streamingDistance": 25600}, expected: 'success' },
+    { scenario: 'CONFIG: configure_world_partition', toolName: 'system_control', arguments: {"action": "configure_world_partition", "cellSize": 6400, "streamingDistance": 25600}, expected: { condition: 'success', errorPattern: 'WORLD_PARTITION_NOT_ENABLED' } },
+    { scenario: 'CONFIG: configure_world_partition streaming switch', toolName: 'system_control', arguments: { action: 'configure_world_partition', enabled: true }, expected: { condition: 'success', errorPattern: 'WORLD_PARTITION_NOT_ENABLED' } },
 
     // === CLEANUP ===
     { scenario: 'Cleanup: delete merged mesh asset', toolName: 'manage_asset', arguments: { action: 'delete', path: MERGED_ACTOR_ASSET, force: true }, expected: 'success|not found' },

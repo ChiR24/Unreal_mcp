@@ -135,10 +135,19 @@ bool UEngineWireSubsystem::HandleDebugAction(
                 [&CategoryName](const FGameplayDebuggerCategoryConfig& Entry) {
                     return Entry.CategoryName.Equals(CategoryName, ESearchCase::IgnoreCase);
                 });
+            // The config lists every registered category. A name it lacks (a typo) was added as a new entry that no
+            // category reads, and the call answered "enabled".
             if (!CategoryConfig)
             {
-                CategoryConfig = &Config->Categories.AddDefaulted_GetRef();
-                CategoryConfig->CategoryName = CategoryName;
+                TArray<FString> Known;
+                for (const FGameplayDebuggerCategoryConfig& Entry : Config->Categories)
+                {
+                    Known.Add(Entry.CategoryName);
+                }
+                SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("'%s' is not a gameplay debugger category; "
+                    "the registered ones are %s. Nothing was changed."), *CategoryName,
+                    Known.Num() > 0 ? *FString::Join(Known, TEXT(", ")) : TEXT("none")), TEXT("CATEGORY_NOT_FOUND"));
+                return true;
             }
 
             CategoryConfig->ActiveInGame = bEnabled

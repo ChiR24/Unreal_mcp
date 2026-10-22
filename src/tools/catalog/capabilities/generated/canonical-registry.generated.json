@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "edf48b096cf051c6",
+  "catalogRevision": "3e8d3deb2b3acfff",
   "recordCount": 416,
   "records": [
     {
@@ -100035,20 +100035,20 @@
           "texture streaming",
           "performance"
         ],
-        "summary": "Configure performance settings: scalability, frame rate limit, resolution scale, vsync, LOD, Nanite, occlusion culling, texture streaming, World Partition streaming, GPU timing, draw-call and shader optimization, baseline profile.",
+        "summary": "Configure performance settings, chosen by setting: scalability levels or a baseline profile (saved, kept across restarts); session-only console settings (frame rate cap, resolution scale, vsync, LOD and mip bias, Nanite, occlusion culling, texture streaming, draw-call batching, GPU timing), each set as the console does and read back, with appliedCVars and notSet in the reply and CVAR_UNAVAILABLE when none took; World Partition streaming and grid; a shader recompile.",
         "whenToUse": [
           "setting=scalability: A scalability group level must be changed atomically.",
           "setting=frame_rate_limit: A maximum FPS cap must be applied.",
           "setting=resolution_scale: The primary render resolution scale must be changed.",
           "setting=vsync: VSync must be toggled at runtime.",
           "setting=lod: A forced LOD level or LOD bias must be applied.",
-          "setting=nanite: Nanite must be enabled or its runtime parameters tuned.",
-          "setting=occlusion_culling: Occlusion culling must be enabled or its parameters tuned.",
-          "setting=texture_streaming: Texture streaming pool size or player-location boost must be tuned.",
-          "setting=world_partition: World Partition runtime settings must be tuned.",
+          "setting=nanite: Nanite rendering must be switched on or off, for example to compare against the fallback meshes.",
+          "setting=occlusion_culling: Occlusion culling must be switched on or off.",
+          "setting=texture_streaming: Texture streaming must be switched or its pool resized.",
+          "setting=world_partition: World Partition streaming must be switched, or its grid cell size or loading range changed.",
           "setting=gpu_timing: Per-frame GPU timing instrumentation must be enabled or disabled.",
           "setting=draw_calls: Draw-call count must be reduced through instancing or batching.",
-          "setting=shaders: Shader compilation must be optimized or force-recompiled.",
+          "setting=shaders: Shaders must be recompiled after shader source files changed.",
           "setting=baseline: A predefined performance baseline profile must be applied."
         ],
         "whenNotToUse": [
@@ -100056,7 +100056,7 @@
           "setting=frame_rate_limit: VSync should be used instead for display-synced limiting.",
           "setting=resolution_scale: The window resolution must change (use set_resolution).",
           "setting=lod: Per-actor LOD is the goal (use control_actor).",
-          "setting=nanite: The target mesh is not Nanite-compatible.",
+          "setting=nanite: One mesh must gain or lose Nanite (a setting of that static mesh asset).",
           "setting=occlusion_culling: The scene is too small to benefit from occlusion culling.",
           "setting=texture_streaming: A one-off texture import is the goal (use manage_asset).",
           "setting=world_partition: Level streaming is managed per-sublevel (use manage_level).",
@@ -100084,47 +100084,35 @@
             },
             "maxFPS": {
               "type": "number",
-              "description": "Maximum frames per second."
+              "description": "Maximum frames per second; 0 for no cap."
             },
             "scale": {
               "type": "number",
-              "description": "Resolution scale percentage."
+              "description": "Percent of the window resolution per axis (100 is full resolution); 0 for the engine default."
             },
             "enabled": {
               "type": "boolean",
-              "description": "Enable (true) or disable (false) VSync."
+              "description": "VSync on (true, the default) or off (false)."
             },
             "forceLOD": {
               "type": "number",
-              "description": "Forced LOD level."
+              "description": "LOD index every static mesh draws (0 is the most detailed); -1 returns to distance-based LOD."
             },
             "lodBias": {
               "type": "number",
-              "description": "Additional LOD bias."
-            },
-            "slop": {
-              "type": "number",
-              "description": "Occlusion query bounds padding in world units (r.OcclusionSlop)."
-            },
-            "minScreenRadius": {
-              "type": "number",
-              "description": "Smallest screen radius an object needs to be occlusion tested (r.OcclusionCullMinScreenRadius)."
+              "description": "Texture mip bias, -15 to 15 (r.MipMapLODBias); positive is blurrier, 0 the default."
             },
             "poolSize": {
               "type": "number",
-              "description": "Streaming pool size in MB."
-            },
-            "boostPlayerLocation": {
-              "type": "boolean",
-              "description": "Prioritize streaming around the player."
+              "description": "Streaming pool size in megabytes, at least 1, or -1 for the engine default."
             },
             "cellSize": {
               "type": "number",
-              "description": "Partition cell size."
+              "description": "Cell size of the first runtime grid, in cm."
             },
             "streamingDistance": {
               "type": "number",
-              "description": "Loading/streaming range."
+              "description": "Loading range of the first runtime grid, in cm: cells this close to a streaming source load."
             },
             "enableBatching": {
               "type": "boolean",
@@ -100132,19 +100120,28 @@
             },
             "enableInstancing": {
               "type": "boolean",
-              "description": "Dynamic instancing of mesh draw commands (r.MeshDrawCommands.DynamicInstancing)."
+              "description": "Dynamic instancing of compatible draws (r.MeshDrawCommands.DynamicInstancing), default true."
             },
             "mode": {
               "type": "string",
-              "description": "Optimization mode."
+              "enum": [
+                "changed",
+                "global"
+              ],
+              "description": "changed (the default): shaders whose source changed; global: the global shaders."
             },
             "forceRecompile": {
               "type": "boolean",
-              "description": "Force a shader recompile."
+              "description": "Recompile every shader, overriding mode (default false); slow on a large project."
             },
             "profile": {
               "type": "string",
-              "description": "Baseline profile name (default balanced)."
+              "enum": [
+                "performance",
+                "balanced",
+                "quality"
+              ],
+              "description": "performance (Low), balanced (High, the default) or quality (Epic)."
             },
             "setting": {
               "type": "string",
@@ -100198,7 +100195,7 @@
       },
       "examples": [
         {
-          "title": "Configure performance settings: scalability, frame rate limit, resolution scale, vsync, LOD, Nanite, occlusion culling, texture streaming, World Partition streaming, GPU timing, draw-call and shader optimization, baseline profile.",
+          "title": "Configure performance settings, chosen by setting: scalability levels or a baseline profile (saved, kept across restarts); session-only console settings (frame rate cap, resolution scale, vsync, LOD and mip bias, Nanite, occlusion culling, texture streaming, draw-call batching, GPU timing), each set as the console does and read back, with appliedCVars and notSet in the reply and CVAR_UNAVAILABLE when none took; World Partition streaming and grid; a shader recompile.",
           "input": {
             "action": "configure_performance",
             "category": "ViewDistance",
@@ -100279,16 +100276,7 @@
             "lodBias": [
               "lod"
             ],
-            "slop": [
-              "occlusion_culling"
-            ],
-            "minScreenRadius": [
-              "occlusion_culling"
-            ],
             "poolSize": [
-              "texture_streaming"
-            ],
-            "boostPlayerLocation": [
               "texture_streaming"
             ],
             "cellSize": [
@@ -100329,8 +100317,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "2dcd8535745c0025281e9251cbd80675ac21838c8a2d2373edaecfda4f995425",
-        "content": "3ef6a55e00437fc1863cf4689c4fcc47e3b3e3a70e434539ac8c27aef03b76c2"
+        "schema": "4a29116febcd4e3d1fd8cb0d18826da119b6612e7e2715b1c10101aa0ee2a2f1",
+        "content": "d6078ca87fedad9b2a8f04d9bb6e166de37be964a46bb938ca5193e67142cb4b"
       }
     },
     {
@@ -104773,7 +104761,7 @@
             },
             "categoryName": {
               "type": "string",
-              "description": "Category name (letters, digits, underscore, hyphen only)."
+              "description": "A registered category name, case ignored (letters, digits, underscore, hyphen only)."
             },
             "category": {
               "type": "string",
@@ -104881,8 +104869,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "090d1709163a1df521d2265ffcbb6eeac50749a4944b08854693122482b92d5c",
-        "content": "3f8b27917942add67efce5cf6bee60040ae37db023c1219641fec430e3323874"
+        "schema": "debb847f62ce5831aad77bedb09dccda5d1187933937c4da0aec7115f0e4baee",
+        "content": "e58708f26c655a99854488801a99c7fb22cbf20721bebfd66200ae7a6d78d386"
       }
     },
     {

@@ -4810,6 +4810,22 @@ describe('sublevels and minimap volumes land where they say', () => {
   });
 });
 
+describe('gameplay debugger categories must be registered', () => {
+  // A mistyped name became a new config entry nothing reads, and the call answered "enabled".
+  it('an unregistered category is refused with the registered ones', () => {
+    const debug = code('Debug', 'McpDebugHandlers.cpp');
+    expect(debug).toContain('TEXT("CATEGORY_NOT_FOUND")');
+    expect(debug).not.toContain('Config->Categories.AddDefaulted_GetRef()');
+  });
+});
+
+describe('open_level_blueprint says when its editor did not open', () => {
+  // OpenEditorForAsset returning false still answered "Opened Level Blueprint".
+  it('an editor that did not open is EDITOR_NOT_OPENED', () => {
+    expect(code('LevelStructure', 'McpLevelStructureBPOpen.cpp')).toContain('TEXT("EDITOR_NOT_OPENED")');
+  });
+});
+
 describe('procedural foliage places instances', () => {
   // The volume had no brush, the simulation ran with a callback that added nothing, and density set the painting
   // value the simulation never reads, yet the call answered "Procedural foliage created".
@@ -4821,5 +4837,57 @@ describe('procedural foliage places instances', () => {
     expect(procedural).not.toContain('[](const TArray<FDesiredFoliageInstance> &) {}');
     expect(procedural).toContain('FT->InitialSeedDensity =');
     expect(procedural.indexOf('TEXT("MESH_NOT_FOUND")')).toBeLessThan(procedural.indexOf('McpCreatePackageForNewAsset('));
+  });
+});
+
+describe('performance settings take, or say why not', () => {
+  // Set at code priority with no read-back, a value typed in the console, a read-only variable and one this engine
+  // version lacks all answered success.
+  it('every console write goes through the read-back helper', () => {
+    const perfPrivate = code('Performance', 'McpPerfPrivate.h');
+    expect(perfPrivate).toContain('McpSetConsoleVariable(*CVar, Value)');
+    expect(perfPrivate).toContain('TEXT("CVAR_UNAVAILABLE")');
+    for (const file of ['McpPerfRenderingSettings.cpp', 'McpPerfAdvancedOptimization.cpp', 'McpPerfProfiling.cpp']) {
+      expect(code('Performance', file)).not.toContain('SetCVarIfExists');
+    }
+  });
+
+  it('vsync reaches the editor windows and the frame cap is set as the console does', () => {
+    const rendering = code('Performance', 'McpPerfRenderingSettings.cpp');
+    expect(rendering).toContain('SetPerfCVar(TEXT("r.VSyncEditor")');
+    expect(rendering).toContain('SetPerfCVar(TEXT("t.MaxFPS")');
+    expect(rendering).not.toContain('GEngine->SetMaxFPS(');
+    expect(rendering).not.toContain('boostPlayerLocation');
+  });
+
+  it('scalability is saved where the editor loads it at startup', () => {
+    for (const file of ['McpPerfRenderingSettings.cpp', 'McpPerfAdvancedOptimization.cpp']) {
+      const source = code('Performance', file);
+      expect(source).toContain('Scalability::SaveState(GEditorSettingsIni);');
+      expect(source).not.toContain('Scalability::SaveState(GEditorIni)');
+    }
+  });
+
+  it('writes no console variable the engine lacks, and refuses an unknown profile or shader mode', () => {
+    const advanced = code('Performance', 'McpPerfAdvancedOptimization.cpp');
+    for (const missing of ['r.OcclusionSlop', 'r.OcclusionCullMinScreenRadius', 'wp.Runtime.EnableStreaming', 'wp.Runtime.RuntimeCellSize', 'wp.Runtime.RuntimeStreamingRange']) {
+      expect(advanced).not.toContain(`TEXT("${missing}")`);
+    }
+    expect(advanced).toContain('WorldPartition->SetEnableStreaming(bEnabled);');
+    expect(advanced).toContain('TEXT("STREAMING_NOT_CHANGED")');
+    expect(advanced).toContain('McpLevelStructure::HandleConfigureGridSize(');
+    expect(advanced).toContain('"must be performance, balanced or quality, got \'%s\'. Nothing was changed."');
+    expect(advanced).toContain('TEXT("EXEC_FAILED")');
+  });
+
+  it('a grid edit answers with the grid as it now stands and changes only what was sent', () => {
+    const grid = code('LevelStructure', 'McpLevelStructureWorldPartition.cpp');
+    expect(grid).toContain('ResponseJson->SetNumberField(TEXT("cellSize"), Edited->CellSize);');
+    expect(grid).not.toContain('ResponseJson->SetNumberField(TEXT("cellSize"), GridCellSize);');
+    const hashSet = code('LevelStructure', 'McpLevelStructureRuntimeHashSetGrid.cpp');
+    expect(hashSet).toContain('bLoadingRangeApplied = bSetRange && SetField(');
+    expect(hashSet).toContain('bCellSizeApplied = bSetCellSize && SetField(');
+    // The unsaved-level note is its own sentence after a message that lacks a closing stop.
+    expect(code('LevelStructure', 'McpLevelStructureEditorWorld.cpp')).toContain('(Message.EndsWith(TEXT(".")) ? Message : Message + TEXT("."))');
   });
 });
