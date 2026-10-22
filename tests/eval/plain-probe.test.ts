@@ -22,6 +22,12 @@ describe('plain-phrasing probe', () => {
     }
   });
 
+  it('keeps an explicitly Blueprint-scoped node read ahead of PCG data reads on both doors', () => {
+    for (const rank of [gatewaySearchRanker, nativeSearchRanker]) {
+      expect(String(rank('read blueprint graph nodes', 1)[0])).toBe('blueprint.inspect_graph');
+    }
+  });
+
   it(`the TypeScript door ranks an accepted capability first for at least ${FLOORS.typescript}`, () => {
     expect(firstHits(gatewaySearchRanker)).toBeGreaterThanOrEqual(FLOORS.typescript);
   });

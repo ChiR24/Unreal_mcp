@@ -6,7 +6,7 @@ import { clearEditorContentRoots, setEditorContentRoots } from '../utils/paths/p
 import { type AutomationBridgeResolvedConfig, formatHostForUrl } from './bridge-config.js';
 import type { AutomationBridgeRuntimeState } from './bridge-state.js';
 import type { ConnectionManager } from './connection-manager.js';
-import type { HandshakeHandler } from './handshake.js';
+import { BridgeHandshakeRefusalError, type HandshakeHandler } from './handshake.js';
 import {
     REDACTED_AUTOMATION_CREDENTIAL,
     redactAutomationLogRecord,
@@ -114,9 +114,18 @@ export class AutomationBridgeClient {
                 });
             } catch (error) {
                 this.clearPendingConnection(socket);
-                const err = this.redactPeerError(error);
-                this.deps.state.lastHandshakeFailure = { reason: err.message, at: new Date() };
-                this.deps.emit('handshakeFailed', { reason: err.message, port: this.deps.config.port });
+                const refusalCode = error instanceof BridgeHandshakeRefusalError
+                    ? error.refusalCode
+                    : undefined;
+                const reason = refusalCode === 'PROJECT_NOT_PERMITTED'
+                    ? 'The connected Unreal project is not permitted for this capability profile.'
+                    : 'Handshake failed';
+                this.deps.state.lastHandshakeFailure = { reason, at: new Date() };
+                this.deps.emit('handshakeFailed', {
+                    reason,
+                    port: this.deps.config.port,
+                    ...(refusalCode === undefined ? {} : { refusalCode })
+                });
             }
         });
 

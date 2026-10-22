@@ -34,7 +34,7 @@ const handleConsolidatedToolCall = vi.fn(async (tool: string, args: Record<strin
     return record === undefined ? { success: true } : minimalValidOutput(record);
   });
 
-function makeContext(connected = true, bridgeTarget?: string): GatewayContext {
+function makeContext(connected = true, bridgeTarget?: string, refusalCode?: 'PROJECT_NOT_PERMITTED'): GatewayContext {
   const tools: ITools = {
     automationBridge: {
       isConnected: () => true,
@@ -45,7 +45,8 @@ function makeContext(connected = true, bridgeTarget?: string): GatewayContext {
     tools.automationBridge = {
       isConnected: () => connected,
       sendAutomationRequest: async () => ({}),
-      getClientUrl: () => bridgeTarget
+      getClientUrl: () => bridgeTarget,
+      getConnectionRefusalCode: () => refusalCode
     };
   }
   return {
@@ -160,6 +161,24 @@ describe('execute seam: guided error envelopes are preserved verbatim', () => {
     expect(result.errorCode).toBe('NOT_CONNECTED');
     expect(result.message).toBe('Unreal Engine is not connected: no bridge listener responded at ws://127.0.0.1:8090.');
     expect(result.nextCall).toEqual({ operation: 'search' });
+  });
+
+  it('preserves an authenticated project refusal as a typed gateway receipt', async () => {
+    const result = await handleUnrealGatewayCall(
+      { operation: 'execute', tool: 'manage_tools', action: 'get_status', params: {} },
+      makeContext(false, 'ws://127.0.0.1:8090', 'PROJECT_NOT_PERMITTED')
+    );
+    expect(result).toMatchObject({
+      success: false,
+      operation: 'execute',
+      errorCode: 'PROJECT_NOT_PERMITTED',
+      message: 'The connected Unreal project is not permitted for this capability profile.',
+      tool: 'manage_tools',
+      action: 'get_status'
+    });
+    expect(JSON.stringify(result)).not.toContain('C:/Private');
+    expect(JSON.stringify(result)).not.toContain('capability-token');
+    expect(dispatched).toHaveLength(0);
   });
 });
 

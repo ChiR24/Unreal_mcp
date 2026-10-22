@@ -86,6 +86,7 @@ bool HandleSetSplinePointTangents(
     // A distinct leaveTangent used to be logged and dropped on the claim that a point has one
     // tangent; SetTangentsAtSplinePoint takes both.
     ApplySplinePointTangents(SplineComp, PointIndex, Payload);
+    SplineComp->bSplineHasBeenEdited = true;
     SplineComp->UpdateSpline();
     Actor->MarkPackageDirty();
 
@@ -112,6 +113,7 @@ bool HandleSetSplinePointRotation(
 
     FRotator Rotation = ExtractRotatorField(Payload, TEXT("pointRotation"), FRotator::ZeroRotator);
     SplineComp->SetRotationAtSplinePoint(PointIndex, Rotation, ESplineCoordinateSpace::Local, true);
+    SplineComp->bSplineHasBeenEdited = true;
     SplineComp->UpdateSpline();
     Actor->MarkPackageDirty();
 
@@ -138,6 +140,7 @@ bool HandleSetSplinePointScale(
 
     FVector Scale = ExtractVectorField(Payload, TEXT("pointScale"), FVector::OneVector);
     SplineComp->SetScaleAtSplinePoint(PointIndex, Scale, true);
+    SplineComp->bSplineHasBeenEdited = true;
     SplineComp->UpdateSpline();
     Actor->MarkPackageDirty();
 
@@ -189,6 +192,7 @@ bool HandleSetSplineType(
         }
     }
 
+    SplineComp->bSplineHasBeenEdited = true;
     SplineComp->UpdateSpline();
     Actor->MarkPackageDirty();
 

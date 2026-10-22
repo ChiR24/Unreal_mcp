@@ -1,14 +1,12 @@
 /**
  * PCG async execution family records (1 action): execute_pcg_graph.
  *
- * The only asynchronous PCG action. It dispatches graph generation as a
- * game-thread task and returns a numeric taskId (an opaque scheduling receipt,
- * not a completion marker). It is long-running and not safe to retry
- * (re-execution regenerates actors). Per the native PCG handler
- * (McpPCGComponentActions.cpp) the leaf emits taskId
- * as a number and NO cancellation state and NO poll action. When createComponent
- * is false the caller must supply a component selector (actorName/
- * componentName/componentPath). Requires the PCG optional plugin.
+ * The legacy scheduling action returns a numeric taskId, not a completion
+ * marker. Supported native components also return an owner-bound operationId
+ * for the separate status/cancellation actions. Re-execution may regenerate
+ * actors, so it is not safe to retry blindly. When createComponent is false
+ * the caller supplies a component selector (actorName/componentName/
+ * componentPath). Requires the PCG optional plugin.
  */
 import type { CapabilityRecordSource } from '../../model.js';
 import { buildWorldRecord } from './builder.js';
@@ -29,7 +27,9 @@ export const PCG_ASYNC_RECORDS: readonly CapabilityRecordSource[] = [
     exampleInput: { action: 'execute_pcg_graph', graphPath: '/Game/PCG/PCG_MyGraph', createComponent: true, save: true },
     exampleOutput: { success: true, message: 'PCG graph execution started', taskId: 5231 },
     outputProps: {
-      taskId: { type: 'number', description: 'The PCG scheduler\'s id for the generation task (nothing here polls it; read bGenerated instead).' },
+      taskId: { type: 'number', description: 'Opaque numeric scheduling receipt for the PCG task; use operationId for supported completion observation.' },
+      operationId: { type: 'string', description: 'Optional authenticated per-component operation correlation ID on supported engine versions; not an MCP task ID.' },
+      operationTracking: { type: 'boolean', description: 'Native completion observation is available for this call; false does not change the legacy scheduling semantics.' },
     },
   }),
 ];

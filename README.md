@@ -290,7 +290,7 @@ These route requests inside the gateway; clients never list them. More in the [T
 | World | `build_environment` | Landscapes, foliage, lights and sky, water, weather, splines, procedural terrain |
 | World | `manage_level_structure` | Sublevels, World Partition, streaming, data layers, HLOD, volumes |
 | World | `manage_geometry` | Geometry Script meshes: booleans, deformers, UVs, collision, LODs, polygon cages, subdivision surfaces, material ids, vertex-color masks |
-| World | `manage_pcg` | PCG graphs: create, add and connect nodes, execute |
+| World | `manage_pcg` | PCG discovery, revision-checked graph edits, parameters, generation and managed results |
 | Gameplay | `animation_physics` | Animation Blueprints, blend spaces, montages, skeletons, Control Rig and IK, ragdolls, cloth, vehicles |
 | Gameplay | `manage_character` | Character Blueprints, movement, MetaHuman |
 | Gameplay | `manage_combat` | Weapons, projectiles, hit detection |
@@ -402,6 +402,7 @@ Use `-i` without `-t`: a TTY corrupts the MCP stream on stdout.
 | 📡 [Protocol](https://github.com/ChiR24/Unreal_mcp/blob/dev/docs/protocol.md) | Transports, version negotiation, cancellation |
 | 🔐 [Security and receipts](https://github.com/ChiR24/Unreal_mcp/blob/dev/docs/security-and-receipts.md) | Scopes, consent, path gating, idempotency, refusal codes |
 | 🧪 [Testing guide](https://github.com/ChiR24/Unreal_mcp/blob/dev/docs/testing-guide.md) | Test suites and how to add cases |
+| 🌱 [PCG authoring and execution](docs/pcg-authoring.md) | Graph discovery, safe edits, parameters, data reads, completion and managed products; see the [validation guide](docs/pcg-validation.md) for test commands and evidence limits |
 | 🧩 [Extending the plugin](https://github.com/ChiR24/Unreal_mcp/blob/dev/docs/editor-plugin-extension.md) | Adding an editor action: record, handler, route and tests, plus the rules for plugin code |
 | 🗺️ [Roadmap](https://github.com/ChiR24/Unreal_mcp/blob/dev/docs/Roadmap.md) | Development roadmap |
 | 📝 [Changelog](https://github.com/ChiR24/Unreal_mcp/blob/dev/CHANGELOG.md) | What changed in each release |

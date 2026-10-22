@@ -1,0 +1,146 @@
+import { randomUUID } from 'node:crypto';
+import process from 'node:process';
+import { runToolTests } from '../../test-runner.mjs';
+
+const stamp = `${Date.now()}_${randomUUID().replaceAll('-', '')}`;
+const graphPath = `/Game/MCP_PCG_Validation/Spatial_${stamp}/Graph`;
+const actorName = `MCP_PCG_Spatial_${stamp}`;
+const dataAttributeName = 'MCP_SpatialScore';
+const captured = key => '${captured:' + key + '}';
+const componentPath = captured('component');
+const pcg = (scenario, action, args, extra = {}) => ({ scenario, toolName: 'manage_pcg',
+  arguments: { action, ...args }, expected: 'success', ...extra });
+const waitForGeneration = (component, operation) => ({
+  scenario: 'Wait for native ParseActorComponents generation to complete', toolName: 'manage_pcg',
+  arguments: { action: 'get_pcg_operation_status', componentPath: component, operationId: operation },
+  expected: 'success', timeoutMs: 30000, abortOnFailure: true,
+  pollUntil: { timeoutMs: 25000, intervalMs: 1000 },
+  assertions: [
+    { path: 'structuredContent.result.completed', equals: true },
+    { path: 'structuredContent.result.engineStillRunning', equals: false },
+    { path: 'structuredContent.result.state', equals: 'succeeded' },
+    { path: 'structuredContent.result.nativeGenerated', equals: true },
+  ],
+});
+const cases = [
+  { scenario: 'Setup: create this run\'s exclusively owned Spatial PCG graph', toolName: 'manage_pcg',
+    arguments: { action: 'create_pcg_graph', graphPath, save: false }, expected: 'success', abortOnFailure: true,
+    assertions: [{ path: 'structuredContent.result.created', equals: true }],
+    captureResult: [{ key: 'ownedGraph', fromField: 'result.graphPath' }] },
+  { scenario: 'Discover the graph output boundary before connecting actor data', toolName: 'manage_pcg',
+    arguments: { action: 'get_pcg_graph', graphPath, limit: 2, edgeLimit: 1 }, expected: 'success', abortOnFailure: true,
+    assertions: [
+      { path: 'structuredContent.result.items', length: 2 },
+      { path: 'structuredContent.result.items.0.input', equals: true },
+      { path: 'structuredContent.result.items.1.output', equals: true },
+    ], captureResult: [{ key: 'graphOutput', fromField: 'result.items.1.nodeId' }] },
+  { scenario: 'Add native Get Actor Data in continuous ParseActorComponents mode with verified self selectors', toolName: 'manage_pcg',
+    arguments: { action: 'add_pcg_node', graphPath, settingsClass: 'PCGDataFromActorSettings', save: false,
+      settings: {
+        Mode: 'ParseActorComponents',
+        ActorSelector: { ActorFilter: 'Self' },
+        ComponentSelector: { ComponentSelection: 'ByClass', ComponentSelectionClass: '/Script/Engine.StaticMeshComponent' },
+      } }, expected: 'success', abortOnFailure: true,
+    captureResult: [{ key: 'actorDataNode', fromField: 'result.nodeId' }] },
+  { scenario: 'Add the native Data-domain constant without converting Spatial data to points', toolName: 'manage_pcg',
+    arguments: { action: 'add_pcg_node', graphPath, settingsClass: 'PCGAddAttributeSettings', save: false,
+      settings: { OutputTarget: { Selection: 'Attribute', AttributeName: dataAttributeName, DomainName: 'Data' },
+        AttributeTypes: { Type: 'Double', DoubleValue: 7.25 } } },
+    expected: 'success', abortOnFailure: true, captureResult: [{ key: 'spatialAttributeNode', fromField: 'result.nodeId' }] },
+  pcg('Connect the real continuous Spatial output to the metadata node input', 'connect_pcg_pins',
+    { graphPath, sourceNodeId: captured('actorDataNode'), sourcePin: 'Out',
+      targetNodeId: captured('spatialAttributeNode'), targetPin: 'In', save: false }, { abortOnFailure: true }),
+  pcg('Connect the Spatial metadata output to the discovered graph output pin Out', 'connect_pcg_pins',
+    { graphPath, sourceNodeId: captured('spatialAttributeNode'), sourcePin: 'Out',
+      targetNodeId: captured('graphOutput'), targetPin: 'Out', save: false }, { abortOnFailure: true }),
+  { scenario: 'Setup: spawn one owned bounds-valid StaticMeshActor with the engine Cube mesh', toolName: 'control_actor',
+    arguments: { action: 'spawn', classPath: '/Script/Engine.StaticMeshActor', meshPath: '/Engine/BasicShapes/Cube.Cube',
+      actorName, location: { x: 0, y: 0, z: 0 }, scale: { x: 20, y: 20, z: 2 } },
+    expected: 'success', abortOnFailure: true },
+  { scenario: 'Execute the actor-data graph and capture its exact component receipt', toolName: 'manage_pcg',
+    arguments: { action: 'execute_pcg_graph', graphPath, actorName, componentName: 'SpatialComponent', createComponent: true, save: false },
+    expected: 'success', abortOnFailure: true,
+    captureResult: [
+      { key: 'component', fromField: 'result.componentPath' },
+      { key: 'operation', fromField: 'result.operationId' },
+    ] },
+  waitForGeneration(componentPath, captured('operation')),
+  { scenario: 'Confirm native generation retained one Spatial output without creating point outputs', toolName: 'manage_pcg',
+    arguments: { action: 'get_pcg_component_results', componentPath, sampleLimit: 0 }, expected: 'success', abortOnFailure: true,
+    assertions: [
+      { path: 'structuredContent.result.generating', equals: false },
+      { path: 'structuredContent.result.outputDataCount', equals: 1 },
+      { path: 'structuredContent.result.outputPointCount', equals: 0 },
+    ] },
+  pcg('Discover the actual continuous Spatial root through the legacy data listing', 'list_pcg_data',
+    { componentPath, offset: 0, limit: 4 }, { abortOnFailure: true,
+      assertions: [
+        { path: 'structuredContent.result.items', length: 1 },
+        { path: 'structuredContent.result.total', equals: 1 },
+        { path: 'structuredContent.result.items.0.datasetIndex', equals: 0 },
+        { path: 'structuredContent.result.items.0.pin', equals: 'Out' },
+        { path: 'structuredContent.result.items.0.kind', equals: 'spatial' },
+        { path: 'structuredContent.result.items.0.dataClass', equals: '/Script/PCG.PCGPrimitiveData' },
+        { path: 'structuredContent.result.items.0.available', equals: true },
+      ], captureResult: [{ key: 'dataset', fromField: 'result.items.0.datasetId' }] }),
+  { scenario: 'An unadvertised Elements domain is unavailable on continuous Spatial data', toolName: 'manage_pcg',
+    arguments: { action: 'inspect_pcg', view: 'data_schema', componentPath, datasetId: captured('dataset'),
+      domain: 'Elements', offset: 0, limit: 1 },
+    expected: { condition: 'error', errorPattern: 'not advertised by this dataset' } },
+  pcg('Select the explicitly materialized Data schema and verify actual domain flags', 'inspect_pcg',
+    { view: 'data_schema', componentPath, datasetId: captured('dataset'), domain: 'Data', offset: 0, limit: 8 },
+    { abortOnFailure: true, assertions: [
+      { path: 'structuredContent.result.schema.domainName', equals: 'Data' },
+      { path: 'structuredContent.result.schema.defaultDomain.name', equals: 'Data' },
+      { path: 'structuredContent.result.schema.defaultDomainFlag', equals: 1 },
+      { path: 'structuredContent.result.schema.rowSemantics', equals: 'single_default_value' },
+      { path: 'structuredContent.result.schema.domains', length: 1 },
+      { path: 'structuredContent.result.schema.domains.0.name', equals: 'Data' },
+      { path: 'structuredContent.result.schema.domains.0.flag', equals: 1 },
+      { path: 'structuredContent.result.schema.domains.0.available', equals: true },
+      { path: 'structuredContent.result.schema.domains.0.queried', equals: true },
+      { path: 'structuredContent.result.schema.attributeTotal', equals: 1 },
+      { path: 'structuredContent.result.schema.attributes', includesObject: {
+        name: dataAttributeName, typeName: 'Double', defaultAvailable: true, defaultValue: 7.25,
+      } },
+    ] }),
+  pcg('Select the explicitly materialized Data schema through the legacy schema action', 'get_pcg_data_schema',
+    { componentPath, datasetId: captured('dataset'), domain: 'Data', offset: 0, limit: 8 },
+    { assertions: [
+      { path: 'structuredContent.result.schema.domainName', equals: 'Data' },
+      { path: 'structuredContent.result.schema.defaultDomainFlag', equals: 1 },
+      { path: 'structuredContent.result.schema.rowSemantics', equals: 'single_default_value' },
+      { path: 'structuredContent.result.schema.attributes', includesObject: {
+        name: dataAttributeName, typeName: 'Double', defaultAvailable: true, defaultValue: 7.25,
+      } },
+    ] }),
+  { scenario: 'Reject attribute-only Data projection on Spatial without unsupported row conversion', toolName: 'manage_pcg',
+    arguments: { action: 'inspect_pcg', view: 'create_data_view', componentPath, datasetId: captured('dataset'),
+      domain: 'Data', fields: [], attributes: [dataAttributeName], sourceOffset: 0, sourceLimit: 1 },
+    expected: { condition: 'error', errorPattern: 'no Spatial conversion is performed' } },
+  { scenario: 'Reject point-field Elements projection on Spatial without conversion', toolName: 'manage_pcg',
+    arguments: { action: 'inspect_pcg', view: 'create_data_view', componentPath, datasetId: captured('dataset'),
+      domain: 'Elements', fields: ['transform'], attributes: [], sourceOffset: 0, sourceLimit: 1 },
+    expected: { condition: 'error', errorPattern: 'no Spatial conversion is performed' } },
+  pcg('Release the owned Spatial dataset root explicitly', 'inspect_pcg',
+    { view: 'release_data_view', componentPath, handleId: captured('dataset') },
+    { assertions: [{ path: 'structuredContent.result.released', equals: true }] }),
+  { scenario: 'A released Spatial root cannot be rebound for another schema request', toolName: 'manage_pcg',
+    arguments: { action: 'inspect_pcg', view: 'data_schema', componentPath, datasetId: captured('dataset'),
+      domain: 'Data', offset: 0, limit: 1 }, expected: 'error' },
+  pcg('Cleanup: remove generated data only from this run\'s owned Spatial component', 'cleanup_pcg_component',
+    { componentPath, timeoutSeconds: 20, save: false }, { timeoutMs: 30000,
+      consent: { capability: 'manage_pcg.cleanup_pcg_component', acknowledge: 'explicit' },
+      assertions: [{ path: 'structuredContent.result.state', equals: 'succeeded' }] }),
+  { scenario: 'Cleanup: delete only the unique StaticMeshActor created by this suite', toolName: 'control_actor',
+    arguments: { action: 'delete', actorNames: [actorName] }, expected: 'success',
+    consent: { capability: 'control_actor.delete', acknowledge: 'explicit' } },
+  { scenario: 'Cleanup: delete only this run\'s exclusively owned Spatial graph', toolName: 'manage_asset',
+    arguments: { action: 'delete', path: captured('ownedGraph') }, expected: 'success',
+    consent: { capability: 'asset.delete', acknowledge: 'elevated' } },
+];
+
+runToolTests('manage_pcg_data_spatial', cases, {
+  isolatedProject: { projectName: process.env.UNREAL_MCP_TEST_PROJECT_NAME, projectDir: process.env.UE_PROJECT_PATH,
+    editorBaseDir: process.env.UE_EDITOR_BASE_DIR, engineVersionPrefix: process.env.UNREAL_MCP_TEST_ENGINE_VERSION },
+});

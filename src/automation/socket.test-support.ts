@@ -48,6 +48,7 @@ export async function startAckServer(
             const ackMessage = { type: 'bridge_ack', ...ack };
             if (sameWrite.length === 0) {
                 socket.send(JSON.stringify(ackMessage));
+                if (ackMessage.type === 'bridge_error') socket.close(4006, 'Handshake refused');
                 return;
             }
             // send() writes one frame per call; the raw socket takes all of them in one write.

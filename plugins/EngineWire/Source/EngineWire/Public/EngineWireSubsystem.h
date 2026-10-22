@@ -21,6 +21,7 @@ class UBlueprint;
 class USkeleton;
 class UEngineWireSubsystem;
 enum class EMcpStateKind : uint8;
+namespace McpPCGHandlers { class FPCGDataViewStore; }
 
 namespace EngineWire
 {
@@ -252,6 +253,7 @@ public:
 private:
   FTSTicker::FDelegateHandle TickHandle;
   TMap<FString, FAutomationHandler> AutomationHandlers;
+  TSharedPtr<McpPCGHandlers::FPCGDataViewStore> PCGDataViews;
   void InitializeHandlers();
   void StartAcceptingAutomationRequests();
   void StopAcceptingAutomationRequests();

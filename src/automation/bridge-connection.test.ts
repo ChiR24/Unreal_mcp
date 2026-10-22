@@ -31,6 +31,41 @@ describe('AutomationBridge lazy connection recovery', () => {
     }
   });
 
+  it('expires a project refusal after a different failed attempt and after success', async () => {
+    const reply: Record<string, unknown> = {
+      type: 'bridge_error',
+      error: 'PROJECT_NOT_PERMITTED',
+      message: 'D:/Private/Project.uproject and capability-token-secret'
+    };
+    const { server, port } = await startAckServer(reply);
+    const bridge = new AutomationBridge({
+      host: '127.0.0.1',
+      port,
+      connectionTimeoutMs: 1000,
+      heartbeatIntervalMs: 0
+    });
+    bridge.on('error', () => undefined);
+
+    try {
+      await expect(bridge.connect()).resolves.toBe(false);
+      expect(bridge.getConnectionRefusalCode()).toBe('PROJECT_NOT_PERMITTED');
+      expect(bridge.getStatus().lastHandshakeFailure?.reason)
+        .toBe('The connected Unreal project is not permitted for this capability profile.');
+
+      reply.error = 'SECRET_PEER_CODE';
+      await expect(bridge.connect()).resolves.toBe(false);
+      expect(bridge.getConnectionRefusalCode()).toBeUndefined();
+
+      reply.type = 'bridge_ack';
+      delete reply.error;
+      await expect(bridge.connect()).resolves.toBe(true);
+      expect(bridge.getConnectionRefusalCode()).toBeUndefined();
+    } finally {
+      bridge.stop();
+      await closeServer(server);
+    }
+  });
+
   it('starts a fresh connection attempt after a lazy connection timeout', async () => {
     let connectionCount = 0;
     const server = net.createServer(socket => {

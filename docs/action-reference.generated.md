@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `c1ad3ae42a850f2a`
+Catalog revision: `d0307eb1be11d988`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 416 capabilities across
+The catalog declares 423 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -55,14 +55,14 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_level` | 17 | 4 | 12 | 1 | level |
 | `manage_level_structure` | 8 | 2 | 5 | 1 | world |
 | `manage_networking` | 21 | 5 | 13 | 3 | networking |
-| `manage_pcg` | 3 | 0 | 3 | 0 | world |
+| `manage_pcg` | 10 | 1 | 6 | 3 | world |
 | `manage_sequence` | 19 | 2 | 16 | 1 | cinematics, media, movie_render, replay, sequence, take_recorder |
 | `manage_tools` | 9 | 4 | 5 | 0 | tools |
 | `system_control` | 29 | 9 | 18 | 2 | audio, build, console, insights, logs, performance, project, python, render, viewport, widget |
 
 ## Capabilities requiring consent
 
-65 of 416 capabilities require consent.
+68 of 423 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -109,6 +109,9 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_networking.remove_legacy_mapping` | `manage_networking` | `manage_input` | destructive | explicit |
 | `manage_networking.remove_local_player` | `manage_networking` | `manage_sessions` | destructive | explicit |
 | `manage_networking.remove_mapping` | `manage_networking` | `manage_input` | destructive | explicit |
+| `manage_pcg.control_pcg_execution` | `manage_pcg` | `cleanup_pcg_component` | destructive | explicit |
+| `manage_pcg.mutate_pcg_graph` | `manage_pcg` | `disconnect_pcg_pins` | destructive | explicit |
+| `manage_pcg.remove_pcg_parameter` | `manage_pcg` | `remove_pcg_parameter` | destructive | explicit |
 | `material.add_function_io` | `manage_asset` | `add_function_input` | write | explicit |
 | `material.add_material_node` | `manage_asset` | `add_material_node` | write | explicit |
 | `material.compile_material` | `manage_asset` | `compile_material` | write | explicit |
@@ -472,8 +475,15 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_networking.remove_mapping` | `manage_networking` | `manage_input` | destructive | destructive | explicit | `manage_networking.remove_mapping` |
 | `manage_networking.set_owner` | `manage_networking` | `manage_networking` | write | write | none | `manage_networking.set_owner` |
 | `manage_pcg.add_pcg_node` | `manage_pcg` | `add_pcg_node` | write | write | none | `manage_pcg.add_pcg_node` `manage_pcg.add_surface_sampler` `manage_pcg.add_spline_sampler` `manage_pcg.add_mesh_sampler` `manage_pcg.add_volume_sampler` `manage_pcg.add_static_mesh_spawner` `manage_pcg.add_actor_spawner` `manage_pcg.add_spline_spawner` `manage_pcg.add_density_filter` `manage_pcg.add_distance_filter` `manage_pcg.add_height_filter` `manage_pcg.add_slope_filter` `manage_pcg.add_bounds_filter` `manage_pcg.add_bounds_modifier` `manage_pcg.add_landscape_data_node` `manage_pcg.add_spline_data_node` `manage_pcg.add_actor_data_node` `manage_pcg.add_texture_data_node` `manage_pcg.add_volume_data_node` `manage_pcg.add_transform_points` `manage_pcg.add_copy_points` `manage_pcg.add_merge_points` `manage_pcg.add_project_to_surface` `manage_pcg.add_self_pruning` |
-| `manage_pcg.edit_pcg_graph` | `manage_pcg` | `create_pcg_graph` | write | write | none | `manage_pcg.edit_pcg_graph` `manage_pcg.create_pcg_graph` `manage_pcg.create_pcg_subgraph` `manage_pcg.connect_pcg_pins` `manage_pcg.set_pcg_node_settings` `manage_pcg.set_pcg_partition_grid_size` |
+| `manage_pcg.batch_edit_pcg_graph` | `manage_pcg` | `batch_edit_pcg_graph` | write | write | none | `manage_pcg.batch_edit_pcg_graph` |
+| `manage_pcg.control_pcg_execution` | `manage_pcg` | `cleanup_pcg_component` | destructive | destructive | explicit | `manage_pcg.control_pcg_execution` `manage_pcg.cleanup_pcg_component` `manage_pcg.cancel_pcg_operation` |
+| `manage_pcg.edit_pcg_graph` | `manage_pcg` | `create_pcg_graph` | write | write | none | `manage_pcg.edit_pcg_graph` `manage_pcg.create_pcg_graph` `manage_pcg.create_pcg_subgraph` `manage_pcg.sync_pcg_editor_graph` `manage_pcg.move_pcg_node` `manage_pcg.connect_pcg_pins` `manage_pcg.set_pcg_node_settings` `manage_pcg.set_pcg_partition_grid_size` |
+| `manage_pcg.edit_pcg_parameters` | `manage_pcg` | `add_pcg_parameter` | write | write | none | `manage_pcg.edit_pcg_parameters` `manage_pcg.add_pcg_parameter` `manage_pcg.set_pcg_parameter` `manage_pcg.rename_pcg_parameter` `manage_pcg.reset_pcg_parameter_override` |
 | `manage_pcg.execute_pcg_graph` | `manage_pcg` | `execute_pcg_graph` | write | write | none | `manage_pcg.execute_pcg_graph` |
+| `manage_pcg.generate_pcg_graph` | `manage_pcg` | `generate_pcg_graph` | write | write | none | `manage_pcg.generate_pcg_graph` |
+| `manage_pcg.inspect_pcg` | `manage_pcg` | `list_pcg_node_types` | read | read | none | `manage_pcg.inspect_pcg` `manage_pcg.list_pcg_node_types` `manage_pcg.get_pcg_settings_schema` `manage_pcg.get_pcg_node_schema` `manage_pcg.get_pcg_graph` `manage_pcg.get_pcg_editor_graph` `manage_pcg.validate_pcg_graph` `manage_pcg.get_pcg_parameters` `manage_pcg.get_pcg_operation_status` `manage_pcg.get_pcg_component_results` `manage_pcg.list_pcg_data` `manage_pcg.get_pcg_data_schema` `manage_pcg.create_pcg_data_view` `manage_pcg.read_pcg_data` `manage_pcg.release_pcg_data_view` |
+| `manage_pcg.mutate_pcg_graph` | `manage_pcg` | `disconnect_pcg_pins` | destructive | destructive | explicit | `manage_pcg.mutate_pcg_graph` `manage_pcg.disconnect_pcg_pins` `manage_pcg.remove_pcg_node` `manage_pcg.batch_edit_pcg_graph_destructive` |
+| `manage_pcg.remove_pcg_parameter` | `manage_pcg` | `remove_pcg_parameter` | destructive | destructive | explicit | `manage_pcg.remove_pcg_parameter` |
 | `manage_tools.disable_category` | `manage_tools` | `disable_category` | write | write | none | `manage_tools.disable_category` |
 | `manage_tools.disable_tools` | `manage_tools` | `disable_tools` | write | write | none | `manage_tools.disable_tools` |
 | `manage_tools.enable_category` | `manage_tools` | `enable_category` | write | write | none | `manage_tools.enable_category` |

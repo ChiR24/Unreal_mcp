@@ -73,6 +73,7 @@ export type AutomationBridgeConnectionInfo = {
 export type AutomationBridgeConnectedEvent = { socket: WebSocket; metadata: Record<string, unknown>; port: number; protocol: string | null };
 export type AutomationBridgeDisconnectedEvent = { code: number; reason: string; port: number; protocol: string | null };
 export type AutomationBridgePortError = Error & { port?: number };
+export type BridgeConnectionRefusalCode = 'PROJECT_NOT_PERMITTED';
 
 /**
  * Progress update message sent by UE during long operations.
@@ -221,7 +222,7 @@ export type AutomationBridgeEvents = {
     message: (message: AutomationBridgeMessage) => void;
     automationEvent: (event: AutomationBridgeAutomationEvent) => void;
     error: (error: AutomationBridgePortError) => void;
-    handshakeFailed: (info: { reason: string; port: number }) => void;
+    handshakeFailed: (info: { reason: string; port: number; refusalCode?: BridgeConnectionRefusalCode }) => void;
 };
 
 /**

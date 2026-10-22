@@ -83,6 +83,17 @@ export async function executeGatewayCall(
   if (policyFailure !== undefined) return refuseWithTarget(target, policyFailure, receiptContext);
 
   if (!await context.ensureConnected()) {
+    // The bridge exposes only a closed-set code from a validated bridge_error.
+    // A project refusal is not listener unavailability and must not be flattened
+    // to NOT_CONNECTED; no peer-provided message or project/path detail crosses.
+    if (context.tools.automationBridge?.getConnectionRefusalCode?.() === 'PROJECT_NOT_PERMITTED') {
+      return refuseWithTarget(target, {
+        errorCode: 'PROJECT_NOT_PERMITTED',
+        message: 'The connected Unreal project is not permitted for this capability profile.',
+        nextCall: buildNextCall({ operation: 'search' })
+      }, receiptContext);
+    }
+
     // Name the target the server actually dialed: with the editor closed, or
     // another process holding the port, "not connected" alone leaves the caller
     // guessing. The errorCode is unchanged so existing callers keep branching

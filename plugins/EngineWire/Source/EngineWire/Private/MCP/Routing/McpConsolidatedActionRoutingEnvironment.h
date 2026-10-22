@@ -102,6 +102,16 @@ inline const TArray<FString>& Rendering()
 inline const TArray<FString>& PCG()
 {
 	static const TArray<FString> Actions = {
+		TEXT("generate_pcg_graph"), TEXT("cleanup_pcg_component"), TEXT("cancel_pcg_operation"),
+		TEXT("get_pcg_operation_status"), TEXT("get_pcg_component_results"),
+		TEXT("list_pcg_data"), TEXT("get_pcg_data_schema"), TEXT("create_pcg_data_view"),
+		TEXT("read_pcg_data"), TEXT("release_pcg_data_view"),
+		TEXT("get_pcg_parameters"), TEXT("add_pcg_parameter"), TEXT("set_pcg_parameter"),
+		TEXT("rename_pcg_parameter"), TEXT("remove_pcg_parameter"), TEXT("reset_pcg_parameter_override"),
+		TEXT("list_pcg_node_types"), TEXT("get_pcg_settings_schema"), TEXT("get_pcg_node_schema"), TEXT("get_pcg_graph"),
+		TEXT("get_pcg_editor_graph"), TEXT("validate_pcg_graph"), TEXT("sync_pcg_editor_graph"),
+		TEXT("move_pcg_node"), TEXT("disconnect_pcg_pins"), TEXT("remove_pcg_node"),
+		TEXT("batch_edit_pcg_graph"), TEXT("batch_edit_pcg_graph_destructive"),
 		TEXT("create_pcg_graph"), TEXT("create_pcg_subgraph"),
 		TEXT("add_pcg_node"), TEXT("connect_pcg_pins"),
 		TEXT("set_pcg_node_settings"),

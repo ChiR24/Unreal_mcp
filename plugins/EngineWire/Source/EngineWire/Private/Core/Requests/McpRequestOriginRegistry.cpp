@@ -18,6 +18,9 @@ void FMcpRequestOriginRegistry::Record(const FString& RequestId, ERequestOrigin 
 	FScopeLock Lock(&Mutex);
 	if (Origins.Contains(RequestId))
 	{
+		// Queue admission repeats the transport's origin record for this same request.
+		// Preserve its authenticated principal unless the origin actually changes.
+		if (Origins[RequestId] != Origin) Principals.Remove(RequestId);
 		Origins.Add(RequestId, Origin);
 		return;
 	}
@@ -29,9 +32,29 @@ void FMcpRequestOriginRegistry::Record(const FString& RequestId, ERequestOrigin 
 		const FString Evicted = InsertionOrder[0];
 		InsertionOrder.RemoveAt(0);
 		Origins.Remove(Evicted);
+		Principals.Remove(Evicted);
 	}
 	Origins.Add(RequestId, Origin);
 	InsertionOrder.Add(RequestId);
+}
+
+void FMcpRequestOriginRegistry::RecordPrincipal(const FString& RequestId, const FString& PrincipalIdentity)
+{
+	FScopeLock Lock(&Mutex);
+	if (Origins.Contains(RequestId) && !PrincipalIdentity.IsEmpty()) Principals.Add(RequestId, PrincipalIdentity);
+}
+
+bool FMcpRequestOriginRegistry::ResolvePrincipal(const FString& RequestId, FString& OutPrincipalIdentity) const
+{
+	FScopeLock Lock(&Mutex);
+	const FString* Found = Principals.Find(RequestId);
+	if (!Found || Found->IsEmpty())
+	{
+		OutPrincipalIdentity.Reset();
+		return false;
+	}
+	OutPrincipalIdentity = *Found;
+	return true;
 }
 
 bool FMcpRequestOriginRegistry::Resolve(const FString& RequestId, ERequestOrigin& OutOrigin) const
@@ -49,6 +72,7 @@ bool FMcpRequestOriginRegistry::Resolve(const FString& RequestId, ERequestOrigin
 void FMcpRequestOriginRegistry::Forget(const FString& RequestId)
 {
 	FScopeLock Lock(&Mutex);
+	Principals.Remove(RequestId);
 	if (Origins.Remove(RequestId) > 0)
 	{
 		InsertionOrder.RemoveSingle(RequestId);
@@ -59,6 +83,7 @@ void FMcpRequestOriginRegistry::Reset()
 {
 	FScopeLock Lock(&Mutex);
 	Origins.Reset();
+	Principals.Reset();
 	InsertionOrder.Reset();
 }
 

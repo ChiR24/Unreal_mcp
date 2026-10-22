@@ -110,7 +110,9 @@ function unionMinimalParams(record: CapabilityLike): JsonRecord {
   const properties = propertiesOf(record.schemas.input);
   const params: JsonRecord = {};
   for (const name of requiredOf(record.schemas.input)) {
-    params[name] = sampleValue(properties[name]);
+    params[name] = name === 'componentPath'
+      ? '/Game/Task27/Level.Level:PersistentLevel.Actor.PCGComponent'
+      : sampleValue(properties[name]);
   }
   // `requiredOneOf` means at least one of the listed properties must be present,
   // so a valid request must carry one; otherwise the valid case would fail.

@@ -13,6 +13,13 @@
 class FMcpBridgeWebSocket;
 class UEngineWireSettings;
 
+enum class EMcpBridgeAuthenticationRefusal : uint8
+{
+	None,
+	InvalidCapabilityToken,
+	ProjectNotPermitted
+};
+
 /**
  * Delegate for handling incoming automation requests.
  * Params: RequestId, Action, Payload, RequestingSocket
@@ -109,9 +116,10 @@ private:
 	bool UpdateRateLimit(FMcpBridgeWebSocket* SocketPtr, bool bIncrementMessage, bool bIncrementAutomation, FString& OutReason);
 
 	// Resolve the socket's capability principal from the presented bridge_hello
-	// token and bind it in SocketPrincipals. Returns false when the connection
-	// must be refused, which is the ONLY authentication verdict for bridge_hello.
-	bool AuthenticateSocketPrincipal(FMcpBridgeWebSocket* SocketPtr, const FString& PresentedToken, bool bLegacyTokenMatch);
+	// token and bind it in SocketPrincipals. A refusal is a closed-set enum so the
+	// handshake can distinguish project scope from token failure without exposing
+	// peer-controlled or project-specific text.
+	bool AuthenticateSocketPrincipal(FMcpBridgeWebSocket* SocketPtr, const FString& PresentedToken, bool bLegacyTokenMatch, EMcpBridgeAuthenticationRefusal& OutRefusal);
 
 	// Build and send the bridge_ack, including the additive, secret-free authority
 	// descriptor for the principal just bound to this socket.

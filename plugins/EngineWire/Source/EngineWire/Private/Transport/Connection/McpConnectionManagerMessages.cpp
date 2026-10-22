@@ -156,8 +156,10 @@ void FMcpConnectionManager::HandleMessage(
     // configured candidate in constant time, so scoped tokens authenticate here too.
     const bool bLegacyTokenMatch =
         McpConstantTimeTokenEquals(ReceivedToken, CapabilityToken);
+    EMcpBridgeAuthenticationRefusal Refusal =
+        EMcpBridgeAuthenticationRefusal::None;
     if (!AuthenticateSocketPrincipal(SocketPtr, ReceivedToken,
-                                     bLegacyTokenMatch)) {
+                                     bLegacyTokenMatch, Refusal)) {
       if (SocketPtr) {
         {
           FScopeLock Lock(&AuthSocketsMutex);
@@ -169,7 +171,14 @@ void FMcpConnectionManager::HandleMessage(
         // socket is still connected -- this path must not depend on that.
         ForgetSocketPrincipal(SocketPtr);
       }
-      SendBridgeErrorAndClose(Socket, TEXT("INVALID_CAPABILITY_TOKEN"), FString(), 4005, TEXT("Invalid capability token"));
+      if (Refusal == EMcpBridgeAuthenticationRefusal::ProjectNotPermitted) {
+        SendBridgeErrorAndClose(
+            Socket, TEXT("PROJECT_NOT_PERMITTED"),
+            TEXT("The connected Unreal project is not permitted for this capability profile."),
+            4006, TEXT("Project not permitted"));
+      } else {
+        SendBridgeErrorAndClose(Socket, TEXT("INVALID_CAPABILITY_TOKEN"), FString(), 4005, TEXT("Invalid capability token"));
+      }
       return;
     }
 

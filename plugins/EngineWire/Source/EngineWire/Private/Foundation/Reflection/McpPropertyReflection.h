@@ -20,6 +20,10 @@ ENGINEWIRE_API double ReadableFloat(float Value);
 // The echo of a write: a struct, or an array of them, shows its editable fields only (see the .cpp).
 ENGINEWIRE_API TSharedPtr<FJsonValue> ExportWrittenValueToJson(void* TargetContainer, FProperty* Property);
 ENGINEWIRE_API TSharedPtr<FJsonObject> ExportPropertiesToJson(UObject* Object, const TArray<FName>& PropertyNames);
+// Exact in-process authored value fingerprint; unlike display JSON, preserves floating-point bits.
+ENGINEWIRE_API FString FingerprintEditableProperties(UObject* Object, const TArray<FName>& AdditionalProperties = TArray<FName>(),
+    const TMap<FName, FString>& PropertyTextOverrides = TMap<FName, FString>());
+ENGINEWIRE_API FString FingerprintReflectedValue(const FProperty* Property, void* Container);
 // A broad export walks every reflected property, so a large CDO answered with
 // a payload the gateway then refused as RESULT_TOO_LARGE - advice the caller
 // cannot act on, because inspect_cdo has no narrowing parameter other than the

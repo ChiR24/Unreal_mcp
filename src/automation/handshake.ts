@@ -5,8 +5,15 @@ import {
     REDACTED_AUTOMATION_CREDENTIAL,
     redactKnownAutomationCredentials
 } from './log-redaction.js';
-import { bridgeAckSchema } from './message-schema.js';
-import type { AutomationBridgeMessage } from './types.js';
+import { bridgeAckSchema, bridgeErrorSchema } from './message-schema.js';
+import type { AutomationBridgeMessage, BridgeConnectionRefusalCode } from './types.js';
+
+export class BridgeHandshakeRefusalError extends Error {
+    constructor(readonly refusalCode: BridgeConnectionRefusalCode) {
+        super('The connected Unreal project is not permitted for this capability profile.');
+        this.name = 'BridgeHandshakeRefusalError';
+    }
+}
 
 export class HandshakeHandler {
     private log = new AutomationLogger('HandshakeHandler');
@@ -79,6 +86,12 @@ export class HandshakeHandler {
                     return;
                 }
 
+                const refusal = bridgeErrorSchema.safeParse(parsed);
+                if (refusal.success && refusal.data.error === 'PROJECT_NOT_PERMITTED') {
+                    rejectHandshake(new BridgeHandshakeRefusalError('PROJECT_NOT_PERMITTED'), 4006, 'Project not permitted');
+                    return;
+                }
+
                 const validation = bridgeAckSchema.safeParse(parsed);
                 if (validation.success) {
                     const metadata = this.sanitizeHandshakeMetadata(validation.data as Record<string, unknown>);
@@ -86,9 +99,8 @@ export class HandshakeHandler {
                     return;
                 }
 
-                const typeHint = typeof parsed.type === 'string' ? parsed.type : 'unknown';
-                this.log.warn(`Expected bridge_ack handshake, received ${typeHint}`, validation.error.issues);
-                rejectHandshake(new Error(`Handshake expected bridge_ack, got ${typeHint}`), 4004, 'Handshake expected bridge_ack');
+                this.log.warn('Received an unexpected automation bridge handshake response');
+                rejectHandshake(new Error('Handshake expected bridge_ack'), 4004, 'Handshake expected bridge_ack');
             };
 
             const onError = (error: Error) => {

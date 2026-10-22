@@ -1,4 +1,5 @@
 #include "Foundation/McpCapabilityAuthorization.h"
+#include "Foundation/BridgeHelpers/Security/McpSubobjectPath.h"
 
 namespace McpAuthorizationCodes
 {
@@ -192,11 +193,12 @@ FMcpAuthorizationDecision CheckPaths(
 	}
 	for (const FString& Path : Paths)
 	{
-		// Collection hands back a canonical path for everything it could trust.
-		// A residual traversal, colon or backslash therefore means the value had
-		// no trustworthy canonical form — and prefix matching would MISREAD it:
-		// "/Game/TeamA/../TeamB" starts with "/Game/TeamA/" yet resolves outside.
-		if (Path.Contains(TEXT("..")) || Path.Contains(TEXT(":")) || Path.Contains(TEXT("\\")))
+		FString ObjectPath, PackagePath;
+		const bool bSubobject = McpSubobjectPath::TryCanonicalize(Path, ObjectPath, PackagePath)
+			&& ObjectPath.Equals(Path, ESearchCase::CaseSensitive);
+		// Only a fully validated canonical object address may contain a colon.
+		// Authorize its owning package, not an unchecked suffix or an actor name.
+		if (Path.Contains(TEXT("..")) || (!bSubobject && Path.Contains(TEXT(":"))) || Path.Contains(TEXT("\\")))
 		{
 			return FMcpAuthorizationDecision::Deny(
 				McpAuthorizationCodes::PathNotPermitted,
@@ -205,7 +207,7 @@ FMcpAuthorizationDecision CheckPaths(
 		bool bPermitted = false;
 		for (const FString& Prefix : Principal.AllowedPathPrefixes)
 		{
-			if (IsPathWithinPrefix(Path, Prefix))
+			if (IsPathWithinPrefix(bSubobject ? PackagePath : Path, Prefix))
 			{
 				bPermitted = true;
 				break;

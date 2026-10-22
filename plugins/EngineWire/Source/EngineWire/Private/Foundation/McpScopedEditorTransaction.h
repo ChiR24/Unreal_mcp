@@ -68,6 +68,8 @@ enum class EMcpTransactionState : uint8
 	RefusedNoTransactionBuffer,
 	/** An object cannot record undo, so the transaction was never left open. */
 	RefusedNonTransactionalObject,
+	/** Explicitly discarded an owned undo recording; this does not restore objects. */
+	RecordingDiscarded,
 	/** Opened as undoable, then a durable write was observed inside the scope. */
 	BrokenByDurableWrite
 };
@@ -92,6 +94,9 @@ public:
 	/** True only while a real transaction is open AND no durable write escaped. */
 	bool IsRecordingUndo() const;
 
+	/** Discard only an outermost recording this scope opened. Never undoes mutations or cancels a caller's transaction. */
+	bool DiscardOwnedRecording();
+
 	/** Recomputed on each call so a durable write mid-scope is never hidden. */
 	EMcpTransactionState GetState() const;
 
@@ -115,6 +120,7 @@ private:
 	FString OpenCode;
 	FString OpenDetail;
 	uint64 DurableWritesAtOpen;
+	bool bOwnsOutermostRecording = false;
 
 	TUniquePtr<class FScopedTransaction> Transaction;
 };

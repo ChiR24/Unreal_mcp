@@ -66,7 +66,7 @@ export const MANAGE_BLUEPRINT_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'inspect_graph', selector: 'info',
     summary: 'Inspect a Blueprint graph: its nodes (every one, those whose title, pin default, text or object path matches a filter, or the unused ones), node details, pin details, the available node types, or the functions a node can call found by what they do in plain words (game time, random number in range), with the memberName, memberClass and pins create_node takes.',
-    topics: ['graph details', 'node details', 'pin details', 'node types', 'find nodes', 'search graph nodes', 'filter graph nodes', 'unused nodes', 'what writes a variable', 'find a blueprint function', 'which function to call', 'function for a node'],
+    topics: ['graph details', 'node details', 'pin details', 'node types', 'find nodes', 'search graph nodes', 'filter graph nodes', 'unused nodes', 'what writes a variable', 'find a blueprint function', 'which function to call', 'function for a node', 'read blueprint graph nodes'],
     members: { graph: 'get_graph_details', node: 'get_node_details', pins: 'get_pin_details', node_types: 'list_node_types', functions: 'find_functions' },
   },
   {

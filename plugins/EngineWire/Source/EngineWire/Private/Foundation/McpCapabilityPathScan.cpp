@@ -1,6 +1,7 @@
 #include "Foundation/McpCapabilityAuthorization.h"
 
 #include "Foundation/BridgeHelpers/Security/McpAssetPathCanonical.h"
+#include "Foundation/BridgeHelpers/Security/McpSubobjectPath.h"
 
 // Payload path collection for the pre-queue gate.
 //
@@ -39,6 +40,12 @@ struct FScanState
 
 void CollectString(const FString& Text, const FString& Key, FScanState& State)
 {
+	FString ObjectPath, PackagePath;
+	if (McpSubobjectPath::TryCanonicalize(Text, ObjectPath, PackagePath))
+	{
+		State.Out->Paths.AddUnique(ObjectPath);
+		return;
+	}
 	const bool bAssumeGameRoot = State.bStrict && IsPathParameterKey(Key);
 	const FString Canonical = McpCanonicalizeContentPath(Text, bAssumeGameRoot);
 	if (!Canonical.IsEmpty())
@@ -156,7 +163,8 @@ bool IsPathParameterKey(const FString& Key)
 		TEXT("skeletonpath"), TEXT("physicsassetpath"), TEXT("animationpath"), TEXT("animpath"),
 		TEXT("texturepath"), TEXT("rendertargetpath"), TEXT("sequencepath"), TEXT("audiopath"),
 		TEXT("soundpath"), TEXT("niagarapath"), TEXT("curvepath"), TEXT("datatablepath"),
-		TEXT("structpath"), TEXT("enumpath")
+		TEXT("structpath"), TEXT("enumpath"), TEXT("graphpath"), TEXT("graphinstancepath"),
+		TEXT("componentpath")
 	};
 	const FString Lower = Key.ToLower();
 	for (const TCHAR* const Candidate : PathKeys)
