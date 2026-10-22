@@ -26,7 +26,7 @@ export const MANAGE_GEOMETRY_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'deform_mesh', selector: 'deform',
-    summary: 'Deform a mesh: bend, twist, taper, stretch, spherify, cylindrify, smooth, relax, noise, lattice, displace by texture.',
+    summary: 'Deform a mesh: bend, twist, taper, stretch, spherify, cylindrify, smooth, relax, noise, lattice, displace by texture. Each edits the placed dynamic mesh in one undo step and leaves the level unsaved.',
     topics: ['bend', 'twist', 'taper', 'smooth mesh', 'noise deform', 'lattice', 'displace', 'spherify'],
     members: byName(['bend', 'twist', 'taper', 'stretch', 'spherify', 'cylindrify', 'smooth', 'relax', 'noise_deform', 'lattice_deform', 'displace_by_texture']),
   },
