@@ -37,6 +37,8 @@ Declare exactly what the C++ handler reads and emits. The gateway validates stri
 ## FOLDED FAMILIES (read before adding an action)
 416 records fold 1,356 authored sources; 240 are families, and 1,554 `{tool, action}` pairs stay callable. `records/folds/<parent>.folds.ts` lists, per family, the primary action, a selector parameter (`kind`, `edit`, `setting`, ...) and the member each selector value dispatches to; `routing.dispatchBy` maps selector → bridge action, and each former name is a `legacyIds[]` entry carrying `folded: { <selector>: <value> }` pins that both gateways inject before validation. A family whose primary is one of its members keeps the selector optional with that member as default. Members must share effect, policy, availability, family and id namespace (`applyFolds` throws otherwise). A spec's `topics` come first and its members' own topics follow (search reads them all), and `routing.dispatchBy.declaredBy` names the variants that declare each parameter the members do not all share, which describe shows as `variants` on that parameter.
 
+A family's discovery summary is the spec's `summary`; each member's own summary goes under the selector parameter's description, one line per variant (`value: summary`, a sibling action name rewritten to `selector=value`). That line is where a member's defaults, replies and refusals reach a caller, so write member summaries in full; search scores the spec summary, topics and whenToUse, never parameter descriptions.
+
 To add an action to an existing family, author its record in `<parent>/` and add it to the family spec (a new selector value, or an `aliasMembers` entry). A brand-new operation is a new record, left unfolded.
 
 ## ADDING / CHANGING A CONTRACT

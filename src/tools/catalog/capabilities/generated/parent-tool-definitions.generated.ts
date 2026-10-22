@@ -219,7 +219,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "bind",
             "assign"
           ],
-          "description": "Which bind cloth to skeletal mesh variant to run; omit for 'bind'.",
+          "description": "Which bind cloth to skeletal mesh variant to run; omit for 'bind'.\nbind: Bind a cloth asset to a skeletal mesh.\nassign: Assign a cloth asset to a skeletal mesh section.",
           "default": "bind"
         },
         "collisionEnabled": {
@@ -385,7 +385,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "socket",
             "physics_body"
           ],
-          "description": "Which remove skeleton element variant to run."
+          "description": "Which remove skeleton element variant to run.\nbone: Remove a bone from a skeleton.\nsocket: Remove a socket from a skeleton or skeletal mesh.\nphysics_body: Remove a physics body from a Physics Asset."
         },
         "enableRootMotion": {
           "type": "boolean",
@@ -500,7 +500,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "physics_asset",
             "physics_bodies"
           ],
-          "description": "Which get skeleton info variant to run; omit for 'skeleton'.",
+          "description": "Which get skeleton info variant to run; omit for 'skeleton'.\nskeleton: Count what a skeleton holds (skeletonPath, or a skeletal mesh's skeleton): boneCount, virtualBoneCount and socketCount. The names come from info=bones, info=sockets and info=virtual_bones.\nbones: List every bone of a skeleton (skeletonPath, or a skeletal mesh's skeleton) in hierarchy order, parents before children: name, index, parentIndex (-1 for the root), parentName and reference-pose location relative to the parent. These are the exact names layer filters, sockets, IK chains and physics bodies take.\nsockets: List sockets of a skeleton.\nvirtual_bones: List the virtual bones declared on a skeleton.\nbone_transform: Read the reference-pose transform and parent of a bone.\nmorph_targets: List the morph targets declared on a Skeletal Mesh.\nphysics_asset: Read the bodies and constraints declared by a Physics Asset.\nphysics_bodies: List physics bodies of a PhysicsAsset.",
           "default": "skeleton"
         },
         "interpolationTime": {
@@ -536,7 +536,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "retargeter",
             "chain_mapping"
           ],
-          "description": "Which create animation asset variant to run; omit for 'asset'."
+          "description": "Which create animation asset variant to run; omit for 'asset'.\nasset: Create an empty Animation Sequence (assetType sequence, the default) or Montage on skeletonPath, named name in path (default /Game/Animations, made if missing), and save it. A montage starts with the DefaultSlot track and no animation. An asset of that class already at the path is reused (existingAsset); another class there is ASSET_TYPE_MISMATCH. For a sequence with a length and frame rate use kind sequence; for a montage from an animation, kind montage.\nsequence: Create an Animation Sequence asset.\nmontage: Create a montage asset, optionally from a sequence.\nblend_space: Create a 2D Blend Space asset.\nblend_space_1d: Create a 1D Blend Space asset.\nblend_space_2d: Create a 2D Blend Space asset.\naim_offset: Create an Aim Offset asset.\npose_library: Create a Pose Asset from an animation sequence, one pose per key frame, on the sequence's skeleton; PoseByName and PoseBlender nodes play its poses.\nprocedural: Create a procedural anim asset."
         },
         "layerSetup": {
           "type": "array",
@@ -807,7 +807,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "setup",
             "activate"
           ],
-          "description": "Which setup ragdoll variant to run; omit for 'setup'.",
+          "description": "Which setup ragdoll variant to run; omit for 'setup'.\nsetup: Enable runtime ragdoll physics on a skeletal actor; requires an assigned PhysicsAsset and an editor build.\nactivate: Switch ragdoll simulation on/off at runtime on a skeletal actor via the distinct native ragdoll=activate action (editor build).",
           "default": "setup"
         },
         "rebuildBlendParameters": {
@@ -985,7 +985,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "create",
             "modify"
           ],
-          "description": "Which configure socket variant to run; omit for 'configure'.",
+          "description": "Which configure socket variant to run; omit for 'configure'.\nconfigure: Change an existing socket of a skeleton (skeletonPath; a skeletal mesh path uses its skeleton): attachBoneName moves it to another bone, and relativeLocation, relativeRotation and relativeScale replace only the parts given. A missing socket is SOCKET_NOT_FOUND, an unknown bone BONE_NOT_FOUND, and a call naming nothing to change is refused. The skeleton is saved unless save is false (saved).\nadd: Put a socket named socketName on attachBoneName of a skeleton (skeletonPath; a skeletal mesh path uses its skeleton), at relativeLocation, relativeRotation and relativeScale (default zero, zero and one). A bone the skeleton lacks is BONE_NOT_FOUND and a name already taken SOCKET_EXISTS. The skeleton is saved unless save is false (saved).\ncreate: Put a socket named socketName on attachBoneName of a skeleton (skeletonPath; a skeletal mesh path uses its skeleton), at relativeLocation, relativeRotation and relativeScale (default zero, zero and one). A bone the skeleton lacks is BONE_NOT_FOUND and a name already taken SOCKET_EXISTS. The skeleton is saved unless save is false (saved).\nmodify: Change an existing socket of a skeleton (skeletonPath; a skeletal mesh path uses its skeleton): attachBoneName moves it to another bone, and relativeLocation, relativeRotation and relativeScale replace only the parts given. A missing socket is SOCKET_NOT_FOUND, an unknown bone BONE_NOT_FOUND, and a call naming nothing to change is refused. The skeleton is saved unless save is false (saved).",
           "default": "configure"
         },
         "sourceAnimationPath": {
@@ -2371,7 +2371,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "light",
             "actor"
           ],
-          "description": "Which set light channel variant to run; omit for 'light'.",
+          "description": "Which set light channel variant to run; omit for 'light'.\nlight: Turn lighting channels on or off for a light actor.\nactor: Turn lighting channels on or off for a target actor's primitives.",
           "default": "light"
         },
         "channels": {
@@ -2532,7 +2532,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "configure_landscape_splines",
             "generate_lods"
           ],
-          "description": "Which edit landscape variant to run."
+          "description": "Which edit landscape variant to run.\npaint_landscape: Paint a landscape layer (layerName) at strength over a brush disc (location + radius), a vertex region, or the whole landscape. The edit goes into the landscape's edit layer (the one being edited in Landscape mode, else the first; other layers still add on top), is one undo step (undo), and the layers are merged before the reply, so the drawn landscape and its collision show it.\npaint_landscape_layer: Paint a landscape layer (layerName) at one weight (strength) over a vertex region, or the whole landscape. The edit goes into the landscape's edit layer (the one being edited in Landscape mode, else the first; other layers still add on top), is one undo step (undo), and the layers are merged before the reply, so the drawn landscape and its collision show it.\nimport_heightmap: Write a raw 16-bit heightmap file (heightmapPath, project-relative, no header, machine byte order, as export_heightmap writes it) into a landscape's heights, over its whole extent or region; the file must hold at least one sample per vertex of that area, row by row. The edit goes into the landscape's edit layer (the one being edited in Landscape mode, else the first; other layers still add on top), is one undo step (undo), and the layers are merged before the reply, so the drawn landscape and its collision show it.\nconfigure_landscape_lod: Tune how a landscape lowers its detail with distance: settings sets its LOD properties by name, such as LOD0ScreenSize (where full detail ends, default 0.5), LOD0DistributionSetting (default 1.25) and LODDistributionSetting (the spacing of the other LODs, default 3; higher keeps detail farther), MaxLODLevel (-1 for no cap) and StaticLightingLOD; from UE 5.4 also bUseScalableLODSettings with the per-quality Scalable versions and LODBlendRange. It is one undo step, reaches the landscape's World Partition streaming proxies as an edit in the Details panel does, and reads back what was set (values). Nothing set is NO_SETTING_SUPPLIED; an unknown or bad value is CONFIGURATION_FAILED, listed in configurationErrors.\nconfigure_landscape_material: Assign the material a landscape renders with (materialPath: a material or material instance; its layer blend nodes name the layers that can be painted), as one undo step. A path outside the project is refused, one that loads nothing is ASSET_NOT_FOUND and another kind of asset LOAD_FAILED. The reply gives landscapeName and landscapePath. Painting a layer creates its layer info when the landscape has none.\nconfigure_landscape_splines: Replace a landscape's splines with one through the given points (width, loop, terrain deform, painted layer).\ngenerate_lods: Give static mesh assets (foliage meshes included) numLODs LODs in all (default 4, LOD 0 included): each LOD keeps half the triangles of the one before, LODs past the count and hand-tuned LOD settings are replaced, and each mesh is rebuilt and saved. Engine meshes are not changed (engineContentPaths; ENGINE_CONTENT when nothing else was given): duplicate one into /Game first. The reply counts processed out of requested and lists notFoundPaths and notMeshPaths."
         },
         "elevation": {
           "type": "number",
@@ -2555,7 +2555,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "shadows",
             "path_tracing"
           ],
-          "description": "Which configure ray tracing variant to run."
+          "description": "Which configure ray tracing variant to run.\nao: Turn ray-traced ambient occlusion on or off (r.RayTracing.AmbientOcclusion) and set its intensity and radius. Values are set as a console command would set them (console_command and this call replace each other, last one wins) and last for this editor session, not saved to the project. With hardware ray tracing off for the project (r.RayTracing 0, fixed at startup) they are stored, draw nothing, and the reply warns (rayTracingEnabled false). A variable that did not take is listed under unsupportedCVars with why: missing in this engine version, read-only, or reset by the engine; refused with CVAR_UNAVAILABLE when none took.\ngi: Turn ray-traced global illumination on or off (r.RayTracing.GlobalIllumination) and set its samples and bounces. Values are set as a console command would set them (console_command and this call replace each other, last one wins) and last for this editor session, not saved to the project. With hardware ray tracing off for the project (r.RayTracing 0, fixed at startup) they are stored, draw nothing, and the reply warns (rayTracingEnabled false). A variable that did not take is listed under unsupportedCVars with why: missing in this engine version, read-only, or reset by the engine; refused with CVAR_UNAVAILABLE when none took.\nreflections: Turn ray-traced reflections on or off (r.RayTracing.Reflections) and set their samples and roughness cutoff. Values are set as a console command would set them (console_command and this call replace each other, last one wins) and last for this editor session, not saved to the project. With hardware ray tracing off for the project (r.RayTracing 0, fixed at startup) they are stored, draw nothing, and the reply warns (rayTracingEnabled false). A variable that did not take is listed under unsupportedCVars with why: missing in this engine version, read-only, or reset by the engine; refused with CVAR_UNAVAILABLE when none took.\nshadows: Turn ray-traced shadows on or off (r.RayTracing.Shadows) and set their samples per pixel. Values are set as a console command would set them (console_command and this call replace each other, last one wins) and last for this editor session, not saved to the project. With hardware ray tracing off for the project (r.RayTracing 0, fixed at startup) they are stored, draw nothing, and the reply warns (rayTracingEnabled false). A variable that did not take is listed under unsupportedCVars with why: missing in this engine version, read-only, or reset by the engine; refused with CVAR_UNAVAILABLE when none took.\npath_tracing: Set the path tracer's samples per pixel and bounces. Its switch r.PathTracing is read-only, fixed at startup by the project's config, so enabled cannot turn it on or off here (the reply lists it under unsupportedCVars); to see the path tracer, set_view_mode PathTracing. Values are set as a console command would set them (console_command and this call replace each other, last one wins) and last for this editor session, not saved to the project. With hardware ray tracing off for the project (r.RayTracing 0, fixed at startup) they are stored, draw nothing, and the reply warns (rayTracingEnabled false). A variable that did not take is listed under unsupportedCVars with why: missing in this engine version, read-only, or reset by the engine; refused with CVAR_UNAVAILABLE when none took."
         },
         "filename": {
           "type": "string",
@@ -2568,7 +2568,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "instances",
             "paint"
           ],
-          "description": "Which add foliage variant to run; omit for 'scatter'.",
+          "description": "Which add foliage variant to run; omit for 'scatter'.\nscatter: Add foliage: with only meshPath (+ name) create or update a foliage type asset; with a foliage type or a placement (locations, position, location + radius + count) scatter instances onto the ground, a bare meshPath standing in for its auto foliage type.\ninstances: Add explicit foliage instances: full transforms, or bare locations varied by minScale/maxScale/randomYaw.\npaint: Paint foliage over a brush disc (location + radius) or a box area: count instances dropped onto the ground, each with a random scale and yaw.",
           "default": "scatter"
         },
         "foliageType": {
@@ -2750,7 +2750,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type",
             "procedural"
           ],
-          "description": "Which create atmosphere actor variant to run."
+          "description": "Which create atmosphere actor variant to run.\nsky_sphere: Create the sky lighting rig in the level being edited: a Sky Atmosphere, a sun (Directional Light) and a Sky Light, labelled <name>_Atmosphere, <name>_Sun and <name>_SkyLight (SkyAtmosphere, DirectionalLight and SkyLight without a name). An actor already carrying one of those labels is reused and set up rather than doubled, but a sun or atmosphere labelled otherwise is not found, so the level gets a second one. No sky sphere mesh, clouds or fog: add those with configure_volumetric_cloud and kind=fog_volume. Replies createdActorCount (0 when all three existed) and the three actor names.\nfog_volume: Create an Exponential Height Fog actor in the level being edited, or set up the one already labelled name (default ExponentialHeightFog), with density and settings (properties of its fog component). It is height fog over the whole level, not a local volume, and a fog labelled otherwise is not found, so the level gets a second one.\ntime_of_day_system: Create one actor, TimeOfDaySystem (or name), carrying its own sun (a directional light at intensity 10, the atmosphere sun), sky light (intensity 1) and sky atmosphere, all movable, with the sun at noon; an actor already labelled so gets the missing parts. Nothing animates it, no curves and no day cycle: move the sun with set_time_of_day. A level that already has a sun or sky atmosphere (kind=sky_sphere, the default level template) ends up with two of each, so use one rig or the other."
         },
         "landscapeActorPath": {
           "type": "string",
@@ -3579,7 +3579,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "heightmap",
             "material"
           ],
-          "description": "Which sculpt variant to run; omit for 'sculpt'.",
+          "description": "Which sculpt variant to run; omit for 'sculpt'.\nsculpt: Sculpt a landscape at location (world space) with a round brush: tool Raise (default) or Lower moves the ground strength x 100 cm at the brush centre (strength default 0.1), Flatten pulls it toward location.z by the strength fraction. radius is in world units (default 1000) and falloff (default 0.5) is the outer share of it that fades out. modifiedVertices counts the vertices that moved (0 when all were clamped); an unknown tool, or a location off the landscape (OUT_OF_BOUNDS), is refused. The edit goes into the landscape's edit layer (the one being edited in Landscape mode, else the first; other layers still add on top), is one undo step (undo), and the layers are merged before the reply, so the drawn landscape and its collision show it.\nheightmap: Change a landscape's heights over a region of its vertices (minX..maxX and minY..maxY, or region; default the whole landscape) by operation: set (default) writes heightData raw heights, one for the whole region or one per vertex row by row; raise and lower (add, subtract) move it by amount cm; flatten sets it to heightData[0]; smooth runs one 3x3 averaging pass. An unknown operation, a heightData count that fits neither form, or raise/lower without amount is refused; modifiedVertices counts the vertices that changed. The edit goes into the landscape's edit layer (the one being edited in Landscape mode, else the first; other layers still add on top), is one undo step (undo), and the layers are merged before the reply, so the drawn landscape and its collision show it.\nmaterial: Set the material a landscape renders with, in one undo step: materialPath must load as a material or material instance (ASSET_NOT_FOUND when nothing is there, LOAD_FAILED for another asset type). paint_landscape_layer then paints the layers its Landscape Layer Blend names.",
           "default": "sculpt"
         },
         "sectionSize": {
@@ -3669,7 +3669,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "light_color_curve",
             "waves"
           ],
-          "description": "Which configure atmosphere variant to run."
+          "description": "Which configure atmosphere variant to run.\nsky_atmosphere: Configure sky atmosphere settings.\nsky_light: Configure sky light intensity and cubemap.\nsun_position: Configure sun azimuth and elevation (or an hour of day) on the level's sun.\ndirectional_light: Configure a directional light: its angle (azimuth, elevation above the horizon), intensity, and any light property such as LightColor through settings.\nheight_fog: Configure exponential height fog settings.\nvolumetric_cloud: Configure volumetric cloud settings.\ntime_of_day: Set the time of day: the hour sets the sun's elevation (azimuth and elevation may be given directly).\nsky_color_curve: Set the color keys of a sky color curve asset (made at curvePath when missing) for time-of-day.\nlight_color_curve: Set the color keys of a light color curve asset (made at curvePath when missing) for time-of-day."
         },
         "settings": {
           "oneOf": [
@@ -3783,7 +3783,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "create",
             "ensure_single"
           ],
-          "description": "Which create sky light variant to run; omit for 'create'.",
+          "description": "Which create sky light variant to run; omit for 'create'.\ncreate: Create a sky light actor, capturing the scene or lighting from a cubemap.\nensure_single: Make sure the edited level has exactly one sky light: spawn one when it has none, relabel the only one; with several, refuse and name the ones to delete.",
           "default": "create"
         },
         "snapToSurface": {
@@ -4332,7 +4332,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "actors",
             "by_tag"
           ],
-          "description": "Which delete variant to run; omit for 'actors'.",
+          "description": "Which delete variant to run; omit for 'actors'.\nactors: Permanently deleteScope=actors one actor or a batch of actors by name.\nby_tag: Permanently deleteScope=actors every actor matching a gameplay tag, or any of several tags in one call.",
           "default": "actors"
         },
         "distance": {
@@ -4355,7 +4355,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "set_property",
             "set_properties"
           ],
-          "description": "Which edit component variant to run."
+          "description": "Which edit component variant to run.\nadd: Add a new component of a given type to an actor. If any requested property (or meshPath) does not apply, the call fails naming what did not, although the component was added.\nremove: Remove a component that was added to this actor (edit=add, or by hand in the editor), by its exact name, in one undo step, leaving the level unsaved. A near miss is refused with COMPONENT_NOT_FOUND naming the closest component; a component of the actor class or its Blueprint, or the root, is refused with COMPONENT_NOT_REMOVABLE (a Blueprint one comes out with edit_scs).\nset_property: Set one or more properties on a named actor component. For RelativeScale3D/RelativeLocation, note that a child inherits its parent's scale: Unreal multiplies parent and child scale COMPONENT-WISE in the child's own local axes, and rotation does NOT permute which axis each factor lands on. World size = ParentScale * ChildScale * MeshExtent per local axis, and world offset = ParentScale * RelativeLocation. Under a parent scaled non-uniformly, divide the offset you want by the parent scale on that axis.\nset_properties: Alias of edit=set_property. The bridge dispatches both names to the same handler."
         },
         "filter": {
           "type": "string",
@@ -4369,7 +4369,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "mesh",
             "material"
           ],
-          "description": "Which find variant to run."
+          "description": "Which find variant to run.\nclass: Find the actors in the level of a class or any subclass of it (a short native name such as PointLight, /Script/Engine.PointLight, or a Blueprint asset path), each with name and path: the first limit (default 200), with truncated and totalCount when more match. A class that resolves to nothing is refused with CLASS_NOT_FOUND, naming assets of that name.\nname: Find the actors in the level whose label, object name or path contains a query (case-insensitive; a full object path is cut to its actor name), each with label, name, path and class: the first limit (default 200), with truncated and totalCount when more match. With no match, similar offers labels that match once case, separators and leading zeros are ignored.\nmesh: Find the actors in the level that draw a static mesh (instanced and foliage components included), each with the components that do.\nmaterial: Find the actors in the level with a component that uses a material in any slot, as an override or as its mesh's default, each with the components and slots that do."
         },
         "folder": {
           "type": "string",
@@ -4398,7 +4398,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "components",
             "bounds"
           ],
-          "description": "Which get components variant to run; omit for 'components'.",
+          "description": "Which get components variant to run; omit for 'components'.\ncomponents: List all components attached to an actor with their relative transforms.\nbounds: Read the world-space bounding box of an actor; normalizes to get_bounding_box.",
           "default": "components"
         },
         "inputs": {
@@ -4625,7 +4625,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "transform",
             "motion"
           ],
-          "description": "Which get transform variant to run; omit for 'transform'.",
+          "description": "Which get transform variant to run; omit for 'transform'.\ntransform: Read the world transform (location, rotation, scale) of an actor.\nmotion: Watch an actor over game time in Play-In-Editor and return its location, velocity, rotation and chosen properties at every interval, plus start/end and min/max extents, in one call; it can also follow points on the actor (bones, sockets, components) with their height over the ground, press keys at exact game times (inputs) and wait for another actor's property to change before it starts (startWhen). The warnings say what the game logged while it ran, and a Blueprint runtime error names the node, graph and Blueprint that raised it.",
           "default": "transform"
         },
         "relativeLocation": {
@@ -4701,7 +4701,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "blueprint",
             "batch"
           ],
-          "description": "Which spawn variant to run; omit for 'class'.",
+          "description": "Which spawn variant to run; omit for 'class'.\nclass: Spawn a new actor instance from a class path into the current level, or a mesh actor from a mesh path alone.\nblueprint: Spawn an actor instance from a Blueprint asset path into the current level.\nbatch: Spawn many actors in one call; each item is a spawnKind=class payload, optionally with a material, Blueprint variables, outliner folder and tags.",
           "default": "class"
         },
         "spawnOf": {
@@ -4757,7 +4757,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "add",
             "remove"
           ],
-          "description": "Which add tag variant to run; omit for 'add'.",
+          "description": "Which add tag variant to run; omit for 'add'.\nadd: Add a tag to an actor, or with actorNames to many actors in one call and one undo step; their level is left unsaved. A tag already there is kept once (wasPresent). actorNames that match nothing come back in missing, and ACTOR_NOT_FOUND answers when none matched. Tags drive find_by_tag, delete_by_tag and the Actor Has Tag node; mcp.placement.ok makes the placement checks skip the actor.\nremove: Remove a gameplay tag from an actor.",
           "default": "add"
         },
         "tags": {
@@ -4788,7 +4788,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "scale",
             "teleport"
           ],
-          "description": "Which set transform variant to run; omit for 'transform'.",
+          "description": "Which set transform variant to run; omit for 'transform'.\ntransform: Move, rotate or scale an actor by setting its world transform (location, rotation, scale) or moving it by an offset, or many actors in one call: actors gives each its own, actorNames gives all the same.\nlocation: Alias of transformMode=transform (location-only intent); normalizes to transformMode=transform.\nrotation: Alias of transformMode=transform (rotation-only intent); normalizes to transformMode=transform.\nscale: Alias of transformMode=transform (scale-only intent); normalizes to transformMode=transform.\nteleport: Alias of transformMode=transform. The bridge dispatches both names to the same handler.",
           "default": "transform"
         },
         "value": {
@@ -5657,7 +5657,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "fov",
             "view_target"
           ],
-          "description": "Which set camera variant to run; omit for 'transform'.",
+          "description": "Which set camera variant to run; omit for 'transform'.\ntransform: Set the viewport camera position and rotation: the level viewport, or, while Play In Editor runs with the player ejected (control_editor play control=eject), the free camera the game view is drawn from.\nfov: Set the camera field of view of the view on screen: the level viewport, the free view of an ejected player, or while the player plays the running game's camera (method player_camera_manager; locked to the value until play stops).\nview_target: Set the PIE view target to a specific actor by name.",
           "default": "transform"
         },
         "category": {
@@ -5690,7 +5690,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "step_frame",
             "start"
           ],
-          "description": "Which play variant to run; omit for 'play'."
+          "description": "Which play variant to run; omit for 'play'.\nplay: Start Play-In-Editor (PIE) session; answers once the control=play world has begun control=play.\npause: Pause the running PIE session.\nresume: Resume a paused PIE session.\nstop: Stop the running PIE session.\neject: Eject the player from its pawn in PIE, as the editor's Eject button does: the session switches to Simulate in Editor and the view becomes a free camera that set_camera moves and screenshot photographs. Answers once the view has switched.\npossess: Possess a pawn in PIE: the player controller takes the pawn named by actorName. Without actorName it brings an ejected player back to its own pawn, as the editor's Possess button does (the way back from control=eject). Answers once the player is back in the game."
         },
         "delaySeconds": {
           "type": "number",
@@ -5742,7 +5742,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "undo",
             "redo"
           ],
-          "description": "Which undo variant to run; omit for 'undo'.",
+          "description": "Which undo variant to run; omit for 'undo'.\nundo: Undo the last editor transaction; the reply names it, and NOTHING_TO_UNDO means there was none.\nredo: Redo the last undone editor transaction; the reply names it, and NOTHING_TO_REDO means there was none.",
           "default": "undo"
         },
         "holdSeconds": {
@@ -5952,7 +5952,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "show_stats",
             "hide_stats"
           ],
-          "description": "Which configure editor variant to run."
+          "description": "Which configure editor variant to run.\nopen_tab: Open a registered editor tab by id via FGlobalTabmanager, the same path the Window menu uses. Content-source plugins register their windows globally — Bridge as \"BridgeTab\" — so this reaches them without depending on either plugin. Fab registers no fixed id (it numbers each tab Fab1, Fab2, ...), so tabId \"Fab\" opens a new Fab tab through the Fab browser API (UE 5.8+). This is also the correct way to authenticate against those services: each owns its own sign-in and persists its own session, so opening its window lets it log in on its own terms rather than reimplementing a login.\npreferences: Set editor preferences, preferences {name: value} in a category: a key naming a console variable is set as the console sets it and read back; any other is a property of the category's settings class (EditorPerformanceSettings, LevelEditorPlaySettings, LevelEditorViewportSettings and the like, the U prefix and Settings suffix optional), written through the property's own text import, saved to the settings ini and applied at once; LevelEditor RealtimeAudio mutes or unmutes editor audio. Keys that did not apply are listed under failed with why, and the call answers PREFERENCES_PARTIALLY_APPLIED or PREFERENCES_NOT_APPLIED. This plugin's own settings are refused. Distinct from system_control set_project_setting.\nwindow: Restore or minimize the main editor window without giving it focus. Restoring also stops the editor throttling itself while in the background (a minimized editor runs Play In Editor at about 3 fps, which makes every timed test lie); minimize puts the window away and turns the throttle back on, so an editor kept out of the way costs the machine next to nothing."
         },
         "speed": {
           "type": "number",
@@ -6715,7 +6715,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "editor_settings",
             "focus"
           ],
-          "description": "Which get editor state variant to run."
+          "description": "Which get editor state variant to run.\nselected_actors: Return the actors currently selected in the editor viewport.\nviewport: Return viewport information (view target, camera manager, world type).\nworld_settings: Return the current world/level settings summary (worldName, gravity, killZ, time).\nproject_settings: Return project settings key/value pairs.\neditor_settings: Return editor settings key/value pairs.\nfocus: Read what the user is working on: the open asset editors (most recently used first), each open Blueprint editor's graph in front and its selected nodes (title and nodeId), the selected actors, the distinct warnings and errors of the last minute, and the Blueprint runtime errors of the last play session."
         },
         "filter": {
           "type": "string",
@@ -6738,7 +6738,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "details",
             "property"
           ],
-          "description": "Which get component details variant to run; omit for 'details'.",
+          "description": "Which get component details variant to run; omit for 'details'.\ndetails: Return a single component of a world actor (TS dispatches get_components to control_actor and filters locally).\nproperty: Read a property on a world actor component (cross-parent to control_actor).",
           "default": "details"
         },
         "kind": {
@@ -6748,7 +6748,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "struct",
             "cdo"
           ],
-          "description": "Which inspect class variant to run; omit for 'class'.",
+          "description": "Which inspect class variant to run; omit for 'class'.\nclass: Inspect a UClass: metadata, parent, default CDO properties.\nstruct: Inspect a UserDefinedStruct layout (member names, types, defaults) read-only.\ncdo: Inspect a Blueprint Class Default Object (CDO) and its default components without spawning an actor.",
           "default": "class"
         },
         "labels": {
@@ -6784,7 +6784,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "bounding_box",
             "export"
           ],
-          "description": "Which query object variant to run."
+          "description": "Which query object variant to run.\nlist: List world actors (cross-parent to control_actor; dispatches action list_actors).\nby_tag: Find world actors by tag (cross-parent to control_actor).\nmetadata: Read metadata key/value pairs from a world actor (cross-parent to control_actor).\nbounding_box: Return the world-space bounding box of a world actor (cross-parent to control_actor).\nexport: Export a world actor or object as text (T3D by default), returned inline as exportedText and, with outputPath, also written to a file inside the project."
         },
         "markDirty": {
           "type": "boolean",
@@ -6808,7 +6808,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "mesh",
             "texture"
           ],
-          "description": "Which inspect object variant to run; omit for 'object'.",
+          "description": "Which inspect object variant to run; omit for 'object'.\nobject: Inspect a world actor or asset object by path, returning detailed properties.\nactor: Inspect a world actor (alias of objectKind=object).\nlevel: Inspect the current level/world summary (TS normalizes to get_world_settings).\nmaterial: Inspect a material or material instance: blend mode, parameters and textures. Any other object is refused with TYPE_MISMATCH.\nmesh: Inspect a static or skeletal mesh asset: size, bounds, pivot, LODs, and every material slot with the triangles and bounds of the geometry it covers. Any other object is refused with TYPE_MISMATCH.\ntexture: Inspect a texture asset: dimensions, format and settings. Any other object is refused with TYPE_MISMATCH.",
           "default": "object"
         },
         "objectPath": {
@@ -7039,7 +7039,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "create",
             "restore"
           ],
-          "description": "Which create snapshot variant to run; omit for 'create'.",
+          "description": "Which create snapshot variant to run; omit for 'create'.\ncreate: Remember a world actor's transform (location, rotation and scale only) under snapshotName, in editor memory, for snapshotOp=restore to set again.\nrestore: Set a world actor back to the transform a snapshot remembered (snapshotOp=create); transformChanged says whether anything moved.",
           "default": "create"
         },
         "statsKind": {
@@ -7050,7 +7050,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "scene",
             "frame"
           ],
-          "description": "Which get stats variant to run."
+          "description": "Which get stats variant to run.\nperformance: Return performance statistics (frame rate, frame time, game, render and GPU thread times, actor count).\nmemory: Return memory statistics (allocated, virtual, resource counts).\nscene: Return scene statistics (actor counts, component counts, etc.).\nframe: Diagnose what a frame costs: the thread that bounds it (game, render, RHI or GPU; in Play, whether the game or the editor fills the game thread) and what in view weighs on it: movable lights that cast shadows, the heaviest non-Nanite meshes, translucent primitives and ticking actors by class."
         },
         "structPath": {
           "type": "string",
@@ -8497,7 +8497,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "assign_tree",
             "assign_blackboard"
           ],
-          "description": "Which run behavior tree variant to run; omit for 'run'.",
+          "description": "Which run behavior tree variant to run; omit for 'run'.\nrun: Make an AIController Blueprint run a Behavior Tree whenever it possesses a pawn: its On Possess event calls Run Behavior Tree (which also starts the Blackboard) with its BehaviorTree variable, set to behaviorTreePath as control=assign_tree does. Engine nodes in the Blueprint, compiled and saved, so it works in a packaged game, for every pawn whose AI Controller Class is this one and whose Auto Possess AI covers how it enters the level. Re-running replaces it; control=stop takes it out. NOT_AI_CONTROLLER for another Blueprint, NOT_FOUND for a missing tree, and refused during Play.\nstop: Take out the Run Behavior Tree logic control=run wrote into an AIController Blueprint, so possessing a pawn no longer starts a tree (its BehaviorTree variable and On Possess event stay), compiled and saved; removed false, and nothing changed, when there was none.\nassign_tree: Put a Behavior Tree in an AIController Blueprint: its BehaviorTree variable (one it declares, else a new instance-editable DefaultBehaviorTree) holds behaviorTreePath by default, compiled and saved. Nothing runs the tree until control=run writes Run Behavior Tree on possess, or the controller calls it itself. NOT_AI_CONTROLLER for another Blueprint, NOT_FOUND for a missing tree.\nassign_blackboard: Assign a Blackboard to an AIController or Behavior Tree asset.",
           "default": "run"
         },
         "controllerPath": {
@@ -8597,7 +8597,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "configure_slot",
             "add_component"
           ],
-          "description": "Which edit behavior tree variant to run."
+          "description": "Which edit behavior tree variant to run.\nadd_composite: Add a composite to a Behavior Tree and save it: compositeType Selector (runs its children until one succeeds), Sequence (until one fails) or SimpleParallel (Parallel is the same: its first child is the main task, the second runs beside it). It goes under parentNodeId (a composite by nodeId or nodeName), else under the root, and a tree with no root takes it as the root (isRoot). nodeName names it; nodeId and nodeName in the reply address it for edit=add_task, edit=add_decorator and edit=add_service. Another compositeType is refused (INVALID_ARGUMENT), as is a parent that is not found (PARENT_NOT_FOUND).\nadd_task: Add a task node to a Behavior Tree asset.\nadd_decorator: Add a decorator to a Behavior Tree node, or to the root when no node is named.\nadd_service: Add a service to a Behavior Tree asset.\nadd_node: Add a node through the Behavior Tree graph route.\nadd_subnode: Add a Behavior Tree decorator or service subnode.\nconnect: Connect Behavior Tree graph nodes.\nbreak_connections: Break Behavior Tree graph connections.\nconfigure_node: Configure a Behavior Tree node.\nset_node_properties: Set Behavior Tree graph node properties.\nremove_node: Remove a Behavior Tree graph node."
         },
         "enableDamage": {
           "type": "boolean",
@@ -8685,7 +8685,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "set",
             "clear"
           ],
-          "description": "Which set focus variant to run; omit for 'set'.",
+          "description": "Which set focus variant to run; omit for 'set'.\nset: Make an AIController Blueprint keep its focus on a target: the player 0 pawn (focusPlayer) or the first actor carrying focusTag. Each frame it has no focus actor, its Tick finds the target and calls Set Focus, so a target that spawns after the AI, or respawns, is picked up again; a pawn that uses its controller rotation turns to face it. Engine nodes in the Blueprint, compiled and saved; re-running replaces the target and focusOp=clear takes it out. Exactly one of focusPlayer and focusTag (INVALID_ARGUMENT); NOT_AI_CONTROLLER for another Blueprint.\nclear: Take out the focus logic focusOp=set wrote into an AIController Blueprint, so it stops seeking a target each frame (a focus already set in a running game stays until something clears it), compiled and saved; removed false, and nothing changed, when there was none.",
           "default": "set"
         },
         "focusPlayer": {
@@ -8766,7 +8766,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "tree",
             "blackboard_value"
           ],
-          "description": "Which get ai info variant to run; omit for 'ai'."
+          "description": "Which get ai info variant to run; omit for 'ai'.\nai: Read AI asset information.\nnavigation: Read navigation state and settings."
         },
         "isInstanceSynced": {
           "type": "boolean",
@@ -8807,7 +8807,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "modifier",
             "modifier_component"
           ],
-          "description": "Which create behavior tree variant to run; omit for 'behavior_tree'."
+          "description": "Which create behavior tree variant to run; omit for 'behavior_tree'.\nbehavior_tree: Create a Behavior Tree asset named name in path (default /Game/AI/BehaviorTrees; savePath when path is absent), saved (saved); an asset already at the path is refused (ASSET_ALREADY_EXISTS). It has no root yet: the first add_composite_node becomes the root.\ngraph_route: Create a Behavior Tree named name in savePath (default /Game; a path without a leading slash goes under /Game) with its editor graph, saved (saved). An asset already at the path is refused (ASSET_ALREADY_EXISTS).\nblackboard: Create a Blackboard asset named name in path (default /Game/AI/Blackboards), saved (saved). A Blackboard already there is kept as it is (alreadyExisted true); another kind of asset at the path is refused (ASSET_ALREADY_EXISTS)."
         },
         "linkEnabled": {
           "type": "boolean",
@@ -9075,7 +9075,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "team",
             "controller"
           ],
-          "description": "Which configure navigation variant to run."
+          "description": "Which configure navigation variant to run.\nmesh_settings: Configure project NavMesh generation settings.\nagent_properties: Set project navigation agent properties.\narea_cost: Configure navigation area cost data.\narea_class: Set the navigation area class on a placed actor that already carries a NavModifierComponent (add one with create_nav_modifier first).\nnav_link: Change the link of a placed NavLinkProxy (actorName): startPoint and endPoint (relative to the actor) and direction go on its smart link when it uses one, else on its point link, and snapRadius on the point link (refused for a smart link). Only what is sent changes, and a call that sends none of them is refused. The navmesh takes the change at once; one undo step, the level left unsaved; the reply gives the link as it is now.\nlink_type: Switch a placed NavLinkProxy (actorName) between a simple link, its point link, and a smart link, its smart link alone (linkType simple or smart), carrying the endpoints and direction over. A proxy already of that type changes nothing (changed false). One undo step; the level is left unsaved.\nsmart_link_behavior: Change the smart link of a NavLinkProxy (actorName): linkEnabled switches it on or off; enabledAreaClass and disabledAreaClass are the navigation areas it marks while on and off (NavArea_Null blocks it); broadcastRadius and broadcastInterval set who hears it switch, heard only while its Notify When Enabled or Disabled is on, and the one left out keeps its value; bCreateBoxObstacle true sets its box obstacle of obstacleAreaClass (default NavArea_Null), obstacleExtent (default 100) and obstacleOffset. An area class that does not load is refused before anything changes, as is a call that sets nothing. The settings stay on a proxy that uses its point link and apply once setting=link_type makes it smart. One undo step; the level is left unsaved.\nrebuild: Rebuild navigation for the loaded editor world."
         },
         "sightConfig": {
           "type": "object",
@@ -9711,7 +9711,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "desaturate",
             "invert"
           ],
-          "description": "Which adjust texture variant to run."
+          "description": "Which adjust texture variant to run.\ncurves: Apply curve-based adjustments to a texture.\nlevels: Adjust levels (black/white points, gamma) on a texture.\nblur: Apply a adjust=blur filter to a texture.\nsharpen: Apply a adjust=sharpen filter to a texture.\ndesaturate: Desaturate a texture by an amount.\ninvert: Invert color channels of a texture."
         },
         "againstPath": {
           "type": "string",
@@ -9902,7 +9902,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "compile",
             "rebuild"
           ],
-          "description": "Which compile material variant to run; omit for 'compile'.",
+          "description": "Which compile material variant to run; omit for 'compile'.\ncompile: Compile a material and report its compile errors.\nrebuild: Rebuild and compile a material (alias of compileOp=compile).",
           "default": "compile"
         },
         "compressionSettings": {
@@ -9963,7 +9963,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "struct",
             "member"
           ],
-          "description": "Which delete data table row variant to run; omit for 'row'."
+          "description": "Which delete data table row variant to run; omit for 'row'.\nrow: Delete a row from a DataTable.\nall: Clear all rows from a DataTable."
         },
         "depth": {
           "type": "number",
@@ -10075,7 +10075,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "refresh_struct_dependencies",
             "set_instanced_struct_property"
           ],
-          "description": "Which edit data table variant to run."
+          "description": "Which edit data table variant to run.\ncreate: Create a new DataTable asset.\ncreate_row_struct: Create a new UScriptStruct suitable as a DataTable row type.\nadd_row: Add a new row to a DataTable.\nupdate_row: Update an existing row in a DataTable.\nimport_rows: Import multiple rows into a DataTable from an array.\nset_row_struct: Bind a row UScriptStruct to an existing DataTable.\nset_struct_as_row_struct: Set an existing UScriptStruct as the row struct for a DataTable (a user-defined struct is validated and compiled first)."
         },
         "endColor": {
           "description": "End colour (default white) as {r, g, b, a} or [r, g, b, a] in 0-1."
@@ -10229,7 +10229,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "export",
             "instanced_property"
           ],
-          "description": "Which get material info variant to run; omit for 'material'."
+          "description": "Which get material info variant to run; omit for 'material'.\nmaterial: Read a material or material function (domain, blend mode, parameters, node count), or a material instance (its parent and parameter overrides).\nfunction: Retrieve information about a material function.\nfind_node: Find a node in a material graph by type or name.\nnode_details: Retrieve details of a material node.\nnode_properties: Retrieve properties of a node in a material graph.\nnode_connections: Retrieve connections for a node in a material graph.\nnode_chain: Retrieve the chain of nodes connected to a starting node.\nsubgraph: Retrieve the connected subgraph from a starting node."
         },
         "inputName": {
           "type": "string",
@@ -10278,7 +10278,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "input",
             "output"
           ],
-          "description": "Which add function io variant to run."
+          "description": "Which add function io variant to run.\ninput: Add a function input to a material function.\noutput: Add a function output to a material function."
         },
         "justification": {
           "type": "string",
@@ -10313,7 +10313,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "metadata",
             "tags"
           ],
-          "description": "Which create material variant to run; omit for 'material'."
+          "description": "Which create material variant to run; omit for 'material'.\nmaterial: Create a new material asset.\ndecal: Create a decal material asset (DeferredDecal domain, Translucent by default).\nlandscape: Create a landscape material asset (Surface domain, Opaque by default).\npost_process: Create a post-process material asset (PostProcess domain by default).\nfunction: Create a new material function asset.\nparameter_collection: Create a Material Parameter Collection, values every material that reads it shares, or add parameters to one and set their defaults."
         },
         "lacunarity": {
           "type": "number",
@@ -10399,7 +10399,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "report",
             "diff"
           ],
-          "description": "Which inspect asset variant to run."
+          "description": "Which inspect asset variant to run.\nmetadata: Retrieve metadata and tags for an asset.\ndependencies: List the packages an asset uses, or with referencers the packages that use it. Direct packages only; lookup \"graph\" walks dependencies recursively.\ngraph: Retrieve the asset reference graph directly via the lookup=graph bridge action.\nvalidate: Confirm an asset exists and loads. It runs no content, reference or data checks.\nreport: Generate an asset report for a directory.\ndiff: Compare a Blueprint, DataTable or data asset with its saved file (its unsaved edits) or with another asset: changed, added and removed properties and class defaults, Blueprint components and graph changes, DataTable rows. Read-only."
         },
         "maintenance": {
           "type": "string",
@@ -10409,7 +10409,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "refresh_blueprints",
             "migrate"
           ],
-          "description": "Which maintain content variant to run."
+          "description": "Which maintain content variant to run.\nbulk_rename: Rename multiple assets in one call: by a pattern (search/replace, prefix, suffix) over a folder or a list, or to explicit new names with renames.\nfixup_redirectors: Fix up redirector assets in a directory.\nrefresh_blueprints: Refresh every node of the Blueprints under a folder (or listed), then compile and save each; run it after renaming or moving classes so casts and node titles follow.\nmigrate: Copy a content tree from an allowlisted source root into this project and scan it into the asset registry. This is how a Quixel Bridge / Fab pack or an engine template (its Blueprints, meshes, materials and maps) becomes usable content in the current project. IMPORTANT: package files store their references as absolute /Game/... paths and a copy cannot rewrite them, so the default destinationPath of \"/Game\" — which reproduces the source layout exactly — is the only setting that guarantees the migrated assets still resolve each other. Any other destinationPath relocates the tree and comes back with referenceIntegrity \"at-risk\". Run with dryRun first to see the file count and the package paths that will appear."
         },
         "marketplace": {
           "type": "string",
@@ -10419,7 +10419,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "fab_download",
             "megascans"
           ],
-          "description": "Which import marketplace asset variant to run."
+          "description": "Which import marketplace asset variant to run.\nfab_listing: Start importing one Fab listing into this project through the signed-in Fab tab and return as soon as Fab accepts the download. The tab is opened when it is closed and the page is waited for up to 15 seconds (PAGE_NOT_READY after that); the account must be signed in there. The content does NOT exist yet when this replies: downloading and importing take minutes and hold the editor, far longer than a client waits, so poll asset.query_marketplace with lookup=fab_import_status and the returned operationId until phase is done or failed (marketplace=fab_cancel stops one that is queued or downloading). Never call this again to see progress: a repeat for a listing that is queued or running only hands back the same operation (alreadyRunning), and a repeat that asks for a different quality, combineMeshes, destinationPath or assetName is refused with ADD_ALREADY_RUNNING, naming that operation, since it would ignore them. One import runs at a time, so an add made while another runs is queued (phase queued, queuePosition) and starts by itself, first in first out, and the status read lists the queue; only a full queue (8 waiting) is refused with QUEUE_FULL, which names the import at its head with its phase, bytes and elapsed time and returns the status call as its nextCall. A queued add is not put to Fab until its turn, so a refusal it would have got at once (NO_IMPORTABLE_FORMAT, COMPLETE_PROJECT, LARGE_SCENE_FILE) arrives later as the status read's failureCode. It claims the listing first: Fab answers 404 for a download the account does not own, so this posts add-to-library exactly as the Fab UI does when you press Add to Project — a real change to your Fab library, free to claim and harmless to repeat on a listing you already own. It claims each free license of the listing in turn until Fab accepts one. Then it picks the format the Fab importer accepts (unreal-engine, else gltf, glb, fbx, obj or usdz) and hands over the download. A unreal-engine pack that declares no build for the running engine imports the highest build at or below it, else the lowest above it, and engineMatch (older or newer) and engineVersion say which. A complete project (COMPLETE_PROJECT) cannot be added to an existing project: it is refused after the claim, so it is in your library to create a project from, and the reply says to create it as a new project from Fab and migrate its content. A MetaHuman listing (METAHUMAN_FORMAT) is refused before anything is claimed, because Fab hands it to a workflow this add does not drive. A listing Fab will not give an address for fails with NO_DOWNLOAD_URL naming the step that refused (license: no offer to claim; claim: Fab refused the account; download-info: Fab answered no address), Fab's HTTP status and Fab's own words, so the cause is in the reply rather than the editor log; the reply names the format, the file and its quality tier, and the file size when Fab publishes one. A Megascans listing publishes one file per quality tier (raw, high, mid, low); quality takes exactly the tier named, and a tier the listing does not publish is refused with QUALITY_NOT_AVAILABLE, naming the tiers it does, before anything downloads. Without quality it takes the best game-ready tier: high, else mid, low, raw. A listing that publishes no tiers, and a unreal-engine pack, ignore quality. Supply only a listing id; the signed URL, EOS token and session cookie stay inside the page and reach no response or log. Fab chooses the destination folder (a Megascans add lands under a machine-named tree such as /Game/Fab/Megascans/3D/<name>_<id>/High/<id>_tier_1), and the status read reports importedRoot once the import is done, by which time the packages Fab left unsaved in memory have been saved, and they are saved again 15 and 60 seconds after the import ends for anything the engine marks dirty late; the status read's saved, savedCount and unsavedPackages say how it went and name a package that could not be saved. destinationPath moves what the import created in its own folders to a /Game folder you name, keeping the layout beneath it (StaticMeshes, Materials, Textures), and assetName names the import's one mesh SM_<assetName> (SK_ for a skeletal mesh) with its material instance and textures following (MI_<assetName>, T_<assetName>_<suffix>); a surface has no mesh and is named by its one material instance. It runs the move and rename that asset.move runs, so references and settings follow and the redirectors left behind are fixed, and it is all or nothing: a name already taken stops it before anything moves. It never touches the shared master materials, material functions and textures in /Game/Fab/Materials, /Game/Fab/MaterialFunctions and /Game/Fab/Textures, and a unreal-engine pack, which arrives outside /Game/Fab, stays where Fab put it. The status read's relocated, movedCount and relocationNote say what happened. Fab's importer merges every mesh in a source file (fbx, obj, gltf, glb, usdz) into ONE static mesh, whatever the project's import settings say, and a file that is really a scene became a single unplaceable mesh that needed gigabytes to build while the editor stayed held for many minutes. So a single mesh file of 50 MB or more (Megascans and unreal-engine packs are not affected) is refused with LARGE_SCENE_FILE, before anything downloads, until combineMeshes says which way to import it.\nfab_cancel: Stop a Fab import that asset.import_marketplace_asset (marketplace=fab_listing) started, by its operationId. Fab gives three handles and this uses exactly those: an add still waiting in the queue is dropped and never reaches Fab; a unreal-engine pack that is downloading is stopped by pressing the Cancel button on Fab's own download notification; an import whose files Interchange is translating is told to cancel its tasks. The download of a source format (fbx, gltf, obj, usdz, Megascans) has no Cancel anywhere in Fab, so it is refused with NOT_CANCELLABLE and the reason, as is an add that is still resolving (seconds, and not interruptible) and an import past its download with no Interchange task to stop; the status read's cancellable says beforehand whether a cancel would work. A running import ends as failed with failureCode CANCELLED within a second (phase cancelling until then), with whatever had already landed listed and left unsaved and unmoved, so asset.delete removes it. A call is served only while the editor is free: while Fab builds meshes the editor is held and every call answers EDITOR_BLOCKED, so a cancel has to come before that. A finished import is refused with ALREADY_FINISHED and an unknown id with NOT_FOUND.\nfab_download: Download a Fab asset through the Fab plugin's own downloader (FFabDownloadRequest), so the transfer uses its HTTP/BuildPatchServices path rather than a parallel implementation that would miss its retry handling. IMPORTANT: the signed downloadUrl is NOT minted here — Fab issues it from its authenticated web session and no C++ entry point initiates that, so supply a URL obtained from the Fab tab's own flow. Once the pack lands, asset.migrate_assets with sourceRoot \"fabLibrary\" places it into /Game. Acquires content against the signed-in account, so it is an explicit-consent write.\nmegascans: Import a downloaded Megascans pack through the Bridge plugin's own importer, headlessly — no Bridge window, no drag, no sign-in. Calls FAssetsImportController::DataReceived, the exported entry point the Bridge desktop app drives over its local TCP socket, so quality tiers, master materials and the MSPresets setup all apply exactly as they would from the UI. This imports content ALREADY on disk, downloaded by the Bridge app. A Megascans listing that is not downloaded yet is fetched and imported by marketplace=fab_listing instead, which needs no Bridge window. Assets land under /Game/Megascans."
         },
         "materialDomain": {
           "type": "string",
@@ -10437,7 +10437,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "shading_model",
             "two_sided"
           ],
-          "description": "Which set material property variant to run."
+          "description": "Which set material property variant to run.\nblend_mode: Set the blend mode of a material.\ndomain: Set the material domain of a material.\nshading_model: Set the shading model of a material.\ntwo_sided: Set the two-sided flag on a material."
         },
         "materials": {
           "type": "array",
@@ -10615,7 +10615,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "landscape_layer",
             "batch"
           ],
-          "description": "Which add material node variant to run; omit for 'node'.",
+          "description": "Which add material node variant to run; omit for 'node'.\nnode: Add a generic material node by type.\ncustom_expression: Add a custom HLSL expression node to a material graph.\nfresnel: Add a fresnel node to a material graph.\nif: Add a conditional If node to a material graph.\nmath: Add a math operation node to a material graph.\nnoise: Add a noise node to a material graph.\npanner: Add a panner node to a material graph.\npixel_depth: Add a pixel depth node to a material graph.\nreflection_vector: Add a reflection vector node to a material graph.\nrotator: Add a rotator node to a material graph.\nscalar_parameter: Add a scalar parameter node to a material graph.\nstatic_switch_parameter: Add a static switch parameter node to a material graph.\nswitch: Add a switch node to a material graph.\ntexture_coordinate: Add a texture coordinate node to a material graph.\ntexture_sample: Add a texture sample node to a material graph.\nvector_parameter: Add a vector parameter node to a material graph.\nvertex_normal: Add a vertex normal node to a material graph.\nvoronoi: Add a voronoi noise node to a material graph.\nworld_position: Add a world position node to a material graph.\nmaterial_function: Insert a material function reference into a material graph.\nlandscape_layer: Create the landscape layer info asset (the weight layer a landscape material paints) for a layer name, beside the material or in path.\nbatch: Build a material graph in one call: add nodes, wire them to each other and to the material output, and set material properties, with $id references between steps.",
           "default": "node"
         },
         "nodeName": {
@@ -10730,7 +10730,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "texture",
             "static_switch"
           ],
-          "description": "Which set material parameter variant to run; omit for 'parameter'.",
+          "description": "Which set material parameter variant to run; omit for 'parameter'.\nparameter: Set a material parameter value by parameterType: scalar (the default) takes a number value, vector {r, g, b, a} or [r, g, b, a], texture a texturePath (or the path in value); a missing value is refused. parameters sets several on one asset, assets several material instances under one consent, each entry checked on its own (the reply lists the ones that failed). On a material instance an override of its parent (a name the parent does not publish is PARAMETER_NOT_FOUND, listing those it does), on a base material the parameter node's default (refused while the material is open in its editor). Saved unless save is false (saved).\nscalar: Set a scalar parameter to value (a number): on a material instance an override of its parent (a name the parent does not publish is PARAMETER_NOT_FOUND, listing those it does), on a base material the parameter node's default (refused while the material is open in its editor). Saved unless save is false (saved).\nvector: Set a vector (colour) parameter to value, {r, g, b, a} or [r, g, b, a]: on a material instance an override of its parent (a name the parent does not publish is PARAMETER_NOT_FOUND, listing those it does), on a base material the parameter node's default (refused while the material is open in its editor). Saved unless save is false (saved).\ntexture: Set a texture parameter to the texture at texturePath: on a material instance an override of its parent (a name the parent does not publish is PARAMETER_NOT_FOUND, listing those it does), on a base material the parameter node's default (refused while the material is open in its editor). Saved unless save is false (saved).\nstatic_switch: Turn a static switch parameter on or off (value true or false; an instance rebuilds its shader permutation): on a material instance an override of its parent (a name the parent does not publish is PARAMETER_NOT_FOUND, listing those it does), on a base material the parameter node's default (refused while the material is open in its editor). Saved unless save is false (saved).",
           "default": "parameter"
         },
         "parameterName": {
@@ -10882,7 +10882,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "mesh_materials",
             "mesh_collision"
           ],
-          "description": "Which process asset variant to run."
+          "description": "Which process asset variant to run.\nthumbnail: Render the preview of an asset and store it as its thumbnail (the asset is left unsaved; engine content keeps its own), and write it as a PNG when outputPath is given.\nlods: Give one or several static mesh assets lodCount LODs in all (default 4, 1 to 50, LOD 0 included): each LOD keeps half the triangles of the one before (50%, 25%, ...), LODs past the count and the hand-tuned settings of the others are replaced, and each mesh is rebuilt and saved. Engine meshes are not changed: they are listed under engineContentPaths (ENGINE_CONTENT when nothing else was given), so duplicate one into /Game first. The reply counts processed out of requested and lists notFoundPaths and notMeshPaths; in a headless editor the build is skipped and each mesh is only checked.\nmesh_materials: Set the materials in the slots of a static or skeletal mesh asset, by slot index or slot name, so every placement of the mesh shows them.\nmesh_collision: Set the collision of a static mesh asset: one box, sphere or capsule fitted to its bounds, its own render triangles (complex), or none; every placed copy is rebuilt to match and the mesh is saved."
         },
         "propertyName": {
           "type": "string",
@@ -11053,7 +11053,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "texture_group",
             "virtual_texture"
           ],
-          "description": "Which configure texture variant to run."
+          "description": "Which configure texture variant to run.\ncompression: Set a 2D texture's compression setting by its engine name, with or without the TC_ prefix (Normalmap or TC_Normalmap). The reply names the setting applied (compressionSettings) and whether the texture reached disk (saved). An unknown name is refused with the valid names and nothing changes.\nlod_bias: Set a 2D texture's LOD bias: the number of top mips dropped at runtime (1 halves each side, 0 restores full size). The reply carries lodBias and saved.\nstreaming_priority: Set never-stream on a 2D texture (neverStream, required): true keeps every mip resident instead of streaming them in, false lets it stream again. UTexture has no per-texture streaming priority to set. The reply carries neverStream and saved.\ntexture_group: Set a 2D texture's texture group (its LOD group) by engine name, with or without the TEXTUREGROUP_ prefix (UI or TEXTUREGROUP_UI), so it follows that group's LOD and streaming rules. The reply names the group applied (textureGroup) and saved; an unknown name is refused with the valid names and nothing changes.\nvirtual_texture: Switch virtual texture streaming on or off for a 2D texture (virtualTextureStreaming, required). Materials that sample the texture must then use the matching sampler type (Virtual Color, Virtual Normal and so on, or the plain type when it is switched off), or they stop compiling. The reply carries virtualTextureStreaming and saved."
         },
         "shadingModel": {
           "type": "string",
@@ -11072,7 +11072,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "init",
             "commit_all"
           ],
-          "description": "Which source control variant to run."
+          "description": "Which source control variant to run.\ncheckout: Check out assets (paths, or assetPath) in the enabled revision-control provider so they can be edited and submitted. Paths that name no asset in the project are skipped and listed (skipped); none left is NO_VALID_ASSETS, and source control off is SOURCE_CONTROL_DISABLED (turn it on with sourceControlOp=enable). The reply gives checkedOut and assets.\nsubmit: Submit (check in) saved assets (paths, or assetPath) to the enabled provider with description as the change description. Paths that name no asset are skipped and listed (skipped); none left is NO_VALID_ASSETS, a provider refusal SUBMIT_FAILED, and source control off SOURCE_CONTROL_DISABLED. The reply gives submitted.\nenable: Turn revision control on with the provider named (Git, Perforce or Subversion, as the editor registers it), switching from another provider that is on; with that provider already on, or none named while one is on, it reports the current provider. A provider whose plugin is off or that cannot connect (Git needs a repository at the project root: sourceControlOp=init) is SOURCE_CONTROL_ENABLE_FAILED.\ninit: Put the project under Git: create a repository at the project root when there is none, write an Unreal .gitignore when there is none (Binaries, Intermediate, Saved, DerivedDataCache), stage everything, make the first commit (description, default \"Initial commit\") and turn the Git provider on. userName and userEmail go to the repository config only and cannot hold quotes or control characters. The reply gives committed, commit (short hash), provider and steps (each git command with its exit code and output); a failing step answers GIT_INIT_FAILED, GIT_ADD_FAILED or GIT_COMMIT_FAILED.\ncommit_all: Stage every change in the project (git add -A, honouring .gitignore) and commit it with description as the message; a clean tree answers success with alreadyClean true and committed false. Needs a repository (NO_REPOSITORY: sourceControlOp=init). userName and userEmail, when sent, go to the repository config and cannot hold quotes or control characters. The reply gives committed, commit and steps."
         },
         "sourceId": {
           "type": "string",
@@ -12709,7 +12709,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "set_class_override",
             "clear_class_override"
           ],
-          "description": "Which control sound mix variant to run."
+          "description": "Which control sound mix variant to run.\npush: Push a Sound Mix (mixName: an asset path or a bare asset name) onto the mix stack of the sound being heard: the running game while one plays, else the editor (inGame says which). While pushed, its sound class adjustments (volume, pitch, EQ) apply, such as ducking music under dialogue; control=pop removes it. A name that loads no Sound Mix is ASSET_NOT_FOUND. Runtime state only: nothing is saved.\npop: Pop a Sound Mix that control=push pushed, on the sound being heard: the running game while one plays, else the editor (inGame says which); its adjustments fade out over the fade-out time of the mix. A mix pushed twice needs two pops, and popping one that is not pushed changes nothing.\nset_base: Make a Sound Mix the base mix of the sound being heard: the running game while one plays, else the editor (inGame says which): the one mix that always applies beneath any pushed ones, replacing the previous base. Runtime state only.\nset_class_override: Override how a Sound Mix adjusts one Sound Class (soundClassName) and its child classes: volume and pitch multipliers (default 1), reached over fadeTime seconds (default 1); the class joins the mix when the mix lacks it. It acts on the sound being heard: the running game while one plays, else the editor (inGame says which), only while that mix is pushed or the base mix, and leaves the asset unchanged. A name that loads no mix or class is ASSET_NOT_FOUND.\nclear_class_override: Remove the override control=set_class_override put on a Sound Mix for soundClassName, fading back over fadeOutTime seconds (default 1), on the sound being heard: the running game while one plays, else the editor (inGame says which)."
         },
         "decayHFRatio": {
           "type": "number",
@@ -12759,7 +12759,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "set_default",
             "batch"
           ],
-          "description": "Which edit metasound variant to run."
+          "description": "Which edit metasound variant to run.\ncreate: Create a MetaSound asset, named by name and path or by its full assetPath, and return its asset path. A MetaSound already at that path is refused (ASSET_EXISTS), never replaced. A one-shot source (the default: On Play in, On Finished out) is never virtualized by the engine, so one left playing on an AudioComponent that starts out of earshot is dropped for good; make a drone, hum or ambience with oneShot false.\nadd_input: Add an input to a MetaSound graph.\nadd_output: Add an output to a MetaSound graph.\nadd_node: Add a node to a MetaSound graph.\nconnect_nodes: Connect two MetaSound graph pins.\ndisconnect: Remove a link from a MetaSound graph: the one into targetNodeId.targetInputName, or every link out of sourceNodeId.sourceOutputName; with both ends given, that exact link. Refused when there is no such link.\nremove_node: Remove one node, or several with nodeIds, and every link on them from a MetaSound graph; graph inputs and outputs (On Play, Out Mono) are refused. All or nothing.\nset_default: Set the default of a MetaSound graph input, or with nodeId the literal on a node input (an oscillator frequency, an envelope time, a note array).\nbatch: Run many MetaSound graph edits in one call: add nodes, inputs and outputs, connect pins and set literals, with $id references between steps."
         },
         "effectPresetPath": {
           "type": "string",
@@ -12818,7 +12818,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "in",
             "out"
           ],
-          "description": "Which fade sound variant to run; omit for 'to_volume'.",
+          "description": "Which fade sound variant to run; omit for 'to_volume'.\nto_volume: Fade a named sound instance to a target volume.\nin: Fade a sound instance in.\nout: Fade a sound instance out.",
           "default": "to_volume"
         },
         "fadeInTime": {
@@ -12913,7 +12913,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "source_effect_chain",
             "submix_effect"
           ],
-          "description": "Which create audio actor variant to run."
+          "description": "Which create audio actor variant to run.\nambient_sound: Create an ambient sound actor.\naudio_component: Create an audio component on an actor, or on a new actor at location when actorName is omitted.\nreverb_zone: Create a runtime reverb zone actor."
         },
         "lfeBleed": {
           "type": "number",
@@ -13075,7 +13075,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "prime",
             "measure"
           ],
-          "description": "Which play sound variant to run."
+          "description": "Which play sound variant to run.\n2d: Play a sound asset 2D, tied to no place, at volume and pitch (default 1) from startTime seconds, on the running game while one plays, else in the editor; it plays to its end, a looping one until stop_sound. A path that loads no sound is ASSET_NOT_FOUND, and an editor with sound off answers NOT_PLAYED.\nat_location: Play a sound once at location (and rotation), at volume and pitch (default 1) from startTime seconds, with an optional attenuationPath and concurrencyPath (ASSET_NOT_FOUND when one does not load). It plays in the running game while one plays, heard from its listener, else in the editor. Fire and forget: only stop_sound with all true stops it.\nspawn_at_location: Spawn a transient sound at a world location.\nattached: Play a sound attached to an actor (actorName; in the running game while one plays, else in the level) on the component or socket attachPointName names, else on its root, at volume and pitch. The reply gives componentName, attachedTo and playing; an unknown actor is ACTOR_NOT_FOUND and an unknown attach point ATTACH_POINT_NOT_FOUND.\nprime: Prime a sound asset for playback.\nmeasure: Play a sound 2D and measure how loud it played, from the mixer's own meter: peak and average level in dB and a timeline, with silent: true when it played but produced no audio (an empty Sound Cue, a MetaSound whose audio output is unconnected). A Sound Wave also gets the peak, RMS and length of the recording itself (wavePeakDb, waveRmsDb, waveSeconds), which hold however slowly the editor draws. Answers when the sound ends or after maxSeconds."
         },
         "plurality": {
           "type": "string",
@@ -13132,7 +13132,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "mix_modifier",
             "mix_eq"
           ],
-          "description": "Which configure sound attenuation variant to run."
+          "description": "Which configure sound attenuation variant to run.\ndistance: Configure distance attenuation: inner radius (or a box's size per axis), falloff distance and curve, and air absorption (a low-pass that muffles the sound with distance).\nspatialization: Set how a Sound Attenuation asset places its sounds in space: spatialize on or off, and spatialization Default (panning) or Binaural (HRTF, for headphones). Only what is sent changes, a call with neither is refused, and another algorithm is INVALID_ARGUMENT. Saved unless save is false.\nocclusion: Configure audio occlusion.\nreverb_send: Configure an audio reverb send.\naudio_occlusion: Configure occlusion settings on a sound asset.\npreset: Create a Sound Attenuation asset name in path (default /Game/Audio/Attenuation): innerRadius (default 400), falloffDistance (default 3600), attenuationShape Sphere (the default), Capsule, Box (sized per axis with extent) or Cone, and falloffMode Linear (the default), Logarithmic, Inverse or NaturalSound; another shape or mode is refused. An asset already at the path is ASSET_ALREADY_EXISTS (change one with setting=distance). Saved unless save is false; the reply reads the values back."
         },
         "size": {
           "type": "array",
@@ -13166,7 +13166,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "pause",
             "resume"
           ],
-          "description": "Which stop sound variant to run; omit for 'stop'.",
+          "description": "Which stop sound variant to run; omit for 'stop'.\nstop: Stop sounds: the 2D sounds play_sound started (only that sound with soundPath), or with all every sound the editor and a running game play, its music included.\npause: Pause the sounds soundOp=stop would stop, each held where it is. Sounds already paused are not counted.\nresume: Resume the paused sounds soundOp=stop would stop, each from where it was paused.",
           "default": "stop"
         },
         "soundPath": {
@@ -13658,7 +13658,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "hint",
             "game_over"
           ],
-          "description": "Which add behaviour variant to run."
+          "description": "Which add behaviour variant to run.\nhealth: Give an actor health: Health and MaxHealth variables, damage from any source (ApplyDamage, a pain causing volume, a projectile) lowers it and negative damage heals, a Heal function, OnHealthChanged and OnDied dispatchers, and optional destroy on death.\ndamage_on_touch: Make an actor damage whatever touches it: ApplyDamage with TouchDamage on each overlap, which an actor with health loses (a negative amount heals); with knockback a touching Character is also launched away from it. It fires on overlap, so the actor needs a component that overlaps pawns (a sphere or box with the Trigger or OverlapAllDynamic profile).\npickup: Make an actor a pickup: a pawn that touches it collects it, which heals the pawn (heal) or adds to a number variable of the collector class (coins, keys, ammo), plays a sound and destroys the pickup. It fires on overlap, so the actor needs a component that overlaps pawns (a sphere or box with the Trigger or OverlapAllDynamic profile).\nsprint: Give a Character a sprint: while the key is held its MaxWalkSpeed is sprintSpeed, and on release the walk speed it had at BeginPlay comes back. The key gets an Input Action and a mapping, registered when the character is possessed.\nshoot: Give a pawn a key that shoots: each press spawns projectileClass in front of it, facing its way and owned by it, and launches it at projectileSpeed, at most fireRate shots a minute. The key gets an Input Action and a mapping, registered when the pawn is possessed.\nchase: Make a pawn chase the player: every quarter second, while the player is within chaseRange, its AI controller moves it toward the player and stops stopDistance away; out of range it stops. The pawn is set to be possessed by an AI controller when placed or spawned.\npatrol: Make a pawn patrol: its AI controller walks it to each of points in turn (offsets from where it starts), it waits waitTime at each and the route loops; with chaseRange it chases the player who comes that close and goes back to its route after. A chase the pawn already has is taken over. The pawn is set to be possessed by an AI controller when placed or spawned.\nturret: Make an actor a turret: every frame, while the player is within range, it turns about its vertical axis to face the player and fires projectileClass at them at projectileSpeed, at most fireRate shots a minute; each projectile is owned by the actor, so it never hits it. Nothing checks line of sight: a wall between them stops the shots.\nstomp: Make an enemy the player defeats by landing on it: a player-controlled Character that lands on top of the actor bounces up at bounceSpeed and the actor dies (with the health behaviour it takes damage enough to die, else it is destroyed); one that bumps it from the side or below takes sideDamage, at most once a second.\nexplosive: Make an actor with health explode when it dies: every actor within explosionRadius with a clear line to it takes up to explosionDamage (less with distance), effectPath plays and soundPath sounds at the spot, and the actor is gone. An explosive the blast kills explodes in turn.\nmoving_platform: Make an actor a moving platform or an elevator: it travels to each of points in turn (offsets from where it starts) at speed, waits waitTime at each, and loops; a Character standing on it rides along. Its root must be movable (a Blueprint made with manage_blueprint create is).\ncontrols: Give a Character the controls a player steers it with: WASD or the left stick walk it relative to where the controller faces, the mouse or the right stick turn the view, and the jump key jumps (held longer, higher). It makes IA_Move and IA_Look (Axis2D) and IA_Jump next to the Blueprint, maps the keys and registers the context when the character is possessed.\nrespawn: Make a pawn come back when it falls off the level or dies: to its start, or to where it last touched an actor tagged checkpointTag (a checkpoint), once it falls fallHeight below that point, and when it dies (back at full health) if it has the health behaviour. Respawn, SetRespawnPoint and OnRespawned are left for other logic.\ngoal: Make an actor the goal of a level: the first time the player touches it, OnGoalReached fires and soundPath plays there, and with nextLevel that level opens delay seconds later. It fires on overlap, so the actor needs a component that overlaps pawns (a sphere or box with the Trigger or OverlapAllDynamic profile).\nlaunch_pad: Make an actor launch a Character that touches it: LaunchCharacter with launchVelocity, replacing its vertical speed so every bounce reaches the same height (overrideXY replaces its horizontal speed too), and soundPath plays at the pad. It fires on overlap, so the actor needs a component that overlaps pawns (a sphere or box with the Trigger or OverlapAllDynamic profile).\nteleporter: Make an actor a teleporter: a pawn that touches it is moved to TeleportTarget, keeping its rotation, and soundPath plays where it arrives. Set TeleportTarget on each placed teleporter to the actor to arrive at (control_actor spawn variables, or set_blueprint_variables, with that actor name); a target that is a teleporter of the same class ignores pawns for cooldown seconds first, so a pair of pads does not send the pawn straight back. It fires on overlap, so the actor needs a component that overlaps pawns (a sphere or box with the Trigger or OverlapAllDynamic profile).\nfalling_platform: Make an actor a falling platform: the first pawn that lands on top of it starts it shaking, fallDelay seconds later it drops with gravity, and respawnTime seconds after the drop began it is back in place and ready again. A bump from the side or below does not set it off. The actor must block pawns, and its root must be movable (a Blueprint made with manage_blueprint create is).\ncountdown: Give an actor a time limit: at BeginPlay TimeLeft starts at seconds and drops by one every second; at zero OnTimeUp fires and, with killAtZero, the actor takes damage enough to die, so a pawn with the health behaviour dies and its game over or respawn follows. Show the time with behaviour counter_hud variableName TimeLeft.\nspawner: Make an actor a spawner: every interval seconds, while fewer than maxAlive of the actors it spawned are alive, it spawns spawnClass at a random point up to radius across from itself, counts each until it is destroyed, and fires OnSpawned with it. A pawn class set to be possessed by AI when spawned (the chase behaviour sets that) moves on its own.\ndash: Give a Character a dash: each press of the key launches it dashSpeed along where it faces, with a small lift so the dash carries before the ground slows it, at most once every cooldown seconds. The key gets an Input Action and a mapping, and the context is registered when the character is possessed.\nhealth_hud: Show the health of a pawn on screen: while a local player controls it, a widget is on the screen with a bar filled to Health / MaxHealth, refilled whenever OnHealthChanged fires, and taken off when the pawn loses that player or is destroyed. Needs the health behaviour. With no widgetPath it makes UI/WBP_HealthBar next to the Blueprint.\ncounter_hud: Show a number of a pawn on screen (Coins, Score): while a local player controls it, a text at the top right reads label: value, the variable rounded to a whole number and refreshed every 0.1 seconds, taken off when the pawn loses that player or is destroyed. With no widgetPath it makes UI/WBP_<variable>Counter next to the Blueprint; each further counter sits a row lower.\nhint: Show a message on the player's screen while the player is in the actor's area: when a locally controlled pawn starts to overlap the actor, a widget shows message at the bottom of that player's view, and it goes when the pawn leaves, or hideAfter seconds later. Each placed copy can say its own text (HintMessage is instance editable). It fires on overlap, so the actor needs a component that overlaps pawns (a sphere or box with the Trigger or OverlapAllDynamic profile).\ngame_over: Give the player a game over: when the pawn dies (health behaviour) while a local player controls it, that player input stops, a widget shows message over a dark shade, and the current level opens again restartDelay seconds later. The pawn stays when it dies, so the restart can run. With no widgetPath it makes UI/WBP_GameOver next to the Blueprint."
         },
         "bindingKind": {
           "type": "string",
@@ -13674,7 +13674,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "localized_text",
             "localization_key"
           ],
-          "description": "Which bind widget variant to run."
+          "description": "Which bind widget variant to run.\ntext: Bind the Text of a widget to a Blueprint variable (any type that converts to text) or pure function.\ncolor: Bind the tint of a widget (text or image color, progress fill, border brush) to a Blueprint variable or pure function.\nenabled: Bind whether a widget is enabled to a Blueprint bool variable or pure function.\npercent: Bind the fill Percent of a Progress Bar (or the Value of a Slider or SpinBox) to a Blueprint float variable or pure function, so a health or loading bar follows it at runtime.\nvisibility: Bind the Visibility of a widget to a Blueprint variable (a bool maps true to Visible, false to Collapsed) or pure function.\non_clicked: Wire the OnClicked event of a Button to a Blueprint function (bindingSource), creating the function when missing.\non_hovered: Wire the OnHovered (and optionally OnUnhovered) event of a Button to Blueprint functions, creating them when missing.\non_value_changed: Wire the value-changed event of a Slider, SpinBox, CheckBox or ComboBoxString to a Blueprint function (bindingSource) that receives the new value; the function is created when missing.\nlocalized_text: Point a Text Block at a string-table entry so its text follows the active localization.\nlocalization_key: Assign the localization namespace and key a Text Block resolves its text through."
         },
         "bindingSource": {
           "type": "string",
@@ -13809,7 +13809,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "blueprint",
             "ensure"
           ],
-          "description": "Which create variant to run; omit for 'create'.",
+          "description": "Which create variant to run; omit for 'create'.\ncreate: Create a Blueprint asset named name in savePath (default /Game) and save it (saved). parentClass is a native class as /Script/Module.Class or a short name (Actor, Pawn, Character, PlayerController), or a Blueprint class path ending in _C; blueprintType Actor, Pawn, Character or FunctionLibrary stands in for a missing parentClass, and Interface without one makes a Blueprint Interface. A parent that resolves to nothing is CLASS_NOT_FOUND, naming classes of that name. properties sets class defaults, Component.Property and struct members by dotted path, reported as appliedProperties and failedProperties (the createMode=create stands either way). A Blueprint already at the path is answered with alreadyExists and left unchanged; one with another parent class is ASSET_ALREADY_EXISTS.\nblueprint: Same as createMode=create: a Blueprint named name in savePath from parentClass, or from blueprintType when parentClass is left out.\nensure: Make sure a Blueprint of parentClass is at savePath/name: one already there is answered with alreadyExists and left unchanged (another parent class is ASSET_ALREADY_EXISTS); otherwise it is created as createMode=create does, unless createIfMissing is false, which only reports whether it exists.",
           "default": "create"
         },
         "currency": {
@@ -13841,7 +13841,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "node",
             "pin_links"
           ],
-          "description": "Which delete node variant to run; omit for 'node'.",
+          "description": "Which delete node variant to run; omit for 'node'.\nnode: Delete a node from a Blueprint graph by its nodeGuid, or many nodes at once with nodeIds (one consent, one compile, all or nothing).\npin_links: Break (disconnect) every link of one pin on a graph node, leaving the pin unwired.",
           "default": "node"
         },
         "delta": {
@@ -13887,7 +13887,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "rename_widget",
             "reparent_widget"
           ],
-          "description": "Which edit graph variant to run."
+          "description": "Which edit graph variant to run.\nadd_node: Add a node to a Blueprint graph (alias of edit=create_node with simplified type resolution).\ncreate_node: Create a graph node (function call, event, variable, branch, etc.) in a Blueprint graph.\ncreate_reroute_node: Create a reroute node for organizing exec/data wire paths in a Blueprint graph.\ncreate_struct_make_break_nodes: Create a Make or Break Struct node in a Blueprint graph from a UserDefinedStruct or native UScriptStruct.\nconnect_pins: Connect two graph pins (exec or data) by nodeGuid and pin name. A pin the editor adds on demand is added: a Sequence's then_2, a Make Array's [2], a Switch on Int's case 7 (a new switch has only Default).\nset_node_property: Set a property on a graph node by nodeGuid.\nset_pin_default_value: Set the default value of a data pin on a graph node; a read-only (const reference) pin gets it through a MakeLiteral node wired into it.\nadd_construction_script: Add or open the Construction Script graph for a Blueprint.\narrange_nodes: Tidy a graph: move the listed nodes beside the nodes they are wired to (right of what runs them, below-left of what reads them), each to the nearest free slot; the nodes left out stay put and anchor them.\nbatch: Run many graph edits in one call: add variables, functions (with their bodies), events and event dispatchers, create nodes, connect pins, set pin defaults and node properties, with $id references between steps."
         },
         "effectPath": {
           "type": "string",
@@ -14090,7 +14090,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "widget",
             "slot"
           ],
-          "description": "Which get blueprint variant to run; omit for 'blueprint'."
+          "description": "Which get blueprint variant to run; omit for 'blueprint'.\nblueprint: Retrieve metadata for one Blueprint asset.\nproperty: Read a property value from a Blueprint asset or its CDO, or a component default as Component.Property."
         },
         "innerSlotPadding": {
           "type": "object",
@@ -14246,7 +14246,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "function",
             "event"
           ],
-          "description": "Which add function variant to run; omit for 'function'."
+          "description": "Which add function variant to run; omit for 'function'.\nfunction: Add a new function graph to a Blueprint with optional inputs and outputs; an existing function of that name is reused only when it matches the pure, inputs and outputs given. A name the parent class lets a Blueprint override (a widget's OnKeyDown) makes that override with its own signature, so leave inputs, outputs, pure and isPublic out.\nevent: Add an event node to a Blueprint event graph: built-in, custom, or bound to a component delegate (componentName plus eventName, e.g. OnComponentBeginOverlap on a BoxComponent) or to a Widget Blueprint widget's event (componentName the widget, e.g. PlayButton with OnClicked)."
         },
         "knockback": {
           "type": "number",
@@ -14279,7 +14279,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "render_transform",
             "style"
           ],
-          "description": "Which set widget layout variant to run."
+          "description": "Which set widget layout variant to run.\nanchor: Set the anchor points (min/max) for a widget in a canvas panel slot.\nposition: Set the position offset for a widget in its slot.\nsize: Set the size of a widget in its slot: a size override {x,y} for a CanvasPanel child, or sizeRule (Auto or Fill) and fillValue (the Fill weight) for a HorizontalBox, VerticalBox or ScrollBox child.\nalignment: Set the alignment (0-1) for a widget in its slot.\npadding: Set the padding for a widget in its slot.\nz_order: Set the Z-order for a widget in a canvas panel slot.\nvisibility: Set the visibility mode (Visible, Collapsed, Hidden, etc.) for a widget.\nclipping: Set the clipping mode (Inherit, ClipToBounds, etc.) for a widget.\nrender_transform: Set the render transform (translation, shear, angle) for a widget.\nstyle: Set the visual style (color, font size, face and letter spacing, text, text justification, brush texture, button hover/press sounds) for a widget, or copy the look of another text block with copyStyleFrom."
         },
         "left": {
           "type": "number",
@@ -14748,7 +14748,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "credits",
             "shop"
           ],
-          "description": "Which create widget template variant to run."
+          "description": "Which create widget template variant to run.\nmain_menu: Create a main menu Widget Blueprint: backdrop, title and a column of buttons (default Play, Settings, Quit).\npause_menu: Create a pause menu Widget Blueprint: dimmed backdrop, PAUSED title and buttons (default Resume, Settings, Main Menu).\nsettings_menu: Create a settings menu Widget Blueprint: graphics, audio and controls rows with real combo boxes, check boxes and sliders, plus Apply and Back.\nloading_screen: Create a loading screen Widget Blueprint: backdrop, Loading text, optional progress bar and optional FadeIn animation.\nhud: Create a HUD Widget Blueprint on a canvas holding ready-made pieces (default health bar, crosshair, ammo counter).\ndialog: Create a dialog box Widget Blueprint: speaker name, wrapped dialog line, response buttons and a continue hint.\ninventory: Create an inventory Widget Blueprint: titled panel with a grid of item slots (default 6 by 4).\nradial_menu: Create a radial menu Widget Blueprint: a ring of round buttons around a centre label (default 8 segments).\ncredits: Create a credits Widget Blueprint: centred scrolling list of role and name pairs with a Back button.\nshop: Create a shop Widget Blueprint: header with currency, a scrolling grid of item cards each with a Buy button, and Close."
         },
         "scrollBarVisibility": {
           "type": "string",
@@ -14915,7 +14915,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "font",
             "margin"
           ],
-          "description": "Which set font variant to run; omit for 'font'.",
+          "description": "Which set font variant to run; omit for 'font'.\nfont: Set the font asset and size on a Text Block or Rich Text Block inside a Widget Blueprint.\nmargin: Set the slot margin on a widget held by a Horizontal Box, Vertical Box, Overlay, or Border.",
           "default": "font"
         },
         "texturePath": {
@@ -15107,7 +15107,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "tree_view",
             "component"
           ],
-          "description": "Which add content widget variant to run."
+          "description": "Which add content widget variant to run.\ntext_block: Add a Text Block widget for displaying read-only text.\nrich_text_block: Add a Rich Text Block widget for styled/markup text.\nimage: Add an Image widget for displaying a texture or brush.\nbutton: Add a Button widget for click interaction.\ncheck_box: Add a Check Box widget for boolean toggle.\ncombo_box: Add a Combo Box (dropdown) widget for option selection.\nslider: Add a Slider widget for range selection.\nspin_box: Add a Spin Box widget for numeric increment/decrement.\nprogress_bar: Add a Progress Bar widget for percentage display.\ntext_input: Add a Text Input (editable text) widget for user text entry.\nlist_view: Add a List View widget for scrollable entry lists.\ntree_view: Add a Tree View widget for hierarchical entry display.\ncomponent: Add a widget of any UMG class to a Widget Blueprint by class name."
         },
         "widgetPath": {
           "type": "string",
@@ -16713,7 +16713,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "ground_friction",
             "braking_deceleration"
           ],
-          "description": "Which set movement property variant to run."
+          "description": "Which set movement property variant to run.\nwalk_speed: Set the top walking speed of a Character Blueprint (CharacterMovement MaxWalkSpeed, cm/s; engine default 600). Compiled and saved; the reply gives the value the compiled class holds. A negative speed is refused, and a Blueprint that is not a Character is NOT_A_CHARACTER.\njump_height: Set how fast a Character Blueprint leaves the ground when it jumps (CharacterMovement JumpZVelocity, cm/s; engine default 420): a launch speed, not a height. The apex is about speed squared / (1960 x gravityScale) cm, so 420 rises about 90 cm. Compiled and saved; the reply gives the value held. Negative is refused.\ngravity_scale: Set the gravity multiplier of a Character Blueprint (CharacterMovement GravityScale: 1 is normal, 0 floats, negative falls upward). Compiled and saved; the reply gives the value held.\nground_friction: Set how quickly a walking Character Blueprint turns and stops (CharacterMovement GroundFriction; engine default 8, higher grips more). Compiled and saved; the reply gives the value held. Negative is refused.\nbraking_deceleration: Set how fast a walking Character Blueprint slows when no input is held (CharacterMovement BrakingDecelerationWalking, cm/s squared; engine default 2048). Compiled and saved; the reply gives the value held. Negative is refused."
         },
         "name": {
           "type": "string",
@@ -16802,7 +16802,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "camera_component",
             "nav_movement"
           ],
-          "description": "Which configure character variant to run."
+          "description": "Which configure character variant to run.\nmovement_speeds: Set a Character Blueprint's Character Movement speeds in one call, then compile and save it: walkSpeed (MaxWalkSpeed, engine default 600), crouchSpeed (300), swimSpeed (300), flySpeed (600), acceleration (MaxAcceleration, 2048), deceleration (braking while walking, 2048) and groundFriction (8), plus the jump fields setting=jump takes. A value not sent keeps its own. A Character has one walk speed: runSpeed sets it only when walkSpeed is absent, otherwise the reply says runSpeedApplied false with a warning (a sprint is game logic that raises MaxWalkSpeed while a key is held). The reply reads back every speed and jump value.\njump: Set how a Character Blueprint jumps, then compile and save it: jumpHeight is the launch speed (JumpZVelocity, engine default 420; the apex is about v squared over 1960 cm at gravity scale 1, so 420 rises 0.9 m and 600 about 1.8 m), jumpHoldTime (seconds holding the button keeps lifting, default 0), maxJumpCount (2 for a double jump), airControl (0-1 steering while falling, default 0.05), gravityScale (default 1) and fallingLateralFriction (default 0). A value not sent keeps its own; the reply reads back all six, jumpHeight as jumpZVelocity.\ncrouch: Let a Character Blueprint crouch, then compile and save it: canCrouch (off on a new Character, so Crouch does nothing until it is on), crouchSpeed (MaxWalkSpeedCrouched, engine default 300) and crouchedHalfHeight (the capsule half-height while crouched, default 40); a field not sent keeps its value. The reply reads back all three. Crouching still needs input that calls Crouch and UnCrouch, and an Animation Blueprint that plays a crouch pose from the crouched state.\nrotation: Choose what turns a Character Blueprint, then compile and save it: orientToMovement turns it toward where it moves at rotationRate degrees per second (yaw; engine default 360); useControllerRotationYaw, Pitch and Roll make it face the controller's aim. A new Character faces the controller's yaw (useControllerRotationYaw true, orientToMovement false). A third-person character usually sets orientToMovement true and useControllerRotationYaw false; a strafing shooter the opposite. Keep only one of those two on: both on fight every frame. A value not sent keeps its own; the reply reads back all five.\ncapsule_component: Resize a Character Blueprint's collision capsule (capsuleRadius and capsuleHalfHeight in world units; a new Character starts at 34 by 88, the third-person template uses 42 by 96), then compile and save it; a size not sent keeps its value. The reply reads both sizes back; a Blueprint that is not a Character is refused (NOT_A_CHARACTER). Move the mesh with it: its meshOffset z is usually minus the half-height, so the feet sit on the capsule bottom.\nmesh_component: Set the inherited Mesh of a Character Blueprint, then compile and save it: skeletalMeshPath, animBlueprintPath (the Animation Blueprint that animates it), and meshOffset and meshRotation relative to the capsule; a field not sent keeps its value. Refused before anything changes: a path that does not load (ASSET_NOT_FOUND), and an Animation Blueprint made for a skeleton the mesh does not take (SKELETON_MISMATCH), which would leave the character in its rest pose. The reply names skeletalMeshAssigned and animBlueprintAssigned. A mannequin-style mesh usually needs meshOffset z at minus the capsule half-height and meshRotation yaw -90 to face forward (+X).\ncamera_component: Give a Character a third-person follow camera: a spring arm behind it with a camera on its end, made when missing; an existing arm changes only in the fields sent.\nnav_movement: Set how AI navigation sees a Character Blueprint, then compile and save it: navAgentRadius and navAgentHeight (the agent size its movement reports to pathfinding) and avoidanceEnabled (RVO avoidance, so moving characters steer around each other). By default a spawned character copies its capsule size over the nav agent size; sending a size turns that copy off so the size stays (navAgentFollowsCapsule false). A value not sent keeps its own; the reply reads back all three and navAgentFollowsCapsule. The navmesh itself is built for the agent sizes in the project's Navigation System settings."
         },
         "skeletalMeshPath": {
           "type": "string",
@@ -17181,7 +17181,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "info",
             "stats"
           ],
-          "description": "Which get combat info variant to run; omit for 'info'.",
+          "description": "Which get combat info variant to run; omit for 'info'.\ninfo: Read combat configuration back from a Blueprint.\nstats: Read combat stats back from a Blueprint.",
           "default": "info"
         },
         "isDamageZoneHead": {
@@ -17196,7 +17196,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "damage_type",
             "damage_type_setup"
           ],
-          "description": "Which create combat asset variant to run."
+          "description": "Which create combat asset variant to run.\nweapon_blueprint: Create an Actor Blueprint named name in path (default /Game) for a weapon: a WeaponMesh component showing weaponMeshPath, and BaseDamage, FireRate, Range and Spread variables set to baseDamage, fireRate, range and spread (defaults 25, 600, 10000, 2). It has no firing logic of its own. A mesh that does not load, or a path an asset already holds, is refused before anything is made; the Blueprint is compiled and saved.\nprojectile_blueprint: Create a projectile Blueprint named name in path (default /Game) that flies, damages what it hits and is destroyed on impact; projectileMeshPath is its mesh, and one that does not load, or a path an asset already holds, is refused before anything is made.\ndamage_type: Create a DamageType Blueprint named name in path (default /Game), a damage class ApplyDamage can name and a damaged actor can tell apart; compiled and saved, and a path an asset already holds is refused.\ndamage_type_setup: Create a DamageType Blueprint named name in path (default /Game) and answer its damageTypePath; compiled and saved, and a path an asset already holds is refused."
         },
         "name": {
           "type": "string",
@@ -17242,7 +17242,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "weapon_mesh",
             "attachments"
           ],
-          "description": "Which configure damage variant to run."
+          "description": "Which configure damage variant to run.\nhit_detection: Make sure a Blueprint has a hitbox of a shape and set its damage multiplier variable.\nhitbox: Add a shaped hitbox component, optionally bound to a bone of the Blueprint skeletal mesh."
         },
         "spread": {
           "type": "number",
@@ -17479,7 +17479,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "reset",
             "effect"
           ],
-          "description": "Which activate variant to run; omit for 'activate'.",
+          "description": "Which activate variant to run; omit for 'activate'.\nactivate: Activate a placed Niagara component, in the level editor or a running game; control=reset restarts it from age 0.\ndeactivate: Deactivate a placed Niagara component, in the level editor or a running game.\nreset: Restart a placed Niagara component from age 0, in the level editor or a running game.\neffect: Activate a Niagara component by actor, or by the system asset it plays (on actorName, else anywhere in the world).",
           "default": "activate"
         },
         "debugOp": {
@@ -17488,7 +17488,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "draw",
             "clear"
           ],
-          "description": "Which debug shape variant to run; omit for 'draw'.",
+          "description": "Which debug shape variant to run; omit for 'draw'.\ndraw: Draw a temporary debug shape in the editor viewport (sphere, box, circle, line, point, coordinate, cylinder, cone, capsule, arrow or plane) at location, for duration seconds (default 5). Nothing is spawned or saved, and nothing shows in Play In Editor or a packaged game.\nclear: Clear every debug shape drawn in the editor viewport at once, instead of waiting for each to time out.",
           "default": "draw"
         },
         "deltaTime": {
@@ -17533,7 +17533,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "enable_gpu_simulation",
             "connect_pins"
           ],
-          "description": "Which edit niagara system variant to run."
+          "description": "Which edit niagara system variant to run.\nadd_emitter: Add an emitter to a Niagara system: an emitter asset (emitterPath), or a copy of another system's emitter with its modules, values, renderers and bindings (sourceSystemPath + sourceEmitterName), as the editor's copy and paste does.\nadd_user_parameter: Add a user parameter to a system.\nbind_parameter: Drive a Niagara value from a parameter: a module input named as get_niagara_info lists it (InitializeParticle.Color) is linked to sourceBinding, as the stack's Link Inputs menu does; any other parameterName gets a Set Variables module in particle update that writes it from sourceBinding every frame.\nset_parameter_value: Set Niagara parameter values: a user parameter, a module input named as get_niagara_info lists it (InitializeParticle.Lifetime), or a module's static switch (InitializeParticle.Ribbon Width Mode, an enum by its display name such as Direct Set); one with parameterName and parameterValue, or several with parameters, written together and saved once.\nset_parameter: Set a Niagara user parameter: on a placed effect's component (actorName), so one placement of a shared system gets its own values, or its default on the system asset (assetPath).\nset_dynamic_input: Configure a Niagara dynamic input expression.\nset_emitter_properties: Enable or disable an emitter in a Niagara system (emitterProperties.enabled).\nenable_gpu_simulation: Enable GPU simulation on a system.\nconnect_pins: Connect two Niagara graph pins (fromNode, fromPin, toNode, toPin), or with autoConnect wire the first compatible free pins."
         },
         "emitter": {
           "type": "string",
@@ -17608,7 +17608,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "info",
             "validate"
           ],
-          "description": "Which get niagara info variant to run; omit for 'info'.",
+          "description": "Which get niagara info variant to run; omit for 'info'.\ninfo: Read Niagara system metadata.\nvalidate: Validate a Niagara system for errors.",
           "default": "info"
         },
         "inputName": {
@@ -17628,7 +17628,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "collision_query",
             "audio_spectrum"
           ],
-          "description": "Which add niagara data interface variant to run."
+          "description": "Which add niagara data interface variant to run.\nstatic_mesh: Add a Static Mesh data interface as a user parameter of the system, User.<parameterName> (default MCP_StaticMeshDataInterface), for modules to sample a static mesh's surface; emitterName must name an emitter of the system. A parameterName the system already has is NAME_TAKEN, nothing changed. Saved unless save is false (saved).\nskeletal_mesh: Add a Skeletal Mesh data interface as a user parameter of the system, User.<parameterName> (default MCP_SkeletalMeshDataInterface), for modules to sample a skeletal mesh's bones and surface; emitterName must name an emitter of the system. A parameterName the system already has is NAME_TAKEN, nothing changed. Saved unless save is false (saved).\nspline: Add a Spline data interface as a user parameter of the system, User.<parameterName> (default MCP_SplineDataInterface), for modules to sample positions along a spline; emitterName must name an emitter of the system. A parameterName the system already has is NAME_TAKEN, nothing changed. Saved unless save is false (saved).\ncollision_query: Add a Collision Query data interface as a user parameter of the system, User.<parameterName> (default MCP_CollisionQueryDataInterface), for modules to trace against the world; emitterName must name an emitter of the system. A parameterName the system already has is NAME_TAKEN, nothing changed. Saved unless save is false (saved).\naudio_spectrum: Add an Audio Spectrum data interface as a user parameter of the system, User.<parameterName> (default MCP_AudioSpectrumDataInterface), for modules to read the spectrum of playing audio (audio-reactive particles); emitterName must name an emitter of the system. A parameterName the system already has is NAME_TAKEN, nothing changed. Saved unless save is false (saved)."
         },
         "kind": {
           "type": "string",
@@ -17643,7 +17643,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "niagara",
             "particle"
           ],
-          "description": "Which create effect variant to run."
+          "description": "Which create effect variant to run.\nniagara_system: Create a Niagara System asset.\nniagara_emitter: Create a Niagara Emitter asset.\nniagara_ribbon: Create a Niagara ribbon effect: by default the engine LocationBasedRibbon template given its own SpawnRate of 60 a second, Ribbon Width Mode Direct Set and an infinite loop, so it trails whatever it is attached to, placed in the level only when location is given; tune SpawnRate.SpawnRate, InitializeParticle.Lifetime, Ribbon Width and Color with set_parameter_value.\nparticle_trail: Create a kind=particle trail effect: by default a ribbon (the engine LocationBasedRibbon template given its own SpawnRate of 60 a second, Ribbon Width Mode Direct Set and an infinite loop) that trails whatever it is attached to, placed in the level only when location is given; tune SpawnRate.SpawnRate, InitializeParticle.Lifetime, Ribbon Width and Color with set_parameter_value.\nimpact: Create an impact effect system asset (the engine OmnidirectionalBurst template by default), placed in the level only when location is given.\nenvironment: Create an environment effect (weather/atmosphere) system asset, placed in the level only when location is given.\nvolumetric_fog: Create a volumetric fog effect.\nniagara: Place a Niagara system in the level as a Niagara actor, at a location or attached to an actor; autoActivate false places it switched off, for a sequence kind=particle track or gameplay to start.\nparticle: Spawn a kind=particle effect (Cascade or Niagara) from a preset name or a system asset."
         },
         "length": {
           "type": "number",
@@ -17699,7 +17699,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "event_generator",
             "event_receiver"
           ],
-          "description": "Which add niagara module variant to run; omit for 'module'.",
+          "description": "Which add niagara module variant to run; omit for 'module'.\nmodule: Add a module to a Niagara emitter, where its dependencies hold: before the first module that must run after it (a force before Solve Forces and Velocity), else at the end of the stack.\nspawn_rate: Insert the SpawnRate module with its default inputs; tune them with set_parameter_value (parameterName \"<Module>.<Input>\").\nspawn_burst: Insert the SpawnBurst_Instantaneous module with its default inputs; tune them with set_parameter_value (parameterName \"<Module>.<Input>\").\nspawn_per_unit: Insert the SpawnPerUnit module with its default inputs; tune them with set_parameter_value (parameterName \"<Module>.<Input>\").\ninitialize_particle: Insert the InitializeParticle module with its default inputs; tune them with set_parameter_value (parameterName \"<Module>.<Input>\").\nvelocity: Add a velocity module.\nacceleration: Insert the AccelerationForce module with its default inputs; tune them with set_parameter_value (parameterName \"<Module>.<Input>\").\nforce: Insert the the chosen force module with its default inputs; tune them with set_parameter_value (parameterName \"<Module>.<Input>\").\ncolor: Insert the Color module with its default inputs; tune them with set_parameter_value (parameterName \"<Module>.<Input>\").\nsize: Insert the ScaleSpriteSize module with its default inputs; tune them with set_parameter_value (parameterName \"<Module>.<Input>\").\ncollision: Insert the Collision module with its default inputs; tune them with set_parameter_value (parameterName \"<Module>.<Input>\").\nkill_particles: Insert the KillParticles module with its default inputs; tune them with set_parameter_value (parameterName \"<Module>.<Input>\").\ncamera_offset: Insert the CameraOffset module with its default inputs; tune them with set_parameter_value (parameterName \"<Module>.<Input>\").\nparticle_state: Add a particle-state module.\nsprite_renderer: Add a sprite renderer module.\nmesh_renderer: Add a mesh renderer module.\nribbon_renderer: Add a ribbon renderer module.\nlight_renderer: Add a light renderer module.\nsimulation_stage: Add a simulation stage.\nevent_generator: Add a Niagara event generator.\nevent_receiver: Add a Niagara event receiver.",
           "default": "module"
         },
         "moduleName": {
@@ -18229,7 +18229,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "gameplay_cue_notify",
             "execution_calculation"
           ],
-          "description": "Which create gas asset variant to run."
+          "description": "Which create gas asset variant to run.\ngameplay_ability: Create a Gameplay Ability asset.\ngameplay_effect: Create a Gameplay Effect Blueprint (name, in path) with its duration policy: durationType Instant (the default without duration), HasDuration (the default with duration, in seconds) or Infinite; period in seconds makes a non-Instant effect tick. An effect already at that path is left as it is (reusedExisting; set_effect_duration changes it). Saved.\nattribute_set: Create an AttributeSet class/asset.\ngameplay_cue_notify: Create a Gameplay Cue Notify asset.\nexecution_calculation: Create a GameplayEffectExecutionCalculation blueprint for custom effect math."
         },
         "magnitudeCalculationType": {
           "type": "string",
@@ -18313,7 +18313,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "instancing_policy",
             "add_to_set"
           ],
-          "description": "Which configure ability variant to run."
+          "description": "Which configure ability variant to run.\ntags: Add gameplay tags to an ability Blueprint: abilityTags (its own asset tags), cancelAbilitiesWithTag and blockAbilitiesWithTag (abilities it cancels or blocks while active), activationRequiredTags and activationBlockedTags (tags its owner must have, or must not have, to activate). Tags are added, never replaced; each must be registered in the project (GAMEPLAY_TAG_NOT_REGISTERED before anything changes) and is read back from the compiled class before the ability is saved (ABILITY_TAGS_NOT_APPLIED otherwise).\ncooldown: Set the Gameplay Effect an ability applies as its cooldown when it commits (cooldownEffectPath: a HasDuration GameplayEffect that grants a cooldown tag; the ability cannot activate again while its owner has that tag). Read back from the compiled class, then saved; the reply names the class it holds (cooldownEffectClass). An effect that does not load is ASSET_NOT_FOUND.\ncosts: Set the Gameplay Effect an ability applies as its cost when it commits (costEffectPath: a GameplayEffect Blueprint, usually Instant with a negative modifier on the spent attribute; the ability cannot activate while its owner cannot pay). Read back from the compiled class, then saved; the reply names the class it holds (costEffectClass). An effect that does not load is ASSET_NOT_FOUND.\nactivation_policy: Set where an ability activates: its net execution policy, LocalPredicted (the default: the client runs it at once and the server confirms), LocalOnly, ServerOnly or ServerInitiated. Another name is refused; the policy is read back from the compiled class, then saved.\ninstancing_policy: Set how an ability is instanced: InstancedPerActor (the default: one instance per actor, keeping its state between activations), InstancedPerExecution (a fresh instance each activation) or NonInstanced (runs on the class default object with no state; deprecated in newer engines). Another name is refused; read back from the compiled class, then saved (the reply gives instancingPolicy).\nadd_to_set: Add an ability class (abilityPath, a Blueprint, or abilityClass) to an existing ability set (setPath: a DataAsset, or DataAsset Blueprint, with an array of ability classes); one already there is reported (alreadyPresent), not doubled. Saved; a set that cannot be written is SAVE_FAILED, and a set with no array that takes the class is PROPERTY_NOT_FOUND, listing its arrays."
         },
         "stackDurationRefreshPolicy": {
           "type": "string",
@@ -18504,7 +18504,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "linear",
             "radial"
           ],
-          "description": "Which array mesh variant to run."
+          "description": "Which array mesh variant to run.\nlinear: Repeat a dynamic mesh in a row inside the same mesh: count copies in all, each one offset further from the last. The reply gives the triangleCount after the copies.\nradial: Repeat a dynamic mesh round its local Z axis inside the same mesh: count copies in all, angle / count apart. The reply gives the triangleCount after the copies."
         },
         "axis": {
           "type": "string",
@@ -18531,7 +18531,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "trim",
             "self_union"
           ],
-          "description": "Which boolean mesh variant to run."
+          "description": "Which boolean mesh variant to run.\nunion: Union of two placed dynamic mesh actors: toolActor's volume joins targetActor's mesh, in place and in world space. keepTool (default true) keeps the tool actor, false deletes it once the union worked; a union that leaves nothing is EMPTY_RESULT with the target unchanged.\nsubtract: Cut toolActor's volume out of targetActor's dynamic mesh, in place and in world space (a hole, a doorway). A tool that does not cross the target's surface is NO_EFFECT and one that empties it EMPTY_RESULT, both leaving the target as it was and the tool in place to move; keepTool (default true) false deletes the tool once the cut worked.\nintersection: Keep only where two placed dynamic mesh actors overlap: targetActor's mesh becomes the shared volume, in place and in world space. Meshes that do not overlap are EMPTY_RESULT with the target unchanged; keepTool (default true) false deletes toolActor once it worked.\ntrim: Trim a dynamic mesh actor by another one, trimActorName, kept in place: keepInside false (default) cuts away what lies inside it, true keeps only that part. Refused like a subtract or intersection when nothing would change or nothing would be left.\nself_union: Resolve a dynamic mesh that overlaps itself (after an append or array): the overlapping shells are unioned into one surface, holes filled and flaps trimmed; trianglesBefore and trianglesAfter come back."
         },
         "boxes": {
           "type": "array",
@@ -18799,7 +18799,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "generate_complex",
             "simplify"
           ],
-          "description": "Which configure mesh collision variant to run."
+          "description": "Which configure mesh collision variant to run.\ngenerate: Generate simple collision for a dynamic mesh.\ngenerate_complex: Generate complex (convex decomposition) collision.\nsimplify: Simplify an existing collision hull."
         },
         "collisionType": {
           "type": "string",
@@ -18839,7 +18839,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "lattice_deform",
             "displace_by_texture"
           ],
-          "description": "Which deform mesh variant to run."
+          "description": "Which deform mesh variant to run.\nbend: Bend a dynamic mesh along an axis.\ntwist: Twist a dynamic mesh along an axis.\ntaper: Taper a dynamic mesh along an axis.\nstretch: Stretch a dynamic mesh along an axis.\nspherify: Spherify a dynamic mesh toward a sphere.\ncylindrify: Cylindrify a dynamic mesh toward a cylinder.\nsmooth: Smooth a dynamic mesh: iterations (default 10) of Laplacian smoothing, each moving every vertex strength (default 0.2) of the way toward its neighbours; the mesh shrinks a little. Fewer than 1 iteration or a strength of 0 is refused.\nrelax: Relax a dynamic mesh: the same smoothing as deform=smooth with other defaults (3 iterations, strength 0.5), to even out vertex spacing. Fewer than 1 iteration or a strength of 0 is refused.\nnoise_deform: Apply noise displacement to a dynamic mesh.\nlattice_deform: Deform a dynamic mesh via a control lattice.\ndisplace_by_texture: Displace a dynamic mesh by a heightmap texture."
         },
         "depth": {
           "type": "number",
@@ -18917,7 +18917,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "translate",
             "difference"
           ],
-          "description": "Which edit dynamic mesh variant to run."
+          "description": "Which edit dynamic mesh variant to run.\ncreate: Spawn a DynamicMesh actor to author geometry into: empty, or a copy of a static mesh asset.\nappend_vertex: Append one vertex to a DynamicMesh actor and return its index.\nappend_triangle: Append a triangle to a DynamicMesh actor from three corner positions.\nappend_polygons: Author a polygon cage on a DynamicMesh actor in one call: new vertices and faces of three or more corners, each with its own polygroup and material id.\nappend_cuboids: Append axis-aligned boxes to a DynamicMesh actor in one call, each with a material id, faces left open and a repeat along up to three axes (a railing, a stack of crates, a grid of windows, shelves, pillars), wound outward for you.\nappend_loft: Append a surface lofted through cross sections to a DynamicMesh actor: each section a loop of points (the same count in every one), joined in order with every face turned outward, the ends capped flat or closed to a tip point.\nappend_mesh: Copy a static mesh asset into a DynamicMesh actor at placements, each repeated along up to three axes, with its material slots mapped to the target's material ids (a list cycles copy by copy for colour variety): a model assembled from detailed parts in one call, its copies keeping the asset's normals and UVs.\ndelete_triangles: Delete the triangles of a DynamicMesh actor that triangleIndices or a region picks (by box, facing direction, polygroup or material id), with the points only they used.\nset_vertex_position: Move one vertex of a DynamicMesh actor to a new position.\nset_vertex_color: Set the vertex colour on one vertex, or on every vertex, of a DynamicMesh actor.\nbake_vertex_colors: Bake ambient occlusion, convex-edge, concave-cavity and height masks into the vertex colours of a DynamicMesh actor, for a material to read through its VertexColor node.\nset_material_id: Set the material id (the static-mesh material slot) of triangles of a DynamicMesh actor: every triangle, the triangleIndices you list, or a region.\nset_uvs: Set the UV coordinate of one vertex on a UV channel of a DynamicMesh actor.\nsplit_normals: Split the normals of a DynamicMesh actor above an angle threshold to harden edges.\ntranslate: Translate every vertex of a DynamicMesh actor, leaving the actor transform alone.\ndifference: Subtract a tool mesh from a target mesh under the edit=difference spelling of boolean_subtract."
         },
         "enableCollision": {
           "type": "boolean",
@@ -19091,7 +19091,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "set_settings",
             "set_screen_sizes"
           ],
-          "description": "Which configure mesh lods variant to run."
+          "description": "Which configure mesh lods variant to run.\ngenerate: Generate LODs for a dynamic mesh.\nset_settings: Set the reduction of one LOD of the static mesh asset an actor draws.\nset_screen_sizes: Set the screen sizes at which the LODs of the static mesh asset an actor draws take over."
         },
         "materialId": {
           "type": "integer",
@@ -19147,7 +19147,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "extrude_along_spline",
             "duplicate_along_spline"
           ],
-          "description": "Which model mesh variant to run."
+          "description": "Which model mesh variant to run.\nextrude: Extrude selected faces of a dynamic mesh.\ninset: Inset selected faces of a dynamic mesh.\noutset: Outset selected faces of a dynamic mesh.\noffset_faces: Offset selected faces of a dynamic mesh.\nbevel: Bevel selected edges of a dynamic mesh.\nchamfer: Chamfer selected edges of a dynamic mesh.\nbridge: Bridge two edge loops of a dynamic mesh.\nloft: Loft between two or more profile curves.\nsweep: Sweep a profile along a path of a dynamic mesh.\nrevolve: Turn a profile of {radius, height} points around the vertical axis into a new dynamic mesh actor: a vase, column, bottle, tower or dome.\nshell: Create a modeling=shell (inner offset) of a dynamic mesh.\nloop_cut: Insert evenly spaced edge loops across a dynamic mesh, perpendicular to an axis.\nedge_split: Split edges of a dynamic mesh at their midpoints.\npoke: Poke faces of a dynamic mesh: add a centre vertex to each triangle (optionally pushed out along its normal) and fan it into three triangles.\nquadrangulate: Group pairs of adjacent triangles of a dynamic mesh into quad PolyGroups, so PolyGroup edits (modeling=extrude, modeling=inset, modeling=bevel by group) act on quads. The mesh itself stays triangles.\nextrude_along_spline: Extrude a profile along a spline actor.\nduplicate_along_spline: Duplicate a mesh along a spline actor."
         },
         "name": {
           "type": "string",
@@ -19246,7 +19246,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "recalculate_normals",
             "recompute_tangents"
           ],
-          "description": "Which optimize mesh variant to run."
+          "description": "Which optimize mesh variant to run.\nsimplify_mesh: Simplify a dynamic mesh to a target triangle count.\nremesh_uniform: Uniformly remesh a dynamic mesh to a target edge length.\nremesh_voxel: Voxel-wrap a dynamic mesh into one watertight, smooth-shaded surface (the engine's solidify): the mesh is sampled into a grid and rebuilt, closing holes and merging overlapping parts.\nsubdivide: Subdivide a dynamic mesh: pn tessellation (default), or a Catmull-Clark, Loop or bilinear subdivision surface.\nmorphology: Offset a dynamic mesh's surface through a voxel grid: dilate, contract, close (fillet the seams where unioned parts meet) or open.\nmerge_vertices: Merge coincident vertices of a dynamic mesh.\nweld_vertices: Weld vertices of a dynamic mesh within a distance.\nremove_degenerates: Remove degenerate triangles from a dynamic mesh.\nfill_holes: Fill boundary holes of a dynamic mesh.\nflip_normals: Flip normals of a dynamic mesh.\nrecalculate_normals: Recalculate normals of a dynamic mesh.\nrecompute_tangents: Recompute tangents of a dynamic mesh."
         },
         "outerRadius": {
           "type": "number",
@@ -19487,7 +19487,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "spiral_stairs",
             "sdf"
           ],
-          "description": "Which create primitive variant to run."
+          "description": "Which create primitive variant to run.\nbox: Create a box dynamic mesh actor.\nsphere: Create a sphere dynamic mesh actor.\ncylinder: Create a cylinder dynamic mesh actor.\ncone: Create a cone dynamic mesh actor.\ncapsule: Create a capsule dynamic mesh actor.\nplane: Create a plane dynamic mesh actor: flat in XY, centred on its origin, facing +Z.\ndisc: Create a disc dynamic mesh actor.\nring: Create a ring dynamic mesh actor.\ntorus: Create a torus dynamic mesh actor.\npipe: Create a pipe dynamic mesh actor.\narch: Create an arch dynamic mesh actor.\nramp: Create a ramp dynamic mesh actor.\nstairs: Create a stairs dynamic mesh actor.\nspiral_stairs: Create a spiral stairs dynamic mesh actor.\nsdf: Create one smooth organic mesh actor from blended shapes (a signed distance field): spheres, ellipsoids, rounded boxes, capsules, cylinders, tori and cones joined with soft fillets, carved with rounded recesses, or intersected, each shape with its own material slot."
         },
         "profile": {
           "type": "array",
@@ -20138,7 +20138,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "pack_islands",
             "transform"
           ],
-          "description": "Which edit uvs variant to run."
+          "description": "Which edit uvs variant to run.\nauto: Unwrap a dynamic mesh actor with XAtlas into uvChannel (default 0, made when missing): seams are cut and the islands packed into the 0-1 square, compacting the mesh first (compacted). When XAtlas writes nothing it falls back to a bounds-sized box projection (method box_projection_fallback, with xatlasError saying why). The reply gives uvElementCount; none at all is UV_GENERATION_FAILED.\nunwrap: Same as uvOp=auto: unwrap a dynamic mesh actor with XAtlas into uvChannel, falling back to a bounds-sized box projection, and report uvElementCount.\nproject: Box-project UVs onto a dynamic mesh actor into uvChannel (default 0, made when missing): each triangle takes the face of the box it points at. tileSize is the world size one texture repeat covers, for tiling materials such as brick or concrete; without it the box is the mesh bounds and the texture spans each side once. The reply gives projectionSize.\npack_islands: Repack the UV islands already in uvChannel (default 0) of a dynamic mesh actor into the 0-1 square without overlap, keeping each island's shape.\ntransform: Move, scale and turn the UVs already in uvChannel (default 0) of a dynamic mesh actor, in that order: uvOffset {u, v} shifts them, uvScale {u, v} scales them about the middle of the 0-1 square (2 repeats a texture twice), rotation turns them by degrees about the same point. The reply echoes what was applied."
         },
         "uvScale": {
           "type": "object",
@@ -20761,7 +20761,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "interface",
             "component"
           ],
-          "description": "Which create interactable variant to run."
+          "description": "Which create interactable variant to run.\ndoor: Create a door actor Blueprint asset that opens when a pawn comes near.\nchest: Create a chest actor Blueprint asset whose lid opens when a pawn comes near.\nswitch: Create a switch actor Blueprint (name in folder, default /Game/Interactables): a mesh and an overlap sphere that a pawn walking in switches, firing OnSwitchChanged(bActivated). switchType button (the default) or lever flips per press, pressure_plate holds while stood on; another type is refused.\nlever: Create a lever actor Blueprint asset.\ntrigger: Create a trigger actor Blueprint asset.\ninterface: Create an interactable Blueprint interface asset.\ncomponent: Add an interaction component to a Blueprint asset."
         },
         "locked": {
           "type": "boolean",
@@ -20799,7 +20799,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "switch",
             "trace"
           ],
-          "description": "Which configure interactable variant to run."
+          "description": "Which configure interactable variant to run.\ndoor: Configure persistent door properties, or make the door follow a switch.\nchest: Configure persistent chest properties.\nswitch: Change a switch Blueprint made by create_interactable: switchType (button or lever flip per press, pressure_plate holds while stood on; a new type rewrites the switch logic), canToggle and resetTime (Blueprint variables). Only the fields sent change, and the Blueprint is saved; one without the SwitchMesh component is refused.\ntrace: Configure persistent interaction trace data."
         },
         "switchPath": {
           "type": "string",
@@ -20953,7 +20953,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "crafting_recipe",
             "crafting_station"
           ],
-          "description": "Which create inventory asset variant to run."
+          "description": "Which create inventory asset variant to run.\nitem_data_asset: Create an item data asset.\nitem_category: Create an item category asset.\nloot_table: Create a loot table asset.\ncrafting_recipe: Create a crafting recipe asset.\ncrafting_station: Create a crafting station Blueprint asset."
         },
         "lootTablePath": {
           "type": "string",
@@ -21042,7 +21042,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "stacking",
             "category"
           ],
-          "description": "Which configure crafting variant to run."
+          "description": "Which configure crafting variant to run.\nadd_recipe_ingredient: Add an ingredient to a crafting recipe asset.\nrecipe_requirements: Configure persistent crafting requirements."
         },
         "stackable": {
           "type": "boolean",
@@ -21318,7 +21318,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "summary",
             "current_level"
           ],
-          "description": "Which get summary variant to run; omit for 'summary'.",
+          "description": "Which get summary variant to run; omit for 'summary'.\nsummary: Return a summary of a level asset (native maps to get_level_info).\ncurrent_level: Return the path of the level currently loaded in the editor.",
           "default": "summary"
         },
         "intensity": {
@@ -21339,7 +21339,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "duplicate",
             "rename"
           ],
-          "description": "Which duplicate level variant to run; omit for 'duplicate'.",
+          "description": "Which duplicate level variant to run; omit for 'duplicate'.\nduplicate: Duplicate a level asset to a new destination path.\nrename: Rename a level asset, keeping it in the same parent directory.",
           "default": "duplicate"
         },
         "levelPath": {
@@ -21412,7 +21412,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "save",
             "as"
           ],
-          "description": "Which save variant to run; omit for 'save'.",
+          "description": "Which save variant to run; omit for 'save'.\nsave: Save the current level, optionally to a target path.\nas: Save the current level to a new path.",
           "default": "save"
         },
         "savePath": {
@@ -21437,7 +21437,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "stream",
             "unload"
           ],
-          "description": "Which stream variant to run; omit for 'stream'.",
+          "description": "Which stream variant to run; omit for 'stream'.\nstream: Stream a sublevel of the open level in or out: during Play in the running game (settled before the reply), otherwise shown or hidden in the editor, which keeps every sublevel loaded.\nunload: Stream a sublevel of the open level out: during Play it unloads in the running game; in the editor, which keeps every sublevel loaded, it is hidden instead and the reply warns.",
           "default": "stream"
         },
         "streaming": {
@@ -21948,7 +21948,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "remove_node",
             "set_pin_default_value"
           ],
-          "description": "Which edit level blueprint variant to run."
+          "description": "Which edit level blueprint variant to run.\nopen: Open the Level Blueprint editor of the open level (levelPath picks a loaded sublevel; default the persistent level), creating the Level Blueprint when the level has none yet. A level never saved (/Temp) has none to open, and an editor that does not open is EDITOR_NOT_OPENED; a headless editor only checks the Blueprint is there (headlessSafeMode). Nothing is changed or saved.\nadd_node: Add a node to the level blueprint graph, including an event bound to a placed actor (OnActorBeginOverlap of a trigger), a reference to one, or a getter of its component; the reply lists the node's pins.\nconnect_nodes: Link sourceNodeName.sourcePinName to targetNodeName.targetPinName in the level Blueprint through the graph schema: incompatible types or directions are refused with the schema's reason (CONNECTION_REFUSED), a cast gets its conversion node, and a pin that takes one link drops its old one. A pin a node lacks is PIN_NOT_FOUND, naming the pins on both nodes. The level stays unsaved unless save is true (saved).\nremove_node: Remove a level blueprint node by id, name or title (one several nodes share is refused), or purge unbound call nodes.\nset_pin_default_value: Set the default value of an input pin on a level blueprint node (in its event graph or one of its functions), such as the color SetLightColor sets; a read-only (const reference) pin gets it through a MakeLiteral node wired into it."
         },
         "eventName": {
           "type": "string",
@@ -22019,7 +22019,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "data_layer",
             "minimap_volume"
           ],
-          "description": "Which create level structure variant to run."
+          "description": "Which create level structure variant to run.\nlevel: Create an empty level asset, levelName in levelPath (default /Game/Maps), saved unless save is false. bCreateWorldPartition makes it a World Partition level (external actors then default on; bUseExternalActors false keeps them in the level). A level already at that path is reported (alreadyExisted), never replaced. loadAfterCreate opens it, refused with DIRTY_PACKAGES (naming them) when open levels have unsaved changes the load would drop.\nsublevel: Create an empty level asset (sublevelName, in sublevelPath, else beside the open level, or /Game/Maps when the open level was never saved) and stream it into the open level by streamingMethod (Blueprint, the default, or AlwaysLoaded). parentLevel, when given, must be the open level (PARENT_LEVEL_NOT_LOADED otherwise, nothing created). A level already at that path is reported (alreadyExisted, streamingAdded), not replaced; manage_level add_sublevel streams it. save (default true) saves the new level and the open level.\nlevel_instance: Place a Level Instance actor that loads an existing level asset at a location, so one saved level (a room, a building) can be reused inside another.\npacked_level_actor: Bake the static meshes of a level into a Packed Level Blueprint (instanced static mesh components) and optionally place it (UE 5.3 or later).\ndata_layer: Create a World Partition data layer: a DataLayerAsset named dataLayerName in dataLayerAssetPath (default /Game/DataLayers), saved, and its instance in the open level, Runtime (streams in the game, the default) or Editor (organises the editor only), visible and loaded in the editor by default. Needs World Partition with external actors (WORLD_PARTITION_NOT_ENABLED, EXTERNAL_ACTORS_NOT_ENABLED); an unknown dataLayerType is refused before anything is created. Add actors with assign_actor_to_data_layer.\nminimap_volume: Place a World Partition minimap volume, the area the minimap builder captures: a box brush of extent (half size, default 10000 on each axis) at location, labelled volumeName (default MinimapVolume). A level without World Partition is refused (WORLD_PARTITION_NOT_ENABLED); UE 5.1 or later. The level stays unsaved unless save is true."
         },
         "label": {
           "type": "string",
@@ -22208,7 +22208,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "hlod_layer",
             "data_layer_assignment"
           ],
-          "description": "Which configure level streaming variant to run; omit for 'streaming'.",
+          "description": "Which configure level streaming variant to run; omit for 'streaming'.\nstreaming: Change how the open level streams a sublevel (levelName: its package path or short name): streamingMethod Blueprint or AlwaysLoaded (switched as the Levels panel does), bShouldBeVisible, bShouldBlockOnLoad and bDisableDistanceStreaming; only the fields sent change. A level on disk that the open level does not stream yet is added to it first; one that does not exist is LEVEL_NOT_FOUND. The open level stays unsaved unless save is true.\nstreaming_distance: Stream a sublevel by where the player is: place a Level Streaming Volume, a box reaching streamingDistance (default 10000) from volumeLocation (default the origin) on each axis, bound to the sublevel (levelName) so it loads while a viewer is inside it. streamingUsage picks what it controls (LoadingAndVisibility, the default, Loading, VisibilityBlockingOnLoad, BlockingOnLoad, LoadingNotVisible); an unknown one or a distance of 0 or less is refused before anything is placed. createVolume false only lists the volumes bound to the level. A level on disk the open level does not stream yet is added first. The open level stays unsaved unless save is true.\nworld_partition: Turn World Partition on for the open level in place: it creates the World Partition object on the level's World Settings (save and reload the level before streaming works); bUseExternalActors also moves every actor into its own package (one file per actor), which data layers need. Turning it off on a partitioned level is refused (NOT_SUPPORTED), as is a level that cannot take it. The level stays unsaved unless save is true.\ngrid_size: Set a World Partition streaming grid of the open level (gridName; omitted, the first grid, or MainPartition on a Runtime Hash Set level): gridCellSize, loadingRange (how far from the player its cells load), bBlockOnSlowStreaming and priority; only the fields sent change, and a grid missing by name is added with createIfMissing (default true), the others at their defaults (cell 12800, range 25600). On a Runtime Hash Set level the grid is a runtime partition row, which must have a Main Layer to hold the values (PARTITION_HAS_NO_LAYER otherwise). The reply gives the edited grid values as they now stand (on a Runtime Hash Set level, the values it set) and lists every grid; a grid found with nothing sent to change is refused. The level stays unsaved unless save is true.\nhlod_layer: Create an HLOD layer asset (hlodLayerName, in hlodLayerPath, default /Game/HLOD): layerType Instancing, MeshMerge (default), MeshSimplify or MeshApproximate, spatially loaded (default true) with its cellSize (default 25600) and loadingDistance (default 51200). An unknown layerType is refused before anything is created; each value reports whether it took (layerTypeApplied and the others). Saved unless save is false.\ndata_layer_assignment: Add a placed actor (actorName: label or name, or actorPath) to a data layer of the open level (dataLayerName: its short or full name), so it loads and shows with that layer. One already in the layer is reported (alreadyAssigned); a layer that is not there is refused with the ones that are. Needs World Partition with external actors; the level stays unsaved unless save is true.",
           "default": "streaming"
         },
         "sourceNodeName": {
@@ -22370,7 +22370,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "extent",
             "bounds"
           ],
-          "description": "Which set volume properties variant to run; omit for 'properties'.",
+          "description": "Which set volume properties variant to run; omit for 'properties'.\nproperties: Set generic properties (enabled, blend, priority) on an existing volume.\nextent: Set the extent (half-size) of an existing volume.\nbounds: Set the bounds (min/max) of an existing volume.",
           "default": "properties"
         },
         "volumeType": {
@@ -22538,7 +22538,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "has_authority",
             "is_locally_controlled"
           ],
-          "description": "Which check authority variant to run."
+          "description": "Which check authority variant to run.\nhas_authority: Read runtime actor authority state.\nis_locally_controlled: Read local-control state for an actor."
         },
         "cmd": {
           "type": "boolean",
@@ -22632,7 +22632,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "player_state",
             "hud"
           ],
-          "description": "Which create framework class variant to run."
+          "description": "Which create framework class variant to run.\ngame_mode: Create a GameMode Blueprint (name, in path) whose parent is GameModeBase or the parentClass given (a child of GameModeBase; an unloadable one, or one that is not, is refused). An asset already at the path is refused (CREATION_FAILED). defaultPawnClass, playerControllerClass, gameStateClass, playerStateClass and hudClass set its classes; each must load and be the kind its slot holds (a Pawn for the pawn), checked before anything is created. Saved unless save is false (saved); the reply gives assetPath.\ngame_state: Create a GameState Blueprint (name, in path) whose parent is GameStateBase or the parentClass given (a child of GameStateBase; an unloadable one, or one that is not, is refused). An asset already at the path is refused (CREATION_FAILED). Saved unless save is false (saved); the reply gives assetPath.\ngame_instance: Create a GameInstance Blueprint (name, in path) whose parent is GameInstance or the parentClass given (a child of GameInstance; an unloadable one, or one that is not, is refused). An asset already at the path is refused (CREATION_FAILED). Saved unless save is false (saved); the reply gives assetPath.\nplayer_controller: Create a PlayerController Blueprint (name, in path) whose parent is PlayerController or the parentClass given (a child of PlayerController; an unloadable one, or one that is not, is refused). An asset already at the path is refused (CREATION_FAILED). Saved unless save is false (saved); the reply gives assetPath.\nplayer_state: Create a PlayerState Blueprint (name, in path) whose parent is PlayerState or the parentClass given (a child of PlayerState; an unloadable one, or one that is not, is refused). An asset already at the path is refused (CREATION_FAILED). Saved unless save is false (saved); the reply gives assetPath.\nhud: Create a HUD Blueprint (name, in path) whose parent is HUD or the parentClass given (a child of HUD; an unloadable one, or one that is not, is refused). An asset already at the path is refused (CREATION_FAILED). Saved unless save is false (saved); the reply gives assetPath."
         },
         "localPlayerNum": {
           "type": "number",
@@ -22652,7 +22652,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "action",
             "axis"
           ],
-          "description": "Which add legacy mapping variant to run."
+          "description": "Which add legacy mapping variant to run.\naction: Add a legacy action mapping.\naxis: Add a legacy axis mapping."
         },
         "maxClientRate": {
           "type": "number",
@@ -22828,7 +22828,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "host",
             "join"
           ],
-          "description": "Which host lan server variant to run; omit for 'host'.",
+          "description": "Which host lan server variant to run; omit for 'host'.\nhost: Build the LAN listen-server travel URL for a map; nothing is hosted unless executeTravel is true, which travels the running world to it.\njoin: Make a running Play-In-Editor instance join a server at serverAddress:serverPort (ClientTravel); the connection completes asynchronously. Refused when PIE is not running or every instance is hosting.",
           "default": "host"
         },
         "serverPort": {
@@ -22882,7 +22882,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "replication_graph",
             "net_driver"
           ],
-          "description": "Which configure game mode variant to run."
+          "description": "Which configure game mode variant to run.\ndefault_pawn_class: Set a GameMode default pawn class. Pass makeDefault: true to also make this game mode the project default; the reply says whether the open level runs it (effectiveInOpenLevel).\nplayer_controller_class: Set a GameMode PlayerController class. Pass makeDefault: true to also make this game mode the project default; the reply says whether the open level runs it (effectiveInOpenLevel).\ngame_state_class: Set a GameMode GameState class. Pass makeDefault: true to also make this game mode the project default; the reply says whether the open level runs it (effectiveInOpenLevel).\nplayer_state_class: Set a GameMode PlayerState class. Pass makeDefault: true to also make this game mode the project default; the reply says whether the open level runs it (effectiveInOpenLevel).\nhud_class: Set a GameMode HUD class. Pass makeDefault: true to also make this game mode the project default; the reply says whether the open level runs it (effectiveInOpenLevel).\nrules: Set a GameMode's bDelayedStart match rule; only GameMode (AGameMode) children have it, a GameModeBase child is refused with NOT_SUPPORTED.\nrespawn: Set the game mode's minimum respawn delay (AGameMode::MinRespawnDelay); a GameModeBase child is refused with NOT_SUPPORTED.\nspectating: Set the GameMode spectator pawn class (SpectatorClass)."
         },
         "shift": {
           "type": "boolean",
@@ -23277,7 +23277,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "set_node_settings",
             "set_partition_grid_size"
           ],
-          "description": "Which edit pcg graph variant to run."
+          "description": "Which edit pcg graph variant to run.\ncreate: Create a PCG graph asset at graphPath (or assetPath, or name in path, default /Game/PCG), saved unless save is false. A PCG graph already at the path is refused (ASSET_ALREADY_EXISTS) unless overwrite is true, which returns that graph unchanged (created false); another kind of asset there is refused. The reply gives graphPath, name, created and saved. Needs the PCG plugin.\ncreate_subgraph: Create a PCG graph at subgraphPath to run inside other graphs (the same rules as edit=create: one already there is refused unless overwrite is true, which reuses it), and with parentGraphPath add a Subgraph node running it to that graph, titled nodeName and placed at x, y. The reply gives subgraphPath, created and saved, and with a parent also parentGraphPath, nodeId (the new node, for edit=connect_pins) and parentSaved. A parent that does not load is ASSET_NOT_FOUND. Saved unless save is false.\nconnect_pins: Wire sourcePin (or outputName) of sourceNodeId to targetPin (or inputName) of targetNodeId in a PCG graph (graphPath or assetPath). A node is found by its nodeId (object name), its title, its index in the graph, or input and output for the graph's own ends (NODE_NOT_FOUND). A pin left out is the node's Out or In pin, else its first; a label it lacks is PIN_NOT_FOUND listing the labels. An edge already there is kept, not doubled. The reply gives both node ids, both pin labels and saved; saved unless save is false.\nset_node_settings: Change a node of a PCG graph, found by nodeId or nodeName (an object name, title, index, or input and output; NODE_NOT_FOUND): settings sets properties by name (INVALID_SETTINGS for one it lacks), texturePath, meshPath and actorClass set the texture, mesh or spawned class of nodes that take them (each checked to load), title renames it and x, y move it. An edit that changes nothing, or sends only a meshPath or class the node has no slot for, is refused. The reply gives nodeId, title, nodeType, settingsApplied and saved; saved unless save is false.\nset_partition_grid_size: Set the size of the cells partitioned PCG generates in (gridSize, a whole number of world units above 0): scope world (the default) sets the PCG world actor's partition grid, scope component one PCG component's generation grid (actorName, componentName or componentPath; COMPONENT_NOT_FOUND). The reply gives previousGridSize and gridSize. Saved with the level unless save is false, which saves every unsaved change in that level too."
         },
         "force": {
           "type": "boolean",
@@ -23335,7 +23335,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "project_to_surface",
             "self_pruning"
           ],
-          "description": "Which add pcg node variant to run; omit for 'node'.",
+          "description": "Which add pcg node variant to run; omit for 'node'.\nnode: Add a node to a PCG graph by settings class or alias.\nsurface_sampler: Add a Surface sampler node to a PCG graph.\nspline_sampler: Add a Spline sampler node to a PCG graph.\nmesh_sampler: Add a Mesh sampler node to a PCG graph.\nvolume_sampler: Add a Volume sampler node to a PCG graph.\nstatic_mesh_spawner: Add a Static Mesh spawner node to a PCG graph.\nactor_spawner: Add an Actor spawner node to a PCG graph.\nspline_spawner: Add a Spline spawner node to a PCG graph.\ndensity_filter: Add a Density filter node to a PCG graph.\ndistance_filter: Add a Distance filter node to a PCG graph.\nheight_filter: Add a Height filter node to a PCG graph.\nslope_filter: Add a Slope filter node to a PCG graph.\nbounds_filter: Add a Bounds filter node to a PCG graph.\nbounds_modifier: Add a Bounds modifier node to a PCG graph.\nlandscape_data_node: Add a Landscape data source node to a PCG graph.\nspline_data_node: Add a Spline data source node to a PCG graph.\nactor_data_node: Add an Actor data source node to a PCG graph.\ntexture_data_node: Add a Texture data source node to a PCG graph.\nvolume_data_node: Add a Volume data source node to a PCG graph.\ntransform_points: Add a Transform Points node to a PCG graph.\ncopy_points: Add a Copy Points node to a PCG graph.\nmerge_points: Add a Merge Points node to a PCG graph.\nproject_to_surface: Add a Project to Surface node to a PCG graph.\nself_pruning: Add a Self-pruning node to a PCG graph.",
           "default": "node"
         },
         "nodeName": {
@@ -23659,7 +23659,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "start_killcam",
             "stop"
           ],
-          "description": "Which create render job variant to run; omit for 'create'."
+          "description": "Which create render job variant to run; omit for 'create'.\ncreate: Create a Movie Render Queue job for sequencePath on mapPath (default: the open level), named renderJobName, with a PNG image sequence output and a deferred render pass, plus any output settings sent (outputDirectory, fileNameFormat, resolution, frameRate, a frame range, settings.handleFrameCount and zeroPadFrameNumbers), all checked before the job is made. The job lives in this editor session queue, not on disk; render it with control start.\nqueue: Enable a render job in the MRQ queue without starting execution. Enqueue does NOT mean render completion.\nstart: Start MRQ render execution. Blocks until completion, fatal error, or timeout. Supports advisory cancellation. renderTimeoutMs (how long the render may run before it is cancelled) defaults to 300000 (5 minutes) and may be as long as the plugin's MaxMovieRenderTimeoutMs (one hour by default); the native transport waits that long plus the cancellation wait for the reply.\ncancel: Stop the Movie Render Queue render that is running, as the queue window's Stop does: every job is cancelled, frames already written stay on disk, and the sequence gets back the state the render held it in.\nremove: Remove a render job from the Movie Render Queue, or every job (allJobs). Rendered files stay on disk. The queue holds a limited number of jobs, and a finished job stays queued (an unrestricted start renders it again), so remove finished ones before creating more."
         },
         "craneArmLength": {
           "type": "number",
@@ -23692,7 +23692,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "track",
             "keyframe"
           ],
-          "description": "Which delete variant to run; omit for 'sequence'.",
+          "description": "Which delete variant to run; omit for 'sequence'.\nsequence: Permanently deleteScope=sequence a Level Sequence asset: refused with SEQUENCE_IN_USE, naming referencedBy, while a level or asset still uses it (a Level Sequence Actor playing it). Its editors close and the undo history may be cleared.\ntrack: Remove one track from a Level Sequence, in one undo step: the track whose name is trackName (case ignored), else the first whose name contains it; the camera cut track too. The sequence is left unsaved.\nkeyframe: Remove keyframes from the tracks trackName or bindingId picks: the keys on one frame or on several, or every key on them, of every key type, in one undo step. Naming neither track nor binding is refused (TRACK_REQUIRED); a filter that matches no track is TRACK_NOT_FOUND.",
           "default": "sequence"
         },
         "demoName": {
@@ -23771,7 +23771,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "set_solo",
             "set_section"
           ],
-          "description": "Which edit sequence bindings variant to run."
+          "description": "Which edit sequence bindings variant to run.\nadd_actor: Bind a placed actor (actorName, its label) to a Level Sequence as a possessable, reusing the binding it already has; a missing actor fails with NO_ACTORS_BOUND. Answers results with the bindingGuid.\nadd_actors: Bind several placed actors (actorNames, their labels) to a Level Sequence as possessables, reusing bindings they already have; answers each in results (bindingGuid or error) with successful and failed, and fails with NO_ACTORS_BOUND only when none bound.\nadd_camera: Add a camera to a Level Sequence: by default a CameraActor placed at the world origin (actorName labels it, default SequenceCamera; move it with control_actor) and bound as a possessable; spawnable true adds a camera the sequence owns, which exists only while it plays. An asset that is not a Level Sequence is refused before anything is placed, and a camera that could not be bound is removed again (BIND_FAILED).\nadd_spawnable: Add a spawnable of className (a class path or name) to a Level Sequence: an actor the sequence creates while it plays and removes after. An unknown class is CLASS_NOT_FOUND; answers the className resolved and its bindingGuid.\nremove_actors: Remove the bindings of the named actors (actorNames) from a Level Sequence, with their tracks; answers removedActors and removed, and fails with NO_ACTORS_REMOVED when none of them was bound."
         },
         "enabled": {
           "type": "boolean",
@@ -23913,7 +23913,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "list",
             "open"
           ],
-          "description": "Which get properties variant to run; omit for 'properties'.",
+          "description": "Which get properties variant to run; omit for 'properties'.\nproperties: Read the playback properties of a Level Sequence: frameRate (the display rate, a number), playbackStart and playbackEnd in display-rate frames, and lengthInFrames. An asset that is not a Level Sequence is INVALID_SEQUENCE.\nbindings: List all bindings (possessables and spawnables) in a Level Sequence.\ntracks: List all tracks in a Level Sequence.\nkeys: Read the sections and keyframes already on a sequence track.\ntrack_types: List all available MovieScene track types registered in the engine.\nlist: List Level Sequence assets under a content folder (recursively; the whole Game folder when path is omitted).\nopen: Open an existing Level Sequence in the Sequencer editor.",
           "default": "properties"
         },
         "interpolation": {
@@ -23980,7 +23980,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "texture",
             "sound_component"
           ],
-          "description": "Which create cinematic asset variant to run."
+          "description": "Which create cinematic asset variant to run.\ncine_camera_actor: Create a CineCameraActor in the level and bind it to the sequence.\nmaster_sequence: Create the master level sequence of a cinematic: an empty sequence at frameRate (default 24 fps) with its playback range, saved; shots and sub-sequences are added to it afterwards."
         },
         "label": {
           "type": "string",
@@ -24366,7 +24366,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "duplicate",
             "rename"
           ],
-          "description": "Which create variant to run; omit for 'create'.",
+          "description": "Which create variant to run; omit for 'create'.\ncreate: Create a new Level Sequence asset in the content browser.\nduplicate: Duplicate a Level Sequence asset to a new destination.\nrename: Rename a Level Sequence asset in place.",
           "default": "create"
         },
         "sequencePath": {
@@ -24383,7 +24383,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "view_range",
             "work_range"
           ],
-          "description": "Which set properties variant to run; omit for 'properties'.",
+          "description": "Which set properties variant to run; omit for 'properties'.\nproperties: Set the display frame rate of a Level Sequence (frameRate, such as 24 or 29.97) and its playback range in display-rate frames: playbackStart, and playbackEnd or lengthInFrames (end = start + length; playbackEnd wins). Send at least one; one undo step, and the sequence is left unsaved. The reply reads the values back; a negative frame or an unreadable rate is INVALID_ARGUMENT, another asset type INVALID_SEQUENCE.\ndisplay_rate: Set the display frame rate of a Level Sequence.\ntick_resolution: Set the tick resolution of a Level Sequence.\nplayback_speed: Set the playback speed of a Level Sequence on the level sequence actors that play it, and on Sequencer when it is open.\nview_range: Set the view range of a Level Sequence, the part of the timeline the Sequencer window shows: start and end in seconds, end after start (INVALID_ARGUMENT otherwise). Display only: playback and keys are untouched.\nwork_range: Set the work range of a Level Sequence, the stretch of timeline the Sequencer shows and edits within: start and end in seconds, end after start (INVALID_ARGUMENT otherwise). An end past the playback range extends playback to it (playbackExtended), so keys out there play; the reply gives the range in seconds and in display-rate frames.",
           "default": "properties"
         },
         "setting": {
@@ -24406,7 +24406,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "start_recording",
             "stop_recording"
           ],
-          "description": "Which configure cinematic variant to run."
+          "description": "Which configure cinematic variant to run.\ncamera: Set the lens of a CineCameraActor (actorName): currentFocalLength or focalLength (mm), currentAperture or aperture (f-stop), sensorWidth and sensorHeight (mm), manualFocusDistance or focusDistance (cm), each also accepted inside a lens, filmback or focus object. The camera clamps them to its lens limits and the reply reads back what it kept (values). One undo step; a call with nothing to set, or an actor with no CineCameraComponent, is refused.\nrig_crane: Set cranePitch and craneYaw (degrees) and craneArmLength (cm) on a CameraRig_Crane named actorName, placing one at the world origin when actorName names none (spawned true). One undo step; a call with no setting is refused, and an actor of another class is RIG_CLASS_MISMATCH.\nrig_rail: Set positionOnRail (0 to 1, where the camera mount sits along the rail spline) on a CameraRig_Rail named actorName, placing one at the world origin when actorName names none (spawned true). One undo step; a call with no setting is refused, and an actor of another class is RIG_CLASS_MISMATCH.\nshot: Configure shot settings (display name, range) for a cinematic shot."
         },
         "settings": {
           "oneOf": [
@@ -24592,7 +24592,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "shot",
             "subsequence"
           ],
-          "description": "Which add cinematic track variant to run."
+          "description": "Which add cinematic track variant to run.\ncamera_cut: Add a camera cut track to a cinematic sequence.\ncamera_shake: Add a camera shake track to a cinematic sequence.\ntransform: Add a transform track to animate actor transforms during cinematic.\nproperty: Add a property track to animate a specific property on a bound actor.\nskeletal_animation: Add a skeletal animation track to play animations on a skeletal mesh. A clip whose skeleton the mesh cannot play is refused with SKELETON_MISMATCH instead of silently showing the rest pose. Overlap the clips before and after it and give easeInFrames/easeOutFrames to crossfade between them instead of cutting in one frame.\nmaterial_parameter: Add a material parameter collection track to animate material parameters.\nparticle: Add a particle track to trigger particle systems during cinematic: trigger fires a one-shot burst (a hit, a spark) once, activate keeps a system running for the section.\nevent: Add an event track to trigger events at specific frames.\nfade: Add a fade track for cinematic fade-in/fade-out transitions.\nlevel_visibility: Add a level visibility track to control level streaming during cinematic.\nshot: Add a cinematic shot track to a master sequence.\nsubsequence: Add a sub-sequence to a master sequence shot track."
         },
         "trackName": {
           "type": "string",
@@ -25530,7 +25530,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "unsubscribe",
             "spawn_category"
           ],
-          "description": "Which profile performance variant to run."
+          "description": "Which profile performance variant to run.\nstart: Start recording every stat group to a .uestats file under Saved/Profiling (stat startfile), for Unreal Insights or the Session Frontend to open; no MCP action reads it. duration stops it by itself after that many seconds, else it runs until control=stop. To find what makes a frame slow, inspect get_stats with stats frame answers directly.\nstop: Stop the stats file capture control=start began (stat stopfile); the file stays under Saved/Profiling.\nbenchmark: Measure the editor as it runs now, over duration seconds (default 10), sampling every frame: frames, averageFps, and with type cpu or all (the default) averageFrameMs, worstFrameMs, bestFrameMs, gameThreadMs and renderThreadMs, with gpu or all gpuMs. A minimized or unfocused editor is throttled and measures slow: focus it, or run during Play to measure the game. A call longer than the client allows answers as a task to poll.\nmemory_report: Generate an engine memory report, optionally detailed.\nshow_stats: Show or hide a stat HUD overlay (e.g. Unit, GPU) in the active editor viewport; the call sets the state rather than toggling it."
         },
         "cvar": {
           "type": "string",
@@ -25628,7 +25628,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "status",
             "analyze"
           ],
-          "description": "Which get trace status variant to run; omit for 'status'.",
+          "description": "Which get trace status variant to run; omit for 'status'.\nstatus: Query the current trace session status.\nanalyze: Read a captured trace file's metadata: whether it exists, its size, extension, .utrace flag and modified time.",
           "default": "status"
         },
         "jobId": {
@@ -25649,7 +25649,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "tests",
             "ubt"
           ],
-          "description": "Which run build variant to run."
+          "description": "Which run build variant to run.\ntests: Run automation tests in the editor, one after another, and answer with each one's result: passed or not, its duration, and the errors and warnings it reported.\nubt: Run UnrealBuildTool for a target/platform/configuration, spawning UBT locally with a manage_pipeline bridge fallback."
         },
         "launchViewer": {
           "type": "boolean",
@@ -25820,7 +25820,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "enable",
             "disable"
           ],
-          "description": "Which enable plugin variant to run; omit for 'enable'.",
+          "description": "Which enable plugin variant to run; omit for 'enable'.\nenable: Enable a plugin for this project by writing it into the .uproject, or limit it to some build targets (targets [\"Editor\"] keeps an editor-only plugin out of a packaged game). A plugin on only because another plugin needs it is written into the project file. A plugin the editor has not loaded yet needs a restart, so the response reports restartRequired.\ndisable: Disable a plugin for this project by removing it from the .uproject. Assets that depend on it fail to load after the restart, so confirm dependents first.",
           "default": "enable"
         },
         "poolSize": {
@@ -25940,7 +25940,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "shaders",
             "baseline"
           ],
-          "description": "Which configure display variant to run."
+          "description": "Which configure display variant to run.\nresolution: Set the screen resolution via the r.SetRes console command.\nfullscreen: Toggle fullscreen mode via r.SetRes or r.FullScreenMode console command.\nquality: Set an engine scalability quality CVar (sg.*Quality) for a category and level.\ncvar: Set a console variable value, derived from name/cvar/key/command plus value.\nfps: Toggle the FPS HUD overlay via the stat fps console command.\nprofile: Toggle a profiling stat display (CPU, GPU, memory, render/game thread) via console command."
         },
         "shadows": {
           "type": "string",
@@ -26042,7 +26042,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "add_child",
             "show"
           ],
-          "description": "Which create widget variant to run; omit for 'create'.",
+          "description": "Which create widget variant to run; omit for 'create'.\ncreate: Create a widget asset via the manage_widget_authoring bridge action.\nadd_child: Add a child widget component to a parent widget via the manage_widget_authoring bridge action.\nshow: Show an editor toast notification with a message; it cannot put a widget Blueprint on screen.",
           "default": "create"
         },
         "widgetPath": {

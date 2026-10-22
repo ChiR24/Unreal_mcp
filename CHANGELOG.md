@@ -35,7 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Small fixes**: `RayTraced` GI is refused from UE 5.4; `viewDistance` alone leaves volumetric fog off; whole-path `runtime_report` filters; UE 5.0 links again; the RHI thread in `get_stats`; rate limits say when to retry.
 - **Removals** take only exact components, name what still uses an asset, keep assets others use, list the nodes `remove_variable` deletes, and undo for tracks and keys.
 - **Nothing is overwritten unasked**: taken names and paths are refused; edits keep the fields left out; engine content is never saved or edited in place; extra sky lights are named, not deleted; `rename_widget` keeps animations and bindings.
-- **A family's variant needs what its action needs** on both transports; describe and search show `requiredFor` and `variantRequired`.
+- **A family's variant needs what its action needs** on both transports; describe and search show `requiredFor` and `variantRequired`, and describe lists what each variant does under its selector.
 - **Renders** keep their request open for `renderTimeoutMs`; `save_all` and `restart_editor` wait for them.
 - **Viewport screenshots wait for streaming** and name video memory over budget; `set_viewport_realtime` reports its state.
 - **Property writes**: a deprecated property is refused with its replacement; Niagara `set_property` restarts placed effects; environment settings take object references.

@@ -19,7 +19,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 ### Fixed
 - **Small fixes**: links on UE 5.0; whole-path `runtime_report` filters; diagnostics records replace their files; exact task principals; the RHI thread in `busiestThreadMs`; effect lifecycle misses name what is missing.
 - **Removals** name what still uses an asset (`*_IN_USE`, `referencedBy`), keep outside-referenced assets, take exact components and undo for tracks and keys; extra sky lights are named, not destroyed.
-- **Fold variants** enforce their own requirements before dispatch.
+- **Fold variants** enforce their own requirements before dispatch, and describe lists what each one does under the selector.
 - **Renders** honour `renderTimeoutMs`; save_all and restart_editor wait (`RENDER_IN_PROGRESS`).
 - **Viewport captures** settle across ticks and warn on demoted video memory; grid edits keep the fields left out and answer with the grid's values.
 - **Properties**: deprecated ones are refused; Niagara systems re-init after a write; settings take object references.

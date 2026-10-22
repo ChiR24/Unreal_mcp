@@ -127,12 +127,21 @@ export function buildFolded(
   };
   if (selector !== undefined) {
     const label = spec.primary.replace(/_/g, ' ');
+    // Each variant's own summary, under the selector describe shows: once folded, the members' summaries reached no
+    // caller, so what a variant does, its defaults and refusals included, went unsaid. A sibling's action name in
+    // one becomes the selector value a caller sends.
+    const asSelector = (text: string): string => selected.reduce((line, entry) =>
+      line.replace(new RegExp(`(^|[^A-Za-z0-9_])${entry.action}(?=[^A-Za-z0-9_]|$)`, 'g'), `$1${selector}=${entry.value}`), text);
+    const variantGuide = selected.flatMap((entry) => {
+      const summary = members[entries.indexOf(entry)]?.discovery.summary;
+      return summary === undefined || summary === spec.summary ? [] : [`\n${entry.value}: ${asSelector(summary)}`];
+    });
     inputProperties[selector] = {
       type: 'string',
       enum: selected.map((entry) => entry.value),
-      description: primaryValue === undefined
+      description: (primaryValue === undefined
         ? `Which ${label} variant to run.`
-        : `Which ${label} variant to run; omit for '${primaryValue}'.`,
+        : `Which ${label} variant to run; omit for '${primaryValue}'.`) + variantGuide.join(''),
       ...(primaryValue === undefined ? {} : { default: primaryValue }),
     };
   }

@@ -198,6 +198,10 @@ catalog used to call `create_noise_texture`. Nothing was retired:
   defaults it to that member (`manage_asset.list` without `kind` still lists
   assets). A family under a new name requires the selector; `describe` shows
   it as required with its enum.
+- The selector parameter's description lists every variant with what it does,
+  its defaults, replies and refusals included, one line each as
+  `value: summary`; a sibling action named there appears as the selector value
+  to send (`setting=vsync`).
 - A consent grant may name the capability by its canonical id, an alias, or a
   folded `tool.action` pair; `describe` always returns the canonical grant.
 
