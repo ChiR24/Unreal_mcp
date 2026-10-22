@@ -28,6 +28,15 @@ bool HandleRenderPostProcessColorAction(
     {
         return false;
     }
+    // set_tonemapper_type set r.TonemapperFilm, gone from the engine before 5.0, and answered applied.
+    const FString ToneMethod = GetJsonStringField(Payload, TEXT("method"), TEXT("Filmic"));
+    const bool bFilmic = ToneMethod.Equals(TEXT("Filmic"), ESearchCase::IgnoreCase);
+    if (SubAction == TEXT("set_tonemapper_type") && !bFilmic && !ToneMethod.Equals(TEXT("Linear"), ESearchCase::IgnoreCase))
+    {
+        Subsystem->SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("method '%s' is not a tonemapper: use "
+            "Filmic (the tone curve, the default) or Linear (no tone curve). Nothing was changed."), *ToneMethod), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
 
     APostProcessVolume* Volume =
         RequirePostProcessVolume(Subsystem, RequestId, Payload, RequestingSocket);
@@ -68,12 +77,16 @@ bool HandleRenderPostProcessColorAction(
     }
     else if (SubAction == TEXT("set_tonemapper_type"))
     {
-        const FString Method = GetJsonStringField(Payload, TEXT("method"), TEXT("Filmic"));
-        SetConsoleVariable(
-            TEXT("r.TonemapperFilm"),
-            Method.Equals(TEXT("Filmic"), ESearchCase::IgnoreCase) ? TEXT("1") : TEXT("0"),
-            Applied,
-            Unsupported);
+        // The filmic tone curve is the engine's one tonemapper; Linear switches the curve off the way the engine
+        // documents it, ToneCurveAmount and ExpandGamut at 0.
+        for (const TCHAR* Field : {TEXT("ToneCurveAmount"), TEXT("ExpandGamut")})
+        {
+            if (!ApplyPostProcessField(Volume, Field, MakeShared<FJsonValueNumber>(bFilmic ? 1.0 : 0.0), Applied, Unsupported, Error))
+            {
+                Subsystem->SendAutomationError(RequestingSocket, RequestId, Error, TEXT("INVALID_SETTING"));
+                return true;
+            }
+        }
     }
     else if (SubAction == TEXT("set_bloom_intensity"))
     {

@@ -6,6 +6,7 @@
 
 #include "Async/Async.h"
 #include "Dom/JsonObject.h"
+#include "HAL/FileManager.h"
 #include "HAL/PlatformProcess.h"
 #include "Misc/Paths.h"
 #include "Misc/FileHelper.h"
@@ -92,6 +93,18 @@ bool UEngineWireSubsystem::HandleSourceControlRepo(
   if (Description.IsEmpty()) {
     Description = bInit ? TEXT("Initial commit") : TEXT("Snapshot");
   }
+  // These went into the git command line inside quotes, so a quote in one ended the argument and the rest became
+  // git options (an --amend rewriting the last commit, a --global identity). The message now goes through a file;
+  // a name or email has no use for quotes or control characters.
+  for (const FString *Identity : {&UserName, &UserEmail}) {
+    for (const TCHAR Char : *Identity) {
+      if (Char == TEXT('"') || Char < 32) {
+        SendAutomationError(RequestingSocket, RequestId,
+            TEXT("userName and userEmail cannot contain quotes or control characters; nothing was run."), TEXT("INVALID_ARGUMENT"));
+        return true;
+      }
+    }
+  }
 
   const bool bRepoExists = FPaths::DirectoryExists(FPaths::Combine(ProjectDir, TEXT(".git")));
   if (bCommit && !bRepoExists) {
@@ -153,9 +166,13 @@ bool UEngineWireSubsystem::HandleSourceControlRepo(
 
     bool bNothingToCommit = false;
     if (bOk) {
+      // Outside the project, so `add -A` never stages it.
+      const FString MessageFile = FPaths::CreateTempFilename(FPlatformProcess::UserTempDir(), TEXT("McpCommitMessage"), TEXT(".txt"));
+      FFileHelper::SaveStringToFile(Description, *MessageFile, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
       FMcpGitStep Commit;
-      Commit.Args = FString::Printf(TEXT("commit -m \"%s\""), *Description);
+      Commit.Args = FString::Printf(TEXT("commit -F \"%s\""), *MessageFile);
       McpRunGit(Commit.Args, ProjectDir, Commit.Code, Commit.Std, Commit.Err);
+      IFileManager::Get().Delete(*MessageFile);
       Steps.Add(Commit);
       // git exits 1 with "nothing to commit" when the tree is clean. That is a
       // successful no-op, not a failure -- a caller snapshotting on a timer

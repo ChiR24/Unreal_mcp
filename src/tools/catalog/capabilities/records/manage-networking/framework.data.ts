@@ -14,9 +14,9 @@ const f = (action: string, summary: string, params: readonly string[], required:
   });
   return withInputProps(record, read ? props : { ...SAVE, ...props });
 };
-const create = (action: string, label: string, extra: readonly string[] = []): CapabilityRecordSource => f(
-  action, `Create a ${label} Blueprint asset and return its path; an unloadable parentClass, or one that is not a ${label}, is refused.`,
-  ['name', 'path', 'parentClass', 'save', ...extra], ['name', 'path'], ['assetPath'], ['assetPath'],
+const create = (action: string, label: string, parent: string, extra: readonly string[] = [], more = ''): CapabilityRecordSource => f(
+  action, `Create a ${label} Blueprint (name, in path) whose parent is ${parent} or the parentClass given (a child of ${parent}; an unloadable one, or one that is not, is refused). An asset already at the path is refused (CREATION_FAILED).${more} Saved unless save is false (saved); the reply gives assetPath.`,
+  ['name', 'path', 'parentClass', 'save', ...extra], ['name', 'path'], ['assetPath', 'saved'], ['assetPath'],
 );
 // Setting a class changes only this game mode. makeDefault opts in to making it the project default
 // (DefaultEngine.ini), and the reply always says which game mode the open level runs in play.
@@ -30,12 +30,13 @@ const setClass = (action: string, label: string, field: string, alias: readonly 
 ), ['A Blueprint\'s own class default values (its CDO) must be set (use blueprint.edit_variable edit=set_default).']);
 
 export const NETWORKING_FRAMEWORK_RECORDS: readonly CapabilityRecordSource[] = [
-  create('create_game_mode', 'GameMode', ['defaultPawnClass', 'playerControllerClass', 'gameStateClass', 'playerStateClass', 'hudClass']),
-  create('create_game_state', 'GameState'),
-  create('create_player_controller', 'PlayerController'),
-  create('create_player_state', 'PlayerState'),
-  create('create_game_instance', 'GameInstance'),
-  create('create_hud_class', 'HUD'),
+  create('create_game_mode', 'GameMode', 'GameModeBase', ['defaultPawnClass', 'playerControllerClass', 'gameStateClass', 'playerStateClass', 'hudClass'],
+    ' defaultPawnClass, playerControllerClass, gameStateClass, playerStateClass and hudClass set its classes; each must load and be the kind its slot holds (a Pawn for the pawn), checked before anything is created.'),
+  create('create_game_state', 'GameState', 'GameStateBase'),
+  create('create_player_controller', 'PlayerController', 'PlayerController'),
+  create('create_player_state', 'PlayerState', 'PlayerState'),
+  create('create_game_instance', 'GameInstance', 'GameInstance'),
+  create('create_hud_class', 'HUD', 'HUD'),
   setClass('set_default_pawn_class', 'default pawn', 'pawnClass', ['defaultPawnClass']),
   setClass('set_player_controller_class', 'PlayerController', 'playerControllerClass'),
   setClass('set_game_state_class', 'GameState', 'gameStateClass'),

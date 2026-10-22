@@ -170,6 +170,8 @@ UNiagaraNodeFunctionCall* AddModuleToEmitterStack(
 UNiagaraScriptSource* GetEmitterScriptSource(FNiagaraEmitterHandle* Handle);
 bool EnsureScriptOutputGraph(UNiagaraScriptSource* ScriptSource, ENiagaraScriptUsage ScriptUsage, FGuid ScriptUsageId);
 bool AddDataInterfaceUserParameter(UNiagaraSystem* System, const FString& ParamName, UClass* DataInterfaceClass);
+// Whether the system has a user parameter of this name, of any type ("User." is added to a bare name).
+bool HasUserParameterNamed(UNiagaraSystem* System, const FString& ParamName);
 // A parameter's value in its own type: a number, a bool, or an array for a vector or colour; null for other types.
 TSharedPtr<FJsonValue> ReadNiagaraValue(const FNiagaraParameterStore& Store, const FNiagaraVariable& Variable);
 // With actorName, puts the placed effect's own user parameter values (and the ones it overrides) under placed; false

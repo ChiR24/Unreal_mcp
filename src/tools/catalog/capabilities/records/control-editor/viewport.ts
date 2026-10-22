@@ -13,7 +13,7 @@ const D = 'editor';
 export const VIEWPORT_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_editor', action: 'set_view_mode', domain: D, family: F,
-    summary: 'Set the rendering view mode (Lit, Unlit, Wireframe, etc.) of the view on screen: the level viewport, or while the player plays the running game\'s view (method game_viewport).',
+    summary: 'Set the rendering view mode of the view on screen (the level viewport, or the running game\'s view while the player plays: method game_viewport) by any engine view mode name, its enum name or display name with case, spaces and underscores ignored: Lit, Unlit, Wireframe, DetailLighting, LightingOnly, LightComplexity, ShaderComplexity, LightmapDensity, ReflectionOverride, PathTracing, RayTracingDebug, CollisionPawn, CollisionVisibility, LODColoration, VisualizeNanite, VisualizeLumen, VisualizeVirtualShadowMap and the rest of this engine version\'s list. An unknown name is refused with that list; with no level viewport open, NO_VIEWPORT.',
     whenToUse: ['The viewport render mode must be changed for debugging or visualization.'],
     whenNotToUse: ['The default Lit mode is acceptable.'],
     inputProps: { viewMode: P.viewMode },

@@ -4621,3 +4621,130 @@ describe('audio actions act on the sound being heard', () => {
     expect(code('Audio', 'McpAudioPlayback.cpp')).not.toContain('GetEditorWorldContext');
   });
 });
+
+describe('landscape LOD edits reach the drawn landscape', () => {
+  // The writes fired no edit event and recorded no undo: World Partition proxies kept the old LOD until a reload.
+  it('configure_landscape_lod is one undo step and fires the engine edit event for each property it sets', () => {
+    const lod = code('Environment', 'McpEnvBuildLandscapeFoliage.cpp');
+    expect(lod).toContain('FText::FromString(TEXT("Configure Landscape LOD"))');
+    expect(lod).toContain('Landscape->PostEditChangeProperty(Event);');
+    expect(lod).toContain('Context.Resp->SetObjectField(TEXT("values"), Values);');
+  });
+});
+
+describe('source control passes caller text to git safely and says what it skipped', () => {
+  // A quote in the commit message or identity ended the quoted argument, so the rest became git options.
+  it('the commit message goes through a file and the identity refuses quotes', () => {
+    const repo = code('AssetWorkflow', 'SourceControl', 'McpAssetSourceControlRepo.cpp');
+    expect(repo).toContain('TEXT("commit -F \\"%s\\""), *MessageFile');
+    expect(repo).not.toContain('commit -m');
+    expect(repo).toContain("if (Char == TEXT('\"') || Char < 32)");
+  });
+
+  it('checkout and submit list the paths that named no asset, and enable switches providers', () => {
+    const control = code('AssetWorkflow', 'SourceControl', 'McpAssetSourceControl.cpp');
+    expect(control.split('SetArrayField(TEXT("skipped"), Skipped)').length - 1).toBe(4);
+    expect(control).toContain('SourceControlModule.GetProvider().GetName().ToString().Equals(Provider, ESearchCase::IgnoreCase)');
+    expect(control).not.toContain('Please configure provider in Editor preferences');
+  });
+
+  // The explanation sat only in the error field, which some clients never show.
+  it('each refusal message says why on its own', () => {
+    const control = code('AssetWorkflow', 'SourceControl', 'McpAssetSourceControl.cpp');
+    expect(control).not.toContain('TEXT("Source control disabled")');
+    expect(control).not.toContain('TEXT("No valid assets")');
+    expect(control.split('*FString::Join(AssetPaths, TEXT(", "))').length - 1).toBe(2);
+    expect(control).toContain('Result->GetStringField(TEXT("error")), Result,');
+    expect(control).not.toContain('TEXT("Source control is not enabled")');
+  });
+});
+
+describe('spline templates draw their own shape and refuse what does not load', () => {
+  // Every template drew the same flat ribbon (a wall or a pipe came out as a road), nothing at all without a
+  // meshPath, and a mesh or material that failed to load still answered success with a bare spline.
+  it('each kind carries a stock mesh and cross-section, and everything loads before the actor spawns', () => {
+    const templates = code('Spline', 'McpSplineTemplates.cpp');
+    expect(templates).toContain('{TEXT("Wall"), StockCube, ESplineMeshAxis::X, 20.0, 300.0, false, true}');
+    expect(templates).toContain('{TEXT("Pipe"), StockCylinder, ESplineMeshAxis::Z, 50.0, 50.0, true, false}');
+    expect(templates).not.toContain('0.08f)');
+    const spawn = templates.indexOf('SpawnSplineActor(');
+    expect(templates.indexOf('TEXT("MESH_NOT_FOUND")')).toBeLessThan(spawn);
+    expect(templates.indexOf('TEXT("MATERIAL_NOT_FOUND")')).toBeLessThan(spawn);
+    expect(templates).toContain('SegmentComp->SetStartOffset(SegmentOffset, false);');
+    // A spline mesh flags its material Used with Spline Meshes, which dirties an /Engine material nobody can save.
+    expect(templates).not.toContain('BasicShapeMaterial');
+  });
+
+  // A bare AActor spawns with no root, so the spawn location and rotation went nowhere.
+  it('a spline actor lands where it was asked', () => {
+    const spawn = code('Spline', 'McpSplineValueAndConfig.cpp');
+    expect(spawn.indexOf('Actor->SetActorLocationAndRotation(Location, Rotation);')).toBeGreaterThan(spawn.indexOf('Actor->SetRootComponent(Spline);'));
+  });
+});
+
+describe('render console settings say what took', () => {
+  // A console variable held by the console or read-only was listed as applied; a settings key the action does not
+  // read was dropped; nothing taking still answered success; ray tracing off for the project went unmentioned.
+  it('reads each variable back, refuses unread keys and empty results, and warns when ray tracing is off', () => {
+    const support = code('Render', 'McpRenderSupportSettings.h');
+    expect(support).toContain('Variable->GetFloat(), Wanted');
+    expect(support).toContain('Variable->Set(*Value, ECVF_SetByConsole);');
+    expect(support).toContain('Variable->TestFlags(ECVF_ReadOnly)');
+    const console = code('Render', 'McpRenderConsole.cpp');
+    expect(console).toContain('does not read settings %s; it reads %s');
+    expect(console).toContain('TEXT("CVAR_UNAVAILABLE")');
+    expect(console).toContain('FindConsoleVariable(TEXT("r.RayTracing"))');
+    expect(console).not.toContain('Render console settings not available.');
+  });
+
+  // set_tonemapper_type set r.TonemapperFilm, which no 5.x engine has, and answered applied.
+  it('the tonemapper type drives the tone curve and refuses an unknown type', () => {
+    const color = code('Render', 'McpRenderPostProcessColor.cpp');
+    expect(color).not.toContain('r.TonemapperFilm');
+    expect(color).toContain('{TEXT("ToneCurveAmount"), TEXT("ExpandGamut")}');
+    expect(color).toContain('is not a tonemapper');
+  });
+});
+
+describe('view modes resolve through the engine enum', () => {
+  // Ten names were known; the rest went to a console command the editor does not run.
+  it('any EViewModeIndex resolves by name, and an unknown one is refused with the list', () => {
+    const viewMode = code('ControlEditor', 'McpEditorViewMode.cpp');
+    expect(viewMode).toContain('StaticEnum<EViewModeIndex>()');
+    expect(viewMode).toContain('is not a view mode. Common ones:');
+    expect(viewMode).not.toContain('TEXT("viewmode %s")');
+  });
+});
+
+describe('effect lifecycle refusals name what was not found', () => {
+  // "Niagara system not found." did not say whether the actor, its component or a component playing assetPath missed.
+  it('each miss names the actor, its component or the asset', () => {
+    const lifecycle = code('Effect', 'McpEffectNiagaraLifecycle.cpp');
+    expect(lifecycle).not.toContain('TEXT("Niagara system not found.")');
+    expect(lifecycle.split('LifecycleMiss(Actor, SystemName, AssetPath)').length - 1).toBe(3);
+  });
+});
+
+describe('Gameplay Effect, data interface and framework creates say what they did', () => {
+  // An unknown modifier operation became Additive; a duration alone made an Instant effect; an unknown policy made an
+  // Instant effect that answered with the policy asked for.
+  it('refuses unknown ops and policies and reads a lone duration as HasDuration', () => {
+    const modifiers = code('GAS', 'Authoring', 'McpGASEffectModifiers.cpp');
+    expect(modifiers).toContain('is not a modifier "');
+    expect(modifiers).toContain('ModOp >= EGameplayModOp::Max');
+    const magnitude = code('GAS', 'McpGASEffectsMagnitude.cpp');
+    expect(magnitude.split('Payload->HasField(TEXT("duration")) ? TEXT("HasDuration") : TEXT("Instant")').length - 1).toBe(2);
+    expect(magnitude).toContain('Nothing was created.');
+  });
+
+  // A second data interface under a taken name was built by NewObject over the first.
+  it('a data interface name the system has is refused, and the object name is unique', () => {
+    const interfaces = code('NiagaraAuthoring', 'McpNiagaraDataInterfaces.cpp');
+    expect(interfaces).toContain('TEXT("NAME_TAKEN")');
+    expect(code('NiagaraAuthoring', 'McpNiagaraUserParams.cpp')).toContain('MakeUniqueObjectName(System, DataInterfaceClass, FName(*ParamName))');
+  });
+
+  it('a framework class create reports whether it saved', () => {
+    expect(code('GameFramework', 'McpGameFrameworkCreation.cpp')).toContain('Response->SetBoolField(TEXT("saved"), bSaved);');
+  });
+});

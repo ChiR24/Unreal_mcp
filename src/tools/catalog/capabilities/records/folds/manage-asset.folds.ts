@@ -12,7 +12,7 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'source_control', selector: 'sourceControlOp',
-    summary: 'Revision control: initialise a repository, enable a provider, check out, submit, or commit every change.',
+    summary: 'Revision control for the project, chosen by sourceControlOp: init makes a Git repository at the project root with an Unreal .gitignore and a first commit and turns the Git provider on; commit_all stages and commits every change (alreadyClean when there is none); enable turns a provider on or switches to it (Git, Perforce, Subversion); checkout and submit check assets out and in through the provider that is on, listing paths that name no asset (skipped). Git runs on a worker and every step comes back with its output.',
     topics: ['source control', 'revision control', 'checkout', 'submit', 'commit', 'init repository', 'perforce', 'git', 'check out file', 'initialize git repo', 'connect to perforce', 'set up version control', 'check in changes'],
     members: {
       checkout: 'source_control_checkout', submit: 'source_control_submit',

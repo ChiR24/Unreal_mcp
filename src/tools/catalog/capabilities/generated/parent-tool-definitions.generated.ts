@@ -2610,6 +2610,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Landscape layer hardness (0-1)."
         },
+        "height": {
+          "type": "number",
+          "description": "Height in world units, over 0 (default 300 for a wall, 100 for a fence); the mesh's bottom stands on the route. With meshPath, omit it to keep the mesh's own height."
+        },
         "heightData": {
           "type": "array",
           "items": {
@@ -2810,6 +2814,25 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "location": {
           "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "description": "World-space location {x, y, z}.",
+              "properties": {
+                "x": {
+                  "type": "number",
+                  "description": "X"
+                },
+                "y": {
+                  "type": "number",
+                  "description": "Y"
+                },
+                "z": {
+                  "type": "number",
+                  "description": "Z"
+                }
+              }
+            },
             {
               "type": "object",
               "description": "Brush centre in world space; paints the disc of radius around it (radius required).",
@@ -3097,109 +3120,220 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Spline point type (Linear, Curve, Constant, etc.)."
         },
         "points": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "description": "Spline point with position and tangent.",
-            "properties": {
-              "position": {
+          "oneOf": [
+            {
+              "type": "array",
+              "description": "Spline points.",
+              "items": {
                 "type": "object",
-                "description": "Position.",
+                "description": "Spline point with position and tangent.",
                 "properties": {
-                  "x": {
-                    "type": "number",
-                    "description": "X"
+                  "position": {
+                    "type": "object",
+                    "description": "Position.",
+                    "properties": {
+                      "x": {
+                        "type": "number",
+                        "description": "X"
+                      },
+                      "y": {
+                        "type": "number",
+                        "description": "Y"
+                      },
+                      "z": {
+                        "type": "number",
+                        "description": "Z"
+                      }
+                    },
+                    "additionalProperties": false
                   },
-                  "y": {
-                    "type": "number",
-                    "description": "Y"
+                  "arriveTangent": {
+                    "type": "object",
+                    "description": "Arrive tangent.",
+                    "properties": {
+                      "x": {
+                        "type": "number",
+                        "description": "X"
+                      },
+                      "y": {
+                        "type": "number",
+                        "description": "Y"
+                      },
+                      "z": {
+                        "type": "number",
+                        "description": "Z"
+                      }
+                    },
+                    "additionalProperties": false
                   },
-                  "z": {
-                    "type": "number",
-                    "description": "Z"
-                  }
-                },
-                "additionalProperties": false
-              },
-              "arriveTangent": {
-                "type": "object",
-                "description": "Arrive tangent.",
-                "properties": {
-                  "x": {
-                    "type": "number",
-                    "description": "X"
+                  "leaveTangent": {
+                    "type": "object",
+                    "description": "Leave tangent.",
+                    "properties": {
+                      "x": {
+                        "type": "number",
+                        "description": "X"
+                      },
+                      "y": {
+                        "type": "number",
+                        "description": "Y"
+                      },
+                      "z": {
+                        "type": "number",
+                        "description": "Z"
+                      }
+                    },
+                    "additionalProperties": false
                   },
-                  "y": {
-                    "type": "number",
-                    "description": "Y"
+                  "rotation": {
+                    "type": "object",
+                    "description": "Rotation.",
+                    "properties": {
+                      "pitch": {
+                        "type": "number",
+                        "description": "Pitch"
+                      },
+                      "yaw": {
+                        "type": "number",
+                        "description": "Yaw"
+                      },
+                      "roll": {
+                        "type": "number",
+                        "description": "Roll"
+                      }
+                    },
+                    "additionalProperties": false
                   },
-                  "z": {
-                    "type": "number",
-                    "description": "Z"
-                  }
-                },
-                "additionalProperties": false
-              },
-              "leaveTangent": {
-                "type": "object",
-                "description": "Leave tangent.",
-                "properties": {
-                  "x": {
-                    "type": "number",
-                    "description": "X"
-                  },
-                  "y": {
-                    "type": "number",
-                    "description": "Y"
-                  },
-                  "z": {
-                    "type": "number",
-                    "description": "Z"
-                  }
-                },
-                "additionalProperties": false
-              },
-              "rotation": {
-                "type": "object",
-                "description": "Rotation.",
-                "properties": {
-                  "pitch": {
-                    "type": "number",
-                    "description": "Pitch"
-                  },
-                  "yaw": {
-                    "type": "number",
-                    "description": "Yaw"
-                  },
-                  "roll": {
-                    "type": "number",
-                    "description": "Roll"
-                  }
-                },
-                "additionalProperties": false
-              },
-              "scale": {
-                "type": "object",
-                "description": "Scale.",
-                "properties": {
-                  "x": {
-                    "type": "number",
-                    "description": "X"
-                  },
-                  "y": {
-                    "type": "number",
-                    "description": "Y"
-                  },
-                  "z": {
-                    "type": "number",
-                    "description": "Z"
+                  "scale": {
+                    "type": "object",
+                    "description": "Scale.",
+                    "properties": {
+                      "x": {
+                        "type": "number",
+                        "description": "X"
+                      },
+                      "y": {
+                        "type": "number",
+                        "description": "Y"
+                      },
+                      "z": {
+                        "type": "number",
+                        "description": "Z"
+                      }
+                    },
+                    "additionalProperties": false
                   }
                 },
                 "additionalProperties": false
               }
             },
-            "additionalProperties": false
-          },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "description": "Spline point with position and tangent.",
+                "properties": {
+                  "position": {
+                    "type": "object",
+                    "description": "Position.",
+                    "properties": {
+                      "x": {
+                        "type": "number",
+                        "description": "X"
+                      },
+                      "y": {
+                        "type": "number",
+                        "description": "Y"
+                      },
+                      "z": {
+                        "type": "number",
+                        "description": "Z"
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "arriveTangent": {
+                    "type": "object",
+                    "description": "Arrive tangent.",
+                    "properties": {
+                      "x": {
+                        "type": "number",
+                        "description": "X"
+                      },
+                      "y": {
+                        "type": "number",
+                        "description": "Y"
+                      },
+                      "z": {
+                        "type": "number",
+                        "description": "Z"
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "leaveTangent": {
+                    "type": "object",
+                    "description": "Leave tangent.",
+                    "properties": {
+                      "x": {
+                        "type": "number",
+                        "description": "X"
+                      },
+                      "y": {
+                        "type": "number",
+                        "description": "Y"
+                      },
+                      "z": {
+                        "type": "number",
+                        "description": "Z"
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "rotation": {
+                    "type": "object",
+                    "description": "Rotation.",
+                    "properties": {
+                      "pitch": {
+                        "type": "number",
+                        "description": "Pitch"
+                      },
+                      "yaw": {
+                        "type": "number",
+                        "description": "Yaw"
+                      },
+                      "roll": {
+                        "type": "number",
+                        "description": "Roll"
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "scale": {
+                    "type": "object",
+                    "description": "Scale.",
+                    "properties": {
+                      "x": {
+                        "type": "number",
+                        "description": "X"
+                      },
+                      "y": {
+                        "type": "number",
+                        "description": "Y"
+                      },
+                      "z": {
+                        "type": "number",
+                        "description": "Z"
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "additionalProperties": false
+              },
+              "description": "Spline points."
+            }
+          ],
           "description": "Spline points."
         },
         "position": {
@@ -3545,6 +3679,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "oneOf": [
             {
               "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "Console values by key, only these (any other key is refused and nothing is set): Radius (0-10000 world units)."
+            },
+            {
+              "type": "object",
               "description": "Action-specific settings key-value pairs.",
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true
@@ -3808,7 +3948,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "width": {
           "type": "number",
-          "description": "Spline width in world units (default 256); side falloff is half of it."
+          "description": "Size across the route in world units, over 0: a road or river slab's width (default 400), a wall's or fence's thickness (default 20 / 10), a pipe's or cable's diameter (default 50 / 4). With meshPath, omit it to keep the mesh's own width."
         },
         "action": {
           "type": "string",
@@ -3865,6 +4005,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
     "outputSchema": {
       "type": "object",
       "properties": {
+        "actorName": {
+          "type": "string",
+          "description": "Label of the new spline actor."
+        },
         "configuredProperties": {
           "type": "array",
           "items": {
@@ -3889,9 +4033,21 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Directional light actor path. As input, selects the light to snapshot; the first directional light in the level is used when omitted. As output, the resolved actor path."
         },
+        "height": {
+          "type": "number",
+          "description": "Size up from the route in world units, as drawn (the diameter for a pipe or cable)."
+        },
         "instancesShowingNewMesh": {
           "type": "number",
           "description": "Mesh assignment: how many of the placed instances now draw the new mesh, read back off their component; below placedInstances means some did not follow."
+        },
+        "meshPath": {
+          "type": "string",
+          "description": "Object path of the mesh drawn along the route."
+        },
+        "meshSegments": {
+          "type": "number",
+          "description": "Mesh spans drawn: one per pair of neighbouring points, one more for a closed loop. Each collides (BlockAll)."
         },
         "message": {
           "type": "string",
@@ -3901,6 +4057,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Mesh assignment: instances of this type placed in the level (its foliage actor)."
         },
+        "pointCount": {
+          "type": "number",
+          "description": "Points on the route."
+        },
         "previousMesh": {
           "type": "string",
           "description": "Mesh assignment: the mesh the type used before this call (empty when it had none)."
@@ -3908,6 +4068,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "skyLightActorPath": {
           "type": "string",
           "description": "Sky light actor path. As input, selects the light to snapshot; the first sky light in the level is used when omitted. As output, the resolved actor path."
+        },
+        "splineLength": {
+          "type": "number",
+          "description": "Length of the route in world units."
         },
         "splines": {
           "type": "array",
@@ -3930,6 +4094,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "description": "Light type."
           },
           "description": "Available light types."
+        },
+        "width": {
+          "type": "number",
+          "description": "Size across the route in world units, as drawn."
         }
       },
       "additionalProperties": true
@@ -17613,7 +17781,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "reset": {
           "type": "boolean",
-          "description": "Restart the system from age 0 before stepping, so it ends at exactly steps x deltaTime seconds; also plays a finished system again. Without it the steps add to the age it has."
+          "description": "Restart the effect from age 0 as it activates (default true); false resumes a deactivated one where it stopped."
         },
         "rotation": {
           "type": "array",
@@ -18071,11 +18239,9 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "enum": [
             "ScalableFloat",
-            "AttributeBased",
-            "SetByCaller",
-            "CustomCalculationClass"
+            "SetByCaller"
           ],
-          "description": "How the modifier magnitude is calculated."
+          "description": "How the magnitude is given: ScalableFloat (a fixed value, the default) or SetByCaller (supplied by the effect spec under setByCallerTag)."
         },
         "modifierIndex": {
           "type": "number",

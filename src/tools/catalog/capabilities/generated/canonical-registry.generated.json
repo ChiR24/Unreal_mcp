@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "c1ad3ae42a850f2a",
+  "catalogRevision": "7582aa91ffeb535c",
   "recordCount": 416,
   "records": [
     {
@@ -13426,7 +13426,7 @@
           "set up version control",
           "check in changes"
         ],
-        "summary": "Revision control: initialise a repository, enable a provider, check out, submit, or commit every change.",
+        "summary": "Revision control for the project, chosen by sourceControlOp: init makes a Git repository at the project root with an Unreal .gitignore and a first commit and turns the Git provider on; commit_all stages and commits every change (alreadyClean when there is none); enable turns a provider on or switches to it (Git, Perforce, Subversion); checkout and submit check assets out and in through the provider that is on, listing paths that name no asset (skipped). Git runs on a worker and every step comes back with its output.",
         "whenToUse": [
           "sourceControlOp=checkout: Assets must be checked out of revision control before they are edited.",
           "sourceControlOp=submit: Checked-out assets must be submitted to the revision-control server with a change description.",
@@ -13514,7 +13514,7 @@
       },
       "examples": [
         {
-          "title": "Revision control: initialise a repository, enable a provider, check out, submit, or commit every change.",
+          "title": "Revision control for the project, chosen by sourceControlOp: init makes a Git repository at the project root with an Unreal .gitignore and a first commit and turns the Git provider on; commit_all stages and commits every change (alreadyClean when there is none); enable turns a provider on or switches to it (Git, Perforce, Subversion); checkout and submit check assets out and in through the provider that is on, listing paths that name no asset (skipped). Git runs on a worker and every step comes back with its output.",
           "input": {
             "paths": [
               "/Game/Materials/M_Base",
@@ -13606,7 +13606,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "15648921044528f7a056a0b40b148acebc5401b5808a141ab91f159fbfe9f34f",
-        "content": "b5043af0feee0f76ee4591097f02ad079e74c9fc97a3beff3c50bef864af5698"
+        "content": "f824d4fd17ac4cd6cedb62480194b84f991d11a22d372730123511db1c6ea203"
       }
     },
     {
@@ -27263,7 +27263,7 @@
           "path tracing",
           "ray traced gi"
         ],
-        "summary": "Configure a ray-tracing feature: ambient occlusion, global illumination, reflections, shadows, path tracing.",
+        "summary": "Turn a ray-tracing feature on or off and tune it through its console variables for this editor session: shadows, global illumination, reflections, ambient occlusion, path tracing. settings takes only the keys that feature reads (another is refused); with hardware ray tracing off for the project the values draw nothing and the reply warns.",
         "whenToUse": [
           "Render or lighting quality settings must be configured."
         ],
@@ -27282,17 +27282,17 @@
             },
             "settings": {
               "type": "object",
-              "description": "Action-specific settings key-value pairs.",
               "additionalProperties": true,
-              "x-unreal-reflection-boundary": true
+              "x-unreal-reflection-boundary": true,
+              "description": "Console values by key, only these (any other key is refused and nothing is set): Radius (0-10000 world units)."
             },
             "enabled": {
               "type": "boolean",
-              "description": "Whether the feature is enabled."
+              "description": "Turn the feature on (default true) or off: its console variable is set to 1 or 0 even when only settings are sent."
             },
             "intensity": {
               "type": "number",
-              "description": "Ray-traced ambient occlusion intensity (r.RayTracing.AmbientOcclusion.Intensity)."
+              "description": "Occlusion intensity 0-10 (r.RayTracing.AmbientOcclusion.Intensity); out of range is refused."
             },
             "feature": {
               "type": "string",
@@ -27338,7 +27338,7 @@
       },
       "examples": [
         {
-          "title": "Configure a ray-tracing feature: ambient occlusion, global illumination, reflections, shadows, path tracing.",
+          "title": "Turn a ray-tracing feature on or off and tune it through its console variables for this editor session: shadows, global illumination, reflections, ambient occlusion, path tracing. settings takes only the keys that feature reads (another is refused); with hardware ray tracing off for the project the values draw nothing and the reply warns.",
           "input": {
             "action": "configure_ray_tracing",
             "feature": "ao"
@@ -27390,8 +27390,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "1f659b8dfa6bdafa528415b2ddd8726f9da945e1d141916f9a62dbd876ef3dee",
-        "content": "26e38e5096784aebabf1c4073f8d8b883863711d9cb2b178b6b8eb3c5d54ea25"
+        "schema": "e45b480dd1e6eedbc1c69670cce1a1faf2f2b0072cfa56d87fb3bbe2cb8b17a8",
+        "content": "d705ab62f8a8718a88c57ecad225a31f2c9d3b0060788aad8ca31494cf0db466"
       }
     },
     {
@@ -30830,19 +30830,25 @@
           "add a cable",
           "add a fence along a path"
         ],
-        "summary": "Create a spline actor, a spline mesh component, or a typed spline (road, wall, fence, pipe, cable, river).",
+        "summary": "Create a spline actor, a spline mesh component, or in one call a typed spline with a mesh drawn along its route: road and river (a flat slab, 400 wide), wall and fence (standing on the route, 20x300 and 10x100), pipe and cable (round, 50 and 4 across). meshPath swaps in a mesh fitted to width (and height for a wall or fence); every span collides.",
         "whenToUse": [
-          "A spline actor or spline mesh must be created or modified."
+          "kind=actor|mesh_component: A spline actor or spline mesh must be created or modified.",
+          "kind=road: A road or path must follow a route through the level: one call lays the spline and the mesh along it, with collision.",
+          "kind=wall: A wall, barrier or enclosure must follow a route through the level: one call lays the spline and the mesh along it, with collision.",
+          "kind=fence: A fence or railing must follow a route through the level: one call lays the spline and the mesh along it, with collision.",
+          "kind=pipe: A pipe, duct or tube must follow a route through the level: one call lays the spline and the mesh along it, with collision.",
+          "kind=cable: A cable, wire or rope must follow a route through the level: one call lays the spline and the mesh along it, with collision.",
+          "kind=river: A river or channel surface must follow a route through the level: one call lays the spline and the mesh along it, with collision."
         ],
         "whenNotToUse": [
           "kind=actor: A static mesh path should be used instead.",
           "kind=mesh_component: A static mesh should be used instead.",
-          "kind=road: A generic spline should be used.",
-          "kind=wall: Manual wall placement is sufficient.",
-          "kind=fence: Manual fence placement is sufficient.",
-          "kind=pipe: Manual pipe placement is sufficient.",
-          "kind=cable: A physics cable component should be used.",
-          "kind=river: A water body actor should be used instead."
+          "kind=road: The road should shape the terrain: landscape splines deform the landscape.",
+          "kind=wall: A few wall pieces placed by hand are enough.",
+          "kind=fence: A few fence pieces placed by hand are enough.",
+          "kind=pipe: A few straight pipe pieces placed by hand are enough.",
+          "kind=cable: The cable must sag and swing with physics: a cable component.",
+          "kind=river: Real water (buoyancy, waves, flow) is wanted: a Water plugin river body."
         ]
       },
       "schemas": {
@@ -30890,6 +30896,7 @@
             },
             "location": {
               "type": "object",
+              "additionalProperties": false,
               "description": "World-space location {x, y, z}.",
               "properties": {
                 "x": {
@@ -30904,8 +30911,7 @@
                   "type": "number",
                   "description": "Z"
                 }
-              },
-              "additionalProperties": false
+              }
             },
             "rotation": {
               "type": "object",
@@ -30928,6 +30934,7 @@
             },
             "points": {
               "type": "array",
+              "description": "Spline points.",
               "items": {
                 "type": "object",
                 "description": "Spline point with position and tangent.",
@@ -31029,8 +31036,7 @@
                   }
                 },
                 "additionalProperties": false
-              },
-              "description": "Spline points."
+              }
             },
             "bClosedLoop": {
               "type": "boolean",
@@ -31070,15 +31076,19 @@
             },
             "materialPath": {
               "type": "string",
-              "description": "Canonical /Game material asset path."
+              "description": "Material for slot 0 of every span (default: the mesh's own). The editor flags a material Used with Spline Meshes the first time one draws it, leaving the material unsaved: save it with the level, or a packaged game draws these spans in the checker. Refused with MATERIAL_NOT_FOUND before anything is created when it does not load."
             },
             "width": {
               "type": "number",
-              "description": "Width of the deformed mesh ribbon in world units (default 400)."
+              "description": "Size across the route in world units, over 0: a road or river slab's width (default 400), a wall's or fence's thickness (default 20 / 10), a pipe's or cable's diameter (default 50 / 4). With meshPath, omit it to keep the mesh's own width."
             },
             "closedLoop": {
               "type": "boolean",
-              "description": "Close the spline into a loop, joining the last point back to the first."
+              "description": "Join the last point back to the first, adding one span (default false)."
+            },
+            "height": {
+              "type": "number",
+              "description": "Height in world units, over 0 (default 300 for a wall, 100 for a fence); the mesh's bottom stands on the route. With meshPath, omit it to keep the mesh's own height."
             },
             "kind": {
               "type": "string",
@@ -31117,6 +31127,34 @@
               "type": "object",
               "x-unreal-reflection-boundary": true,
               "description": "Additional handler result fields not named by the contract."
+            },
+            "actorName": {
+              "type": "string",
+              "description": "Label of the new spline actor."
+            },
+            "pointCount": {
+              "type": "number",
+              "description": "Points on the route."
+            },
+            "splineLength": {
+              "type": "number",
+              "description": "Length of the route in world units."
+            },
+            "meshSegments": {
+              "type": "number",
+              "description": "Mesh spans drawn: one per pair of neighbouring points, one more for a closed loop. Each collides (BlockAll)."
+            },
+            "meshPath": {
+              "type": "string",
+              "description": "Object path of the mesh drawn along the route."
+            },
+            "width": {
+              "type": "number",
+              "description": "Size across the route in world units, as drawn."
+            },
+            "height": {
+              "type": "number",
+              "description": "Size up from the route in world units, as drawn (the diameter for a pipe or cable)."
             }
           },
           "required": [
@@ -31127,7 +31165,7 @@
       },
       "examples": [
         {
-          "title": "Create a spline actor, a spline mesh component, or a typed spline (road, wall, fence, pipe, cable, river).",
+          "title": "Create a spline actor, a spline mesh component, or in one call a typed spline with a mesh drawn along its route: road and river (a flat slab, 400 wide), wall and fence (standing on the route, 20x300 and 10x100), pipe and cable (round, 50 and 4 across). meshPath swaps in a mesh fitted to width (and height for a wall or fence); every span collides.",
           "input": {
             "action": "create_spline",
             "name": "Spline_1",
@@ -31269,14 +31307,18 @@
               "pipe",
               "cable",
               "river"
+            ],
+            "height": [
+              "wall",
+              "fence"
             ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "7c7590927815cea8b4fa13ee9401819e217b96caa62283fd4f1c3525e63238c4",
-        "content": "ee9ad31b69dadd62c77444551250209c04dd14de75125d314b196d6c256119c7"
+        "schema": "d766009aa43a27f4823a7509132b35dfc0c85c15142610f404eb47c3d2756a98",
+        "content": "a4be98f00c5f9a6facbe50b14ea646d591ae2ac63c77206dbb6f31910e697cf6"
       }
     },
     {
@@ -31878,11 +31920,11 @@
           "landscape lod",
           "landscape splines"
         ],
-        "summary": "Edit a landscape: paint layers, import a heightmap, configure LOD, material or splines, generate LODs.",
+        "summary": "Edit a landscape (landscapeName or landscapePath, else the first in the level), chosen by edit. paint_landscape paints a layer over a brush disc, a vertex region or the whole landscape, and paint_landscape_layer at one weight over a region; import_heightmap writes a raw 16-bit heightmap into its heights. Those three go into the edit layer being edited (else the first), are one undo step and are merged before the reply, so the drawn landscape and its collision show them. configure_landscape_lod sets LOD properties by name and reads them back; configure_landscape_material assigns its material; configure_landscape_splines replaces its splines with one through points that can deform the terrain and paint a layer; generate_lods gives static meshes simplified LODs.",
         "whenToUse": [
           "edit=paint_landscape|paint_landscape_layer: A landscape must be created or modified in the current level.",
           "edit=import_heightmap: A heightmap file must be imported to create or update a landscape.",
-          "edit=configure_landscape_lod: Landscape LOD distance or screen-size must be tuned.",
+          "edit=configure_landscape_lod: A landscape looks blurry or pops in detail too near, or costs too much far away.",
           "edit=configure_landscape_material: A landscape needs a different material assignment.",
           "edit=configure_landscape_splines: Landscape splines need to be added or modified.",
           "edit=generate_lods: LODs must be generated for one or more assets."
@@ -31891,7 +31933,6 @@
           "edit=paint_landscape: The landscape layer weight should be set via raw data.",
           "edit=paint_landscape_layer: The landscape should be painted interactively.",
           "edit=import_heightmap: The heightmap should be generated procedurally.",
-          "edit=configure_landscape_lod: LODs should be generated rather than configured.",
           "edit=configure_landscape_splines: Standalone spline actors should be used instead.",
           "edit=generate_lods: LODs have already been tuned by hand: this replaces their settings (manage_geometry.configure_mesh_lods tunes one LOD)."
         ]
@@ -32189,7 +32230,7 @@
       },
       "examples": [
         {
-          "title": "Edit a landscape: paint layers, import a heightmap, configure LOD, material or splines, generate LODs.",
+          "title": "Edit a landscape (landscapeName or landscapePath, else the first in the level), chosen by edit. paint_landscape paints a layer over a brush disc, a vertex region or the whole landscape, and paint_landscape_layer at one weight over a region; import_heightmap writes a raw 16-bit heightmap into its heights. Those three go into the edit layer being edited (else the first), are one undo step and are merged before the reply, so the drawn landscape and its collision show them. configure_landscape_lod sets LOD properties by name and reads them back; configure_landscape_material assigns its material; configure_landscape_splines replaces its splines with one through points that can deform the terrain and paint a layer; generate_lods gives static meshes simplified LODs.",
           "input": {
             "action": "edit_landscape",
             "landscapeName": "Landscape_1",
@@ -32340,7 +32381,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "bb8b8b49be3730a088685d3f8c26e2eda524d7022f1f75994bd35ff7ed35c7c6",
-        "content": "7922e2c06eebda6002052ce734a5418542945a72dfe5ae30f53172927127a825"
+        "content": "7bd854253fc7948e398ef5f240f5324bced4c5a464a6ef4e74e500d5279f614b"
       }
     },
     {
@@ -62882,7 +62923,7 @@
           "restart particle effect",
           "reset niagara system"
         ],
-        "summary": "Activate, deactivate or reset a Niagara component on an actor, or activate an effect by asset or system name.",
+        "summary": "Activate (restarting from age 0 unless reset is false), deactivate or reset the Niagara component on a placed actor (actorName), or with assetPath the one playing that system, on actorName or anywhere in the level; the running game's copy while Play runs. The reply says active, false while its system is still compiling or loading. A miss names what was not found: the actor, its Niagara component, or a component playing assetPath (SYSTEM_NOT_FOUND).",
         "whenToUse": [
           "control=activate: Effect must turn on.",
           "control=deactivate: Effect must turn off.",
@@ -62908,7 +62949,7 @@
             },
             "reset": {
               "type": "boolean",
-              "description": "Whether the effect restarts from its initial state."
+              "description": "Restart the effect from age 0 as it activates (default true); false resumes a deactivated one where it stopped."
             },
             "assetPath": {
               "type": "string",
@@ -62960,7 +63001,7 @@
       },
       "examples": [
         {
-          "title": "Activate, deactivate or reset a Niagara component on an actor, or activate an effect by asset or system name.",
+          "title": "Activate (restarting from age 0 unless reset is false), deactivate or reset the Niagara component on a placed actor (actorName), or with assetPath the one playing that system, on actorName or anywhere in the level; the running game's copy while Play runs. The reply says active, false while its system is still compiling or loading. A miss names what was not found: the actor, its Niagara component, or a component playing assetPath (SYSTEM_NOT_FOUND).",
           "input": {
             "action": "activate",
             "actorName": "FX_1",
@@ -63048,8 +63089,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "e1c23a0a1af4292c2324bfbcd4b85dc6a3e61e31497efed503498302fa5c2d9e",
-        "content": "7e3f3bef0c60615dfbed51442934699e4cd8e3637144f2164f407b3b2ac46e2e"
+        "schema": "d19b390115300e17308840a806495c39f98c0a3d9f774f118c5a2db717724de7",
+        "content": "55f109e1dab1143122afa1179aebb8a144b986544054f61387dc903b07ce4296"
       }
     },
     {
@@ -66979,11 +67020,9 @@
               "type": "string",
               "enum": [
                 "ScalableFloat",
-                "AttributeBased",
-                "SetByCaller",
-                "CustomCalculationClass"
+                "SetByCaller"
               ],
-              "description": "How the modifier magnitude is calculated."
+              "description": "How the magnitude is given: ScalableFloat (a fixed value, the default) or SetByCaller (supplied by the effect spec under setByCallerTag)."
             },
             "setByCallerTag": {
               "type": "string",
@@ -67181,8 +67220,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "4e827b292fbe9c2893a6c673bf54ae05a383670d916dcc1c38c0027235aa2761",
-        "content": "62e75bb3dca83d320dfba017a7de47db8717a67b0873ceb33b138b4d8f188082"
+        "schema": "db0fa10672124608e7ac71700935da7aba51488e761b3bb70e823a7fcbf1d914",
+        "content": "7068998aed19e20c9965ba27f5e8b9a0c443da51f478aa30bec57c8f3b592069"
       }
     },
     {
@@ -84484,12 +84523,12 @@
         ],
         "summary": "Create a game framework Blueprint: game mode, game state, game instance, player controller, player state, HUD.",
         "whenToUse": [
-          "kind=game_mode: Use it to create a GameMode Blueprint asset and return its path; an unloadable parentClass, or one that is not a GameMode, is refused.",
-          "kind=game_state: Use it to create a GameState Blueprint asset and return its path; an unloadable parentClass, or one that is not a GameState, is refused.",
-          "kind=game_instance: Use it to create a GameInstance Blueprint asset and return its path; an unloadable parentClass, or one that is not a GameInstance, is refused.",
-          "kind=player_controller: Use it to create a PlayerController Blueprint asset and return its path; an unloadable parentClass, or one that is not a PlayerController, is refused.",
-          "kind=player_state: Use it to create a PlayerState Blueprint asset and return its path; an unloadable parentClass, or one that is not a PlayerState, is refused.",
-          "kind=hud: Use it to create a HUD Blueprint asset and return its path; an unloadable parentClass, or one that is not a HUD, is refused."
+          "kind=game_mode: Use it to create a GameMode Blueprint (name, in path) whose parent is GameModeBase or the parentClass given (a child of GameModeBase; an unloadable one, or one that is not, is refused). An asset already at the path is refused (CREATION_FAILED). defaultPawnClass, playerControllerClass, gameStateClass, playerStateClass and hudClass set its classes; each must load and be the kind its slot holds (a Pawn for the pawn), checked before anything is created. Saved unless save is false (saved); the reply gives assetPath.",
+          "kind=game_state: Use it to create a GameState Blueprint (name, in path) whose parent is GameStateBase or the parentClass given (a child of GameStateBase; an unloadable one, or one that is not, is refused). An asset already at the path is refused (CREATION_FAILED). Saved unless save is false (saved); the reply gives assetPath.",
+          "kind=game_instance: Use it to create a GameInstance Blueprint (name, in path) whose parent is GameInstance or the parentClass given (a child of GameInstance; an unloadable one, or one that is not, is refused). An asset already at the path is refused (CREATION_FAILED). Saved unless save is false (saved); the reply gives assetPath.",
+          "kind=player_controller: Use it to create a PlayerController Blueprint (name, in path) whose parent is PlayerController or the parentClass given (a child of PlayerController; an unloadable one, or one that is not, is refused). An asset already at the path is refused (CREATION_FAILED). Saved unless save is false (saved); the reply gives assetPath.",
+          "kind=player_state: Use it to create a PlayerState Blueprint (name, in path) whose parent is PlayerState or the parentClass given (a child of PlayerState; an unloadable one, or one that is not, is refused). An asset already at the path is refused (CREATION_FAILED). Saved unless save is false (saved); the reply gives assetPath.",
+          "kind=hud: Use it to create a HUD Blueprint (name, in path) whose parent is HUD or the parentClass given (a child of HUD; an unloadable one, or one that is not, is refused). An asset already at the path is refused (CREATION_FAILED). Saved unless save is false (saved); the reply gives assetPath."
         ],
         "whenNotToUse": []
       },
@@ -84579,6 +84618,10 @@
             "assetPath": {
               "type": "string",
               "description": "Full /Game path of the asset that was created, modified or inspected."
+            },
+            "saved": {
+              "type": "boolean",
+              "description": "Whether the asset was saved to disk."
             }
           },
           "required": [
@@ -84659,8 +84702,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "8328e701741baced0429b8023749085be2bbe7abc1baa044d7a4ac1ef9712438",
-        "content": "d3c7f0efe0e27b53f466152781af49c83587e603b9857439df4cdf517dace301"
+        "schema": "794cc639cc9c3376340d048ffc8c771b25b0756e931774e982caec54b4b6bed8",
+        "content": "220c2229014c4ae72e63dad36f46abc8a8fc7cb4cd27cc572314221e43e2db11"
       }
     },
     {

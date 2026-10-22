@@ -2,108 +2,66 @@
 
 namespace McpNiagaraAuthoringHandlers
 {
-static bool FinishDataInterfaceAction(
-    FActionContext& Context,
-    UNiagaraSystem* System,
-    const FString& DataInterfaceName,
-    const FString& ParamName,
-    bool bDataInterfaceAdded,
-    const FString& MessageText,
-    const FString& ResponseText)
+// One data interface as a user parameter of the system (User.<parameterName>). Every DI but the static-mesh one used
+// to reply success with dataInterfaceAdded false; a second one under a taken name was built by NewObject over the
+// first (same outer, same name), replacing an object the system still used.
+static bool AddDataInterface(FActionContext& Context, const TCHAR* Label, UClass* DataInterfaceClass)
 {
-    // Every DI but the static-mesh one used to reply success with dataInterfaceAdded:false.
-    if (!bDataInterfaceAdded)
+    UNiagaraSystem* System = nullptr;
+    FNiagaraEmitterHandle* Handle = nullptr;
+    if (!LoadSystemAndEmitter(Context, System, Handle))
     {
-        Context.SendError(FString::Printf(TEXT("Failed to create the %s data interface parameter '%s'."), *DataInterfaceName, *ParamName), TEXT("NIAGARA_DI_CREATE_FAILED"));
+        return true;
+    }
+    const FString ParamName = GetJsonStringField(Context.Payload, TEXT("parameterName"), FString::Printf(TEXT("MCP_%sDataInterface"), Label));
+    if (HasUserParameterNamed(System, ParamName))
+    {
+        Context.SendError(FString::Printf(TEXT("%s already has a user parameter '%s'; pick another parameterName. Nothing was changed."),
+            *System->GetName(), *ParamName), TEXT("NAME_TAKEN"));
+        return true;
+    }
+    if (!AddDataInterfaceUserParameter(System, ParamName, DataInterfaceClass))
+    {
+        Context.SendError(FString::Printf(TEXT("Failed to create the %s data interface parameter '%s'."), Label, *ParamName),
+            TEXT("NIAGARA_DI_CREATE_FAILED"));
         return true;
     }
     MarkDirtyAndVerify(Context, System);
-    Context.Result->SetStringField(TEXT("dataInterface"), DataInterfaceName);
+    Context.Result->SetStringField(TEXT("dataInterface"), Label);
     Context.Result->SetStringField(TEXT("parameterName"), ParamName);
-    Context.Result->SetBoolField(TEXT("dataInterfaceAdded"), bDataInterfaceAdded);
-    Context.Result->SetStringField(TEXT("message"), MessageText);
-    Context.SendSuccess(true, ResponseText);
+    Context.Result->SetBoolField(TEXT("dataInterfaceAdded"), true);
+    Context.SendSuccess(true, FString::Printf(TEXT("%s data interface added as User.%s."), Label, *ParamName));
     return true;
 }
 
-static bool AddSkeletalMeshDI(FActionContext& Context)
-{
-    UNiagaraSystem* System = nullptr;
-    FNiagaraEmitterHandle* Handle = nullptr;
-    if (!LoadSystemAndEmitter(Context, System, Handle))
-    {
-        return true;
-    }
-    const FString ParamName = GetJsonStringField(Context.Payload, TEXT("parameterName"), TEXT("MCP_SkeletalMeshDataInterface"));
-    const bool bDataInterfaceAdded = AddDataInterfaceUserParameter(System, ParamName, UNiagaraDataInterfaceSkeletalMesh::StaticClass());
-    return FinishDataInterfaceAction(Context, System, TEXT("SkeletalMesh"), ParamName, bDataInterfaceAdded, TEXT("Added Skeletal Mesh data interface."), TEXT("Skeletal Mesh DI added."));
-}
-
-static bool AddStaticMeshDI(FActionContext& Context)
-{
-    UNiagaraSystem* System = nullptr;
-    FNiagaraEmitterHandle* Handle = nullptr;
-    if (!LoadSystemAndEmitter(Context, System, Handle))
-    {
-        return true;
-    }
-    const FString ParamName = GetJsonStringField(Context.Payload, TEXT("parameterName"), TEXT("MCP_StaticMeshDataInterface"));
-    bool bDataInterfaceAdded = false;
-#if MCP_HAS_NIAGARA_STATIC_MESH_DI
-    bDataInterfaceAdded = AddDataInterfaceUserParameter(System, ParamName, UNiagaraDataInterfaceStaticMesh::StaticClass());
-#else
-    UClass* StaticMeshDataInterfaceClass = StaticLoadClass(UNiagaraDataInterface::StaticClass(), nullptr, TEXT("/Script/Niagara.NiagaraDataInterfaceStaticMesh"));
-    bDataInterfaceAdded = AddDataInterfaceUserParameter(System, ParamName, StaticMeshDataInterfaceClass);
-#endif
-    return FinishDataInterfaceAction(Context, System, TEXT("StaticMesh"), ParamName, bDataInterfaceAdded, TEXT("Added Static Mesh data interface."), TEXT("Static Mesh DI added."));
-}
-
-static bool AddSplineDI(FActionContext& Context)
-{
-    UNiagaraSystem* System = nullptr;
-    FNiagaraEmitterHandle* Handle = nullptr;
-    if (!LoadSystemAndEmitter(Context, System, Handle))
-    {
-        return true;
-    }
-    const FString ParamName = GetJsonStringField(Context.Payload, TEXT("parameterName"), TEXT("MCP_SplineDataInterface"));
-    return FinishDataInterfaceAction(Context, System, TEXT("Spline"), ParamName, AddDataInterfaceUserParameter(System, ParamName, UNiagaraDataInterfaceSpline::StaticClass()), TEXT("Added Spline data interface."), TEXT("Spline DI added."));
-}
-
-static bool AddAudioSpectrumDI(FActionContext& Context)
-{
-    UNiagaraSystem* System = nullptr;
-    FNiagaraEmitterHandle* Handle = nullptr;
-    if (!LoadSystemAndEmitter(Context, System, Handle))
-    {
-        return true;
-    }
-    const FString ParamName = GetJsonStringField(Context.Payload, TEXT("parameterName"), TEXT("MCP_AudioSpectrumDataInterface"));
-    return FinishDataInterfaceAction(Context, System, TEXT("AudioSpectrum"), ParamName, AddDataInterfaceUserParameter(System, ParamName, UNiagaraDataInterfaceAudioSpectrum::StaticClass()), TEXT("Added Audio Spectrum data interface."), TEXT("Audio Spectrum DI added."));
-}
-
-#if MCP_HAS_NIAGARA_COLLISION_QUERY_DI
-static bool AddCollisionQueryDI(FActionContext& Context)
-{
-    UNiagaraSystem* System = nullptr;
-    FNiagaraEmitterHandle* Handle = nullptr;
-    if (!LoadSystemAndEmitter(Context, System, Handle))
-    {
-        return true;
-    }
-    const FString ParamName = GetJsonStringField(Context.Payload, TEXT("parameterName"), TEXT("MCP_CollisionQueryDataInterface"));
-    return FinishDataInterfaceAction(Context, System, TEXT("CollisionQuery"), ParamName, AddDataInterfaceUserParameter(System, ParamName, UNiagaraDataInterfaceCollisionQuery::StaticClass()), TEXT("Added Collision Query data interface."), TEXT("Collision Query DI added."));
-}
-#endif // MCP_HAS_NIAGARA_COLLISION_QUERY_DI
-
 bool HandleDataInterfaceAction(FActionContext& Context, const FString& SubAction)
 {
-    if (SubAction == TEXT("add_skeletal_mesh_data_interface")) return AddSkeletalMeshDI(Context);
-    if (SubAction == TEXT("add_static_mesh_data_interface")) return AddStaticMeshDI(Context);
-    if (SubAction == TEXT("add_spline_data_interface")) return AddSplineDI(Context);
-    if (SubAction == TEXT("add_audio_spectrum_data_interface")) return AddAudioSpectrumDI(Context);
+    if (SubAction == TEXT("add_skeletal_mesh_data_interface"))
+    {
+        return AddDataInterface(Context, TEXT("SkeletalMesh"), UNiagaraDataInterfaceSkeletalMesh::StaticClass());
+    }
+    if (SubAction == TEXT("add_static_mesh_data_interface"))
+    {
+#if MCP_HAS_NIAGARA_STATIC_MESH_DI
+        return AddDataInterface(Context, TEXT("StaticMesh"), UNiagaraDataInterfaceStaticMesh::StaticClass());
+#else
+        return AddDataInterface(Context, TEXT("StaticMesh"),
+            StaticLoadClass(UNiagaraDataInterface::StaticClass(), nullptr, TEXT("/Script/Niagara.NiagaraDataInterfaceStaticMesh")));
+#endif
+    }
+    if (SubAction == TEXT("add_spline_data_interface"))
+    {
+        return AddDataInterface(Context, TEXT("Spline"), UNiagaraDataInterfaceSpline::StaticClass());
+    }
+    if (SubAction == TEXT("add_audio_spectrum_data_interface"))
+    {
+        return AddDataInterface(Context, TEXT("AudioSpectrum"), UNiagaraDataInterfaceAudioSpectrum::StaticClass());
+    }
 #if MCP_HAS_NIAGARA_COLLISION_QUERY_DI
-    if (SubAction == TEXT("add_collision_query_data_interface")) return AddCollisionQueryDI(Context);
+    if (SubAction == TEXT("add_collision_query_data_interface"))
+    {
+        return AddDataInterface(Context, TEXT("CollisionQuery"), UNiagaraDataInterfaceCollisionQuery::StaticClass());
+    }
 #endif
     return false;
 }

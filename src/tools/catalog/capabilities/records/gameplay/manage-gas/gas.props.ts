@@ -45,8 +45,8 @@ export const GAS_P: PropertyMap = {
   modifierMagnitude: num('Magnitude of the modifier.'),
   targetAttribute: str('Target attribute captured by the modifier.'),
   modifierIndex: num('Zero-based index of the modifier to edit.'),
-  magnitudeCalculationType: choice('How the modifier magnitude is calculated.', [
-    'ScalableFloat', 'AttributeBased', 'SetByCaller', 'CustomCalculationClass',
+  magnitudeCalculationType: choice('How the magnitude is given: ScalableFloat (a fixed value, the default) or SetByCaller (supplied by the effect spec under setByCallerTag).', [
+    'ScalableFloat', 'SetByCaller',
   ]),
   setByCallerTag: str('Gameplay tag keying a SetByCaller magnitude.'),
 

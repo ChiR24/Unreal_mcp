@@ -112,7 +112,7 @@ export const LANDSCAPE_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'build_environment.configure_landscape_material', action: 'configure_landscape_material', family: F,
-    summary: 'Assign the material a landscape renders with (its layer blends come from the material).',
+    summary: 'Assign the material a landscape renders with (materialPath: a material or material instance; its layer blend nodes name the layers that can be painted), as one undo step. A path outside the project is refused, one that loads nothing is ASSET_NOT_FOUND and another kind of asset LOAD_FAILED. The reply gives landscapeName and landscapePath. Painting a layer creates its layer info when the landscape has none.',
     whenToUse: ['A landscape needs a different material assignment.'],
     whenNotToUse: ['Layers should be painted: use paint_landscape_layer.'],
     inputProps: { ...LANDSCAPE, materialPath: P.materialPath },
@@ -133,13 +133,13 @@ export const LANDSCAPE_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'build_environment.configure_landscape_lod', action: 'configure_landscape_lod', family: F,
-    summary: 'Configure LOD settings for a landscape; fails when nothing applied.',
-    whenToUse: ['Landscape LOD distance or screen-size must be tuned.'],
-    whenNotToUse: ['LODs should be generated rather than configured.'],
+    summary: 'Tune how a landscape lowers its detail with distance: settings sets its LOD properties by name, such as LOD0ScreenSize (where full detail ends, default 0.5), LOD0DistributionSetting (default 1.25) and LODDistributionSetting (the spacing of the other LODs, default 3; higher keeps detail farther), MaxLODLevel (-1 for no cap) and StaticLightingLOD; from UE 5.4 also bUseScalableLODSettings with the per-quality Scalable versions and LODBlendRange. It is one undo step, reaches the landscape\'s World Partition streaming proxies as an edit in the Details panel does, and reads back what was set (values). Nothing set is NO_SETTING_SUPPLIED; an unknown or bad value is CONFIGURATION_FAILED, listed in configurationErrors.',
+    whenToUse: ['A landscape looks blurry or pops in detail too near, or costs too much far away.'],
+    whenNotToUse: ['Static mesh LODs (generate_lods).'],
     inputProps: { ...LANDSCAPE,
       settings: { ...P.settings, description: 'Landscape properties by name, e.g. {"MaxLODLevel": 2, "LODDistributionSetting": 1.5}.' } },
     effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'interactive', resources: 'low',
-    exampleInput: { action: 'configure_landscape_lod', landscapeName: 'Landscape_1' },
+    exampleInput: { action: 'configure_landscape_lod', landscapeName: 'Landscape_1', settings: { LOD0ScreenSize: 0.8, LODDistributionSetting: 2 } },
   }),
   buildRecord({
     id: 'build_environment.create_landscape_streaming_proxy', action: 'create_landscape_streaming_proxy', family: F,

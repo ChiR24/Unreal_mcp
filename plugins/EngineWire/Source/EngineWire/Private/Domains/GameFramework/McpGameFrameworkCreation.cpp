@@ -69,10 +69,8 @@ static bool CreateFrameworkClass(FActionContext& Context, UClass* DefaultParent,
     {
         McpSafeCompileBlueprint(Blueprint);
     }
-    if (Context.bSave)
-    {
-        McpSafeAssetSave(Blueprint);
-    }
+    // A failed save answered success all the same.
+    const bool bSaved = Context.bSave && McpSafeAssetSave(Blueprint);
     if (!OverrideError.IsEmpty())
     {
         // The classes all loaded, so this is a class of the wrong kind (a non-Pawn as the pawn).
@@ -84,6 +82,8 @@ static bool CreateFrameworkClass(FActionContext& Context, UClass* DefaultParent,
     TSharedPtr<FJsonObject> Response = MakeBlueprintResponse(
         FString::Printf(TEXT("Created %s blueprint: %s"), *Label, *Context.Name),
         Blueprint);
+    Response->SetStringField(TEXT("parentClass"), ParentClass->GetPathName());
+    Response->SetBoolField(TEXT("saved"), bSaved);
     McpHandlerUtils::AddVerification(Response, Blueprint);
     Context.SendSuccess(Response);
     return true;

@@ -137,7 +137,7 @@ function createRenderingHappyCases(ctx) {
   return [
     createNamedActionCase('RT: configure ray traced shadows', 'configure_ray_traced_shadows', {
       enabled: true,
-      settings: { SamplesPerPixel: 1, ShadowDistance: 20000 }
+      settings: { SamplesPerPixel: 1 }
     }, {
       expected: successExpected('unsupported', 'not available'),
       assertions: [{ path: 'structuredContent.result.subAction', equals: 'configure_ray_traced_shadows', label: 'ray traced shadows response names subAction' }]
@@ -361,10 +361,17 @@ function createRenderingHappyCases(ctx) {
       actorName: ctx.postProcessVolume,
       settings: { FilmSlope: 0.88, FilmToe: 0.55, FilmShoulder: 0.26 }
     }),
+    // It set r.TonemapperFilm, gone from the engine, and answered applied; Linear now turns the tone curve off.
     createNamedActionCase('Post Process: set tonemapper type', 'set_tonemapper_type', {
       actorName: ctx.postProcessVolume,
-      method: 'Filmic'
+      method: 'Linear'
+    }, {
+      assertions: [{ path: 'structuredContent.result.appliedSettings.0', equals: 'ToneCurveAmount', label: 'Linear turns the tone curve off on the volume' }]
     }),
+    createNamedActionCase('Post Process: refuse an unknown tonemapper type', 'set_tonemapper_type', {
+      actorName: ctx.postProcessVolume,
+      method: 'ACES'
+    }, { expected: errorExpected('not a tonemapper') }),
     createNamedActionCase('Post Process: configure bloom', 'configure_bloom', {
       actorName: ctx.postProcessVolume,
       settings: { BloomSizeScale: 4 },
@@ -562,6 +569,10 @@ function createRenderingAdversarialCases(ctx) {
       enabled: true,
       settings: { SamplesPerPixel: 1000000000 }
     }, { expected: errorExpected('invalid') }),
+    // A key the action does not read was dropped without a word and the call answered applied.
+    createNamedActionCase('Adversarial: reject a ray-traced shadow setting the action does not read', 'configure_ray_traced_shadows', {
+      settings: { SamplesPerPixel: 2, ShadowDistance: 20000 }
+    }, { expected: errorExpected('does not read settings ShadowDistance') }),
     createNamedActionCase('Adversarial: reject oversized ray-traced GI bounces', 'configure_ray_traced_gi', {
       enabled: true,
       settings: { SamplesPerPixel: 1, MaxBounces: 1000000000 }

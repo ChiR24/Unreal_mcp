@@ -250,7 +250,7 @@ export const ASSET_ADVANCED_RECORDS: readonly RecordSpec[] = [
       ],
       examples: [ex('Delete two obsolete assets and clean redirectors', { assetPaths: ['/Game/MCPTest/OldA', '/Game/MCPTest/OldB'], fixupRedirectors: true }, { success: true })] }
   ),
-  r('source_control_checkout', 'asset', 'Check out assets in source control.',
+  r('source_control_checkout', 'asset', 'Check out assets (paths, or assetPath) in the enabled revision-control provider so they can be edited and submitted. Paths that name no asset in the project are skipped and listed (skipped); none left is NO_VALID_ASSETS, and source control off is SOURCE_CONTROL_DISABLED (turn it on with sourceControlOp=enable). The reply gives checkedOut and assets.',
     schema({ assetPath: ASSET_PATH, paths: arr('Asset paths to check out.') }, []),
     OK, WRITE, WRITE_POLICY, MEDIUM,
     { dispatchAction: 'source_control_checkout',
@@ -258,7 +258,7 @@ export const ASSET_ADVANCED_RECORDS: readonly RecordSpec[] = [
       whenNotToUse: ['The checked-out or modified state of assets is wanted (use asset.query_asset for source control state).'],
       examples: [ex('Check out two materials before editing', { paths: ['/Game/Materials/M_Base', '/Game/Materials/M_Trim'] }, { success: true })] }
   ),
-  r('source_control_submit', 'asset', 'Submit checked-out assets to source control.',
+  r('source_control_submit', 'asset', 'Submit (check in) saved assets (paths, or assetPath) to the enabled provider with description as the change description. Paths that name no asset are skipped and listed (skipped); none left is NO_VALID_ASSETS, a provider refusal SUBMIT_FAILED, and source control off SOURCE_CONTROL_DISABLED. The reply gives submitted.',
     schema({ assetPath: ASSET_PATH, paths: arr('Asset paths to submit.'), description: str('Submit description.') }, ['description']),
     OK, WRITE, WRITE_POLICY, MEDIUM,
     { dispatchAction: 'source_control_submit',
@@ -273,7 +273,7 @@ export const ASSET_ADVANCED_RECORDS: readonly RecordSpec[] = [
   // handlers were written, but no record ever published it, so the only way to
   // put a project under revision control was the editor's own login dialog --
   // the one thing an automation caller cannot reach.
-  r('source_control_enable', 'asset', 'Enable revision control and select the provider (Git, Perforce, Subversion...).',
+  r('source_control_enable', 'asset', 'Turn revision control on with the provider named (Git, Perforce or Subversion, as the editor registers it), switching from another provider that is on; with that provider already on, or none named while one is on, it reports the current provider. A provider whose plugin is off or that cannot connect (Git needs a repository at the project root: sourceControlOp=init) is SOURCE_CONTROL_ENABLE_FAILED.',
     schema({ provider: str('Provider name as the editor registers it, e.g. Git or Perforce. Omit to report the current provider without changing it.') }, []),
     OK, WRITE, WRITE_POLICY, MEDIUM,
     { dispatchAction: 'source_control_enable',
@@ -281,7 +281,7 @@ export const ASSET_ADVANCED_RECORDS: readonly RecordSpec[] = [
       whenNotToUse: ['Only the state of particular assets is wanted (use asset.query_asset for source control state).'],
       examples: [ex('Point the editor at the Git provider', { provider: 'Git' }, { success: true, provider: 'Git' })] }
   ),
-  r('source_control_init', 'asset', 'Create a repository for this project, write an Unreal .gitignore, make the first commit and select the Git provider.',
+  r('source_control_init', 'asset', 'Put the project under Git: create a repository at the project root when there is none, write an Unreal .gitignore when there is none (Binaries, Intermediate, Saved, DerivedDataCache), stage everything, make the first commit (description, default "Initial commit") and turn the Git provider on. userName and userEmail go to the repository config only and cannot hold quotes or control characters. The reply gives committed, commit (short hash), provider and steps (each git command with its exit code and output); a failing step answers GIT_INIT_FAILED, GIT_ADD_FAILED or GIT_COMMIT_FAILED.',
     schema({ description: str('First commit message. Defaults to "Initial commit".'), userName: str('Commit author name, written to the repository config only.'), userEmail: str('Commit author email, written to the repository config only.') }, []),
     OK, { ...WRITE, longRunning: true }, WRITE_POLICY, HIGH,
     { dispatchAction: 'source_control_init',
@@ -289,7 +289,7 @@ export const ASSET_ADVANCED_RECORDS: readonly RecordSpec[] = [
       whenNotToUse: ['A Perforce or Subversion provider is wanted; init builds only a Git repository (select the provider with sourceControlOp=enable).'],
       examples: [ex('Put a fresh project under revision control', { description: 'Initial commit', userName: 'Dev', userEmail: 'dev@example.com' }, { success: true, committed: true })] }
   ),
-  r('source_control_commit_all', 'asset', 'Stage every change in the project and commit it as a snapshot.',
+  r('source_control_commit_all', 'asset', 'Stage every change in the project (git add -A, honouring .gitignore) and commit it with description as the message; a clean tree answers success with alreadyClean true and committed false. Needs a repository (NO_REPOSITORY: sourceControlOp=init). userName and userEmail, when sent, go to the repository config and cannot hold quotes or control characters. The reply gives committed, commit and steps.',
     schema({ description: str('Commit message.'), userName: str('Commit author name, written to the repository config only.'), userEmail: str('Commit author email, written to the repository config only.') }, ['description']),
     OK, { ...WRITE, longRunning: true }, WRITE_POLICY, HIGH,
     { dispatchAction: 'source_control_commit_all',

@@ -27,16 +27,30 @@ bool HandleGASEffectsMagnitude(const FGASRequestContext& Context, const FString&
 
     if (SubAction == TEXT("create_gameplay_effect"))
     {
-        const FString DurationType = GetJsonStringField(Payload, TEXT("durationType"), TEXT("Instant"));
+        // A duration with no durationType was taken as Instant, which has no duration.
+        const FString DurationType = GetJsonStringField(Payload, TEXT("durationType"),
+            Payload->HasField(TEXT("duration")) ? TEXT("HasDuration") : TEXT("Instant"));
+        // Checked before the asset exists: an unknown policy made an Instant effect and answered with the token asked for.
+        EGameplayEffectDurationType Policy = EGameplayEffectDurationType::Instant;
+        if (!TryParseGASEnum(DurationType, Policy))
+        {
+            Bridge->SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Unsupported durationType '%s'. Expected one "
+                "of: Instant, Infinite, HasDuration. Nothing was created."), *DurationType), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
         bool bReusedExisting = false;
         // A new effect gets its duration policy, and for a non-Instant one the requested duration and
         // period (both used to be dropped, so a "5 s, ticking every second" effect never ticked).
         const TSharedPtr<FJsonObject> Result = CreateGASAsset(Context, UGameplayEffect::StaticClass(), TEXT("GameplayEffect"),
-            bReusedExisting, [&DurationType, &Payload](UBlueprint* Blueprint) {
+            bReusedExisting, [Policy, &Payload](UBlueprint* Blueprint) {
                 UGameplayEffect* EffectCDO = Blueprint->GeneratedClass
                     ? Cast<UGameplayEffect>(Blueprint->GeneratedClass->GetDefaultObject()) : nullptr;
-                if (!EffectCDO || !TryParseGASEnum(DurationType, EffectCDO->DurationPolicy)
-                    || EffectCDO->DurationPolicy == EGameplayEffectDurationType::Instant)
+                if (!EffectCDO)
+                {
+                    return;
+                }
+                EffectCDO->DurationPolicy = Policy;
+                if (Policy == EGameplayEffectDurationType::Instant)
                 {
                     return;
                 }
@@ -54,9 +68,14 @@ bool HandleGASEffectsMagnitude(const FGASRequestContext& Context, const FString&
         {
             return true;
         }
-        Result->SetStringField(TEXT("durationType"), DurationType);
+        // An effect that already existed is left as it was, so the policy asked for is not what it has.
+        if (!bReusedExisting)
+        {
+            Result->SetStringField(TEXT("durationType"), GASEnumName(Policy));
+        }
         Bridge->SendAutomationResponse(RequestingSocket, RequestId, true,
-            bReusedExisting ? TEXT("Effect already exists") : TEXT("Effect created"), Result);
+            bReusedExisting ? TEXT("Effect already exists and was left as it is; set_effect_duration changes its duration.")
+                            : TEXT("Effect created"), Result);
         return true;
     }
 
@@ -76,7 +95,8 @@ bool HandleGASEffectsMagnitude(const FGASRequestContext& Context, const FString&
             return true;
         }
 
-        FString DurationType = GetJsonStringField(Payload, TEXT("durationType"), TEXT("Instant"));
+        FString DurationType = GetJsonStringField(Payload, TEXT("durationType"),
+            Payload->HasField(TEXT("duration")) ? TEXT("HasDuration") : TEXT("Instant"));
         float Duration = static_cast<float>(GetJsonNumberField(Payload, TEXT("duration"), 0.0));
 
         // Resolve the requested policy BEFORE touching the CDO. An unrecognized token used to fall through

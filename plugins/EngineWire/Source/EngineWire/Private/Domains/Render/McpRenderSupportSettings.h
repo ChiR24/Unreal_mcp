@@ -113,7 +113,25 @@ inline bool SetConsoleVariable(
         OutUnsupported.Add(Name);
         return false;
     }
-    Variable->Set(*Value, ECVF_SetByCode);
+    // Set skips the read-only check the console makes, so a startup-only variable would change value and do nothing.
+    if (Variable->TestFlags(ECVF_ReadOnly))
+    {
+        OutUnsupported.Add(FString::Printf(TEXT("%s (read-only: fixed at startup, set it in the project's config)"), *Name));
+        return false;
+    }
+    // At console priority, as console_command sets: a SetByCode write was ignored after any console set of the same
+    // variable, so this call and console_command now replace each other, last one wins.
+    Variable->Set(*Value, ECVF_SetByConsole);
+    // Read back: a variable's own change callback can still clamp or reset the value.
+    const float Wanted = FCString::Atof(*Value);
+    const bool bTook = Value.IsNumeric()
+        ? FMath::IsNearlyEqual(Variable->GetFloat(), Wanted, FMath::Max(1e-4f, FMath::Abs(Wanted) * 1e-5f))
+        : Variable->GetString().Equals(Value, ESearchCase::IgnoreCase);
+    if (!bTook)
+    {
+        OutUnsupported.Add(FString::Printf(TEXT("%s (stays %s: held by a higher-priority source)"), *Name, *Variable->GetString()));
+        return false;
+    }
     OutApplied.Add(Name);
     return true;
 }

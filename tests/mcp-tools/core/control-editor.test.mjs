@@ -78,6 +78,10 @@ const testCases = [
   { scenario: 'CONFIG: set_viewport_camera', toolName: 'control_editor', arguments: { action: 'set_viewport_camera', location: { x: 340, y: -280, z: 220 }, rotation: cameraRotation }, expected: 'success' },
   { scenario: 'CONFIG: set_camera_fov', toolName: 'control_editor', arguments: { action: 'set_camera_fov', fov: 85 }, expected: 'success' },
   { scenario: 'CONFIG: set_view_mode', toolName: 'control_editor', arguments: { action: 'set_view_mode', viewMode: 'Lit' }, expected: 'success' },
+  // Only ten names were known; any engine view mode now resolves by its display name, and an unknown one is refused.
+  { scenario: 'CONFIG: set_view_mode by display name', toolName: 'control_editor', arguments: { action: 'set_view_mode', viewMode: 'Player Collision' }, expected: 'success', assertions: [{ path: 'structuredContent.result.viewMode', equals: 'CollisionPawn', label: 'the display name finds the engine view mode' }] },
+  { scenario: 'ERROR: set_view_mode with an unknown name', toolName: 'control_editor', arguments: { action: 'set_view_mode', viewMode: 'Sepia' }, expected: 'error|is not a view mode' },
+  { scenario: 'CONFIG: set_view_mode back to Lit', toolName: 'control_editor', arguments: { action: 'set_view_mode', viewMode: 'Lit' }, expected: 'success' },
   { scenario: 'CONFIG: set_viewport_resolution', toolName: 'control_editor', arguments: { action: 'set_viewport_resolution', width: 1280, height: 720 }, expected: 'success' },
   { scenario: 'CONFIG: set_viewport_realtime', toolName: 'control_editor', arguments: { action: 'set_viewport_realtime', realtime: false }, expected: 'success' },
 

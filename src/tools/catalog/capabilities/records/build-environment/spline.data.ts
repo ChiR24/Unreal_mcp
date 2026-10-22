@@ -12,11 +12,31 @@ const WU = ['A spline actor or spline mesh must be created or modified.'];
 const ACTOR_PATH = { ...P.actorPath, description: 'Object path of the spline actor; used when actorName is omitted.' };
 // A point is placed relative to the spline actor: an ocean shoreline read as world points was set off by the actor's location.
 const SPLINE_POSITION = { ...P.position, description: 'Point position relative to the spline actor {x, y, z}: its local space, the location get_splines_info with actorName reports (worldLocation is where the point lies in the level).' };
-// Every template reads the same inputs; fence posts go through scatter_meshes_along_spline.
+// Every template reads the same inputs (a wall and a fence also read height); fence posts go through scatter_meshes_along_spline.
 const TEMPLATE = {
-  name: P.name, location: P.location, meshPath: P.meshPath, points: P.points,
-  materialPath: P.materialPath, width: { ...P.width, description: 'Width of the deformed mesh ribbon in world units (default 400).' }, closedLoop: P.closedLoop,
+  name: { ...P.name, description: 'Label of the new spline actor (default <Kind>_Spline, e.g. Wall_Spline).' },
+  location: { ...P.location, description: 'World location of the spline actor {x, y, z} (default 0,0,0); points are relative to it.' },
+  meshPath: { ...P.meshPath, description: 'Static mesh drawn along each span, its length along X (default: the engine cube; the engine cylinder for pipe and cable, both in the engine\'s grey checker until materialPath gives them a material). Refused with MESH_NOT_FOUND before anything is created when it does not load.' },
+  points: { ...P.points, description: 'The route relative to location, at least 2 points {position, arriveTangent, leaveTangent, rotation, scale}. With fewer, a 4-point demo route: (0,0), (500,0), (1000,200), (1500,200).' },
+  materialPath: { ...P.materialPath, description: 'Material for slot 0 of every span (default: the mesh\'s own). The editor flags a material Used with Spline Meshes the first time one draws it, leaving the material unsaved: save it with the level, or a packaged game draws these spans in the checker. Refused with MATERIAL_NOT_FOUND before anything is created when it does not load.' },
+  width: { ...P.width, description: 'Size across the route in world units, over 0: a road or river slab\'s width (default 400), a wall\'s or fence\'s thickness (default 20 / 10), a pipe\'s or cable\'s diameter (default 50 / 4). With meshPath, omit it to keep the mesh\'s own width.' },
+  closedLoop: { ...P.closedLoop, description: 'Join the last point back to the first, adding one span (default false).' },
 };
+const STANDING_TEMPLATE = {
+  ...TEMPLATE,
+  height: { type: 'number', description: 'Height in world units, over 0 (default 300 for a wall, 100 for a fence); the mesh\'s bottom stands on the route. With meshPath, omit it to keep the mesh\'s own height.' },
+};
+const num = (description: string) => ({ type: 'number', description });
+const TEMPLATE_OUT = {
+  actorName: { type: 'string', description: 'Label of the new spline actor.' },
+  pointCount: num('Points on the route.'),
+  splineLength: num('Length of the route in world units.'),
+  meshSegments: num('Mesh spans drawn: one per pair of neighbouring points, one more for a closed loop. Each collides (BlockAll).'),
+  meshPath: { type: 'string', description: 'Object path of the mesh drawn along the route.' },
+  width: num('Size across the route in world units, as drawn.'),
+  height: num('Size up from the route in world units, as drawn (the diameter for a pipe or cable).'),
+};
+const TEMPLATE_WHEN = (what: string): string[] => [`${what} must follow a route through the level: one call lays the spline and the mesh along it, with collision.`];
 
 export const SPLINE_RECORDS: readonly CapabilityRecordSource[] = [
   buildRecord({
@@ -147,51 +167,57 @@ export const SPLINE_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'build_environment.create_road_spline', action: 'create_road_spline', family: F,
-    summary: 'Create a road spline with mesh and width.',
-    whenToUse: WU, whenNotToUse: ['A generic spline should be used.'],
-    inputProps: TEMPLATE,
+    summary: 'Lay a road along a route: a slab drawn along the spline, 400 wide and 8 thick by default (the engine cube), centred on the route; meshPath swaps in a road mesh, fitted to width. Every span collides, so vehicles and characters stay on it.',
+    whenToUse: TEMPLATE_WHEN('A road or path'),
+    whenNotToUse: ['A bare spline with no mesh is wanted (create_spline kind actor).', 'The road should shape the terrain: landscape splines deform the landscape.'],
+    inputProps: TEMPLATE, outputProps: TEMPLATE_OUT,
     required: [], effect: 'write', latency: 'interactive', resources: 'low',
-    exampleInput: { action: 'create_road_spline', name: 'Road_1', meshPath: '/Game/Meshes/SM_Road', materialPath: '/Game/Materials/M_Road', width: 500, closedLoop: true },
+    exampleInput: { action: 'create_road_spline', name: 'Road_1', width: 600, closedLoop: true, points: [{ position: { x: 0, y: 0, z: 0 } }, { position: { x: 2000, y: 0, z: 0 } }, { position: { x: 2000, y: 2000, z: 0 } }, { position: { x: 0, y: 2000, z: 0 } }] },
   }),
   buildRecord({
     id: 'build_environment.create_river_spline', action: 'create_river_spline', family: F,
-    summary: 'Create a river spline with mesh and width.',
-    whenToUse: WU, whenNotToUse: ['A water body actor should be used instead.'],
-    inputProps: TEMPLATE,
+    summary: 'Lay a river bed along a route: a flat slab drawn along the spline, 400 wide and 8 thick by default, centred on the route; give it a water-looking material with materialPath. It is a mesh: no buoyancy, waves or flow.',
+    whenToUse: TEMPLATE_WHEN('A river or channel surface'),
+    whenNotToUse: ['Real water (buoyancy, waves, flow) is wanted: a Water plugin river body.'],
+    inputProps: TEMPLATE, outputProps: TEMPLATE_OUT,
     required: [], effect: 'write', latency: 'interactive', resources: 'low',
     exampleInput: { action: 'create_river_spline', name: 'River_1', width: 800 },
   }),
   buildRecord({
     id: 'build_environment.create_fence_spline', action: 'create_fence_spline', family: F,
-    summary: 'Create a fence spline: a mesh deformed along the route (place posts with scatter_meshes_along_spline).',
-    whenToUse: WU, whenNotToUse: ['Manual fence placement is sufficient.'],
-    inputProps: TEMPLATE,
+    summary: 'Run a fence along a route: a panel 10 thick and 100 high by default, its bottom standing on the spline; meshPath swaps in a rail or panel mesh, fitted to width and height. Posts: scatter_meshes_along_spline on the new actor.',
+    whenToUse: TEMPLATE_WHEN('A fence or railing'),
+    whenNotToUse: ['A few fence pieces placed by hand are enough.'],
+    inputProps: STANDING_TEMPLATE, outputProps: TEMPLATE_OUT,
     required: [], effect: 'write', latency: 'interactive', resources: 'low',
-    exampleInput: { action: 'create_fence_spline', name: 'Fence_1', meshPath: '/Game/Meshes/SM_FenceRail' },
+    exampleInput: { action: 'create_fence_spline', name: 'Fence_1', height: 120 },
   }),
   buildRecord({
     id: 'build_environment.create_wall_spline', action: 'create_wall_spline', family: F,
-    summary: 'Create a wall spline with mesh and height.',
-    whenToUse: WU, whenNotToUse: ['Manual wall placement is sufficient.'],
-    inputProps: TEMPLATE,
+    summary: 'Build a wall along a route: 20 thick and 300 high by default, its bottom standing on the spline; meshPath swaps in a wall mesh, fitted to width (thickness) and height. Every span collides.',
+    whenToUse: TEMPLATE_WHEN('A wall, barrier or enclosure'),
+    whenNotToUse: ['A few wall pieces placed by hand are enough.'],
+    inputProps: STANDING_TEMPLATE, outputProps: TEMPLATE_OUT,
     required: [], effect: 'write', latency: 'interactive', resources: 'low',
-    exampleInput: { action: 'create_wall_spline', name: 'Wall_1', meshPath: '/Game/Meshes/SM_Wall', width: 300 },
+    exampleInput: { action: 'create_wall_spline', name: 'Wall_1', width: 30, height: 250, points: [{ position: { x: 0, y: 0, z: 0 } }, { position: { x: 1500, y: 0, z: 0 } }] },
   }),
   buildRecord({
     id: 'build_environment.create_cable_spline', action: 'create_cable_spline', family: F,
-    summary: 'Create a cable spline between two points.',
-    whenToUse: WU, whenNotToUse: ['A physics cable component should be used.'],
-    inputProps: TEMPLATE,
+    summary: 'Hang a cable along a route: a round tube 4 across by default (the engine cylinder), centred on the route. It does not sag or swing: shape the sag with points, or use a cable component for physics.',
+    whenToUse: TEMPLATE_WHEN('A cable, wire or rope'),
+    whenNotToUse: ['The cable must sag and swing with physics: a cable component.'],
+    inputProps: TEMPLATE, outputProps: TEMPLATE_OUT,
     required: [], effect: 'write', latency: 'interactive', resources: 'low',
-    exampleInput: { action: 'create_cable_spline', name: 'Cable_1' },
+    exampleInput: { action: 'create_cable_spline', name: 'Cable_1', points: [{ position: { x: 0, y: 0, z: 500 } }, { position: { x: 600, y: 0, z: 380 } }, { position: { x: 1200, y: 0, z: 500 } }] },
   }),
   buildRecord({
     id: 'build_environment.create_pipe_spline', action: 'create_pipe_spline', family: F,
-    summary: 'Create a pipe spline with mesh and radius.',
-    whenToUse: WU, whenNotToUse: ['Manual pipe placement is sufficient.'],
-    inputProps: TEMPLATE,
+    summary: 'Run a pipe along a route: a round tube 50 across by default (the engine cylinder), centred on the route; width is the diameter. meshPath swaps in a pipe mesh (its length along X), fitted to width.',
+    whenToUse: TEMPLATE_WHEN('A pipe, duct or tube'),
+    whenNotToUse: ['A few straight pipe pieces placed by hand are enough.'],
+    inputProps: TEMPLATE, outputProps: TEMPLATE_OUT,
     required: [], effect: 'write', latency: 'interactive', resources: 'low',
-    exampleInput: { action: 'create_pipe_spline', name: 'Pipe_1', meshPath: '/Game/Meshes/SM_Pipe', width: 50 },
+    exampleInput: { action: 'create_pipe_spline', name: 'Pipe_1', width: 40 },
   }),
   buildRecord({
     id: 'build_environment.get_splines_info', action: 'get_splines_info', family: F,

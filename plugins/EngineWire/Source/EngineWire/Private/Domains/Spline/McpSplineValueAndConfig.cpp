@@ -104,6 +104,8 @@ USplineComponent* SpawnSplineActor(UWorld* World, const FString& Name, const FVe
     Spline->RegisterComponent();
     Actor->AddInstanceComponent(Spline);
     Actor->SetRootComponent(Spline);
+    // A bare AActor spawns with no root to hold the spawn transform, so every spline sat at the origin, unturned.
+    Actor->SetActorLocationAndRotation(Location, Rotation);
     return Spline;
 }
 

@@ -20,7 +20,7 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'edit_landscape', selector: 'edit',
-    summary: 'Edit a landscape: paint layers, import a heightmap, configure LOD, material or splines, generate LODs.',
+    summary: 'Edit a landscape (landscapeName or landscapePath, else the first in the level), chosen by edit. paint_landscape paints a layer over a brush disc, a vertex region or the whole landscape, and paint_landscape_layer at one weight over a region; import_heightmap writes a raw 16-bit heightmap into its heights. Those three go into the edit layer being edited (else the first), are one undo step and are merged before the reply, so the drawn landscape and its collision show them. configure_landscape_lod sets LOD properties by name and reads them back; configure_landscape_material assigns its material; configure_landscape_splines replaces its splines with one through points that can deform the terrain and paint a layer; generate_lods gives static meshes simplified LODs.',
     topics: ['paint landscape', 'landscape layer', 'import heightmap', 'landscape lod', 'landscape splines'],
     members: byName(['paint_landscape', 'paint_landscape_layer', 'import_heightmap', 'configure_landscape_lod', 'configure_landscape_material', 'configure_landscape_splines', 'generate_lods']),
   },
@@ -78,7 +78,7 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
   // render / post process
   {
     primary: 'configure_ray_tracing', selector: 'feature',
-    summary: 'Configure a ray-tracing feature: ambient occlusion, global illumination, reflections, shadows, path tracing.',
+    summary: 'Turn a ray-tracing feature on or off and tune it through its console variables for this editor session: shadows, global illumination, reflections, ambient occlusion, path tracing. settings takes only the keys that feature reads (another is refused); with hardware ray tracing off for the project the values draw nothing and the reply warns.',
     topics: ['ray tracing', 'ray traced shadows', 'ray traced reflections', 'path tracing', 'ray traced gi'],
     members: { ao: 'configure_ray_traced_ao', gi: 'configure_ray_traced_gi', reflections: 'configure_ray_traced_reflections', shadows: 'configure_ray_traced_shadows', path_tracing: 'configure_path_tracing' },
   },
@@ -121,7 +121,7 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
   // spline
   {
     primary: 'create_spline', selector: 'kind',
-    summary: 'Create a spline actor, a spline mesh component, or a typed spline (road, wall, fence, pipe, cable, river).',
+    summary: 'Create a spline actor, a spline mesh component, or in one call a typed spline with a mesh drawn along its route: road and river (a flat slab, 400 wide), wall and fence (standing on the route, 20x300 and 10x100), pipe and cable (round, 50 and 4 across). meshPath swaps in a mesh fitted to width (and height for a wall or fence); every span collides.',
     topics: ['spline actor', 'spline mesh', 'road spline', 'wall spline', 'fence', 'pipe', 'cable', 'river spline', 'make a spline', 'add a cable', 'add a fence along a path'],
     members: {
       actor: 'create_spline_actor', mesh_component: 'create_spline_mesh_component', road: 'create_road_spline', wall: 'create_wall_spline',

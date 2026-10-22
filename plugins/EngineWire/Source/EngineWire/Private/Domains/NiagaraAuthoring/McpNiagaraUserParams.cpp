@@ -15,13 +15,28 @@ bool AddDataInterfaceUserParameter(UNiagaraSystem* System, const FString& ParamN
     {
         return false;
     }
-    UNiagaraDataInterface* DataInterface = NewObject<UNiagaraDataInterface>(System, DataInterfaceClass, FName(*ParamName), RF_Transactional);
+    UNiagaraDataInterface* DataInterface = NewObject<UNiagaraDataInterface>(System, DataInterfaceClass,
+        MakeUniqueObjectName(System, DataInterfaceClass, FName(*ParamName)), RF_Transactional);
     if (!DataInterface)
     {
         return false;
     }
     UserStore.SetDataInterface(DataInterface, Param);
     return UserStore.GetDataInterface(Param) == DataInterface;
+}
+
+bool HasUserParameterNamed(UNiagaraSystem* System, const FString& ParamName)
+{
+    const FName Plain(*ParamName);
+    const FName User(*(TEXT("User.") + ParamName));
+    for (const FNiagaraVariableWithOffset& Variable : System->GetExposedParameters().ReadParameterVariables())
+    {
+        if (Variable.GetName() == Plain || Variable.GetName() == User)
+        {
+            return true;
+        }
+    }
+    return false;
 }
 
 // A placed effect's own colour or rate read back only as the raw bytes of its component's override store. Each user

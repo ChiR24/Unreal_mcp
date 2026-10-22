@@ -57,7 +57,7 @@ export const E: PropertyMap = {
   deterministicEnabled: bool('Whether deterministic GPU simulation is enabled.'),
   fixedBoundsEnabled: bool('Whether fixed system bounds are enabled.'),
   attachToActor: str('Name of the actor the spawned system attaches to.'),
-  reset: bool('Whether the effect restarts from its initial state.'),
+  reset: bool('Restart the effect from age 0 as it activates (default true); false resumes a deactivated one where it stopped.'),
   deltaTime: num('Seconds per step (default 0.1); steps of about a frame (0.02) simulate the way the game does.'),
   steps: num('Steps to run (default 1): the system ages steps x deltaTime seconds.'),
   filter: str('Actor name prefix selecting which transient effects are cleaned up.'),
