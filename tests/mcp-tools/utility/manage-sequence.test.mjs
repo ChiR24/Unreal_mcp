@@ -58,6 +58,7 @@ const testCases = [
   { scenario: 'ACTION: create from a path that names the sequence', toolName: 'manage_sequence', arguments: { action: 'create', path: `${TEST_FOLDER}/SEQ_PathOnly_${ts}` }, expected: 'success' },
   { scenario: 'ERROR: create with a folder path and no name', toolName: 'manage_sequence', arguments: { action: 'create', path: TEST_FOLDER }, expected: 'error' },
   { scenario: 'ACTION: open', toolName: 'manage_sequence', arguments: { action: 'open', path: SEQUENCE_PATH }, expected: 'success' },
+  { scenario: 'ERROR: open refuses an asset that is not a sequence', toolName: 'manage_sequence', arguments: { action: 'open', path: SOUND_WAVE }, expected: 'error|SEQUENCE_NOT_FOUND' },
 
   // === BINDINGS ===
   { scenario: 'ADD: add_camera', toolName: 'manage_sequence', arguments: { action: 'add_camera', path: SEQUENCE_PATH, spawnable: true }, expected: 'success|already exists' },
@@ -74,6 +75,7 @@ const testCases = [
   // startTime is seconds; a frame number sent there lands past the end and is refused.
   { scenario: 'ERROR: pause past the end of the sequence', toolName: 'manage_sequence', arguments: { action: 'pause', path: SEQUENCE_PATH, startTime: 100000 }, expected: 'error' },
   { scenario: 'PLAYBACK: stop', toolName: 'manage_sequence', arguments: { action: 'stop', path: SEQUENCE_PATH }, expected: 'success' },
+  { scenario: 'PLAYBACK: stop reads the playhead back', toolName: 'manage_sequence', arguments: { action: 'stop', path: SEQUENCE_PATH }, expected: 'success', assertions: [{ path: 'structuredContent.result.currentFrame', exists: true, label: 'currentFrame read back' }] },
   { scenario: 'CONFIG: set_playback_speed', toolName: 'manage_sequence', arguments: { action: 'set_playback_speed', path: SEQUENCE_PATH, speed: 1.25 }, expected: 'success' },
 
   // === PROPERTIES / KEYFRAMES ===
@@ -97,6 +99,10 @@ const testCases = [
   { scenario: 'CONFIG: set_properties lengthInFrames', toolName: 'manage_sequence', arguments: { action: 'set_properties', path: SEQUENCE_PATH, playbackStart: 12, lengthInFrames: 36 }, expected: 'success', assertions: [{ path: 'structuredContent.result.playbackStart', equals: 12 }, { path: 'structuredContent.result.playbackEnd', equals: 48 }, { path: 'structuredContent.result.duration', equals: 36 }] },
   { scenario: 'CONFIG: set_display_rate', toolName: 'manage_sequence', arguments: { action: 'set_display_rate', path: SEQUENCE_PATH, frameRate: '24fps' }, expected: 'success' },
   { scenario: 'CONFIG: set_tick_resolution', toolName: 'manage_sequence', arguments: { action: 'set_tick_resolution', path: SEQUENCE_PATH, resolution: '24000/1' }, expected: 'success' },
+  { scenario: 'CONFIG: set_tick_resolution migrates to 60000', toolName: 'manage_sequence', arguments: { action: 'set_tick_resolution', path: SEQUENCE_PATH, resolution: '60000' }, expected: 'success', assertions: [{ path: 'structuredContent.result.previousTickResolution', exists: true, label: 'previous resolution reported' }] },
+  { scenario: 'ERROR: set_tick_resolution refuses a grid coarser than the display rate', toolName: 'manage_sequence', arguments: { action: 'set_tick_resolution', path: SEQUENCE_PATH, resolution: '24000/1001' }, expected: 'error|coarser than the display rate' },
+  { scenario: 'CONFIG: set_tick_resolution back to 24000', toolName: 'manage_sequence', arguments: { action: 'set_tick_resolution', path: SEQUENCE_PATH, resolution: '24000' }, expected: 'success' },
+  { scenario: 'ERROR: set_tick_resolution refuses zero', toolName: 'manage_sequence', arguments: { action: 'set_tick_resolution', path: SEQUENCE_PATH, resolution: '0' }, expected: 'error|resolution must be whole ticks' },
   { scenario: 'CONFIG: set_work_range', toolName: 'manage_sequence', arguments: { action: 'set_work_range', path: SEQUENCE_PATH, start: 0, end: 5 }, expected: 'success' },
   { scenario: 'CONFIG: set_view_range', toolName: 'manage_sequence', arguments: { action: 'set_view_range', path: SEQUENCE_PATH, start: 0, end: 5 }, expected: 'success' },
   { scenario: 'ERROR: set_view_range refuses an end before its start', toolName: 'manage_sequence', arguments: { action: 'set_view_range', path: SEQUENCE_PATH, start: 5, end: 1 }, expected: 'error|end after start' },
@@ -120,6 +126,8 @@ const testCases = [
   { scenario: 'ERROR: set_section playRate on a section that plays no animation', toolName: 'manage_sequence', arguments: { action: 'set_section', path: SEQUENCE_PATH, trackName: TRACK_NAME, playRate: 2 }, expected: 'error|INVALID_ARGUMENT' },
   { scenario: 'ERROR: set_section ending before it starts', toolName: 'manage_sequence', arguments: { action: 'set_section', path: SEQUENCE_PATH, trackName: TRACK_NAME, startFrame: 40, endFrame: 10 }, expected: 'error' },
   { scenario: 'ADD: add_track Audio (music or sound)', toolName: 'manage_sequence', arguments: { action: 'add_track', path: SEQUENCE_PATH, trackType: 'Audio', trackName: AUDIO_TRACK_NAME }, expected: 'success', assertions: [{ path: 'structuredContent.result.trackClass', equals: 'MovieSceneAudioTrack', label: 'Audio resolves to the audio track' }] },
+  { scenario: 'CONFIG: set_track_muted finds a track by the name add_track gave it', toolName: 'manage_sequence', arguments: { action: 'set_track_muted', path: SEQUENCE_PATH, trackName: AUDIO_TRACK_NAME, muted: false }, expected: 'success', assertions: [{ path: 'structuredContent.result.muted', equals: false, label: 'unmuted' }] },
+  { scenario: 'ERROR: add_track refuses an unknown track type', toolName: 'manage_sequence', arguments: { action: 'add_track', path: SEQUENCE_PATH, trackType: 'NoSuchTrackType' }, expected: 'error|TRACK_CREATION_FAILED' },
   { scenario: 'ADD: add_section soundPath puts the sound in the audio track, as long as the sound', toolName: 'manage_sequence', arguments: { action: 'add_section', path: SEQUENCE_PATH, trackName: AUDIO_TRACK_NAME, start: 24, soundPath: SOUND_WAVE }, expected: 'success', assertions: [{ path: 'structuredContent.result.soundName', equals: 'VR_click1', label: 'reply names the sound' }] },
   { scenario: 'ADD: add_section soundPath with an explicit end', toolName: 'manage_sequence', arguments: { action: 'add_section', path: SEQUENCE_PATH, trackName: AUDIO_TRACK_NAME, start: 0, end: 48, soundPath: SOUND_WAVE }, expected: 'success', assertions: [{ path: 'structuredContent.result.endFrame', equals: 48, label: 'the given end is kept' }] },
   { scenario: 'ADD: add_section with a missing sound is refused', toolName: 'manage_sequence', arguments: { action: 'add_section', path: SEQUENCE_PATH, trackName: AUDIO_TRACK_NAME, start: 0, soundPath: `/Game/MCPTest/NoSuchSound_${ts}` }, expected: 'error|ASSET_NOT_FOUND' },

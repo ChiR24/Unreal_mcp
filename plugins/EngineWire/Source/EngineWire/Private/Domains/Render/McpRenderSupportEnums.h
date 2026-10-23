@@ -4,25 +4,31 @@
 
 namespace McpRenderHandlers
 {
-inline const TMap<FString, FString>& DepthOfFieldMethodMap()
+// The one depth of field choice a volume holds since UE 5: desktop and console always render the cinematic
+// (diaphragm) depth of field, and mobile renders either its own or the high quality Gaussian one, which is
+// bMobileHQGaussian. The method used to be written to DepthOfFieldMethod, a field UE 5 no longer has, so every call
+// was refused. The UE 4 names are taken as before: CircleDOF and BokehDOF are the cinematic one, GaussianDOF Gaussian.
+inline bool ResolveDepthOfFieldMethod(const FString& Input, bool& bOutMobileHQGaussian, FString& OutError)
 {
-    static const TMap<FString, FString> Map = {
-        { TEXT("CircleDOF"),       TEXT("DOFM_CircleDOF") },
-        { TEXT("GaussianDOF"),     TEXT("DOFM_Gaussian") },
-        { TEXT("BokehDOF"),        TEXT("DOFM_BokehDOF") },
-        { TEXT("CinematicDOF"),    TEXT("DOFM_CircleDOF") },
-        { TEXT("USGDOF"),          TEXT("DOFM_USG") }
-    };
-    return Map;
+    for (const TCHAR* Name : {TEXT("Cinematic"), TEXT("CinematicDOF"), TEXT("CircleDOF"), TEXT("BokehDOF"), TEXT("Gaussian"), TEXT("GaussianDOF")})
+    {
+        if (Input.Equals(Name, ESearchCase::IgnoreCase))
+        {
+            bOutMobileHQGaussian = Input.StartsWith(TEXT("Gaussian"), ESearchCase::IgnoreCase);
+            return true;
+        }
+    }
+    OutError = FString::Printf(TEXT("Unknown method '%s'. Allowed values: Cinematic (also CircleDOF, BokehDOF), Gaussian"), *Input);
+    return false;
 }
 
+// EAutoExposureMethod has no Recovery value in any UE 5, so that name wrote a value the renderer does not know.
 inline const TMap<FString, FString>& AutoExposureMethodMap()
 {
     static const TMap<FString, FString> Map = {
         { TEXT("Manual"),          TEXT("AEM_Manual") },
         { TEXT("Histogram"),       TEXT("AEM_Histogram") },
-        { TEXT("Basic"),           TEXT("AEM_Basic") },
-        { TEXT("Recovery"),        TEXT("AEM_Recovery") }
+        { TEXT("Basic"),           TEXT("AEM_Basic") }
     };
     return Map;
 }

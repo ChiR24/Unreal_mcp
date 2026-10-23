@@ -2,6 +2,7 @@
 #include "Domains/BlueprintGraph/McpBPGraphBatchSteps.h"
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
 
+#include "Foundation/McpScopedEditorTransaction.h"
 #include "ScopedTransaction.h"
 
 // delete_node: one node (nodeId or nodeGuid) or many (nodeIds). Removing a 71-node dead chain used to take
@@ -134,59 +135,75 @@ bool ArrangeNodes(FActionContext& Context)
                           TEXT("INVALID_ARGUMENT"));
         return true;
     }
-    const FScopedTransaction Transaction(FText::FromString(TEXT("Arrange Nodes")));
-    GraphBatch::FBatchState State;
-    TMap<UEdGraphNode*, FIntPoint> Original;
+    // Every id resolves before anything moves: an unknown one is refused with nothing changed.
+    TArray<UObject*> Nodes;
     for (const TSharedPtr<FJsonValue>& Id : *Ids)
     {
         UEdGraphNode* Node = Context.FindNode(Id.IsValid() ? Id->AsString() : FString());
         if (!Node)
         {
-            for (const TPair<UEdGraphNode*, FIntPoint>& Entry : Original)
-            {
-                Entry.Key->NodePosX = Entry.Value.X;
-                Entry.Key->NodePosY = Entry.Value.Y;
-            }
             Context.SendNodeNotFound(Id.IsValid() ? Id->AsString() : FString());
             return true;
         }
-        if (!Original.Contains(Node))
+        Nodes.AddUnique(Node);
+    }
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    TArray<TSharedPtr<FJsonValue>> Moved;
+    TArray<TSharedPtr<FJsonValue>> Stayed;
+    TArray<TSharedPtr<FJsonValue>> InPlace;
+    TMap<UEdGraphNode*, FIntPoint> Original;
+    {
+        // One undo step for the moves. It closes before the save below: a save inside it left the file holding
+        // the new positions while undo put the old ones back in memory.
+        const FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Arrange Nodes")),
+                                                      EMcpMutationDurability::EditorStateOnly, Nodes);
+        GraphBatch::FBatchState State;
+        for (UObject* Object : Nodes)
         {
+            UEdGraphNode* Node = CastChecked<UEdGraphNode>(Object);
             Original.Add(Node, FIntPoint(Node->NodePosX, Node->NodePosY));
-            Node->Modify();
             Node->NodePosX = -1000000 - Original.Num() * 480;
             Node->NodePosY = -1000000;
             State.AutoPlacedGuids.Add(Node->NodeGuid.ToString());
         }
-    }
-    const TArray<UEdGraphNode*> Unmoved = GraphBatch::SettleAutoPlacedNodes(Context.Blueprint, State);
-    TArray<TSharedPtr<FJsonValue>> Moved;
-    TArray<TSharedPtr<FJsonValue>> Stayed;
-    for (const TPair<UEdGraphNode*, FIntPoint>& Entry : Original)
-    {
-        UEdGraphNode* Node = Entry.Key;
-        if (Unmoved.Contains(Node))
+        const TArray<UEdGraphNode*> Unmoved = GraphBatch::SettleAutoPlacedNodes(Context.Blueprint, State);
+        for (const TPair<UEdGraphNode*, FIntPoint>& Entry : Original)
         {
-            Node->NodePosX = Entry.Value.X;
-            Node->NodePosY = Entry.Value.Y;
-            Stayed.Add(MakeShared<FJsonValueString>(Node->NodeGuid.ToString()));
-            continue;
+            UEdGraphNode* Node = Entry.Key;
+            if (Unmoved.Contains(Node))
+            {
+                Node->NodePosX = Entry.Value.X;
+                Node->NodePosY = Entry.Value.Y;
+                Stayed.Add(MakeShared<FJsonValueString>(Node->NodeGuid.ToString()));
+                continue;
+            }
+            // Settled where it already stood: counted as moved, the reply claimed a change undo then had nothing for.
+            if (FIntPoint(Node->NodePosX, Node->NodePosY) == Entry.Value)
+            {
+                InPlace.Add(MakeShared<FJsonValueString>(Node->NodeGuid.ToString()));
+                continue;
+            }
+            TSharedPtr<FJsonObject> Row = MakeShared<FJsonObject>();
+            Row->SetStringField(TEXT("nodeId"), Node->NodeGuid.ToString());
+            Row->SetStringField(TEXT("nodeTitle"), Node->GetNodeTitle(ENodeTitleType::ListView).ToString());
+            Row->SetNumberField(TEXT("x"), Node->NodePosX);
+            Row->SetNumberField(TEXT("y"), Node->NodePosY);
+            Moved.Add(MakeShared<FJsonValueObject>(Row));
         }
-        TSharedPtr<FJsonObject> Row = MakeShared<FJsonObject>();
-        Row->SetStringField(TEXT("nodeId"), Node->NodeGuid.ToString());
-        Row->SetStringField(TEXT("nodeTitle"), Node->GetNodeTitle(ENodeTitleType::ListView).ToString());
-        Row->SetNumberField(TEXT("x"), Node->NodePosX);
-        Row->SetNumberField(TEXT("y"), Node->NodePosY);
-        Moved.Add(MakeShared<FJsonValueObject>(Row));
+        Context.TargetGraph->NotifyGraphChanged();
+        FBlueprintEditorUtils::MarkBlueprintAsModified(Context.Blueprint);
+        // With nothing moved the buffer drops the empty transaction as it closes, so there is no step to claim.
+        if (Moved.Num() > 0)
+        {
+            Transaction.DescribeInto(Result);
+        }
     }
-    Context.TargetGraph->NotifyGraphChanged();
-    FBlueprintEditorUtils::MarkBlueprintAsModified(Context.Blueprint);
     SaveLoadedAssetThrottled(Context.Blueprint);
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetArrayField(TEXT("moved"), Moved);
     Result->SetArrayField(TEXT("unmoved"), Stayed);
-    Context.SendResponse(FString::Printf(TEXT("Moved %d of %d nodes beside the nodes they are wired to."),
-                                         Moved.Num(), Original.Num()), Result);
+    Result->SetArrayField(TEXT("alreadyInPlace"), InPlace);
+    Context.SendResponse(FString::Printf(TEXT("Moved %d of %d nodes beside the nodes they are wired to (%d already there)."),
+                                         Moved.Num(), Original.Num(), InPlace.Num()), Result);
     return true;
 }
 }

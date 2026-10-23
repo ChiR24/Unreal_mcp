@@ -20,9 +20,9 @@ export const TIMELINE_PLAYBACK_RECORDS: readonly CapabilityRecordSource[] = [
   buildRecord({
     id: 'sequence.play', action: 'play', family: F, domain: D,
     topics: ['play sequence', 'play cinematic', 'preview sequence', 'play cutscene', 'preview cutscene'],
-    summary: 'Start playing the currently open Level Sequence.',
-    whenToUse: ['Sequence playback must be started for preview or PIE.'],
-    whenNotToUse: ['The sequence is already playing.'],
+    summary: 'Open a Level Sequence (path) in Sequencer and play it as an editor preview in the level viewport. startTime jumps there first; without it play carries on from the playhead (from the start when it sits at the end). loopMode once or loop sets the Sequencer\'s own loop setting, which stays for later previews. The reply reads back startTime (seconds), currentFrame and playbackStart/playbackEnd in display frames. Nothing in the asset or level changes. A time past the playback range or another loopMode is INVALID_ARGUMENT; a path that is not a Level Sequence is SEQUENCE_NOT_FOUND.',
+    whenToUse: ['A sequence must be previewed in the editor viewport.', 'A screenshot must show the scene moving through a shot: play, then pause with startTime to hold one moment.'],
+    whenNotToUse: ['The sequence must play in game or Play In Editor: that runs through a level sequence actor placed for it, not the Sequencer preview.'],
     inputProps: { path: P.path, startTime: START_TIME, loopMode: { type: 'string', enum: ['once', 'loop'], description: 'Sequencer loop mode for the preview: once or loop.' } },
     required: ['path'],
     effect: 'write', latency: 'instant', resources: 'low', plugins: SEQ_PLUGINS,
@@ -31,7 +31,7 @@ export const TIMELINE_PLAYBACK_RECORDS: readonly CapabilityRecordSource[] = [
   buildRecord({
     id: 'sequence.pause', action: 'pause', family: F, domain: D,
     topics: ['sequencer playhead', 'scrub sequence', 'set sequence time', 'go to frame', 'hold a frame'],
-    summary: 'Pause playback of the currently open Level Sequence, or hold it at one moment to inspect it.',
+    summary: 'Pause the Sequencer preview of a Level Sequence, or hold it at one moment to inspect it: startTime (seconds) moves the playhead there and poses the animated meshes at once, so a screenshot taken next shows that moment even with the editor in the background; a sequence not open is opened first. The reply reads back currentFrame in display frames. Without startTime a sequence not open in Sequencer is EDITOR_NOT_OPEN; a time past the playback range is INVALID_ARGUMENT. Nothing in the asset changes.',
     whenToUse: ['Sequence playback must be paused.', 'A pose, camera or effect must be checked at one moment of the sequence: pause with startTime, then take a screenshot.'],
     whenNotToUse: ['The sequence is not open in Sequencer (play opens it).'],
     inputProps: { path: P.path, startTime: START_TIME },
@@ -41,8 +41,8 @@ export const TIMELINE_PLAYBACK_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'sequence.stop', action: 'stop', family: F, domain: D,
-    summary: 'Stop playback and reset the playhead of the open Level Sequence.',
-    whenToUse: ['Sequence playback must be stopped and the playhead reset.'],
+    summary: 'Stop the Sequencer preview of a Level Sequence and put the playhead back on the start of its playback range (where Jump to Start goes, not frame 0), posing the animated meshes there. The reply reads back currentFrame in display frames. A sequence not open in Sequencer is EDITOR_NOT_OPEN; nothing in the asset changes.',
+    whenToUse: ['Sequence playback must be stopped and the playhead reset to the start.'],
     whenNotToUse: ['The sequence should only be paused.'],
     inputProps: { path: P.path },
     required: ['path'],
@@ -51,8 +51,8 @@ export const TIMELINE_PLAYBACK_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'sequence.set_playback_speed', action: 'set_playback_speed', family: F, domain: D,
-    summary: 'Set the playback speed of a Level Sequence on the level sequence actors that play it, and on Sequencer when it is open.',
-    whenToUse: ['Playback speed must be changed for preview.'],
+    summary: 'Set the play rate of a Level Sequence (speed, above 0; 1 is normal, 0.5 half speed) on every level sequence actor in the editor level that plays it, which is the rate it runs at in game and Play In Editor, and on the Sequencer preview when the sequence is open there (a preview setting that is not saved). The actors change in one undo step and the level is left unsaved. The reply lists the actors (levelSequenceActors) and sequencerUpdated. With neither an actor nor an open Sequencer it is PLAYBACK_TARGET_NOT_FOUND; speed 0 or below is INVALID_ARGUMENT.',
+    whenToUse: ['A sequence must play faster or slower in game, or in the preview.'],
     whenNotToUse: ['The speed value is not a positive number.'],
     inputProps: { path: P.path, speed: P.speed },
     required: ['path', 'speed'],

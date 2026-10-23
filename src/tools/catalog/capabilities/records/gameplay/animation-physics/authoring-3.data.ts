@@ -90,7 +90,7 @@ export const ANIM_AUTHORED_3: readonly CapabilityRecordSource[] = [
     exampleInput: { action: 'force_rebuild_blend_space', assetPath: '/Game/BS_Locomotion', compileReferencers: true, rebuildBlendParameters: true },
     exampleOutput: { success: true, message: 'Blend space rebuilt', referencersCompiled: 3 } }),
   buildRecord({ parentTool: T, id: `${T}.set_axis_settings`, action: 'set_axis_settings', family: F,
-    summary: 'Set Blend Space axis settings.', whenToUse: ['Axis labels/ranges must change.'], whenNotToUse: ['Use add_blend_sample.'],
+    summary: 'Change one axis of a blend space (axis: X or Horizontal, the default, or Y or Vertical, which a 1D blend space lacks): axisName, minValue, maxValue and gridDivisions, each kept when not sent. minValue must stay below maxValue and gridDivisions at least 1. Samples are checked against the new range and the runtime data rebuilt, as the blend space editor does. The reply reads the axis back and gives saved (unless save is false).', whenToUse: ['Axis labels/ranges must change.'], whenNotToUse: ['Use add_blend_sample.'],
     inputProps: { assetPath: P.assetPath, axis: str('Axis to change: X or Horizontal (default), Y or Vertical.'), axisName: P.axisName, minValue: P.minValue, maxValue: P.maxValue, gridDivisions: num('Number of grid divisions on the axis.'), save: A.save }, required: ['assetPath'],
     effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'interactive', resources: 'low', plugins: ESU,
     exampleInput: { action: 'set_axis_settings', assetPath: '/Game/BS_Locomotion', axis: 'X', axisName: 'Speed', minValue: 0, maxValue: 600 } }),

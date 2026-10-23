@@ -53,7 +53,7 @@ export const SESSION_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_editor', action: 'pause', domain: D, family: F,
     editorStates: ANY_EDITOR_STATE,
-    summary: 'Pause the running PIE session.',
+    summary: 'Pause the running Play In Editor session, as the toolbar pause does; the reply says alreadyPaused when it was. No session is NO_ACTIVE_SESSION.',
     whenToUse: ['PIE must be paused without stopping.'],
     whenNotToUse: ['PIE is not running or already paused.'],
     inputProps: {},
@@ -65,7 +65,7 @@ export const SESSION_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_editor', action: 'resume', domain: D, family: F,
     editorStates: ANY_EDITOR_STATE,
-    summary: 'Resume a paused PIE session.',
+    summary: 'Resume a paused Play In Editor session; wasPaused false says it was not paused and nothing changed. A pause the game holds itself (a pause menu) is GAME_PAUSED unless unpauseGame is true, and a widget that still holds keyboard focus is named in warnings. No session is NO_ACTIVE_SESSION.',
     whenToUse: ['A paused PIE session must resume.', 'The running game paused itself (a title screen or a pause menu) and must run again for a test: pass unpauseGame.'],
     whenNotToUse: ['PIE is not paused.'],
     inputProps: {

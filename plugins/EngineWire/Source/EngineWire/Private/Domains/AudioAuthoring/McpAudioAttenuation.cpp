@@ -157,9 +157,12 @@ TSharedPtr<FJsonObject> HandleAttenuationActions(const FString& SubAction, const
 		}
 
 		// The contract spells these enable, occlusionVolumeScale and occlusionFilterScale (as set_audio_occlusion
-		// does); only the engine field names were read, so enable:false could never arrive and every call turned
-		// occlusion on. The engine spellings stay as fallbacks.
-		Atten->Attenuation.bEnableOcclusion = GetJsonBoolField(Params, TEXT("enable"), GetJsonBoolField(Params, TEXT("enableOcclusion"), true));
+		// does); the engine spellings stay as fallbacks. enable is written only when sent: a call that set only the
+		// volume turned occlusion on.
+		if (Params->HasField(TEXT("enable")) || Params->HasField(TEXT("enableOcclusion")))
+		{
+			Atten->Attenuation.bEnableOcclusion = GetJsonBoolField(Params, TEXT("enable"), GetJsonBoolField(Params, TEXT("enableOcclusion"), true));
+		}
 		if (Params->HasField(TEXT("occlusionFilterScale"))) { Atten->Attenuation.OcclusionLowPassFilterFrequency = static_cast<float>(20000.0 * GetJsonNumberField(Params, TEXT("occlusionFilterScale"), 1.0)); }
 		else if (Params->HasField(TEXT("occlusionLowPassFilterFrequency"))) { Atten->Attenuation.OcclusionLowPassFilterFrequency = static_cast<float>(GetJsonNumberField(Params, TEXT("occlusionLowPassFilterFrequency"), 20000.0)); }
 		if (Params->HasField(TEXT("occlusionVolumeScale"))) { Atten->Attenuation.OcclusionVolumeAttenuation = static_cast<float>(GetJsonNumberField(Params, TEXT("occlusionVolumeScale"), 0.0)); }

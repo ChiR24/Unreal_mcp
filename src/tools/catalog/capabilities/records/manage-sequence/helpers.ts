@@ -18,7 +18,8 @@ export const P = {
   actorNames: { type: 'array', items: str('Actor name.'), description: 'Actor names.' },
   className: str('Unreal class path for the spawnable.'),
   trackType: str('Track type: "Audio" (music or sound, then add_section with soundPath), "Transform", or a MovieScene track class name such as MovieSceneEventTrack.'),
-  trackName: str('The track, by the name get_properties lists (MovieScene3DTransformTrack_1). A whole name picks that track only; part of a name (Transform) picks the tracks whose names contain it.'),
+  trackName: str('One track, by its trackName or displayName as list_tracks gives them (MovieScene3DTransformTrack_1, or the name add_track gave it); case is ignored. A part of a name works when one track alone contains it; a name several tracks fit (Transform with two actors bound) is refused with AMBIGUOUS_TRACK naming them, and one no track has is TRACK_NOT_FOUND.'),
+  trackFilter: str('The tracks, by trackName or displayName as list_tracks gives them (MovieScene3DTransformTrack_1, Transform); case is ignored. A whole name picks the tracks of that name only; a part of one picks every track whose name contains it.'),
   property: str('Property name to keyframe (Transform, Location, Rotation, Scale).'),
   frame: int('Frame number for the keyframe.'),
   bindingId: str('Sequencer binding GUID to key against.'),
@@ -27,7 +28,7 @@ export const P = {
   end: num('Range end frame or time.'),
   resolution: {
     type: ['number', 'string'],
-    description: 'Tick resolution as ticks per second or a rate string such as 24000/1001.',
+    description: 'Tick resolution in whole ticks per second (24000, 60000), at least the display rate.',
   },
   frameRate: {
     type: ['number', 'string'],

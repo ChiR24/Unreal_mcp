@@ -31,14 +31,22 @@ describe('Niagara create actions create only the package they checked', () => {
     it(`${signature.slice(12, -1)} resolves the package first and refuses with INVALID_ARGUMENT`, () => {
       const handler = body(systems, signature);
       const resolveAt = handler.indexOf('McpNiagaraCreatePackageName(Context.Path, Context.Name, PathError)');
-      const createAt = handler.indexOf('CreatePackage(*PackageName)');
+      // The guarded helper refuses a name already taken: CreatePackage handed back the existing package.
+      const createAt = handler.indexOf('McpCreatePackageForNewAsset(PackageName, CreateError, CreateCode)');
       expect(resolveAt).toBeGreaterThan(-1);
       expect(createAt).toBeGreaterThan(resolveAt);
       expect(handler.slice(resolveAt, createAt)).toMatch(/Context\.SendError\(PathError, TEXT\("INVALID_ARGUMENT"\)\);\s*return true;/u);
-      expect(handler.match(/(?<!\w)CreatePackage\(/gu)).toHaveLength(1);
+      expect(handler.match(/(?<!\w)CreatePackage\(/gu)).toBeNull();
       expect(handler).not.toMatch(/Context\.Path \+=/u);
     });
   }
+
+  it('create_niagara_system looks for the package on disk only when it saved one', () => {
+    // save false failed with CREATE_FAILED ("does not exist on disk") for a system it had made.
+    const handler = body(systems, 'static bool CreateNiagaraSystem(');
+    expect(handler).toContain('if (Context.bSave && !FPackageName::DoesPackageExist(');
+    expect(handler.match(/DoesPackageExist\(/gu)).toHaveLength(1);
+  });
 });
 
 describe('McpNiagaraCreatePackageName', () => {

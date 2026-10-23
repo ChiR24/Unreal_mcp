@@ -168,7 +168,7 @@ describe('a retargeter built for setup_retargeting carries the pelvis and matche
   it('create_ik_rig with a mesh builds the same characterized rig, in place, and names the asset it wrote', () => {
     const rig = compact(code('AnimationAuthoring', 'McpAnimIKRig.cpp'));
 
-    expect(rig).toContain('UIKRigDefinition* Built = McpBuildIKRig(RigMesh, Path, Name, BuildError);');
+    expect(rig).toContain('UIKRigDefinition* Built = McpBuildIKRig(RigMesh, Path, Name, BuildError, bSave, &bSaved);');
     expect(rig).toContain('created successfully"), *IKRig->GetName())');
   });
 });

@@ -17,10 +17,13 @@ static bool CreateNiagaraSystem(FActionContext& Context)
         Context.SendError(PathError, TEXT("INVALID_ARGUMENT"));
         return true;
     }
-    UPackage* Package = CreatePackage(*PackageName);
+    // CreatePackage hands back a package already there, and NewObject under a taken name rebuilt the asset in place
+    // (a system's emitters gone) or, for another class, stopped the editor with a fatal error: refuse it instead.
+    FString CreateError, CreateCode;
+    UPackage* Package = McpCreatePackageForNewAsset(PackageName, CreateError, CreateCode);
     if (!Package)
     {
-        Context.SendError(TEXT("Failed to create package."), TEXT("PACKAGE_ERROR"));
+        Context.SendError(CreateError, CreateCode);
         return true;
     }
     // RF_Transactional as the asset factory gives it: without it undo skipped the system and every Niagara stack
@@ -32,6 +35,8 @@ static bool CreateNiagaraSystem(FActionContext& Context)
         FModuleManager::Get().LoadModule(TEXT("NiagaraEditor"));
         UNiagaraSystemFactoryNew::InitializeSystem(NewSystem, true);
 #endif
+        // The factory compiles a new system; built here without it, it was saved with no compiled scripts.
+        NewSystem->RequestCompile(false);
     }
     if (!NewSystem)
     {
@@ -43,7 +48,9 @@ static bool CreateNiagaraSystem(FActionContext& Context)
     {
         McpSafeAssetSave(NewSystem);
     }
-    if (!FPackageName::DoesPackageExist(FPackageName::ObjectPathToPackageName(NewSystem->GetPathName())))
+    // save false leaves nothing on disk by design: checked then too, every such create answered CREATE_FAILED for a
+    // system it had made.
+    if (Context.bSave && !FPackageName::DoesPackageExist(FPackageName::ObjectPathToPackageName(NewSystem->GetPathName())))
     {
         Context.SendError(TEXT("Created system package does not exist on disk."), TEXT("CREATE_FAILED"));
         return true;
@@ -69,10 +76,13 @@ static bool CreateNiagaraEmitter(FActionContext& Context)
         Context.SendError(PathError, TEXT("INVALID_ARGUMENT"));
         return true;
     }
-    UPackage* Package = CreatePackage(*PackageName);
+    // CreatePackage hands back a package already there, and NewObject under a taken name rebuilt the asset in place
+    // (a system's emitters gone) or, for another class, stopped the editor with a fatal error: refuse it instead.
+    FString CreateError, CreateCode;
+    UPackage* Package = McpCreatePackageForNewAsset(PackageName, CreateError, CreateCode);
     if (!Package)
     {
-        Context.SendError(TEXT("Failed to create package."), TEXT("PACKAGE_ERROR"));
+        Context.SendError(CreateError, CreateCode);
         return true;
     }
     const EObjectFlags EmitterFlags = RF_Public | RF_Standalone | RF_Transactional;

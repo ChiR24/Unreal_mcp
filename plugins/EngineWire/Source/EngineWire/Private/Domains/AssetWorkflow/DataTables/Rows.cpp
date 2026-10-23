@@ -1,4 +1,5 @@
 #include "Domains/AssetWorkflow/DataTables/Shared.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 
 
 // MakeInvalidEntry/FPendingRow moved to RowsBulk.cpp with their only callers.
@@ -35,11 +36,17 @@ bool HandleDataTableRowActions(
             OutResult = McpDataTableMakeError(TEXT("INVALID_ROW_DATA"), *Err);
             return true;
         }
-        MCP_DATATABLE_ADD_ROW(Table, FName(*RowName), RowMem);
+        OutResult = McpHandlerUtils::CreateResultObject();
+        {
+            // One undo step, closed before the save: no row edit recorded anything to undo to.
+            FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Add Data Table Row")),
+                                                    EMcpMutationDurability::EditorStateOnly, {Table});
+            MCP_DATATABLE_ADD_ROW(Table, FName(*RowName), RowMem);
+            Transaction.DescribeInto(OutResult);
+        }
         McpFreeDataTableRow(Table->RowStruct, RowMem);
         const bool bSaved = McpDataTableSaveIfRequested(Params, Table);
 
-        OutResult = McpHandlerUtils::CreateResultObject();
         OutResult->SetBoolField(TEXT("added"), true);
         OutResult->SetBoolField(TEXT("saved"), bSaved);
         OutResult->SetStringField(TEXT("rowName"), RowName);
@@ -114,12 +121,17 @@ bool HandleDataTableRowActions(
             OutResult = McpDataTableMakeError(TEXT("INVALID_ROW_DATA"), *Err);
             return true;
         }
-        Table->RemoveRow(FName(*RowName));
-        MCP_DATATABLE_ADD_ROW(Table, FName(*RowName), RowMem);
+        OutResult = McpHandlerUtils::CreateResultObject();
+        {
+            FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Update Data Table Row")),
+                                                    EMcpMutationDurability::EditorStateOnly, {Table});
+            Table->RemoveRow(FName(*RowName));
+            MCP_DATATABLE_ADD_ROW(Table, FName(*RowName), RowMem);
+            Transaction.DescribeInto(OutResult);
+        }
         McpFreeDataTableRow(Table->RowStruct, RowMem);
         const bool bSaved = McpDataTableSaveIfRequested(Params, Table);
 
-        OutResult = McpHandlerUtils::CreateResultObject();
         OutResult->SetBoolField(TEXT("updated"), true);
         OutResult->SetBoolField(TEXT("saved"), bSaved);
         OutResult->SetStringField(TEXT("rowName"), RowName);
@@ -145,10 +157,15 @@ bool HandleDataTableRowActions(
             return true;
         }
 
-        Table->RemoveRow(FName(*RowName));
+        OutResult = McpHandlerUtils::CreateResultObject();
+        {
+            FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Delete Data Table Row")),
+                                                    EMcpMutationDurability::EditorStateOnly, {Table});
+            Table->RemoveRow(FName(*RowName));
+            Transaction.DescribeInto(OutResult);
+        }
         const bool bSaved = McpDataTableSaveIfRequested(Params, Table);
 
-        OutResult = McpHandlerUtils::CreateResultObject();
         OutResult->SetBoolField(TEXT("removed"), true);
         OutResult->SetBoolField(TEXT("saved"), bSaved);
         OutResult->SetStringField(TEXT("rowName"), RowName);

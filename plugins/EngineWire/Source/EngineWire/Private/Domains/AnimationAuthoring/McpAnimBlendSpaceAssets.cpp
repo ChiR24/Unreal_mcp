@@ -22,6 +22,11 @@ TSharedPtr<FJsonObject> HandleBlendSpaceAssetActions(const FString& SubAction, c
     }
 
     USkeleton* Skeleton = nullptr;
+    // The engine's factory makes nothing without a skeleton, so the call failed late with an empty package left behind.
+    if (SkeletonPath.IsEmpty())
+    {
+        ANIM_ERROR_RESPONSE(TEXT("skeletonPath is required: a blend space is made for one skeleton"), TEXT("MISSING_SKELETON"));
+    }
     if (!SkeletonPath.IsEmpty())
     {
         Skeleton = LoadSkeletonFromPathAnim(SkeletonPath);
@@ -43,7 +48,9 @@ TSharedPtr<FJsonObject> HandleBlendSpaceAssetActions(const FString& SubAction, c
                     // Same type - return success with existing asset info
                     Response->SetStringField(TEXT("assetPath"), ObjectPath);
                     Response->SetBoolField(TEXT("existingAsset"), true);
-                    ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Blend Space 1D '%s' already exists - reusing existing asset"), *Name));
+                    // The axes asked for were dropped without a word: the reply now shows the ones the asset keeps.
+                    Response->SetArrayField(TEXT("axes"), McpBlendSpaceAxesJson(Cast<UBlendSpace>(ExistingAsset), 1));
+                    ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Blend Space 1D '%s' already exists and was kept as it is: its axes were not changed (set_axis_settings changes them)"), *Name));
                     return Response;
                 }
                 else
@@ -100,7 +107,7 @@ TSharedPtr<FJsonObject> HandleBlendSpaceAssetActions(const FString& SubAction, c
 
         NewBlendSpace->PostEditChange();
 
-        SaveAnimAsset(NewBlendSpace, bSave);
+        SaveAnimAssetAndReport(NewBlendSpace, bSave, Response);
 
         FString FullPath = Path / Name;
         Response->SetStringField(TEXT("assetPath"), FullPath);
@@ -129,6 +136,11 @@ TSharedPtr<FJsonObject> HandleBlendSpaceAssetActions(const FString& SubAction, c
     }
 
     USkeleton* Skeleton = nullptr;
+    // The engine's factory makes nothing without a skeleton, so the call failed late with an empty package left behind.
+    if (SkeletonPath.IsEmpty())
+    {
+        ANIM_ERROR_RESPONSE(TEXT("skeletonPath is required: a blend space is made for one skeleton"), TEXT("MISSING_SKELETON"));
+    }
     if (!SkeletonPath.IsEmpty())
     {
         Skeleton = LoadSkeletonFromPathAnim(SkeletonPath);
@@ -150,7 +162,9 @@ TSharedPtr<FJsonObject> HandleBlendSpaceAssetActions(const FString& SubAction, c
                     // Same type - return success with existing asset info
                     Response->SetStringField(TEXT("assetPath"), ObjectPath);
                     Response->SetBoolField(TEXT("existingAsset"), true);
-                    ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Blend Space 2D '%s' already exists - reusing existing asset"), *Name));
+                    // The axes asked for were dropped without a word: the reply now shows the ones the asset keeps.
+                    Response->SetArrayField(TEXT("axes"), McpBlendSpaceAxesJson(Cast<UBlendSpace>(ExistingAsset), 2));
+                    ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Blend Space 2D '%s' already exists and was kept as it is: its axes were not changed (set_axis_settings changes them)"), *Name));
                     return Response;
                 }
                 else
@@ -216,7 +230,7 @@ TSharedPtr<FJsonObject> HandleBlendSpaceAssetActions(const FString& SubAction, c
 
         NewBlendSpace->PostEditChange();
 
-        SaveAnimAsset(NewBlendSpace, bSave);
+        SaveAnimAssetAndReport(NewBlendSpace, bSave, Response);
 
         FString FullPath = Path / Name;
         Response->SetStringField(TEXT("assetPath"), FullPath);

@@ -611,7 +611,7 @@
               "socket",
               "physics_body"
             ],
-            "description": "Which remove skeleton element variant to run.\nbone: Remove a bone from a skeleton.\nsocket: Remove a socket from a skeleton or skeletal mesh.\nphysics_body: Remove a physics body from a Physics Asset."
+            "description": "Which remove skeleton element variant to run.\nbone: Remove boneName from a skeleton (UE 5.3 and later), with its children when removeChildren is true. The only root a skeleton has is refused (CANNOT_REMOVE_ROOT); a second root is removed like any bone. One undo step (the reply's undo block says so), saved unless save is false; the reply gives boneCount.\nsocket: Remove a socket from a skeleton or skeletal mesh.\nphysics_body: Remove a physics body from a Physics Asset."
           },
           "enableRootMotion": {
             "type": "boolean",
@@ -762,7 +762,7 @@
               "retargeter",
               "chain_mapping"
             ],
-            "description": "Which create animation asset variant to run; omit for 'asset'.\nasset: Create an empty Animation Sequence (assetType sequence, the default) or Montage on skeletonPath, named name in path (default /Game/Animations, made if missing), and save it. A montage starts with the DefaultSlot track and no animation. An asset of that class already at the path is reused (existingAsset); another class there is ASSET_TYPE_MISMATCH. For a sequence with a length and frame rate use kind sequence; for a montage from an animation, kind montage.\nsequence: Create an Animation Sequence asset.\nmontage: Create a montage asset, optionally from a sequence.\nblend_space: Create a 2D Blend Space asset.\nblend_space_1d: Create a 1D Blend Space asset.\nblend_space_2d: Create a 2D Blend Space asset.\naim_offset: Create an Aim Offset asset.\npose_library: Create a Pose Asset from an animation sequence, one pose per key frame, on the sequence's skeleton; PoseByName and PoseBlender nodes play its poses.\nprocedural: Create a procedural anim asset."
+            "description": "Which create animation asset variant to run; omit for 'asset'.\nasset: Create an empty Animation Sequence (assetType sequence, the default) or Montage on skeletonPath, named name in path (default /Game/Animations, made if missing), and save it. A montage starts with the DefaultSlot track and no animation. An asset of that class already at the path is reused (existingAsset); another class there is ASSET_TYPE_MISMATCH. For a sequence with a length and frame rate use kind sequence; for a montage from an animation, kind montage.\nsequence: Create an Animation Sequence asset.\nmontage: Create a montage asset, optionally from a sequence.\nblend_space: Create a 2D Blend Space for skeletonPath (required) as name in path (default /Game/Animations) and save it: horizontal axis horizontalAxisName (Direction, -180 to 180 by default), vertical verticalAxisName (Speed, 0 to 600), 4 grid divisions each; add_blend_sample places animations on it. A blend space already there is kept as it is and answered with existingAsset and the axes it has (set_axis_settings changes them); another asset there is ASSET_TYPE_MISMATCH. The reply gives assetPath and saved.\nblend_space_1d: Create a 1D Blend Space for skeletonPath (required) as name in path (default /Game/Animations) and save it: one axis, axisName (Speed by default) from axisMin to axisMax (0 to 600), 4 grid divisions. A blend space already there is kept as it is and answered with existingAsset and the axis it has (set_axis_settings changes it); another asset there is ASSET_TYPE_MISMATCH. The reply gives assetPath and saved.\nblend_space_2d: Create a 2D Blend Space, as kind=blend_space does: skeletonPath required, horizontal axis Direction -180 to 180 and vertical Speed 0 to 600 unless given, saved; one already there is kept and answered with existingAsset and its axes.\naim_offset: Create an Aim Offset for skeletonPath (required) as name in path (default /Game/Animations) and save it, with the axes aim offsets use: Yaw -180 to 180 and Pitch -90 to 90, 4 grid divisions each (set_axis_settings changes them). Its samples are additive rotation-offset (mesh space) poses, added with add_aim_offset_sample. A taken name is refused. The reply gives assetPath and saved.\npose_library: Create a Pose Asset from an animation sequence, one pose per key frame, on the sequence's skeleton; PoseByName and PoseBlender nodes play its poses.\nprocedural: Create a procedural anim asset."
           },
           "layerSetup": {
             "type": "array",
@@ -1773,7 +1773,7 @@
           },
           "amount": {
             "type": "number",
-            "description": "Bloom intensity."
+            "description": "Bloom intensity, 0 or more (0.675 by default; 8 is the top of the editor slider)."
           },
           "amplitude": {
             "type": "number",
@@ -1781,7 +1781,7 @@
           },
           "aperture": {
             "type": "number",
-            "description": "Camera aperture (f-stop)."
+            "description": "f-stop, 1 to 32."
           },
           "area": {
             "type": "object",
@@ -1991,7 +1991,7 @@
           },
           "captureOffset": {
             "type": "object",
-            "description": "Capture offset.",
+            "description": "Offset in cm from the capture actor.",
             "properties": {
               "x": {
                 "type": "number",
@@ -2070,7 +2070,7 @@
           },
           "compensationValue": {
             "type": "number",
-            "description": "Exposure compensation value."
+            "description": "Exposure bias in stops (+1 is twice as bright)."
           },
           "componentCount": {
             "type": "object",
@@ -2168,7 +2168,7 @@
           },
           "distance": {
             "type": "number",
-            "description": "Focus distance."
+            "description": "Focal distance in cm, 0 or more."
           },
           "edit": {
             "type": "string",
@@ -2223,7 +2223,7 @@
               "instances",
               "paint"
             ],
-            "description": "Which add foliage variant to run; omit for 'scatter'.\nscatter: Add foliage: with only meshPath (+ name) create or update a foliage type asset; with a foliage type or a placement (locations, position, location + radius + count) scatter instances onto the ground, a bare meshPath standing in for its auto foliage type.\ninstances: Add explicit foliage instances: full transforms, or bare locations varied by minScale/maxScale/randomYaw.\npaint: Paint foliage over a brush disc (location + radius) or a box area: count instances dropped onto the ground, each with a random scale and yaw.",
+            "description": "Which add foliage variant to run; omit for 'scatter'.\nscatter: Add foliage: with only meshPath (+ name) create or update a foliage type asset; with a foliage type or a placement (locations, position, location + radius + count) scatter instances onto the ground, a bare meshPath standing in for its auto foliage type.\ninstances: Add explicit foliage instances: full transforms, or bare locations varied by minScale/maxScale/randomYaw. One undo step removes them all; the reply's undo block says so.\npaint: Paint foliage over a brush disc (location + radius) or a box area: count instances dropped onto the ground, each with a random scale and yaw. One undo step removes the whole stroke; NO_SURFACE (no ground below any point) adds nothing.",
             "default": "scatter"
           },
           "foliageType": {
@@ -2646,7 +2646,7 @@
           },
           "maxBrightness": {
             "type": "number",
-            "description": "Maximum brightness."
+            "description": "Highest auto exposure (EV100 with the extended luminance range)."
           },
           "maxScale": {
             "type": "number",
@@ -2670,7 +2670,7 @@
           },
           "minBrightness": {
             "type": "number",
-            "description": "Minimum brightness."
+            "description": "Lowest auto exposure (EV100 with the extended luminance range)."
           },
           "minScale": {
             "type": "number",
@@ -3109,7 +3109,7 @@
           },
           "resolution": {
             "type": "integer",
-            "description": "Capture resolution."
+            "description": "Width and height in pixels, 1 to 4096."
           },
           "rotation": {
             "oneOf": [
@@ -3483,7 +3483,7 @@
           },
           "threshold": {
             "type": "number",
-            "description": "Bloom threshold (-1 = everything blooms)."
+            "description": "Brightness a pixel needs to bloom: -1 (the default) blooms everything, 0 or more only brighter pixels."
           },
           "tileSize": {
             "type": "number",
@@ -4678,7 +4678,7 @@
               "step_frame",
               "start"
             ],
-            "description": "Which play variant to run; omit for 'play'.\nplay: Start Play-In-Editor (PIE) session; answers once the control=play world has begun control=play.\npause: Pause the running PIE session.\nresume: Resume a paused PIE session.\nstop: Stop the running PIE session.\neject: Eject the player from its pawn in PIE, as the editor's Eject button does: the session switches to Simulate in Editor and the view becomes a free camera that set_camera moves and screenshot photographs. Answers once the view has switched.\npossess: Possess a pawn in PIE: the player controller takes the pawn named by actorName. Without actorName it brings an ejected player back to its own pawn, as the editor's Possess button does (the way back from control=eject). Answers once the player is back in the game."
+            "description": "Which play variant to run; omit for 'play'.\nplay: Start Play-In-Editor (PIE) session; answers once the control=play world has begun control=play.\npause: Pause the running Play In Editor session, as the toolbar control=pause does; the reply says alreadyPaused when it was. No session is NO_ACTIVE_SESSION.\nresume: Resume a paused Play In Editor session; wasPaused false says it was not paused and nothing changed. A control=pause the game holds itself (a control=pause menu) is GAME_PAUSED unless unpauseGame is true, and a widget that still holds keyboard focus is named in warnings. No session is NO_ACTIVE_SESSION.\nstop: Stop the running PIE session.\neject: Eject the player from its pawn in PIE, as the editor's Eject button does: the session switches to Simulate in Editor and the view becomes a free camera that set_camera moves and screenshot photographs. Answers once the view has switched.\npossess: Possess a pawn in PIE: the player controller takes the pawn named by actorName. Without actorName it brings an ejected player back to its own pawn, as the editor's Possess button does (the way back from control=eject). Answers once the player is back in the game."
           },
           "delaySeconds": {
             "type": "number",
@@ -7335,7 +7335,7 @@
               "struct",
               "member"
             ],
-            "description": "Which delete data table row variant to run; omit for 'row'.\nrow: Delete a row from a DataTable.\nall: Clear all rows from a DataTable."
+            "description": "Which delete data table row variant to run; omit for 'row'.\nrow: Delete the row rowName from a DataTable; a name the table lacks is ROW_NOT_FOUND. One undo step (the undo block in the reply says so); the table is saved unless save is false (saved).\nall: Clear all rows from a DataTable."
           },
           "depth": {
             "type": "number",
@@ -7447,7 +7447,7 @@
               "refresh_struct_dependencies",
               "set_instanced_struct_property"
             ],
-            "description": "Which edit data table variant to run.\ncreate: Create a new DataTable asset.\ncreate_row_struct: Create a new UScriptStruct suitable as a DataTable row type.\nadd_row: Add a new row to a DataTable.\nupdate_row: Update an existing row in a DataTable.\nimport_rows: Import multiple rows into a DataTable from an array.\nset_row_struct: Bind a row UScriptStruct to an existing DataTable.\nset_struct_as_row_struct: Set an existing UScriptStruct as the row struct for a DataTable (a user-defined struct is validated and compiled first)."
+            "description": "Which edit data table variant to run.\ncreate: Create a new DataTable asset.\ncreate_row_struct: Create a new UScriptStruct suitable as a DataTable row type.\nadd_row: Add a row named rowName to a DataTable from rowData (column names as the row struct spells them; columns left out take the row struct defaults). A taken name is ROW_ALREADY_EXISTS, data the struct refuses INVALID_ROW_DATA. One undo step (the undo block in the reply says so); the table is saved unless save is false (saved).\nupdate_row: Change columns of an existing DataTable row: the columns rowData names change, the others keep their values. One undo step (the undo block in the reply says so); the table is saved unless save is false (saved).\nimport_rows: Import multiple rows into a DataTable from an array.\nset_row_struct: Bind a row UScriptStruct to an existing DataTable.\nset_struct_as_row_struct: Set an existing UScriptStruct as the row struct for a DataTable (a user-defined struct is validated and compiled first)."
           },
           "endColor": {
             "description": "End colour (default white) as {r, g, b, a} or [r, g, b, a] in 0-1."
@@ -9348,7 +9348,7 @@
               "mix_modifier",
               "mix_eq"
             ],
-            "description": "Which configure sound attenuation variant to run.\ndistance: Configure distance attenuation: inner radius (or a box's size per axis), falloff distance and curve, and air absorption (a low-pass that muffles the sound with distance).\nspatialization: Set how a Sound Attenuation asset places its sounds in space: spatialize on or off, and spatialization Default (panning) or Binaural (HRTF, for headphones). Only what is sent changes, a call with neither is refused, and another algorithm is INVALID_ARGUMENT. Saved unless save is false.\nocclusion: Configure audio occlusion.\nreverb_send: Configure an audio reverb send.\naudio_occlusion: Configure occlusion settings on a sound asset.\npreset: Create a Sound Attenuation asset name in path (default /Game/Audio/Attenuation): innerRadius (default 400), falloffDistance (default 3600), attenuationShape Sphere (the default), Capsule, Box (sized per axis with extent) or Cone, and falloffMode Linear (the default), Logarithmic, Inverse or NaturalSound; another shape or mode is refused. An asset already at the path is ASSET_ALREADY_EXISTS (change one with setting=distance). Saved unless save is false; the reply reads the values back."
+            "description": "Which configure sound attenuation variant to run.\ndistance: Configure distance attenuation: inner radius (or a box's size per axis), falloff distance and curve, and air absorption (a low-pass that muffles the sound with distance).\nspatialization: Set how a Sound Attenuation asset places its sounds in space: spatialize on or off, and spatialization Default (panning) or Binaural (HRTF, for headphones). Only what is sent changes, a call with neither is refused, and another algorithm is INVALID_ARGUMENT. Saved unless save is false.\nocclusion: Set occlusion on a Sound Attenuation asset (assetPath), each value only when sent: enable turns it on or off, occlusionFilterScale (0-1) times 20000 Hz is the low-pass cutoff when blocked, occlusionVolumeScale (0-1) the volume kept, occlusionInterpolationTime the seconds to blend. The reply reads the four values back; the asset is saved unless save is false.\nreverb_send: Configure an audio reverb send.\naudio_occlusion: Configure occlusion settings on a sound asset.\npreset: Create a Sound Attenuation asset name in path (default /Game/Audio/Attenuation): innerRadius (default 400), falloffDistance (default 3600), attenuationShape Sphere (the default), Capsule, Box (sized per axis with extent) or Cone, and falloffMode Linear (the default), Logarithmic, Inverse or NaturalSound; another shape or mode is refused. An asset already at the path is ASSET_ALREADY_EXISTS (change one with setting=distance). Saved unless save is false; the reply reads the values back."
           },
           "size": {
             "type": "array",
@@ -10116,7 +10116,7 @@
               "rename_widget",
               "reparent_widget"
             ],
-            "description": "Which edit graph variant to run.\nadd_node: Add a node to a Blueprint graph (alias of edit=create_node with simplified type resolution).\ncreate_node: Create a graph node (function call, event, variable, branch, etc.) in a Blueprint graph.\ncreate_reroute_node: Create a reroute node for organizing exec/data wire paths in a Blueprint graph.\ncreate_struct_make_break_nodes: Create a Make or Break Struct node in a Blueprint graph from a UserDefinedStruct or native UScriptStruct.\nconnect_pins: Connect two graph pins (exec or data) by nodeGuid and pin name. A pin the editor adds on demand is added: a Sequence's then_2, a Make Array's [2], a Switch on Int's case 7 (a new switch has only Default).\nset_node_property: Set a property on a graph node by nodeGuid.\nset_pin_default_value: Set the default value of a data pin on a graph node; a read-only (const reference) pin gets it through a MakeLiteral node wired into it.\nadd_construction_script: Add or open the Construction Script graph for a Blueprint.\narrange_nodes: Tidy a graph: move the listed nodes beside the nodes they are wired to (right of what runs them, below-left of what reads them), each to the nearest free slot; the nodes left out stay put and anchor them.\nbatch: Run many graph edits in one call: add variables, functions (with their bodies), events and event dispatchers, create nodes, connect pins, set pin defaults and node properties, with $id references between steps."
+            "description": "Which edit graph variant to run.\nadd_node: Add a node to a Blueprint graph (alias of edit=create_node with simplified type resolution).\ncreate_node: Create a graph node (function call, event, variable, branch, etc.) in a Blueprint graph.\ncreate_reroute_node: Create a reroute node for organizing exec/data wire paths in a Blueprint graph.\ncreate_struct_make_break_nodes: Create a Make or Break Struct node in a Blueprint graph from a UserDefinedStruct or native UScriptStruct.\nconnect_pins: Connect two graph pins (exec or data) by nodeGuid and pin name. A pin the editor adds on demand is added: a Sequence's then_2, a Make Array's [2], a Switch on Int's case 7 (a new switch has only Default).\nset_node_property: Set a property on a graph node by nodeGuid.\nset_pin_default_value: Set the default value of a data pin on a graph node; a read-only (const reference) pin gets it through a MakeLiteral node wired into it.\nadd_construction_script: Add or open the Construction Script graph for a Blueprint.\narrange_nodes: Tidy a graph: move the listed nodes beside the nodes they are wired to (right of what runs them, below-left of what reads them), each to the nearest free slot; the nodes left out stay put and anchor them. An unknown nodeId is refused before anything moves. The Blueprint then compiles and is saved; that compile clears the editor's undo history whenever the history holds the Blueprint (undoBufferReset, and undo.undoable false with UNDO_CLEARED_BY_COMPILE), so the move usually cannot be undone: run edit=arrange_nodes again or set positions back with edit=set_node_property.\nbatch: Run many graph edits in one call: add variables, functions (with their bodies), events and event dispatchers, create nodes, connect pins, set pin defaults and node properties, with $id references between steps."
           },
           "effectPath": {
             "type": "string",
@@ -12328,15 +12328,20 @@
           },
           "eventName": {
             "type": "string",
-            "description": "Niagara event name."
+            "description": "Optional: the name expected; the generator module names its event, and a different one draws a warning."
           },
           "eventSpawnCount": {
             "type": "number",
-            "description": "Particles spawned per received event."
+            "description": "Particles spawned per received event (default 1); the engine uses it only with spawnOnEvent true."
           },
           "eventType": {
             "type": "string",
-            "description": "Niagara event generator type (Location, Death, Collision)."
+            "enum": [
+              "Location",
+              "Death",
+              "Collision"
+            ],
+            "description": "Event generator module: Location (GenerateLocationEvent, the default), Death or Collision; any other name is refused."
           },
           "extinction": {
             "type": "number",
@@ -12352,7 +12357,16 @@
           },
           "forceType": {
             "type": "string",
-            "description": "Force module type (Gravity, Drag, Wind, Curl, Vortex, PointAttraction)."
+            "enum": [
+              "Gravity",
+              "Drag",
+              "Wind",
+              "Curl",
+              "CurlNoise",
+              "Vortex",
+              "PointAttraction"
+            ],
+            "description": "Force module: Gravity (default), Drag, Wind, Curl (CurlNoise), Vortex or PointAttraction; any other name is refused."
           },
           "fromNode": {
             "type": "string",
@@ -12407,7 +12421,7 @@
               "niagara",
               "particle"
             ],
-            "description": "Which create effect variant to run.\nniagara_system: Create a Niagara System asset.\nniagara_emitter: Create a Niagara Emitter asset.\nniagara_ribbon: Create a Niagara ribbon effect: by default the engine LocationBasedRibbon template given its own SpawnRate of 60 a second, Ribbon Width Mode Direct Set and an infinite loop, so it trails whatever it is attached to, placed in the level only when location is given; tune SpawnRate.SpawnRate, InitializeParticle.Lifetime, Ribbon Width and Color with set_parameter_value.\nparticle_trail: Create a kind=particle trail effect: by default a ribbon (the engine LocationBasedRibbon template given its own SpawnRate of 60 a second, Ribbon Width Mode Direct Set and an infinite loop) that trails whatever it is attached to, placed in the level only when location is given; tune SpawnRate.SpawnRate, InitializeParticle.Lifetime, Ribbon Width and Color with set_parameter_value.\nimpact: Create an impact effect system asset (the engine OmnidirectionalBurst template by default), placed in the level only when location is given.\nenvironment: Create an environment effect (weather/atmosphere) system asset, placed in the level only when location is given.\nvolumetric_fog: Create a volumetric fog effect.\nniagara: Place a Niagara system in the level as a Niagara actor, at a location or attached to an actor; autoActivate false places it switched off, for a sequence kind=particle track or gameplay to start.\nparticle: Spawn a kind=particle effect (Cascade or Niagara) from a preset name or a system asset."
+            "description": "Which create effect variant to run.\nniagara_system: Create an empty Niagara System named name in path (or savePath; default /Game), compiled and saved unless save is false: it has its system scripts and no emitter yet, so it draws nothing until add_emitter_to_system adds one. A name already taken is ASSET_ALREADY_EXISTS, nothing changed. The reply gives systemPath.\nniagara_emitter: Create a standalone Niagara Emitter asset named name in path (default /Game) with the engine's default modules and a sprite renderer (UE 5.1 and later), saved unless save is false; add_emitter_to_system puts it in a system. A name already taken is ASSET_ALREADY_EXISTS, nothing changed.\nniagara_ribbon: Create a Niagara ribbon effect: by default the engine LocationBasedRibbon template given its own SpawnRate of 60 a second, Ribbon Width Mode Direct Set and an infinite loop, so it trails whatever it is attached to, placed in the level only when location is given; tune SpawnRate.SpawnRate, InitializeParticle.Lifetime, Ribbon Width and Color with set_parameter_value.\nparticle_trail: Create a kind=particle trail effect: by default a ribbon (the engine LocationBasedRibbon template given its own SpawnRate of 60 a second, Ribbon Width Mode Direct Set and an infinite loop) that trails whatever it is attached to, placed in the level only when location is given; tune SpawnRate.SpawnRate, InitializeParticle.Lifetime, Ribbon Width and Color with set_parameter_value.\nimpact: Create an impact effect system asset (the engine OmnidirectionalBurst template by default), placed in the level only when location is given.\nenvironment: Create an environment effect (weather/atmosphere) system asset, placed in the level only when location is given.\nvolumetric_fog: Create a volumetric fog effect.\nniagara: Place a Niagara system in the level as a Niagara actor, at a location or attached to an actor; autoActivate false places it switched off, for a sequence kind=particle track or gameplay to start.\nparticle: Spawn a kind=particle effect (Cascade or Niagara) from a preset name or a system asset."
           },
           "length": {
             "type": "number",
@@ -12463,7 +12477,7 @@
               "event_generator",
               "event_receiver"
             ],
-            "description": "Which add niagara module variant to run; omit for 'module'.\nmodule: Add a module to a Niagara emitter, where its dependencies hold: before the first module that must run after it (a force before Solve Forces and Velocity), else at the end of the stack.\nspawn_rate: Insert the SpawnRate module with its default inputs; tune them with set_parameter_value (parameterName \"<Module>.<Input>\").\nspawn_burst: Insert the SpawnBurst_Instantaneous module with its default inputs; tune them with set_parameter_value (parameterName \"<Module>.<Input>\").\nspawn_per_unit: Insert the SpawnPerUnit module with its default inputs; tune them with set_parameter_value (parameterName \"<Module>.<Input>\").\ninitialize_particle: Insert the InitializeParticle module with its default inputs; tune them with set_parameter_value (parameterName \"<Module>.<Input>\").\nvelocity: Add a velocity module.\nacceleration: Insert the AccelerationForce module with its default inputs; tune them with set_parameter_value (parameterName \"<Module>.<Input>\").\nforce: Insert the the chosen force module with its default inputs; tune them with set_parameter_value (parameterName \"<Module>.<Input>\").\ncolor: Insert the Color module with its default inputs; tune them with set_parameter_value (parameterName \"<Module>.<Input>\").\nsize: Insert the ScaleSpriteSize module with its default inputs; tune them with set_parameter_value (parameterName \"<Module>.<Input>\").\ncollision: Insert the Collision module with its default inputs; tune them with set_parameter_value (parameterName \"<Module>.<Input>\").\nkill_particles: Insert the KillParticles module with its default inputs; tune them with set_parameter_value (parameterName \"<Module>.<Input>\").\ncamera_offset: Insert the CameraOffset module with its default inputs; tune them with set_parameter_value (parameterName \"<Module>.<Input>\").\nparticle_state: Add a particle-state module.\nsprite_renderer: Add a sprite renderer module.\nmesh_renderer: Add a mesh renderer module.\nribbon_renderer: Add a ribbon renderer module.\nlight_renderer: Add a light renderer module.\nsimulation_stage: Add a simulation stage.\nevent_generator: Add a Niagara event generator.\nevent_receiver: Add a Niagara event receiver.",
+            "description": "Which add niagara module variant to run; omit for 'module'.\nmodule: Add a module to a Niagara emitter, where its dependencies hold: before the first module that must run after it (a force before Solve Forces and Velocity), else at the end of the stack.\nspawn_rate: Insert the SpawnRate module with its default inputs; tune them with set_parameter_value (parameterName \"<Module>.<Input>\").\nspawn_burst: Insert the SpawnBurst_Instantaneous module with its default inputs; tune them with set_parameter_value (parameterName \"<Module>.<Input>\").\nspawn_per_unit: Insert the SpawnPerUnit module with its default inputs; tune them with set_parameter_value (parameterName \"<Module>.<Input>\").\ninitialize_particle: Insert the InitializeParticle module with its default inputs; tune them with set_parameter_value (parameterName \"<Module>.<Input>\").\nvelocity: Insert a velocity module into the emitter's particle spawn stack, chosen by velocityMode: Linear (AddVelocity, the default), Cone (AddVelocityInCone) or FromPoint (AddVelocityFromPoint); another mode is INVALID_ARGUMENT. Its inputs keep their defaults; set them with set_parameter_value. The system recompiles and is saved unless save is false; the reply gives moduleName.\nacceleration: Insert the AccelerationForce module with its default inputs; tune them with set_parameter_value (parameterName \"<Module>.<Input>\").\nforce: Insert the force module forceType names (Gravity by default; Drag, Wind, Curl, Vortex, PointAttraction) into the emitter's particle update stack, before Solve Forces and Velocity, with its default inputs; tune them with set_parameter_value (parameterName \"<moduleName>.<Input>\"). Another forceType is INVALID_ARGUMENT. The system recompiles and is saved unless save is false; the reply gives moduleName as the stack named it.\ncolor: Insert the Color module with its default inputs; tune them with set_parameter_value (parameterName \"<Module>.<Input>\").\nsize: Insert the ScaleSpriteSize module with its default inputs; tune them with set_parameter_value (parameterName \"<Module>.<Input>\").\ncollision: Insert the Collision module with its default inputs; tune them with set_parameter_value (parameterName \"<Module>.<Input>\").\nkill_particles: Insert the KillParticles module with its default inputs; tune them with set_parameter_value (parameterName \"<Module>.<Input>\").\ncamera_offset: Insert the CameraOffset module with its default inputs; tune them with set_parameter_value (parameterName \"<Module>.<Input>\").\nparticle_state: Add a particle-state module.\nsprite_renderer: Give the emitter a sprite renderer, or configure the one it has (rendererCreated false), drawing with materialPath (its Niagara sprite usage flag set and saved); without materialPath it keeps its material, the engine default on a new one. The system recompiles and is saved unless save is false; the reply reads back materialPath and rendererPath.\nmesh_renderer: Give the emitter a mesh renderer, or configure the one it has (rendererCreated false), drawing each particle as meshPath (required; it replaces the renderer's mesh list, and its materials get their Niagara mesh-particle flag). Without meshPath it is INVALID_ARGUMENT, since a mesh renderer with no mesh draws nothing. The system recompiles and is saved unless save is false.\nribbon_renderer: Give the emitter a ribbon renderer (a strip joining its particles, for trails), or configure the one it has (rendererCreated false), drawing with materialPath (its Niagara ribbon usage flag set and saved); without it the material stays as it is. The system recompiles and is saved unless save is false; the reply reads back materialPath.\nlight_renderer: Give the emitter a light renderer, a point light at each particle, or configure the one it has (rendererCreated false); lightRadius multiplies each particle's light radius (RadiusScale, engine default 1) and is read back. The system recompiles and is saved unless save is false.\nsimulation_stage: Add an empty generic simulation stage named stageName to the emitter, running over stageIterationSource (Particles, the default, DataInterface or DirectSet on UE 5.2 and later; another name is INVALID_ARGUMENT). Stages run on GPU emitters. The system recompiles and is saved unless save is false; the reply gives simulationStageCount.\nevent_generator: Insert the engine's event generator module for eventType (Location, the default, Death or Collision) into the emitter's particle update stack. The event it emits is named by that module, and the reply gives that name (eventName) for moduleKind=event_receiver on another emitter; an eventName given that differs is not applied and draws a warning. Another eventType is INVALID_ARGUMENT. The system recompiles and is saved unless save is false.\nevent_receiver: Add an event handler to the emitter for the event eventName (the name moduleKind=event_generator reported): with spawnOnEvent true it spawns eventSpawnCount particles (default 1) per event, otherwise its script runs on every particle when the event arrives. Its handler script starts empty. The system recompiles and is saved unless save is false.",
             "default": "module"
           },
           "moduleName": {
@@ -12597,7 +12611,12 @@
           },
           "stageIterationSource": {
             "type": "string",
-            "description": "Simulation stage iteration source."
+            "enum": [
+              "Particles",
+              "DataInterface",
+              "DirectSet"
+            ],
+            "description": "What the stage runs over: Particles (the default, each particle), DataInterface (each element of a grid or other data interface) or DirectSet (a count you set; UE 5.2 and later). Any other name is refused."
           },
           "stageName": {
             "type": "string",
@@ -12644,7 +12663,12 @@
           },
           "velocityMode": {
             "type": "string",
-            "description": "Velocity module mode (Linear, Cone, FromPoint)."
+            "enum": [
+              "Linear",
+              "Cone",
+              "FromPoint"
+            ],
+            "description": "Velocity module: Linear (AddVelocity, the default), Cone (AddVelocityInCone) or FromPoint (AddVelocityFromPoint); any other name is refused."
           },
           "action": {
             "type": "string",
@@ -17728,7 +17752,7 @@
               "track",
               "keyframe"
             ],
-            "description": "Which delete variant to run; omit for 'sequence'.\nsequence: Permanently deleteScope=sequence a Level Sequence asset: refused with SEQUENCE_IN_USE, naming referencedBy, while a level or asset still uses it (a Level Sequence Actor playing it). Its editors close and the undo history may be cleared.\ntrack: Remove one track from a Level Sequence, in one undo step: the track whose name is trackName (case ignored), else the first whose name contains it; the camera cut track too. The sequence is left unsaved.\nkeyframe: Remove keyframes from the tracks trackName or bindingId picks: the keys on one frame or on several, or every key on them, of every key type, in one undo step. Naming neither track nor binding is refused (TRACK_REQUIRED); a filter that matches no track is TRACK_NOT_FOUND.",
+            "description": "Which delete variant to run; omit for 'sequence'.\nsequence: Permanently deleteScope=sequence a Level Sequence asset: refused with SEQUENCE_IN_USE, naming referencedBy, while a level or asset still uses it (a Level Sequence Actor playing it). Its editors close and the undo history may be cleared.\ntrack: Remove one track from a Level Sequence with its sections and keys, in one undo step: the track trackName names (its name or display name, case ignored; a part of a name only when one track alone contains it), the camera cut track too. A name several tracks fit is refused with AMBIGUOUS_TRACK naming them. The sequence is left unsaved.\nkeyframe: Remove keyframes from the tracks trackName or bindingId picks: the keys on one frame or on several, or every key on them, of every key type, in one undo step. Naming neither track nor binding is refused (TRACK_REQUIRED); a filter that matches no track is TRACK_NOT_FOUND.",
             "default": "sequence"
           },
           "demoName": {
@@ -17949,7 +17973,7 @@
               "list",
               "open"
             ],
-            "description": "Which get properties variant to run; omit for 'properties'.\nproperties: Read the playback properties of a Level Sequence: frameRate (the display rate, a number), playbackStart and playbackEnd in display-rate frames, and lengthInFrames. An asset that is not a Level Sequence is INVALID_SEQUENCE.\nbindings: List all bindings (possessables and spawnables) in a Level Sequence.\ntracks: List all tracks in a Level Sequence.\nkeys: Read the sections and keyframes already on a sequence track.\ntrack_types: List all available MovieScene track types registered in the engine.\nlist: List Level Sequence assets under a content folder (recursively; the whole Game folder when path is omitted).\nopen: Open an existing Level Sequence in the Sequencer editor.",
+            "description": "Which get properties variant to run; omit for 'properties'.\nproperties: Read the playback properties of a Level Sequence: frameRate (the display rate, a number), playbackStart and playbackEnd in display-rate frames, and lengthInFrames. An asset that is not a Level Sequence is INVALID_SEQUENCE.\nbindings: List all bindings (possessables and spawnables) in a Level Sequence.\ntracks: List every track of a Level Sequence: the sequence-wide tracks (the camera cut track included) and each binding's tracks. Each row gives trackName (the object name track actions take), trackType (its class), displayName (the label Sequencer shows, also accepted), isMasterTrack, for a bound track bindingName (Actor/Component for a component) and bindingGuid, sectionCount, muted (set_track_muted or solo turned it off), the animation clips a skeletal animation track plays (animations) and isCameraCut. Read only.\nkeys: Read the sections and keyframes already on a sequence track.\ntrack_types: List all available MovieScene track types registered in the engine.\nlist: List Level Sequence assets under a content folder (recursively; the whole Game folder when path is omitted).\nopen: Open a Level Sequence (path) in the Sequencer editor; nothing in it changes. The reply gives sequencePath. A path that is not a Level Sequence is SEQUENCE_NOT_FOUND, and an editor that does not info=open EDITOR_NOT_OPEN.",
             "default": "properties"
           },
           "interpolation": {
@@ -18402,7 +18426,7 @@
               "duplicate",
               "rename"
             ],
-            "description": "Which create variant to run; omit for 'create'.\ncreate: Create a new Level Sequence asset in the content browser.\nduplicate: Duplicate a Level Sequence asset to a new destination.\nrename: Rename a Level Sequence asset in place.",
+            "description": "Which create variant to run; omit for 'create'.\ncreate: Create a Level Sequence asset and save it: name in the folder path names (default /Game), or path alone naming the sequence itself (/Game/Cinematics/SEQ_Shot). A Level Sequence already there is kept and answered with alreadyExists true; another asset there is ASSET_ALREADY_EXISTS, and a path outside the writable content roots SEQUENCE_PATH_NOT_WRITABLE. The new sequence is empty, with no bindings or camera, at the project's default display rate (30 fps out of the box) and 24000 ticks per second.\nduplicate: Copy a Level Sequence to destinationPath (a folder; one not starting with / is under the source folder) as newName, and save the copy. A destination already taken is ASSET_ALREADY_EXISTS, a source that is not a Level Sequence INVALID_SEQUENCE, a destination outside the writable content roots SEQUENCE_PATH_NOT_WRITABLE. The reply gives duplicatedPath and saved; the copy keeps the original's bindings, which still point at the same level actors.\nrename: Rename a Level Sequence: newName keeps its folder, a path starting with / moves it there. The engine saves the renamed sequence and leaves a redirector at the old path when other assets reference it. A name already taken is ASSET_ALREADY_EXISTS, a source that is not a Level Sequence INVALID_SEQUENCE, a path outside the writable content roots SEQUENCE_PATH_NOT_WRITABLE. The reply gives oldPath and sequencePath.",
             "default": "create"
           },
           "sequencePath": {
@@ -18419,7 +18443,7 @@
               "view_range",
               "work_range"
             ],
-            "description": "Which set properties variant to run; omit for 'properties'.\nproperties: Set the display frame rate of a Level Sequence (frameRate, such as 24 or 29.97) and its playback range in display-rate frames: playbackStart, and playbackEnd or lengthInFrames (end = start + length; playbackEnd wins). Send at least one; one undo step, and the sequence is left unsaved. The reply reads the values back; a negative frame or an unreadable rate is INVALID_ARGUMENT, another asset type INVALID_SEQUENCE.\ndisplay_rate: Set the display frame rate of a Level Sequence.\ntick_resolution: Set the tick resolution of a Level Sequence.\nplayback_speed: Set the playback speed of a Level Sequence on the level sequence actors that play it, and on Sequencer when it is open.\nview_range: Set the view range of a Level Sequence, the part of the timeline the Sequencer window shows: start and end in seconds, end after start (INVALID_ARGUMENT otherwise). Display only: playback and keys are untouched.\nwork_range: Set the work range of a Level Sequence, the stretch of timeline the Sequencer shows and edits within: start and end in seconds, end after start (INVALID_ARGUMENT otherwise). An end past the playback range extends playback to it (playbackExtended), so keys out there play; the reply gives the range in seconds and in display-rate frames.",
+            "description": "Which set properties variant to run; omit for 'properties'.\nproperties: Set the display frame rate of a Level Sequence (frameRate, such as 24 or 29.97) and its playback range in display-rate frames: playbackStart, and playbackEnd or lengthInFrames (end = start + length; playbackEnd wins). Send at least one; one undo step, and the sequence is left unsaved. The reply reads the values back; a negative frame or an unreadable rate is INVALID_ARGUMENT, another asset type INVALID_SEQUENCE.\ndisplay_rate: Set the display frame rate of a Level Sequence (frameRate: 24, 29.97, \"30fps\", \"30000/1001\"), the rate its timeline counts frames in; keys stay at the same times. An unreadable rate is INVALID_ARGUMENT; the reply reads the rate back. One undo step; the sequence is left unsaved.\ntick_resolution: Set the tick resolution of a Level Sequence, the time grid keys and sections are stored on (resolution: whole ticks per second such as 24000, the default, or 60000; a ratio N/D is N ticks every D seconds), moving every key, section and range onto the new grid as the Sequencer does so nothing shifts in time. Anything else, zero included, is INVALID_ARGUMENT, and so is a resolution coarser than the display rate, which could not hold every frame. The reply gives tickResolution and previousTickResolution, and warns when the display rate does not fall on whole ticks. One undo step; the sequence is left unsaved.\nplayback_speed: Set the play rate of a Level Sequence (speed, above 0; 1 is normal, 0.5 half speed) on every level sequence actor in the editor level that plays it, which is the rate it runs at in game and Play In Editor, and on the Sequencer preview when the sequence is open there (a preview setting that is not saved). The actors change in one undo step and the level is left unsaved. The reply lists the actors (levelSequenceActors) and sequencerUpdated. With neither an actor nor an open Sequencer it is PLAYBACK_TARGET_NOT_FOUND; speed 0 or below is INVALID_ARGUMENT.\nview_range: Set the view range of a Level Sequence, the part of the timeline the Sequencer window shows: start and end in seconds, end after start (INVALID_ARGUMENT otherwise). Display only: playback and keys are untouched.\nwork_range: Set the work range of a Level Sequence, the stretch of timeline the Sequencer shows and edits within: start and end in seconds, end after start (INVALID_ARGUMENT otherwise). An end past the playback range extends playback to it (playbackExtended), so keys out there play; the reply gives the range in seconds and in display-rate frames.",
             "default": "properties"
           },
           "setting": {
@@ -18632,7 +18656,7 @@
           },
           "trackName": {
             "type": "string",
-            "description": "The track, by the name get_properties lists (MovieScene3DTransformTrack_1). A whole name picks that track only; part of a name (Transform) picks the tracks whose names contain it."
+            "description": "Display name for the new track; track actions find it by this name. A track type that takes no name keeps its own, which the reply reads back."
           },
           "trackNames": {
             "type": "array",

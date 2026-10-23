@@ -17,14 +17,16 @@ static FString ForceModulePath(const FString& ForceType)
     if (ForceType.Equals(TEXT("Curl"), ESearchCase::IgnoreCase) || ForceType.Equals(TEXT("CurlNoise"), ESearchCase::IgnoreCase)) return TEXT("/Niagara/Modules/Update/Forces/CurlNoiseForce.CurlNoiseForce");
     if (ForceType.Equals(TEXT("Vortex"), ESearchCase::IgnoreCase)) return TEXT("/Niagara/Modules/Update/Forces/VortexForce.VortexForce");
     if (ForceType.Equals(TEXT("PointAttraction"), ESearchCase::IgnoreCase)) return TEXT("/Niagara/Modules/Update/Forces/PointAttractionForce.PointAttractionForce");
-    return TEXT("/Niagara/Modules/Update/Forces/GravityForce.GravityForce");
+    // Any other name added gravity (a misspelt Vortex included); the caller refuses an empty path instead.
+    return ForceType.Equals(TEXT("Gravity"), ESearchCase::IgnoreCase) ? TEXT("/Niagara/Modules/Update/Forces/GravityForce.GravityForce") : FString();
 }
 
 static FString VelocityModulePath(const FString& VelocityMode)
 {
     if (VelocityMode.Equals(TEXT("Cone"), ESearchCase::IgnoreCase)) return TEXT("/Niagara/Modules/Spawn/Velocity/AddVelocityInCone.AddVelocityInCone");
     if (VelocityMode.Equals(TEXT("FromPoint"), ESearchCase::IgnoreCase)) return TEXT("/Niagara/Modules/Spawn/Velocity/AddVelocityFromPoint.AddVelocityFromPoint");
-    return TEXT("/Niagara/Modules/Spawn/Velocity/AddVelocity.AddVelocity");
+    // Any other name added the linear module while the reply echoed it; the caller refuses an empty path instead.
+    return VelocityMode.Equals(TEXT("Linear"), ESearchCase::IgnoreCase) ? TEXT("/Niagara/Modules/Spawn/Velocity/AddVelocity.AddVelocity") : FString();
 }
 
 struct FFixedModule
@@ -86,6 +88,13 @@ bool HandleFixedModuleAction(FActionContext& Context, const FString& SubAction)
             TEXT("/Niagara/Modules/Spawn/Initialization/InitializeParticle.InitializeParticle"));
     }
 
+    if (ModulePath.IsEmpty())
+    {
+        Context.SendError(SubAction == TEXT("add_force_module")
+            ? TEXT("forceType must be Gravity, Drag, Wind, Curl (CurlNoise), Vortex or PointAttraction. Nothing was changed.")
+            : TEXT("velocityMode must be Linear, Cone or FromPoint. Nothing was changed."), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
     UNiagaraSystem* System = nullptr;
     FNiagaraEmitterHandle* Handle = nullptr;
     if (!LoadSystemAndEmitter(Context, System, Handle))

@@ -1,6 +1,7 @@
 #include "Domains/Skeleton/McpSkeletonActions.h"
 #include "Domains/Skeleton/Assets/McpSkeletonAssetLoading.h"
 #include "Domains/Skeleton/Assets/McpSkeletonPayload.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 
 #include "Animation/Skeleton.h"
 #include "Safety/McpSafeOperations.h"
@@ -181,28 +182,32 @@ bool HandleAddBoneAction(UEngineWireSubsystem* Subsystem, const FString& Request
             return true;
         }
 
-        FVector Location = ExtractVectorField(Payload, TEXT("location"), FVector::ZeroVector);
-        FRotator Rotation = ExtractRotatorField(Payload, TEXT("rotation"), FRotator::ZeroRotator);
-        FVector Scale = ExtractVectorField(Payload, TEXT("scale"), FVector::OneVector);
-        FTransform BoneTransform(Rotation, Location, Scale);
-
-        Skeleton->Modify();
-        FReferenceSkeletonModifier Modifier(Skeleton);
-        FMeshBoneInfo NewBone;
-        NewBone.Name = FName(*BoneName);
-        NewBone.ParentIndex = ParentIndex;
-        NewBone.ExportName = BoneName;
-
-        // Allow multiple roots only if no parent is specified and this is the first bone
-        bool bAllowMultipleRoots = ParentIndex == INDEX_NONE && RefSkeleton.GetRawBoneNum() == 0;
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
-        Modifier.Add(NewBone, BoneTransform, bAllowMultipleRoots);
-#else
-        // UE 5.0-5.2: Add() only takes 2 parameters
-        Modifier.Add(NewBone, BoneTransform);
-#endif
+        // The shared reader takes a uniform scale (scale: 2) as well as a vector; read as a vector only, it was dropped.
+        FTransform BoneTransform = FTransform::Identity;
+        ApplyTransformFieldsFromJson(Payload, BoneTransform);
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+        {
+            // One undo step. The modifier rebuilds the skeleton when it goes out of scope, which came after the save
+            // below: it ends here, so the skeleton written is the rebuilt one.
+            FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Add Bone")), EMcpMutationDurability::EditorStateOnly, {Skeleton});
+            FReferenceSkeletonModifier Modifier(Skeleton);
+            FMeshBoneInfo NewBone;
+            NewBone.Name = FName(*BoneName);
+            NewBone.ParentIndex = ParentIndex;
+            NewBone.ExportName = BoneName;
+
+            // Allow multiple roots only if no parent is specified and this is the first bone
+            bool bAllowMultipleRoots = ParentIndex == INDEX_NONE && RefSkeleton.GetRawBoneNum() == 0;
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
+            Modifier.Add(NewBone, BoneTransform, bAllowMultipleRoots);
+#else
+            // UE 5.0-5.2: Add() only takes 2 parameters
+            Modifier.Add(NewBone, BoneTransform);
+#endif
+            Transaction.DescribeInto(Result);
+        }
+
         Result->SetStringField(TEXT("boneName"), BoneName);
         Result->SetStringField(TEXT("parentBone"), ParentName);
         Result->SetNumberField(TEXT("boneCount"), Skeleton->GetReferenceSkeleton().GetRawBoneNum());

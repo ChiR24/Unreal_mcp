@@ -49,6 +49,21 @@ APostProcessVolume* McpResolvePostProcessVolume(
         }
     }
 
+    // A name no volume has went on to the level's unbound volume, so a misspelt name edited another volume. A name
+    // makes a new volume only in a level that has no unbound volume to edit.
+    if (!Reference.IsEmpty() && (Unbound.Num() > 0 || !bAllowSpawn))
+    {
+        TArray<FString> Labels;
+        for (TActorIterator<APostProcessVolume> It(World); It; ++It)
+        {
+            Labels.Add(It->GetActorLabel());
+        }
+        OutError = FString::Printf(TEXT("No PostProcessVolume is named '%s'. Volumes in the level: %s"), *Reference,
+                                   Labels.Num() > 0 ? *FString::Join(Labels, TEXT(", ")) : TEXT("none"));
+        OutErrorCode = TEXT("ACTOR_NOT_FOUND");
+        return nullptr;
+    }
+
     if (Unbound.Num() == 1)
     {
         return Unbound[0];

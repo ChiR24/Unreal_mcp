@@ -204,6 +204,38 @@ inline void SaveAnimAssetAndReport(UObject* Asset, bool bSave, const TSharedPtr<
     const bool bSaved = SaveAnimAsset(Asset, bSave) && bSave;
     Response->SetBoolField(TEXT("saved"), bSaved);
 }
+// Axis Index (0 horizontal, 1 vertical) of a blend space; BlendParameters is protected, so through reflection.
+inline bool McpSetBlendSpaceAxis(UBlendSpace* BlendSpace, int32 Index, const FString& Name, float Min, float Max)
+{
+    FProperty* Prop = BlendSpace ? UBlendSpace::StaticClass()->FindPropertyByName(TEXT("BlendParameters")) : nullptr;
+    FBlendParameter* Axes = Prop ? Prop->ContainerPtrToValuePtr<FBlendParameter>(BlendSpace) : nullptr;
+    if (!Axes)
+    {
+        return false;
+    }
+    BlendSpace->Modify();
+    Axes[Index].DisplayName = Name;
+    Axes[Index].Min = Min;
+    Axes[Index].Max = Max;
+    Axes[Index].GridNum = 4;
+    return true;
+}
+// The first AxisCount axes of a blend space as it holds them: axisName, minValue, maxValue, gridDivisions.
+inline TArray<TSharedPtr<FJsonValue>> McpBlendSpaceAxesJson(const UBlendSpace* BlendSpace, int32 AxisCount)
+{
+    TArray<TSharedPtr<FJsonValue>> Out;
+    for (int32 Index = 0; Index < AxisCount; ++Index)
+    {
+        const FBlendParameter& Axis = BlendSpace->GetBlendParameter(Index);
+        TSharedPtr<FJsonObject> Row = MakeShared<FJsonObject>();
+        Row->SetStringField(TEXT("axisName"), Axis.DisplayName);
+        Row->SetNumberField(TEXT("minValue"), Axis.Min);
+        Row->SetNumberField(TEXT("maxValue"), Axis.Max);
+        Row->SetNumberField(TEXT("gridDivisions"), Axis.GridNum);
+        Out.Add(MakeShared<FJsonValueObject>(Row));
+    }
+    return Out;
+}
 // The montage's section names, comma-separated, for a refusal that names what exists.
 inline FString McpMontageSectionNames(const UAnimMontage* Montage)
 {

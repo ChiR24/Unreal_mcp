@@ -33,12 +33,14 @@ if (SubAction == TEXT("create_ik_rig"))
     if (RigMesh)
     {
         FString BuildError;
-        UIKRigDefinition* Built = McpBuildIKRig(RigMesh, Path, Name, BuildError);
+        bool bSaved = false;
+        UIKRigDefinition* Built = McpBuildIKRig(RigMesh, Path, Name, BuildError, bSave, &bSaved);
         if (!Built)
         {
             ANIM_ERROR_RESPONSE(BuildError, TEXT("CREATION_FAILED"));
         }
         Response->SetStringField(TEXT("assetPath"), Built->GetPathName());
+        Response->SetBoolField(TEXT("saved"), bSaved);
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("IK Rig '%s' built from %s"), *Built->GetName(), *RigMesh->GetName()));
         return Response;
     }

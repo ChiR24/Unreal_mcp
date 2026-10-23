@@ -123,6 +123,18 @@ inline bool McpCompileBlueprintWithDiagnostics(
     // Why is the comment above: the same 230 characters on nearly every graph edit's reply only repeated it.
     if (bUndoBufferReset) {
       Out->SetBoolField(TEXT("undoBufferReset"), true);
+      // An undo step the edit recorded went with the buffer: an `undo` block still saying undoable true beside this
+      // flag told the caller to undo something that no longer exists.
+      if (Out->HasTypedField<EJson::Object>(TEXT("undo"))) {
+        const TSharedPtr<FJsonObject> Undo = MakeShared<FJsonObject>();
+        Undo->SetBoolField(TEXT("undoable"), false);
+        Undo->SetStringField(TEXT("reasonCode"), TEXT("UNDO_CLEARED_BY_COMPILE"));
+        Undo->SetStringField(TEXT("reason"),
+                             TEXT("The compile after this edit cleared the editor's undo history: a Blueprint the undo "
+                                  "history holds would keep its preview or play world alive and crash the editor at "
+                                  "the next full garbage collection."));
+        Out->SetObjectField(TEXT("undo"), Undo);
+      }
     }
     Out->SetBoolField(TEXT("compiled"), bCompiled);
     Out->SetStringField(TEXT("compilerStatus"),

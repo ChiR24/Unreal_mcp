@@ -190,7 +190,7 @@ export const MATERIAL_GRAPH_RECORDS: readonly RecordSpec[] = [
   // badly stayed that way — the only recourse was remove plus re-add, which
   // drops the node's connections. This is what makes the overlap warning the
   // node adders now return actionable after the fact.
-  r('set_node_position', 'material', 'Move a node of a material or material function graph (materialPath or assetPath; nodeId as add_material_node and get_material_info give it) to x and y, keeping every wire. The material recompiles and is left unsaved, and the move is no undo step; the reply gives where the node now sits and warns when it overlaps another.',
+  r('set_node_position', 'material', 'Move a node of a material or material function graph (materialPath or assetPath; nodeId as add_material_node and get_material_info give it) to x and y, keeping every wire. The move is one undo step (the reply\'s undo block says so); the material recompiles and is left unsaved; the reply gives where the node now sits and warns when it overlaps another.',
     schema({ materialPath: MAT, assetPath: str('Material asset path (accepted in place of materialPath).'), nodeId: str('Node ID to move.'), x: num('New X coordinate (posX is the fallback spelling).'), y: num('New Y coordinate (posY is the fallback spelling).'), posX: num('New X coordinate (fallback spelling).'), posY: num('New Y coordinate (fallback spelling).') }, ['nodeId'], ['materialPath', 'assetPath']),
     MOVE_OUT, WRITE, WRITE_POLICY, LOW,
     { topics: ['move material node'],

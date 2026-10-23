@@ -115,6 +115,18 @@ TSharedPtr<FJsonObject> HandleBlueprintBlendNodeActions(const FString& SubAction
             ANIM_ERROR_RESPONSE(TEXT("Could not find AnimGraph in blueprint"), TEXT("GRAPH_NOT_FOUND"));
         }
 
+        // Two caches under one name make the Blueprint ambiguous to use; the engine renames a pasted duplicate, so a
+        // created one answered with a name the node might not hold.
+        TArray<UAnimGraphNode_SaveCachedPose*> ExistingCaches;
+        FBlueprintEditorUtils::GetAllNodesOfClass<UAnimGraphNode_SaveCachedPose>(AnimBP, ExistingCaches);
+        for (const UAnimGraphNode_SaveCachedPose* Existing : ExistingCaches)
+        {
+            if (Existing && Existing->CacheName.Equals(CacheName, ESearchCase::IgnoreCase))
+            {
+                ANIM_ERROR_RESPONSE(FString::Printf(TEXT("The Blueprint already has a cached pose named '%s'"), *CacheName), TEXT("CACHE_NAME_TAKEN"));
+            }
+        }
+
         // Create the Save Cached Pose node
         FGraphNodeCreator<UAnimGraphNode_SaveCachedPose> NodeCreator(*AnimGraph);
         UAnimGraphNode_SaveCachedPose* CachedPoseNode = NodeCreator.CreateNode();
@@ -124,9 +136,10 @@ TSharedPtr<FJsonObject> HandleBlueprintBlendNodeActions(const FString& SubAction
         NodeCreator.Finalize();
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(AnimBP);
-        SaveAnimAsset(AnimBP, bSave);
+        SaveAnimAssetAndReport(AnimBP, bSave, Response);
 
-        Response->SetStringField(TEXT("cacheName"), CacheName);
+        Response->SetStringField(TEXT("cacheName"), CachedPoseNode->CacheName);
+        Response->SetStringField(TEXT("nodeId"), CachedPoseNode->NodeGuid.ToString());
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Cached pose node '%s' created"), *CacheName));
         return Response;
     }

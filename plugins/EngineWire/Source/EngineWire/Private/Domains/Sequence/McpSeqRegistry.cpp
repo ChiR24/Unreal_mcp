@@ -51,6 +51,21 @@ ULevelSequence *McpSequence::LoadOrReply(UEngineWireSubsystem *Subsystem, const 
   return Sequence;
 }
 
+void McpSequence::ReplyTrackMiss(UEngineWireSubsystem *Subsystem, const FString &RequestId,
+                                 TSharedPtr<FMcpBridgeWebSocket> Socket, const FString &TrackName,
+                                 const FString &Ambiguous) {
+  if (Ambiguous.IsEmpty()) {
+    Subsystem->SendAutomationResponse(Socket, RequestId, false,
+        FString::Printf(TEXT("No track named '%s'; list_tracks gives each track's trackName and displayName"), *TrackName),
+        nullptr, TEXT("TRACK_NOT_FOUND"));
+    return;
+  }
+  Subsystem->SendAutomationResponse(Socket, RequestId, false,
+      FString::Printf(TEXT("'%s' fits several tracks: %s. Pass one trackName exactly as list_tracks gives it"),
+                      *TrackName, *Ambiguous),
+      nullptr, TEXT("AMBIGUOUS_TRACK"));
+}
+
 ULevelSequence *McpSequence::CreateSequenceAsset(const FString &Name, const FString &Folder) {
   UClass *FactoryClass = LoadClass<UFactory>(nullptr, TEXT("/Script/LevelSequenceEditor.LevelSequenceFactoryNew"));
   if (!FactoryClass) {

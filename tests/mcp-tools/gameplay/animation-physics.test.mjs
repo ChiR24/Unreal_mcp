@@ -83,6 +83,7 @@ const testCases = [
 
 // === ADD (Cached Pose - needs blueprintPath) ===
 { scenario: 'ADD: add_cached_pose', toolName: 'animation_physics', arguments: {"action": "add_cached_pose", "blueprintPath": `${TEST_FOLDER}/Testanimation_blueprint`, "cacheName": "Testcached_pose", "positionX": 600, "positionY": 0}, expected: 'success|already exists' },
+{ scenario: 'ERROR: add_cached_pose refuses a cache name the Blueprint has', toolName: 'animation_physics', arguments: {"action": "add_cached_pose", "blueprintPath": `${TEST_FOLDER}/Testanimation_blueprint`, "cacheName": "Testcached_pose", "positionX": 900, "positionY": 0}, expected: 'error|CACHE_NAME_TAKEN' },
 
 // === ADD (Slot Node - needs blueprintPath) ===
 { scenario: 'ADD: add_slot_node', toolName: 'animation_physics', arguments: {"action": "add_slot_node", "blueprintPath": `${TEST_FOLDER}/Testanimation_blueprint`, "slotName": "Testslot_node", "groupName": "DefaultGroup", "positionX": 800, "positionY": 0}, expected: 'success|already exists', assertions: [
@@ -160,6 +161,8 @@ const testCases = [
 
 // === CONFIG (Curve Key - needs assetPath) ===
 { scenario: 'CONFIG: set_curve_key', toolName: 'animation_physics', arguments: {"action": "set_curve_key", "assetPath": `${TEST_FOLDER}/Testanimation_sequence`, "curveName": "TestCurve", "frame": 0, "value": 1.0, "createIfMissing": true, "save": true}, expected: 'success' },
+{ scenario: 'CONFIG: set_curve_key reads the key back', toolName: 'animation_physics', arguments: {"action": "set_curve_key", "assetPath": `${TEST_FOLDER}/Testanimation_sequence`, "curveName": "TestCurve", "frame": 0, "value": 0.5, "save": false}, expected: 'success', assertions: [{ path: 'structuredContent.result.value', equals: 0.5, label: 'curve value read back' }] },
+{ scenario: 'ERROR: set_curve_key refuses a missing curve without createIfMissing', toolName: 'animation_physics', arguments: {"action": "set_curve_key", "assetPath": `${TEST_FOLDER}/Testanimation_sequence`, "curveName": "NoSuchCurve", "frame": 0, "value": 1.0, "createIfMissing": false, "save": false}, expected: 'error|CURVE_NOT_FOUND' },
 
 // === CREATE (Montage - needs skeletonPath) ===
 // A pose asset takes one pose per key frame of the keyed sequence above; the first two get names.

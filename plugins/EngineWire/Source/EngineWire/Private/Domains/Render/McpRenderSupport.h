@@ -5,6 +5,7 @@
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/Render/McpPostProcessVolumeResolution.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 
 #include "Editor.h"
 #include "Engine/PostProcessVolume.h"
@@ -44,19 +45,21 @@ inline AActor* FindRenderActor(const FString& Reference)
     return FindActorByNameInWorldForMcp(World, Reference, true);
 }
 
-// Writes FPostProcessSettings fields of the volume from JSON (reflection; override flags set).
-inline bool ApplyPostProcessSettings(APostProcessVolume* Volume, const TSharedPtr<FJsonObject>& Settings,
+// Writes FPostProcessSettings fields from JSON (reflection; override flags set). Handlers write a copy of the
+// volume's settings and put it on the volume once every value is taken (CommitPostProcessVolume), so a refusal
+// halfway no longer left the volume half changed.
+inline bool ApplyPostProcessSettings(FPostProcessSettings& Target, const TSharedPtr<FJsonObject>& Settings,
     TArray<FString>& Applied, TArray<FString>& Unsupported, FString& Error)
 {
-    return ApplyJsonSettings(&Volume->Settings, FPostProcessSettings::StaticStruct(), Settings, true, Applied, Unsupported, Error);
+    return ApplyJsonSettings(&Target, FPostProcessSettings::StaticStruct(), Settings, true, Applied, Unsupported, Error);
 }
 
-inline bool ApplyPostProcessField(APostProcessVolume* Volume, const FString& Field, const TSharedPtr<FJsonValue>& Value,
+inline bool ApplyPostProcessField(FPostProcessSettings& Target, const FString& Field, const TSharedPtr<FJsonValue>& Value,
     TArray<FString>& Applied, TArray<FString>& Unsupported, FString& Error)
 {
     TSharedPtr<FJsonObject> Settings = MakeShared<FJsonObject>();
     Settings->SetField(Field, Value);
-    return ApplyPostProcessSettings(Volume, Settings, Applied, Unsupported, Error);
+    return ApplyPostProcessSettings(Target, Settings, Applied, Unsupported, Error);
 }
 
 inline TSharedPtr<FJsonObject> MakeRenderResult(const FString& SubAction)
@@ -92,10 +95,30 @@ inline void ApplyVolumeBlendFields(APostProcessVolume* Volume, const TSharedPtr<
     }
 }
 
+// Puts the staged settings on the volume, with the volume's own fields the call gave (blendWeight,
+// infiniteUnbound, and enabled when bTakeEnabled), in one undo step once every value has been taken: Modify with no
+// transaction open recorded nothing, so undo could not take a post-process change back.
+inline void CommitPostProcessVolume(APostProcessVolume* Volume, const FPostProcessSettings& Staged,
+                                    const TSharedPtr<FJsonObject>& Payload, bool bTakeEnabled, TArray<FString>& Applied)
+{
+    {
+        FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Configure Post Process")),
+                                                EMcpMutationDurability::EditorStateOnly, {Volume});
+        Volume->Settings = Staged;
+        if (bTakeEnabled && Payload->HasTypedField<EJson::Boolean>(TEXT("enabled")))
+        {
+            Volume->bEnabled = Payload->GetBoolField(TEXT("enabled"));
+            Applied.Add(TEXT("bEnabled"));
+        }
+        ApplyVolumeBlendFields(Volume, Payload, Applied);
+    }
+    Volume->MarkComponentsRenderStateDirty();
+}
+
 // configure_exposure declares method/minBrightness/maxBrightness/
 // compensationValue but only ever applied the free-form `settings` bag, so a
 // contract-following call answered "applied" with appliedSettings: [].
-inline bool ApplyDeclaredExposureFields(APostProcessVolume* Volume, const TSharedPtr<FJsonObject>& Payload,
+inline bool ApplyDeclaredExposureFields(FPostProcessSettings& Target, const TSharedPtr<FJsonObject>& Payload,
                                         TArray<FString>& Applied, TArray<FString>& Unsupported, FString& Error)
 {
     TSharedPtr<FJsonObject> Fields = MakeShared<FJsonObject>();
@@ -121,7 +144,7 @@ inline bool ApplyDeclaredExposureFields(APostProcessVolume* Volume, const TShare
         }
     }
     return Fields->Values.Num() == 0 ||
-        ApplyPostProcessSettings(Volume, Fields, Applied, Unsupported, Error);
+        ApplyPostProcessSettings(Target, Fields, Applied, Unsupported, Error);
 }
 
 inline APostProcessVolume* RequirePostProcessVolume(
@@ -149,8 +172,7 @@ inline APostProcessVolume* RequirePostProcessVolume(
                 ResolveErrorCode.IsEmpty() ? FString(TEXT("ACTOR_NOT_FOUND")) : ResolveErrorCode);
         }
     }
-    // Callers apply ApplyVolumeBlendFields after Volume->Modify() into their own Applied list:
-    // applying it here wrote it before the undo snapshot and hid it from the reply.
+    // Callers apply the blend fields through CommitPostProcessVolume, inside its undo step and into their reply.
     return Volume;
 }
 

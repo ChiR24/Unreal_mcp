@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "d60cf4c91abaf959",
+  "catalogRevision": "2dd614cb7e0b9e95",
   "recordCount": 416,
   "records": [
     {
@@ -1513,7 +1513,7 @@
                 "pose_library",
                 "procedural"
               ],
-              "description": "Which create animation asset variant to run; omit for 'asset'.\nasset: Create an empty Animation Sequence (assetType sequence, the default) or Montage on skeletonPath, named name in path (default /Game/Animations, made if missing), and save it. A montage starts with the DefaultSlot track and no animation. An asset of that class already at the path is reused (existingAsset); another class there is ASSET_TYPE_MISMATCH. For a sequence with a length and frame rate use kind sequence; for a montage from an animation, kind montage.\nsequence: Create an Animation Sequence asset.\nmontage: Create a montage asset, optionally from a sequence.\nblend_space: Create a 2D Blend Space asset.\nblend_space_1d: Create a 1D Blend Space asset.\nblend_space_2d: Create a 2D Blend Space asset.\naim_offset: Create an Aim Offset asset.\npose_library: Create a Pose Asset from an animation sequence, one pose per key frame, on the sequence's skeleton; PoseByName and PoseBlender nodes play its poses.\nprocedural: Create a procedural anim asset.",
+              "description": "Which create animation asset variant to run; omit for 'asset'.\nasset: Create an empty Animation Sequence (assetType sequence, the default) or Montage on skeletonPath, named name in path (default /Game/Animations, made if missing), and save it. A montage starts with the DefaultSlot track and no animation. An asset of that class already at the path is reused (existingAsset); another class there is ASSET_TYPE_MISMATCH. For a sequence with a length and frame rate use kind sequence; for a montage from an animation, kind montage.\nsequence: Create an Animation Sequence asset.\nmontage: Create a montage asset, optionally from a sequence.\nblend_space: Create a 2D Blend Space for skeletonPath (required) as name in path (default /Game/Animations) and save it: horizontal axis horizontalAxisName (Direction, -180 to 180 by default), vertical verticalAxisName (Speed, 0 to 600), 4 grid divisions each; add_blend_sample places animations on it. A blend space already there is kept as it is and answered with existingAsset and the axes it has (set_axis_settings changes them); another asset there is ASSET_TYPE_MISMATCH. The reply gives assetPath and saved.\nblend_space_1d: Create a 1D Blend Space for skeletonPath (required) as name in path (default /Game/Animations) and save it: one axis, axisName (Speed by default) from axisMin to axisMax (0 to 600), 4 grid divisions. A blend space already there is kept as it is and answered with existingAsset and the axis it has (set_axis_settings changes it); another asset there is ASSET_TYPE_MISMATCH. The reply gives assetPath and saved.\nblend_space_2d: Create a 2D Blend Space, as kind=blend_space does: skeletonPath required, horizontal axis Direction -180 to 180 and vertical Speed 0 to 600 unless given, saved; one already there is kept and answered with existingAsset and its axes.\naim_offset: Create an Aim Offset for skeletonPath (required) as name in path (default /Game/Animations) and save it, with the axes aim offsets use: Yaw -180 to 180 and Pitch -90 to 90, 4 grid divisions each (set_axis_settings changes them). Its samples are additive rotation-offset (mesh space) poses, added with add_aim_offset_sample. A taken name is refused. The reply gives assetPath and saved.\npose_library: Create a Pose Asset from an animation sequence, one pose per key frame, on the sequence's skeleton; PoseByName and PoseBlender nodes play its poses.\nprocedural: Create a procedural anim asset.",
               "default": "asset"
             }
           },
@@ -1725,6 +1725,26 @@
                 "animationPath"
               ]
             },
+            "create_blend_space": {
+              "required": [
+                "skeletonPath"
+              ]
+            },
+            "create_blend_space_1d": {
+              "required": [
+                "skeletonPath"
+              ]
+            },
+            "create_blend_space_2d": {
+              "required": [
+                "skeletonPath"
+              ]
+            },
+            "create_aim_offset": {
+              "required": [
+                "skeletonPath"
+              ]
+            },
             "create_pose_library": {
               "required": [
                 "sourceAnimationPath"
@@ -1741,8 +1761,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "3ce33edf0b9ad8818f980ff85c094404bff4c57a7a4ad9b6d2bf2f86bd93c129",
-        "content": "f7b321edf7389499506816a0443f4f21f7ed8fe0ddfa4c68a60b51736c0a8888"
+        "schema": "9db9e1314a2047256b7f4454349394e0a46c4a062b84d9e8bda3349b988a2cf6",
+        "content": "f746c272bce5dd642661b7d060e2b9d1dd8114f7480379abe7ac391c8fc172c3"
       }
     },
     {
@@ -2430,7 +2450,7 @@
         "summary": "Edit an Animation Blueprint graph: blend, cached-pose and slot nodes, state machines, states, transitions and transition rules, blend trees. Any other AnimGraph node (Two Bone IK, Modify Bone, Blend Space Player) is created by class with manage_blueprint edit_graph create_node.",
         "whenToUse": [
           "edit=add_blend_node: Graph needs a blend node.",
-          "edit=add_cached_pose: Pose reuse optimization needed.",
+          "edit=add_cached_pose: One pose (a locomotion state machine) must feed several places of the AnimGraph without being evaluated twice.",
           "edit=add_slot_node: Montages (attacks, reloads, emotes) must play on a character whose Animation Blueprint has no Slot node for their slot.",
           "edit=create_state_machine: State-driven animation is needed.",
           "edit=add_state_machine: A state machine must be embedded.",
@@ -2617,7 +2637,7 @@
                 "delete_transition",
                 "create_blend_tree"
               ],
-              "description": "Which edit anim graph variant to run.\nadd_blend_node: Add a blend node to an AnimGraph.\nadd_cached_pose: Add a cached pose node.\nadd_slot_node: Add a Slot node to an Animation Blueprint's AnimGraph: a montage plays only through a Slot node whose slotName matches its slot track, so put one between the locomotion pose and the output. slotName is the bare name montages use (DefaultSlot, UpperBody). A new slot goes in groupName on the skeleton (default DefaultGroup; another group is added and the skeleton saved, skeletonSaved); a slot the skeleton already has keeps its group, and a different groupName is refused (SLOT_IN_OTHER_GROUP). The node is placed unwired at positionX, positionY (its Source input takes the pose to play over, its Pose output goes on toward the Output Pose node's Result); the reply names it (nodeName, nodeId) for manage_blueprint edit_graph connect_pins. Saved unless save is false (saved).\ncreate_state_machine: Create a State Machine graph asset.\nadd_state_machine: Add a State Machine node to an AnimGraph.\nadd_state: Add a state to a State Machine.\nadd_transition: Add a transition between two states.\nset_transition_rules: Set transition rule logic: the condition a transition tests, plus its blend timing.\ndelete_transition: Delete a transition from a State Machine.\ncreate_blend_tree: Author a blend tree in an AnimBlueprint AnimGraph: a Blend List (by int) node fed by one Sequence Player per animation, optionally wired to the output pose."
+              "description": "Which edit anim graph variant to run.\nadd_blend_node: Add a blend node to an AnimGraph.\nadd_cached_pose: Add a Save Cached Pose node named cacheName to the AnimGraph of an Animation Blueprint, at positionX, positionY (default 0, 0); a Use Cached Pose node of that name then reads the pose anywhere in the graph. A name another cached pose in the Blueprint has is CACHE_NAME_TAKEN. The Blueprint is compiled and saved unless save is false; the reply gives cacheName as the node holds it, nodeId and saved.\nadd_slot_node: Add a Slot node to an Animation Blueprint's AnimGraph: a montage plays only through a Slot node whose slotName matches its slot track, so put one between the locomotion pose and the output. slotName is the bare name montages use (DefaultSlot, UpperBody). A new slot goes in groupName on the skeleton (default DefaultGroup; another group is added and the skeleton saved, skeletonSaved); a slot the skeleton already has keeps its group, and a different groupName is refused (SLOT_IN_OTHER_GROUP). The node is placed unwired at positionX, positionY (its Source input takes the pose to play over, its Pose output goes on toward the Output Pose node's Result); the reply names it (nodeName, nodeId) for manage_blueprint edit_graph connect_pins. Saved unless save is false (saved).\ncreate_state_machine: Create a State Machine graph asset.\nadd_state_machine: Add a State Machine node to an AnimGraph.\nadd_state: Add a state to a State Machine.\nadd_transition: Add a transition between two states.\nset_transition_rules: Set transition rule logic: the condition a transition tests, plus its blend timing.\ndelete_transition: Delete a transition from a State Machine.\ncreate_blend_tree: Author a blend tree in an AnimBlueprint AnimGraph: a Blend List (by int) node fed by one Sequence Player per animation, optionally wired to the output pose."
             }
           },
           "required": [
@@ -2942,8 +2962,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "440c01d41e88b39de4a9214ca4e820263425c494ab3ccdf4cbf0799da9f7b245",
-        "content": "35bf380923675dcdff60ffd3e572cac177b252410d2bd4d9f5bd8e59cb077df4"
+        "schema": "7ea66adda3c00a28ca9141000391c654d4a14c5633eef00ff73bd2ffaf420990",
+        "content": "f68a15d73a1db50e55a2a72a51264cf70fd4d3991be1f0acab7dfd42b7b29001"
       }
     },
     {
@@ -3235,7 +3255,7 @@
                 "set_sequence_length",
                 "add_aim_offset_sample"
               ],
-              "description": "Which edit animation variant to run.\nadd_bone_track: Add a bone animation track.\nset_bone_key: Set a bone transform key at a frame; a location, rotation or scale left out keeps the value the bone has there (the key of its track, or the reference pose for a bone with no track yet).\nset_curve_key: Set an animation curve key.\nadd_notify: Add a frame notify to a sequence (authoring).\nadd_notify_state: Add a notify state spanning a frame range.\nadd_sync_marker: Add a sync marker to a sequence.\nset_additive_settings: Configure additive animation settings.\nset_root_motion_settings: Configure root motion on a sequence.\nset_sequence_length: Set the length of an Animation Sequence.\nadd_aim_offset_sample: Add a sample pose to an Aim Offset."
+              "description": "Which edit animation variant to run.\nadd_bone_track: Add an empty transform track for boneName to an animation sequence (assetPath, or animationPath), to key with edit=set_bone_key. A bone its skeleton lacks is BONE_NOT_FOUND_IN_SKELETON, listing bones. A track the sequence already has is left as it is and answered with alreadyExists true and nothing saved; otherwise the sequence is saved unless save is false (saved).\nset_bone_key: Set a bone transform key at a frame; a location, rotation or scale left out keeps the value the bone has there (the key of its track, or the reference pose for a bone with no track yet).\nset_curve_key: Set a key of the float curve curveName in an animation sequence at frame (default 0) to value: a curve the sequence lacks is added (curveCreated) unless createIfMissing is false, which refuses it (CURVE_NOT_FOUND), and a key the engine does not take is CURVE_KEY_FAILED. The reply reads the curve back at that frame (value) and says whether it saved (saved, unless save is false). Curves drive morph targets and material parameters, and AnimBlueprints read them by name.\nadd_notify: Add a frame notify to a sequence (authoring).\nadd_notify_state: Add a notify state spanning a frame range.\nadd_sync_marker: Add a sync marker to a sequence.\nset_additive_settings: Configure additive animation settings.\nset_root_motion_settings: Configure root motion on a sequence.\nset_sequence_length: Set the length of an Animation Sequence.\nadd_aim_offset_sample: Add a sample pose to an Aim Offset."
             }
           },
           "required": [
@@ -3467,8 +3487,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "6cb1639c3080664633f85c438c5354811143c4148078afcd43f7f1c88f47ab4c",
-        "content": "cf8aef58092d55a4884d96c517130e262f75d4ae574d971118ecf7b31bd0c9aa"
+        "schema": "5bd4e542227c9b2188a5fbc99a638dc99d50485625a62119c7c489ef39827792",
+        "content": "9d9b9795cce07448fb9279c4042af13219c7178669e5606031053aed1df43fde"
       }
     },
     {
@@ -3611,7 +3631,7 @@
                 "set_interpolation_settings",
                 "rebuild"
               ],
-              "description": "Which edit blend space variant to run.\nadd_sample: Add a blend sample to a Blend Space.\nset_axis_settings: Set Blend Space axis settings.\nset_interpolation_settings: Set Blend Space input smoothing and sample weight speed; only the fields sent change.\nrebuild: Force a Blend Space rebuild and recompile referencers."
+              "description": "Which edit blend space variant to run.\nadd_sample: Add a blend sample to a Blend Space.\nset_axis_settings: Change one axis of a blend space (axis: X or Horizontal, the default, or Y or Vertical, which a 1D blend space lacks): axisName, minValue, maxValue and gridDivisions, each kept when not sent. minValue must stay below maxValue and gridDivisions at least 1. Samples are checked against the new range and the runtime data rebuilt, as the blend space editor does. The reply reads the axis back and gives saved (unless save is false).\nset_interpolation_settings: Set Blend Space input smoothing and sample weight speed; only the fields sent change.\nrebuild: Force a Blend Space rebuild and recompile referencers."
             }
           },
           "required": [
@@ -3757,8 +3777,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "83c06f2e2f0efb2f4e8167b50d485ba6834c6df86b08cfb6f41e76e2848be522",
-        "content": "24ee463148e32e7afc938aae4e5dce80e5711fd6a0d7852f37bc728a0e119ed6"
+        "schema": "65585c2c5288e19d3dc5def55eff96c80976032aa94588137979e28ec5decab8",
+        "content": "10907b93bcd9c9c45931d6faf8a135a033dfe3979d00a1df1af2d8043bced530"
       }
     },
     {
@@ -5501,7 +5521,7 @@
                 "set_bone_transform",
                 "create_virtual_bone"
               ],
-              "description": "Which edit skeleton variant to run.\nadd_bone: Add a bone to a skeleton.\nrename_bone: Rename a virtual bone on a skeleton (real skeleton bones cannot be renamed and answer OPERATION_NOT_SUPPORTED).\nset_bone_parent: Reparent a bone under a new parent.\nset_bone_transform: Set the rest transform of a bone.\ncreate_virtual_bone: Create a virtual bone between two bones."
+              "description": "Which edit skeleton variant to run.\nadd_bone: Add boneName to a skeleton under parentBoneName at location, rotation and scale relative to its parent (scale a number for uniform, or {x, y, z}); a skeleton with bones refuses a new root (PARENT_REQUIRED), and a taken name is BONE_EXISTS. One undo step (the reply's undo block says so), saved unless save is false; the reply gives boneCount.\nrename_bone: Rename a virtual bone on a skeleton (real skeleton bones cannot be renamed and answer OPERATION_NOT_SUPPORTED).\nset_bone_parent: Move boneName, with its children, under the existing bone parentBoneName (UE 5.3 and later); the reply gives newBoneIndex and changed. The parent it already has answers changed false and writes nothing; the bone itself or one of its descendants as parent is INVALID_ARGUMENT, a bone not in the skeleton BONE_NOT_FOUND or PARENT_NOT_FOUND. One undo step (the reply's undo block says so), saved unless save is false.\nset_bone_transform: Set the rest transform of a bone.\ncreate_virtual_bone: Create a virtual bone between two bones."
             }
           },
           "required": [
@@ -5657,8 +5677,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "ce0ee05ff98b17c70a8b5fe173a603d64b13847f22b7f09a159f1117cf61e1c4",
-        "content": "63930f21f30c90d321823a4f601df8de7d66c46a4bdb34b999d3f4796dcafe86"
+        "schema": "ad87ef534cea28644c331cb62c2d82c8ddb44c69ba8ae03aa59bf3d947ae081a",
+        "content": "c2ce3ba3ce26c9056fd40f415c31d507a1dcc73885eb888f30870d6ae607e66c"
       }
     },
     {
@@ -7265,7 +7285,7 @@
                 "socket",
                 "physics_body"
               ],
-              "description": "Which remove skeleton element variant to run.\nbone: Remove a bone from a skeleton.\nsocket: Remove a socket from a skeleton or skeletal mesh.\nphysics_body: Remove a physics body from a Physics Asset."
+              "description": "Which remove skeleton element variant to run.\nbone: Remove boneName from a skeleton (UE 5.3 and later), with its children when removeChildren is true. The only root a skeleton has is refused (CANNOT_REMOVE_ROOT); a second root is removed like any bone. One undo step (the reply's undo block says so), saved unless save is false; the reply gives boneCount.\nsocket: Remove a socket from a skeleton or skeletal mesh.\nphysics_body: Remove a physics body from a Physics Asset."
             }
           },
           "required": [
@@ -7423,8 +7443,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "6994fa1cf081de274eff5386656d10e038ad0b44a0bd164cfe67a795492fc375",
-        "content": "7703a14ed45828ec506a22f31a8aea47b1877e837860561b6227d913be656801"
+        "schema": "fa60e18f6da18a12ad92b90e6e4f95700313ba4565bcdc1a10242fd1f52930aa",
+        "content": "fc8b63d3ac1edb2780a876cf5fadc7d481c717f86316405eef74dd286c26e3b0"
       }
     },
     {
@@ -7484,6 +7504,7 @@
         "whenNotToUse": [
           "kind=setup: An IK Rig asset is needed (kind rig).",
           "kind=rig: Use create_control_rig.",
+          "kind=rig: A whole retarget from one character to another is wanted: setup_retargeting builds both rigs and the retargeter.",
           "kind=retargeter: Both characters share one skeleton.",
           "kind=chain_mapping: The retargeter does not exist yet (kind retargeter)."
         ]
@@ -7545,7 +7566,7 @@
                 "retargeter",
                 "chain_mapping"
               ],
-              "description": "Which setup ik variant to run; omit for 'setup'.\nsetup: Create a Control Rig Blueprint named name in path (default /Game/Animations) to host IK solvers, previewing the preview mesh of skeletonPath; its rig hierarchy starts empty (import the bones in the Control Rig editor). An existing Control Rig at the path is reused, another asset there is refused. Saved.\nrig: Create an IK Rig asset.\nretargeter: Create an IK Retargeter asset named name in path (default /Game/Retargeting) between sourceIKRigPath and targetIKRigPath, each optional (kind=chain_mapping needs both); a rig path that does not load is IK_RIG_NOT_FOUND before anything is made, and a taken path ASSET_ALREADY_EXISTS. On UE 5.6 and later the default retarget ops are added. Saved unless save is false.\nchain_mapping: Set which source IK Rig chain drives a target chain in an IK Retargeter (None clears it), or auto-map every unmapped chain by name; replies with the whole mapping.",
+              "description": "Which setup ik variant to run; omit for 'setup'.\nsetup: Create a Control Rig Blueprint named name in path (default /Game/Animations) to host IK solvers, previewing the preview mesh of skeletonPath; its rig hierarchy starts empty (import the bones in the Control Rig editor). An existing Control Rig at the path is reused, another asset there is refused. Saved.\nrig: Create an IK Rig named name in path (default /Game/Retargeting). On UE 5.6 and later, given skeletalMeshPath (or skeletonPath, whose preview mesh is used) it is characterized from the mesh as setup_retargeting does: retarget chains and the pelvis filled in, ready for a retargeter, and an IK Rig already under that name is rebuilt in place. It is saved unless save is false; the reply gives assetPath and saved.\nretargeter: Create an IK Retargeter asset named name in path (default /Game/Retargeting) between sourceIKRigPath and targetIKRigPath, each optional (kind=chain_mapping needs both); a rig path that does not load is IK_RIG_NOT_FOUND before anything is made, and a taken path ASSET_ALREADY_EXISTS. On UE 5.6 and later the default retarget ops are added. Saved unless save is false.\nchain_mapping: Set which source IK Rig chain drives a target chain in an IK Retargeter (None clears it), or auto-map every unmapped chain by name; replies with the whole mapping.",
               "default": "setup"
             }
           },
@@ -7721,8 +7742,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "5c0c753e5bef1ba0c13e7137c6a187146cae1c7c771dc4469a314794f9ec00f1",
-        "content": "27dee0ac8f1a83f2f79b2d30d9138c694d14e84ddf07562dca72e16f9f24ebd4"
+        "schema": "1eb88f6c520c16ee98cb339f636cf5505a212f592f5947e08e04ba14f4890bca",
+        "content": "f483102b90c811a24a6f652a57e9b460981e731c4f733cc0c72481cb4546e6b8"
       }
     },
     {
@@ -18827,7 +18848,7 @@
                 "arrange_nodes",
                 "batch"
               ],
-              "description": "Which edit graph variant to run.\nadd_node: Add a node to a Blueprint graph (alias of edit=create_node with simplified type resolution).\ncreate_node: Create a graph node (function call, event, variable, branch, etc.) in a Blueprint graph.\ncreate_reroute_node: Create a reroute node for organizing exec/data wire paths in a Blueprint graph.\ncreate_struct_make_break_nodes: Create a Make or Break Struct node in a Blueprint graph from a UserDefinedStruct or native UScriptStruct.\nconnect_pins: Connect two graph pins (exec or data) by nodeGuid and pin name. A pin the editor adds on demand is added: a Sequence's then_2, a Make Array's [2], a Switch on Int's case 7 (a new switch has only Default).\nset_node_property: Set a property on a graph node by nodeGuid.\nset_pin_default_value: Set the default value of a data pin on a graph node; a read-only (const reference) pin gets it through a MakeLiteral node wired into it.\nadd_construction_script: Add or open the Construction Script graph for a Blueprint.\narrange_nodes: Tidy a graph: move the listed nodes beside the nodes they are wired to (right of what runs them, below-left of what reads them), each to the nearest free slot; the nodes left out stay put and anchor them.\nbatch: Run many graph edits in one call: add variables, functions (with their bodies), events and event dispatchers, create nodes, connect pins, set pin defaults and node properties, with $id references between steps."
+              "description": "Which edit graph variant to run.\nadd_node: Add a node to a Blueprint graph (alias of edit=create_node with simplified type resolution).\ncreate_node: Create a graph node (function call, event, variable, branch, etc.) in a Blueprint graph.\ncreate_reroute_node: Create a reroute node for organizing exec/data wire paths in a Blueprint graph.\ncreate_struct_make_break_nodes: Create a Make or Break Struct node in a Blueprint graph from a UserDefinedStruct or native UScriptStruct.\nconnect_pins: Connect two graph pins (exec or data) by nodeGuid and pin name. A pin the editor adds on demand is added: a Sequence's then_2, a Make Array's [2], a Switch on Int's case 7 (a new switch has only Default).\nset_node_property: Set a property on a graph node by nodeGuid.\nset_pin_default_value: Set the default value of a data pin on a graph node; a read-only (const reference) pin gets it through a MakeLiteral node wired into it.\nadd_construction_script: Add or open the Construction Script graph for a Blueprint.\narrange_nodes: Tidy a graph: move the listed nodes beside the nodes they are wired to (right of what runs them, below-left of what reads them), each to the nearest free slot; the nodes left out stay put and anchor them. An unknown nodeId is refused before anything moves. The Blueprint then compiles and is saved; that compile clears the editor's undo history whenever the history holds the Blueprint (undoBufferReset, and undo.undoable false with UNDO_CLEARED_BY_COMPILE), so the move usually cannot be undone: run edit=arrange_nodes again or set positions back with edit=set_node_property.\nbatch: Run many graph edits in one call: add variables, functions (with their bodies), events and event dispatchers, create nodes, connect pins, set pin defaults and node properties, with $id references between steps."
             }
           },
           "required": [
@@ -19047,6 +19068,13 @@
                 "type": "string"
               },
               "description": "Ids of listed nodes that stayed where they were: wired to no node left in place, or no free slot near one."
+            },
+            "alreadyInPlace": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Ids of listed nodes already beside what they are wired to: nothing moved them, so there is nothing to undo for them."
             },
             "results": {
               "type": "array",
@@ -19422,8 +19450,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "7e2add97752ba8089b8dc26449ca6ff3f63c419aedd376c990ed04325e1073d4",
-        "content": "a30a2d030cb9b873f48af1c03a5204540e5f9a58a4e8a4e0b00cc2f2fb60f8fe"
+        "schema": "38ee34d9e95febbdeaf51e5992d1a80b4dd8871663de0f6cf3a9aa1176fac50f",
+        "content": "ff3fa26434290ec4ee0816d8e34889340498264f4a533e25cbe841b380f0fd27"
       }
     },
     {
@@ -24635,7 +24663,7 @@
           "trees",
           "plants"
         ],
-        "summary": "Create or update a foliage type asset, place explicit instances/transforms, or paint instances over a brush disc or a box area, dropped onto the ground.",
+        "summary": "Create or update a foliage type asset, place explicit instances/transforms, or paint instances over a brush disc or a box area, dropped onto the ground. Placing and painting are one undo step each.",
         "whenToUse": [
           "Foliage must be added, configured, or removed in the level."
         ],
@@ -24893,7 +24921,7 @@
                 "instances",
                 "paint"
               ],
-              "description": "Which add foliage variant to run; omit for 'scatter'.\nscatter: Add foliage: with only meshPath (+ name) create or update a foliage type asset; with a foliage type or a placement (locations, position, location + radius + count) scatter instances onto the ground, a bare meshPath standing in for its auto foliage type.\ninstances: Add explicit foliage instances: full transforms, or bare locations varied by minScale/maxScale/randomYaw.\npaint: Paint foliage over a brush disc (location + radius) or a box area: count instances dropped onto the ground, each with a random scale and yaw.",
+              "description": "Which add foliage variant to run; omit for 'scatter'.\nscatter: Add foliage: with only meshPath (+ name) create or update a foliage type asset; with a foliage type or a placement (locations, position, location + radius + count) scatter instances onto the ground, a bare meshPath standing in for its auto foliage type.\ninstances: Add explicit foliage instances: full transforms, or bare locations varied by minScale/maxScale/randomYaw. One undo step removes them all; the reply's undo block says so.\npaint: Paint foliage over a brush disc (location + radius) or a box area: count instances dropped onto the ground, each with a random scale and yaw. One undo step removes the whole stroke; NO_SURFACE (no ground below any point) adds nothing.",
               "default": "scatter"
             }
           },
@@ -24928,7 +24956,7 @@
       },
       "examples": [
         {
-          "title": "Create or update a foliage type asset, place explicit instances/transforms, or paint instances over a brush disc or a box area, dropped onto the ground.",
+          "title": "Create or update a foliage type asset, place explicit instances/transforms, or paint instances over a brush disc or a box area, dropped onto the ground. Placing and painting are one undo step each.",
           "input": {
             "action": "add_foliage",
             "meshPath": "/Game/Meshes/SM_Bush",
@@ -25023,8 +25051,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "50704e68cabb553b1a9e18b934bc32cac0bb54c240b03b38c807f6f1ffe16616",
-        "content": "87b152f727839fe766b08c103e3048ca515a6c612cc0208d8a471d3ca308a471"
+        "schema": "1d69a2ec3894703cfb5473af28e37c8f764811e72feee995d7335213b3db30fa",
+        "content": "360cfe015f4c80c43e1516ac5669c28aecaec629b9c23f528e478685b59b26da"
       }
     },
     {
@@ -26809,7 +26837,7 @@
           "change screen tint",
           "add bloom or depth of field"
         ],
-        "summary": "Configure a post-process setting on a volume or camera: bloom, exposure, depth of field, motion blur, tonemapper, color grading, LUT, white balance, vignette, grain, chromatic aberration, lens flare, SSAO/GTAO, SSR, screen percentage, blend.",
+        "summary": "Set post-process values on a PostProcessVolume, chosen by setting: bloom, exposure, depth of field, motion blur, tonemapper, color grading, LUT, white balance, vignette, grain, chromatic aberration, lens flare, SSAO/GTAO, screen-space and Lumen reflections, blend (screen_percentage sets r.ScreenPercentage instead). The volume is actorName, else the level's unbound (whole level) volume, the persistent level's first; a level with none gets one, named actorName when given. A name no volume has is ACTOR_NOT_FOUND listing the volumes, several unbound volumes AMBIGUOUS. Each value is the FPostProcessSettings field it names and turns that field's override on; settings takes any field by engine name. A value outside the engine's limits, an unknown name and a call that sets nothing are refused, and nothing is written unless every value is taken. One undo step; the level is left unsaved. blendWeight (0-1) and infiniteUnbound set the volume itself with any variant.",
         "whenToUse": [
           "setting=configure_bloom|set_bloom_intensity|set_bloom_threshold|configure_exposure|set_exposure_method|configure_dof|set_dof_method|set_focal_distance|set_aperture|configure_bokeh|configure_motion_blur|set_motion_blur_amount|set_motion_blur_max|configure_tonemapper|set_tonemapper_type|set_pp_color_grading|set_pp_lut|set_pp_white_balance|configure_lens_flare|configure_ssr_settings|configure_lumen_reflection_settings|configure_pp_blend: Post-process, exposure, or screen effect settings must be configured.",
           "setting=set_exposure_compensation|set_exposure_min_max|configure_vignette|configure_grain|configure_chromatic_aberration|configure_ssao|configure_gtao|configure_screen_percentage: Exposure, ambient occlusion, screen, or capture settings must be configured."
@@ -26848,35 +26876,35 @@
             },
             "amount": {
               "type": "number",
-              "description": "Bloom intensity."
+              "description": "Bloom intensity, 0 or more (0.675 by default; 8 is the top of the editor slider)."
             },
             "threshold": {
               "type": "number",
-              "description": "Bloom threshold (-1 = everything blooms)."
+              "description": "Brightness a pixel needs to bloom: -1 (the default) blooms everything, 0 or more only brighter pixels."
             },
             "compensationValue": {
               "type": "number",
-              "description": "Exposure compensation value."
+              "description": "Exposure bias in stops (+1 is twice as bright)."
             },
             "minBrightness": {
               "type": "number",
-              "description": "Minimum brightness."
+              "description": "Lowest auto exposure (EV100 with the extended luminance range)."
             },
             "maxBrightness": {
               "type": "number",
-              "description": "Maximum brightness."
+              "description": "Highest auto exposure (EV100 with the extended luminance range)."
             },
             "method": {
               "type": "string",
-              "description": "Auto-exposure method: Manual, Histogram or Basic."
+              "description": "Auto-exposure method: Manual (fixed; camera settings), Histogram (the default) or Basic."
             },
             "distance": {
               "type": "number",
-              "description": "Focus distance."
+              "description": "Focal distance in cm, 0 or more."
             },
             "aperture": {
               "type": "number",
-              "description": "Camera aperture (f-stop)."
+              "description": "f-stop, 1 to 32."
             },
             "lutPath": {
               "type": "string",
@@ -26884,7 +26912,7 @@
             },
             "enabled": {
               "type": "boolean",
-              "description": "false zeroes the lens flare intensity."
+              "description": "false sets LensFlareIntensity 0; true sets it back to 1 unless settings gives it."
             },
             "screenPercentage": {
               "type": "number",
@@ -26924,7 +26952,7 @@
                 "configure_screen_percentage",
                 "configure_pp_blend"
               ],
-              "description": "Which configure post process variant to run.\nconfigure_bloom: Configure bloom settings.\nset_bloom_intensity: Set bloom intensity.\nset_bloom_threshold: Set bloom threshold.\nconfigure_exposure: Configure exposure settings.\nset_exposure_compensation: Set exposure compensation value.\nset_exposure_method: Set exposure method.\nset_exposure_min_max: Set exposure min and max brightness; a bound left out keeps its value.\nconfigure_dof: Configure depth of field.\nset_dof_method: Set depth of field method.\nset_focal_distance: Set focal distance for DOF.\nset_aperture: Set camera aperture (f-stop).\nconfigure_bokeh: Configure bokeh settings.\nconfigure_motion_blur: Configure motion blur settings.\nset_motion_blur_amount: Set motion blur amount.\nset_motion_blur_max: Set motion blur maximum.\nconfigure_tonemapper: Set the filmic tonemapper's curve on a post-process volume from settings, by FPostProcessSettings field: FilmSlope, FilmToe, FilmShoulder, FilmBlackClip, FilmWhiteClip, ToneCurveAmount, ExpandGamut (each turns its override on).\nset_tonemapper_type: Choose the tonemapper look on a post-process volume: method Filmic (default: the engine's filmic tone curve, ToneCurveAmount and ExpandGamut 1) or Linear (the curve off, both 0); anything else is refused, nothing changed.\nset_pp_color_grading: Set post-process color grading.\nset_pp_lut: Set post-process LUT texture.\nset_pp_white_balance: Set post-process white balance.\nconfigure_vignette: Configure vignette settings.\nconfigure_grain: Configure film grain settings.\nconfigure_chromatic_aberration: Configure chromatic aberration.\nconfigure_lens_flare: Configure lens flare settings.\nconfigure_ssao: Configure screen-space ambient occlusion.\nconfigure_gtao: Configure ground-truth ambient occlusion.\nconfigure_ssr_settings: Configure screen-space reflections.\nconfigure_lumen_reflection_settings: Configure Lumen reflection settings.\nconfigure_screen_percentage: Set screen percentage for rendering (the r.ScreenPercentage console variable; no volume involved).\nconfigure_pp_blend: Configure a post-process volume's blend weight, unbound flag and whether it is enabled."
+              "description": "Which configure post process variant to run.\nconfigure_bloom: Set bloom: amount (BloomIntensity) and threshold (BloomThreshold), written after settings, which takes any other bloom field by engine name (BloomSizeScale, BloomMethod). Send at least one.\nset_bloom_intensity: Set BloomIntensity to amount: 0 or more, 0.675 by default, 8 at the top of the editor slider; 0 turns bloom off.\nset_bloom_threshold: Set BloomThreshold to threshold, the brightness a pixel needs to bloom: -1 (the default) blooms everything, 0 or more only brighter pixels.\nconfigure_exposure: Set exposure: method (Manual, Histogram, the default, or Basic), compensationValue (AutoExposureBias, in stops), minBrightness and maxBrightness (the auto exposure range), then settings for any other exposure field (AutoExposureSpeedUp, AutoExposureSpeedDown). The range is in EV100 when the project extends the default luminance range, as UE 5 projects do, and in luminance otherwise. Send at least one.\nset_exposure_compensation: Set AutoExposureBias to compensationValue, in stops: +1 is twice as bright, -1 half; it applies with every exposure method.\nset_exposure_method: Set AutoExposureMethod: Manual (no adaptation: exposure from compensation and camera settings), Histogram (the default, adapting from the scene's brightness) or Basic (a cheaper adaptation). Anything else is INVALID_SETTING.\nset_exposure_min_max: Set the auto exposure range, AutoExposureMinBrightness and AutoExposureMaxBrightness (-10 or more): in EV100 when the project extends the default luminance range, as UE 5 projects do, in luminance otherwise. Equal values fix the exposure. A bound left out keeps its value; send at least one.\nconfigure_dof: Set depth of field from settings, by engine field name: DepthOfFieldFocalDistance (cm to the sharp plane; at 0, the default, there is no depth of field), DepthOfFieldFstop (1-32; lower blurs more), DepthOfFieldSensorWidth (mm), DepthOfFieldDepthBlurRadius and the rest of the Lens|Depth of Field fields.\nset_dof_method: Choose the depth of field the volume renders with method: UE 5 desktop and console renderers always use the cinematic one, so this picks what mobile renders, Gaussian (bMobileHQGaussian on: the high quality Gaussian blur) or Cinematic (off: mobile's own). CircleDOF and BokehDOF are taken as Cinematic, GaussianDOF as Gaussian.\nset_focal_distance: Set DepthOfFieldFocalDistance, the distance in cm from the camera to the sharp plane, 0 or more; depth of field shows only while it is above 0 (0 is the default).\nset_aperture: Set DepthOfFieldFstop to aperture, 1 to 32 (4 by default): a lower f-stop gives a shallower, blurrier depth of field. Shows once a focal distance is set.\nconfigure_bokeh: Set the shape of out-of-focus highlights from settings, by engine field name: DepthOfFieldBladeCount (aperture blades), DepthOfFieldMinFstop, DepthOfFieldSensorWidth (mm), DepthOfFieldSqueezeFactor (anamorphic).\nconfigure_motion_blur: Set motion blur from settings, by engine field name: MotionBlurAmount (0-1, 0.5 by default; 0 turns it off), MotionBlurMax (0-100, percent of the screen width, 5 by default), MotionBlurTargetFPS, MotionBlurPerObjectSize.\nset_motion_blur_amount: Set MotionBlurAmount to amount, 0 to 1 (0.5 by default); 0 turns motion blur off.\nset_motion_blur_max: Set MotionBlurMax to amount: the longest blur streak, 0 to 100 percent of the screen width (5 by default).\nconfigure_tonemapper: Set the filmic tonemapper's curve on a post-process volume from settings, by FPostProcessSettings field: FilmSlope, FilmToe, FilmShoulder, FilmBlackClip, FilmWhiteClip, ToneCurveAmount, ExpandGamut (each turns its override on).\nset_tonemapper_type: Choose the tonemapper look on a post-process volume: method Filmic (default: the engine's filmic tone curve, ToneCurveAmount and ExpandGamut 1) or Linear (the curve off, both 0); anything else is refused, nothing changed.\nset_pp_color_grading: Set color grading on the volume from settings, by engine field name: ColorSaturation, ColorContrast, ColorGamma and ColorGain as {x, y, z, w} (1 is neutral; w scales all three), ColorOffset (0 neutral), each also in a Shadows, Midtones or Highlights form (ColorSaturationShadows), and ColorGradingIntensity (0-1).\nset_pp_lut: Grade the volume with a color lookup table: lutPath is a texture in the 256x16 strip LUT format, which becomes ColorGradingLUT with its override on (ColorGradingIntensity sets how strongly it applies). A path that loads no texture is ASSET_NOT_FOUND.\nset_pp_white_balance: Set white balance on the volume from settings, by engine field name: WhiteTemp (Kelvin; 6500, the default, is neutral, lower is warmer) and WhiteTint (-1 to 1, green to magenta).\nconfigure_vignette: Set VignetteIntensity to amount: how much the screen edges darken, 0 (off) to 1 on the editor slider, 0.4 by default.\nconfigure_grain: Set film grain: amount (FilmGrainIntensity, 0 by default, 1 at the top of the slider) written after settings, which takes other grain fields by engine name (FilmGrainIntensityShadows, FilmGrainTexelSize, FilmGrainTexture). Send at least one.\nconfigure_chromatic_aberration: Set chromatic aberration: amount (SceneFringeIntensity, 0 by default, 5 at the top of the slider) written after settings, which takes other fields by engine name (ChromaticAberrationStartOffset 0-1). Send at least one.\nconfigure_lens_flare: Set lens flares from settings, by engine field name (LensFlareIntensity 0-16, 1 by default; LensFlareThreshold; LensFlareBokehSize; LensFlareTint). enabled false sets LensFlareIntensity 0; enabled true puts it back to 1 unless settings gives it.\nconfigure_ssao: Set screen-space ambient occlusion: amount (AmbientOcclusionIntensity, 0-1, 0.5 by default) written after settings, which takes other fields by engine name (AmbientOcclusionRadius in cm, AmbientOcclusionPower, AmbientOcclusionQuality 0-100). With Lumen on, its own occlusion replaces this. Send at least one.\nconfigure_gtao: Set ambient occlusion fields from settings, by engine field name (AmbientOcclusionQuality 0-100, AmbientOcclusionRadius, AmbientOcclusionIntensity); ground truth AO itself is chosen by r.AmbientOcclusion.Method, which this does not change.\nconfigure_ssr_settings: Set screen-space reflections on the volume from settings, by engine field name: ScreenSpaceReflectionIntensity and ScreenSpaceReflectionQuality (0-100; 100 and 50 by default) and ScreenSpaceReflectionMaxRoughness (0-1).\nconfigure_lumen_reflection_settings: Set Lumen reflections on the volume from settings, by engine field name, such as LumenReflectionQuality and LumenMaxRoughnessToTraceReflections (0-1); they show only where the project renders reflections with Lumen.\nconfigure_screen_percentage: Set screen percentage for rendering (the r.ScreenPercentage console variable; no volume involved).\nconfigure_pp_blend: Set the volume's own fields: enabled, blendWeight (0-1, how much of the volume applies) and infiniteUnbound (true: the whole level, false: only inside its bounds). Send at least one."
             }
           },
           "required": [
@@ -26959,7 +26987,7 @@
       },
       "examples": [
         {
-          "title": "Configure a post-process setting on a volume or camera: bloom, exposure, depth of field, motion blur, tonemapper, color grading, LUT, white balance, vignette, grain, chromatic aberration, lens flare, SSAO/GTAO, SSR, screen percentage, blend.",
+          "title": "Set post-process values on a PostProcessVolume, chosen by setting: bloom, exposure, depth of field, motion blur, tonemapper, color grading, LUT, white balance, vignette, grain, chromatic aberration, lens flare, SSAO/GTAO, screen-space and Lumen reflections, blend (screen_percentage sets r.ScreenPercentage instead). The volume is actorName, else the level's unbound (whole level) volume, the persistent level's first; a level with none gets one, named actorName when given. A name no volume has is ACTOR_NOT_FOUND listing the volumes, several unbound volumes AMBIGUOUS. Each value is the FPostProcessSettings field it names and turns that field's override on; settings takes any field by engine name. A value outside the engine's limits, an unknown name and a call that sets nothing are refused, and nothing is written unless every value is taken. One undo step; the level is left unsaved. blendWeight (0-1) and infiniteUnbound set the volume itself with any variant.",
           "input": {
             "action": "configure_post_process",
             "setting": "configure_bloom"
@@ -27186,13 +27214,110 @@
             "screenPercentage": [
               "configure_screen_percentage"
             ]
+          },
+          "requires": {
+            "set_bloom_intensity": {
+              "required": [
+                "amount"
+              ]
+            },
+            "set_bloom_threshold": {
+              "required": [
+                "threshold"
+              ]
+            },
+            "set_exposure_compensation": {
+              "required": [
+                "compensationValue"
+              ]
+            },
+            "set_exposure_method": {
+              "required": [
+                "method"
+              ]
+            },
+            "configure_dof": {
+              "required": [
+                "settings"
+              ]
+            },
+            "set_dof_method": {
+              "required": [
+                "method"
+              ]
+            },
+            "set_focal_distance": {
+              "required": [
+                "distance"
+              ]
+            },
+            "set_aperture": {
+              "required": [
+                "aperture"
+              ]
+            },
+            "configure_bokeh": {
+              "required": [
+                "settings"
+              ]
+            },
+            "configure_motion_blur": {
+              "required": [
+                "settings"
+              ]
+            },
+            "set_motion_blur_amount": {
+              "required": [
+                "amount"
+              ]
+            },
+            "set_motion_blur_max": {
+              "required": [
+                "amount"
+              ]
+            },
+            "set_pp_color_grading": {
+              "required": [
+                "settings"
+              ]
+            },
+            "set_pp_lut": {
+              "required": [
+                "lutPath"
+              ]
+            },
+            "set_pp_white_balance": {
+              "required": [
+                "settings"
+              ]
+            },
+            "configure_vignette": {
+              "required": [
+                "amount"
+              ]
+            },
+            "configure_gtao": {
+              "required": [
+                "settings"
+              ]
+            },
+            "configure_ssr_settings": {
+              "required": [
+                "settings"
+              ]
+            },
+            "configure_lumen_reflection_settings": {
+              "required": [
+                "settings"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "fbbc07ec14bf0f26c4012689fb9a1472a683b49da74ea64653ecdd941fd086bf",
-        "content": "70a8fcc5deaf5c68b581b4e81714b9182bc115259405e1e5fee7c4db5f343e99"
+        "schema": "6e0499250b33a73ef4c234087fc992a568d3d5d48c155fa859237578f2a2736b",
+        "content": "76b32e5dbdb65febcd0865c250283fbfaab98032f169538eddef50b090d670c6"
       }
     },
     {
@@ -27505,11 +27630,11 @@
             },
             "resolution": {
               "type": "integer",
-              "description": "Capture resolution."
+              "description": "Width and height in pixels, 1 to 4096."
             },
             "captureOffset": {
               "type": "object",
-              "description": "Capture offset.",
+              "description": "Offset in cm from the capture actor.",
               "properties": {
                 "x": {
                   "type": "number",
@@ -27544,7 +27669,7 @@
                 "capture",
                 "recapture"
               ],
-              "description": "Which configure scene capture variant to run.\nrender_target: Assign a render target to a scene capture.\nsource: Configure scene capture source.\nresolution: Set scene capture resolution.\noffset: Set scene capture offset.\nplanar_reflection: Configure planar reflection settings.\nreflection_resolution: Set reflection capture resolution (project-wide CVar; marks the named capture, or every capture, for recapture).\ncapture: Trigger a scene capture on an actor.\nrecapture: Recapture a reflection or scene capture."
+              "description": "Which configure scene capture variant to run.\nrender_target: Assign a render target to a scene capture.\nsource: Configure scene capture source.\nresolution: Resize the render target a SceneCapture2D draws into to resolution x resolution (1-4096; the reply reads the size back). It is the render target asset that changes, for every capture drawing into it, in one undo step, and it is left unsaved. A cube capture is UNSUPPORTED_TARGET, a capture with no render target RENDER_TARGET_NOT_ASSIGNED; without actorName the level's one scene capture is used.\noffset: Move the point a sphere or box reflection capture captures from by captureOffset (cm from the actor, {x, y, z} or [x, y, z]; a component left out keeps its value), then mark it for recapture. One undo step; the reply reads the offset back. Without actorName the level's one reflection capture is used; several is AMBIGUOUS.\nplanar_reflection: Configure planar reflection settings.\nreflection_resolution: Set reflection capture resolution (project-wide CVar; marks the named capture, or every capture, for recapture).\ncapture: Trigger a scene capture on an actor.\nrecapture: Recapture a reflection or scene capture."
             }
           },
           "required": [
@@ -27648,14 +27773,24 @@
               "required": [
                 "captureSource"
               ]
+            },
+            "configure_capture_resolution": {
+              "required": [
+                "resolution"
+              ]
+            },
+            "configure_capture_offset": {
+              "required": [
+                "captureOffset"
+              ]
             }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "07552f95f84f90c70b2ac278d9e837b9b6ecbde83731783c75fd7792d57b8ef8",
-        "content": "a4eb431ff0a0812981357771d9fe44d227907adb4a4394ceadd4333046349f9c"
+        "schema": "7ccf016e62d5cf7f000ede275ef1405cdf4728581c5bee1c30ec47f72d03792a",
+        "content": "a43ae9c19327a00a71b17c95c6730b85b6fa7099a59fb7676d6812e5b473a175"
       }
     },
     {
@@ -42286,7 +42421,7 @@
                 "eject",
                 "possess"
               ],
-              "description": "Which play variant to run; omit for 'play'.\nplay: Start Play-In-Editor (PIE) session; answers once the control=play world has begun control=play.\npause: Pause the running PIE session.\nresume: Resume a paused PIE session.\nstop: Stop the running PIE session.\neject: Eject the player from its pawn in PIE, as the editor's Eject button does: the session switches to Simulate in Editor and the view becomes a free camera that set_camera moves and screenshot photographs. Answers once the view has switched.\npossess: Possess a pawn in PIE: the player controller takes the pawn named by actorName. Without actorName it brings an ejected player back to its own pawn, as the editor's Possess button does (the way back from control=eject). Answers once the player is back in the game.",
+              "description": "Which play variant to run; omit for 'play'.\nplay: Start Play-In-Editor (PIE) session; answers once the control=play world has begun control=play.\npause: Pause the running Play In Editor session, as the toolbar control=pause does; the reply says alreadyPaused when it was. No session is NO_ACTIVE_SESSION.\nresume: Resume a paused Play In Editor session; wasPaused false says it was not paused and nothing changed. A control=pause the game holds itself (a control=pause menu) is GAME_PAUSED unless unpauseGame is true, and a widget that still holds keyboard focus is named in warnings. No session is NO_ACTIVE_SESSION.\nstop: Stop the running PIE session.\neject: Eject the player from its pawn in PIE, as the editor's Eject button does: the session switches to Simulate in Editor and the view becomes a free camera that set_camera moves and screenshot photographs. Answers once the view has switched.\npossess: Possess a pawn in PIE: the player controller takes the pawn named by actorName. Without actorName it brings an ejected player back to its own pawn, as the editor's Possess button does (the way back from control=eject). Answers once the player is back in the game.",
               "default": "play"
             }
           },
@@ -42411,8 +42546,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "5195b9d12f415f0a2300baee5f97e1f46d833015fd9c02ad00de5ba734e534c0",
-        "content": "6f50d51850bfd1b69e72474807f2b720578e8edd8ddd8d8a3823bc767b96631c"
+        "schema": "814718336b831e4d0332eac4a5750818df87199767aee28b9d3c22922510defb",
+        "content": "214430118211fc5bbc5f2c3058a4dd4825be9d027273ae1271e2f6be36aea5e8"
       }
     },
     {
@@ -44427,7 +44562,7 @@
                 "row",
                 "all"
               ],
-              "description": "Which delete data table row variant to run; omit for 'row'.\nrow: Delete a row from a DataTable.\nall: Clear all rows from a DataTable.",
+              "description": "Which delete data table row variant to run; omit for 'row'.\nrow: Delete the row rowName from a DataTable; a name the table lacks is ROW_NOT_FOUND. One undo step (the undo block in the reply says so); the table is saved unless save is false (saved).\nall: Clear all rows from a DataTable.",
               "default": "row"
             }
           },
@@ -44518,8 +44653,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "4296e1e19c0cdf51df10455d807b726b179be16658b090e4631bf88afc72618b",
-        "content": "2197380348b6fab553220183268e5580d53ee55984bd8d04feac43a6477bdfef"
+        "schema": "3e754c569c25f898f71d55dca54144852d718a7a5cdef0d1b2017c32fc0d861b",
+        "content": "44956538d9163b2183ebe81c086b4c4442ba50dc630a84ec33894533c02d7b02"
       }
     },
     {
@@ -44688,7 +44823,7 @@
                 "set_row_struct",
                 "set_struct_as_row_struct"
               ],
-              "description": "Which edit data table variant to run.\ncreate: Create a new DataTable asset.\ncreate_row_struct: Create a new UScriptStruct suitable as a DataTable row type.\nadd_row: Add a new row to a DataTable.\nupdate_row: Update an existing row in a DataTable.\nimport_rows: Import multiple rows into a DataTable from an array.\nset_row_struct: Bind a row UScriptStruct to an existing DataTable.\nset_struct_as_row_struct: Set an existing UScriptStruct as the row struct for a DataTable (a user-defined struct is validated and compiled first)."
+              "description": "Which edit data table variant to run.\ncreate: Create a new DataTable asset.\ncreate_row_struct: Create a new UScriptStruct suitable as a DataTable row type.\nadd_row: Add a row named rowName to a DataTable from rowData (column names as the row struct spells them; columns left out take the row struct defaults). A taken name is ROW_ALREADY_EXISTS, data the struct refuses INVALID_ROW_DATA. One undo step (the undo block in the reply says so); the table is saved unless save is false (saved).\nupdate_row: Change columns of an existing DataTable row: the columns rowData names change, the others keep their values. One undo step (the undo block in the reply says so); the table is saved unless save is false (saved).\nimport_rows: Import multiple rows into a DataTable from an array.\nset_row_struct: Bind a row UScriptStruct to an existing DataTable.\nset_struct_as_row_struct: Set an existing UScriptStruct as the row struct for a DataTable (a user-defined struct is validated and compiled first)."
             }
           },
           "required": [
@@ -44868,8 +45003,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "93e13a1c06201b576ae25c3a3c5ced5a86b309bf471bf6cbff72fb32a883edf0",
-        "content": "dad231e8b1bfb8343a293e94515aee71703e28c04557d10785a2412d89b4cc1e"
+        "schema": "32bbe9499d3b7074141c8cefc660a45e5a84ff89d542117f4b7e84b841ca700c",
+        "content": "5ff7e4aa5caa38706452ff60b6b232a15721e3ffa7886f3bb7431f7dc0b4b7a9"
       }
     },
     {
@@ -55654,7 +55789,7 @@
         "whenToUse": [
           "setting=distance: Use it to configure distance attenuation: inner radius (or a box's size per axis), falloff distance and curve, and air absorption (a low-pass that muffles the sound with distance).",
           "setting=spatialization: Use it to set how a Sound Attenuation asset places its sounds in space: spatialize on or off, and spatialization Default (panning) or Binaural (HRTF, for headphones). Only what is sent changes, a call with neither is refused, and another algorithm is INVALID_ARGUMENT. Saved unless save is false.",
-          "setting=occlusion: Use it to configure audio occlusion.",
+          "setting=occlusion: Use it to set occlusion on a Sound Attenuation asset (assetPath), each value only when sent: enable turns it on or off, occlusionFilterScale (0-1) times 20000 Hz is the low-pass cutoff when blocked, occlusionVolumeScale (0-1) the volume kept, occlusionInterpolationTime the seconds to blend. The reply reads the four values back; the asset is saved unless save is false.",
           "setting=reverb_send: Use it to configure an audio reverb send.",
           "setting=audio_occlusion: Use it to configure occlusion settings on a sound asset.",
           "setting=preset: Use it to create a Sound Attenuation asset name in path (default /Game/Audio/Attenuation): innerRadius (default 400), falloffDistance (default 3600), attenuationShape Sphere (the default), Capsule, Box (sized per axis with extent) or Cone, and falloffMode Linear (the default), Logarithmic, Inverse or NaturalSound; another shape or mode is refused. An asset already at the path is ASSET_ALREADY_EXISTS (change one with configure_distance_attenuation). Saved unless save is false; the reply reads the values back."
@@ -55808,7 +55943,7 @@
                 "audio_occlusion",
                 "preset"
               ],
-              "description": "Which configure sound attenuation variant to run.\ndistance: Configure distance attenuation: inner radius (or a box's size per axis), falloff distance and curve, and air absorption (a low-pass that muffles the sound with distance).\nspatialization: Set how a Sound Attenuation asset places its sounds in space: spatialize on or off, and spatialization Default (panning) or Binaural (HRTF, for headphones). Only what is sent changes, a call with neither is refused, and another algorithm is INVALID_ARGUMENT. Saved unless save is false.\nocclusion: Configure audio occlusion.\nreverb_send: Configure an audio reverb send.\naudio_occlusion: Configure occlusion settings on a sound asset.\npreset: Create a Sound Attenuation asset name in path (default /Game/Audio/Attenuation): innerRadius (default 400), falloffDistance (default 3600), attenuationShape Sphere (the default), Capsule, Box (sized per axis with extent) or Cone, and falloffMode Linear (the default), Logarithmic, Inverse or NaturalSound; another shape or mode is refused. An asset already at the path is ASSET_ALREADY_EXISTS (change one with setting=distance). Saved unless save is false; the reply reads the values back."
+              "description": "Which configure sound attenuation variant to run.\ndistance: Configure distance attenuation: inner radius (or a box's size per axis), falloff distance and curve, and air absorption (a low-pass that muffles the sound with distance).\nspatialization: Set how a Sound Attenuation asset places its sounds in space: spatialize on or off, and spatialization Default (panning) or Binaural (HRTF, for headphones). Only what is sent changes, a call with neither is refused, and another algorithm is INVALID_ARGUMENT. Saved unless save is false.\nocclusion: Set occlusion on a Sound Attenuation asset (assetPath), each value only when sent: enable turns it on or off, occlusionFilterScale (0-1) times 20000 Hz is the low-pass cutoff when blocked, occlusionVolumeScale (0-1) the volume kept, occlusionInterpolationTime the seconds to blend. The reply reads the four values back; the asset is saved unless save is false.\nreverb_send: Configure an audio reverb send.\naudio_occlusion: Configure occlusion settings on a sound asset.\npreset: Create a Sound Attenuation asset name in path (default /Game/Audio/Attenuation): innerRadius (default 400), falloffDistance (default 3600), attenuationShape Sphere (the default), Capsule, Box (sized per axis with extent) or Cone, and falloffMode Linear (the default), Logarithmic, Inverse or NaturalSound; another shape or mode is refused. An asset already at the path is ASSET_ALREADY_EXISTS (change one with setting=distance). Saved unless save is false; the reply reads the values back."
             }
           },
           "required": [
@@ -56019,8 +56154,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "e18559e1aba65c6747873afab206ef4ef01e3b3c152d2036126da597c941cff4",
-        "content": "a7f9a032883d1f730c76c06ddf4f57cf183895424d6dde467ff171daffec1767"
+        "schema": "4b995f1b2b1eefba15b40fde593fb309b9ddb82cba216ae3b41a6400efd3a60d",
+        "content": "042531230cec6cda0f0737474bd9c56a76dabebb0954b43222429e4602efe970"
       }
     },
     {
@@ -63530,11 +63665,25 @@
             },
             "velocityMode": {
               "type": "string",
-              "description": "Velocity module mode (Linear, Cone, FromPoint)."
+              "enum": [
+                "Linear",
+                "Cone",
+                "FromPoint"
+              ],
+              "description": "Velocity module: Linear (AddVelocity, the default), Cone (AddVelocityInCone) or FromPoint (AddVelocityFromPoint); any other name is refused."
             },
             "forceType": {
               "type": "string",
-              "description": "Force module type (Gravity, Drag, Wind, Curl, Vortex, PointAttraction)."
+              "enum": [
+                "Gravity",
+                "Drag",
+                "Wind",
+                "Curl",
+                "CurlNoise",
+                "Vortex",
+                "PointAttraction"
+              ],
+              "description": "Force module: Gravity (default), Drag, Wind, Curl (CurlNoise), Vortex or PointAttraction; any other name is refused."
             },
             "materialPath": {
               "type": "string",
@@ -63554,15 +63703,25 @@
             },
             "stageIterationSource": {
               "type": "string",
-              "description": "Simulation stage iteration source."
+              "enum": [
+                "Particles",
+                "DataInterface",
+                "DirectSet"
+              ],
+              "description": "What the stage runs over: Particles (the default, each particle), DataInterface (each element of a grid or other data interface) or DirectSet (a count you set; UE 5.2 and later). Any other name is refused."
             },
             "eventName": {
               "type": "string",
-              "description": "Niagara event name."
+              "description": "Optional: the name expected; the generator module names its event, and a different one draws a warning."
             },
             "eventType": {
               "type": "string",
-              "description": "Niagara event generator type (Location, Death, Collision)."
+              "enum": [
+                "Location",
+                "Death",
+                "Collision"
+              ],
+              "description": "Event generator module: Location (GenerateLocationEvent, the default), Death or Collision; any other name is refused."
             },
             "spawnOnEvent": {
               "type": "boolean",
@@ -63570,7 +63729,7 @@
             },
             "eventSpawnCount": {
               "type": "number",
-              "description": "Particles spawned per received event."
+              "description": "Particles spawned per received event (default 1); the engine uses it only with spawnOnEvent true."
             },
             "moduleKind": {
               "type": "string",
@@ -63597,7 +63756,7 @@
                 "event_generator",
                 "event_receiver"
               ],
-              "description": "Which add niagara module variant to run; omit for 'module'.\nmodule: Add a module to a Niagara emitter, where its dependencies hold: before the first module that must run after it (a force before Solve Forces and Velocity), else at the end of the stack.\nspawn_rate: Insert the SpawnRate module with its default inputs; tune them with set_parameter_value (parameterName \"<Module>.<Input>\").\nspawn_burst: Insert the SpawnBurst_Instantaneous module with its default inputs; tune them with set_parameter_value (parameterName \"<Module>.<Input>\").\nspawn_per_unit: Insert the SpawnPerUnit module with its default inputs; tune them with set_parameter_value (parameterName \"<Module>.<Input>\").\ninitialize_particle: Insert the InitializeParticle module with its default inputs; tune them with set_parameter_value (parameterName \"<Module>.<Input>\").\nvelocity: Add a velocity module.\nacceleration: Insert the AccelerationForce module with its default inputs; tune them with set_parameter_value (parameterName \"<Module>.<Input>\").\nforce: Insert the the chosen force module with its default inputs; tune them with set_parameter_value (parameterName \"<Module>.<Input>\").\ncolor: Insert the Color module with its default inputs; tune them with set_parameter_value (parameterName \"<Module>.<Input>\").\nsize: Insert the ScaleSpriteSize module with its default inputs; tune them with set_parameter_value (parameterName \"<Module>.<Input>\").\ncollision: Insert the Collision module with its default inputs; tune them with set_parameter_value (parameterName \"<Module>.<Input>\").\nkill_particles: Insert the KillParticles module with its default inputs; tune them with set_parameter_value (parameterName \"<Module>.<Input>\").\ncamera_offset: Insert the CameraOffset module with its default inputs; tune them with set_parameter_value (parameterName \"<Module>.<Input>\").\nparticle_state: Add a particle-state module.\nsprite_renderer: Add a sprite renderer module.\nmesh_renderer: Add a mesh renderer module.\nribbon_renderer: Add a ribbon renderer module.\nlight_renderer: Add a light renderer module.\nsimulation_stage: Add a simulation stage.\nevent_generator: Add a Niagara event generator.\nevent_receiver: Add a Niagara event receiver.",
+              "description": "Which add niagara module variant to run; omit for 'module'.\nmodule: Add a module to a Niagara emitter, where its dependencies hold: before the first module that must run after it (a force before Solve Forces and Velocity), else at the end of the stack.\nspawn_rate: Insert the SpawnRate module with its default inputs; tune them with set_parameter_value (parameterName \"<Module>.<Input>\").\nspawn_burst: Insert the SpawnBurst_Instantaneous module with its default inputs; tune them with set_parameter_value (parameterName \"<Module>.<Input>\").\nspawn_per_unit: Insert the SpawnPerUnit module with its default inputs; tune them with set_parameter_value (parameterName \"<Module>.<Input>\").\ninitialize_particle: Insert the InitializeParticle module with its default inputs; tune them with set_parameter_value (parameterName \"<Module>.<Input>\").\nvelocity: Insert a velocity module into the emitter's particle spawn stack, chosen by velocityMode: Linear (AddVelocity, the default), Cone (AddVelocityInCone) or FromPoint (AddVelocityFromPoint); another mode is INVALID_ARGUMENT. Its inputs keep their defaults; set them with set_parameter_value. The system recompiles and is saved unless save is false; the reply gives moduleName.\nacceleration: Insert the AccelerationForce module with its default inputs; tune them with set_parameter_value (parameterName \"<Module>.<Input>\").\nforce: Insert the force module forceType names (Gravity by default; Drag, Wind, Curl, Vortex, PointAttraction) into the emitter's particle update stack, before Solve Forces and Velocity, with its default inputs; tune them with set_parameter_value (parameterName \"<moduleName>.<Input>\"). Another forceType is INVALID_ARGUMENT. The system recompiles and is saved unless save is false; the reply gives moduleName as the stack named it.\ncolor: Insert the Color module with its default inputs; tune them with set_parameter_value (parameterName \"<Module>.<Input>\").\nsize: Insert the ScaleSpriteSize module with its default inputs; tune them with set_parameter_value (parameterName \"<Module>.<Input>\").\ncollision: Insert the Collision module with its default inputs; tune them with set_parameter_value (parameterName \"<Module>.<Input>\").\nkill_particles: Insert the KillParticles module with its default inputs; tune them with set_parameter_value (parameterName \"<Module>.<Input>\").\ncamera_offset: Insert the CameraOffset module with its default inputs; tune them with set_parameter_value (parameterName \"<Module>.<Input>\").\nparticle_state: Add a particle-state module.\nsprite_renderer: Give the emitter a sprite renderer, or configure the one it has (rendererCreated false), drawing with materialPath (its Niagara sprite usage flag set and saved); without materialPath it keeps its material, the engine default on a new one. The system recompiles and is saved unless save is false; the reply reads back materialPath and rendererPath.\nmesh_renderer: Give the emitter a mesh renderer, or configure the one it has (rendererCreated false), drawing each particle as meshPath (required; it replaces the renderer's mesh list, and its materials get their Niagara mesh-particle flag). Without meshPath it is INVALID_ARGUMENT, since a mesh renderer with no mesh draws nothing. The system recompiles and is saved unless save is false.\nribbon_renderer: Give the emitter a ribbon renderer (a strip joining its particles, for trails), or configure the one it has (rendererCreated false), drawing with materialPath (its Niagara ribbon usage flag set and saved); without it the material stays as it is. The system recompiles and is saved unless save is false; the reply reads back materialPath.\nlight_renderer: Give the emitter a light renderer, a point light at each particle, or configure the one it has (rendererCreated false); lightRadius multiplies each particle's light radius (RadiusScale, engine default 1) and is read back. The system recompiles and is saved unless save is false.\nsimulation_stage: Add an empty generic simulation stage named stageName to the emitter, running over stageIterationSource (Particles, the default, DataInterface or DirectSet on UE 5.2 and later; another name is INVALID_ARGUMENT). Stages run on GPU emitters. The system recompiles and is saved unless save is false; the reply gives simulationStageCount.\nevent_generator: Insert the engine's event generator module for eventType (Location, the default, Death or Collision) into the emitter's particle update stack. The event it emits is named by that module, and the reply gives that name (eventName) for moduleKind=event_receiver on another emitter; an eventName given that differs is not applied and draws a warning. Another eventType is INVALID_ARGUMENT. The system recompiles and is saved unless save is false.\nevent_receiver: Add an event handler to the emitter for the event eventName (the name moduleKind=event_generator reported): with spawnOnEvent true it spawns eventSpawnCount particles (default 1) per event, otherwise its script runs on every particle when the event arrives. Its handler script starts empty. The system recompiles and is saved unless save is false.",
               "default": "module"
             }
           },
@@ -63767,14 +63926,19 @@
               "required": [
                 "forceType"
               ]
+            },
+            "add_mesh_renderer_module": {
+              "required": [
+                "meshPath"
+              ]
             }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "eadee31386699868ee19b8e7d543c03de8d04a265474a572c07db0100097e698",
-        "content": "13fee94cb726adb752ff037dab2b2ffc7a660f5e4a86fa24325f92cedd52e69c"
+        "schema": "283df00719fc6373ace0fcaa1b41ce14acca621563626b3bb43538ea4609367e",
+        "content": "8f35e1045f7dd2fdf4940efc0fcd78f0ae19430e1a761ca800040c2ccc3f042a"
       }
     },
     {
@@ -64369,7 +64533,7 @@
                 "niagara",
                 "particle"
               ],
-              "description": "Which create effect variant to run.\nniagara_system: Create a Niagara System asset.\nniagara_emitter: Create a Niagara Emitter asset.\nniagara_ribbon: Create a Niagara ribbon effect: by default the engine LocationBasedRibbon template given its own SpawnRate of 60 a second, Ribbon Width Mode Direct Set and an infinite loop, so it trails whatever it is attached to, placed in the level only when location is given; tune SpawnRate.SpawnRate, InitializeParticle.Lifetime, Ribbon Width and Color with set_parameter_value.\nparticle_trail: Create a kind=particle trail effect: by default a ribbon (the engine LocationBasedRibbon template given its own SpawnRate of 60 a second, Ribbon Width Mode Direct Set and an infinite loop) that trails whatever it is attached to, placed in the level only when location is given; tune SpawnRate.SpawnRate, InitializeParticle.Lifetime, Ribbon Width and Color with set_parameter_value.\nimpact: Create an impact effect system asset (the engine OmnidirectionalBurst template by default), placed in the level only when location is given.\nenvironment: Create an environment effect (weather/atmosphere) system asset, placed in the level only when location is given.\nvolumetric_fog: Create a volumetric fog effect.\nniagara: Place a Niagara system in the level as a Niagara actor, at a location or attached to an actor; autoActivate false places it switched off, for a sequence kind=particle track or gameplay to start.\nparticle: Spawn a kind=particle effect (Cascade or Niagara) from a preset name or a system asset."
+              "description": "Which create effect variant to run.\nniagara_system: Create an empty Niagara System named name in path (or savePath; default /Game), compiled and saved unless save is false: it has its system scripts and no emitter yet, so it draws nothing until add_emitter_to_system adds one. A name already taken is ASSET_ALREADY_EXISTS, nothing changed. The reply gives systemPath.\nniagara_emitter: Create a standalone Niagara Emitter asset named name in path (default /Game) with the engine's default modules and a sprite renderer (UE 5.1 and later), saved unless save is false; add_emitter_to_system puts it in a system. A name already taken is ASSET_ALREADY_EXISTS, nothing changed.\nniagara_ribbon: Create a Niagara ribbon effect: by default the engine LocationBasedRibbon template given its own SpawnRate of 60 a second, Ribbon Width Mode Direct Set and an infinite loop, so it trails whatever it is attached to, placed in the level only when location is given; tune SpawnRate.SpawnRate, InitializeParticle.Lifetime, Ribbon Width and Color with set_parameter_value.\nparticle_trail: Create a kind=particle trail effect: by default a ribbon (the engine LocationBasedRibbon template given its own SpawnRate of 60 a second, Ribbon Width Mode Direct Set and an infinite loop) that trails whatever it is attached to, placed in the level only when location is given; tune SpawnRate.SpawnRate, InitializeParticle.Lifetime, Ribbon Width and Color with set_parameter_value.\nimpact: Create an impact effect system asset (the engine OmnidirectionalBurst template by default), placed in the level only when location is given.\nenvironment: Create an environment effect (weather/atmosphere) system asset, placed in the level only when location is given.\nvolumetric_fog: Create a volumetric fog effect.\nniagara: Place a Niagara system in the level as a Niagara actor, at a location or attached to an actor; autoActivate false places it switched off, for a sequence kind=particle track or gameplay to start.\nparticle: Spawn a kind=particle effect (Cascade or Niagara) from a preset name or a system asset."
             }
           },
           "required": [
@@ -64600,8 +64764,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "563a035c1ac31f8f7ffbdd0b89414911e0c304a852f2f7653c5fed960468ee8d",
-        "content": "0b77d2cea16533562ce541e864fb2e1bb41e901f94a0abc242665c9d8c992c78"
+        "schema": "bba0756a12c2e904bb727a6332509ba5e0b89b9c3dc8f153bb20fb14854cad34",
+        "content": "c2993e8c245943c579e52115e32b67530887aaea49221e788391a5169eefaca4"
       }
     },
     {
@@ -81521,7 +81685,7 @@
         "topics": [
           "add_legacy_mapping"
         ],
-        "summary": "Bind a key to a legacy (Project Settings, Input) mapping, chosen by mapping: action takes actionName (or name), key and the shift, ctrl, alt and cmd modifiers; axis takes axisName (or name), key and scale (default 1, -1 for the reverse direction). key is the engine key name (SpaceBar, W, LeftMouseButton, Gamepad_LeftX); an unknown one is INVALID_ARGUMENT. A binding already there is kept (alreadyPresent), and the project DefaultInput.ini is written (defaultConfigUpdated). Projects on Enhanced Input map keys with manage_networking configure_input instead.",
+        "summary": "Bind a key to a legacy (Project Settings, Input) mapping, chosen by mapping: action takes actionName (or name), key and the shift, ctrl, alt and cmd modifiers; axis takes axisName (or name), key and scale (default 1, -1 for the reverse direction). key is the engine key name (SpaceBar, W, LeftMouseButton, Gamepad_LeftX); an unknown one is INVALID_ARGUMENT. A binding already there is kept (alreadyPresent true, added false); a new one is written to the project DefaultInput.ini (defaultConfigUpdated). Projects on Enhanced Input map keys with manage_networking configure_input instead.",
         "whenToUse": [
           "mapping=action: Use it to add a legacy action mapping.",
           "mapping=axis: Use it to add a legacy axis mapping."
@@ -81615,7 +81779,7 @@
       },
       "examples": [
         {
-          "title": "Bind a key to a legacy (Project Settings, Input) mapping, chosen by mapping: action takes actionName (or name), key and the shift, ctrl, alt and cmd modifiers; axis takes axisName (or name), key and scale (default 1, -1 for the reverse direction). key is the engine key name (SpaceBar, W, LeftMouseButton, Gamepad_LeftX); an unknown one is INVALID_ARGUMENT. A binding already there is kept (alreadyPresent), and the project DefaultInput.ini is written (defaultConfigUpdated). Projects on Enhanced Input map keys with manage_networking configure_input instead.",
+          "title": "Bind a key to a legacy (Project Settings, Input) mapping, chosen by mapping: action takes actionName (or name), key and the shift, ctrl, alt and cmd modifiers; axis takes axisName (or name), key and scale (default 1, -1 for the reverse direction). key is the engine key name (SpaceBar, W, LeftMouseButton, Gamepad_LeftX); an unknown one is INVALID_ARGUMENT. A binding already there is kept (alreadyPresent true, added false); a new one is written to the project DefaultInput.ini (defaultConfigUpdated). Projects on Enhanced Input map keys with manage_networking configure_input instead.",
           "input": {
             "action": "add_legacy_mapping",
             "key": "SpaceBar",
@@ -81685,7 +81849,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "4a2d8b29bc43dae6af1b88366163d3903dde2e5b98a47d2f2b83e5453857a6c1",
-        "content": "4b90b99e09bba6107f99c6f103c989b11383c670924208c2305d135764b435c6"
+        "content": "afd03f4fd62ec64419d2fc512bbe12dd4321aba714f1bd01cae80eca069cb6ee"
       }
     },
     {
@@ -85503,7 +85667,7 @@
         "topics": [
           "remove_legacy_mapping"
         ],
-        "summary": "Remove the binding of key from a legacy action or axis mapping, chosen by mapping (actionName, axisName or name): every binding of that name and key goes, removedCount says how many, and a pair that is not bound is NOT_FOUND with nothing written. The project DefaultInput.ini is written (defaultConfigUpdated).",
+        "summary": "Remove the binding of key from a legacy action or axis mapping, chosen by mapping (actionName, axisName or name): every binding of that name and key goes (an action binding only with the same shift, ctrl, alt and cmd), removedCount says how many, and a pair that is not bound is NOT_FOUND with nothing written. The project DefaultInput.ini is written (defaultConfigUpdated).",
         "whenToUse": [
           "mapping=action: Use it to remove a legacy action mapping.",
           "mapping=axis: Use it to remove a legacy axis mapping."
@@ -85597,7 +85761,7 @@
       },
       "examples": [
         {
-          "title": "Remove the binding of key from a legacy action or axis mapping, chosen by mapping (actionName, axisName or name): every binding of that name and key goes, removedCount says how many, and a pair that is not bound is NOT_FOUND with nothing written. The project DefaultInput.ini is written (defaultConfigUpdated).",
+          "title": "Remove the binding of key from a legacy action or axis mapping, chosen by mapping (actionName, axisName or name): every binding of that name and key goes (an action binding only with the same shift, ctrl, alt and cmd), removedCount says how many, and a pair that is not bound is NOT_FOUND with nothing written. The project DefaultInput.ini is written (defaultConfigUpdated).",
           "input": {
             "action": "remove_legacy_mapping",
             "key": "SpaceBar",
@@ -85667,7 +85831,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "2b61c175ae21a9ba8539e1f12ef94146b768cd35e119e21b12c545297bb3ada8",
-        "content": "94726e149cb141f3ca897286ae2755ac79a8ccd4bdd289e3c0a14f06a2d89528"
+        "content": "3632a84657d8d9e85d877b2853bc43744e8a9e0057501118408075fba7d819d2"
       }
     },
     {
@@ -91734,7 +91898,7 @@
           "set_node_position",
           "move material node"
         ],
-        "summary": "Move a node of a material or material function graph (materialPath or assetPath; nodeId as add_material_node and get_material_info give it) to x and y, keeping every wire. The material recompiles and is left unsaved, and the move is no undo step; the reply gives where the node now sits and warns when it overlaps another.",
+        "summary": "Move a node of a material or material function graph (materialPath or assetPath; nodeId as add_material_node and get_material_info give it) to x and y, keeping every wire. The move is one undo step (the reply's undo block says so); the material recompiles and is left unsaved; the reply gives where the node now sits and warns when it overlaps another.",
         "whenToUse": [
           "Overlapping nodes reported by a node add (overlappingNodes) must be spread out without losing wires.",
           "A cluttered graph must be tidied by moving an existing node to new x and y."
@@ -91885,7 +92049,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "22d0c91ccf58652e7252c68ce9b2a7fdf2092de4ea83555011915917d4892c5d",
-        "content": "9eef69e2af2dcd4ae9458aecf9a7f21b9817636b8e7effb4a7c8bbe0a5581b61"
+        "content": "5f7ff08e1da4ece13a41036fc73d04ddb3274e04fa53d1d9bd97239d954ea859"
       }
     },
     {
@@ -93538,7 +93702,7 @@
           "level sequence asset",
           "create level sequence"
         ],
-        "summary": "Create a level sequence (sequenceOp create, the default): name in the folder path (default /Game), or path naming the asset itself; it is saved (saved), and a level sequence already there is kept and answered with alreadyExists, while another asset there is ASSET_ALREADY_EXISTS. duplicate copies the sequence at path into the folder destinationPath as newName and saves the copy; rename gives the sequence at path the name newName in its folder, references following it, and leaves it unsaved as asset.rename does. Only /Game paths are written (SEQUENCE_PATH_NOT_WRITABLE); a source that is not a level sequence is INVALID_SEQUENCE, and a taken destination ASSET_ALREADY_EXISTS.",
+        "summary": "Create a level sequence (sequenceOp create, the default): name in the folder path (default /Game), or path naming the asset itself; it is saved (saved), and a level sequence already there is kept and answered with alreadyExists, while another asset there is ASSET_ALREADY_EXISTS. duplicate copies the sequence at path into the folder destinationPath as newName and saves the copy; rename gives the sequence at path the name newName in its folder (a path starting with / moves it), references following it; the engine saves it and leaves a redirector at the old path when other assets reference it. Only /Game paths are written (SEQUENCE_PATH_NOT_WRITABLE); a source that is not a level sequence is INVALID_SEQUENCE, and a taken destination ASSET_ALREADY_EXISTS.",
         "whenToUse": [
           "sequenceOp=create: A new cinematic or animation sequence asset is needed.",
           "sequenceOp=duplicate: A sequence must be copied to a different folder or name.",
@@ -93582,7 +93746,7 @@
                 "duplicate",
                 "rename"
               ],
-              "description": "Which create variant to run; omit for 'create'.\ncreate: Create a new Level Sequence asset in the content browser.\nduplicate: Duplicate a Level Sequence asset to a new destination.\nrename: Rename a Level Sequence asset in place.",
+              "description": "Which create variant to run; omit for 'create'.\ncreate: Create a Level Sequence asset and save it: name in the folder path names (default /Game), or path alone naming the sequence itself (/Game/Cinematics/SEQ_Shot). A Level Sequence already there is kept and answered with alreadyExists true; another asset there is ASSET_ALREADY_EXISTS, and a path outside the writable content roots SEQUENCE_PATH_NOT_WRITABLE. The new sequence is empty, with no bindings or camera, at the project's default display rate (30 fps out of the box) and 24000 ticks per second.\nduplicate: Copy a Level Sequence to destinationPath (a folder; one not starting with / is under the source folder) as newName, and save the copy. A destination already taken is ASSET_ALREADY_EXISTS, a source that is not a Level Sequence INVALID_SEQUENCE, a destination outside the writable content roots SEQUENCE_PATH_NOT_WRITABLE. The reply gives duplicatedPath and saved; the copy keeps the original's bindings, which still point at the same level actors.\nrename: Rename a Level Sequence: newName keeps its folder, a path starting with / moves it there. The engine saves the renamed sequence and leaves a redirector at the old path when other assets reference it. A name already taken is ASSET_ALREADY_EXISTS, a source that is not a Level Sequence INVALID_SEQUENCE, a path outside the writable content roots SEQUENCE_PATH_NOT_WRITABLE. The reply gives oldPath and sequencePath.",
               "default": "create"
             }
           },
@@ -93641,7 +93805,7 @@
       },
       "examples": [
         {
-          "title": "Create a level sequence (sequenceOp create, the default): name in the folder path (default /Game), or path naming the asset itself; it is saved (saved), and a level sequence already there is kept and answered with alreadyExists, while another asset there is ASSET_ALREADY_EXISTS. duplicate copies the sequence at path into the folder destinationPath as newName and saves the copy; rename gives the sequence at path the name newName in its folder, references following it, and leaves it unsaved as asset.rename does. Only /Game paths are written (SEQUENCE_PATH_NOT_WRITABLE); a source that is not a level sequence is INVALID_SEQUENCE, and a taken destination ASSET_ALREADY_EXISTS.",
+          "title": "Create a level sequence (sequenceOp create, the default): name in the folder path (default /Game), or path naming the asset itself; it is saved (saved), and a level sequence already there is kept and answered with alreadyExists, while another asset there is ASSET_ALREADY_EXISTS. duplicate copies the sequence at path into the folder destinationPath as newName and saves the copy; rename gives the sequence at path the name newName in its folder (a path starting with / moves it), references following it; the engine saves it and leaves a redirector at the old path when other assets reference it. Only /Game paths are written (SEQUENCE_PATH_NOT_WRITABLE); a source that is not a level sequence is INVALID_SEQUENCE, and a taken destination ASSET_ALREADY_EXISTS.",
           "input": {
             "action": "create",
             "name": "SEQ_Master",
@@ -93726,8 +93890,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "91b9e43c647fb5d0d9d5c377dc32a039242c6be3feda09d94bb34293de595689",
-        "content": "e145a818f344d9bd3d40dd39662ad298b3d1ca356370d32764144d940dbeedc2"
+        "schema": "07b908bab2635c907da30ba18c0ba01f44b79964eb7794a5c498ad516c5fca1d",
+        "content": "1a6e04866689bcb52f600f91e38680aded49b47e013362f61b59f9827f3550cb"
       }
     },
     {
@@ -93791,7 +93955,7 @@
             },
             "trackName": {
               "type": "string",
-              "description": "The track, by the name get_properties lists (MovieScene3DTransformTrack_1). A whole name picks that track only; part of a name (Transform) picks the tracks whose names contain it."
+              "description": "One track, by its trackName or displayName as list_tracks gives them (MovieScene3DTransformTrack_1, or the name add_track gave it); case is ignored. A part of a name works when one track alone contains it; a name several tracks fit (Transform with two actors bound) is refused with AMBIGUOUS_TRACK naming them, and one no track has is TRACK_NOT_FOUND."
             },
             "bindingId": {
               "type": "string",
@@ -93818,7 +93982,7 @@
                 "track",
                 "keyframe"
               ],
-              "description": "Which delete variant to run; omit for 'sequence'.\nsequence: Permanently deleteScope=sequence a Level Sequence asset: refused with SEQUENCE_IN_USE, naming referencedBy, while a level or asset still uses it (a Level Sequence Actor playing it). Its editors close and the undo history may be cleared.\ntrack: Remove one track from a Level Sequence, in one undo step: the track whose name is trackName (case ignored), else the first whose name contains it; the camera cut track too. The sequence is left unsaved.\nkeyframe: Remove keyframes from the tracks trackName or bindingId picks: the keys on one frame or on several, or every key on them, of every key type, in one undo step. Naming neither track nor binding is refused (TRACK_REQUIRED); a filter that matches no track is TRACK_NOT_FOUND.",
+              "description": "Which delete variant to run; omit for 'sequence'.\nsequence: Permanently deleteScope=sequence a Level Sequence asset: refused with SEQUENCE_IN_USE, naming referencedBy, while a level or asset still uses it (a Level Sequence Actor playing it). Its editors close and the undo history may be cleared.\ntrack: Remove one track from a Level Sequence with its sections and keys, in one undo step: the track trackName names (its name or display name, case ignored; a part of a name only when one track alone contains it), the camera cut track too. A name several tracks fit is refused with AMBIGUOUS_TRACK naming them. The sequence is left unsaved.\nkeyframe: Remove keyframes from the tracks trackName or bindingId picks: the keys on one frame or on several, or every key on them, of every key type, in one undo step. Naming neither track nor binding is refused (TRACK_REQUIRED); a filter that matches no track is TRACK_NOT_FOUND.",
               "default": "sequence"
             }
           },
@@ -93954,8 +94118,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "2dcd00f67af8881b64d04b08dfbbdd0d565e852e67afb363d0e20d7f9be1b9ac",
-        "content": "2b03aa4c4fa23de9d22b9f66f3e395ced6eba9d928ce8dbaeb3899a94ca88959"
+        "schema": "ae63a13b7a5bcbc5c1de24f08e1bcc8c34d96c325cf6f1b74a9285e9da035ca0",
+        "content": "504e27afd72b0ba7bbf3d624b1773aeff51f147847a8e8dd71a58652d3af2d25"
       }
     },
     {
@@ -94373,7 +94537,7 @@
             },
             "trackName": {
               "type": "string",
-              "description": "The track, by the name get_properties lists (MovieScene3DTransformTrack_1). A whole name picks that track only; part of a name (Transform) picks the tracks whose names contain it."
+              "description": "Display name for the new track; track actions find it by this name. A track type that takes no name keeps its own, which the reply reads back."
             },
             "actorName": {
               "type": "string",
@@ -94499,7 +94663,7 @@
                 "set_solo",
                 "set_section"
               ],
-              "description": "Which edit sequence tracks variant to run.\nadd_track: Add a track of a specific type to a Level Sequence or binding.\nadd_section: Add a section to an existing track in a Level Sequence; on an Audio track, soundPath puts music or a sound in it.\nadd_keyframe: Add a keyframe for a property at a specific frame on a bound actor.\nset_locked: Lock or unlock a track in a Level Sequence.\nset_muted: Mute or unmute a track in a Level Sequence.\nset_solo: Solo or unsolo a track in a Level Sequence.\nset_section: Move, trim, ease or speed up a section already on a track: its start and end frames, the frames it eases in and out over, and the play rate of an animation section."
+              "description": "Which edit sequence tracks variant to run.\nadd_track: Add an empty track of trackType to a Level Sequence: on the binding of actorName (an actor the sequence already binds), or as a sequence-wide track without it (Audio for music, Fade, Event). trackName gives it a display name later track actions can address it by. One undo step; the sequence is left unsaved. The reply gives trackId (its object name), trackClass and trackName read back. An unknown type is TRACK_CREATION_FAILED (list_track_types gives the names), a class that is no track INVALID_CLASS_TYPE, an actor the sequence does not bind BINDING_NOT_FOUND.\nadd_section: Add a section to an existing track in a Level Sequence; on an Audio track, soundPath puts music or a sound in it.\nadd_keyframe: Add a keyframe for a property at a specific frame on a bound actor.\nset_locked: Lock (locked, default true) or unlock every section of a Level Sequence track, so the Sequencer will not move or edit them; the track still plays. One undo step; the sequence is left unsaved.\nset_muted: Mute (muted, default true) or unmute a track of a Level Sequence by trackName: a muted track stays in the sequence but is not evaluated, so it plays and renders nothing. One undo step; the sequence is left unsaved. A trackName the sequence lacks is TRACK_NOT_FOUND.\nset_solo: Solo a track of a Level Sequence (solo, default true) by muting every other track, or with solo false unmute every track, those muted before included. The reply counts the tracks it changed (affectedTrackCount, disabledOtherTrackCount). One undo step; the sequence is left unsaved.\nset_section: Move, trim, ease or speed up a section already on a track: its start and end frames, the frames it eases in and out over, and the play rate of an animation section."
             }
           },
           "required": [
@@ -94532,7 +94696,7 @@
             },
             "trackName": {
               "type": "string",
-              "description": "The track, by the name get_properties lists (MovieScene3DTransformTrack_1). A whole name picks that track only; part of a name (Transform) picks the tracks whose names contain it."
+              "description": "The display name the track has, read back."
             },
             "trackId": {
               "type": "string",
@@ -94731,8 +94895,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "5a76fef066c7b2ba47c204e57e3b31a56ab4aba045684020f263422beabf96ed",
-        "content": "1e48fae7d36915a641c1ffd0074249a42fdf6ae0a558e03748ba8a8008d22083"
+        "schema": "e995c27578a9994bc4cb8c0c27e517fc4e8108599c87d8efd79269d92251de79",
+        "content": "6380b67352559ea727e4ea75e5a8c50ded24933b15772a90e1460ba7b904aace"
       }
     },
     {
@@ -94967,11 +95131,13 @@
           "info=properties: Sequence timing properties must be inspected.",
           "info=bindings: Sequence bindings must be enumerated.",
           "info=tracks: The tracks in a sequence must be enumerated.",
+          "info=tracks: A track action needs the exact trackName of one of several similar tracks.",
           "info=keys: Existing keys must be inspected before re-authoring a track.",
           "info=keys: A keyframe appeared to do nothing and the section range needs checking.",
           "info=track_types: Available track types must be discovered before adding a track.",
           "info=list: Available sequences under a folder must be enumerated.",
-          "info=open: An existing sequence must be opened for editing."
+          "info=open: An existing sequence must be opened for editing.",
+          "info=open: pause or stop must act on a sequence, which they do only while it is open (play and pause with startTime open it themselves)."
         ],
         "whenNotToUse": [
           "info=properties: Properties are being set rather than read.",
@@ -94997,7 +95163,7 @@
             },
             "trackName": {
               "type": "string",
-              "description": "The track, by the name get_properties lists (MovieScene3DTransformTrack_1). A whole name picks that track only; part of a name (Transform) picks the tracks whose names contain it."
+              "description": "The tracks, by trackName or displayName as list_tracks gives them (MovieScene3DTransformTrack_1, Transform); case is ignored. A whole name picks the tracks of that name only; a part of one picks every track whose name contains it."
             },
             "info": {
               "type": "string",
@@ -95010,7 +95176,7 @@
                 "list",
                 "open"
               ],
-              "description": "Which get properties variant to run; omit for 'properties'.\nproperties: Read the playback properties of a Level Sequence: frameRate (the display rate, a number), playbackStart and playbackEnd in display-rate frames, and lengthInFrames. An asset that is not a Level Sequence is INVALID_SEQUENCE.\nbindings: List all bindings (possessables and spawnables) in a Level Sequence.\ntracks: List all tracks in a Level Sequence.\nkeys: Read the sections and keyframes already on a sequence track.\ntrack_types: List all available MovieScene track types registered in the engine.\nlist: List Level Sequence assets under a content folder (recursively; the whole Game folder when path is omitted).\nopen: Open an existing Level Sequence in the Sequencer editor.",
+              "description": "Which get properties variant to run; omit for 'properties'.\nproperties: Read the playback properties of a Level Sequence: frameRate (the display rate, a number), playbackStart and playbackEnd in display-rate frames, and lengthInFrames. An asset that is not a Level Sequence is INVALID_SEQUENCE.\nbindings: List all bindings (possessables and spawnables) in a Level Sequence.\ntracks: List every track of a Level Sequence: the sequence-wide tracks (the camera cut track included) and each binding's tracks. Each row gives trackName (the object name track actions take), trackType (its class), displayName (the label Sequencer shows, also accepted), isMasterTrack, for a bound track bindingName (Actor/Component for a component) and bindingGuid, sectionCount, muted (set_track_muted or solo turned it off), the animation clips a skeletal animation track plays (animations) and isCameraCut. Read only.\nkeys: Read the sections and keyframes already on a sequence track.\ntrack_types: List all available MovieScene track types registered in the engine.\nlist: List Level Sequence assets under a content folder (recursively; the whole Game folder when path is omitted).\nopen: Open a Level Sequence (path) in the Sequencer editor; nothing in it changes. The reply gives sequencePath. A path that is not a Level Sequence is SEQUENCE_NOT_FOUND, and an editor that does not info=open EDITOR_NOT_OPEN.",
               "default": "properties"
             }
           },
@@ -95394,8 +95560,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "1f1b3fffe7b78bf75e08c1dfd5a8aad20611b6b7850e99226a589779afd2fb8f",
-        "content": "4d65869d1fac98bae96c4c4506e46ab51bed42a448d9cdeacd228ccd6dd3e0e1"
+        "schema": "40dcc0e4fb3495b6e801beace28fad2919db963a4f1c651f6b2fc50d3fb50f6a",
+        "content": "a316e51948d7958f04d9042689b89088d8c5a6bfa889c7d5857fb8242db4d132"
       }
     },
     {
@@ -97046,13 +97212,13 @@
         ],
         "summary": "Play, pause or stop a level sequence in the editor; pause with startTime moves the playhead to that time and holds the frame there, so the level shows that moment.",
         "whenToUse": [
-          "control=play: Sequence playback must be started for preview or PIE.",
+          "control=play: A sequence must be previewed in the editor viewport.",
+          "control=play: A screenshot must show the scene moving through a shot: play, then pause with startTime to hold one moment.",
           "control=pause: Sequence playback must be paused.",
           "control=pause: A pose, camera or effect must be checked at one moment of the sequence: pause with startTime, then take a screenshot.",
-          "control=stop: Sequence playback must be stopped and the playhead reset."
+          "control=stop: Sequence playback must be stopped and the playhead reset to the start."
         ],
         "whenNotToUse": [
-          "control=play: The sequence is already playing.",
           "control=stop: The sequence should only be paused."
         ]
       },
@@ -97089,7 +97255,7 @@
                 "pause",
                 "stop"
               ],
-              "description": "Which play variant to run; omit for 'play'.\nplay: Start playing the currently open Level Sequence.\npause: Pause playback of the currently open Level Sequence, or hold it at one moment to inspect it.\nstop: Stop playback and reset the playhead of the open Level Sequence.",
+              "description": "Which play variant to run; omit for 'play'.\nplay: Open a Level Sequence (path) in Sequencer and control=play it as an editor preview in the level viewport. startTime jumps there first; without it control=play carries on from the playhead (from the start when it sits at the end). loopMode once or loop sets the Sequencer's own loop setting, which stays for later previews. The reply reads back startTime (seconds), currentFrame and playbackStart/playbackEnd in display frames. Nothing in the asset or level changes. A time past the playback range or another loopMode is INVALID_ARGUMENT; a path that is not a Level Sequence is SEQUENCE_NOT_FOUND.\npause: Pause the Sequencer preview of a Level Sequence, or hold it at one moment to inspect it: startTime (seconds) moves the playhead there and poses the animated meshes at once, so a screenshot taken next shows that moment even with the editor in the background; a sequence not open is opened first. The reply reads back currentFrame in display frames. Without startTime a sequence not open in Sequencer is EDITOR_NOT_OPEN; a time past the playback range is INVALID_ARGUMENT. Nothing in the asset changes.\nstop: Stop the Sequencer preview of a Level Sequence and put the playhead back on the start of its playback range (where Jump to Start goes, not frame 0), posing the animated meshes there. The reply reads back currentFrame in display frames. A sequence not open in Sequencer is EDITOR_NOT_OPEN; nothing in the asset changes.",
               "default": "play"
             }
           },
@@ -97182,8 +97348,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "af338b34f46eaed7861f461b2cec40cf025475ee799a6c412b128e0b8a89ce83",
-        "content": "9f091605e4adcd8747822afa44b2146bbbee639cdeb2ce306bd83b722d23375f"
+        "schema": "0907db74fb87b01d38bb7c2f7dc99faca81564ec16bdf1a5ce34cf42c0dc18ea",
+        "content": "4363a01683afd62cf1741f83c6b82f78f14c482f7bfc1e3885b1c1d18d3f4652"
       }
     },
     {
@@ -97894,7 +98060,7 @@
           "sequenceProperty=properties: Sequence timing properties must be configured.",
           "sequenceProperty=display_rate: The sequence display rate must be changed.",
           "sequenceProperty=tick_resolution: The sequence tick resolution must be changed.",
-          "sequenceProperty=playback_speed: Playback speed must be changed for preview.",
+          "sequenceProperty=playback_speed: A sequence must play faster or slower in game, or in the preview.",
           "sequenceProperty=view_range: The visible region in the Sequencer must be bounded.",
           "sequenceProperty=work_range: The editable region must be bounded."
         ],
@@ -97944,7 +98110,7 @@
                 "number",
                 "string"
               ],
-              "description": "Tick resolution as ticks per second or a rate string such as 24000/1001."
+              "description": "Tick resolution in whole ticks per second (24000, 60000), at least the display rate."
             },
             "speed": {
               "type": "number",
@@ -97968,7 +98134,7 @@
                 "view_range",
                 "work_range"
               ],
-              "description": "Which set properties variant to run; omit for 'properties'.\nproperties: Set the display frame rate of a Level Sequence (frameRate, such as 24 or 29.97) and its playback range in display-rate frames: playbackStart, and playbackEnd or lengthInFrames (end = start + length; playbackEnd wins). Send at least one; one undo step, and the sequence is left unsaved. The reply reads the values back; a negative frame or an unreadable rate is INVALID_ARGUMENT, another asset type INVALID_SEQUENCE.\ndisplay_rate: Set the display frame rate of a Level Sequence.\ntick_resolution: Set the tick resolution of a Level Sequence.\nplayback_speed: Set the playback speed of a Level Sequence on the level sequence actors that play it, and on Sequencer when it is open.\nview_range: Set the view range of a Level Sequence, the part of the timeline the Sequencer window shows: start and end in seconds, end after start (INVALID_ARGUMENT otherwise). Display only: playback and keys are untouched.\nwork_range: Set the work range of a Level Sequence, the stretch of timeline the Sequencer shows and edits within: start and end in seconds, end after start (INVALID_ARGUMENT otherwise). An end past the playback range extends playback to it (playbackExtended), so keys out there play; the reply gives the range in seconds and in display-rate frames.",
+              "description": "Which set properties variant to run; omit for 'properties'.\nproperties: Set the display frame rate of a Level Sequence (frameRate, such as 24 or 29.97) and its playback range in display-rate frames: playbackStart, and playbackEnd or lengthInFrames (end = start + length; playbackEnd wins). Send at least one; one undo step, and the sequence is left unsaved. The reply reads the values back; a negative frame or an unreadable rate is INVALID_ARGUMENT, another asset type INVALID_SEQUENCE.\ndisplay_rate: Set the display frame rate of a Level Sequence (frameRate: 24, 29.97, \"30fps\", \"30000/1001\"), the rate its timeline counts frames in; keys stay at the same times. An unreadable rate is INVALID_ARGUMENT; the reply reads the rate back. One undo step; the sequence is left unsaved.\ntick_resolution: Set the tick resolution of a Level Sequence, the time grid keys and sections are stored on (resolution: whole ticks per second such as 24000, the default, or 60000; a ratio N/D is N ticks every D seconds), moving every key, section and range onto the new grid as the Sequencer does so nothing shifts in time. Anything else, zero included, is INVALID_ARGUMENT, and so is a resolution coarser than the display rate, which could not hold every frame. The reply gives tickResolution and previousTickResolution, and warns when the display rate does not fall on whole ticks. One undo step; the sequence is left unsaved.\nplayback_speed: Set the play rate of a Level Sequence (speed, above 0; 1 is normal, 0.5 half speed) on every level sequence actor in the editor level that plays it, which is the rate it runs at in game and Play In Editor, and on the Sequencer preview when the sequence is open there (a preview setting that is not saved). The actors change in one undo step and the level is left unsaved. The reply lists the actors (levelSequenceActors) and sequencerUpdated. With neither an actor nor an open Sequencer it is PLAYBACK_TARGET_NOT_FOUND; speed 0 or below is INVALID_ARGUMENT.\nview_range: Set the view range of a Level Sequence, the part of the timeline the Sequencer window shows: start and end in seconds, end after start (INVALID_ARGUMENT otherwise). Display only: playback and keys are untouched.\nwork_range: Set the work range of a Level Sequence, the stretch of timeline the Sequencer shows and edits within: start and end in seconds, end after start (INVALID_ARGUMENT otherwise). An end past the playback range extends playback to it (playbackExtended), so keys out there play; the reply gives the range in seconds and in display-rate frames.",
               "default": "properties"
             }
           },
@@ -98114,8 +98280,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "1d012c0990e3e79ec0eb27d8cbf0a06b0e1335d553a6c0fd091aea92024939f0",
-        "content": "3df01a8ab773194d44105ba640bd60a8412298881fe550e4c87f1a188d8bc734"
+        "schema": "12ab6893cb08f40b9d17dd9ad15d4f0c4c5b531dc2ea1ae89397b880362b7185",
+        "content": "4cb8b1e27b4cfef472db59c397dc675f12967780a69d2c88e12ea74e680aa9e1"
       }
     },
     {

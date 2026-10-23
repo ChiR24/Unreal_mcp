@@ -32,11 +32,12 @@ UMovieSceneTrack *LoadTrackOrReply(UEngineWireSubsystem *Self, const FString &Re
   OutSequence = McpSequence::LoadOrReply(Self, RequestId, Socket, Payload, Action, OutMovieScene);
   if (!OutSequence)
     return nullptr;
-  UMovieSceneTrack *Track =
-      FindTrackByName(OutMovieScene, GetJsonStringField(Payload, TEXT("trackName")));
+  // The display name too: add_track names a track by it, and that name answered TRACK_NOT_FOUND here.
+  const FString TrackName = GetJsonStringField(Payload, TEXT("trackName"));
+  FString Ambiguous;
+  UMovieSceneTrack *Track = FindTrackByName(OutMovieScene, TrackName, true, FString(), &Ambiguous);
   if (!Track)
-    Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Track not found"), nullptr,
-                                 TEXT("TRACK_NOT_FOUND"));
+    McpSequence::ReplyTrackMiss(Self, RequestId, Socket, TrackName, Ambiguous);
   return Track;
 }
 }
@@ -50,8 +51,11 @@ bool UEngineWireSubsystem::HandleSequenceSetTrackMuted(
   if (!Track)
     return true;
   const bool bMuted = GetJsonBoolField(Payload, TEXT("muted"), true);
+  // One undo step; the Modify that followed the change recorded nothing to undo to.
+  FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Mute Sequence Track")),
+                                          EMcpMutationDurability::EditorStateOnly, {Sequence, MovieScene, Track});
   Track->SetEvalDisabled(bMuted);
-  MovieScene->Modify();
+  Sequence->MarkPackageDirty();
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("trackName"), Track->GetName());
   Resp->SetBoolField(TEXT("muted"), bMuted);
@@ -72,12 +76,15 @@ bool UEngineWireSubsystem::HandleSequenceSetTrackSolo(
   TArray<UMovieSceneTrack *> AllTracks;
   CollectTracksByName(MovieScene, FString(), FString(), AllTracks);
   int32 DisabledOtherTrackCount = 0;
+  FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Solo Sequence Track")),
+                                          EMcpMutationDurability::EditorStateOnly, {Sequence, MovieScene});
   for (UMovieSceneTrack *Track : AllTracks) {
     const bool bDisableTrack = bSolo && Track != SoloTrack;
+    Track->Modify();
     Track->SetEvalDisabled(bDisableTrack);
     DisabledOtherTrackCount += bDisableTrack ? 1 : 0;
   }
-  MovieScene->Modify();
+  Sequence->MarkPackageDirty();
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("trackName"), SoloTrack->GetName());
@@ -101,12 +108,14 @@ bool UEngineWireSubsystem::HandleSequenceSetTrackLocked(
   if (!Track)
     return true;
   const bool bLocked = GetJsonBoolField(Payload, TEXT("locked"), true);
+  FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Lock Sequence Track")),
+                                          EMcpMutationDurability::EditorStateOnly, {Sequence, MovieScene});
   for (UMovieSceneSection *Section : Track->GetAllSections()) {
     if (Section) {
       Section->SetIsLocked(bLocked);
     }
   }
-  MovieScene->Modify();
+  Sequence->MarkPackageDirty();
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("trackName"), Track->GetName());

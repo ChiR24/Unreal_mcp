@@ -77,12 +77,12 @@ export const MANAGE_NETWORKING_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'add_legacy_mapping', selector: 'mapping',
-    summary: 'Bind a key to a legacy (Project Settings, Input) mapping, chosen by mapping: action takes actionName (or name), key and the shift, ctrl, alt and cmd modifiers; axis takes axisName (or name), key and scale (default 1, -1 for the reverse direction). key is the engine key name (SpaceBar, W, LeftMouseButton, Gamepad_LeftX); an unknown one is INVALID_ARGUMENT. A binding already there is kept (alreadyPresent), and the project DefaultInput.ini is written (defaultConfigUpdated). Projects on Enhanced Input map keys with manage_networking configure_input instead.',
+    summary: 'Bind a key to a legacy (Project Settings, Input) mapping, chosen by mapping: action takes actionName (or name), key and the shift, ctrl, alt and cmd modifiers; axis takes axisName (or name), key and scale (default 1, -1 for the reverse direction). key is the engine key name (SpaceBar, W, LeftMouseButton, Gamepad_LeftX); an unknown one is INVALID_ARGUMENT. A binding already there is kept (alreadyPresent true, added false); a new one is written to the project DefaultInput.ini (defaultConfigUpdated). Projects on Enhanced Input map keys with manage_networking configure_input instead.',
     members: byTarget('add_legacy_', ['add_legacy_action_mapping', 'add_legacy_axis_mapping'], '_mapping'),
   },
   {
     primary: 'remove_legacy_mapping', selector: 'mapping',
-    summary: 'Remove the binding of key from a legacy action or axis mapping, chosen by mapping (actionName, axisName or name): every binding of that name and key goes, removedCount says how many, and a pair that is not bound is NOT_FOUND with nothing written. The project DefaultInput.ini is written (defaultConfigUpdated).',
+    summary: 'Remove the binding of key from a legacy action or axis mapping, chosen by mapping (actionName, axisName or name): every binding of that name and key goes (an action binding only with the same shift, ctrl, alt and cmd), removedCount says how many, and a pair that is not bound is NOT_FOUND with nothing written. The project DefaultInput.ini is written (defaultConfigUpdated).',
     members: byTarget('remove_legacy_', ['remove_legacy_action_mapping', 'remove_legacy_axis_mapping'], '_mapping'),
   },
 ];

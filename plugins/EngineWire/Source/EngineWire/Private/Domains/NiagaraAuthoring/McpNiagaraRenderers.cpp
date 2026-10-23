@@ -33,8 +33,9 @@ static bool LoadRendererTarget(FActionContext& Context, FRendererTarget& Target)
 }
 
 template <typename TRenderer>
-static TRenderer* FindOrCreateRenderer(FRendererTarget& Target)
+static TRenderer* FindOrCreateRenderer(FRendererTarget& Target, bool& bOutCreated)
 {
+    bOutCreated = false;
     for (UNiagaraRendererProperties* Renderer : Target.EmitterData->GetRenderers())
     {
         if (TRenderer* TypedRenderer = Cast<TRenderer>(Renderer))
@@ -42,6 +43,7 @@ static TRenderer* FindOrCreateRenderer(FRendererTarget& Target)
             return TypedRenderer;
         }
     }
+    bOutCreated = true;
     TRenderer* NewRenderer = NewObject<TRenderer>(Target.Emitter, NAME_None, RF_Transactional);
     if (!NewRenderer)
     {
@@ -64,7 +66,8 @@ static bool AddRenderer(FActionContext& Context, const TCHAR* Label, TConfigure 
     {
         return true;
     }
-    TRenderer* Renderer = FindOrCreateRenderer<TRenderer>(Target);
+    bool bCreated = false;
+    TRenderer* Renderer = FindOrCreateRenderer<TRenderer>(Target, bCreated);
     const FString Lower = FString(Label).ToLower();
     if (!Renderer)
     {
@@ -73,9 +76,12 @@ static bool AddRenderer(FActionContext& Context, const TCHAR* Label, TConfigure 
     }
     Configure(*Renderer);
     MarkDirtyAndVerify(Context, Target.System);
+    // A second call configured the emitter's existing renderer while the reply read the same as adding one.
     Context.Result->SetStringField(TEXT("moduleName"), FString::Printf(TEXT("%sRenderer"), Label));
-    Context.Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Configured %s renderer module."), *Lower));
-    Context.SendSuccess(true, FString::Printf(TEXT("%s renderer configured."), Label));
+    Context.Result->SetStringField(TEXT("rendererPath"), Renderer->GetPathName());
+    Context.Result->SetBoolField(TEXT("rendererCreated"), bCreated);
+    Context.SendSuccess(true, bCreated ? FString::Printf(TEXT("%s renderer added."), Label)
+                                       : FString::Printf(TEXT("The emitter's %s renderer was configured; it already had one."), *Lower));
     return true;
 }
 
@@ -123,12 +129,14 @@ bool HandleRendererAction(FActionContext& Context, const FString& SubAction)
             return true;
         }
         EnsureNiagaraUsage(Material, bSprite ? TEXT("bUsedWithNiagaraSprites") : TEXT("bUsedWithNiagaraRibbons"));
-        const auto SetMaterial = [Material](auto& Renderer)
+        const auto SetMaterial = [Material, &Context](auto& Renderer)
         {
             if (Material)
             {
                 Renderer.Material = Material;
             }
+            // Read back: without materialPath the renderer keeps what it had, the engine default on a new one.
+            Context.Result->SetStringField(TEXT("materialPath"), Renderer.Material ? Renderer.Material->GetPathName() : FString());
         };
         return bSprite
             ? AddRenderer<UNiagaraSpriteRendererProperties>(Context, TEXT("Sprite"), SetMaterial)
@@ -141,20 +149,24 @@ bool HandleRendererAction(FActionContext& Context, const FString& SubAction)
         {
             return true;
         }
+        // Without a mesh the renderer was added with an empty mesh list, drawing nothing, and answered configured.
+        if (!Mesh)
+        {
+            Context.SendError(TEXT("meshPath is required: a mesh renderer with no mesh draws nothing. Nothing was changed."), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
         // Mesh particles draw the mesh's own materials, which need their mesh-particle flag the same way.
         for (const FStaticMaterial& Slot : Mesh ? Mesh->GetStaticMaterials() : TArray<FStaticMaterial>())
         {
             EnsureNiagaraUsage(Slot.MaterialInterface, TEXT("bUsedWithNiagaraMeshParticles"));
         }
-        return AddRenderer<UNiagaraMeshRendererProperties>(Context, TEXT("Mesh"), [Mesh](UNiagaraMeshRendererProperties& Renderer)
+        return AddRenderer<UNiagaraMeshRendererProperties>(Context, TEXT("Mesh"), [Mesh, &Context](UNiagaraMeshRendererProperties& Renderer)
         {
-            if (Mesh)
-            {
-                FNiagaraMeshRendererMeshProperties MeshProps;
-                MeshProps.Mesh = Mesh;
-                Renderer.Meshes.Empty();
-                Renderer.Meshes.Add(MeshProps);
-            }
+            FNiagaraMeshRendererMeshProperties MeshProps;
+            MeshProps.Mesh = Mesh;
+            Renderer.Meshes.Empty();
+            Renderer.Meshes.Add(MeshProps);
+            Context.Result->SetStringField(TEXT("meshPath"), Mesh->GetPathName());
         });
     }
     if (SubAction == TEXT("add_light_renderer_module"))
@@ -168,6 +180,7 @@ bool HandleRendererAction(FActionContext& Context, const FString& SubAction)
             {
                 Renderer.RadiusScale = static_cast<float>(RadiusScale);
             }
+            Context.Result->SetNumberField(TEXT("lightRadius"), Renderer.RadiusScale);
         });
     }
     return false;

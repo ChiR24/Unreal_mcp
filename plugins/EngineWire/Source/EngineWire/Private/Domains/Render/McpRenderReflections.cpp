@@ -93,18 +93,20 @@ bool ApplyPostProcessReflectionSettings(
     TArray<FString> Applied;
     TArray<FString> Unsupported;
     FString Error;
-    // Modify() before the write, as the color/lens variants already do: called
-    // after, it snapshots the changed struct and undo restores nothing.
-    Volume->Modify();
-    ApplyVolumeBlendFields(Volume, Payload, Applied);
-    if (!ApplyJsonSettings(
-            &Volume->Settings, FPostProcessSettings::StaticStruct(), GetSettingsObject(Payload),
-            true, Applied, Unsupported, Error))
+    // A copy first, as the color and lens variants do: the volume changes in one undo step once every value is taken.
+    FPostProcessSettings Staged = Volume->Settings;
+    if (!ApplyPostProcessSettings(Staged, GetSettingsObject(Payload), Applied, Unsupported, Error))
     {
         Subsystem->SendAutomationError(Socket, RequestId, Error, TEXT("INVALID_SETTING"));
         return true;
     }
-    Volume->MarkComponentsRenderStateDirty();
+    if (Applied.Num() == 0)
+    {
+        Subsystem->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("%s changed nothing: pass settings naming "
+            "FPostProcessSettings fields."), *SubAction), TEXT("NO_SETTING_SUPPLIED"));
+        return true;
+    }
+    CommitPostProcessVolume(Volume, Staged, Payload, false, Applied);
     TSharedPtr<FJsonObject> Result = MakeRenderResult(SubAction);
     AddStringArray(Result, TEXT("appliedSettings"), Applied);
     AddStringArray(Result, TEXT("unsupportedSettings"), Unsupported);
@@ -185,11 +187,25 @@ bool HandleRenderReflectionAction(
         {
             return false;
         }
-        // Modify marks the level changed; without it a save could miss the new offset.
-        Capture->Modify();
-        Capture->CaptureOffset = ExtractVectorField(Payload, TEXT("captureOffset"), Capture->CaptureOffset);
+        // No captureOffset, or one that is no vector, answered "configured" with nothing changed. A component left
+        // out of {x, y, z} keeps its value.
+        static const TCHAR* const Keys[3] = {TEXT("x"), TEXT("y"), TEXT("z")};
+        double Offset[3] = {Capture->CaptureOffset.X, Capture->CaptureOffset.Y, Capture->CaptureOffset.Z};
+        if (!ReadJsonTriple(Payload->TryGetField(TEXT("captureOffset")), Keys, Offset))
+        {
+            Subsystem->SendAutomationError(RequestingSocket, RequestId,
+                TEXT("captureOffset must be {x, y, z} or [x, y, z] in cm. Nothing was changed."), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+        {
+            // One undo step; Modify with no transaction open only marked the level changed.
+            FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Set Capture Offset")),
+                                                    EMcpMutationDurability::EditorStateOnly, {Capture});
+            Capture->CaptureOffset = FVector(Offset[0], Offset[1], Offset[2]);
+        }
         Capture->MarkDirtyForRecaptureOrUpload();
         TSharedPtr<FJsonObject> Result = MakeRenderResult(SubAction);
+        Result->SetObjectField(TEXT("captureOffset"), McpHandlerUtils::VectorToJson(Capture->CaptureOffset));
         McpHandlerUtils::AddVerification(Result, Actor);
         Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Capture offset configured."), Result);
         return true;

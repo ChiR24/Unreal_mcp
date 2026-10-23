@@ -1,6 +1,7 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "MovieSceneNameableTrack.h"
 #include "Domains/Sequence/McpSeqEditorSupport.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 
 namespace McpSequenceTracks {
 bool HandleAddTrack(UEngineWireSubsystem *Subsystem,
@@ -59,13 +60,25 @@ bool HandleAddTrack(UEngineWireSubsystem *Subsystem,
   }
 
   if (TrackClass && TrackClass->IsChildOf(UMovieSceneTrack::StaticClass())) {
+    // One undo step for the track and its name; AddTrack's own Modify recorded nothing without a transaction.
+    FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Add Sequence Track")),
+                                            EMcpMutationDurability::EditorStateOnly, {Sequence, MovieScene});
     if (BindingGuid.IsValid()) {
       NewTrack = MovieScene->AddTrack(TrackClass, BindingGuid);
     } else {
       // An unbound track (an Audio track for cutscene music) is a master track before 5.2.
       NewTrack = MCP_ADD_MOVIESCENE_TRACK(MovieScene, TrackClass);
     }
-  } else if (TrackClass) {
+    // Honour trackName (dogfood #124): callers address tracks by the display name they chose.
+    if (UMovieSceneNameableTrack *Nameable = (NewTrack && !TrackName.IsEmpty()) ? Cast<UMovieSceneNameableTrack>(NewTrack) : nullptr) {
+      Nameable->SetDisplayName(FText::FromString(TrackName));
+    }
+  } else if (!TrackClass) {
+    Subsystem->SendAutomationResponse(RequestingSocket, RequestId, false,
+        FString::Printf(TEXT("No track type '%s': list_track_types gives the names add_track takes"), *TrackType),
+        nullptr, TEXT("TRACK_CREATION_FAILED"));
+    return true;
+  } else {
     Subsystem->SendAutomationError(
         RequestingSocket, RequestId,
         FString::Printf(TEXT("Class '%s' is not a UMovieSceneTrack"),
@@ -79,19 +92,14 @@ bool HandleAddTrack(UEngineWireSubsystem *Subsystem,
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("sequencePath"), SeqPath);
-    // Honour trackName (dogfood #124): callers address tracks by the display name they chose.
-    if (UMovieSceneNameableTrack *Nameable = (NewTrack && !TrackName.IsEmpty()) ? Cast<UMovieSceneNameableTrack>(NewTrack) : nullptr)
-    {
-      Nameable->SetDisplayName(FText::FromString(TrackName));
-    }
     Resp->SetStringField(TEXT("trackType"), TrackType);
     if (NewTrack) {
       Resp->SetStringField(TEXT("trackId"), NewTrack->GetName()); // dogfood #124: addressable id
       Resp->SetStringField(TEXT("trackClass"), NewTrack->GetClass()->GetName());
       Resp->SetStringField(TEXT("trackPath"), NewTrack->GetPathName());
     }
-    Resp->SetStringField(TEXT("trackName"),
-                         TrackName.IsEmpty() ? TrackType : TrackName);
+    // Read back: a track type that takes no name kept its own while the reply named the one asked for.
+    Resp->SetStringField(TEXT("trackName"), NewTrack->GetDisplayName().ToString());
     if (!ActorName.IsEmpty()) {
       Resp->SetStringField(TEXT("actorName"), ActorName);
       Resp->SetStringField(TEXT("bindingGuid"), BindingGuid.ToString());

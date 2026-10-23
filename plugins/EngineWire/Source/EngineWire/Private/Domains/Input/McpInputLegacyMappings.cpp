@@ -158,7 +158,8 @@ bool HandleLegacyInputMapping(
         // An add that found the mapping already present is a no-op, not a new binding.
         Result->SetBoolField(TEXT("alreadyPresent"), BeforeCount > 0);
     }
-    Result->SetBoolField(bRemove ? TEXT("removed") : TEXT("added"), true);
+    // added was true for a binding that was already there, beside alreadyPresent true.
+    Result->SetBoolField(bRemove ? TEXT("removed") : TEXT("added"), bRemove || BeforeCount == 0);
     if (bUpdatedDefaultConfig && (bRemove || BeforeCount == 0))
     {
         // The receipt's changes[] reads modifiedPaths: the project's input config is what this edit changed.
@@ -167,7 +168,9 @@ bool HandleLegacyInputMapping(
         Result->SetArrayField(TEXT("modifiedPaths"), Paths);
     }
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
-        bRemove ? TEXT("Legacy input mapping removed.") : TEXT("Legacy input mapping added."), Result);
+        bRemove ? TEXT("Legacy input mapping removed.")
+                : BeforeCount > 0 ? TEXT("That legacy input mapping is already bound; nothing was added.")
+                                  : TEXT("Legacy input mapping added."), Result);
     return true;
 }
 }

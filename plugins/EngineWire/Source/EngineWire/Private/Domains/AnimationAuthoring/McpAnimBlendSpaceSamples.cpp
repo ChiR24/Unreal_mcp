@@ -232,7 +232,11 @@ TSharedPtr<FJsonObject> HandleBlendSpaceSampleActions(const FString& SubAction, 
         }
         BlendSpace->Modify();
         BlendParams[bVertical ? 1 : 0] = Updated;
+        // PostEditChange names no property, so the blend space rebuilt nothing: samples off the new range stayed valid
+        // and the runtime data kept the old grid. Validate and resample as its own editor does after an edit.
+        BlendSpace->ValidateSampleData();
         BlendSpace->PostEditChange();
+        BlendSpace->ResampleData();
         BlendSpace->MarkPackageDirty();
 
         Response->SetStringField(TEXT("axis"), bVertical ? TEXT("Vertical") : TEXT("Horizontal"));

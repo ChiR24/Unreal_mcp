@@ -3513,7 +3513,8 @@ describe('long cinematic work: tracks, settings, batches, rate limits and render
   // MovieScene3DTransformTrack_1 also matched _10 to _19, and remove_track could take the first of those.
   it('a whole track name picks that track before any that contains it', () => {
     const support = code('Sequence', 'McpSeqEditorSupport.h');
-    expect(support).toContain('for (const bool bWhole : {true, false})');
+    expect(support).toContain('for (int32 Step = 0; Step < 3; ++Step)');
+    expect(support).toMatch(/Step == 0\s*\? Name\.Equals\(TrackName, ESearchCase::IgnoreCase\)/u);
     expect(support).toContain('Out.RemoveAll([&Whole](UMovieSceneTrack *Track) { return !Whole(Track); });');
   });
 
@@ -4702,6 +4703,49 @@ describe('render console settings say what took', () => {
     expect(color).toContain('{TEXT("ToneCurveAmount"), TEXT("ExpandGamut")}');
     expect(color).toContain('is not a tonemapper');
   });
+
+  // Every post-process call wrote the live volume piecemeal with no transaction: undo took nothing back, and a refusal
+  // halfway (a bad value after good ones) left the volume half changed.
+  it('post-process values go on in one undo step once every one is taken', () => {
+    const support = code('Render', 'McpRenderSupport.h');
+    expect(support).toMatch(/inline void CommitPostProcessVolume[\s\S]*?FMcpScopedEditorTransaction Transaction[\s\S]*?Volume->Settings = Staged;/u);
+    for (const file of ['McpRenderPostProcessColor.cpp', 'McpRenderPostProcessLens.cpp', 'McpRenderReflections.cpp']) {
+      const handler = code('Render', file);
+      expect(handler).toContain('FPostProcessSettings Staged = Volume->Settings;');
+      expect(handler).toMatch(/CommitPostProcessVolume\(Volume, Staged, Payload, (true|false|bBlend), Applied\);/u);
+      expect(handler).not.toContain('ApplyVolumeBlendFields(Volume, Payload, Applied);');
+    }
+  });
+
+  // A motion blur amount of 50 or an f-stop of 0.5 was written and answered applied; two exposure and depth of field
+  // names wrote values no engine has; bMobileHQGaussian's override (bOverride_MobileHQGaussian) was never turned on.
+  it('values are held to the engine limits and to names the engine has', () => {
+    const settings = code('Render', 'McpRenderSupportSettings.h');
+    expect(settings).toContain('Property->GetMetaData(TEXT("ClampMin"))');
+    expect(settings).toContain('Property->GetMetaData(TEXT("ClampMax"))');
+    expect(settings).toContain('TEXT("bOverride_") + Pair.Key.Mid(1)');
+    const enums = code('Render', 'McpRenderSupportEnums.h');
+    expect(enums).not.toContain('AEM_Recovery');
+    expect(enums).not.toContain('DOFM_');
+    expect(code('Render', 'McpRenderPostProcessLens.cpp')).toContain('TEXT("bMobileHQGaussian")');
+  });
+
+  // A misspelt actorName went on to the level's unbound volume, so it edited another volume than the one named.
+  it('a volume name that matches none is refused while the level has an unbound volume', () => {
+    const resolver = readFileSync(join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'Foundation', 'Render', 'McpPostProcessVolumeResolution.cpp'), 'utf8');
+    expect(resolver).toContain('if (!Reference.IsEmpty() && (Unbound.Num() > 0 || !bAllowSpawn))');
+  });
+
+  // A capture offset call without captureOffset, and a capture resolution call without resolution (which resized the
+  // render target to 512), answered success.
+  it('capture offset and resolution need their value and read it back', () => {
+    const reflections = code('Render', 'McpRenderReflections.cpp');
+    expect(reflections).toContain('if (!ReadJsonTriple(Payload->TryGetField(TEXT("captureOffset")), Keys, Offset))');
+    expect(reflections).toContain('McpHandlerUtils::VectorToJson(Capture->CaptureOffset)');
+    const capture = code('Render', 'McpRenderSceneCapture.cpp');
+    expect(capture).toContain('ReadBoundedIntField(Payload, TEXT("resolution"), 0, 1, 4096, Resolution, Error)');
+    expect(capture).toContain('Result->SetNumberField(TEXT("resolution"), Capture2D->TextureTarget->SizeX);');
+  });
 });
 
 describe('console variable writes are read back', () => {
@@ -4988,5 +5032,130 @@ describe('saves and runtime state are reported as they are', () => {
   it('a mapping context already on the player is re-added at the new priority', () => {
     const input = code('Input', 'McpInputRuntimeQueries.cpp');
     expect(input.indexOf('InputSubsystem->RemoveMappingContext(Context);')).toBeLessThan(input.indexOf('InputSubsystem->AddMappingContext(Context, Priority);'));
+  });
+});
+
+describe('sequence timing and track state edits move nothing they should not', () => {
+  // A new tick resolution was set over keys stored in ticks, so every key moved in time; 24000/1001 was read as 24000.
+  it('a tick resolution change migrates keys and parses a ratio', () => {
+    const rates = code('Sequence', 'McpSeqSetDisplayRate.cpp');
+    expect(rates).toContain('UE::MovieScene::TimeHelpers::MigrateFrameTimes(Previous, NewResolution, MovieScene);');
+    expect(rates).not.toContain('SetTickResolutionDirectly');
+    expect(rates).not.toContain('Contains(TEXT("24000"))');
+  });
+
+  it('mute, solo and lock are one undo step each', () => {
+    const state = code('Sequence', 'McpSeqTrackState.cpp');
+    for (const title of ['Mute Sequence Track', 'Solo Sequence Track', 'Lock Sequence Track']) {
+      expect(state).toContain(`FText::FromString(TEXT("${title}"))`);
+    }
+  });
+
+  // stop put the playhead on frame 0, before a playback range that starts later, and answered "reset to start".
+  it('stop goes to the start of the playback range and seeks land on whole ticks', () => {
+    const playback = code('Sequence', 'McpSeqPlayback.cpp');
+    const stop = playback.slice(playback.indexOf('HandleSequenceStop('));
+    expect(stop).toContain('McpSeekPaused(Sequencer, FFrameTime(MovieScene->GetPlaybackRange().GetLowerBoundValue()));');
+    expect(stop).not.toContain('FFrameTime(0)');
+    expect(playback).toContain('AsFrameTime(Seconds).RoundToFrame()');
+    expect(playback).toContain('FText::FromString(TEXT("Set Sequence Playback Speed"))');
+  });
+
+  // "Transform" with two actors bound muted, or removed, whichever track came first; a name add_track gave a track
+  // answered TRACK_NOT_FOUND to mute, solo, lock and remove_track.
+  it('a track name several tracks fit is refused, and display names are found', () => {
+    const support = code('Sequence', 'McpSeqEditorSupport.h');
+    const lookup = support.slice(support.indexOf('inline UMovieSceneTrack *FindTrackByName'), support.indexOf('inline void CollectTracksByName'));
+    expect(lookup).toContain('if (Found.Num() > 1) {');
+    expect(lookup).not.toMatch(/if \(Matches\(Track\)\) \{\s*return Track;/);
+    expect(code('Sequence', 'McpSeqTrackState.cpp')).toContain('FindTrackByName(OutMovieScene, TrackName, true, FString(), &Ambiguous)');
+    expect(code('Sequence', 'McpSeqRegistry.cpp')).toContain('TEXT("AMBIGUOUS_TRACK")');
+  });
+
+  // open opened any asset at the path in its own editor and answered "Sequence opened" whether or not one opened.
+  it('open and add_track answer with what the editor did', () => {
+    const creation = code('Sequence', 'McpSeqAssetCreation.cpp');
+    const open = creation.slice(creation.indexOf('HandleSequenceOpen('));
+    expect(open).toContain('!AssetEditorSS->OpenEditorForAsset(Sequence)');
+    expect(open).toContain('McpSequence::LoadOrReply(');
+    const addTrack = code('Sequence', 'McpSeqTrackCreation.cpp');
+    expect(addTrack).toContain('FText::FromString(TEXT("Add Sequence Track"))');
+    expect(addTrack).toContain('Resp->SetStringField(TEXT("trackName"), NewTrack->GetDisplayName().ToString());');
+  });
+});
+
+describe('animation, audio, data table and input edits answer with what the engine holds', () => {
+  // createIfMissing false on a missing curve, and a key the controller refused, answered "Curve key set"; 5.0 wrote none.
+  it('a curve key is refused when it was not set, and read back when it was', () => {
+    const events = code('AnimationAuthoring', 'McpAnimSequenceEvents.cpp');
+    expect(events).toContain('if (!Controller.SetCurveKey(CurveId, FRichCurveKey(FrameTime, Value)))');
+    expect(events).toContain('TEXT("CURVE_NOT_FOUND")');
+    expect(events).toContain('VerifySmartName(USkeleton::AnimCurveMappingName, SmartCurveName)');
+    expect(events).toContain('Curve->FloatCurve.Eval(FrameTime)');
+  });
+
+  it('bone tracks, cached poses, blend spaces and aim offsets report what they hold and whether they saved', () => {
+    const tracks = code('AnimationAuthoring', 'McpAnimSequenceTracks.cpp');
+    expect(tracks).toContain('Response->SetBoolField(TEXT("alreadyExists"), bAlreadyHadTrack);');
+    const nodes = code('AnimationAuthoring', 'McpAnimBPBlendNodes.cpp');
+    expect(nodes).toContain('TEXT("CACHE_NAME_TAKEN")');
+    expect(nodes).toContain('Response->SetStringField(TEXT("cacheName"), CachedPoseNode->CacheName);');
+    expect(code('AnimationAuthoring', 'McpAnimAimOffsets.cpp')).toContain('McpSetBlendSpaceAxis(NewAimOffset, 0, TEXT("Yaw"), -180.f, 180.f)');
+    const spaces = code('AnimationAuthoring', 'McpAnimBlendSpaceAssets.cpp');
+    expect(spaces).toContain('McpBlendSpaceAxesJson(Cast<UBlendSpace>(ExistingAsset), 1)');
+    expect(spaces).not.toMatch(/^\s*SaveAnimAsset\(NewBlendSpace, bSave\);/mu);
+    expect(spaces).toContain('TEXT("MISSING_SKELETON")');
+    const samples = code('AnimationAuthoring', 'McpAnimBlendSpaceSamples.cpp');
+    expect(samples).toMatch(/BlendSpace->ValidateSampleData\(\);\s*BlendSpace->PostEditChange\(\);\s*BlendSpace->ResampleData\(\);/u);
+  });
+
+  // The modifier rebuilt the skeleton when it went out of scope, after the save had written it; no step was undoable.
+  it('skeleton bone edits are one undo step, rebuilt before the save', () => {
+    const creation = code('Skeleton', 'Bones', 'McpSkeletonStructureCreation.cpp');
+    expect(creation).toMatch(/FMcpScopedEditorTransaction Transaction\(FText::FromString\(TEXT\("Add Bone"\)\)[\s\S]*?Transaction\.DescribeInto\(Result\);\s*\}[\s\S]*?SaveAndReport\(Skeleton, Payload, Result\);/u);
+    expect(creation).toContain('ApplyTransformFieldsFromJson(Payload, BoneTransform);');
+    const editing = code('Skeleton', 'Bones', 'McpSkeletonStructureEditing.cpp');
+    expect(editing).toContain('FText::FromString(TEXT("Remove Bone"))');
+    expect(editing).toContain('FText::FromString(TEXT("Set Bone Parent"))');
+    expect(editing).toContain('RootCount <= 1');
+  });
+
+  it('occlusion, data table rows, PIE pause and legacy bindings say what changed', () => {
+    expect(code('AudioAuthoring', 'McpAudioAttenuation.cpp')).toContain('if (Params->HasField(TEXT("enable")) || Params->HasField(TEXT("enableOcclusion")))');
+    const rows = code('AssetWorkflow', 'DataTables', 'Rows.cpp');
+    for (const title of ['Add Data Table Row', 'Update Data Table Row', 'Delete Data Table Row']) {
+      expect(rows).toContain(`FText::FromString(TEXT("${title}"))`);
+    }
+    const play = code('ControlEditor', 'McpEditorPlay.cpp');
+    expect(play).toContain('Resp->SetBoolField(TEXT("alreadyPaused"), bWasPaused);');
+    expect(play).toContain('Resp->SetBoolField(TEXT("wasPaused"), bWasPaused);');
+    expect(code('Input', 'McpInputLegacyMappings.cpp')).toContain('bRemove || BeforeCount == 0');
+  });
+});
+
+describe('Niagara authoring builds what it reports', () => {
+  // NewObject under a taken name rebuilt a system in place (its emitters gone) or, for another class, stopped the editor.
+  it('creating a system or emitter refuses a taken name and compiles the new system', () => {
+    const systems = code('NiagaraAuthoring', 'McpNiagaraSystems.cpp');
+    expect(systems).not.toContain('CreatePackage(*PackageName)');
+    expect(systems.match(/McpCreatePackageForNewAsset\(PackageName, CreateError, CreateCode\)/gu)?.length).toBe(2);
+    expect(systems).toContain('NewSystem->RequestCompile(false);');
+    expect(code('NiagaraAuthoring', 'McpNiagaraContext.cpp')).toMatch(/void MarkDirtyAndVerify[\s\S]*?System->RequestCompile\(false\);/u);
+  });
+
+  // An unknown velocityMode, forceType, eventType or iteration source became the default while the reply echoed it.
+  it('selectors refuse names the engine has no module or source for', () => {
+    const modules = code('NiagaraAuthoring', 'McpNiagaraParticleModules.cpp');
+    expect(modules).toContain('velocityMode must be Linear, Cone or FromPoint');
+    expect(modules).toContain('forceType must be Gravity');
+    const events = code('NiagaraAuthoring', 'McpNiagaraEvents.cpp');
+    expect(events).toContain('eventType must be Location, Collision or Death');
+    expect(events).toContain('GeneratedEventName(NewModule)');
+    const stages = code('NiagaraAuthoring', 'McpNiagaraSimulation.cpp');
+    expect(stages).toContain('ENiagaraIterationSource::DirectSet');
+    expect(stages).toContain('FindPropertyByName(TEXT("MergeId"))');
+    const renderers = code('NiagaraAuthoring', 'McpNiagaraRenderers.cpp');
+    expect(renderers).toContain('meshPath is required');
+    expect(renderers).toContain('Context.Result->SetBoolField(TEXT("rendererCreated"), bCreated);');
   });
 });

@@ -88,7 +88,8 @@ bool HandleAmbientActions(
 
       TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
       Resp->SetStringField(TEXT("componentName"), AudioComp->GetName());
-      if (AmbientActor) { Resp->SetStringField(TEXT("actorName"), McpActorRef(AmbientActor)); } // contract output
+      // contract output; the actor a failed AmbientSound spawn fell back to went unnamed.
+      if (AActor* Owner = AmbientActor ? AmbientActor : AudioComp->GetOwner()) { Resp->SetStringField(TEXT("actorName"), McpActorRef(Owner)); }
       McpHandlerUtils::AddVerification(Resp, Sound);
       // The sound is used, not changed: the receipt listed it as a change.
       McpHandlerUtils::MarkNoAssetsChanged(Resp);

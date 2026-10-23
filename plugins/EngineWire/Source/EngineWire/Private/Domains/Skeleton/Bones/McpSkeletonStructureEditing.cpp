@@ -1,4 +1,5 @@
 #include "Domains/Skeleton/McpSkeletonActions.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 #include "Domains/Skeleton/Assets/McpSkeletonAssetLoading.h"
 #include "Domains/Skeleton/Assets/McpSkeletonPayload.h"
 
@@ -43,20 +44,31 @@ bool HandleRemoveBoneAction(UEngineWireSubsystem* Subsystem, const FString& Requ
             return true;
         }
 
-        if (BoneIndex == 0)
+        // The engine refuses only the one root a skeleton keeps; a second root (add_bone allows several) was refused
+        // too, as bone 0, though it removes like any other bone.
+        int32 RootCount = 0;
+        for (int32 Index = 0; Index < RefSkeleton.GetRawBoneNum(); ++Index)
+        {
+            RootCount += RefSkeleton.GetRawParentIndex(Index) == INDEX_NONE ? 1 : 0;
+        }
+        if (RefSkeleton.GetRawParentIndex(BoneIndex) == INDEX_NONE && RootCount <= 1)
         {
             Subsystem->SendAutomationError(RequestingSocket, RequestId,
-                TEXT("Cannot remove root bone"), TEXT("CANNOT_REMOVE_ROOT"));
+                TEXT("Cannot remove the skeleton's only root bone"), TEXT("CANNOT_REMOVE_ROOT"));
             return true;
         }
 
         // Remove the bone using FReferenceSkeletonModifier
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
-        Skeleton->Modify();
-        FReferenceSkeletonModifier Modifier(Skeleton);
-        Modifier.Remove(FName(*BoneName), bRemoveChildren);
-
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+        {
+            // One undo step; the modifier rebuilds the skeleton as it goes out of scope, before the save below.
+            FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Remove Bone")), EMcpMutationDurability::EditorStateOnly, {Skeleton});
+            FReferenceSkeletonModifier Modifier(Skeleton);
+            Modifier.Remove(FName(*BoneName), bRemoveChildren);
+            Transaction.DescribeInto(Result);
+        }
+
         Result->SetStringField(TEXT("removedBone"), BoneName);
         Result->SetBoolField(TEXT("childrenRemoved"), bRemoveChildren);
         Result->SetNumberField(TEXT("boneCount"), Skeleton->GetReferenceSkeleton().GetRawBoneNum());
@@ -136,9 +148,15 @@ bool HandleSetBoneParentAction(UEngineWireSubsystem* Subsystem, const FString& R
                 TEXT("INVALID_ARGUMENT"));
             return true;
         }
-        Skeleton->Modify();
-        FReferenceSkeletonModifier Modifier(Skeleton);
-        int32 NewBoneIndex = Modifier.SetParent(FName(*BoneName), FName(*NewParentName), false);
+        int32 NewBoneIndex = INDEX_NONE;
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+        {
+            // One undo step; the modifier rebuilds the skeleton as it goes out of scope, before the save below.
+            FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Set Bone Parent")), EMcpMutationDurability::EditorStateOnly, {Skeleton});
+            FReferenceSkeletonModifier Modifier(Skeleton);
+            NewBoneIndex = Modifier.SetParent(FName(*BoneName), FName(*NewParentName), false);
+            Transaction.DescribeInto(Result);
+        }
 
         if (NewBoneIndex == INDEX_NONE)
         {
@@ -148,7 +166,6 @@ bool HandleSetBoneParentAction(UEngineWireSubsystem* Subsystem, const FString& R
             return true;
         }
 
-        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("boneName"), BoneName);
         Result->SetStringField(TEXT("newParent"), NewParentName);
         Result->SetNumberField(TEXT("newBoneIndex"), NewBoneIndex);

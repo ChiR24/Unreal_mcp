@@ -146,15 +146,16 @@ bool UEngineWireSubsystem::HandleControlEditorPause(
     return true;
   }
 
+  // A session already paused answered "paused" as if this call had paused it.
+  const bool bWasPaused = GEditor->PlayWorld->bDebugPauseExecution;
   GEditor->PlayWorld->bDebugPauseExecution = true;
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("state"), TEXT("paused"));
-  Resp->SetStringField(TEXT("message"), TEXT("PIE session paused"));
+  Resp->SetBoolField(TEXT("alreadyPaused"), bWasPaused);
 
   SendAutomationResponse(Socket, RequestId, true,
-                         TEXT("PIE session paused"), Resp, FString());
+                         bWasPaused ? TEXT("PIE was already paused; nothing changed") : TEXT("PIE session paused"), Resp, FString());
   return true;
 }
 
@@ -173,10 +174,12 @@ bool UEngineWireSubsystem::HandleControlEditorResume(
     return true;
   }
 
+  const AWorldSettings *Settings = GEditor->PlayWorld->GetWorldSettings();
+  // A session that was not paused answered "resumed" as if this call had resumed it.
+  const bool bWasPaused = GEditor->PlayWorld->bDebugPauseExecution || (Settings && Settings->GetPauserPlayerState());
   GEditor->PlayWorld->bDebugPauseExecution = false;
   // The game can hold a pause of its own (SetGamePaused, from a pause menu or a title screen): the world then stays still
   // with the editor's pause off, and "resumed" was untrue. unpauseGame lifts it as the game's own unpause would.
-  const AWorldSettings *Settings = GEditor->PlayWorld->GetWorldSettings();
   if (Settings && Settings->GetPauserPlayerState() && GetJsonBoolField(Payload, TEXT("unpauseGame"))) {
     UGameplayStatics::SetGamePaused(GEditor->PlayWorld, false);
   }
@@ -192,9 +195,8 @@ bool UEngineWireSubsystem::HandleControlEditorResume(
   }
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("state"), TEXT("resumed"));
-  Resp->SetStringField(TEXT("message"), TEXT("PIE session resumed"));
+  Resp->SetBoolField(TEXT("wasPaused"), bWasPaused);
   // Unpausing does not close the menu that paused the game: its focused button kept taking the jump key.
   const FString Focused = FocusedPieWidgetForMcp();
   if (!Focused.IsEmpty()) {
@@ -208,7 +210,7 @@ bool UEngineWireSubsystem::HandleControlEditorResume(
   }
 
   SendAutomationResponse(Socket, RequestId, true,
-                         TEXT("PIE session resumed"), Resp, FString());
+                         bWasPaused ? TEXT("PIE session resumed") : TEXT("PIE was not paused; nothing changed"), Resp, FString());
   return true;
 }
 bool UEngineWireSubsystem::HandleControlEditorStepFrame(

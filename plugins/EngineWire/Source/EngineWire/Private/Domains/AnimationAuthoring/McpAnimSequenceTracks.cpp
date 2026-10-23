@@ -90,6 +90,7 @@ TSharedPtr<FJsonObject> HandleSequenceTrackActions(const FString& SubAction, con
             );
         }
 
+        bool bAlreadyHadTrack = false;
 #if ENGINE_MINOR_VERSION >= 2
         // UE 5.2+ uses IAnimationDataController with IsValidBoneTrackName and AddBoneCurve
         IAnimationDataController& Controller = Sequence->GetController();
@@ -104,7 +105,8 @@ TSharedPtr<FJsonObject> HandleSequenceTrackActions(const FString& SubAction, con
         }
 
         // Use IsValidBoneTrackName (non-deprecated) instead of GetBoneTrackIndexByName (deprecated since 5.2)
-        if (!Controller.GetModel()->IsValidBoneTrackName(BoneFName))
+        bAlreadyHadTrack = Controller.GetModel()->IsValidBoneTrackName(BoneFName);
+        if (!bAlreadyHadTrack)
         {
             // AddBoneCurve returns bool - check the result
             const bool bAdded = Controller.AddBoneCurve(BoneFName);
@@ -127,7 +129,8 @@ TSharedPtr<FJsonObject> HandleSequenceTrackActions(const FString& SubAction, con
 #elif ENGINE_MINOR_VERSION == 1
         // UE 5.1: AddBoneTrack/FindBoneTrackByName (AddBoneCurve is 5.2+, AddNewRawTrack is 5.0-only)
         IAnimationDataController& Controller = Sequence->GetController();
-        if (Controller.GetModel()->FindBoneTrackByName(BoneFName) == nullptr)
+        bAlreadyHadTrack = Controller.GetModel()->FindBoneTrackByName(BoneFName) != nullptr;
+        if (!bAlreadyHadTrack)
         {
             Controller.AddBoneTrack(BoneFName);
             if (Controller.GetModel()->FindBoneTrackByName(BoneFName) == nullptr)
@@ -143,6 +146,7 @@ TSharedPtr<FJsonObject> HandleSequenceTrackActions(const FString& SubAction, con
         IAnimationDataController& Controller = Sequence->GetController();
 
         const FBoneAnimationTrack* Track = Controller.GetModel()->FindBoneTrackByName(BoneFName);
+        bAlreadyHadTrack = Track != nullptr;
         if (Track == nullptr)
         {
             // UE 5.0 doesn't have AddBoneCurve - use AddNewRawTrack directly on the sequence
@@ -164,9 +168,13 @@ TSharedPtr<FJsonObject> HandleSequenceTrackActions(const FString& SubAction, con
         }
 #endif
 
-        SaveAnimAsset(Sequence, bSave);
+        // A track the sequence already had answered "added" and the sequence was written again.
+        Response->SetBoolField(TEXT("alreadyExists"), bAlreadyHadTrack);
+        SaveAnimAssetAndReport(Sequence, bSave && !bAlreadyHadTrack, Response);
 
-        ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Bone track '%s' added"), *BoneName));
+        ANIM_SUCCESS_RESPONSE(bAlreadyHadTrack
+            ? FString::Printf(TEXT("The sequence already has a track for bone '%s'; nothing was changed"), *BoneName)
+            : FString::Printf(TEXT("Bone track '%s' added"), *BoneName));
         McpHandlerUtils::AddVerification(Response, Sequence);
         return Response;
     }

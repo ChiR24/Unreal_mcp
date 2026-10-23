@@ -52,11 +52,11 @@ bool UEngineWireSubsystem::HandleSequenceAddSection(
     return true;
   }
 
-  UMovieSceneTrack *Track = FindTrackByName(MovieScene, TrackName, true, ActorName);
+  FString Ambiguous;
+  UMovieSceneTrack *Track = FindTrackByName(MovieScene, TrackName, true, ActorName, &Ambiguous);
 
   if (!Track) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("Track not found"),
-                           nullptr, TEXT("TRACK_NOT_FOUND"));
+    McpSequence::ReplyTrackMiss(this, RequestId, Socket, TrackName, Ambiguous);
     return true;
   }
 

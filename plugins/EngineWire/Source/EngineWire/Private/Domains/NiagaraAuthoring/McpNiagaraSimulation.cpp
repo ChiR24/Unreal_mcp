@@ -60,13 +60,37 @@ static bool AddSimulationStage(FActionContext& Context)
     {
         return true;
     }
+    // An unknown source, DirectSet included, made a particle stage while the reply named the one asked for.
+    FString IterationSource = GetJsonStringField(Context.Payload, TEXT("stageIterationSource"), TEXT("Particles"));
+    ENiagaraIterationSource Source = ENiagaraIterationSource::Particles;
+    if (IterationSource.Equals(TEXT("DataInterface"), ESearchCase::IgnoreCase))
+    {
+        Source = ENiagaraIterationSource::DataInterface;
+        IterationSource = TEXT("DataInterface");
+    }
+#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 2
+    else if (IterationSource.Equals(TEXT("DirectSet"), ESearchCase::IgnoreCase))
+    {
+        Source = ENiagaraIterationSource::DirectSet;
+        IterationSource = TEXT("DirectSet");
+    }
+#endif
+    else if (!IterationSource.Equals(TEXT("Particles"), ESearchCase::IgnoreCase))
+    {
+        Context.SendError(FString::Printf(TEXT("stageIterationSource must be Particles, DataInterface or DirectSet (UE 5.2 and later); "
+            "got '%s'. Nothing was changed."), *IterationSource), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+    else
+    {
+        IterationSource = TEXT("Particles");
+    }
     UNiagaraSystem* System = nullptr;
     FNiagaraEmitterHandle* Handle = nullptr;
     if (!LoadSystemAndEmitter(Context, System, Handle))
     {
         return true;
     }
-    const FString IterationSource = GetJsonStringField(Context.Payload, TEXT("stageIterationSource"), TEXT("Particles"));
     bool bSimulationStageAdded = false;
     bool bSimulationStageGraphCreated = false;
     int32 SimulationStageCount = 0;
@@ -89,12 +113,20 @@ static bool AddSimulationStage(FActionContext& Context)
         if (NewStage)
         {
             NewStage->SimulationStageName = FName(*StageName);
-            NewStage->IterationSource = IterationSource.Equals(TEXT("DataInterface"), ESearchCase::IgnoreCase) ? ENiagaraIterationSource::DataInterface : ENiagaraIterationSource::Particles;
+            NewStage->IterationSource = Source;
             NewStage->Script = NewObject<UNiagaraScript>(NewStage, MakeUniqueObjectName(NewStage, UNiagaraScript::StaticClass(), TEXT("MCPSimulationStageScript")), RF_Transactional);
-            if (NewStage->Script)
+            // The engine adds a stage only with its script, which AddSimulationStage reads: a stage without one crashed.
+            if (!NewStage->Script)
             {
+                Context.SendError(TEXT("Failed to create the simulation stage script."), TEXT("NIAGARA_GRAPH_CREATE_FAILED"));
+                return true;
+            }
+            {
+                // The engine keys a stage's script by the stage's merge id, as emitter merging matches them.
+                const FStructProperty* MergeIdProp = CastField<FStructProperty>(NewStage->GetClass()->FindPropertyByName(TEXT("MergeId")));
+                const FGuid* MergeId = MergeIdProp ? MergeIdProp->ContainerPtrToValuePtr<FGuid>(NewStage) : nullptr;
                 NewStage->Script->SetUsage(ENiagaraScriptUsage::ParticleSimulationStageScript);
-                NewStage->Script->SetUsageId(FGuid::NewGuid());
+                NewStage->Script->SetUsageId(MergeId && MergeId->IsValid() ? *MergeId : FGuid::NewGuid());
                 NewStage->Script->SetLatestSource(ScriptSource);
                 bSimulationStageGraphCreated = EnsureScriptOutputGraph(ScriptSource, ENiagaraScriptUsage::ParticleSimulationStageScript, NewStage->Script->GetUsageId());
                 if (!bSimulationStageGraphCreated)

@@ -259,6 +259,12 @@ bool LoadSystemAndEmitter(FActionContext& Context, UNiagaraSystem*& System, FNia
 
 void MarkDirtyAndVerify(FActionContext& Context, UObject* Object)
 {
+    // A module, renderer, event handler or simulation stage added to the stack ran nowhere until something compiled
+    // the system, and a save wrote the old scripts; compile it as add_niagara_module and add_emitter_to_system do.
+    if (UNiagaraSystem* System = Cast<UNiagaraSystem>(Object))
+    {
+        System->RequestCompile(false);
+    }
     if (Context.bSave && Object)
     {
         // Dirty alone never reached disk: module/parameter edits vanished at the next editor start.

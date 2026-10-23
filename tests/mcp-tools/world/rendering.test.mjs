@@ -391,6 +391,10 @@ function createRenderingHappyCases(ctx) {
       enabled: true,
       settings: { LensFlareIntensity: 1.1, LensFlareThreshold: 8 }
     }),
+    createNamedActionCase('Post Process: lens flare enabled puts the intensity back', 'configure_lens_flare', {
+      actorName: ctx.postProcessVolume,
+      enabled: true
+    }, { assertions: [{ path: 'structuredContent.result.appliedSettings', includes: 'LensFlareIntensity', label: 'enabled true writes the intensity' }] }),
     createNamedActionCase('Post Process: configure DOF', 'configure_dof', {
       actorName: ctx.postProcessVolume,
       enabled: true,
@@ -399,7 +403,23 @@ function createRenderingHappyCases(ctx) {
     createNamedActionCase('Post Process: set DOF method', 'set_dof_method', {
       actorName: ctx.postProcessVolume,
       method: 'CinematicDOF'
-    }),
+    }, { assertions: [{ path: 'structuredContent.result.appliedSettings', includes: 'bMobileHQGaussian', label: 'the method is the mobile Gaussian switch' }] }),
+    createNamedActionCase('Post Process: set DOF method Gaussian', 'set_dof_method', {
+      actorName: ctx.postProcessVolume,
+      method: 'Gaussian'
+    }, { assertions: [{ path: 'structuredContent.result.appliedSettings', includes: 'bMobileHQGaussian', label: 'Gaussian turns the mobile high quality Gaussian on' }] }),
+    createNamedActionCase('Post Process: refuse a motion blur amount past the engine limit', 'set_motion_blur_amount', {
+      actorName: ctx.postProcessVolume,
+      amount: 50
+    }, { expected: errorExpected('must be between') }),
+    createNamedActionCase('Post Process: refuse an exposure method the engine does not have', 'set_exposure_method', {
+      actorName: ctx.postProcessVolume,
+      method: 'Recovery'
+    }, { expected: errorExpected('unknown method') }),
+    createNamedActionCase('Post Process: refuse a volume name no volume has', 'set_focal_distance', {
+      actorName: `${ctx.postProcessVolume}_Missing`,
+      distance: 300
+    }, { expected: errorExpected('no postprocessvolume is named') }),
     createNamedActionCase('Post Process: set focal distance', 'set_focal_distance', {
       actorName: ctx.postProcessVolume,
       distance: 650
@@ -673,6 +693,10 @@ function createRenderingAdversarialCases(ctx) {
     }, { expected: errorExpected('invalid') }),
     createNamedActionCase('Adversarial: reject a post-process call that sets nothing', 'set_bloom_threshold', {
       actorName: ctx.postProcessVolume
+    }, { expected: errorExpected('missing required parameter') }),
+    createNamedActionCase('Adversarial: reject a blend-only call to a value variant', 'configure_lens_flare', {
+      actorName: ctx.postProcessVolume,
+      blendWeight: 1
     }, { expected: errorExpected('no_setting_supplied') }),
     createNamedActionCase('Adversarial: reject oversized reflection capture resolution', 'configure_reflection_capture_resolution', {
       actorName: ctx.sphereCapture,

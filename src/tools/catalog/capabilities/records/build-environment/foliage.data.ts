@@ -38,7 +38,7 @@ export const FOLIAGE_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'build_environment.add_foliage_instances', action: 'add_foliage_instances', family: F,
-    summary: 'Add explicit foliage instances: full transforms, or bare locations varied by minScale/maxScale/randomYaw.',
+    summary: 'Add explicit foliage instances: full transforms, or bare locations varied by minScale/maxScale/randomYaw. One undo step removes them all; the reply\'s undo block says so.',
     whenToUse: WU, whenNotToUse: ['Random scatter via paint_foliage is sufficient.'],
     inputProps: { foliageType: P.foliageType, foliageTypePath: P.foliageTypePath,
       meshPath: { ...P.meshPath, description: 'StaticMesh to place when no foliage type is named; its /Game/Foliage/Auto_<mesh> type is made once and reused.' },
@@ -72,7 +72,7 @@ export const FOLIAGE_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'build_environment.paint_foliage', action: 'paint_foliage', family: F,
-    summary: 'Paint foliage over a brush disc (location + radius) or a box area: count instances dropped onto the ground, each with a random scale and yaw.',
+    summary: 'Paint foliage over a brush disc (location + radius) or a box area: count instances dropped onto the ground, each with a random scale and yaw. One undo step removes the whole stroke; NO_SURFACE (no ground below any point) adds nothing.',
     whenToUse: WU, whenNotToUse: ['Explicit transforms should be used via add_foliage_instances.'],
     inputProps: { foliageType: P.foliageType, foliageTypePath: P.foliageTypePath,
       locations: P.locations, position: P.position, location: P.location, radius: P.radius,

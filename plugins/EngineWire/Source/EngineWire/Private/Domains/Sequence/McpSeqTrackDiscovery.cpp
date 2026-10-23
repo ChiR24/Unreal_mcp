@@ -46,6 +46,8 @@ bool HandleListTracks(UEngineWireSubsystem *Subsystem,
       TrackObj->SetStringField(TEXT("bindingGuid"), Binding->GetObjectGuid().ToString());
     }
     TrackObj->SetNumberField(TEXT("sectionCount"), Track->GetAllSections().Num());
+    // Mute and solo had nothing to read them back with.
+    TrackObj->SetBoolField(TEXT("muted"), Track->IsEvalDisabled());
     // Which clip plays where read only through info=keys or a property read of each section.
     TArray<FString> Clips;
     for (const UMovieSceneSection *Section : Track->GetAllSections()) {
