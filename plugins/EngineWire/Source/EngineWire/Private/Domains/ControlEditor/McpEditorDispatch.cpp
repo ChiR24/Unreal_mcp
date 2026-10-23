@@ -1,4 +1,5 @@
 #include "Domains/ControlEditor/McpEditorSupport.h"
+#include "Domains/ControlEditor/Checkpoint/McpEditorCheckpoint.h"
 #include "Domains/ControlEditor/Toolsets/McpEditorToolsets.h"
 
 bool UEngineWireSubsystem::HandleControlEditorAction(
@@ -101,6 +102,8 @@ bool UEngineWireSubsystem::HandleControlEditorAction(
     return HandleControlEditorUndo(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("redo"))
     return HandleControlEditorRedo(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("restore_point"))
+    return McpEditorCheckpoint::Handle(this, RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("set_editor_mode"))
     return HandleControlEditorSetEditorMode(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("show_stats"))

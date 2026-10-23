@@ -8,6 +8,7 @@
 #include "Core/Errors/McpRequestErrorDevice.h"
 #include "Foundation/Diagnostics/McpDiagnosticsSnapshot.h"
 #include "Foundation/Diagnostics/McpWorldTickTimer.h"
+#include "Domains/ControlEditor/Checkpoint/McpEditorCheckpoint.h"
 #include "Domains/ControlEditor/McpEditorSupport.h"
 #include "Domains/ControlEditor/McpEditorScreenshotSupport.h"
 #include "Domains/Log/McpLogHistory.h"
@@ -151,6 +152,8 @@ void UEngineWireSubsystem::Deinitialize()
     McpWorldTickTimer::Stop();
     StopAcceptingAutomationRequests();
     McpStopLiveStateTracking();
+    // An open restore point holds lambdas on engine delegates that outlive this module.
+    McpEditorCheckpoint::Shutdown();
     // Enhanced Input holds live on the core ticker, which outlives this module.
     // Live Coding unloads the module routinely, so a hold left registered would
     // tick into code that is no longer mapped.

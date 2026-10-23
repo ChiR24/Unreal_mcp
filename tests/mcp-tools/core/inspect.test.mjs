@@ -61,6 +61,7 @@ const testCases = [
 
   // === PROPERTIES / COMPONENTS ===
   { scenario: 'CONFIG: set_property', toolName: 'inspect', arguments: inspectActor('set_property', { propertyName: 'InitialLifeSpan', value: 0 }), expected: 'success' },
+  { scenario: 'CONFIG: a set_property write is one undo step', toolName: 'inspect', arguments: inspectActor('set_property', { propertyName: 'InitialLifeSpan', value: 7 }), expected: 'success', assertions: [{ path: 'structuredContent.result.undo.undoable', equals: true, label: 'the write reached the undo history, so undo takes it back' }] },
   { scenario: 'INFO: get_property', toolName: 'inspect', arguments: inspectActor('get_property', { propertyName: 'InitialLifeSpan' }), expected: 'success' },
   { scenario: 'CONFIG: set_property with only propertyPath, left clean', toolName: 'inspect', arguments: inspectActor('set_property', { propertyPath: 'InitialLifeSpan', value: 0, markDirty: false }), expected: 'success' },
   { scenario: 'CONFIG: set_property watches a property after the write', toolName: 'inspect', arguments: inspectActor('set_property', { propertyName: 'InitialLifeSpan', value: 0, markDirty: false, watch: { propertyName: 'InitialLifeSpan', durationSeconds: 0.1, intervalSeconds: 0 } }), expected: 'success', assertions: [{ path: 'structuredContent.result.watch.propertyName', equals: 'InitialLifeSpan', label: 'the watch comes back with the reply' }] },

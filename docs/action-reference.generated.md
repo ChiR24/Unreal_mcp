@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `d584d8fdac0f367b`
+Catalog revision: `436cdf4839ee1638`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -307,7 +307,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `control_editor.set_viewport_resolution` | `control_editor` | `console_command` | read | read | none | `control_editor.set_viewport_resolution` |
 | `control_editor.simulate_input` | `control_editor` | `simulate_input` | write | write | none | `control_editor.simulate_input` |
 | `control_editor.start_recording` | `control_editor` | `start_recording` | write | write | none | `control_editor.start_recording` `control_editor.stop_recording` |
-| `control_editor.undo` | `control_editor` | `undo` | write | write | none | `control_editor.undo` `control_editor.redo` |
+| `control_editor.undo` | `control_editor` | `undo` | write | write | none | `control_editor.undo` `control_editor.redo` `control_editor.restore_point` |
 | `datatable.delete_data_table_row` | `manage_asset` | `delete_data_table_row` | destructive | destructive | elevated | `manage_asset.delete_data_table_row` `manage_asset.clear_data_table_rows` |
 | `datatable.edit_data_table` | `manage_asset` | `create_data_table` | write | write | explicit | `manage_asset.edit_data_table` `manage_asset.create_data_table` `manage_asset.create_row_struct` `manage_asset.add_data_table_row` `manage_asset.update_data_table_row` `manage_asset.import_data_table_rows` `manage_asset.set_data_table_row_struct` `manage_asset.set_struct_as_row_struct` |
 | `datatable.inspect_data_table` | `manage_asset` | `get_data_table_row` | read | read | none | `manage_asset.inspect_data_table` `manage_asset.get_data_table_row` `manage_asset.list_data_table_rows` `manage_asset.get_row_struct` |

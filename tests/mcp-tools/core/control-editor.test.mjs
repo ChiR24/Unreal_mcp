@@ -140,6 +140,12 @@ const testCases = [
   { scenario: 'CONFIG: set_game_view', toolName: 'control_editor', arguments: { action: 'set_game_view', enabled: false }, expected: 'success' },
   { scenario: 'ACTION: undo', toolName: 'control_editor', arguments: { action: 'undo' }, expected: 'success' },
   { scenario: 'ACTION: redo', toolName: 'control_editor', arguments: { action: 'redo' }, expected: 'success' },
+  { scenario: 'ERROR: restore point rollback with none open', toolName: 'control_editor', arguments: { action: 'restore_point', op: 'rollback' }, expected: 'error|NO_RESTORE_POINT' },
+  { scenario: 'ACTION: restore point begin', toolName: 'control_editor', arguments: { action: 'restore_point', op: 'begin', label: 'integration' }, expected: 'success' },
+  { scenario: 'ERROR: a second restore point while one is open', toolName: 'control_editor', arguments: { action: 'restore_point', op: 'begin' }, expected: 'error|RESTORE_POINT_OPEN' },
+  { scenario: 'ACTION: restore point status names it', toolName: 'control_editor', arguments: { action: 'restore_point', op: 'status' }, expected: 'success', assertions: [{ path: 'structuredContent.result.label', equals: 'integration', label: 'the open restore point is the one begun' }] },
+  { scenario: 'ACTION: restore point rollback with nothing since', toolName: 'control_editor', arguments: { action: 'restore_point', op: 'rollback' }, expected: 'success' },
+  { scenario: 'ACTION: restore point end', toolName: 'control_editor', arguments: { action: 'restore_point', op: 'end' }, expected: 'success' },
   { scenario: 'ACTION: save_all', toolName: 'control_editor', arguments: { action: 'save_all' }, expected: 'success' },
   // A listed path that is not dirty saves nothing and still succeeds.
   { scenario: 'ACTION: save_all assetPaths', toolName: 'control_editor', arguments: { action: 'save_all', assetPaths: ['/Game/NoSuchAsset'] }, expected: 'success' },

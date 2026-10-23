@@ -2,6 +2,7 @@
 #include "Dom/JsonObject.h"
 #include "HAL/PlatformTime.h"
 #include "Core/Module/EngineWireGlobals.h"
+#include "Core/Requests/McpUndoLedger.h"
 #include "Core/Security/McpPrequeueGate.h"
 #include "Domains/ControlActor/Placement/McpChangeWatch.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
@@ -188,6 +189,8 @@ void UEngineWireSubsystem::ProcessAutomationRequest(
 
   {
     ON_SCOPE_EXIT {
+      // A reply held while the handler's transaction was open goes now, with every capture still running.
+      McpUndoLedger::Flush();
       // =====================================================================
       // End Error Capture and check for captured errors
       // =====================================================================
@@ -215,6 +218,7 @@ void UEngineWireSubsystem::ProcessAutomationRequest(
       }
 
       McpChangeWatch::End();
+      McpUndoLedger::End();
       bProcessingAutomationRequest = false;
       EngineWire::SetInFlightAction(FString(), FString()); // clear the in-flight action on every exit path
       CurrentRequestOrigin = ERequestOrigin::WebSocket;
@@ -251,8 +255,10 @@ void UEngineWireSubsystem::ProcessAutomationRequest(
     // responses stay aligned with the Unreal log.
     BeginErrorCapture();
     bErrorCaptureStarted = true;
-    // Whatever actors the handler spawns, moves or redraws are checked when it replies (McpChangeWatch::AddWarnings).
+    // Whatever actors the handler spawns, moves or redraws are checked when it replies (McpChangeWatch::AddWarnings),
+    // and the undo steps it leaves are read from the transaction buffer (McpUndoLedger::Describe).
     McpChangeWatch::Begin(RequestId);
+    McpUndoLedger::Begin(RequestId);
 
     // Map this requestId to the requesting socket so responses can be
     // delivered reliably

@@ -241,7 +241,7 @@ const testCases = [
   { scenario: 'CONFIG: set_blueprint_variables takes an array of actors by label', toolName: 'control_actor', arguments: { action: 'set_blueprint_variables', actorName: BP_ACTOR, variables: { Targets: [MAIN_ACTOR, PARENT_ACTOR] } }, expected: 'success' },
   { scenario: 'VERIFY: the array holds both actors', toolName: 'control_actor', arguments: { action: 'list', filter: BP_ACTOR, propertyNames: ['Targets'] }, expected: 'success', assertions: [{ path: 'structuredContent.result.actors.0.properties.Targets', length: 2, label: 'both labels resolved to actors' }] },
   { scenario: 'CREATE: create_snapshot', toolName: 'control_actor', arguments: actorArgs('create_snapshot', { snapshotName: `Snapshot_${ts}` }), expected: 'success|already exists' },
-  { scenario: 'ACTION: attach', toolName: 'control_actor', arguments: { action: 'attach', childActor: CHILD_ACTOR, parentActor: PARENT_ACTOR }, expected: 'success' },
+  { scenario: 'ACTION: attach', toolName: 'control_actor', arguments: { action: 'attach', childActor: CHILD_ACTOR, parentActor: PARENT_ACTOR }, expected: 'success', assertions: [{ path: 'structuredContent.result.undo.undoable', equals: true, label: 'the attach step is reported from the undo history, though its handler names none' }] },
   { scenario: 'ACTION: detach', toolName: 'control_actor', arguments: { action: 'detach', actorName: CHILD_ACTOR }, expected: 'success' },
   { scenario: 'ACTION: attach_actor', toolName: 'control_actor', arguments: { action: 'attach_actor', childActor: CHILD_ACTOR, parentActor: PARENT_ACTOR }, expected: 'success' },
   { scenario: 'ACTION: detach_actor', toolName: 'control_actor', arguments: { action: 'detach_actor', actorName: CHILD_ACTOR }, expected: 'success' },

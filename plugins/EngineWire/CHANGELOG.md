@@ -15,9 +15,10 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **`get_frame_cost`**, **`diff_asset`**, **`cancel_render`**, `configure_render_camera` shutter and overscan, `set_section` `playRate`.
 - **`nanite_rebuild_mesh` `assetPaths`**, `get_niagara_info` values, `edit_dynamic_mesh` `append_cuboids`, `append_loft`, `append_mesh` and `delete_triangles`.
 - **Change watch**: what a request spawns or modifies, and an edited Blueprint's placed copies, are checked into `warnings`.
+- **Undo ledger**: a reply's `undo` block comes from the transaction buffer (a reply sent inside its handler's transaction waits for it to close); **restore points** (`control_editor restore_point`) roll back only this server's steps, refusing a user's step or a cleared history first.
 
 ### Fixed
-- **Small fixes**: links on UE 5.0; whole-path `runtime_report` filters; diagnostics records replace their files; exact task principals; the RHI thread in `busiestThreadMs`; effect lifecycle misses name what is missing.
+- **Small fixes**: `set_property` writes are one undo step; links on UE 5.0; whole-path `runtime_report` filters; diagnostics records replace their files; exact task principals; the RHI thread in `busiestThreadMs`; effect lifecycle misses name what is missing.
 - **Removals** name what still uses an asset (`*_IN_USE`, `referencedBy`), keep outside-referenced assets, take exact components and undo for tracks and keys; extra sky lights are named, not destroyed.
 - **Fold variants** enforce their own requirements before dispatch, and describe lists what each one does under the selector.
 - **Renders** honour `renderTimeoutMs`; save_all and restart_editor wait (`RENDER_IN_PROGRESS`).

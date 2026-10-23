@@ -5740,9 +5740,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "enum": [
             "undo",
-            "redo"
+            "redo",
+            "restore_point"
           ],
-          "description": "Which undo variant to run; omit for 'undo'.\nundo: Undo the last editor transaction; the reply names it, and NOTHING_TO_UNDO means there was none.\nredo: Redo the last undone editor transaction; the reply names it, and NOTHING_TO_REDO means there was none.",
+          "description": "Which undo variant to run; omit for 'undo'.\nundo: Undo the last editor transaction; the reply names it, and NOTHING_TO_UNDO means there was none.\nredo: Redo the last undone editor transaction; the reply names it, and NOTHING_TO_REDO means there was none.\nrestore_point: Mark a restore point to roll the editor back to, undoing only what calls through this server changed, chosen by op. begin opens it (one at a time; label names it); status lists the editor's transactions since it, newest first, each with byMcp, and the assets created, removed or saved since (assetsCreated, assetsRemoved, packagesSaved); rollback undoes every step since it and refuses before undoing anything when a step was not made through this server (USER_STEP_SINCE_RESTORE_POINT names it) or the editor's history was cleared since (UNDO_HISTORY_CLEARED: a Blueprint compile or a level load clears it); end closes it. Undo deletes no created asset and restores no saved file: rollback lists them, and asset.delete removes a created one. A rollback is refused while Play runs (PIE_RUNNING).",
           "default": "undo"
         },
         "holdSeconds": {
@@ -5789,6 +5790,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "key": {
           "type": "string",
           "description": "Key name: SpaceBar, D, Left, Enter, P. Escape is the editor stop-play key: in Play In Editor it ends the session instead of reaching the game, so test an action bound to Escape through another key mapped to it."
+        },
+        "label": {
+          "type": "string",
+          "description": "Name for the restore point (begin); default restore point."
         },
         "levelPath": {
           "type": "string",
@@ -5864,6 +5869,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "objectPath": {
           "type": "string",
           "description": "Object path alias for actorName."
+        },
+        "op": {
+          "type": "string",
+          "enum": [
+            "begin",
+            "status",
+            "rollback",
+            "end"
+          ],
+          "description": "begin opens the restore point, status lists what changed since it (the default), rollback undoes it, end closes it."
         },
         "path": {
           "type": "string",
