@@ -37,6 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Nothing is overwritten unasked**: taken names and paths are refused; edits keep the fields left out; engine content is never saved or edited in place; extra sky lights are named, not deleted; `rename_widget` keeps animations and bindings.
 - **A family's variant needs what its action needs** on both transports; describe and search show `requiredFor` and `variantRequired`, and describe lists what each variant does under its selector.
 - **Renders** keep their request open for `renderTimeoutMs`; `save_all` and `restart_editor` wait for them.
+- **An open editor dialog** answers every call `EDITOR_MODAL_ACTIVE` with its title on both transports; calls through `/mcp` waited, then failed `EDITOR_BLOCKED`.
 - **Viewport screenshots wait for streaming** and name video memory over budget; `set_viewport_realtime` reports its state.
 - **Property writes**: a deprecated property is refused with its replacement; Niagara `set_property` restarts placed effects; environment settings take object references.
 - **Placement checks**: `audit_placement` counts simulated bodies, player-start capsules and skips undersides; `fix_coplanar` handles several neighbours.

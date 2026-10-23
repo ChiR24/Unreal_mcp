@@ -3,6 +3,7 @@
 #if WITH_DEV_AUTOMATION_TESTS
 #include "Misc/AutomationTest.h"
 #include "Misc/ScopeExit.h"
+#include "Core/Requests/McpResponseCaptureRegistry.h"
 #include "McpConnectionManager.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 
@@ -263,6 +264,48 @@ bool FMcpAutomationSaturationRecoveryTest::RunTest(const FString &Parameters) {
       TEXT("the lane depth unwinds to zero"),
       Subsystem->QueueFairness.DispatchDepth, 0);
 
+  return true;
+}
+
+// While a dialog runs its own loop, queued requests are answered EDITOR_MODAL_ACTIVE with its title, and none runs.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FMcpModalLoopAnswerTest,
+    "EngineWire.Core.RequestQueue.ModalLoopAnswer",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FMcpModalLoopAnswerTest::RunTest(const FString &Parameters) {
+  (void)Parameters;
+  UEngineWireSubsystem *Subsystem = NewObject<UEngineWireSubsystem>();
+  int32 DispatchCount = 0;
+  Subsystem->RegisterHandler(
+      TEXT("modal_answer_test"),
+      [&DispatchCount](const FString &, const FString &, const TSharedPtr<FJsonObject> &,
+                       TSharedPtr<FMcpBridgeWebSocket>) {
+        ++DispatchCount;
+        return true;
+      });
+  const FString Ids[] = {TEXT("modal-answer-1"), TEXT("modal-answer-2")};
+  for (const FString &Id : Ids) {
+    FMcpResponseCaptureRegistry::Get().Begin(Id);
+    TestEqual(TEXT("request queued"),
+              Subsystem->QueueAutomationRequest(Id, TEXT("modal_answer_test"), MakeShared<FJsonObject>(), nullptr),
+              EAutomationQueueRejection::None);
+  }
+  TestEqual(TEXT("both queued requests answered"), Subsystem->AnswerQueuedRequestsDuringModal(TEXT("Save Content")), 2);
+  for (const FString &Id : Ids) {
+    const FMcpCapturedResponse Reply = FMcpResponseCaptureRegistry::Get().End(Id);
+    TestTrue(TEXT("a reply was sent"), Reply.bCaptured);
+    TestFalse(TEXT("it is a refusal"), Reply.bSuccess);
+    TestEqual(TEXT("error code"), Reply.ErrorCode, FString(TEXT("EDITOR_MODAL_ACTIVE")));
+    FString Title;
+    TestTrue(TEXT("names the dialog"),
+             Reply.Result.IsValid() && Reply.Result->TryGetStringField(TEXT("modalWindowTitle"), Title) &&
+                 Title == TEXT("Save Content"));
+    TestFalse(TEXT("no longer queued"), Subsystem->IsAutomationRequestWaiting(Id));
+  }
+  Subsystem->ProcessPendingAutomationRequests();
+  TestEqual(TEXT("no handler ran"), DispatchCount, 0);
+  TestEqual(TEXT("an empty queue answers nothing"), Subsystem->AnswerQueuedRequestsDuringModal(TEXT("Save Content")), 0);
   return true;
 }
 #endif

@@ -202,6 +202,9 @@ public:
       const FString& RequestId,
       TFunction<void()> Callback);
   void ClearAutomationRequestCancellation(const FString& RequestId);
+  // A modal dialog runs its own loop, which never ticks the queue drain: every request still queued is answered
+  // EDITOR_MODAL_ACTIVE naming the dialog, without running. Returns how many were answered.
+  int32 AnswerQueuedRequestsDuringModal(const FString& DialogTitle);
 
   TSharedPtr<class FMcpConnectionManager> ConnectionManager;
   TSharedPtr<FMcpNativeTransport> NativeTransport;
@@ -257,6 +260,8 @@ private:
   void StopAcceptingAutomationRequests();
   void StartNativeTransport();
   void ReconcileLogCaptureDevice();
+  // Bound to FSlateApplication's modal-loop tick, which runs on the game thread while a dialog is up.
+  void OnModalLoopTick(float DeltaTime);
 
   MCP_SUBSYSTEM_PROPERTY_COLLECTION_DECLARATIONS
   MCP_SUBSYSTEM_ACTION_ROUTING_DECLARATIONS

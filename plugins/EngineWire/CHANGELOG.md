@@ -21,6 +21,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **Removals** name what still uses an asset (`*_IN_USE`, `referencedBy`), keep outside-referenced assets, take exact components and undo for tracks and keys; extra sky lights are named, not destroyed.
 - **Fold variants** enforce their own requirements before dispatch, and describe lists what each one does under the selector.
 - **Renders** honour `renderTimeoutMs`; save_all and restart_editor wait (`RENDER_IN_PROGRESS`).
+- **Dialogs**: while an editor dialog is open, queued and new requests are answered `EDITOR_MODAL_ACTIVE` with `modalWindowTitle` from the modal loop, so `/mcp` calls no longer wait out the heartbeat (`EDITOR_BLOCKED`).
 - **Viewport captures** settle across ticks and warn on demoted video memory; grid edits keep the fields left out and answer with the grid's values.
 - **Properties**: deprecated ones are refused; Niagara systems re-init after a write; settings take object references.
 - **Placement and tracks**: physics-body ground traces, player-start capsules, whole track names, display names and `AMBIGUOUS_TRACK`, `set_bone_key` keeps unsent parts, a display-rate change keeps key times, stop seeks the range start.

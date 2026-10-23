@@ -31,6 +31,6 @@ The wire contract is the 23 parent tools plus `console_command`. `InitializeHand
 
 ## ANTI-PATTERNS
 - Editor APIs off the game thread, or invoking a handler around `QueueAutomationRequest()`.
-- A second drain path (see `../../Public/McpQueueFairness.h`: exactly one game-thread dequeuer).
+- A second dispatching drain (see `../../Public/McpQueueFairness.h`: exactly one game-thread path RUNS queued requests). Paths that only remove queued requests without running them are allowed: cancellation, and the modal-loop answer (`Requests/McpModalRefusal.cpp`, EDITOR_MODAL_ACTIVE while a dialog's own loop stops the ticker).
 - Handler logic in Core: Core routes, Domains implement.
 - More than 250 pure lines per file or 25 files per folder.

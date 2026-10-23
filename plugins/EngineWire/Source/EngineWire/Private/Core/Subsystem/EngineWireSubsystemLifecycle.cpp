@@ -15,6 +15,7 @@
 #include "Domains/SystemControl/McpSystemPrivate.h"
 #include "Foundation/McpLiveStateRevisionTracker.h"
 #include "Foundation/McpReadinessState.h"
+#include "Framework/Application/SlateApplication.h"
 #include "Misc/Parse.h"
 
 void UEngineWireSubsystem::Initialize(FSubsystemCollectionBase& Collection)
@@ -85,6 +86,11 @@ void UEngineWireSubsystem::Initialize(FSubsystemCollectionBase& Collection)
     TickHandle = FTSTicker::GetCoreTicker().AddTicker(
         FTickerDelegate::CreateUObject(this, &UEngineWireSubsystem::Tick),
         0.0f);
+    // The ticker above stops while a modal dialog runs its own loop; this answers what queues meanwhile.
+    if (FSlateApplication::IsInitialized())
+    {
+        FSlateApplication::Get().GetOnModalLoopTickEvent().AddUObject(this, &UEngineWireSubsystem::OnModalLoopTick);
+    }
 
     // -McpStartMinimized: a launch for an automated session sat in the foreground, rendering flat out, until a caller
     // could minimize it over the bridge. The editor adds its main window hidden and shows it, maximized, at the end of
@@ -136,6 +142,11 @@ void UEngineWireSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 
 void UEngineWireSubsystem::Deinitialize()
 {
+    // First: Live Coding unloads this module routinely, and a binding left behind would call into unmapped code.
+    if (FSlateApplication::IsInitialized())
+    {
+        FSlateApplication::Get().GetOnModalLoopTickEvent().RemoveAll(this);
+    }
     FMcpReadinessState::Get().Reset();
     McpWorldTickTimer::Stop();
     StopAcceptingAutomationRequests();

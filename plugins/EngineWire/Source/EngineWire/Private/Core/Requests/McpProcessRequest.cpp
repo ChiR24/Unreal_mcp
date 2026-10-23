@@ -11,6 +11,8 @@
 #include "Misc/ScopeExit.h"
 #include "Misc/ScopeLock.h"
 #include "Framework/Application/SlateApplication.h" // active-modal pre-flight (Slate is an editor dep)
+#include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Widgets/SWindow.h"
 #include "Foundation/McpScreenshotResample.h" // McpShaderJobsRemaining
 
 // Publish the currently-executing automation action, when it started and its last progress, so a reader off the
@@ -145,10 +147,15 @@ void UEngineWireSubsystem::ProcessAutomationRequest(
            TEXT("ProcessAutomationRequest: refusing dispatch while a modal window is active "
                 "RequestId=%s action='%s'"),
            *RequestId, *Action);
-    SendAutomationError(
-        RequestingSocket, RequestId,
-        TEXT("Editor is waiting on a modal dialog; automation is paused until it is dismissed."),
-        TEXT("EDITOR_MODAL_ACTIVE"));
+    // Named, so the caller can say which dialog to close (the queued requests get the same answer from the modal tick).
+    const FString DialogTitle = FSlateApplication::Get().GetActiveModalWindow()->GetTitle().ToString();
+    TSharedPtr<FJsonObject> ModalResult = McpHandlerUtils::CreateResultObject();
+    ModalResult->SetStringField(TEXT("modalWindowTitle"), DialogTitle);
+    SendAutomationResponse(
+        RequestingSocket, RequestId, false,
+        FString::Printf(TEXT("The editor is waiting on the dialog '%s'; nothing ran. Close that dialog in the editor, then send the same call again."),
+                        *DialogTitle),
+        ModalResult, TEXT("EDITOR_MODAL_ACTIVE"));
     return;
   }
 
