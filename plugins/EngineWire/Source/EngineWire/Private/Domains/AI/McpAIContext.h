@@ -33,12 +33,11 @@ inline bool SanitizeAIAssetPath(const FString& InputPath, FString& OutSanitizedP
 
 
 /**
- * Create a /Game AI asset of type T at Path/Name, or fill OutError and OutCode
+ * Create a /Game AI asset of AssetClass at Path/Name, or fill OutError and OutCode
  * (ASSET_ALREADY_EXISTS for anything already at the path, saved or only in memory).
  * The caller still owns whatever comes after creation (graph seeding, saving).
  */
-template <typename T>
-T* CreateAIAssetInPackage(const FString& Path, const FString& Name, const TCHAR* TypeNoun, FString& OutError, FString& OutCode)
+inline UObject* CreateAIAssetOfClass(UClass* AssetClass, const FString& Path, const FString& Name, const TCHAR* TypeNoun, FString& OutError, FString& OutCode)
 {
 	FString SanitizedPath;
 	if (!SanitizeAIAssetPath(Path, SanitizedPath, OutError))
@@ -53,7 +52,7 @@ T* CreateAIAssetInPackage(const FString& Path, const FString& Name, const TCHAR*
 		return nullptr;
 	}
 
-	T* Asset = NewObject<T>(Package, T::StaticClass(), FName(*Name), RF_Public | RF_Standalone);
+	UObject* Asset = NewObject<UObject>(Package, AssetClass, FName(*Name), RF_Public | RF_Standalone);
 	if (!Asset)
 	{
 		OutError = FString::Printf(TEXT("Failed to create %s asset"), TypeNoun);
@@ -63,6 +62,12 @@ T* CreateAIAssetInPackage(const FString& Path, const FString& Name, const TCHAR*
 
 	FAssetRegistryModule::AssetCreated(Asset);
 	return Asset;
+}
+
+template <typename T>
+T* CreateAIAssetInPackage(const FString& Path, const FString& Name, const TCHAR* TypeNoun, FString& OutError, FString& OutCode)
+{
+	return Cast<T>(CreateAIAssetOfClass(T::StaticClass(), Path, Name, TypeNoun, OutError, OutCode));
 }
 
 

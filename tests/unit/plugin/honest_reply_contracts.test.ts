@@ -4133,7 +4133,7 @@ describe('AI and navigation writes say what they did', () => {
   });
 
   it('Smart Object, Mass and EQS writes refuse what they cannot do', () => {
-    expect(code('AI', 'SmartObjects', 'McpAISmartObjectsDefs.cpp')).toContain('CreateAIAssetInPackage<USmartObjectDefinition>(');
+    expect(code('AI', 'SmartObjects', 'McpAISmartObjectsDefs.cpp')).toContain('CreateAIAssetOfClass(DefinitionClass, ');
     const components = code('AI', 'SmartObjects', 'McpAISmartObjectsComponents.cpp');
     expect(components).toContain('TEXT("ALREADY_EXISTS")');
     expect(components).toContain('Nothing to set: send activityTags or enabled.');
@@ -4177,7 +4177,16 @@ describe('AI and navigation writes say what they did', () => {
   it('a Smart Object slot gets the setup the editor gives a new slot', () => {
     const defs = code('AI', 'SmartObjects', 'McpAISmartObjectsDefs.cpp');
     expect(defs).toContain('FPropertyChangedEvent Added(SlotsProp, EPropertyChangeType::ArrayAdd);');
-    expect(defs).toContain('NotifySlotAdded(Definition, ArrayProp, SlotIndex);');
+    expect(defs).toContain('NotifySlotAdded(Definition, SlotsProp, SlotIndex);');
+  });
+
+  it('Smart Objects are reached through reflection, never through their headers', () => {
+    // Up to 5.2 SmartObjects' headers include MassEntityTypes.h, whose explicitly instantiated bitsets call into
+    // MassEntity; a file including them needs MassEntity linked, which a build without Mass does not do.
+    for (const file of ['McpAISmartObjectsFeature.h', 'McpAISmartObjectsDefs.cpp', 'McpAISmartObjectsComponents.cpp']) {
+      expect(code('AI', 'SmartObjects', file)).not.toMatch(/#\s*include\s*["<](SmartObject|Mass)/);
+    }
+    expect(code('AI', 'SmartObjects', 'McpAISmartObjectsFeature.h')).toContain('TEXT("/Script/SmartObjectsModule.")');
   });
 
   it('add_eqs_generator refuses settings its generator does not read, before it adds anything', () => {
