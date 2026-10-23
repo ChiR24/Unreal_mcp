@@ -46,6 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <details>
 <summary><b>🔧 Fixed</b></summary>
+- Reflected float and double writes reject incomplete or non-finite numbers and values outside float range.
 
 - **Crashes**: Ability System actions on non-Actor Blueprints and creates or bakes over another class's asset are refused.
 - **`run_benchmark` measures** frames, FPS and thread times (it measured nothing).
