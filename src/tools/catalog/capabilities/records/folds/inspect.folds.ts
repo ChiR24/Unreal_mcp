@@ -49,4 +49,10 @@ export const INSPECT_FOLDS: readonly FoldSpec[] = [
     topics: ['pie state', 'inspect running game', 'live actors', 'player location during play', 'variable value during play', 'runtime value of a variable'],
     members: ['pie_report'],
   },
+  {
+    primary: 'explain', selector: 'what',
+    summary: 'Explain why something does not happen, chosen by what: two actors that do not overlap or hit (collision), an actor that is not seen (visible), a key that does nothing (input), a widget not on screen (widget), a sound not heard (audible), a light that lights nothing (lit). Each walks an ordered fault tree over what the engine holds and answers the first cause with the call that fixes it, plus every check made.',
+    topics: ['why does nothing happen', 'explain', 'diagnose', 'why not working', 'troubleshoot', 'root cause'],
+    members: { collision: 'explain_collision', visible: 'explain_visible', input: 'explain_input', widget: 'explain_widget', audible: 'explain_audible', lit: 'explain_lit' },
+  },
 ];

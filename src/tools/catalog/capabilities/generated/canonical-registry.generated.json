@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "436cdf4839ee1638",
-  "recordCount": 416,
+  "catalogRevision": "7c813a5e0a03fe03",
+  "recordCount": 417,
   "records": [
     {
       "id": "animation_physics.analyze_animation",
@@ -35277,6 +35277,7 @@
           "audit_placement",
           "placement problems",
           "overlapping actors",
+          "find which actors overlap each other",
           "sunk actors",
           "floating actors",
           "tilted actors",
@@ -35479,7 +35480,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "0560abba1e4013aea0ed52d9e2edf48081c38acd766c58a0276096c153ce7906",
-        "content": "e411af4027b88c41dbe6f94eb9bc86e4d9f0cb3b609eb6db9de0288059bfb14a"
+        "content": "66b99639694122a09cb08dfe4a033a8a3d1022643527ccb63aa9b8d5c2b05ddc"
       }
     },
     {
@@ -47164,6 +47165,325 @@
         "algorithm": "sha256",
         "schema": "35618390674de7af81bc1ad60649d77802b7eca01427e6dae087e08aff860ac4",
         "content": "e7790dcae9b86d41c5395629b87974a2b4e5373d74b41aee4aec5a3fb8af4488"
+      }
+    },
+    {
+      "id": "inspect.explain",
+      "aliases": [
+        "inspect.explain_collision",
+        "inspect.explain_visible",
+        "inspect.explain_input",
+        "inspect.explain_widget",
+        "inspect.explain_audible",
+        "inspect.explain_lit"
+      ],
+      "legacyIds": [
+        {
+          "tool": "inspect",
+          "action": "explain"
+        },
+        {
+          "tool": "inspect",
+          "action": "explain_collision",
+          "folded": {
+            "what": "collision"
+          }
+        },
+        {
+          "tool": "inspect",
+          "action": "explain_visible",
+          "folded": {
+            "what": "visible"
+          }
+        },
+        {
+          "tool": "inspect",
+          "action": "explain_input",
+          "folded": {
+            "what": "input"
+          }
+        },
+        {
+          "tool": "inspect",
+          "action": "explain_widget",
+          "folded": {
+            "what": "widget"
+          }
+        },
+        {
+          "tool": "inspect",
+          "action": "explain_audible",
+          "folded": {
+            "what": "audible"
+          }
+        },
+        {
+          "tool": "inspect",
+          "action": "explain_lit",
+          "folded": {
+            "what": "lit"
+          }
+        }
+      ],
+      "discovery": {
+        "domain": "inspect",
+        "family": "explain",
+        "topics": [
+          "explain",
+          "why does nothing happen",
+          "diagnose",
+          "why not working",
+          "troubleshoot",
+          "root cause",
+          "why no overlap",
+          "overlap not firing",
+          "collision not working",
+          "hit event not firing",
+          "trigger does nothing",
+          "why invisible",
+          "why is actor invisible",
+          "actor not showing",
+          "cannot see actor",
+          "mesh not rendering",
+          "object disappeared",
+          "key does nothing",
+          "input not working",
+          "button press ignored",
+          "jump key dead",
+          "enhanced input not firing",
+          "widget not showing",
+          "hud not visible",
+          "ui does not appear",
+          "menu not on screen",
+          "sound not playing",
+          "cannot hear sound",
+          "no audio",
+          "ambient sound silent",
+          "light not working",
+          "light does not light",
+          "actor too dark",
+          "lighting has no effect"
+        ],
+        "summary": "Explain why something does not happen, chosen by what: two actors that do not overlap or hit (collision), an actor that is not seen (visible), a key that does nothing (input), a widget not on screen (widget), a sound not heard (audible), a light that lights nothing (lit). Each walks an ordered fault tree over what the engine holds and answers the first cause with the call that fixes it, plus every check made.",
+        "whenToUse": [
+          "what=collision: An overlap or hit event between two actors never fires.",
+          "what=collision: A trigger volume does nothing when something walks into it.",
+          "what=visible: A placed actor does not appear in the viewport or in Play.",
+          "what=input: A key or button press does nothing in Play.",
+          "what=input: An input action event never fires.",
+          "what=widget: A HUD, menu or other widget never appears.",
+          "what=audible: A placed sound or an actor's audio is silent.",
+          "what=lit: A light seems to have no effect on the scene or on one actor."
+        ],
+        "whenNotToUse": [
+          "what=collision: The collision settings must be changed (use control_actor set_actor_collision, the nextCall the cause names).",
+          "what=visible: The actor should be found first; use inspect query_object or the outliner.",
+          "what=input: Legacy (Project Settings) input mappings: only Enhanced Input is explained.",
+          "what=widget: The widget appears but its layout is wrong (use manage_blueprint get_widget_info to read its tree).",
+          "what=audible: The sound must be changed or started (use manage_audio).",
+          "what=lit: The light must be created or tuned (use build_environment lighting actions)."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "actorName": {
+              "type": "string",
+              "description": "The first actor, by label, name or path."
+            },
+            "otherActor": {
+              "type": "string",
+              "description": "The second actor, by label, name or path."
+            },
+            "expect": {
+              "type": "string",
+              "enum": [
+                "overlap",
+                "hit"
+              ],
+              "description": "The event that should happen: overlap (default) or hit."
+            },
+            "actionPath": {
+              "type": "string",
+              "description": "The Input Action asset the key should fire, e.g. /Game/Input/IA_Jump."
+            },
+            "key": {
+              "type": "string",
+              "description": "The key pressed, by engine key name (SpaceBar, E, Gamepad_FaceButton_Bottom); omitted, any key mapped to the action counts."
+            },
+            "widgetPath": {
+              "type": "string",
+              "description": "The Widget Blueprint that should show, e.g. /Game/UI/WBP_HUD."
+            },
+            "targetActor": {
+              "type": "string",
+              "description": "The actor the light should reach; omitted, only the light itself is checked."
+            },
+            "what": {
+              "type": "string",
+              "enum": [
+                "collision",
+                "visible",
+                "input",
+                "widget",
+                "audible",
+                "lit"
+              ],
+              "description": "Which explain variant to run.\ncollision: Explain why actorName and otherActor do not overlap (expect overlap, the default) or hit each other (expect hit), from what the engine uses to decide: collision turned off on an actor (ACTOR_COLLISION_DISABLED), no component taking part in collision queries (NO_COLLIDING_COMPONENT), a static mesh with no collision shape (NO_COLLISION_SHAPE), a channel response on either side that ignores the other's object type (RESPONSE_IGNORES; a hit needs Block both ways, RESPONSE_DOES_NOT_BLOCK), two blockers that raise hits rather than overlaps (BLOCKS_INSTEAD), Generate Overlap Events off on a side (OVERLAP_EVENTS_OFF), a simulating body without hit events (HIT_EVENTS_OFF), one told to ignore the other (IGNORED_WHEN_MOVING), and whether they touch now. Reads the running game during Play, the editor level otherwise. The reply gives verdict (failed, unknown when a check could not be made, or ok), cause (the first failed check: check, code, detail and, when one fixes it, nextCall), causes (every failed check) and checks (each check made, in order, passed, failed or unknown). Nothing is changed.\nvisible: Explain why actorName is not seen, from the player's camera during Play or the editor viewport otherwise: hidden in the game or in the editor (HIDDEN_IN_GAME, HIDDEN_IN_EDITOR), editor-only during Play (EDITOR_ONLY), its streaming level not visible (LEVEL_HIDDEN), no component that draws (NOTHING_TO_DRAW: each hidden, unregistered, or a static mesh component with no mesh), beyond a component's draw distance (CULLED_BY_DISTANCE), nearer than the near clip plane (INSIDE_NEAR_CLIP), outside the camera's field of view (OUT_OF_VIEW), drawn only for its owner or hidden from its owner (ONLY_OWNER_SEES, OWNER_NO_SEE), or buried in the surface under it (BURIED, with the location that rests it on top). The reply names the view it judged from (viewFrom). The reply gives verdict (failed, unknown when a check could not be made, or ok), cause (the first failed check: check, code, detail and, when one fixes it, nextCall), causes (every failed check) and checks (each check made, in order, passed, failed or unknown). Nothing is changed.\ninput: Explain why the Enhanced Input action at actionPath (pressed with key, when given) does nothing: no mapping context under /Game maps it (NOT_MAPPED), no Add Mapping Context node adds such a context in the game mode's player controller or pawn Blueprints, or during Play the player has none of them added (CONTEXT_NOT_ADDED: every key stays dead), and no event for the action in those Blueprints (NOT_HANDLED); during Play also no possessed pawn (NO_PAWN), a paused game (GAME_PAUSED) and a widget holding keyboard focus (WIDGET_HAS_FOCUS). A missing action is ACTION_NOT_FOUND. The reply gives verdict (failed, unknown when a check could not be made, or ok), cause (the first failed check: check, code, detail and, when one fixes it, nextCall), causes (every failed check) and checks (each check made, in order, passed, failed or unknown). Nothing is changed.\nwidget: Explain why the Widget Blueprint at widgetPath is not on screen. During Play: no instance exists (NOT_CREATED), one exists but was never added to the viewport or to another widget (NOT_IN_VIEWPORT), its visibility is Collapsed or Hidden (HIDDEN), its render opacity is 0 (TRANSPARENT), or its desired size is 0 by 0 (ZERO_SIZE). Outside Play: no Create Widget node for it in the game mode's player controller, pawn or HUD Blueprint or the level's own (NOT_CREATED_ANYWHERE), or the Blueprint that creates it never adds it to the viewport (NOT_ADDED); whether it is on screen is then unknown until Play. A missing Widget Blueprint is WIDGET_NOT_FOUND. The reply gives verdict (failed, unknown when a check could not be made, or ok), cause (the first failed check: check, code, detail and, when one fixes it, nextCall), causes (every failed check) and checks (each check made, in order, passed, failed or unknown). Nothing is changed.\naudible: Explain why actorName's sound is not heard: no audio component (NO_AUDIO_COMPONENT), no sound on it (NO_SOUND), not playing during Play (NOT_PLAYING) or not starting by itself (NOT_AUTO_ACTIVATED), a volume multiplier of 0 (MUTED), or the listener beyond its attenuation range (OUT_OF_RANGE: inner radius plus falloff). The listener is the player's during Play (often the camera, far from the pawn in a side view) and the editor viewport otherwise (listener in the reply). The reply gives verdict (failed, unknown when a check could not be made, or ok), cause (the first failed check: check, code, detail and, when one fixes it, nextCall), causes (every failed check) and checks (each check made, in order, passed, failed or unknown). Nothing is changed.\nlit: Explain why the light actorName lights nothing, or does not light targetActor: hidden or not affecting the world (LIGHT_OFF), an intensity of 0 (NO_INTENSITY), a Static light with lighting unbuilt (UNBUILT_LIGHTING), and against targetActor: beyond the attenuation radius (OUT_OF_RANGE, with the radius that reaches it), outside a spot light's outer cone (OUTSIDE_CONE), or no lighting channel in common (CHANNEL_MISMATCH). A light not found is LIGHT_NOT_FOUND. Auto exposure can also hide a lighting change: look with a fixed exposure before judging by eye. The reply gives verdict (failed, unknown when a check could not be made, or ok), cause (the first failed check: check, code, detail and, when one fixes it, nextCall), causes (every failed check) and checks (each check made, in order, passed, failed or unknown). Nothing is changed."
+            }
+          },
+          "required": [
+            "action",
+            "what"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Explain why something does not happen, chosen by what: two actors that do not overlap or hit (collision), an actor that is not seen (visible), a key that does nothing (input), a widget not on screen (widget), a sound not heard (audible), a light that lights nothing (lit). Each walks an ordered fault tree over what the engine holds and answers the first cause with the call that fixes it, plus every check made.",
+          "input": {
+            "action": "explain",
+            "actorName": "TriggerBox_Door",
+            "otherActor": "BP_Player",
+            "expect": "overlap",
+            "what": "collision"
+          },
+          "output": {
+            "success": true
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [],
+        "editorStates": [
+          "edit",
+          "pie",
+          "simulate"
+        ]
+      },
+      "behavior": {
+        "effect": "read",
+        "idempotency": "idempotent",
+        "longRunning": false,
+        "safeToRetry": true
+      },
+      "policy": {
+        "requiredScope": "read",
+        "consent": "none",
+        "dataAccess": "project-read"
+      },
+      "cost": {
+        "latency": "instant",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "inspect",
+        "dispatchAction": "explain_collision",
+        "dispatchBy": {
+          "param": "what",
+          "actions": {
+            "collision": "explain_collision",
+            "visible": "explain_visible",
+            "input": "explain_input",
+            "widget": "explain_widget",
+            "audible": "explain_audible",
+            "lit": "explain_lit"
+          },
+          "declaredBy": {
+            "actorName": [
+              "collision",
+              "visible",
+              "audible",
+              "lit"
+            ],
+            "otherActor": [
+              "collision"
+            ],
+            "expect": [
+              "collision"
+            ],
+            "actionPath": [
+              "input"
+            ],
+            "key": [
+              "input"
+            ],
+            "widgetPath": [
+              "widget"
+            ],
+            "targetActor": [
+              "lit"
+            ]
+          },
+          "requires": {
+            "explain_collision": {
+              "required": [
+                "actorName",
+                "otherActor"
+              ]
+            },
+            "explain_visible": {
+              "required": [
+                "actorName"
+              ]
+            },
+            "explain_input": {
+              "required": [
+                "actionPath"
+              ]
+            },
+            "explain_widget": {
+              "required": [
+                "widgetPath"
+              ]
+            },
+            "explain_audible": {
+              "required": [
+                "actorName"
+              ]
+            },
+            "explain_lit": {
+              "required": [
+                "actorName"
+              ]
+            }
+          }
+        }
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "a8cd75929317999febb8c464c602020785b4e4dc4f0c7774c70d44f12e71595f",
+        "content": "50ef372ad3c1304a7929c4baaa9e414e102ab698e2992a8ca703abadc379e391"
       }
     },
     {

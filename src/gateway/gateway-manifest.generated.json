@@ -5101,9 +5101,11 @@
         "find_by_class",
         "runtime_report",
         "get_editor_state",
-        "get_stats"
+        "get_stats",
+        "explain"
       ],
       "parameterNames": [
+        "actionPath",
         "actorName",
         "actorNames",
         "actors",
@@ -5115,10 +5117,12 @@
         "componentNames",
         "detailed",
         "editorState",
+        "expect",
         "filter",
         "format",
         "ignoreActors",
         "info",
+        "key",
         "kind",
         "labels",
         "limit",
@@ -5131,6 +5135,7 @@
         "objectPath",
         "objectPaths",
         "offset",
+        "otherActor",
         "outputPath",
         "passes",
         "points",
@@ -5145,17 +5150,24 @@
         "statsKind",
         "structPath",
         "tag",
+        "targetActor",
         "traceComplex",
         "value",
         "watch",
+        "what",
+        "widgetPath",
         "width"
       ],
       "inputSchema": {
         "type": "object",
         "properties": {
+          "actionPath": {
+            "type": "string",
+            "description": "The Input Action asset the key should fire, e.g. /Game/Input/IA_Jump."
+          },
           "actorName": {
             "type": "string",
-            "description": "World actor name to inspect."
+            "description": "The first actor, by label, name or path."
           },
           "actorNames": {
             "type": "array",
@@ -5233,6 +5245,14 @@
             ],
             "description": "Which get editor state variant to run.\nselected_actors: Return the actors currently selected in the editor viewport.\nviewport: Return viewport information (view target, camera manager, world type).\nworld_settings: Return the current world/level settings summary (worldName, gravity, killZ, time).\nproject_settings: Return project settings key/value pairs.\neditor_settings: Return editor settings key/value pairs.\nfocus: Read what the user is working on: the open asset editors (most recently used first), each open Blueprint editor's graph in front and its selected nodes (title and nodeId), the selected actors, the distinct warnings and errors of the last minute, and the Blueprint runtime errors of the last play session."
           },
+          "expect": {
+            "type": "string",
+            "enum": [
+              "overlap",
+              "hit"
+            ],
+            "description": "The event that should happen: overlap (default) or hit."
+          },
           "filter": {
             "type": "string",
             "description": "Runtime report filter expression."
@@ -5256,6 +5276,10 @@
             ],
             "description": "Which get component details variant to run; omit for 'details'.\ndetails: Return a single component of a world actor (TS dispatches get_components to control_actor and filters locally).\nproperty: Read a property on a world actor component (cross-parent to control_actor).",
             "default": "details"
+          },
+          "key": {
+            "type": "string",
+            "description": "The key pressed, by engine key name (SpaceBar, E, Gamepad_FaceButton_Bottom); omitted, any key mapped to the action counts."
           },
           "kind": {
             "type": "string",
@@ -5357,6 +5381,10 @@
           "offset": {
             "type": "number",
             "description": "Matching objects to skip before the first one returned, for paging (default 0); hasMore says whether more follow."
+          },
+          "otherActor": {
+            "type": "string",
+            "description": "The second actor, by label, name or path."
           },
           "outputPath": {
             "type": "string",
@@ -5576,6 +5604,10 @@
             "type": "string",
             "description": "Actor tag to match."
           },
+          "targetActor": {
+            "type": "string",
+            "description": "The actor the light should reach; omitted, only the light itself is checked."
+          },
           "traceComplex": {
             "type": "boolean",
             "description": "Trace the render triangles of meshes that allow it instead of their simple collision (default false: the shapes the game's movement collides with)."
@@ -5606,6 +5638,22 @@
             },
             "additionalProperties": false
           },
+          "what": {
+            "type": "string",
+            "enum": [
+              "collision",
+              "visible",
+              "input",
+              "widget",
+              "audible",
+              "lit"
+            ],
+            "description": "Which explain variant to run.\ncollision: Explain why actorName and otherActor do not overlap (expect overlap, the default) or hit each other (expect hit), from what the engine uses to decide: collision turned off on an actor (ACTOR_COLLISION_DISABLED), no component taking part in collision queries (NO_COLLIDING_COMPONENT), a static mesh with no collision shape (NO_COLLISION_SHAPE), a channel response on either side that ignores the other's object type (RESPONSE_IGNORES; a hit needs Block both ways, RESPONSE_DOES_NOT_BLOCK), two blockers that raise hits rather than overlaps (BLOCKS_INSTEAD), Generate Overlap Events off on a side (OVERLAP_EVENTS_OFF), a simulating body without hit events (HIT_EVENTS_OFF), one told to ignore the other (IGNORED_WHEN_MOVING), and whether they touch now. Reads the running game during Play, the editor level otherwise. The reply gives verdict (failed, unknown when a check could not be made, or ok), cause (the first failed check: check, code, detail and, when one fixes it, nextCall), causes (every failed check) and checks (each check made, in order, passed, failed or unknown). Nothing is changed.\nvisible: Explain why actorName is not seen, from the player's camera during Play or the editor viewport otherwise: hidden in the game or in the editor (HIDDEN_IN_GAME, HIDDEN_IN_EDITOR), editor-only during Play (EDITOR_ONLY), its streaming level not visible (LEVEL_HIDDEN), no component that draws (NOTHING_TO_DRAW: each hidden, unregistered, or a static mesh component with no mesh), beyond a component's draw distance (CULLED_BY_DISTANCE), nearer than the near clip plane (INSIDE_NEAR_CLIP), outside the camera's field of view (OUT_OF_VIEW), drawn only for its owner or hidden from its owner (ONLY_OWNER_SEES, OWNER_NO_SEE), or buried in the surface under it (BURIED, with the location that rests it on top). The reply names the view it judged from (viewFrom). The reply gives verdict (failed, unknown when a check could not be made, or ok), cause (the first failed check: check, code, detail and, when one fixes it, nextCall), causes (every failed check) and checks (each check made, in order, passed, failed or unknown). Nothing is changed.\ninput: Explain why the Enhanced Input action at actionPath (pressed with key, when given) does nothing: no mapping context under /Game maps it (NOT_MAPPED), no Add Mapping Context node adds such a context in the game mode's player controller or pawn Blueprints, or during Play the player has none of them added (CONTEXT_NOT_ADDED: every key stays dead), and no event for the action in those Blueprints (NOT_HANDLED); during Play also no possessed pawn (NO_PAWN), a paused game (GAME_PAUSED) and a widget holding keyboard focus (WIDGET_HAS_FOCUS). A missing action is ACTION_NOT_FOUND. The reply gives verdict (failed, unknown when a check could not be made, or ok), cause (the first failed check: check, code, detail and, when one fixes it, nextCall), causes (every failed check) and checks (each check made, in order, passed, failed or unknown). Nothing is changed.\nwidget: Explain why the Widget Blueprint at widgetPath is not on screen. During Play: no instance exists (NOT_CREATED), one exists but was never added to the viewport or to another widget (NOT_IN_VIEWPORT), its visibility is Collapsed or Hidden (HIDDEN), its render opacity is 0 (TRANSPARENT), or its desired size is 0 by 0 (ZERO_SIZE). Outside Play: no Create Widget node for it in the game mode's player controller, pawn or HUD Blueprint or the level's own (NOT_CREATED_ANYWHERE), or the Blueprint that creates it never adds it to the viewport (NOT_ADDED); whether it is on screen is then unknown until Play. A missing Widget Blueprint is WIDGET_NOT_FOUND. The reply gives verdict (failed, unknown when a check could not be made, or ok), cause (the first failed check: check, code, detail and, when one fixes it, nextCall), causes (every failed check) and checks (each check made, in order, passed, failed or unknown). Nothing is changed.\naudible: Explain why actorName's sound is not heard: no audio component (NO_AUDIO_COMPONENT), no sound on it (NO_SOUND), not playing during Play (NOT_PLAYING) or not starting by itself (NOT_AUTO_ACTIVATED), a volume multiplier of 0 (MUTED), or the listener beyond its attenuation range (OUT_OF_RANGE: inner radius plus falloff). The listener is the player's during Play (often the camera, far from the pawn in a side view) and the editor viewport otherwise (listener in the reply). The reply gives verdict (failed, unknown when a check could not be made, or ok), cause (the first failed check: check, code, detail and, when one fixes it, nextCall), causes (every failed check) and checks (each check made, in order, passed, failed or unknown). Nothing is changed.\nlit: Explain why the light actorName lights nothing, or does not light targetActor: hidden or not affecting the world (LIGHT_OFF), an intensity of 0 (NO_INTENSITY), a Static light with lighting unbuilt (UNBUILT_LIGHTING), and against targetActor: beyond the attenuation radius (OUT_OF_RANGE, with the radius that reaches it), outside a spot light's outer cone (OUTSIDE_CONE), or no lighting channel in common (CHANNEL_MISMATCH). A light not found is LIGHT_NOT_FOUND. Auto exposure can also hide a lighting change: look with a fixed exposure before judging by eye. The reply gives verdict (failed, unknown when a check could not be made, or ok), cause (the first failed check: check, code, detail and, when one fixes it, nextCall), causes (every failed check) and checks (each check made, in order, passed, failed or unknown). Nothing is changed."
+          },
+          "widgetPath": {
+            "type": "string",
+            "description": "The Widget Blueprint that should show, e.g. /Game/UI/WBP_HUD."
+          },
           "width": {
             "type": "number",
             "description": "Width of every pass in pixels (default 960, 64 to 4096); the height follows the viewport's shape so the passes line up with it."
@@ -5633,7 +5681,8 @@
               "find_by_class",
               "runtime_report",
               "get_editor_state",
-              "get_stats"
+              "get_stats",
+              "explain"
             ],
             "description": "Action to invoke on inspect."
           }

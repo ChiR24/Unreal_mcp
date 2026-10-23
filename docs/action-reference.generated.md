@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `436cdf4839ee1638`
+Catalog revision: `7c813a5e0a03fe03`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 416 capabilities across
+The catalog declares 417 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -40,7 +40,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `build_environment` | 40 | 4 | 33 | 3 | environment |
 | `control_actor` | 25 | 8 | 15 | 2 | actor |
 | `control_editor` | 24 | 9 | 12 | 3 | editor |
-| `inspect` | 21 | 16 | 4 | 1 | inspect |
+| `inspect` | 22 | 17 | 4 | 1 | inspect |
 | `manage_ai` | 16 | 2 | 14 | 0 | manage ai |
 | `manage_asset` | 47 | 10 | 32 | 5 | asset, datatable, enum, material, struct, texture |
 | `manage_audio` | 14 | 3 | 11 | 0 | audio |
@@ -62,7 +62,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-65 of 416 capabilities require consent.
+65 of 417 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -320,6 +320,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `inspect.create_snapshot` | `inspect` | `control_actor` | write | write | none | `inspect.create_snapshot` `inspect.restore_snapshot` |
 | `inspect.delete_object` | `inspect` | `control_actor` | destructive | destructive | explicit | `inspect.delete_object` |
 | `inspect.describe_view` | `inspect` | `describe_view` | read | read | none | `inspect.describe_view` |
+| `inspect.explain` | `inspect` | `explain_collision` | read | read | none | `inspect.explain` `inspect.explain_collision` `inspect.explain_visible` `inspect.explain_input` `inspect.explain_widget` `inspect.explain_audible` `inspect.explain_lit` |
 | `inspect.find_by_class` | `inspect` | `find_by_class` | read | read | none | `inspect.find_by_class` |
 | `inspect.get_blueprint_details` | `inspect` | `blueprint_get` | read | read | none | `inspect.get_blueprint_details` |
 | `inspect.get_component_details` | `inspect` | `control_actor` | read | read | none | `inspect.get_component_details` `inspect.get_component_property` |

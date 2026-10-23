@@ -163,6 +163,20 @@ const testCases = [
   { scenario: 'INFO: pie_report', toolName: 'inspect', arguments: { action: 'pie_report', filter: ACTOR }, expected: 'success' },
   { scenario: 'INFO: a bare runtime_report describes no actors', toolName: 'inspect', arguments: { action: 'runtime_report' }, expected: 'success', assertions: [{ path: 'structuredContent.result.message', includes: 'pass filter', label: 'it says how to list actors' }] },
 
+  // === EXPLAIN ===
+  // Two default cubes block each other and stand apart: not an overlap, for reasons the tree names.
+  { scenario: 'EXPLAIN: why two blocking shapes do not overlap', toolName: 'inspect', arguments: { action: 'explain_collision', actorName: ACTOR, otherActor: DELETE_ACTOR, expect: 'overlap' }, expected: 'success', assertions: [{ path: 'structuredContent.result.verdict', equals: 'failed', label: 'blocking shapes apart do not overlap' }] },
+  { scenario: 'EXPLAIN: whether they would hit', toolName: 'inspect', arguments: { action: 'explain_collision', actorName: ACTOR, otherActor: DELETE_ACTOR, expect: 'hit' }, expected: 'success' },
+  { scenario: 'ERROR: explain_collision with an actor not in the level', toolName: 'inspect', arguments: { action: 'explain_collision', actorName: ACTOR, otherActor: `MCP_NoSuchActor_${ts}` }, expected: 'error|ACTOR_NOT_FOUND' },
+  { scenario: 'EXPLAIN: why an actor is not seen', toolName: 'inspect', arguments: { action: 'explain_visible', actorName: ACTOR }, expected: 'success' },
+  { scenario: 'CREATE: an input action no context maps', toolName: 'manage_networking', arguments: { action: 'configure_input', setting: 'create_action', name: `IA_Explain_${ts}`, path: TEST_FOLDER, valueType: 'digital' }, expected: 'success' },
+  { scenario: 'EXPLAIN: why a key does nothing names the mapping that fixes it', toolName: 'inspect', arguments: { action: 'explain_input', actionPath: `${TEST_FOLDER}/IA_Explain_${ts}`, key: 'F9' }, expected: 'success', assertions: [{ path: 'structuredContent.result.cause.code', equals: 'NOT_MAPPED', label: 'no context maps the new action' }, { path: 'structuredContent.result.cause.nextCall.action', equals: 'configure_input', label: 'the fix is a configure_input call it can run as given' }] },
+  { scenario: 'ERROR: explain_input for an action that does not exist', toolName: 'inspect', arguments: { action: 'explain_input', actionPath: `/Game/MCPTest/IA_NoSuchAction_${ts}`, key: 'SpaceBar' }, expected: 'error|ACTION_NOT_FOUND' },
+  { scenario: 'ERROR: explain_widget for a widget that does not exist', toolName: 'inspect', arguments: { action: 'explain_widget', widgetPath: `/Game/MCPTest/WBP_NoSuchWidget_${ts}` }, expected: 'error|WIDGET_NOT_FOUND' },
+  // A cube has no audio component: the first cause says so.
+  { scenario: 'EXPLAIN: why a cube is silent', toolName: 'inspect', arguments: { action: 'explain_audible', actorName: ACTOR }, expected: 'success', assertions: [{ path: 'structuredContent.result.cause.code', equals: 'NO_AUDIO_COMPONENT', label: 'no audio component is the cause' }] },
+  { scenario: 'ERROR: explain_lit on an actor that is not a light', toolName: 'inspect', arguments: { action: 'explain_lit', actorName: DELETE_ACTOR, targetActor: ACTOR }, expected: 'error|LIGHT_NOT_FOUND' },
+
   // === DESTRUCTIVE / CLEANUP ===
   { scenario: 'DELETE: delete_object', toolName: 'inspect', arguments: { action: 'delete_object', actorNames: [DELETE_ACTOR] }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete inspect actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: ACTOR }, expected: 'success|not found' },
