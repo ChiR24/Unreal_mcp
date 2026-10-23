@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Spawns, moves and re-meshes are checked** and warn on an actor left sunk, floating, intersecting, z-fighting, untextured, labelled "Text" or pasted twice.
 - **Replies say what undo can revert** (`undo`, read from the editor's history), and **`control_editor restore_point`** rolls back only this server's steps.
 - **`inspect explain`** says why something does not happen (collision, visibility, input, widget, sound, light) and names the call that fixes it.
+- **An unchanged call failing three times in a row is refused** (`REPEATED_FAILURE`) on both transports.
 
 </details>
 

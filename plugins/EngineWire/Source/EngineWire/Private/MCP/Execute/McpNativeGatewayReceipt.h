@@ -132,6 +132,14 @@ FString McpCanonicalFingerprint(const FString& CapabilityId, const TSharedPtr<FJ
  *  the slot so the key stays retryable. A blank slot is a no-op. */
 void McpSettleIdempotency(const FString& Slot, bool bSuccess, const TSharedPtr<FJsonObject>& Receipt);
 
+/** Loop guard (mirrors gateway-loop-guard.ts): the refusal message when this exact call (the owner's principal and
+ *  params fingerprint) already failed the same way McpLoopLimit times in a row within a minute, else empty. */
+FString McpLoopGuardRefusal(const TSharedPtr<FMcpPageOwner>& Owner);
+
+/** Records a dispatched call's outcome at the completion funnel: a failure extends or starts its streak; a success,
+ *  another call or a failure that names a passing moment (a dialog, a timeout, a stale pin, consent) ends it. */
+void McpLoopGuardNote(const TSharedPtr<FMcpPageOwner>& Owner, bool bSuccess, const FString& ErrorCode);
+
 /** Error receipt. Guidance (suggestions/nextCall/etc.) is merged in when supplied. */
 TSharedPtr<FJsonObject> McpBuildErrorReceipt(
 	const FString& CapabilityId, const FMcpSemanticError& Error,

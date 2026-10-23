@@ -121,6 +121,18 @@ void FMcpNativeTransport::HandleGatewayExecute(
 		return;
 	}
 
+	// A call that already failed the same way three times in a row is not run again (mirrors gateway-loop-guard.ts).
+	// Before the policy gate, so nobody is asked to approve a call that is then refused.
+	const FString Repeated = McpLoopGuardRefusal(Context.PageOwner);
+	if (!Repeated.IsEmpty())
+	{
+		TSharedPtr<FJsonObject> Guidance = MakeShared<FJsonObject>();
+		Guidance->SetObjectField(TEXT("nextCall"),
+			GatewayBuildNextCall(TEXT("describe"), Plan.ParentTool, Plan.LegacyAction, FString()));
+		SendReceipt(McpBuildErrorReceipt(Plan.CapabilityId, McpValidationError(TEXT("REPEATED_FAILURE"), Repeated), Context, Guidance));
+		return;
+	}
+
 	// The same pre-queue security gate the WebSocket bridge applies, so both
 	// transports refuse identically, with the identical typed error, before any
 	// editor work is queued. It runs before the local-tool intercept so a local

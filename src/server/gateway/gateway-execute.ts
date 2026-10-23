@@ -31,7 +31,9 @@ import { ConsentGrantSchema, type ConsentGrant } from '../../tools/catalog/capab
 import { buildReceiptContext, type GatewayReceiptContext } from './gateway-receipt-context.js';
 import { noteTaskDone, noteTaskRunning } from './gateway-task-results.js';
 import type { CapabilityRecord } from '../../tools/catalog/capabilities/model.js';
+import { loopStreak, noteOutcome, repeatedFailureMessage, REPEATED_FAILURE_CODE } from './gateway-loop-guard.js';
 import {
+  canonicalFingerprint,
   conflictMessage,
   IDEMPOTENCY_CONFLICT_CODE,
   LOCAL_PRINCIPAL,
@@ -118,6 +120,19 @@ export async function executeGatewayCall(
     }, receiptContext);
   }
 
+  // A call that already failed the same way LOOP_LIMIT times in a row is not run again (gateway-loop-guard.ts).
+  // Before consent, so nobody is asked to approve a call that is then refused.
+  const principal = authority?.profile ?? LOCAL_PRINCIPAL;
+  const fingerprint = canonicalFingerprint(target.record.id, checked.params);
+  const streak = loopStreak(principal, fingerprint);
+  if (streak !== undefined) {
+    return refuseWithTarget(target, {
+      errorCode: REPEATED_FAILURE_CODE,
+      message: repeatedFailureMessage(streak),
+      nextCall: buildNextCall({ operation: 'describe', tool: target.record.routing.parentTool, action: target.legacy.action })
+    }, receiptContext);
+  }
+
   // A grant the user gave through the client also carries the nonce the plugin burns once.
   let consentGrant: (ConsentGrant & { readonly nonce?: string }) | undefined;
   if (args.consent !== undefined) {
@@ -181,6 +196,7 @@ export async function executeGatewayCall(
       expectedRevisions: checked.expectedRevisions,
       timeoutMs: checked.timeoutMs
     }, checked.unread);
+    noteOutcome(principal, fingerprint, receipt);
     // A plugin from another release can lack the action or read its params
     // differently, so every failed dispatch names the mismatch until the pair agrees.
     const versionMismatch = receipt.success === true ? undefined : context.tools.automationBridge?.getVersionMismatch?.();
@@ -192,7 +208,7 @@ export async function executeGatewayCall(
   const settled = runWithIdempotency(
       {
         capabilityId: target.record.id,
-        principal: authority?.profile ?? LOCAL_PRINCIPAL,
+        principal,
         params: checked.params,
         idempotencyKey: receiptContext.idempotencyId
       },

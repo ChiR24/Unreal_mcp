@@ -32,6 +32,7 @@ import {
   catalogRevision
 } from '../../../src/server/gateway/gateway-capability-index.js';
 import { resetSharedExecuteLedger } from '../../../src/server/gateway/gateway-execute-idempotency.js';
+import { resetLoopGuard } from '../../../src/server/gateway/gateway-loop-guard.js';
 import type { CapabilityRecord } from '../../../src/tools/catalog/capabilities/model.js';
 
 const dispatched: Array<{ tool: string; args: Record<string, unknown> }> = [];
@@ -82,8 +83,9 @@ function errorOf(result: Record<string, unknown>): Record<string, unknown> {
 beforeEach(() => {
   handlerResult = { success: true, message: 'ok' };
   // The execute ledger is a process-wide singleton; a key recorded by one case
-  // would otherwise decide the outcome of another.
+  // would otherwise decide the outcome of another. The loop guard's streaks are too.
   resetSharedExecuteLedger();
+  resetLoopGuard();
 });
 
 afterEach(() => {

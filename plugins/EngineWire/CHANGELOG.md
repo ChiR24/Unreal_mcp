@@ -17,6 +17,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **Change watch**: what a request spawns or modifies, and an edited Blueprint's placed copies, are checked into `warnings`.
 - **Undo ledger**: a reply's `undo` block comes from the transaction buffer (a reply sent inside its handler's transaction waits for it to close); **restore points** (`control_editor restore_point`) roll back only this server's steps, refusing a user's step or a cleared history first.
 - **`explain`** fault trees (`inspect explain`): collision, visible, input, widget, audible, lit; a failed check names the call that fixes it.
+- **Loop guard** on `/mcp`: an unchanged call failing three times in a row is refused `REPEATED_FAILURE` before it runs.
 
 ### Fixed
 - **Small fixes**: `set_property` writes are one undo step; links on UE 5.0; whole-path `runtime_report` filters; diagnostics records replace their files; exact task principals; the RHI thread in `busiestThreadMs`; effect lifecycle misses name what is missing.

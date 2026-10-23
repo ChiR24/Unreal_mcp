@@ -172,6 +172,7 @@ bool FMcpNativeTransport::CompletePendingRequest(
 		ReportedErrorCode.Reset();
 		ReportedResult->TryGetStringField(TEXT("errorCode"), ReportedErrorCode);
 		McpSettleIdempotency(Conn->IdempotencySlot, bReportedSuccess, ReportedResult);
+		McpLoopGuardNote(Conn->PageOwner, bReportedSuccess, ReportedErrorCode);
 	}
 	else
 	{
