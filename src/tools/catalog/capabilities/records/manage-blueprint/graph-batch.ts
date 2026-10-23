@@ -22,8 +22,8 @@ export const GRAPH_BATCH_RECORDS: readonly CapabilityRecordSource[] = [
     family: 'graph',
     domain: 'blueprint',
     topics: ['batch graph edit', 'build event graph', 'wire many nodes', 'blueprint graph batch', 'function with body'],
-    summary: 'Run many graph edits in one call: add variables, functions (with their bodies), events and event dispatchers, create nodes, connect pins, set pin defaults and node properties, with $id references between steps.',
-    whenToUse: ['More than a couple of nodes or links must be added to one Blueprint graph.', 'A new function and the nodes inside it must be built in one call.'],
+    summary: 'Run many graph edits in one call: add variables, functions (with their bodies), events and event dispatchers, create nodes, connect pins, set pin defaults and node properties, with $id references between steps. dryRun checks a batch without running any step.',
+    whenToUse: ['More than a couple of nodes or links must be added to one Blueprint graph.', 'A new function and the nodes inside it must be built in one call.', 'A long batch should be checked before it runs (dryRun: every problem at once, nothing changed).'],
     whenNotToUse: ['Nodes or links must be deleted (use delete_node; destructive edits are not batched).'],
     inputProps: {
       blueprintPath: P.blueprintPath,
@@ -62,6 +62,13 @@ export const GRAPH_BATCH_RECORDS: readonly CapabilityRecordSource[] = [
           + 'so a failed batch leaves the Blueprint as it was: fix that step and send the whole batch again. Only a '
           + 'set_node_property on a node that was already there stays, and the error names it.',
       },
+      dryRun: {
+        type: 'boolean',
+        description: 'Check the batch without running any step (default false): the members, functions, variables and '
+          + 'expressions the steps name, every "$id" against the ids of the steps before it, and every node named by guid. '
+          + 'Every problem comes back at once in problems, and the reply fails with the first one\'s code; the pins of the '
+          + 'nodes the batch would create are checked only when it runs. Nothing is changed, compiled or saved.',
+      },
     },
     required: ['blueprintPath', 'operations'],
     outputProps: {
@@ -73,6 +80,10 @@ export const GRAPH_BATCH_RECORDS: readonly CapabilityRecordSource[] = [
       compilerStatus: { type: 'string', description: 'Blueprint status after the final compile.' },
       diagnostics: { type: 'array', items: ITEM, 'x-unreal-reflection-boundary': true, description: 'Compile messages: { severity, message }.' },
       saved: { type: 'boolean', description: 'Whether the Blueprint was saved after the batch.' },
+      dryRun: { type: 'boolean', description: 'True when nothing ran (dryRun).' },
+      checked: { type: 'number', description: 'dryRun: the steps checked.' },
+      wouldCreate: { type: 'number', description: 'dryRun: the nodes the batch would create.' },
+      problems: { type: 'array', items: ITEM, 'x-unreal-reflection-boundary': true, description: 'dryRun: every step that would fail a check, each with index, edit, errorCode and error.' },
     },
     outputRequired: [],
     effect: 'write',

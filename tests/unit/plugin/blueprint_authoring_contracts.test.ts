@@ -739,3 +739,27 @@ describe('a call node takes a function by the name the editor shows', () => {
     expect(helper).toContain('return Twin ? Twin : Function;');
   });
 });
+
+describe('build_graph dryRun checks the batch and runs nothing', () => {
+  const batch = (): string => read('Domains', 'BlueprintGraph', 'McpBPGraphBatch.cpp').replace(/\r\n/gu, '\n');
+  const check = (): string => read('Domains', 'BlueprintGraph', 'McpBPGraphBatchCheck.cpp').replace(/\r\n/gu, '\n');
+
+  it('is build_graph\'s own (the recipes that author through the batch never dry-run) and answers before any step', () => {
+    const run = sliceBetween(batch(), 'bool RunGraphBatch(', 'bool HandleGraphBatchAction(');
+    expect(run).toContain('const bool bDryRun = bCompile && GetJsonBoolField(Context.Payload, TEXT("dryRun"), false);');
+    const answer = run.indexOf('return AnswerDryRun(Context, *Steps);');
+    expect(answer).toBeGreaterThan(run.indexOf('PassesPrecheck(Context, *Steps, bDryRun)'));
+    expect(answer).toBeLessThan(run.indexOf('TakeSnapshot('));
+    expect(answer).toBeLessThan(run.indexOf('RunBatchStep('));
+  });
+
+  it('resolves "$id" with the run\'s own payload and alias helpers and reports every problem', () => {
+    const dry = sliceBetween(check(), 'bool AnswerDryRun(', '} // namespace McpBlueprintGraphHandlers::GraphBatch');
+    expect(dry).toContain('BuildStepPayload(Context.Payload, *Step, Edit)');
+    expect(dry).toContain('ResolveStepAliases(State, Payload, Error)');
+    expect(dry).toContain('SetArrayField(TEXT("problems"), Problems)');
+    for (const mutation of ['RunStep(', 'RunPlacedStep(', 'Modify(', 'SaveLoadedAssetThrottled(', 'McpCompileBlueprintWithDiagnostics(']) {
+      expect(dry, mutation).not.toContain(mutation);
+    }
+  });
+});

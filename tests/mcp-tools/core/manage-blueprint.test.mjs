@@ -404,6 +404,20 @@ const testCases = [
     { edit: 'connect_pins', from: '$delay.then', to: '$print.execute' },
   ] }, expected: 'success', assertions: [{ path: 'structuredContent.result.succeeded', equals: 3, label: 'build_graph ran all three steps' }, { path: 'structuredContent.receipt.handles.0.kind', equals: 'asset', label: 'the receipt names the Blueprint the batch edited' }, { path: 'structuredContent.receipt.changes', length: 1, label: 'and lists it once as changed' }] },
 
+  // === BATCH: dryRun checks a batch and runs none of it ===
+  { scenario: 'BATCH: build_graph dryRun checks every step and runs none', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: BP_PATH, graphName: 'EventGraph', dryRun: true, operations: [
+    { edit: 'add_variable', variableName: 'DryRunOnly', variableType: 'int' },
+    { edit: 'create_node', id: 'dryGet', nodeType: 'VariableGet', memberName: 'DryRunOnly' },
+    { edit: 'create_node', id: 'dryPrint', nodeType: 'CallFunction', memberName: 'PrintString' },
+    { edit: 'connect_pins', from: '$dryGet.DryRunOnly', to: '$dryPrint.InString' },
+  ] }, expected: 'success', assertions: [{ path: 'structuredContent.result.dryRun', equals: true, label: 'nothing ran' }, { path: 'structuredContent.result.checked', equals: 4, label: 'every step was checked' }, { path: 'structuredContent.result.wouldCreate', equals: 2, label: 'the two nodes it would make' }] },
+  { scenario: 'ERROR: the dryRun added no variable, so a real step reading it is refused', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: BP_PATH, graphName: 'EventGraph', operations: [{ edit: 'create_node', nodeType: 'VariableGet', memberName: 'DryRunOnly' }] }, expected: 'error|DryRunOnly', assertions: [{ path: 'structuredContent.errorCode', equals: 'VARIABLE_NOT_FOUND', label: 'the variable the dry run named does not exist' }] },
+  { scenario: 'ERROR: build_graph dryRun names every $id no earlier step defines at once', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: BP_PATH, graphName: 'EventGraph', dryRun: true, operations: [
+    { edit: 'create_node', id: 'gate', nodeType: 'Branch' },
+    { edit: 'connect_pins', from: '$missingA.then', to: '$gate.execute' },
+    { edit: 'connect_pins', from: '$gate.then', to: '$missingB.execute' },
+  ] }, expected: 'error|2 step(s) would fail', assertions: [{ path: 'structuredContent.errorCode', equals: 'INVALID_OPERATION', label: 'an id no earlier step defines' }, { path: 'structuredContent.message', includes: 'first operations[1]', label: 'both found in one reply, the first named' }] },
+
   // === BATCH: a link between nodes of a function made in the same batch needs no graphName ===
   { scenario: 'BATCH: build_graph links a new function body without naming its graph', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: BP_PATH, graphName: 'EventGraph', operations: [
     { edit: 'add_function', id: 'fn', functionName: 'SayReady' },

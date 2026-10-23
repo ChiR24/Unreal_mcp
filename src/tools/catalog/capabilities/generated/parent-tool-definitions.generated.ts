@@ -13908,6 +13908,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Destroy the actor when its health reaches 0 (default false; OnDied fires either way)."
         },
+        "dryRun": {
+          "type": "boolean",
+          "description": "Check the batch without running any step (default false): the members, functions, variables and expressions the steps name, every \"$id\" against the ids of the steps before it, and every node named by guid. Every problem comes back at once in problems, and the reply fails with the first one's code; the pins of the nodes the batch would create are checked only when it runs. Nothing is changed, compiled or saved."
+        },
         "duration": {
           "type": "number",
           "description": "Duration in seconds."
@@ -13943,7 +13947,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "rename_widget",
             "reparent_widget"
           ],
-          "description": "Which edit graph variant to run.\nadd_node: Add a node to a Blueprint graph (alias of edit=create_node with simplified type resolution).\ncreate_node: Create a graph node (function call, event, variable, branch, etc.) in a Blueprint graph.\ncreate_reroute_node: Create a reroute node for organizing exec/data wire paths in a Blueprint graph.\ncreate_struct_make_break_nodes: Create a Make or Break Struct node in a Blueprint graph from a UserDefinedStruct or native UScriptStruct.\nconnect_pins: Connect two graph pins (exec or data) by nodeGuid and pin name. A pin the editor adds on demand is added: a Sequence's then_2, a Make Array's [2], a Switch on Int's case 7 (a new switch has only Default).\nset_node_property: Set a property on a graph node by nodeGuid.\nset_pin_default_value: Set the default value of a data pin on a graph node; a read-only (const reference) pin gets it through a MakeLiteral node wired into it.\nadd_construction_script: Add or open the Construction Script graph for a Blueprint.\narrange_nodes: Tidy a graph: move the listed nodes beside the nodes they are wired to (right of what runs them, below-left of what reads them), each to the nearest free slot; the nodes left out stay put and anchor them. An unknown nodeId is refused before anything moves. The Blueprint then compiles and is saved; that compile clears the editor's undo history whenever the history holds the Blueprint (undoBufferReset, and undo.undoable false with UNDO_CLEARED_BY_COMPILE), so the move usually cannot be undone: run edit=arrange_nodes again or set positions back with edit=set_node_property.\nbatch: Run many graph edits in one call: add variables, functions (with their bodies), events and event dispatchers, create nodes, connect pins, set pin defaults and node properties, with $id references between steps."
+          "description": "Which edit graph variant to run.\nadd_node: Add a node to a Blueprint graph (alias of edit=create_node with simplified type resolution).\ncreate_node: Create a graph node (function call, event, variable, branch, etc.) in a Blueprint graph.\ncreate_reroute_node: Create a reroute node for organizing exec/data wire paths in a Blueprint graph.\ncreate_struct_make_break_nodes: Create a Make or Break Struct node in a Blueprint graph from a UserDefinedStruct or native UScriptStruct.\nconnect_pins: Connect two graph pins (exec or data) by nodeGuid and pin name. A pin the editor adds on demand is added: a Sequence's then_2, a Make Array's [2], a Switch on Int's case 7 (a new switch has only Default).\nset_node_property: Set a property on a graph node by nodeGuid.\nset_pin_default_value: Set the default value of a data pin on a graph node; a read-only (const reference) pin gets it through a MakeLiteral node wired into it.\nadd_construction_script: Add or open the Construction Script graph for a Blueprint.\narrange_nodes: Tidy a graph: move the listed nodes beside the nodes they are wired to (right of what runs them, below-left of what reads them), each to the nearest free slot; the nodes left out stay put and anchor them. An unknown nodeId is refused before anything moves. The Blueprint then compiles and is saved; that compile clears the editor's undo history whenever the history holds the Blueprint (undoBufferReset, and undo.undoable false with UNDO_CLEARED_BY_COMPILE), so the move usually cannot be undone: run edit=arrange_nodes again or set positions back with edit=set_node_property.\nbatch: Run many graph edits in one call: add variables, functions (with their bodies), events and event dispatchers, create nodes, connect pins, set pin defaults and node properties, with $id references between steps. dryRun checks a batch without running any step."
         },
         "effectPath": {
           "type": "string",
@@ -15476,6 +15480,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Channels that received a key."
         },
+        "checked": {
+          "type": "number",
+          "description": "dryRun: the steps checked."
+        },
         "compileStatus": {
           "type": "string",
           "description": "Last compile status."
@@ -15615,6 +15623,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "string"
           },
           "description": "Event dispatchers it added, which other logic can bind."
+        },
+        "dryRun": {
+          "type": "boolean",
+          "description": "True when nothing ran (dryRun)."
         },
         "duration": {
           "type": "number",
@@ -16174,6 +16186,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Y coordinate the node was placed at."
         },
+        "problems": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "x-unreal-reflection-boundary": true,
+          "description": "dryRun: every step that would fail a check, each with index, edit, errorCode and error."
+        },
         "promotedChildren": {
           "type": "array",
           "items": {
@@ -16582,6 +16604,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "width": {
           "type": "number",
           "description": "Image width in pixels."
+        },
+        "wouldCreate": {
+          "type": "number",
+          "description": "dryRun: the nodes the batch would create."
         },
         "x": {
           "type": "number",
