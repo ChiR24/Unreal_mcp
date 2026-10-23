@@ -1,4 +1,5 @@
 #include "Domains/Skeleton/McpSkeletonActions.h"
+#include "Domains/Skeleton/Bones/McpSkeletonBoneEdits.h"
 #include "Foundation/McpScopedEditorTransaction.h"
 #include "Domains/Skeleton/Assets/McpSkeletonAssetLoading.h"
 #include "Domains/Skeleton/Assets/McpSkeletonPayload.h"
@@ -35,7 +36,9 @@ bool HandleRemoveBoneAction(UEngineWireSubsystem* Subsystem, const FString& Requ
         }
 
         const FReferenceSkeleton& RefSkeleton = Skeleton->GetReferenceSkeleton();
-        int32 BoneIndex = RefSkeleton.FindBoneIndex(FName(*BoneName));
+        // Raw bones only: a virtual bone (delete_virtual_bone removes those) was found here, the edit then found no such
+        // bone, changed nothing and was answered as a success.
+        int32 BoneIndex = RefSkeleton.FindRawBoneIndex(FName(*BoneName));
 
         if (BoneIndex == INDEX_NONE)
         {
@@ -58,14 +61,11 @@ bool HandleRemoveBoneAction(UEngineWireSubsystem* Subsystem, const FString& Requ
             return true;
         }
 
-        // Remove the bone using FReferenceSkeletonModifier
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         {
-            // One undo step; the modifier rebuilds the skeleton as it goes out of scope, before the save below.
+            // One undo step, closed before the save below.
             FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Remove Bone")), EMcpMutationDurability::EditorStateOnly, {Skeleton});
-            FReferenceSkeletonModifier Modifier(Skeleton);
-            Modifier.Remove(FName(*BoneName), bRemoveChildren);
+            McpSkeletonBoneEdits::RemoveBone(Skeleton, FName(*BoneName), bRemoveChildren);
             Transaction.DescribeInto(Result);
         }
 
@@ -77,13 +77,6 @@ bool HandleRemoveBoneAction(UEngineWireSubsystem* Subsystem, const FString& Requ
         Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true,
             FString::Printf(TEXT("Bone '%s' removed from skeleton"), *BoneName), Result);
         return true;
-#else
-        // UE 5.0-5.2: FReferenceSkeletonModifier doesn't have Remove() method
-        Subsystem->SendAutomationError(RequestingSocket, RequestId,
-            TEXT("remove_bone is not supported in UE 5.0-5.2. Please use UE 5.3 or later."),
-            TEXT("NOT_SUPPORTED"));
-        return true;
-#endif
 }
 
 bool HandleSetBoneParentAction(UEngineWireSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
@@ -110,7 +103,8 @@ bool HandleSetBoneParentAction(UEngineWireSubsystem* Subsystem, const FString& R
         }
 
         const FReferenceSkeleton& RefSkeleton = Skeleton->GetReferenceSkeleton();
-        int32 BoneIndex = RefSkeleton.FindBoneIndex(FName(*BoneName));
+        // Raw bones only, as in remove_bone: neither a virtual bone nor a virtual parent can take part.
+        int32 BoneIndex = RefSkeleton.FindRawBoneIndex(FName(*BoneName));
 
         if (BoneIndex == INDEX_NONE)
         {
@@ -119,9 +113,7 @@ bool HandleSetBoneParentAction(UEngineWireSubsystem* Subsystem, const FString& R
             return true;
         }
 
-        // Set new parent using FReferenceSkeletonModifier
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
-        const int32 NewParentIndex = RefSkeleton.FindBoneIndex(FName(*NewParentName));
+        const int32 NewParentIndex = RefSkeleton.FindRawBoneIndex(FName(*NewParentName));
         if (NewParentIndex == INDEX_NONE)
         {
             Subsystem->SendAutomationError(RequestingSocket, RequestId,
@@ -151,19 +143,10 @@ bool HandleSetBoneParentAction(UEngineWireSubsystem* Subsystem, const FString& R
         int32 NewBoneIndex = INDEX_NONE;
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         {
-            // One undo step; the modifier rebuilds the skeleton as it goes out of scope, before the save below.
+            // One undo step, closed before the save below. The checks above leave SetParent no case to refuse.
             FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Set Bone Parent")), EMcpMutationDurability::EditorStateOnly, {Skeleton});
-            FReferenceSkeletonModifier Modifier(Skeleton);
-            NewBoneIndex = Modifier.SetParent(FName(*BoneName), FName(*NewParentName), false);
+            NewBoneIndex = McpSkeletonBoneEdits::SetBoneParent(Skeleton, FName(*BoneName), FName(*NewParentName));
             Transaction.DescribeInto(Result);
-        }
-
-        if (NewBoneIndex == INDEX_NONE)
-        {
-            Subsystem->SendAutomationError(RequestingSocket, RequestId,
-                FString::Printf(TEXT("Failed to set parent. New parent '%s' may not exist or operation invalid."), *NewParentName),
-                TEXT("SET_PARENT_FAILED"));
-            return true;
         }
 
         Result->SetStringField(TEXT("boneName"), BoneName);
@@ -175,13 +158,6 @@ bool HandleSetBoneParentAction(UEngineWireSubsystem* Subsystem, const FString& R
         Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true,
             FString::Printf(TEXT("Bone '%s' parent changed to '%s'"), *BoneName, *NewParentName), Result);
         return true;
-#else
-        // UE 5.0-5.2: FReferenceSkeletonModifier doesn't have SetParent() method
-        Subsystem->SendAutomationError(RequestingSocket, RequestId,
-            TEXT("set_bone_parent is not supported in UE 5.0-5.2. Please use UE 5.3 or later."),
-            TEXT("NOT_SUPPORTED"));
-        return true;
-#endif
 }
 
 } // namespace McpSkeletonHandlers

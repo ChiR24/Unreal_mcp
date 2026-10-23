@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "2dd614cb7e0b9e95",
+  "catalogRevision": "1ee47e4e11550e1d",
   "recordCount": 416,
   "records": [
     {
@@ -5437,7 +5437,7 @@
           "bone transform",
           "virtual bone"
         ],
-        "summary": "Edit a skeleton (skeletonPath), chosen by edit. add_bone adds boneName under parentBoneName (needed once the skeleton has bones; a taken name is BONE_EXISTS) at location, rotation and scale relative to the parent. set_bone_parent moves boneName under parentBoneName (UE 5.3 and later): its own descendants are refused, and the parent it already has changes nothing (changed false). Both change the skeleton asset only; the skeletal meshes on it keep their own bones. set_bone_transform rewrites boneName in the reference pose of the skeletal mesh (skeletalMeshPath, or the skeleton's preview mesh), only the location, rotation or scale sent. create_virtual_bone adds a virtual bone from sourceBoneName to targetBoneName named boneName, or VB <source>_<target>; the engine's VB prefix is added when missing. rename_bone renames virtual bones only; a real bone takes a reimport of the mesh (OPERATION_NOT_SUPPORTED). Saved unless save is false (saved).",
+        "summary": "Edit a skeleton (skeletonPath), chosen by edit. add_bone adds boneName under parentBoneName (needed once the skeleton has bones; a taken name is BONE_EXISTS) at location, rotation and scale relative to the parent. set_bone_parent moves boneName, with its children, under parentBoneName, where it keeps its place in the reference pose: its own descendants are refused, and the parent it already has changes nothing (changed false). Both change the skeleton asset only; the skeletal meshes on it keep their own bones. set_bone_transform rewrites boneName in the reference pose of the skeletal mesh (skeletalMeshPath, or the skeleton's preview mesh), only the location, rotation or scale sent. create_virtual_bone adds a virtual bone from sourceBoneName to targetBoneName named boneName, or VB <source>_<target>; the engine's VB prefix is added when missing. rename_bone renames virtual bones only; a real bone takes a reimport of the mesh (OPERATION_NOT_SUPPORTED). Saved unless save is false (saved).",
         "whenToUse": [
           "edit=add_bone: A skeleton, bone, socket, physics body or morph target must be authored.",
           "edit=rename_bone: A virtual bone needs renaming.",
@@ -5521,7 +5521,7 @@
                 "set_bone_transform",
                 "create_virtual_bone"
               ],
-              "description": "Which edit skeleton variant to run.\nadd_bone: Add boneName to a skeleton under parentBoneName at location, rotation and scale relative to its parent (scale a number for uniform, or {x, y, z}); a skeleton with bones refuses a new root (PARENT_REQUIRED), and a taken name is BONE_EXISTS. One undo step (the reply's undo block says so), saved unless save is false; the reply gives boneCount.\nrename_bone: Rename a virtual bone on a skeleton (real skeleton bones cannot be renamed and answer OPERATION_NOT_SUPPORTED).\nset_bone_parent: Move boneName, with its children, under the existing bone parentBoneName (UE 5.3 and later); the reply gives newBoneIndex and changed. The parent it already has answers changed false and writes nothing; the bone itself or one of its descendants as parent is INVALID_ARGUMENT, a bone not in the skeleton BONE_NOT_FOUND or PARENT_NOT_FOUND. One undo step (the reply's undo block says so), saved unless save is false.\nset_bone_transform: Set the rest transform of a bone.\ncreate_virtual_bone: Create a virtual bone between two bones."
+              "description": "Which edit skeleton variant to run.\nadd_bone: Add boneName to a skeleton under parentBoneName at location, rotation and scale relative to its parent (scale a number for uniform, or {x, y, z}); a skeleton with bones refuses a new root (PARENT_REQUIRED), and a taken name is BONE_EXISTS. One undo step (the reply's undo block says so), saved unless save is false; the reply gives boneCount.\nrename_bone: Rename a virtual bone on a skeleton (real skeleton bones cannot be renamed and answer OPERATION_NOT_SUPPORTED).\nset_bone_parent: Move boneName, with its children, under the existing bone parentBoneName, where it keeps its place in the reference pose; the reply gives newBoneIndex (bones can be reordered) and changed. The parent it already has answers changed false and writes nothing; the bone itself or one of its descendants as parent is INVALID_ARGUMENT, a bone not in the skeleton BONE_NOT_FOUND or PARENT_NOT_FOUND. One undo step (the reply's undo block says so), saved unless save is false.\nset_bone_transform: Set the rest transform of a bone.\ncreate_virtual_bone: Create a virtual bone between two bones."
             }
           },
           "required": [
@@ -5555,7 +5555,7 @@
       },
       "examples": [
         {
-          "title": "Edit a skeleton (skeletonPath), chosen by edit. add_bone adds boneName under parentBoneName (needed once the skeleton has bones; a taken name is BONE_EXISTS) at location, rotation and scale relative to the parent. set_bone_parent moves boneName under parentBoneName (UE 5.3 and later): its own descendants are refused, and the parent it already has changes nothing (changed false). Both change the skeleton asset only; the skeletal meshes on it keep their own bones. set_bone_transform rewrites boneName in the reference pose of the skeletal mesh (skeletalMeshPath, or the skeleton's preview mesh), only the location, rotation or scale sent. create_virtual_bone adds a virtual bone from sourceBoneName to targetBoneName named boneName, or VB <source>_<target>; the engine's VB prefix is added when missing. rename_bone renames virtual bones only; a real bone takes a reimport of the mesh (OPERATION_NOT_SUPPORTED). Saved unless save is false (saved).",
+          "title": "Edit a skeleton (skeletonPath), chosen by edit. add_bone adds boneName under parentBoneName (needed once the skeleton has bones; a taken name is BONE_EXISTS) at location, rotation and scale relative to the parent. set_bone_parent moves boneName, with its children, under parentBoneName, where it keeps its place in the reference pose: its own descendants are refused, and the parent it already has changes nothing (changed false). Both change the skeleton asset only; the skeletal meshes on it keep their own bones. set_bone_transform rewrites boneName in the reference pose of the skeletal mesh (skeletalMeshPath, or the skeleton's preview mesh), only the location, rotation or scale sent. create_virtual_bone adds a virtual bone from sourceBoneName to targetBoneName named boneName, or VB <source>_<target>; the engine's VB prefix is added when missing. rename_bone renames virtual bones only; a real bone takes a reimport of the mesh (OPERATION_NOT_SUPPORTED). Saved unless save is false (saved).",
           "input": {
             "action": "edit_skeleton",
             "skeletonPath": "/Game/SK_Char",
@@ -5677,8 +5677,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "ad87ef534cea28644c331cb62c2d82c8ddb44c69ba8ae03aa59bf3d947ae081a",
-        "content": "c2ce3ba3ce26c9056fd40f415c31d507a1dcc73885eb888f30870d6ae607e66c"
+        "schema": "b354dd98cd7f89138ded430b31c22b1cd8cff16825c57df1a25c85c38d5b081a",
+        "content": "003ee549e3d8e152073b85dc0f4b7a4d8810f53c934daa76dba88aaed5b5983f"
       }
     },
     {
@@ -7233,7 +7233,7 @@
           "remove socket",
           "remove physics body"
         ],
-        "summary": "Remove part of a skeleton or physics asset, chosen by element. bone removes boneName from the skeleton (UE 5.3 and later): with removeChildren its whole branch goes, otherwise its children move up to its parent, and the root bone is refused. socket removes socketName from the skeleton (a socket defined on a mesh is not found here). physics_body removes the body of boneName from physicsAssetPath together with every constraint that uses it. A missing bone, socket or body is refused. Saved unless save is false (saved).",
+        "summary": "Remove part of a skeleton or physics asset, chosen by element. bone removes boneName from the skeleton: with removeChildren its whole branch goes, otherwise its children move up to its parent and keep their place in the reference pose; the only root a skeleton has is refused. socket removes socketName from the skeleton (a socket defined on a mesh is not found here). physics_body removes the body of boneName from physicsAssetPath together with every constraint that uses it. A missing bone, socket or body is refused. Saved unless save is false (saved).",
         "whenToUse": [
           "element=bone: A bone must be removed.",
           "element=socket: An attach point must be taken off a skeleton.",
@@ -7285,7 +7285,7 @@
                 "socket",
                 "physics_body"
               ],
-              "description": "Which remove skeleton element variant to run.\nbone: Remove boneName from a skeleton (UE 5.3 and later), with its children when removeChildren is true. The only root a skeleton has is refused (CANNOT_REMOVE_ROOT); a second root is removed like any bone. One undo step (the reply's undo block says so), saved unless save is false; the reply gives boneCount.\nsocket: Remove a socket from a skeleton or skeletal mesh.\nphysics_body: Remove a physics body from a Physics Asset."
+              "description": "Which remove skeleton element variant to run.\nbone: Remove boneName from a skeleton, with its children when removeChildren is true; otherwise its children move up to its parent and keep their place in the reference pose. A virtual bone is BONE_NOT_FOUND (delete_virtual_bone removes it). The only root a skeleton has is refused (CANNOT_REMOVE_ROOT); a second root is removed like any bone. One undo step (the reply's undo block says so), saved unless save is false; the reply gives boneCount.\nsocket: Remove a socket from a skeleton or skeletal mesh.\nphysics_body: Remove a physics body from a Physics Asset."
             }
           },
           "required": [
@@ -7343,7 +7343,7 @@
       },
       "examples": [
         {
-          "title": "Remove part of a skeleton or physics asset, chosen by element. bone removes boneName from the skeleton (UE 5.3 and later): with removeChildren its whole branch goes, otherwise its children move up to its parent, and the root bone is refused. socket removes socketName from the skeleton (a socket defined on a mesh is not found here). physics_body removes the body of boneName from physicsAssetPath together with every constraint that uses it. A missing bone, socket or body is refused. Saved unless save is false (saved).",
+          "title": "Remove part of a skeleton or physics asset, chosen by element. bone removes boneName from the skeleton: with removeChildren its whole branch goes, otherwise its children move up to its parent and keep their place in the reference pose; the only root a skeleton has is refused. socket removes socketName from the skeleton (a socket defined on a mesh is not found here). physics_body removes the body of boneName from physicsAssetPath together with every constraint that uses it. A missing bone, socket or body is refused. Saved unless save is false (saved).",
           "input": {
             "action": "remove_skeleton_element",
             "skeletonPath": "/Game/SK_Char",
@@ -7443,8 +7443,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "fa60e18f6da18a12ad92b90e6e4f95700313ba4565bcdc1a10242fd1f52930aa",
-        "content": "fc8b63d3ac1edb2780a876cf5fadc7d481c717f86316405eef74dd286c26e3b0"
+        "schema": "31348441c34c189586e364179432ddd4dfd575bf8261d04b63ed2c2d7696c8f2",
+        "content": "25023ea0a51e3a221e6dff9266b9662c528daa513b51b08470cd036ec4f67129"
       }
     },
     {

@@ -4037,7 +4037,7 @@ describe('blend spaces, skeletons and ragdolls answer for what they did', () => 
     }
     const editing = code('Skeleton', 'Bones', 'McpSkeletonStructureEditing.cpp');
     expect(editing).toContain('RefSkeleton.BoneIsChildOf(NewParentIndex, BoneIndex)');
-    expect(editing.indexOf('RefSkeleton.GetParentIndex(BoneIndex) == NewParentIndex')).toBeLessThan(editing.indexOf('Modifier.SetParent('));
+    expect(editing.indexOf('RefSkeleton.GetParentIndex(BoneIndex) == NewParentIndex')).toBeLessThan(editing.indexOf('McpSkeletonBoneEdits::SetBoneParent('));
     expect(code('Skeleton', 'Bones', 'McpSkeletonVirtualBones.cpp')).toContain('VirtualBoneNameHelpers::AddVirtualBonePrefix(');
   });
 

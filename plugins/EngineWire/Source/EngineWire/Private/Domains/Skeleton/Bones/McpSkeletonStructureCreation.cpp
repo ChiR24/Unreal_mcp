@@ -1,6 +1,7 @@
 #include "Domains/Skeleton/McpSkeletonActions.h"
 #include "Domains/Skeleton/Assets/McpSkeletonAssetLoading.h"
 #include "Domains/Skeleton/Assets/McpSkeletonPayload.h"
+#include "Domains/Skeleton/Bones/McpSkeletonBoneEdits.h"
 #include "Foundation/McpScopedEditorTransaction.h"
 
 #include "Animation/Skeleton.h"
@@ -92,18 +93,22 @@ bool HandleCreateSkeletonAction(UEngineWireSubsystem* Subsystem, const FString& 
             return true;
         }
 
-        // Initialize with a root bone using FReferenceSkeletonModifier
-        FReferenceSkeletonModifier Modifier(NewSkeleton);
-        FMeshBoneInfo RootBone;
-        RootBone.Name = FName(*RootBoneName);
-        RootBone.ParentIndex = INDEX_NONE;
-        RootBone.ExportName = RootBoneName;
+        // Initialize with a root bone using FReferenceSkeletonModifier, which rebuilds the skeleton as it goes out of
+        // scope: before the save below, not after it.
+        {
+            FReferenceSkeletonModifier Modifier(NewSkeleton);
+            FMeshBoneInfo RootBone;
+            RootBone.Name = FName(*RootBoneName);
+            RootBone.ParentIndex = INDEX_NONE;
+            RootBone.ExportName = RootBoneName;
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
-        Modifier.Add(RootBone, FTransform::Identity, true); // bAllowMultipleRoots = true for first bone
+            Modifier.Add(RootBone, FTransform::Identity, true); // bAllowMultipleRoots = true for first bone
 #else
-        // UE 5.0-5.2: Add() only takes 2 parameters
-        Modifier.Add(RootBone, FTransform::Identity);
+            // UE 5.0-5.2: Add() only takes 2 parameters
+            Modifier.Add(RootBone, FTransform::Identity);
 #endif
+        }
+        McpSkeletonBoneEdits::FitBoneTree(NewSkeleton);
 
         bool bSave = true;
         Payload->TryGetBoolField(TEXT("save"), bSave);
@@ -205,6 +210,7 @@ bool HandleAddBoneAction(UEngineWireSubsystem* Subsystem, const FString& Request
             // UE 5.0-5.2: Add() only takes 2 parameters
             Modifier.Add(NewBone, BoneTransform);
 #endif
+            McpSkeletonBoneEdits::FitBoneTree(Skeleton);
             Transaction.DescribeInto(Result);
         }
 
