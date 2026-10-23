@@ -15,14 +15,13 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **`get_frame_cost`**, **`diff_asset`**, **`cancel_render`**, `configure_render_camera` shutter and overscan, `set_section` `playRate`.
 - **`nanite_rebuild_mesh` `assetPaths`**, `get_niagara_info` values, `edit_dynamic_mesh` `append_cuboids`, `append_loft`, `append_mesh` and `delete_triangles`.
 - **Change watch**: what a request spawns or modifies, and an edited Blueprint's placed copies, are checked into `warnings`.
-- **Undo ledger**: a reply's `undo` block comes from the transaction buffer (a reply sent inside its handler's transaction waits for it to close); **restore points** (`control_editor restore_point`) roll back only this server's steps, refusing a user's step or a cleared history first.
+- **Undo ledger**: a reply's `undo` block comes from the transaction buffer, held until its handler's transaction closes; **restore points** (`control_editor restore_point`) roll back only this server's steps.
 - **`explain`** fault trees (`inspect explain`): collision, visible, input, widget, audible, lit; a failed check names the call that fixes it.
 - **Loop guard** on `/mcp`: an unchanged call failing three times in a row is refused `REPEATED_FAILURE` before it runs.
-- **`build_graph` `dryRun`**: the pre-check, every `$id` and node guid; nothing runs.
-- **Material and widget batches**: `build_material_graph` checks every edit and `$id` before a step runs; it and `add_widget_tree` take `dryRun`.
+- **`dryRun`** on `build_graph`, `build_material_graph` and `add_widget_tree`; `build_material_graph` checks every edit and `$id` before a step runs.
 
 ### Fixed
-- **Small fixes**: `set_property` writes are one undo step; links on UE 5.0; whole-path `runtime_report` filters; diagnostics records replace their files; exact task principals; the RHI thread in `busiestThreadMs`; effect lifecycle misses name what is missing.
+- **Small fixes**: links on UE 5.0; whole-path `runtime_report` filters; diagnostics records replace their files; exact task principals; the RHI thread in `busiestThreadMs`; effect lifecycle misses name what is missing.
 - **Removals** name what still uses an asset (`*_IN_USE`, `referencedBy`), keep outside-referenced assets, take exact components and undo for tracks and keys; extra sky lights are named, not destroyed.
 - **Fold variants** enforce their own requirements before dispatch, and describe lists what each one does under the selector.
 - **Renders** honour `renderTimeoutMs`; save_all and restart_editor wait (`RENDER_IN_PROGRESS`).
@@ -30,14 +29,14 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **Viewport captures** settle across ticks and warn on demoted video memory; grid edits keep the fields left out and answer with the grid's values.
 - **Properties**: deprecated ones are refused; Niagara systems re-init after a write; settings take object references.
 - **Placement and tracks**: physics-body ground traces, player-start capsules, whole track names, display names and `AMBIGUOUS_TRACK`, `set_bone_key` keeps unsent parts, a display-rate change keeps key times, stop seeks the range start.
-- **Niagara and animation**: creates refuse taken names and unknown velocity, event and stage types (`eventName` read back), and a `save: false` system no longer answers `CREATE_FAILED`; curve keys, blend space and aim offset axes read back; `MISSING_SKELETON`, `CURVE_NOT_FOUND`, `CACHE_NAME_TAKEN`; PIE pause and resume say when nothing changed; legacy mappings report `added`.
+- **Niagara and animation**: creates refuse taken names and unknown types; a `save: false` system no longer fails; curve keys and axes read back; PIE pause and resume say when nothing changed; legacy mappings report `added`.
 - **Pre-queue scans** walk 262144 values; rate-limit replies carry `retryAfterSeconds`.
-- **Undo** for spawns, transforms, attachments, components, splines, scatters, volume bounds, Blueprint variables, lighting, post-process, foliage, water, cameras, landscape, dynamic meshes, sequences, data table rows, bones and material node moves, also on assets created without `RF_Transactional`; a compile that clears the history says so (`UNDO_CLEARED_BY_COMPILE`); `arrange_nodes` refuses an unknown node before moving any.
+- **Undo** for property writes, spawns, transforms, attachments, components, splines, lighting, post-process, foliage, water, cameras, landscape, meshes, sequences, data table rows, bones and material nodes, also on assets created without `RF_Transactional`.
 - **Git**: commit messages go to git through a file and identities refuse quotes (a quote injected git options); checkout and submit list skipped paths; `enable` switches providers.
 - **Finds** stop at `limit` with `truncated` and `totalCount`; **`cleanup`** is destructive, one transaction, refused in Play.
-- **Refused instead of overwritten or guessed**: taken names and paths, a bake over another kind of asset (`ASSET_EXISTS`), engine content, unknown types, modes and operations, empty edits, assets that do not load, foreign montage sections, slots and notifies, incompatible pins, settings keys an action does not read, character edits on a non-Character or another skeleton (`NOT_A_CHARACTER`, `SKELETON_MISMATCH`), lighting builds the level forbids.
-- **Calls that now do what they say**: fades, thumbnails, overrides, enum renames, pins, RPCs, sockets, blend samples, bones, ragdolls, AI (Blackboard defaults 5.4+, nav links, State Trees 5.5+, EQS, perception, Mass, Smart Objects, controllers), `merge_actors`, PCG components, widgets, physics bodies, landscape, foliage, water, audio and streaming in Play, `run_benchmark`, splines, volumes, console values, ability and movement values (read back, unsent ones kept), editor vsync, World Partition streaming, scalability, the tonemapper and every view mode.
-- **Saves are reported** (`saved`, or `SAVE_FAILED` for ability sets, networking Blueprints and new animation assets; `COMPILE_FAILED` names the compiler error) by creators and by material, texture, LOD, skeleton, socket, morph target, weight profile, montage, dialogue and physics edits; an animation or audio edit with `save: false` stays an unsaved change.
+- **Refused instead of overwritten or guessed**: taken names and paths, bakes over another asset kind, engine content, unknown types and modes, empty edits, incompatible pins, character edits on a non-Character (`NOT_A_CHARACTER`, `SKELETON_MISMATCH`).
+- **Calls that now do what they say**: fades, thumbnails, sockets, bones, ragdolls, AI, `merge_actors`, PCG components, widgets, physics bodies, landscape, foliage, water, audio and streaming in Play, `run_benchmark`, splines, volumes, console values, scalability and every view mode.
+- **Saves are reported** (`saved`, `SAVE_FAILED`, `COMPILE_FAILED` with the compiler error) by creators and asset edits; a `save: false` edit stays unsaved.
 
 ## [0.6.0-beta-f] - 2026-10-16
 

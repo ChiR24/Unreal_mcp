@@ -27,8 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Replies say what undo can revert** (`undo`, read from the editor's history), and **`control_editor restore_point`** rolls back only this server's steps.
 - **`inspect explain`** says why something does not happen (collision, visibility, input, widget, sound, light) and names the call that fixes it.
 - **An unchanged call failing three times in a row is refused** (`REPEATED_FAILURE`) on both transports.
-- **`build_graph` `dryRun`** checks every step of a batch without running one.
-- **`build_material_graph` checks every edit and `$id` before a step runs**, so a misspelled id applies nothing; it and `add_widget_tree` take `dryRun`.
+- **Batches check before they run**: a misspelled `$id` in `build_material_graph` applies nothing, and `build_graph`, `build_material_graph` and `add_widget_tree` take `dryRun`.
 
 </details>
 
@@ -37,23 +36,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Crashes**: Ability System actions on a non-Actor Blueprint, and creates or mesh bakes over an asset of another class, are refused.
 - **`run_benchmark` measures** frames, FPS, frame and thread times (it measured nothing and opened the GPU Visualizer).
-- **Small fixes**: `RayTraced` GI is refused from UE 5.4; whole-path `runtime_report` filters; UE 5.0 links again; rate limits say when to retry; `set_property` writes are one undo step; folded descriptions keep plain words.
+- **Small fixes**: `RayTraced` GI is refused from UE 5.4; whole-path `runtime_report` filters; UE 5.0 links; rate limits say when to retry; folded descriptions keep plain words.
 - **Removals** take only exact components, name what still uses an asset, keep assets others use, list the nodes `remove_variable` deletes, and undo for tracks and keys.
 - **Nothing is overwritten unasked**: taken names and paths are refused; edits keep the fields left out; engine content is never edited in place.
-- **A family's variant needs what its action needs** on both transports; describe and search show `requiredFor` and `variantRequired`, and describe lists what each variant does under its selector.
+- **A family's variant needs what its action needs**; describe shows `requiredFor`, `variantRequired` and what each variant does.
 - **Renders** keep their request open for `renderTimeoutMs`; `save_all` and `restart_editor` wait for them.
 - **An open editor dialog** answers every call `EDITOR_MODAL_ACTIVE` with its title on both transports; calls through `/mcp` waited, then failed `EDITOR_BLOCKED`.
 - **Viewport screenshots wait for streaming** and name video memory over budget; `set_viewport_realtime` reports its state.
 - **Property writes**: a deprecated property is refused with its replacement; Niagara `set_property` restarts placed effects; environment settings take object references.
 - **Placement checks**: `audit_placement` counts simulated bodies, player-start capsules and skips undersides; `fix_coplanar` handles several neighbours.
 - **Tracks and keys**: track names match whole, display names count, two matches are refused; `set_bone_key` keeps what it is not given; a new frame rate keeps key times.
-- **Undo** covers edits to meshes, landscape, lights, sound, foliage, splines, water, post-process, cameras, sequences, data tables, bones and material nodes, plus spawns, transforms and attachments, also on assets EngineWire created; a compile that clears undo says so (`UNDO_CLEARED_BY_COMPILE`).
+- **Undo** covers property writes, meshes, landscape, lights, sound, foliage, splines, water, post-process, cameras, sequences, data tables, bones, material nodes, spawns, transforms and attachments.
 - **Effects and animation**: Niagara creates refuse taken names and unknown types, name the emitted event and keep a `save: false` system (it failed); curve keys and axes read back; a missing skeleton or curve is refused.
 - **Finds stop at `limit`** (default 200) and say how many matched.
-- **Records and replies say what happens**: about 250 records name defaults, replies and refusals; replies read back what the engine holds; failed saves and compiles say so; `save: false` edits stay unsaved.
-- **Successes that did nothing now act**: foliage, water, Characters, AI (State Trees, Mass, Smart Objects, EQS, Blackboards), audio and streaming in Play, splines, volumes, landscape, sockets, blend samples, view modes, scalability and more.
+- **Records and replies say what happens**: defaults, refusals and read-back values; failed saves and compiles say so.
+- **Successes that did nothing now act**: foliage, water, Characters, AI, audio and streaming in Play, splines, volumes, landscape, view modes and more.
 - **`manage_effect cleanup` needs destructive consent** and `filter`, is one undo step and refuses during Play; clearing debug shapes moved to `debug_shape`.
-- **Sublevels and paths**: object paths work in `open_level`, `load` and `add_sublevel`; `create_sublevel` refuses a parent that is not open; a relative `.t3d` export lands in the project.
+- **Sublevels and paths**: object paths work in `open_level`, `load` and `add_sublevel`; a relative `.t3d` export lands in the project.
 - **Git commits** take any commit message safely (a quote could inject git options); checkout and submit list the paths they skip; `enable` switches providers.
 
 </details>
