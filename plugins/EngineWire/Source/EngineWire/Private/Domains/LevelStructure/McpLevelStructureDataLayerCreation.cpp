@@ -12,6 +12,7 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Modules/ModuleManager.h"
 #include "UObject/Package.h"
+#include "UObject/StructOnScope.h"
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
 #include "WorldPartition/DataLayer/DataLayerAsset.h"
 #include "WorldPartition/DataLayer/DataLayerInstance.h"
@@ -155,7 +156,23 @@ bool HandleCreateDataLayer(
     McpSafeAssetSave(NewDataLayerAsset);
 
     // Step 2: Create a UDataLayerInstance using the asset
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 1
+    // 5.1 does not export FDataLayerCreationParameters (DATALAYEREDITOR_API arrives in 5.2), so its out-of-line
+    // constructor cannot be called from this module. The struct is made through its reflection instead, which runs
+    // that constructor inside DataLayerEditor.
+    const UScriptStruct* CreationParamsType = FindObject<UScriptStruct>(nullptr, TEXT("/Script/DataLayerEditor.DataLayerCreationParameters"));
+    if (!CreationParamsType)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("Created DataLayerAsset '%s' but the engine has no DataLayerCreationParameters type to create its "
+                "DataLayerInstance with. The asset exists at: %s"), *DataLayerName, *FullAssetPath), nullptr, TEXT("DATA_LAYER_INSTANCE_FAILED"));
+        return true;
+    }
+    FStructOnScope CreationParamsScope(CreationParamsType);
+    FDataLayerCreationParameters& CreationParams = *reinterpret_cast<FDataLayerCreationParameters*>(CreationParamsScope.GetStructMemory());
+#else
     FDataLayerCreationParameters CreationParams;
+#endif
     CreationParams.DataLayerAsset = NewDataLayerAsset;
     CreationParams.WorldDataLayers = World->GetWorldDataLayers();
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3

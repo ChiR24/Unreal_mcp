@@ -11,7 +11,10 @@ bool HandleAutoUV(UEngineWireSubsystem* Self, const FString& RequestId,
 
     const TOptional<FMcpGeometryTarget> Target = ResolveGeometryTarget(Self, RequestId, ActorName, Socket);
     if (!Target) return true;
-    auto [TargetActor, DMC, Mesh] = *Target;
+    // Plain locals, not a structured binding: CountUVElements captures Mesh, and capturing a binding is a C++20 rule
+    // that older compilers refuse.
+    UDynamicMeshComponent* DMC = Target->Component;
+    UDynamicMesh* Mesh = Target->Mesh;
     const int32 UVChannel = FMath::Max(0, GetJsonIntField(Payload, TEXT("uvChannel"), 0));
 
     // XAtlas silently refuses a non-compact mesh or a missing UV layer (its Debug sink

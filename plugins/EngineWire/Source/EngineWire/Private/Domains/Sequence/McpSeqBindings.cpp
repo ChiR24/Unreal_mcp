@@ -233,5 +233,4 @@ bool UEngineWireSubsystem::HandleSequenceAddActors(
       Socket, RequestId, false, TEXT("EditorActorSubsystem not available"),
       nullptr, TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"));
   return true;
-  return true;
 }

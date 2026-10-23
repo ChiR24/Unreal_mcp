@@ -62,7 +62,11 @@ bool HandleAppendMesh(UEngineWireSubsystem* Self, const FString& RequestId,
     }
     const TOptional<FMcpGeometryTarget> Target = ResolveGeometryTarget(Self, RequestId, ActorName, Socket);
     if (!Target) return true;
-    auto [TargetActor, DMC, Mesh] = *Target;
+    // Plain locals, not a structured binding: the lambdas below use Mesh, and capturing a binding is a C++20 rule that
+    // older compilers refuse.
+    ADynamicMeshActor* TargetActor = Target->Actor;
+    UDynamicMeshComponent* DMC = Target->Component;
+    UDynamicMesh* Mesh = Target->Mesh;
 
     UStaticMesh* Source = Cast<UStaticMesh>(McpLoadAsset(SanitizeProjectRelativePath(MeshPath)));
     UDynamicMesh* Part = NewObject<UDynamicMesh>(GetTransientPackage());

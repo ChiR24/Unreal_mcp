@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "EngineWireSubsystem.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpBPCompileError.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Core/Module/EngineWireGlobals.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
@@ -50,7 +51,7 @@ UBlueprint* LoadCharacterBlueprint(UEngineWireSubsystem* Self, const FString& Re
 inline bool CommitCharacterEdit(UEngineWireSubsystem* Self, const FString& RequestId, UBlueprint* Blueprint, FCharacterSocket Socket)
 {
     FString CompileError;
-    if (!McpSafeCompileBlueprint(Blueprint, &CompileError))
+    if (!McpCompileBlueprintWithError(Blueprint, CompileError))
     {
         Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("%s was changed in the editor but does not compile, so "
             "it was NOT saved: %s"), *Blueprint->GetPathName(), CompileError.IsEmpty() ? TEXT("the compiler gave no reason") : *CompileError),

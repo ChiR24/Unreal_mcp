@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
 #include "Engine/Blueprint.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpBPCompileError.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPCompileHelpers.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "EngineWireSubsystem.h"
@@ -78,7 +79,7 @@ inline bool CommitGASBlueprintEdit(const FGASRequestContext& Context, UBlueprint
     FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
     // The compiler's reason, not a guess: a cooldown effect that grants no tags failed here as "unrelated graph errors".
     FString CompileError;
-    if (!McpSafeCompileBlueprint(Blueprint, &CompileError))
+    if (!McpCompileBlueprintWithError(Blueprint, CompileError))
     {
         Context.Subsystem->SendAutomationError(Context.RequestingSocket, Context.RequestId,
             FString::Printf(TEXT("%s applied, but the Blueprint failed to compile, so the asset was NOT saved: %s"), What,
