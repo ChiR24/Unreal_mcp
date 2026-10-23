@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`inspect explain`** says why something does not happen (collision, visibility, input, widget, sound, light) and names the call that fixes it.
 - **An unchanged call failing three times in a row is refused** (`REPEATED_FAILURE`) on both transports.
 - **`build_graph` `dryRun`** checks every step of a batch without running one.
+- **`build_material_graph` checks every edit and `$id` before a step runs**, so a misspelled id applies nothing; it and `add_widget_tree` take `dryRun`.
 
 </details>
 

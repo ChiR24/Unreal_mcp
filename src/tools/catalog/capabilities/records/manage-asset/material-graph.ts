@@ -82,8 +82,9 @@ const OPERATIONS = {
     + 'node; later steps use "$id" in sourceNodeId/targetNodeId/nodeId), from/to ("$id.Pin" shorthand for connect_nodes, where '
     + 'a source pin may be channel letters like "$uv.G"; '
     + '"Main.EmissiveColor" is the material output). A created node without x/y is laid out automatically. Deleting and '
-    + 'disconnecting are not batched. The batch stops at the first failing step; when every step ran, the material is '
-    + 'compiled and saved once.',
+    + 'disconnecting are not batched. Every edit and "$id" is checked before any step runs, so a misspelled one refuses the '
+    + 'batch with nothing applied (problems lists each); a step that fails when it runs stops the batch with the steps '
+    + 'before it applied (their node ids are in nodeIds). When every step ran, the material is compiled and saved once.',
 } as const;
 const BATCH_OUT = schema({
   success: bool('True when every step ran.'),
@@ -95,6 +96,10 @@ const BATCH_OUT = schema({
   compiled: bool('False when the material does not compile after the batch; compileErrors says why.'),
   compileErrors: arr('Compile errors after the batch, empty when the material compiles.'),
   saved: bool('Whether the material was saved after the batch.'),
+  dryRun: bool('True when nothing ran (dryRun).'),
+  checked: num('Steps checked before any ran.'),
+  wouldCreate: num('dryRun: the nodes the batch would create.'),
+  problems: arrObj('Every step the check refused, each with index, edit, errorCode and error; nothing was applied.'),
 }, ['success']);
 // update_custom_expression compiles and saves the material when it is called on its own, as compile_material does; as a
 // step of build_material_graph it leaves both to the batch, so these three are absent there. `details` takes the rest
@@ -198,7 +203,7 @@ export const MATERIAL_GRAPH_RECORDS: readonly RecordSpec[] = [
       whenNotToUse: ['A new node needs a position (pass x and y when adding it with material.add_material_node).', 'Wires must change (use material.connect_nodes or material.disconnect_nodes).'],
       examples: [ex('Space a stacked parameter node out', { materialPath: M, nodeId: SAMPLE, x: -400, y: 260 }, { success: true, nodeId: SAMPLE, posX: -400, posY: 260 })] }),
   r('build_material_graph', 'material', 'Build a material graph in one call: add nodes, wire them to each other and to the material output, and set material properties, with $id references between steps.',
-    schema({ materialPath: MAT, operations: OPERATIONS }, ['materialPath', 'operations']), BATCH_OUT, WRITE, WRITE_POLICY, LOW,
+    schema({ materialPath: MAT, operations: OPERATIONS, dryRun: bool('Check the batch without running a step (default false): every edit and "$id", with every problem in one reply. Node names, pins and values are checked only when it runs. Nothing is changed, compiled or saved.') }, ['materialPath', 'operations']), BATCH_OUT, WRITE, WRITE_POLICY, LOW,
     { whenToUse: ['Many nodes, wires and material properties must be built at once, with the material compiled and saved only at the end.', 'New nodes must be wired to each other in the same call by id ($id) without waiting for node ids.'],
       whenNotToUse: ['Only one wire is needed (use material.connect_nodes).', 'Nodes must be deleted or unwired; batches do not run those (use material.delete_node or material.disconnect_nodes).'],
       topics: ['batch material edit', 'build material graph', 'wire many material nodes', 'material graph batch'],

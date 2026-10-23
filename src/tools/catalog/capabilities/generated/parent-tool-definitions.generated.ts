@@ -10098,7 +10098,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "dryRun": {
           "type": "boolean",
-          "description": "Report what would be copied without writing anything. Returns the same counts and packagePaths sample."
+          "description": "Check the batch without running a step (default false): every edit and \"$id\", with every problem in one reply. Node names, pins and values are checked only when it runs. Nothing is changed, compiled or saved."
         },
         "edit": {
           "type": "string",
@@ -10714,7 +10714,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "x-unreal-reflection-boundary": true
           },
           "x-unreal-reflection-boundary": true,
-          "description": "Steps run in order, 1-200. Each is {edit, ...the params of that edit}: edit is a node adder (add_material_node, add_scalar_parameter, add_vector_parameter, add_texture_sample, add_texture_coordinate, add_math_node, add_noise, add_custom_expression, ...; or add_material_node with nodeKind, as in the single call: {\"edit\": \"add_material_node\", \"nodeKind\": \"world_position\"}), use_material_function, connect_nodes, set_node_position, update_custom_expression, set_blend_mode, set_shading_model, set_material_domain or set_two_sided. Optional per step: id (names the created node; later steps use \"$id\" in sourceNodeId/targetNodeId/nodeId), from/to (\"$id.Pin\" shorthand for connect_nodes, where a source pin may be channel letters like \"$uv.G\"; \"Main.EmissiveColor\" is the material output). A created node without x/y is laid out automatically. Deleting and disconnecting are not batched. The batch stops at the first failing step; when every step ran, the material is compiled and saved once."
+          "description": "Steps run in order, 1-200. Each is {edit, ...the params of that edit}: edit is a node adder (add_material_node, add_scalar_parameter, add_vector_parameter, add_texture_sample, add_texture_coordinate, add_math_node, add_noise, add_custom_expression, ...; or add_material_node with nodeKind, as in the single call: {\"edit\": \"add_material_node\", \"nodeKind\": \"world_position\"}), use_material_function, connect_nodes, set_node_position, update_custom_expression, set_blend_mode, set_shading_model, set_material_domain or set_two_sided. Optional per step: id (names the created node; later steps use \"$id\" in sourceNodeId/targetNodeId/nodeId), from/to (\"$id.Pin\" shorthand for connect_nodes, where a source pin may be channel letters like \"$uv.G\"; \"Main.EmissiveColor\" is the material output). A created node without x/y is laid out automatically. Deleting and disconnecting are not batched. Every edit and \"$id\" is checked before any step runs, so a misspelled one refuses the batch with nothing applied (problems lists each); a step that fails when it runs stops the batch with the steps before it applied (their node ids are in nodeIds). When every step ran, the material is compiled and saved once."
         },
         "order": {
           "type": "array",
@@ -11558,6 +11558,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Slots whose material this call changed; an entry that names the material a slot already holds changes nothing."
         },
+        "checked": {
+          "type": "number",
+          "description": "Steps checked before any ran."
+        },
         "collisionType": {
           "type": "string",
           "description": "The collision the mesh has now."
@@ -11752,7 +11756,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "dryRun": {
           "type": "boolean",
-          "description": "True when nothing was written."
+          "description": "True when nothing ran (dryRun)."
         },
         "duplicatedCount": {
           "type": "number",
@@ -12331,6 +12335,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Key names of a price field this does not recognise, so a Fab change reports itself. Present only then."
         },
+        "problems": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Every step the check refused, each with index, edit, errorCode and error; nothing was applied."
+        },
         "propertyChanges": {
           "type": "array",
           "items": {
@@ -12688,6 +12700,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "width": {
           "type": "number",
           "description": "Texture width."
+        },
+        "wouldCreate": {
+          "type": "number",
+          "description": "dryRun: the nodes the batch would create."
         }
       },
       "additionalProperties": true
@@ -16490,7 +16506,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "widgetCount": {
           "type": "number",
-          "description": "How many widgets the tree made."
+          "description": "How many widgets the tree made (with dryRun, would make)."
         },
         "widgetInfo": {
           "type": "object",
@@ -16596,7 +16612,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "items": {
                 "type": "string"
               },
-              "description": "Every widget the tree made, by name, parents first."
+              "description": "Every widget the tree made, by name, parents first; with dryRun, the names it would use."
             }
           ],
           "description": "Every widget created, root first; bind or restyle them by these names."

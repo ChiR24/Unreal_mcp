@@ -4,6 +4,8 @@
 #include "Domains/WidgetAuthoring/Templates/McpWidgetSpec.h"
 
 #include "Blueprint/WidgetTree.h"
+#include "Components/PanelWidget.h"
+#include "Domains/WidgetAuthoring/Support/McpWidgetTreeMutation.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "EngineWireSubsystem.h"
@@ -114,6 +116,31 @@ FString McpValidateWidgetTreeSpec(const TSharedPtr<FJsonObject>& Node, const FSt
     }
     return FString();
 }
+
+FString McpCheckSpecPlacement(UWidgetBlueprint* WidgetBP, const TSharedPtr<FJsonObject>& Spec, const FString& SlotName,
+                              const TSharedPtr<FJsonObject>& Payload, FString& OutCode)
+{
+    UWidgetTree* Tree = WidgetBP->WidgetTree;
+    TArray<FString> Names;
+    McpCollectSpecNames(Spec, SlotName, Names);
+    for (const FString& Name : Names)
+    {
+        if (Tree->FindWidget(FName(*Name)))
+        {
+            OutCode = TEXT("SLOT_EXISTS");
+            return FString::Printf(TEXT("'%s' already holds a widget named '%s'. Pick another slotName, or remove_widget the old "
+                                        "one first."), *WidgetBP->GetName(), *Name);
+        }
+    }
+    const FString ParentSlot = ResolveParentSlotName(Payload);
+    if (!ParentSlot.IsEmpty() && !Cast<UPanelWidget>(Tree->FindWidget(FName(*ParentSlot))))
+    {
+        OutCode = TEXT("PARENT_NOT_FOUND");
+        return FString::Printf(TEXT("'%s' is not a panel in '%s'; parentSlot must name a panel widget (get_widget_info lists "
+                                    "them)."), *ParentSlot, *WidgetBP->GetName());
+    }
+    return FString();
+}
 }
 
 namespace WidgetAuthoringHandlers
@@ -151,6 +178,32 @@ bool HandleWidgetAuthoringTreeBuild(UEngineWireSubsystem& Subsystem, const FStri
         return true;
     }
     const FString RootName = GetJsonStringField(*TreeObject, TEXT("name"));
+    // dryRun: the checks made before any widget is added (types, properties, slots above; names and parent here).
+    if (GetJsonBoolField(Payload, TEXT("dryRun"), false))
+    {
+        FString Code;
+        if (const FString Refusal = McpCheckSpecPlacement(WidgetBP, *TreeObject, RootName, Payload, Code); !Refusal.IsEmpty())
+        {
+            Subsystem.SendAutomationError(Socket, RequestId, Refusal + TEXT(" Nothing was added."), Code);
+            return true;
+        }
+        TArray<FString> Names;
+        McpCollectSpecNames(*TreeObject, RootName, Names);
+        TArray<TSharedPtr<FJsonValue>> WouldMake;
+        for (const FString& Name : Names)
+        {
+            WouldMake.Add(MakeShared<FJsonValueString>(Name));
+        }
+        ResultJson->SetBoolField(TEXT("dryRun"), true);
+        ResultJson->SetStringField(TEXT("widgetPath"), WidgetBlueprintPackagePath(WidgetBP));
+        ResultJson->SetStringField(TEXT("slotName"), RootName);
+        ResultJson->SetArrayField(TEXT("widgets"), WouldMake);
+        ResultJson->SetNumberField(TEXT("widgetCount"), Count);
+        Subsystem.SendAutomationResponse(Socket, RequestId, true, FString::Printf(TEXT("add_widget_tree dryRun: the %d widgets "
+            "pass every check made before one is added (types, properties, slots, names, parent). Nothing was added."), Count),
+            ResultJson);
+        return true;
+    }
     TArray<UWidget*> Created;
     if (!McpAddSpecToWidget(Subsystem, RequestId, Socket, Payload, WidgetBP, *TreeObject, RootName, Created))
     {

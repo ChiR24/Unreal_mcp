@@ -58,6 +58,12 @@ void McpApplySpecSlot(UWidget* Widget, const TSharedPtr<FJsonObject>& SlotSpec);
 // Takes everything McpBuildWidgetSpec created back out of the tree and frees the names.
 void McpRollbackWidgetSpec(UWidgetBlueprint* WidgetBP, const TArray<UWidget*>& Created);
 
+// What McpAddSpecToWidget refuses before it adds a widget: a spec name the Widget Blueprint already holds
+// (SLOT_EXISTS) or a parentSlot that is not a panel of it (PARENT_NOT_FOUND). Empty when it may add (add_widget_tree
+// dryRun asks this alone, McpWidgetTreeBuild.cpp).
+FString McpCheckSpecPlacement(UWidgetBlueprint* WidgetBP, const TSharedPtr<FJsonObject>& Spec, const FString& SlotName,
+                              const TSharedPtr<FJsonObject>& Payload, FString& OutCode);
+
 // Seats a built spec under ParentSlot (the root panel when empty; a canvas root is made
 // for an empty tree), applies its default placement, then the caller's
 // positionX/positionY/sizeX/sizeY. Sends the refusal itself and returns false on failure.

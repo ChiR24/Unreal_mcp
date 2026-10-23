@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "7ffd0a6c957013ee",
+  "catalogRevision": "29113592e885d640",
   "recordCount": 417,
   "records": [
     {
@@ -16284,6 +16284,10 @@
               "x-unreal-reflection-boundary": true,
               "description": "The layout as one nested node {type, name, children[], slot{}, ...props}. type: a UMG class short name (CanvasPanel, Overlay, VerticalBox, HorizontalBox, Border, SizeBox, ScaleBox, UniformGridPanel, Spacer, TextBlock, RichTextBlock, Image, ProgressBar, Button). name: the widget name, unique in the Widget Blueprint (each becomes a variable a graph can read). Props: text, fontSize, color [r,g,b,a] (text colour, border brush, image tint, bar fill), justify left|center|right, autoWrap, opacity, visibility, padding (number or [l,t,r,b]: a border's inner padding), radius (rounded border, image or button) with outlineColor and outlineWidth, imageSize [w,h], texture (an image's texture path), material (an Image's or Border's brush: a UI material or instance that draws the whole widget, such as a rounded panel with its rim and gradient), percent (progress bar), width, height, maxHeight (size box). Text blocks also take typeface (Bold, Regular, Light, Italic), fontFamily, letterSpacing, outline with outlineColor, and shadowOffset [x,y] with shadowColor. slot places the node in its parent: in a canvas anchors [minX,minY,maxX,maxY], alignment [x,y], position [x,y], size [w,h], autoSize, z; in a box padding, hAlign (left|center|right|fill), vAlign (top|center|bottom|fill) and fill (a share of the free space). A Widget Blueprint with no root yet gets a canvas, and a tree root with no slot (and no positionX/Y or sizeX/Y) fills it. An unknown field is refused, not ignored; at most 200 widgets."
             },
+            "dryRun": {
+              "type": "boolean",
+              "description": "Check the tree without adding a widget (default false): types, properties and slots, names the Widget Blueprint already holds (SLOT_EXISTS) and the parent panel (PARENT_NOT_FOUND). Nothing is added or saved."
+            },
             "widgetKind": {
               "type": "string",
               "enum": [
@@ -16355,15 +16359,19 @@
               "items": {
                 "type": "string"
               },
-              "description": "Every widget the tree made, by name, parents first."
+              "description": "Every widget the tree made, by name, parents first; with dryRun, the names it would use."
             },
             "widgetCount": {
               "type": "number",
-              "description": "How many widgets the tree made."
+              "description": "How many widgets the tree made (with dryRun, would make)."
             },
             "saved": {
               "type": "boolean",
               "description": "Whether the Widget Blueprint was saved."
+            },
+            "dryRun": {
+              "type": "boolean",
+              "description": "True when nothing was added (dryRun)."
             }
           },
           "required": [
@@ -16585,6 +16593,9 @@
             ],
             "tree": [
               "widget_tree"
+            ],
+            "dryRun": [
+              "widget_tree"
             ]
           },
           "requires": {
@@ -16598,8 +16609,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "8a6e58945d3745c3b75b45688d915a7e218b5453f4a83d33b29d632e0489e3da",
-        "content": "f0889d3e27796ea84237188f5dc888c789c438173bdfcbedb5bba2cc7b20b585"
+        "schema": "5a4dac7a54a1f3bd5a1938c69c2343ed23dd436981386515cc1b84d4515c858d",
+        "content": "9fd72a7230251aa35f95fba19be7282cddf0cbb96de44ae50cecfd2f072977a1"
       }
     },
     {
@@ -89541,7 +89552,11 @@
                 "x-unreal-reflection-boundary": true
               },
               "x-unreal-reflection-boundary": true,
-              "description": "Steps run in order, 1-200. Each is {edit, ...the params of that edit}: edit is a node adder (add_material_node, add_scalar_parameter, add_vector_parameter, add_texture_sample, add_texture_coordinate, add_math_node, add_noise, add_custom_expression, ...; or add_material_node with nodeKind, as in the single call: {\"edit\": \"add_material_node\", \"nodeKind\": \"world_position\"}), use_material_function, connect_nodes, set_node_position, update_custom_expression, set_blend_mode, set_shading_model, set_material_domain or set_two_sided. Optional per step: id (names the created node; later steps use \"$id\" in sourceNodeId/targetNodeId/nodeId), from/to (\"$id.Pin\" shorthand for connect_nodes, where a source pin may be channel letters like \"$uv.G\"; \"Main.EmissiveColor\" is the material output). A created node without x/y is laid out automatically. Deleting and disconnecting are not batched. The batch stops at the first failing step; when every step ran, the material is compiled and saved once."
+              "description": "Steps run in order, 1-200. Each is {edit, ...the params of that edit}: edit is a node adder (add_material_node, add_scalar_parameter, add_vector_parameter, add_texture_sample, add_texture_coordinate, add_math_node, add_noise, add_custom_expression, ...; or add_material_node with nodeKind, as in the single call: {\"edit\": \"add_material_node\", \"nodeKind\": \"world_position\"}), use_material_function, connect_nodes, set_node_position, update_custom_expression, set_blend_mode, set_shading_model, set_material_domain or set_two_sided. Optional per step: id (names the created node; later steps use \"$id\" in sourceNodeId/targetNodeId/nodeId), from/to (\"$id.Pin\" shorthand for connect_nodes, where a source pin may be channel letters like \"$uv.G\"; \"Main.EmissiveColor\" is the material output). A created node without x/y is laid out automatically. Deleting and disconnecting are not batched. Every edit and \"$id\" is checked before any step runs, so a misspelled one refuses the batch with nothing applied (problems lists each); a step that fails when it runs stops the batch with the steps before it applied (their node ids are in nodeIds). When every step ran, the material is compiled and saved once."
+            },
+            "dryRun": {
+              "type": "boolean",
+              "description": "Check the batch without running a step (default false): every edit and \"$id\", with every problem in one reply. Node names, pins and values are checked only when it runs. Nothing is changed, compiled or saved."
             },
             "nodeKind": {
               "type": "string",
@@ -89663,6 +89678,26 @@
             "saved": {
               "type": "boolean",
               "description": "Whether the material was saved after the batch."
+            },
+            "dryRun": {
+              "type": "boolean",
+              "description": "True when nothing ran (dryRun)."
+            },
+            "checked": {
+              "type": "number",
+              "description": "Steps checked before any ran."
+            },
+            "wouldCreate": {
+              "type": "number",
+              "description": "dryRun: the nodes the batch would create."
+            },
+            "problems": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Every step the check refused, each with index, edit, errorCode and error; nothing was applied."
             }
           },
           "required": [
@@ -89934,6 +89969,9 @@
             ],
             "operations": [
               "batch"
+            ],
+            "dryRun": [
+              "batch"
             ]
           },
           "requires": {
@@ -89991,8 +90029,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "d4ee450b2a4997c004168d064d7d84ac277e7f8749e7e9861c5206789155f271",
-        "content": "8380a8e35041d26b9fbc80b07c371f4dd999d424bc1589d72d5e7c5fb7731b7f"
+        "schema": "24185924ce77af97127e7f4a8de587e279ebc86b68cc8cd9f21702120ec2cd74",
+        "content": "a88b38c93a5045411f908fc8a6bb7d45f7212d6841d33faa9f5dd3d07e7dc703"
       }
     },
     {

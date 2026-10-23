@@ -19,6 +19,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **`explain`** fault trees (`inspect explain`): collision, visible, input, widget, audible, lit; a failed check names the call that fixes it.
 - **Loop guard** on `/mcp`: an unchanged call failing three times in a row is refused `REPEATED_FAILURE` before it runs.
 - **`build_graph` `dryRun`**: the pre-check, every `$id` and node guid; nothing runs.
+- **Material and widget batches**: `build_material_graph` checks every edit and `$id` before a step runs; it and `add_widget_tree` take `dryRun`.
 
 ### Fixed
 - **Small fixes**: `set_property` writes are one undo step; links on UE 5.0; whole-path `runtime_report` filters; diagnostics records replace their files; exact task principals; the RHI thread in `busiestThreadMs`; effect lifecycle misses name what is missing.
