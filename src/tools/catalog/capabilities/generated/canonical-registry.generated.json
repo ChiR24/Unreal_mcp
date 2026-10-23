@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "1ee47e4e11550e1d",
+  "catalogRevision": "d584d8fdac0f367b",
   "recordCount": 416,
   "records": [
     {
@@ -12040,7 +12040,7 @@
                 "material_stats",
                 "source_control_state"
               ],
-              "description": "Which query asset variant to run.\nexists: Check whether an asset lookup=exists at a given path, or which of several do.\nsearch: Find or search assets by text, class, or package path with bounded pagination.\nby_tag: Find /Game assets that carry an asset-registry tag, optionally with a given value (compared ignoring case).\ntext: Find where a piece of text appears: Blueprint graph nodes by title (every call of a function, by its name as the graph shows it), literals, assets picked on pins and comments, variable and component defaults (a reference to another asset matches by its path, so a sound name finds the node or component that plays it), widget texts, DataTable rows, String Table entries, and the actors of the open level.\ngraph: Analyze the node graph inside a material or Blueprint asset; a MetaSound, Niagara or Behavior Tree asset answers with the nextCall that reads its graph.\nmaterial_stats: Retrieve rendering statistics for a material.\nsource_control_state: Retrieve source-control state for an asset."
+              "description": "Which query asset variant to run.\nexists: Check whether an asset exists at a given path, or which of several do.\nsearch: Find or search assets by text, class, or package path with bounded pagination.\nby_tag: Find /Game assets that carry an asset-registry tag, optionally with a given value (compared ignoring case).\ntext: Find where a piece of text appears: Blueprint graph nodes by title (every call of a function, by its name as the graph shows it), literals, assets picked on pins and comments, variable and component defaults (a reference to another asset matches by its path, so a sound name finds the node or component that plays it), widget texts, DataTable rows, String Table entries, and the actors of the open level.\ngraph: Analyze the node graph inside a material or Blueprint asset; a MetaSound, Niagara or Behavior Tree asset answers with the nextCall that reads its graph.\nmaterial_stats: Retrieve rendering statistics for a material.\nsource_control_state: Retrieve source-control state for an asset."
             }
           },
           "required": [
@@ -12360,8 +12360,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "869be364b961e7fdba1cd762aaf1bfa33d57a8cd43b2aeef9d16b50eef16479b",
-        "content": "6f6404f26f166a821b7045236476c2e95d289aa6d974998e33d0c078687954ba"
+        "schema": "fc8acbeb4ae9a8a6c999416790ccd43c314af461f90517e3b0758c244cb3f2f0",
+        "content": "13e5587af72345dff9d60fa3472aa0684f2401f8b77f670ea5bdd3a56ee1dac5"
       }
     },
     {
@@ -17312,7 +17312,7 @@
                 "blueprint",
                 "ensure"
               ],
-              "description": "Which create variant to run; omit for 'create'.\ncreate: Create a Blueprint asset named name in savePath (default /Game) and save it (saved). parentClass is a native class as /Script/Module.Class or a short name (Actor, Pawn, Character, PlayerController), or a Blueprint class path ending in _C; blueprintType Actor, Pawn, Character or FunctionLibrary stands in for a missing parentClass, and Interface without one makes a Blueprint Interface. A parent that resolves to nothing is CLASS_NOT_FOUND, naming classes of that name. properties sets class defaults, Component.Property and struct members by dotted path, reported as appliedProperties and failedProperties (the createMode=create stands either way). A Blueprint already at the path is answered with alreadyExists and left unchanged; one with another parent class is ASSET_ALREADY_EXISTS.\nblueprint: Same as createMode=create: a Blueprint named name in savePath from parentClass, or from blueprintType when parentClass is left out.\nensure: Make sure a Blueprint of parentClass is at savePath/name: one already there is answered with alreadyExists and left unchanged (another parent class is ASSET_ALREADY_EXISTS); otherwise it is created as createMode=create does, unless createIfMissing is false, which only reports whether it exists.",
+              "description": "Which create variant to run; omit for 'create'.\ncreate: Create a Blueprint asset named name in savePath (default /Game) and save it (saved). parentClass is a native class as /Script/Module.Class or a short name (Actor, Pawn, Character, PlayerController), or a Blueprint class path ending in _C; blueprintType Actor, Pawn, Character or FunctionLibrary stands in for a missing parentClass, and Interface without one makes a Blueprint Interface. A parent that resolves to nothing is CLASS_NOT_FOUND, naming classes of that name. properties sets class defaults, Component.Property and struct members by dotted path, reported as appliedProperties and failedProperties (the create stands either way). A Blueprint already at the path is answered with alreadyExists and left unchanged; one with another parent class is ASSET_ALREADY_EXISTS.\nblueprint: Same as create: a Blueprint named name in savePath from parentClass, or from blueprintType when parentClass is left out.\nensure: Make sure a Blueprint of parentClass is at savePath/name: one already there is answered with alreadyExists and left unchanged (another parent class is ASSET_ALREADY_EXISTS); otherwise it is created as create does, unless createIfMissing is false, which only reports whether it exists.",
               "default": "create"
             }
           },
@@ -17463,8 +17463,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "fb443e1be14ec49343ffe6e9bc159513cee8249c73adcdf4b0199d0e46dc9c38",
-        "content": "fcd6d8b96d6c22fd0b3986ce31c3d0c88316cda75d826dd90d3ef92b590074ef"
+        "schema": "83870dfb7d688319fb83fd01c8440eac40f8b7d9bd4eae4a3a95572a37d23976",
+        "content": "26df6e50b8692af1bab5e1eaa59216924985dc6152cea600cbf51ecf5bfdac51"
       }
     },
     {
@@ -35819,7 +35819,7 @@
                 "actors",
                 "by_tag"
               ],
-              "description": "Which delete variant to run; omit for 'actors'.\nactors: Permanently deleteScope=actors one actor or a batch of actors by name.\nby_tag: Permanently deleteScope=actors every actor matching a gameplay tag, or any of several tags in one call.",
+              "description": "Which delete variant to run; omit for 'actors'.\nactors: Permanently delete one actor or a batch of actors by name.\nby_tag: Permanently delete every actor matching a gameplay tag, or any of several tags in one call.",
               "default": "actors"
             }
           },
@@ -35941,8 +35941,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "bd8c61f68e86326380d2d212c08726cb1baabb9fa648bca590806e58f80c8c7b",
-        "content": "ccacf08210ab079ffcfac1cb67a719914f80c153acad7cdeda8961b1576d1f46"
+        "schema": "8c3e23695164965208c5d990f589d52dc9b26bdec26c9270f0c1789ab528ced5",
+        "content": "a448a05c5dcbe89fb876076ba04bec60c571000ae48206c7e1ab9cad29f88387"
       }
     },
     {
@@ -39915,7 +39915,7 @@
                 "blueprint",
                 "batch"
               ],
-              "description": "Which spawn variant to run; omit for 'class'.\nclass: Spawn a new actor instance from a class path into the current level, or a mesh actor from a mesh path alone.\nblueprint: Spawn an actor instance from a Blueprint asset path into the current level.\nbatch: Spawn many actors in one call; each item is a spawnKind=class payload, optionally with a material, Blueprint variables, outliner folder and tags.",
+              "description": "Which spawn variant to run; omit for 'class'.\nclass: Spawn a new actor instance from a class path into the current level, or a mesh actor from a mesh path alone.\nblueprint: Spawn an actor instance from a Blueprint asset path into the current level.\nbatch: Spawn many actors in one call; each item is a spawn payload, optionally with a material, Blueprint variables, outliner folder and tags.",
               "default": "class"
             }
           },
@@ -40189,8 +40189,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "b171e4cf046b851a68f9e4e73e913a4be3d2f467dc8593a0dc20e8be8cecf74f",
-        "content": "aab37b5872216623c8db1ea6fde0aaa755a9a966b10552821b7c1f53e4ae0e38"
+        "schema": "83255eb7ee40ca38cadf51b0ef17d54b36cd77be9b26993e7212e6aad8e1d744",
+        "content": "82cfa60d7673a83e713b32cbd77ed5b7065ab79c91030a4f8a2480e6f307ae0d"
       }
     },
     {
@@ -42421,7 +42421,7 @@
                 "eject",
                 "possess"
               ],
-              "description": "Which play variant to run; omit for 'play'.\nplay: Start Play-In-Editor (PIE) session; answers once the control=play world has begun control=play.\npause: Pause the running Play In Editor session, as the toolbar control=pause does; the reply says alreadyPaused when it was. No session is NO_ACTIVE_SESSION.\nresume: Resume a paused Play In Editor session; wasPaused false says it was not paused and nothing changed. A control=pause the game holds itself (a control=pause menu) is GAME_PAUSED unless unpauseGame is true, and a widget that still holds keyboard focus is named in warnings. No session is NO_ACTIVE_SESSION.\nstop: Stop the running PIE session.\neject: Eject the player from its pawn in PIE, as the editor's Eject button does: the session switches to Simulate in Editor and the view becomes a free camera that set_camera moves and screenshot photographs. Answers once the view has switched.\npossess: Possess a pawn in PIE: the player controller takes the pawn named by actorName. Without actorName it brings an ejected player back to its own pawn, as the editor's Possess button does (the way back from control=eject). Answers once the player is back in the game.",
+              "description": "Which play variant to run; omit for 'play'.\nplay: Start Play-In-Editor (PIE) session; answers once the play world has begun play.\npause: Pause the running Play In Editor session, as the toolbar pause does; the reply says alreadyPaused when it was. No session is NO_ACTIVE_SESSION.\nresume: Resume a paused Play In Editor session; wasPaused false says it was not paused and nothing changed. A pause the game holds itself (a pause menu) is GAME_PAUSED unless unpauseGame is true, and a widget that still holds keyboard focus is named in warnings. No session is NO_ACTIVE_SESSION.\nstop: Stop the running PIE session.\neject: Eject the player from its pawn in PIE, as the editor's Eject button does: the session switches to Simulate in Editor and the view becomes a free camera that set_camera moves and screenshot photographs. Answers once the view has switched.\npossess: Possess a pawn in PIE: the player controller takes the pawn named by actorName. Without actorName it brings an ejected player back to its own pawn, as the editor's Possess button does (the way back from eject). Answers once the player is back in the game.",
               "default": "play"
             }
           },
@@ -42546,8 +42546,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "814718336b831e4d0332eac4a5750818df87199767aee28b9d3c22922510defb",
-        "content": "214430118211fc5bbc5f2c3058a4dd4825be9d027273ae1271e2f6be36aea5e8"
+        "schema": "9a2b96f68ca89f0a4536ed7d547af79bbafddc21251a63e9907e877b8e1e76dd",
+        "content": "77afafd965edc9c04d2a30a88c703796da30352d2927e26a68b78c9f6318b993"
       }
     },
     {
@@ -63091,7 +63091,7 @@
                 "reset",
                 "effect"
               ],
-              "description": "Which activate variant to run; omit for 'activate'.\nactivate: Activate a placed Niagara component, in the level editor or a running game; control=reset restarts it from age 0.\ndeactivate: Deactivate a placed Niagara component, in the level editor or a running game.\nreset: Restart a placed Niagara component from age 0, in the level editor or a running game.\neffect: Activate a Niagara component by actor, or by the system asset it plays (on actorName, else anywhere in the world).",
+              "description": "Which activate variant to run; omit for 'activate'.\nactivate: Activate a placed Niagara component, in the level editor or a running game; reset restarts it from age 0.\ndeactivate: Deactivate a placed Niagara component, in the level editor or a running game.\nreset: Restart a placed Niagara component from age 0, in the level editor or a running game.\neffect: Activate a Niagara component by actor, or by the system asset it plays (on actorName, else anywhere in the world).",
               "default": "activate"
             }
           },
@@ -63217,8 +63217,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "615ebf135be27527b8b02bcbe9729ece9c34c5c53a65aa212e2e27fce4323531",
-        "content": "4c84bf8d73da9cd27b3702ca72848e8b0bb47eb8d50258b29569a124897ee146"
+        "schema": "b406959306783f1a68af89029d835f55260d673cb07fb0d617f0492217a9f3a4",
+        "content": "f3c62f48f36e71fb07653e30a61213c50712ae0a9e66f0b8864e99e2a8fdc3c8"
       }
     },
     {
@@ -64533,7 +64533,7 @@
                 "niagara",
                 "particle"
               ],
-              "description": "Which create effect variant to run.\nniagara_system: Create an empty Niagara System named name in path (or savePath; default /Game), compiled and saved unless save is false: it has its system scripts and no emitter yet, so it draws nothing until add_emitter_to_system adds one. A name already taken is ASSET_ALREADY_EXISTS, nothing changed. The reply gives systemPath.\nniagara_emitter: Create a standalone Niagara Emitter asset named name in path (default /Game) with the engine's default modules and a sprite renderer (UE 5.1 and later), saved unless save is false; add_emitter_to_system puts it in a system. A name already taken is ASSET_ALREADY_EXISTS, nothing changed.\nniagara_ribbon: Create a Niagara ribbon effect: by default the engine LocationBasedRibbon template given its own SpawnRate of 60 a second, Ribbon Width Mode Direct Set and an infinite loop, so it trails whatever it is attached to, placed in the level only when location is given; tune SpawnRate.SpawnRate, InitializeParticle.Lifetime, Ribbon Width and Color with set_parameter_value.\nparticle_trail: Create a kind=particle trail effect: by default a ribbon (the engine LocationBasedRibbon template given its own SpawnRate of 60 a second, Ribbon Width Mode Direct Set and an infinite loop) that trails whatever it is attached to, placed in the level only when location is given; tune SpawnRate.SpawnRate, InitializeParticle.Lifetime, Ribbon Width and Color with set_parameter_value.\nimpact: Create an impact effect system asset (the engine OmnidirectionalBurst template by default), placed in the level only when location is given.\nenvironment: Create an environment effect (weather/atmosphere) system asset, placed in the level only when location is given.\nvolumetric_fog: Create a volumetric fog effect.\nniagara: Place a Niagara system in the level as a Niagara actor, at a location or attached to an actor; autoActivate false places it switched off, for a sequence kind=particle track or gameplay to start.\nparticle: Spawn a kind=particle effect (Cascade or Niagara) from a preset name or a system asset."
+              "description": "Which create effect variant to run.\nniagara_system: Create an empty Niagara System named name in path (or savePath; default /Game), compiled and saved unless save is false: it has its system scripts and no emitter yet, so it draws nothing until add_emitter_to_system adds one. A name already taken is ASSET_ALREADY_EXISTS, nothing changed. The reply gives systemPath.\nniagara_emitter: Create a standalone Niagara Emitter asset named name in path (default /Game) with the engine's default modules and a sprite renderer (UE 5.1 and later), saved unless save is false; add_emitter_to_system puts it in a system. A name already taken is ASSET_ALREADY_EXISTS, nothing changed.\nniagara_ribbon: Create a Niagara ribbon effect: by default the engine LocationBasedRibbon template given its own SpawnRate of 60 a second, Ribbon Width Mode Direct Set and an infinite loop, so it trails whatever it is attached to, placed in the level only when location is given; tune SpawnRate.SpawnRate, InitializeParticle.Lifetime, Ribbon Width and Color with set_parameter_value.\nparticle_trail: Create a particle trail effect: by default a ribbon (the engine LocationBasedRibbon template given its own SpawnRate of 60 a second, Ribbon Width Mode Direct Set and an infinite loop) that trails whatever it is attached to, placed in the level only when location is given; tune SpawnRate.SpawnRate, InitializeParticle.Lifetime, Ribbon Width and Color with set_parameter_value.\nimpact: Create an impact effect system asset (the engine OmnidirectionalBurst template by default), placed in the level only when location is given.\nenvironment: Create an environment effect (weather/atmosphere) system asset, placed in the level only when location is given.\nvolumetric_fog: Create a volumetric fog effect.\nniagara: Place a Niagara system in the level as a Niagara actor, at a location or attached to an actor; autoActivate false places it switched off, for a sequence particle track or gameplay to start.\nparticle: Spawn a particle effect (Cascade or Niagara) from a preset name or a system asset."
             }
           },
           "required": [
@@ -64764,8 +64764,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "bba0756a12c2e904bb727a6332509ba5e0b89b9c3dc8f153bb20fb14854cad34",
-        "content": "c2993e8c245943c579e52115e32b67530887aaea49221e788391a5169eefaca4"
+        "schema": "332be23fa2be58488ecf91463343001eb63f4bcb2731c89022912790fc94502c",
+        "content": "f37de94c1db1004016953dc566d38956752d592cc7d57e297f38da587beac39f"
       }
     },
     {
@@ -70234,7 +70234,7 @@
                 "lattice_deform",
                 "displace_by_texture"
               ],
-              "description": "Which deform mesh variant to run.\nbend: Bend a dynamic mesh along axis (X, Y or Z, default Z) by strength degrees (default 45), the deform=bend spread over its length along that axis and centred on its local origin, the pivot. The reply gives the angle.\ntwist: Twist a dynamic mesh about axis (X, Y or Z, default Z) by strength degrees (default 45) across its length along that axis, centred on its local origin. The reply gives the angle.\ntaper: Flare a dynamic mesh around axis (X, Y or Z, default Z): its cross-section grows by strength percent (default 50) at the middle of its length and not at all at the ends, so a positive strength bulges it and a negative one pinches it (a sine profile, not a straight deform=taper).\nstretch: Scale a dynamic mesh along one axis (X, Y or Z, default Z) by strength (default 1.5: 2 doubles it, 0.5 halves it) about its local origin, the other axes unchanged.\nspherify: Pull every vertex of a dynamic mesh toward a sphere around its bounds centre, as large as its largest half-extent: strength 0 to 1 (default 1, clamped) is how far, 1 making it that sphere.\ncylindrify: Pull every vertex of a dynamic mesh toward a cylinder around axis (X, Y or Z, default Z) through its bounds centre, its radius the average distance of the vertices from that axis: strength 0 to 1 (default 1, clamped) is how far. The reply gives avgRadius and verticesModified.\nsmooth: Smooth a dynamic mesh: iterations (default 10) of Laplacian smoothing, each moving every vertex strength (default 0.2) of the way toward its neighbours; the mesh shrinks a little. Fewer than 1 iteration or a strength of 0 is refused.\nrelax: Relax a dynamic mesh: the same smoothing as deform=smooth with other defaults (3 iterations, strength 0.5), to even out vertex spacing. Fewer than 1 iteration or a strength of 0 is refused.\nnoise_deform: Displace a dynamic mesh along its normals by Perlin noise: strength is the height in cm (default 5) and frequency the noise cycles per cm (default three bumps across its largest dimension). The reply gives both.\nlattice_deform: Ripple a dynamic mesh with a sine wave: every vertex moves along axis (X, Y or Z, default Z) by a wave latticeResolution cycles across its bounds (2 to 16, default 3), at most weight (-2 to 2, default 0.25) times a quarter of its largest size, fading to nothing three quarters of that size from position (default the bounds centre). A procedural ripple, not a cage of control points.\ndisplace_by_texture: Raise a dynamic mesh by a heightmap texture projected straight down over its X/Y bounds: each vertex moves along axis (X, Y or Z, default Z) by (luminance - midpoint) x heightScale (midpoint 0 to 1, default 0.5; heightScale cm, default 10). A texture that does not load is TEXTURE_NOT_FOUND, one whose source format cannot be read TEXTURE_FORMAT_UNSUPPORTED."
+              "description": "Which deform mesh variant to run.\nbend: Bend a dynamic mesh along axis (X, Y or Z, default Z) by strength degrees (default 45), the bend spread over its length along that axis and centred on its local origin, the pivot. The reply gives the angle.\ntwist: Twist a dynamic mesh about axis (X, Y or Z, default Z) by strength degrees (default 45) across its length along that axis, centred on its local origin. The reply gives the angle.\ntaper: Flare a dynamic mesh around axis (X, Y or Z, default Z): its cross-section grows by strength percent (default 50) at the middle of its length and not at all at the ends, so a positive strength bulges it and a negative one pinches it (a sine profile, not a straight taper).\nstretch: Scale a dynamic mesh along one axis (X, Y or Z, default Z) by strength (default 1.5: 2 doubles it, 0.5 halves it) about its local origin, the other axes unchanged.\nspherify: Pull every vertex of a dynamic mesh toward a sphere around its bounds centre, as large as its largest half-extent: strength 0 to 1 (default 1, clamped) is how far, 1 making it that sphere.\ncylindrify: Pull every vertex of a dynamic mesh toward a cylinder around axis (X, Y or Z, default Z) through its bounds centre, its radius the average distance of the vertices from that axis: strength 0 to 1 (default 1, clamped) is how far. The reply gives avgRadius and verticesModified.\nsmooth: Smooth a dynamic mesh: iterations (default 10) of Laplacian smoothing, each moving every vertex strength (default 0.2) of the way toward its neighbours; the mesh shrinks a little. Fewer than 1 iteration or a strength of 0 is refused.\nrelax: Relax a dynamic mesh: the same smoothing as smooth with other defaults (3 iterations, strength 0.5), to even out vertex spacing. Fewer than 1 iteration or a strength of 0 is refused.\nnoise_deform: Displace a dynamic mesh along its normals by Perlin noise: strength is the height in cm (default 5) and frequency the noise cycles per cm (default three bumps across its largest dimension). The reply gives both.\nlattice_deform: Ripple a dynamic mesh with a sine wave: every vertex moves along axis (X, Y or Z, default Z) by a wave latticeResolution cycles across its bounds (2 to 16, default 3), at most weight (-2 to 2, default 0.25) times a quarter of its largest size, fading to nothing three quarters of that size from position (default the bounds centre). A procedural ripple, not a cage of control points.\ndisplace_by_texture: Raise a dynamic mesh by a heightmap texture projected straight down over its X/Y bounds: each vertex moves along axis (X, Y or Z, default Z) by (luminance - midpoint) x heightScale (midpoint 0 to 1, default 0.5; heightScale cm, default 10). A texture that does not load is TEXTURE_NOT_FOUND, one whose source format cannot be read TEXTURE_FORMAT_UNSUPPORTED."
             }
           },
           "required": [
@@ -70385,8 +70385,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "44a46767214b602134d0bdd75ab5c5309ff95b4b88960cf96dcade7f55fa1b52",
-        "content": "26fbd6a8b39dbfd2ebce47d9e8572b8a030f93f9154f66fc47546d5c2746a0c9"
+        "schema": "2cb340c588e7e8f7a9296d2dd3ec8442cd33a45a45e612c2194a55ae86462360",
+        "content": "ee48bd8378d54353d00b4bb6f2b5a3318e7dcf083b5663989bd412a6b994621c"
       }
     },
     {
@@ -71491,7 +71491,7 @@
                 "translate",
                 "difference"
               ],
-              "description": "Which edit dynamic mesh variant to run.\ncreate: Spawn a DynamicMesh actor to author geometry into: empty, or a copy of a static mesh asset.\nappend_vertex: Append one vertex to a DynamicMesh actor and return its index.\nappend_triangle: Append a triangle to a DynamicMesh actor from three corner positions.\nappend_polygons: Author a polygon cage on a DynamicMesh actor in one call: new vertices and faces of three or more corners, each with its own polygroup and material id.\nappend_cuboids: Append axis-aligned boxes to a DynamicMesh actor in one call, each with a material id, faces left open and a repeat along up to three axes (a railing, a stack of crates, a grid of windows, shelves, pillars), wound outward for you.\nappend_loft: Append a surface lofted through cross sections to a DynamicMesh actor: each section a loop of points (the same count in every one), joined in order with every face turned outward, the ends capped flat or closed to a tip point.\nappend_mesh: Copy a static mesh asset into a DynamicMesh actor at placements, each repeated along up to three axes, with its material slots mapped to the target's material ids (a list cycles copy by copy for colour variety): a model assembled from detailed parts in one call, its copies keeping the asset's normals and UVs.\ndelete_triangles: Delete the triangles of a DynamicMesh actor that triangleIndices or a region picks (by box, facing direction, polygroup or material id), with the points only they used.\nset_vertex_position: Move one vertex of a DynamicMesh actor to a new position.\nset_vertex_color: Set the vertex colour on one vertex, or on every vertex, of a DynamicMesh actor.\nbake_vertex_colors: Bake ambient occlusion, convex-edge, concave-cavity and height masks into the vertex colours of a DynamicMesh actor, for a material to read through its VertexColor node.\nset_material_id: Set the material id (the static-mesh material slot) of triangles of a DynamicMesh actor: every triangle, the triangleIndices you list, or a region.\nset_uvs: Set the UV coordinate of one vertex on a UV channel of a DynamicMesh actor.\nsplit_normals: Split the normals of a DynamicMesh actor above an angle threshold to harden edges.\ntranslate: Translate every vertex of a DynamicMesh actor, leaving the actor transform alone.\ndifference: Subtract a tool mesh from a target mesh under the edit=difference spelling of boolean_subtract."
+              "description": "Which edit dynamic mesh variant to run.\ncreate: Spawn a DynamicMesh actor to author geometry into: empty, or a copy of a static mesh asset.\nappend_vertex: Append one vertex to a DynamicMesh actor and return its index.\nappend_triangle: Append a triangle to a DynamicMesh actor from three corner positions.\nappend_polygons: Author a polygon cage on a DynamicMesh actor in one call: new vertices and faces of three or more corners, each with its own polygroup and material id.\nappend_cuboids: Append axis-aligned boxes to a DynamicMesh actor in one call, each with a material id, faces left open and a repeat along up to three axes (a railing, a stack of crates, a grid of windows, shelves, pillars), wound outward for you.\nappend_loft: Append a surface lofted through cross sections to a DynamicMesh actor: each section a loop of points (the same count in every one), joined in order with every face turned outward, the ends capped flat or closed to a tip point.\nappend_mesh: Copy a static mesh asset into a DynamicMesh actor at placements, each repeated along up to three axes, with its material slots mapped to the target's material ids (a list cycles copy by copy for colour variety): a model assembled from detailed parts in one call, its copies keeping the asset's normals and UVs.\ndelete_triangles: Delete the triangles of a DynamicMesh actor that triangleIndices or a region picks (by box, facing direction, polygroup or material id), with the points only they used.\nset_vertex_position: Move one vertex of a DynamicMesh actor to a new position.\nset_vertex_color: Set the vertex colour on one vertex, or on every vertex, of a DynamicMesh actor.\nbake_vertex_colors: Bake ambient occlusion, convex-edge, concave-cavity and height masks into the vertex colours of a DynamicMesh actor, for a material to read through its VertexColor node.\nset_material_id: Set the material id (the static-mesh material slot) of triangles of a DynamicMesh actor: every triangle, the triangleIndices you list, or a region.\nset_uvs: Set the UV coordinate of one vertex on a UV channel of a DynamicMesh actor.\nsplit_normals: Split the normals of a DynamicMesh actor above an angle threshold to harden edges.\ntranslate: Translate every vertex of a DynamicMesh actor, leaving the actor transform alone.\ndifference: Subtract a tool mesh from a target mesh under the difference spelling of boolean_subtract."
             }
           },
           "required": [
@@ -72042,8 +72042,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "85c0d8596ec6589060faf8e7b3c14aee71d15e9d579c1c07f86dda19d6c81419",
-        "content": "633873fcbc6548006306bf8df0590db2533d1c1900e1308eacb2894d352ff8a2"
+        "schema": "0b161d2d9cac6fd0ea88972bb28f2c4fe329dd369f95c930ad5f0447f519bbe3",
+        "content": "ecfa5548d3ad04b6d10178f2fbbacbed15de4e7de66ccd8b89c32de763986210"
       }
     },
     {
@@ -73217,7 +73217,7 @@
                 "extrude_along_spline",
                 "duplicate_along_spline"
               ],
-              "description": "Which model mesh variant to run.\nextrude: Extrude selected faces of a dynamic mesh.\ninset: Inset selected faces of a dynamic mesh.\noutset: Outset selected faces of a dynamic mesh.\noffset_faces: Offset selected faces of a dynamic mesh.\nbevel: Bevel selected edges of a dynamic mesh.\nchamfer: Chamfer selected edges of a dynamic mesh.\nbridge: Bridge two edge loops of a dynamic mesh.\nloft: Loft between two or more profile curves.\nsweep: Sweep a profile along a path of a dynamic mesh.\nrevolve: Turn a profile of {radius, height} points around the vertical axis into a new dynamic mesh actor: a vase, column, bottle, tower or dome.\nshell: Create a modeling=shell (inner offset) of a dynamic mesh.\nloop_cut: Insert evenly spaced edge loops across a dynamic mesh, perpendicular to an axis.\nedge_split: Split edges of a dynamic mesh at their midpoints.\npoke: Poke faces of a dynamic mesh: add a centre vertex to each triangle (optionally pushed out along its normal) and fan it into three triangles.\nquadrangulate: Group pairs of adjacent triangles of a dynamic mesh into quad PolyGroups, so PolyGroup edits (modeling=extrude, modeling=inset, modeling=bevel by group) act on quads. The mesh itself stays triangles.\nextrude_along_spline: Extrude a profile along a spline actor.\nduplicate_along_spline: Duplicate a mesh along a spline actor."
+              "description": "Which model mesh variant to run.\nextrude: Extrude selected faces of a dynamic mesh.\ninset: Inset selected faces of a dynamic mesh.\noutset: Outset selected faces of a dynamic mesh.\noffset_faces: Offset selected faces of a dynamic mesh.\nbevel: Bevel selected edges of a dynamic mesh.\nchamfer: Chamfer selected edges of a dynamic mesh.\nbridge: Bridge two edge loops of a dynamic mesh.\nloft: Loft between two or more profile curves.\nsweep: Sweep a profile along a path of a dynamic mesh.\nrevolve: Turn a profile of {radius, height} points around the vertical axis into a new dynamic mesh actor: a vase, column, bottle, tower or dome.\nshell: Create a shell (inner offset) of a dynamic mesh.\nloop_cut: Insert evenly spaced edge loops across a dynamic mesh, perpendicular to an axis.\nedge_split: Split edges of a dynamic mesh at their midpoints.\npoke: Poke faces of a dynamic mesh: add a centre vertex to each triangle (optionally pushed out along its normal) and fan it into three triangles.\nquadrangulate: Group pairs of adjacent triangles of a dynamic mesh into quad PolyGroups, so PolyGroup edits (extrude, inset, bevel by group) act on quads. The mesh itself stays triangles.\nextrude_along_spline: Extrude a profile along a spline actor.\nduplicate_along_spline: Duplicate a mesh along a spline actor."
             }
           },
           "required": [
@@ -73597,8 +73597,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "c62107895d7e8d07e5f520035910114f8b49d2c2fc00f0570156ef92b9a4c31f",
-        "content": "16daf9c438a426c77bb80e9e7f378abbeeb15d998ca2ecd2f11000c326901e60"
+        "schema": "f2fc89af8d4af90737311615e752efee5cea448961950424c3ec4c8e782272c1",
+        "content": "796dd6d1abf677fdd22a1c299133fca8cc44c9ddb257793bfe58fc28413db02d"
       }
     },
     {
@@ -93982,7 +93982,7 @@
                 "track",
                 "keyframe"
               ],
-              "description": "Which delete variant to run; omit for 'sequence'.\nsequence: Permanently deleteScope=sequence a Level Sequence asset: refused with SEQUENCE_IN_USE, naming referencedBy, while a level or asset still uses it (a Level Sequence Actor playing it). Its editors close and the undo history may be cleared.\ntrack: Remove one track from a Level Sequence with its sections and keys, in one undo step: the track trackName names (its name or display name, case ignored; a part of a name only when one track alone contains it), the camera cut track too. A name several tracks fit is refused with AMBIGUOUS_TRACK naming them. The sequence is left unsaved.\nkeyframe: Remove keyframes from the tracks trackName or bindingId picks: the keys on one frame or on several, or every key on them, of every key type, in one undo step. Naming neither track nor binding is refused (TRACK_REQUIRED); a filter that matches no track is TRACK_NOT_FOUND.",
+              "description": "Which delete variant to run; omit for 'sequence'.\nsequence: Permanently delete a Level Sequence asset: refused with SEQUENCE_IN_USE, naming referencedBy, while a level or asset still uses it (a Level Sequence Actor playing it). Its editors close and the undo history may be cleared.\ntrack: Remove one track from a Level Sequence with its sections and keys, in one undo step: the track trackName names (its name or display name, case ignored; a part of a name only when one track alone contains it), the camera cut track too. A name several tracks fit is refused with AMBIGUOUS_TRACK naming them. The sequence is left unsaved.\nkeyframe: Remove keyframes from the tracks trackName or bindingId picks: the keys on one frame or on several, or every key on them, of every key type, in one undo step. Naming neither track nor binding is refused (TRACK_REQUIRED); a filter that matches no track is TRACK_NOT_FOUND.",
               "default": "sequence"
             }
           },
@@ -94118,8 +94118,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "ae63a13b7a5bcbc5c1de24f08e1bcc8c34d96c325cf6f1b74a9285e9da035ca0",
-        "content": "504e27afd72b0ba7bbf3d624b1773aeff51f147847a8e8dd71a58652d3af2d25"
+        "schema": "b3ed7e3226d6ab64dfd84641ee1c2ab0a75555396c6b9b1f806f755698b7dd0a",
+        "content": "c4a5de7662c4d25f829e28e79e7db97778f213adb418ea30d100af75bd08a1e0"
       }
     },
     {
@@ -95176,7 +95176,7 @@
                 "list",
                 "open"
               ],
-              "description": "Which get properties variant to run; omit for 'properties'.\nproperties: Read the playback properties of a Level Sequence: frameRate (the display rate, a number), playbackStart and playbackEnd in display-rate frames, and lengthInFrames. An asset that is not a Level Sequence is INVALID_SEQUENCE.\nbindings: List all bindings (possessables and spawnables) in a Level Sequence.\ntracks: List every track of a Level Sequence: the sequence-wide tracks (the camera cut track included) and each binding's tracks. Each row gives trackName (the object name track actions take), trackType (its class), displayName (the label Sequencer shows, also accepted), isMasterTrack, for a bound track bindingName (Actor/Component for a component) and bindingGuid, sectionCount, muted (set_track_muted or solo turned it off), the animation clips a skeletal animation track plays (animations) and isCameraCut. Read only.\nkeys: Read the sections and keyframes already on a sequence track.\ntrack_types: List all available MovieScene track types registered in the engine.\nlist: List Level Sequence assets under a content folder (recursively; the whole Game folder when path is omitted).\nopen: Open a Level Sequence (path) in the Sequencer editor; nothing in it changes. The reply gives sequencePath. A path that is not a Level Sequence is SEQUENCE_NOT_FOUND, and an editor that does not info=open EDITOR_NOT_OPEN.",
+              "description": "Which get properties variant to run; omit for 'properties'.\nproperties: Read the playback properties of a Level Sequence: frameRate (the display rate, a number), playbackStart and playbackEnd in display-rate frames, and lengthInFrames. An asset that is not a Level Sequence is INVALID_SEQUENCE.\nbindings: List all bindings (possessables and spawnables) in a Level Sequence.\ntracks: List every track of a Level Sequence: the sequence-wide tracks (the camera cut track included) and each binding's tracks. Each row gives trackName (the object name track actions take), trackType (its class), displayName (the label Sequencer shows, also accepted), isMasterTrack, for a bound track bindingName (Actor/Component for a component) and bindingGuid, sectionCount, muted (set_track_muted or solo turned it off), the animation clips a skeletal animation track plays (animations) and isCameraCut. Read only.\nkeys: Read the sections and keyframes already on a sequence track.\ntrack_types: List all available MovieScene track types registered in the engine.\nlist: List Level Sequence assets under a content folder (recursively; the whole Game folder when path is omitted).\nopen: Open a Level Sequence (path) in the Sequencer editor; nothing in it changes. The reply gives sequencePath. A path that is not a Level Sequence is SEQUENCE_NOT_FOUND, and an editor that does not open EDITOR_NOT_OPEN.",
               "default": "properties"
             }
           },
@@ -95560,8 +95560,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "40dcc0e4fb3495b6e801beace28fad2919db963a4f1c651f6b2fc50d3fb50f6a",
-        "content": "a316e51948d7958f04d9042689b89088d8c5a6bfa889c7d5857fb8242db4d132"
+        "schema": "f146add400dcf3ac4d3b025f28ce84afb28302693ea428f584272076a6fae9de",
+        "content": "72c21866dc13adcca08288891d3dd735724417b80b32a6aca365998b292892a4"
       }
     },
     {
@@ -97255,7 +97255,7 @@
                 "pause",
                 "stop"
               ],
-              "description": "Which play variant to run; omit for 'play'.\nplay: Open a Level Sequence (path) in Sequencer and control=play it as an editor preview in the level viewport. startTime jumps there first; without it control=play carries on from the playhead (from the start when it sits at the end). loopMode once or loop sets the Sequencer's own loop setting, which stays for later previews. The reply reads back startTime (seconds), currentFrame and playbackStart/playbackEnd in display frames. Nothing in the asset or level changes. A time past the playback range or another loopMode is INVALID_ARGUMENT; a path that is not a Level Sequence is SEQUENCE_NOT_FOUND.\npause: Pause the Sequencer preview of a Level Sequence, or hold it at one moment to inspect it: startTime (seconds) moves the playhead there and poses the animated meshes at once, so a screenshot taken next shows that moment even with the editor in the background; a sequence not open is opened first. The reply reads back currentFrame in display frames. Without startTime a sequence not open in Sequencer is EDITOR_NOT_OPEN; a time past the playback range is INVALID_ARGUMENT. Nothing in the asset changes.\nstop: Stop the Sequencer preview of a Level Sequence and put the playhead back on the start of its playback range (where Jump to Start goes, not frame 0), posing the animated meshes there. The reply reads back currentFrame in display frames. A sequence not open in Sequencer is EDITOR_NOT_OPEN; nothing in the asset changes.",
+              "description": "Which play variant to run; omit for 'play'.\nplay: Open a Level Sequence (path) in Sequencer and play it as an editor preview in the level viewport. startTime jumps there first; without it play carries on from the playhead (from the start when it sits at the end). loopMode once or loop sets the Sequencer's own loop setting, which stays for later previews. The reply reads back startTime (seconds), currentFrame and playbackStart/playbackEnd in display frames. Nothing in the asset or level changes. A time past the playback range or another loopMode is INVALID_ARGUMENT; a path that is not a Level Sequence is SEQUENCE_NOT_FOUND.\npause: Pause the Sequencer preview of a Level Sequence, or hold it at one moment to inspect it: startTime (seconds) moves the playhead there and poses the animated meshes at once, so a screenshot taken next shows that moment even with the editor in the background; a sequence not open is opened first. The reply reads back currentFrame in display frames. Without startTime a sequence not open in Sequencer is EDITOR_NOT_OPEN; a time past the playback range is INVALID_ARGUMENT. Nothing in the asset changes.\nstop: Stop the Sequencer preview of a Level Sequence and put the playhead back on the start of its playback range (where Jump to Start goes, not frame 0), posing the animated meshes there. The reply reads back currentFrame in display frames. A sequence not open in Sequencer is EDITOR_NOT_OPEN; nothing in the asset changes.",
               "default": "play"
             }
           },
@@ -97348,8 +97348,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "0907db74fb87b01d38bb7c2f7dc99faca81564ec16bdf1a5ce34cf42c0dc18ea",
-        "content": "4363a01683afd62cf1741f83c6b82f78f14c482f7bfc1e3885b1c1d18d3f4652"
+        "schema": "7e9f511207225a0006b6ae1cb53d0a9132ae7d744bb2b92e0a969eb94b4c5899",
+        "content": "3a5869904e06170ac39bf7622652e31496c47820d9b864d5888a490bee67353a"
       }
     },
     {
@@ -105384,7 +105384,7 @@
                 "desaturate",
                 "invert"
               ],
-              "description": "Which adjust texture variant to run.\ncurves: Apply curve-based adjustments to a texture.\nlevels: Adjust levels (black/white points, gamma) on a texture.\nblur: Apply a adjust=blur filter to a texture.\nsharpen: Apply a adjust=sharpen filter to a texture.\ndesaturate: Desaturate a texture by an amount.\ninvert: Invert color channels of a texture."
+              "description": "Which adjust texture variant to run.\ncurves: Apply curve-based adjustments to a texture.\nlevels: Adjust levels (black/white points, gamma) on a texture.\nblur: Apply a blur filter to a texture.\nsharpen: Apply a sharpen filter to a texture.\ndesaturate: Desaturate a texture by an amount.\ninvert: Invert color channels of a texture."
             }
           },
           "required": [
@@ -105514,8 +105514,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "8b60f224eede72022d45490727acadf0915bfda4c8535a50117982722ec96926",
-        "content": "6a297dc211351e1682e5429e06b72ac9f069f4ddbfbe89ba187aaef695e7ca3b"
+        "schema": "30b4d721d79a56f6c552021e2850f1d508ef66c688cab9ec5ffc737e2133697a",
+        "content": "1324b80c21b4b7803a06eb49e1ff082daf976dc70ec11e287a1531ea95560e2f"
       }
     },
     {

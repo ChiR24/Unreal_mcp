@@ -32,7 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Crashes**: Ability System actions on a non-Actor Blueprint, and creates or mesh bakes over an asset of another class, are refused.
 - **`run_benchmark` measures** frames, FPS, frame and thread times (it measured nothing and opened the GPU Visualizer).
-- **Small fixes**: `RayTraced` GI is refused from UE 5.4; whole-path `runtime_report` filters; UE 5.0 links again; rate limits say when to retry.
+- **Small fixes**: `RayTraced` GI is refused from UE 5.4; whole-path `runtime_report` filters; UE 5.0 links again; rate limits say when to retry; folded descriptions keep plain words.
 - **Removals** take only exact components, name what still uses an asset, keep assets others use, list the nodes `remove_variable` deletes, and undo for tracks and keys.
 - **Nothing is overwritten unasked**: taken names and paths are refused; edits keep the fields left out; engine content is never edited in place.
 - **A family's variant needs what its action needs** on both transports; describe and search show `requiredFor` and `variantRequired`, and describe lists what each variant does under its selector.
