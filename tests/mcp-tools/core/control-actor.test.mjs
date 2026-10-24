@@ -32,6 +32,30 @@ const PLACEMENT_WALL = `MCP_PlaceWall_${ts}`;
 const PLACEMENT_AWNING = `MCP_PlaceAwning_${ts}`;
 const PLACEMENT_HOVER = `MCP_PlaceHover_${ts}`;
 const PLACEMENT_FLUSH = `MCP_PlaceFlush_${ts}`;
+// describe_relations' room, far from everything else: a 2000 x 2000 floor (top at z 10) round (20000, 20000), a
+// 200 x 100 x 80 table with a lamp on it and two chairs drawn up 25 units from it, facing it; a wall with a shelf standing
+// against it and a picture hanging on it; four crates in a row, six boxes in a 3 x 2 grid and six posts in a ring.
+const REL_TAG = `MCPRelationsTag_${ts}`;
+const rel = (name) => `MCP_Rel${name}_${ts}`;
+const REL_AREA = { center: { x: 20000, y: 20000, z: 0 }, radius: 1100 };
+const REL_ROOM = [
+  { actorName: rel('Floor'), location: { x: 20000, y: 20000, z: 0 }, scale: [20, 20, 0.2] },
+  { actorName: rel('Wall'), location: { x: 20000, y: 20800, z: 160 }, scale: [10, 0.2, 3] },
+  { actorName: rel('Table'), location: { x: 20000, y: 20000, z: 50 }, scale: [2, 1, 0.8] },
+  { actorName: rel('Lamp'), location: { x: 20000, y: 20000, z: 115 }, scale: [0.3, 0.3, 0.5] },
+  { actorName: rel('ChairA'), location: { x: 19850, y: 20000, z: 50 }, scale: [0.5, 0.5, 0.8] },
+  { actorName: rel('ChairB'), location: { x: 20150, y: 20000, z: 50 }, rotation: [0, 180, 0], scale: [0.5, 0.5, 0.8] },
+  { actorName: rel('Shelf'), location: { x: 20000, y: 20770, z: 100 }, scale: [1.5, 0.4, 1.8] },
+  { actorName: rel('Picture'), location: { x: 20300, y: 20787.5, z: 200 }, scale: [1, 0.05, 0.6] },
+  ...[0, 1, 2, 3].map((i) => ({ actorName: `${rel('Crate')}_${i}`, location: { x: 19700 + 150 * i, y: 19400, z: 35 }, scale: [0.5, 0.5, 0.5] })),
+  ...[0, 1, 2, 3, 4, 5].map((i) => ({ actorName: rel(`Box${i}`), location: { x: 20400 + 100 * (i % 3), y: 20300 + 100 * Math.floor(i / 3), z: 25 }, scale: [0.3, 0.3, 0.3] })),
+];
+const REL_POSTS = [0, 1, 2, 3, 4, 5].map((i) => ({
+  actorName: rel(`Post${i}`),
+  location: { x: 19400 + 250 * Math.cos((i * Math.PI) / 3), y: 20500 + 250 * Math.sin((i * Math.PI) / 3), z: 85 },
+  scale: [0.2, 0.2, 1.5],
+}));
+const relation = (subject, kind, object) => ({ 0: subject, 1: kind, 2: object });
 const COMPONENT_NAME = `MCPPointLight_${ts}`;
 const MESH_COMPONENT = `MCPConeMesh_${ts}`;
 const ENGINE_BASIC_MATERIAL = '/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial';
@@ -120,6 +144,53 @@ const testCases = [
   { scenario: 'FIX: fix_placement pushes the two cubes apart', toolName: 'control_actor', arguments: { action: 'fix_placement', kinds: ['overlapping'], nameFilter: `MCP_FixPair_${ts}` }, expected: 'success', assertions: [{ path: 'structuredContent.result.actorsMoved', equals: 2, label: 'cubes of one size share the push' }, { path: 'structuredContent.result.remaining', equals: 0, label: 'and neither intersects the other now' }] },
   { scenario: 'ERROR: fix_placement names no actor that exists', toolName: 'control_actor', arguments: { action: 'fix_placement', kinds: ['sunk'], actorNames: ['MCP_NoSuchActor'] }, expected: 'error|ACTOR_NOT_FOUND' },
   { scenario: 'ERROR: fix_placement refuses a kind it cannot fix', toolName: 'control_actor', arguments: { action: 'fix_placement', kinds: ['tilted'] }, expected: 'error' },
+  // describe_relations reads the room back as it was built; what rests on the floor is counted, not listed.
+  { scenario: 'Setup: the relations room of cubes', toolName: 'control_actor', arguments: { action: 'spawn_batch', defaults: { classPath: '/Engine/BasicShapes/Cube', folder: 'MCPTest/Relations', tags: [REL_TAG] }, actors: REL_ROOM }, expected: 'success' },
+  { scenario: 'Setup: the ring of posts', toolName: 'control_actor', arguments: { action: 'spawn_batch', defaults: { classPath: '/Engine/BasicShapes/Cylinder', folder: 'MCPTest/Relations', tags: [REL_TAG] }, actors: REL_POSTS }, expected: 'success' },
+  { scenario: 'READ: describe_relations reads the room back as built', toolName: 'control_actor', arguments: { action: 'describe_relations', ...REL_AREA }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.relations', includesObject: relation(rel('Lamp'), 'on', rel('Table')), label: 'the lamp rests on the table' },
+    { path: 'structuredContent.result.relations', includesObject: relation(rel('Picture'), 'mounted', rel('Wall')), label: 'the picture hangs on the wall' },
+    { path: 'structuredContent.result.relations', includesObject: { ...relation(rel('Wall'), 'nextTo', rel('Shelf')), 3: 'touching its -Y side' }, label: 'the shelf stands against the wall' },
+    { path: 'structuredContent.result.groups', length: 2, label: 'the table set and the wall with what is on it' },
+    { path: 'structuredContent.result.rows', length: 1, label: 'one row: the crates' },
+    { path: 'structuredContent.result.rows.0.spacing', equals: 150, label: '150 apart' },
+    { path: 'structuredContent.result.rows.0.even', equals: true, label: 'evenly' },
+    { path: 'structuredContent.result.grids.0.columns', equals: 3, label: 'the boxes form a grid of three columns' },
+    { path: 'structuredContent.result.grids.0.rows', equals: 2, label: 'and two rows' },
+    { path: 'structuredContent.result.rings.0.members', length: 6, label: 'the posts form a ring' },
+    { path: 'structuredContent.result.rings.0.radius', approximately: 250, tolerance: 1, label: 'of the radius they stand at' },
+    { path: 'structuredContent.result.roles.ground.name', equals: rel('Floor'), label: 'the floor is the ground' },
+    { path: 'structuredContent.result.roles.ground.supports', equals: 21, label: 'everything but the lamp and the picture rests on it' },
+    { path: 'structuredContent.result.actorsExamined', equals: 24, label: 'every actor of the room is judged' },
+  ] },
+  { scenario: 'READ: describe_relations names what the chairs face', toolName: 'control_actor', arguments: { action: 'describe_relations', kinds: ['faces'], actorNames: [rel('ChairA'), rel('ChairB')], ...REL_AREA }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.relations', includesObject: { ...relation(rel('ChairA'), 'faces', rel('Table')), 3: '25 cm away' }, label: 'a chair faces the table, 25 units off' },
+    { path: 'structuredContent.result.relations', includesObject: relation(rel('ChairB'), 'faces', rel('Table')), label: 'and so does the one turned round' },
+  ] },
+  { scenario: 'READ: describe_relations about one actor lists what it rests on, even the floor', toolName: 'control_actor', arguments: { action: 'describe_relations', actorNames: [rel('Table')], ...REL_AREA }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.relations', includesObject: relation(rel('Table'), 'on', rel('Floor')), label: 'the table stands on the floor' },
+    { path: 'structuredContent.result.relations', includesObject: relation(rel('Lamp'), 'on', rel('Table')), label: 'and what rests on it is still found' },
+    { path: 'structuredContent.result.groups', length: 1, label: 'only the group it belongs to' },
+    { path: 'structuredContent.result.rows', exists: false, label: 'and no pattern it is not part of' },
+  ] },
+  { scenario: 'READ: describe_relations by nameFilter lists the crates on the floor and their row', toolName: 'control_actor', arguments: { action: 'describe_relations', nameFilter: rel('Crate'), ...REL_AREA }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.relations', length: 4, label: 'each crate on the floor' },
+    { path: 'structuredContent.result.rows.0.members', length: 4, label: 'and the row they form' },
+  ] },
+  { scenario: 'READ: describe_relations kinds narrows the reply to the rings', toolName: 'control_actor', arguments: { action: 'describe_relations', kinds: ['rings'], ...REL_AREA }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.rings', length: 1, label: 'the ring' },
+    { path: 'structuredContent.result.relations', exists: false, label: 'and no relation' },
+    { path: 'structuredContent.result.roles', exists: false, label: 'nor roles' },
+  ] },
+  { scenario: 'READ: describe_relations maxActors judges the nearest actors and says the area held more', toolName: 'control_actor', arguments: { action: 'describe_relations', maxActors: 3, ...REL_AREA }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.actorsExamined', equals: 3, label: 'three actors judged' },
+    { path: 'structuredContent.result.truncated', equals: true, label: 'the reply says it was cut' },
+    { path: 'structuredContent.result.actorsInScope', equals: 24, label: 'and how many the area held' },
+  ] },
+  { scenario: 'ERROR: describe_relations refuses a kind it does not know', toolName: 'control_actor', arguments: { action: 'describe_relations', kinds: ['beside'] }, expected: 'error' },
+  { scenario: 'ERROR: describe_relations refuses a center without a radius', toolName: 'control_actor', arguments: { action: 'describe_relations', center: { x: 0, y: 0, z: 0 } }, expected: 'error|INVALID_ARGUMENT' },
+  { scenario: 'ERROR: describe_relations names no actor that exists', toolName: 'control_actor', arguments: { action: 'describe_relations', actorNames: ['MCP_NoSuchActor'] }, expected: 'error|ACTOR_NOT_FOUND' },
+  { scenario: 'DELETE: the relations room by its tag', toolName: 'control_actor', arguments: { action: 'delete_by_tag', tag: REL_TAG }, expected: 'success' },
   { scenario: 'DELETE: the placement wall, awning and hovering box', toolName: 'control_actor', arguments: { action: 'delete', actorNames: [PLACEMENT_WALL, PLACEMENT_AWNING, PLACEMENT_HOVER, PLACEMENT_FLUSH] }, expected: 'success|not found' },
   { scenario: 'DELETE: the placement batch actors by their tag', toolName: 'control_actor', arguments: { action: 'delete_by_tag', tag: PLACEMENT_TAG }, expected: 'success' },
   { scenario: 'DELETE: the sunk placement actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: PLACEMENT_SUNK }, expected: 'success|not found' },

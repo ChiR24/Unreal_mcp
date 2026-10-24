@@ -141,11 +141,12 @@ describe('the placement check does not call a wall-mounted actor floating', () =
     const source = flat(read('Placement', 'McpPlacementMount.cpp'));
 
     expect(source).toContain('if (!Other || Other == Actor || Other->IsHidden() || IsBoundsOnlyActor(Other)) { continue; }');
-    expect(source).toContain('const FBox Reach = ActorBox.ExpandBy(Touch);');
-    expect(source).toContain('const FBox Shared = Reach.Overlap(FBox::BuildAABB(Origin, Extent));');
-    expect(source).toContain('if (Extent.GetMin() <= 1.0 || !Shared.IsValid) { continue; }');
+    expect(source).toContain('if (HangsOn(ActorBox, FBox::BuildAABB(Origin, Extent), Touch)) { return Other; }');
+    // The pair test, shared with describe_relations' mounted.
+    expect(source).toContain('const FBox Shared = ActorBox.ExpandBy(Touch).Overlap(OtherBox);');
+    expect(source).toContain('if (OtherBox.GetExtent().GetMin() <= 1.0 || !Shared.IsValid) { return false; }');
     expect(source).toContain('const bool bAcrossX = Size.X <= Size.Y;');
-    expect(source).toContain('if (Depth < Size.Z && Depth <= FMath::Max(2.0 * Touch, 0.25 * (bAcrossX ? Own.X : Own.Y))) { return Other; }');
+    expect(source).toContain('return Depth < Size.Z && Depth <= FMath::Max(2.0 * Touch, 0.25 * (bAcrossX ? Own.X : Own.Y));');
   });
 
   // The rule above on plain boxes, with the numbers of the live cases and the ones it must keep reporting.

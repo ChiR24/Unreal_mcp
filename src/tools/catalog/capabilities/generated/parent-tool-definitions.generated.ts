@@ -4136,6 +4136,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "items": {
                 "type": "string"
               },
+              "description": "Report only the relations these actors take part in, as subject or object, and the patterns they belong to; the rest of the level is still judged, so a lamp still rests on a table nobody named. Names not found come back under missing; when none is found the call fails with ACTOR_NOT_FOUND."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
               "description": "Several actors to change in one call and one undo step, in place of actorName; names not found are listed back under missing, and the actors changed under affectedActors (which the receipt lists as changes, with an actor handle each)."
             },
             {
@@ -4287,6 +4294,22 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "blueprintPath": {
           "type": "string",
           "description": "Audit the mesh parts of this actor Blueprint instead of the level: a preview instance (the level is untouched) has every visible static mesh part measured against every other and against its ground (a Character's capsule bottom). problems[] then lists componentName, kind (buried: inside otherComponent; sunk: below the ground), depth and severity in cm, insideShare and the issue; minSeverity is the tolerance (default 0.5 cm), and kinds, nameFilter and maxTilt are refused (INVALID_ARGUMENT). A part tagged mcp.placement.ok in its ComponentTags is a deliberate embed (an eyeball in its socket) and is left out; mcp.placement.ok:<component> accepts the embed in that one part only and keeps every other check. Blueprint component edits report the same for the parts they touch, as partWarnings."
+        },
+        "center": {
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            },
+            "z": {
+              "type": "number"
+            }
+          },
+          "additionalProperties": false,
+          "description": "With radius: judge only the actors whose bounds come within radius cm of this point (named actors always count). Refused without radius."
         },
         "childActor": {
           "type": "string",
@@ -4444,6 +4467,24 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "items": {
                 "type": "string",
                 "enum": [
+                  "on",
+                  "mounted",
+                  "inside",
+                  "nextTo",
+                  "faces",
+                  "groups",
+                  "rows",
+                  "rings",
+                  "roles"
+                ]
+              },
+              "description": "Which relations and patterns to report: on (rests on the actor under it; read from short traces down from its bottom, so an actor without collision rests on nothing), mounted (held from the side, as a picture on a wall), inside (within another's bounds, the tightest such), nextTo (side by side, their sides within 2 cm), faces (its forward, X axis points at the nearest actor within 20 degrees that is not a copy of it; a prop without a front, such as a crate or a table, faces whatever lies along its X axis), groups, rows (with grids), rings and roles. Omit for all of them but faces, which is listed only when kinds names it or actorNames or nameFilter narrow the report: across a whole level it would name a front for most props."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
                   "sunk",
                   "floating",
                   "overlapping",
@@ -4521,6 +4562,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "minItems": 1,
           "maxItems": 64,
           "description": "One material per slot in place of materialPath and materialSlot: entry i goes into slot i, \"\" leaves that slot as it is. Every slot is reported under slots, in one undo step; the call fails naming any slot that did not take its material. A mesh made with several material ids (an SDF part) needs this once instead of one call per slot."
+        },
+        "maxActors": {
+          "type": "number",
+          "description": "At most this many actors are judged (1-400, default 300): named actors first, then the nearest to center, else the largest. A level cut short says so with truncated and actorsInScope."
         },
         "maxRealSeconds": {
           "type": "number",
@@ -4640,9 +4685,18 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Same as propertyName (a name or a dotted path such as BodyInstance.CollisionEnabled); used when propertyName is absent."
         },
         "radius": {
-          "type": "number",
-          "minimum": 0,
-          "description": "World units from near: an actor is listed when its bounding box comes within this distance of the point (the distance is 0 for a box that contains the point, such as a floor slab under it). Needs near."
+          "oneOf": [
+            {
+              "type": "number",
+              "description": "With center: the radius in cm of the area judged; above 0. Refused without center."
+            },
+            {
+              "type": "number",
+              "minimum": 0,
+              "description": "World units from near: an actor is listed when its bounding box comes within this distance of the point (the distance is 0 for a box that contains the point, such as a floor slab under it). Needs near."
+            }
+          ],
+          "description": "With center: the radius in cm of the area judged; above 0. Refused without center."
         },
         "readMode": {
           "type": "string",
@@ -4852,6 +4906,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "audit_placement",
             "fix_coplanar",
             "fix_placement",
+            "describe_relations",
             "attach",
             "detach",
             "set_blueprint_variables",
@@ -4966,6 +5021,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             }
           ],
           "description": "Matched actors."
+        },
+        "actorsExamined": {
+          "type": "number",
+          "description": "Actors judged: visible actors with bounds in the area, lights, volumes and other bounds-only actors left out."
+        },
+        "actorsInScope": {
+          "type": "number",
+          "description": "Present when maxActors cut the list: how many actors the area held."
         },
         "actorsMoved": {
           "type": "number",
@@ -5222,6 +5285,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Game time covered."
         },
+        "grids": {
+          "type": "array",
+          "description": "Copies of one prop in rows and columns, each {members, columns, rows, spacing [x, y] in cm, even}; their rows are not listed again under rows. members names at most 24; memberCount says how many there are when more.",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "x-unreal-reflection-boundary": true
+        },
         "groundClearance": {
           "type": "number",
           "description": "How far the bottom of the actor's bounds sits above that surface; negative means it is sunk into it."
@@ -5229,6 +5302,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "groundZ": {
           "type": "number",
           "description": "With blueprintPath: the ground the parts were measured against (the capsule bottom of the preview instance); absent when the root is not a capsule."
+        },
+        "groups": {
+          "type": "array",
+          "description": "Actors standing together, each {members, center, size}: every member within about a footprint of another, as a table with its chairs and the lamp on it. A level that is one group lists none. members names at most 24; memberCount says how many there are when more.",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "x-unreal-reflection-boundary": true
         },
         "hasMore": {
           "type": "boolean",
@@ -5466,6 +5549,20 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Wall-clock time the run took."
         },
+        "relationCount": {
+          "type": "number",
+          "description": "Present when the relations list was cut at 200: how many there were."
+        },
+        "relations": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "description": "One row per relation as [subject, relation, object] or [subject, relation, object, detail], grouped by subject, at most 200: [\"Lamp\", \"on\", \"Table\"], [\"Chair_1\", \"faces\", \"Table\", \"25 cm away\"], [\"Shelf\", \"nextTo\", \"Wall\", \"touching its +Y side\"]. An on row whose detail says an edge of it rests there stands only partly on that actor. What rests on the ground is listed only for the actors asked about by actorNames or nameFilter; roles.ground counts the rest."
+        },
         "remaining": {
           "type": "number",
           "description": "Actors still showing a kind asked for afterwards: flagged ones it could not move, and moved ones a move left wrong (their rows carry remainingWarning). Under dryRun, every flagged one."
@@ -5506,6 +5603,22 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Entries included in problems[]."
         },
+        "rings": {
+          "type": "array",
+          "description": "Copies of one prop standing evenly around a centre at one distance, each {members, center, radius in cm}. members names at most 24; memberCount says how many there are when more.",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "x-unreal-reflection-boundary": true
+        },
+        "roles": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "The scene's roles: ground {name, supports (how many actors rest on it), top (its height)}, the ground-like actor most rest on; sun {name, elevation, azimuth}, the brightest directional light as the sun's angle above the horizon and its direction in degrees from +X toward +Y; sky (the sky atmosphere, sky light, fog, cloud and sky sphere actors); playerStarts and cameras [{name, location}], forPlayer on a camera a player views through from the start; playArea {center, size}, the navigation mesh bounds."
+        },
         "rotation": {
           "oneOf": [
             {
@@ -5530,6 +5643,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "rounds": {
           "type": "number",
           "description": "Rounds made: a move can land an actor in another, so what moved is checked again (at most three; one under dryRun)."
+        },
+        "rows": {
+          "type": "array",
+          "description": "Copies of one prop (same class and size) in a line along X or Y, each {members, along (x or y), spacing in cm, even}: even is true when every step is within 5 percent of the spacing. members names at most 24; memberCount says how many there are when more.",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "x-unreal-reflection-boundary": true
         },
         "sampleCount": {
           "type": "number",
@@ -5637,7 +5760,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "truncated": {
           "type": "boolean",
-          "description": "True when limit cut the list short; totalCount says how many matched."
+          "description": "Present when maxActors cut the actors judged (actorsInScope says how many there were) or 200 relations cut the list (relationCount says how many there were)."
         },
         "truncationNote": {
           "type": "string",

@@ -16,6 +16,13 @@ namespace McpPlacement {
 bool IsBoundsOnlyActor(const AActor *Actor);
 
 /**
+ * The box of what the game draws of Actor: its visible primitives. The sprite the
+ * editor gives an actor with only a scene root is editor-only and far bigger than
+ * a small prop: an 84 cm robot read as a 256 cm cube round its pivot.
+ */
+FBox DrawnBounds(const AActor &Actor);
+
+/**
  * The actor Actor hangs on from the side, or null: a window band flush on a hall,
  * an awning on a facade. The placement check only looked for a surface UNDER an
  * actor, so everything mounted on a wall read "floating" by the height of the
@@ -30,4 +37,7 @@ bool IsBoundsOnlyActor(const AActor *Actor);
  * not "mounted" on it.
  */
 AActor *FindMount(UWorld *World, AActor *Actor, const FBox &ActorBox, double Touch);
+
+/** FindMount's test for one pair: whether the actor bounded by ActorBox hangs on OtherBox from the side. */
+bool HangsOn(const FBox &ActorBox, const FBox &OtherBox, double Touch);
 } // namespace McpPlacement

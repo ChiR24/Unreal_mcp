@@ -1,5 +1,7 @@
 #include "Domains/Environment/Inspection/McpEnvInspectViewIds.h"
 
+#include "Domains/ControlActor/Placement/McpPlacementMount.h"
+
 #include "Components/PrimitiveComponent.h"
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"
@@ -10,29 +12,13 @@
 // covers part of one that is. Split from McpEnvInspectViewContents.cpp.
 namespace McpEnvironmentHandlers {
 namespace {
-// The box of what the game draws. The sprite the editor gives an actor with only a scene root is editor-only and
-// far bigger than a small prop: an 84 cm robot read as a 256 cm cube round its pivot.
-FBox McpDrawnBounds(const AActor &Actor)
-{
-    FBox Box(ForceInit);
-    TInlineComponentArray<UPrimitiveComponent *> Parts(&Actor);
-    for (const UPrimitiveComponent *Part : Parts)
-    {
-        if (Part->IsRegistered() && Part->IsVisible() && !Part->bHiddenInGame && !Part->IsEditorOnly())
-        {
-            Box += Part->Bounds.GetBox();
-        }
-    }
-    return Box.IsValid ? Box : Actor.GetComponentsBoundingBox(true);
-}
-
 // The actors drawn over the box Actor's bounds project to, by share of that box: up to three, each at least MinShare
 // percent, leaving out Actor itself, actors centred farther than it and the ground under it. False when the box lies
 // outside the frame; OutInFrame is the percent of the box inside it.
 bool McpNearerCovers(AActor *Actor, const FEditorViewportClient &Client, const FIntPoint &Size, const TArray<FColor> &Ids,
                      TMap<uint32, FMcpViewProxy> &Proxies, double MinShare, double &OutInFrame, TArray<TSharedPtr<FJsonValue>> &OutCovers)
 {
-    const FBox Bounds = McpDrawnBounds(*Actor);
+    const FBox Bounds = McpPlacement::DrawnBounds(*Actor);
     const FMatrix Axes = FRotationMatrix(Client.GetViewRotation());
     const double TanX = FMath::Tan(FMath::DegreesToRadians(Client.ViewFOV * 0.5));
     const double TanY = TanX * Size.Y / Size.X;
@@ -89,7 +75,7 @@ bool McpNearerCovers(AActor *Actor, const FEditorViewportClient &Client, const F
         {
             break;
         }
-        const FBox Other = McpDrawnBounds(*Sorted[Index].Key);
+        const FBox Other = McpPlacement::DrawnBounds(*Sorted[Index].Key);
         const bool bUnder = Middle.X >= Other.Min.X && Middle.X <= Other.Max.X && Middle.Y >= Other.Min.Y && Middle.Y <= Other.Max.Y;
         const bool bGround = Other.Max.Z < Middle.Z && (bUnder || Other.GetSize().Z < 0.25 * Bounds.GetSize().Z);
         if (Other.IsValid && (bGround ||

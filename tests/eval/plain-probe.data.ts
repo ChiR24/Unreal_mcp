@@ -633,4 +633,13 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'actors around a location', accepted: ['control_actor.list'] },
   { query: 'write c++ code', accepted: ['system_control.create_cpp_class'] },
   { query: 'write code in c++', accepted: ['system_control.create_cpp_class'] },
+  { query: 'what is on the table', accepted: ['control_actor.describe_relations'] },
+  { query: 'spatial relations between actors', accepted: ['control_actor.describe_relations'] },
+  { query: 'describe how the actors are arranged', accepted: ['control_actor.describe_relations'] },
+  { query: 'what does each actor rest on', accepted: ['control_actor.describe_relations'] },
+  { query: 'which actors are touching', accepted: ['control_actor.describe_relations'] },
+  { query: 'find actors arranged in a ring', accepted: ['control_actor.describe_relations'] },
+  { query: 'which props stand in a row', accepted: ['control_actor.describe_relations'] },
+  { query: 'is the shelf against the wall', accepted: ['control_actor.describe_relations'] },
+  { query: 'what is the chair facing', accepted: ['control_actor.describe_relations'] },
 ];

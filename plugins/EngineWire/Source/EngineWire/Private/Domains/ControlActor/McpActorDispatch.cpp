@@ -2,6 +2,7 @@
 #include "Domains/ControlActor/Find/McpFindByAsset.h"
 #include "Domains/ControlActor/Placement/McpCoplanarFaces.h"
 #include "Domains/ControlActor/Placement/Fix/McpPlacementFix.h"
+#include "Domains/ControlActor/Relations/McpRelations.h"
 
 bool UEngineWireSubsystem::HandleControlActorAction(
     const FString &RequestId, const FString &Action,
@@ -141,6 +142,9 @@ bool UEngineWireSubsystem::HandleControlActorAction(
   if (LowerSub == TEXT("fix_placement"))
     return McpPlacementFix::HandleFixPlacement(this, RequestId, Payload, RequestingSocket,
                                                [this](const FString &Name) { return FindActorByName(Name); });
+  if (LowerSub == TEXT("describe_relations"))
+    return McpRelations::HandleDescribeRelations(this, RequestId, Payload, RequestingSocket,
+                                                 [this](const FString &Name) { return FindActorByName(Name); });
   if (LowerSub == TEXT("set_property"))
     return HandleSetObjectProperty(RequestId, TEXT("set_object_property"), Payload, RequestingSocket);
   if (LowerSub == TEXT("get_property"))

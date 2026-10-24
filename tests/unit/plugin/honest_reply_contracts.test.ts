@@ -2637,7 +2637,10 @@ describe('describe_view counts what the game draws in the camera view', () => {
     // A storefront behind a balloon cluster at the frame edge was named as what hid it.
     expect(unseen, 'ground under it, or an actor centred farther, cannot hide it').toContain('const bool bGround = Other.Max.Z < Middle.Z && (bUnder || Other.GetSize().Z < 0.25 * Bounds.GetSize().Z);');
     // An editor-only sprite made an 84 cm robot a 256 cm cube.
-    expect(unseen, 'the box of what the game draws').toContain('if (Part->IsRegistered() && Part->IsVisible() && !Part->bHiddenInGame && !Part->IsEditorOnly())');
+    expect(unseen, 'the box of what the game draws').toContain('const FBox Bounds = McpPlacement::DrawnBounds(*Actor);');
+    expect(code('ControlActor', 'Placement', 'McpPlacementMount.cpp')).toContain(
+      'if (Part->IsRegistered() && Part->IsVisible() && !Part->bHiddenInGame && !Part->IsEditorOnly())',
+    );
     expect(unseen).toContain('Row->SetNumberField(TEXT("inFrame"), InFrame);');
     expect(unseen).toContain('InFrame < 50.0 ? TEXT("at the edge of the frame, mostly outside it")');
   });

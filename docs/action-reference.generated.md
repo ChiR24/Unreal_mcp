@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `9467c3ada93b3dac`
+Catalog revision: `e23d15348a402ea0`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 421 capabilities across
+The catalog declares 422 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -38,7 +38,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | --- | --- | --- | --- | --- | --- |
 | `animation_physics` | 31 | 5 | 24 | 2 | animation physics |
 | `build_environment` | 40 | 4 | 33 | 3 | environment |
-| `control_actor` | 26 | 8 | 16 | 2 | actor |
+| `control_actor` | 27 | 9 | 16 | 2 | actor |
 | `control_editor` | 24 | 9 | 12 | 3 | editor |
 | `inspect` | 23 | 18 | 4 | 1 | inspect |
 | `manage_ai` | 16 | 2 | 14 | 0 | manage ai |
@@ -62,7 +62,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-65 of 421 capabilities require consent.
+65 of 422 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -267,6 +267,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `control_actor.call_actor_function` | `control_actor` | `call_actor_function` | destructive | destructive | elevated | `control_actor.call_actor_function` |
 | `control_actor.create_snapshot` | `control_actor` | `create_snapshot` | read | read | none | `control_actor.create_snapshot` |
 | `control_actor.delete` | `control_actor` | `delete` | destructive | destructive | explicit | `control_actor.delete` `control_actor.delete_by_tag` `control_actor.destroy_actor` |
+| `control_actor.describe_relations` | `control_actor` | `describe_relations` | read | read | none | `control_actor.describe_relations` |
 | `control_actor.detach` | `control_actor` | `detach` | write | write | none | `control_actor.detach` `control_actor.detach_actor` |
 | `control_actor.duplicate` | `control_actor` | `duplicate` | write | write | none | `control_actor.duplicate` |
 | `control_actor.edit_component` | `control_actor` | `add_component` | write | write | none | `control_actor.edit_component` `control_actor.add_component` `control_actor.remove_component` `control_actor.set_component_property` `control_actor.set_component_properties` |

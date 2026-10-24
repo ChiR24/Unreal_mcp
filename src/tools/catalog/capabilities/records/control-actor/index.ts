@@ -5,6 +5,7 @@ import type { CapabilityRecordSource } from '../../model.js';
 
 import { ADVANCED_RECORDS } from './advanced-records.js';
 import { COMPONENT_RECORDS } from './component-records.js';
+import { RELATIONS_RECORDS } from './relations-records.js';
 import { SEARCH_RECORDS } from './search-records.js';
 import { SPAWN_RECORDS } from './spawn-records.js';
 import { STATE_RECORDS } from './state-records.js';
@@ -19,6 +20,7 @@ export const CONTROL_ACTOR_UNFOLDED_SOURCES: readonly CapabilityRecordSource[] =
   ...COMPONENT_RECORDS,
   ...STATE_RECORDS,
   ...SEARCH_RECORDS,
+  ...RELATIONS_RECORDS,
   ...ADVANCED_RECORDS,
 ];
 
