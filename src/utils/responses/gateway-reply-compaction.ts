@@ -28,7 +28,8 @@ export const STOCK_OUTPUT_PROPERTIES: Readonly<Record<string, string>> = {
   details: 'Additional handler result fields not named by the contract.'
 };
 
-const SEARCH_ROW_RANKING_FIELDS = ['matchReasons', 'score'] as const;
+/** Search-index and revision bookkeeping a search row may carry; the native row never builds them. */
+export const SEARCH_ROW_BOOKKEEPING_FIELDS = ['category', 'hashes', 'reasons'] as const;
 
 const same = (left: unknown, right: unknown): boolean =>
   left !== undefined && right !== undefined && JSON.stringify(left) === JSON.stringify(right);
@@ -243,7 +244,7 @@ function compactSearch(reply: Json): Json {
   if (Array.isArray(out.results)) {
     out.results = out.results.map((row) => {
       if (!isRecord(row)) return row;
-      const kept = omit(row, SEARCH_ROW_RANKING_FIELDS);
+      const kept = omit(row, SEARCH_ROW_BOOKKEEPING_FIELDS);
       const nextTool = isRecord(row.nextCall) ? row.nextCall.tool : undefined;
       for (const key of ['parent', 'parentTool']) {
         if (same(kept[key], nextTool)) delete kept[key];

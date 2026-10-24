@@ -226,21 +226,28 @@ describe('compactGatewayReply', () => {
   });
 
   it('keeps search rows to what picks one', () => {
+    const row = {
+      capability: 'inspect.set_property', parentTool: 'inspect', action: 'set_property', domain: 'inspect', family: 'property',
+      summary: 'Write a property value.', effect: 'write', availability: { status: 'available' }, runnable: true
+    };
     const found = compactGatewayReply({
       catalogRevision: 'bfcee38a7ffedc73', hasMore: true, limit: 3, offset: 0, operation: 'search', query: 'set property',
-      message: 'Results are capability-level and bounded.', success: true, total: 127, nextCursor: '3',
-      results: [{
-        available: true, capability: 'inspect.set_property', domain: 'inspect', effect: 'write', family: 'property',
-        matchReasons: ['id-exact'], score: 474, parent: 'inspect', summary: 'Write a property value.',
-        nextCall: { operation: 'describe', tool: 'inspect', action: 'set_property' }
-      }]
+      message: 'Results are compact.', success: true, total: 127, nextCursor: 'c:3',
+      results: [
+        {
+          ...row, category: 'core', hashes: { algorithm: 'sha256', schema: 'a', content: 'b' },
+          reasons: [{ field: 'canonical_id', matchedTokens: ['set', 'property'] }],
+          nextCall: { operation: 'describe', capability: 'inspect.set_property' }
+        },
+        { ...row, runnable: false, nextCall: { operation: 'configure', tool: 'inspect' } }
+      ]
     });
     expect(found).toEqual({
-      catalogRevision: 'bfcee38a7ffedc73', hasMore: true, limit: 3, offset: 0, operation: 'search', success: true, total: 127, nextCursor: '3',
-      results: [{
-        available: true, capability: 'inspect.set_property', domain: 'inspect', effect: 'write', family: 'property',
-        summary: 'Write a property value.', nextCall: { operation: 'describe', tool: 'inspect', action: 'set_property' }
-      }]
+      catalogRevision: 'bfcee38a7ffedc73', hasMore: true, limit: 3, offset: 0, operation: 'search', success: true, total: 127, nextCursor: 'c:3',
+      results: [
+        { ...row, nextCall: { operation: 'describe', capability: 'inspect.set_property' } },
+        { ...row, parentTool: undefined, runnable: false, nextCall: { operation: 'configure', tool: 'inspect' } }
+      ].map((entry) => Object.fromEntries(Object.entries(entry).filter(([, value]) => value !== undefined)))
     });
   });
 

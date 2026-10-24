@@ -61,7 +61,8 @@ export function unknownFamilyError(domain: string, family: string): Record<strin
     domain,
     availableFamilies: families,
     suggestions: closestMatches(family, [...families], MAX_SUGGESTIONS),
-    nextCall: { operation: 'describe', domain }
+    // No domain has the family: describe {domain: ''} could only fail, so the catalog is the next step.
+    nextCall: domain === '' ? { operation: 'describe' } : { operation: 'describe', domain }
   };
 }
 
