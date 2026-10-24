@@ -1,14 +1,23 @@
-// Both validators refuse a schema keyword outside their subset when a call reaches it (UNSUPPORTED_SCHEMA_KEYWORD), so a
-// record that used one failed every call sending that parameter: exclusiveMinimum on project_uv's tileSize did, and no
-// test noticed until an editor ran it. Every input and output schema is held to the subset here.
+// The native validator refuses a schema keyword outside its subset when a call reaches it (UNSUPPORTED_SCHEMA_KEYWORD),
+// so a record that used one failed every call sending that parameter: exclusiveMinimum on project_uv's tileSize did,
+// and no test noticed until an editor ran it. Every input and output schema is held to the subset here, read from the
+// validator's own SupportedKeywords[] list.
 
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { capabilityIndex } from './support/capability-index.js';
-import { SUPPORTED_SCHEMA_KEYWORDS } from './support/schema-validate.js';
 import { isRecord } from '../../src/utils/validation/type-guards.js';
 
-/** The keyword paths in schema that neither validator implements; enum and default hold data, not schemas. */
+const KEYWORDS_SOURCE = readFileSync(
+  join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'MCP', 'Execute', 'McpNativeGatewaySchemaKeywords.cpp'), 'utf8');
+const KEYWORDS_START = KEYWORDS_SOURCE.indexOf('SupportedKeywords[]');
+const SUPPORTED_SCHEMA_KEYWORDS: ReadonlySet<string> = new Set(
+  [...KEYWORDS_SOURCE.slice(KEYWORDS_START, KEYWORDS_SOURCE.indexOf('};', KEYWORDS_START)).matchAll(/TEXT\("([^"]+)"\)/gu)]
+    .map((match) => String(match[1])));
+
+/** The keyword paths in schema that the validator does not implement; enum and default hold data, not schemas. */
 function unsupportedKeywords(schema: unknown, path: string, out: string[]): void {
   if (!isRecord(schema)) return;
   for (const [key, value] of Object.entries(schema)) {
@@ -22,7 +31,12 @@ function unsupportedKeywords(schema: unknown, path: string, out: string[]): void
   }
 }
 
-describe('record schemas use only the keywords both validators implement', () => {
+describe('record schemas use only the keywords the native validator implements', () => {
+  it('reads the subset from the C++', () => {
+    expect(SUPPORTED_SCHEMA_KEYWORDS.has('type')).toBe(true);
+    expect(SUPPORTED_SCHEMA_KEYWORDS.has('exclusiveMinimum')).toBe(false);
+  });
+
   it('holds every input and output schema to the subset', () => {
     const found: string[] = [];
     for (const record of capabilityIndex().byId.values()) {
