@@ -15556,6 +15556,7 @@
         "list_levels",
         "get_summary",
         "validate_level",
+        "run_map_check",
         "export_level",
         "import_level",
         "add_sublevel"
@@ -15807,6 +15808,7 @@
               "list_levels",
               "get_summary",
               "validate_level",
+              "run_map_check",
               "export_level",
               "import_level",
               "add_sublevel"

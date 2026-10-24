@@ -74,6 +74,7 @@ const testCases = [
   { scenario: 'INFO: list_levels', toolName: 'manage_level', arguments: { action: 'list_levels' }, expected: 'success' },
   { scenario: 'INFO: get_summary', toolName: 'manage_level', arguments: { action: 'get_summary', levelPath: MAIN_LEVEL }, expected: 'success' },
   { scenario: 'ACTION: validate_level', toolName: 'manage_level', arguments: { action: 'validate_level', levelPath: MAIN_LEVEL }, expected: 'success' },
+  { scenario: 'INFO: run_map_check answers the engine\'s Map Check as rows', toolName: 'manage_level', arguments: { action: 'run_map_check' }, expected: 'success', assertions: [{ path: 'structuredContent.result.messages', exists: true, label: 'one row per Map Check message' }, { path: 'structuredContent.result.total', gte: 0, label: 'every message counted' }] },
   { scenario: 'INFO: get_current_level', toolName: 'manage_level', arguments: { action: 'get_current_level' }, expected: 'success' },
 
   // === ASSET OPERATIONS ===

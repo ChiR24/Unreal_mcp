@@ -21614,6 +21614,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "list_levels",
             "get_summary",
             "validate_level",
+            "run_map_check",
             "export_level",
             "import_level",
             "add_sublevel"
@@ -21749,6 +21750,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Level packages with unsaved changes when the call began, counted in every mode (it read 0 in an interactive editor)."
         },
+        "errors": {
+          "type": "number",
+          "description": "Error messages."
+        },
         "exists": {
           "type": "boolean",
           "description": "Whether the level asset exists."
@@ -21781,6 +21786,20 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Human-readable result message."
         },
+        "messages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "x-unreal-reflection-boundary": true,
+          "description": "One row per Map Check message: severity, message, actor and actorPath when it names one, code (the map error name)."
+        },
+        "notes": {
+          "type": "number",
+          "description": "Info messages."
+        },
         "objectPath": {
           "type": "string",
           "description": "Object path (asset-registry lookup)."
@@ -21788,6 +21807,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "packageName": {
           "type": "string",
           "description": "Package name (asset-registry lookup)."
+        },
+        "performanceWarnings": {
+          "type": "number",
+          "description": "Performance warnings."
         },
         "reloaded": {
           "type": "boolean",
@@ -21848,6 +21871,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Global time dilation multiplier for the level."
         },
+        "total": {
+          "type": "number",
+          "description": "Every message found, listed or not."
+        },
+        "truncated": {
+          "type": "boolean",
+          "description": "True when more than 200 messages were found."
+        },
         "unsaved": {
           "type": "boolean",
           "description": "Whether this level has changes that are not saved."
@@ -21878,6 +21909,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "visible": {
           "type": "boolean",
           "description": "Whether the level is drawn now."
+        },
+        "warnings": {
+          "type": "number",
+          "description": "Warning messages."
         },
         "world": {
           "type": "string",

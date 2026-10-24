@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `29113592e885d640`
+Catalog revision: `7aab878b016715a3`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 417 capabilities across
+The catalog declares 418 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -52,7 +52,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_geometry` | 16 | 2 | 14 | 0 | world |
 | `manage_interaction` | 3 | 1 | 2 | 0 | manage interaction |
 | `manage_inventory` | 6 | 1 | 5 | 0 | manage inventory |
-| `manage_level` | 17 | 4 | 12 | 1 | level |
+| `manage_level` | 18 | 5 | 12 | 1 | level |
 | `manage_level_structure` | 8 | 2 | 5 | 1 | world |
 | `manage_networking` | 21 | 5 | 13 | 3 | networking |
 | `manage_pcg` | 3 | 0 | 3 | 0 | world |
@@ -62,7 +62,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-65 of 417 capabilities require consent.
+65 of 418 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -437,6 +437,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_level.import_level` | `manage_level` | `import_level` | write | write | none | `manage_level.import_level` |
 | `manage_level.list_levels` | `manage_level` | `list_levels` | read | read | none | `manage_level.list_levels` |
 | `manage_level.load` | `manage_level` | `load` | write | write | none | `manage_level.load` `manage_level.load_level` |
+| `manage_level.run_map_check` | `manage_level` | `run_map_check` | read | read | none | `manage_level.run_map_check` |
 | `manage_level.save` | `manage_level` | `save` | write | write | none | `manage_level.save` `manage_level.save_as` `manage_level.save_level` `manage_level.save_level_as` |
 | `manage_level.set_metadata` | `manage_level` | `set_metadata` | write | write | none | `manage_level.set_metadata` |
 | `manage_level.set_world_settings` | `manage_level` | `set_level_world_settings` | write | write | none | `manage_level.set_world_settings` |

@@ -91,6 +91,7 @@ bool UEngineWireSubsystem::HandleLevelAction(
       {TEXT("save_level_as"), McpLevelHandlers::HandleSaveLevelAsAction},
       {TEXT("set_metadata"), McpLevelHandlers::HandleSetMetadataAction},
       {TEXT("validate_level"), McpLevelHandlers::HandleValidateLevelAction},
+      {TEXT("run_map_check"), McpLevelHandlers::HandleRunMapCheckAction},
       {TEXT("create_new_level"), McpLevelHandlers::HandleCreateNewLevelAction},
       {TEXT("spawn_light"), McpLevelHandlers::HandleSpawnLightAction},
       {TEXT("list_levels"), McpLevelHandlers::HandleListLevelsAction},

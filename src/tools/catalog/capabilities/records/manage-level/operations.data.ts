@@ -1,5 +1,5 @@
 /**
- * Level operations family records (13 actions): streaming, lighting,
+ * Level operations family records (15 actions): streaming, lighting,
  * metadata, query, io, sublevel, and settings. Grounded per shard: see the
  * `Grounded in:` header of streaming/lighting/metadata/query/io/sublevel.
  */
@@ -84,6 +84,46 @@ export const OPERATIONS_RECORDS: readonly CapabilityRecordSource[] = [
       levelPath: P.levelPath,
     },
     outputRequired: ['exists'],
+  }),
+  buildCoreRecord({
+    parentTool: 'manage_level', action: 'run_map_check',
+    domain: D, family: 'query',
+    // No topic holds "errors" or "problems": with "map check" they named every word of "check for errors" (read_log).
+    // One "map" topic only: a second raised "what maps exist" to 98% of list_levels.
+    topics: ['map check', 'level warnings', 'unbuilt lighting'],
+    summary: 'Run the editor\'s own Map Check (Build > Map Check) on the level open in the editor and answer its messages '
+      + 'as rows: severity (error, warning, performance or info), message, the actor it names (actor, actorPath) and '
+      + 'code, the map error\'s name (the key of the engine\'s guidance for it, such as LightingBuildNeeded or '
+      + 'StaticMeshNull). Counts by severity come back as errors, warnings, performanceWarnings and notes, with total; at '
+      + 'most 200 rows (truncated says when more were found). No Message Log tab opens and nothing in the level changes. '
+      + 'NO_WORLD: no level is open.',
+    whenToUse: ['The engine\'s own checks must be read for the open level: unbuilt lighting, meshes with no mesh, '
+      + 'overlapping stationary lights, volumes with a bad brush and the rest.', 'A level is about to be saved, '
+      + 'shipped or reviewed.'],
+    whenNotToUse: ['Placement problems such as sunk, floating, intersecting or z-fighting actors (use control_actor '
+      + 'audit_placement).'],
+    inputProps: {},
+    required: [],
+    effect: 'read', costLatency: 'interactive',
+    exampleInput: { action: 'run_map_check' },
+    exampleOutput: {
+      success: true, message: 'Map Check of \'L_Demo\': 1 error(s), 2 warning(s), 0 performance warning(s), 0 note(s).',
+      levelPath: '/Game/Maps/L_Demo', errors: 1, warnings: 2, performanceWarnings: 0, notes: 0, total: 3,
+    },
+    outputProps: {
+      levelPath: { type: 'string', description: 'The level checked.' },
+      messages: {
+        type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
+        'x-unreal-reflection-boundary': true,
+        description: 'One row per Map Check message: severity, message, actor and actorPath when it names one, code (the map error name).',
+      },
+      errors: { type: 'number', description: 'Error messages.' },
+      warnings: { type: 'number', description: 'Warning messages.' },
+      performanceWarnings: { type: 'number', description: 'Performance warnings.' },
+      notes: { type: 'number', description: 'Info messages.' },
+      total: { type: 'number', description: 'Every message found, listed or not.' },
+      truncated: { type: 'boolean', description: 'True when more than 200 messages were found.' },
+    },
   }),
   ...OPERATIONS_IO_RECORDS,
   buildCoreRecord({
