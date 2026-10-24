@@ -217,6 +217,20 @@ bool Handle(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedP
     Result->SetArrayField(TEXT("assetsCreated"), Strings(GPoint.Added));
     Result->SetArrayField(TEXT("assetsRemoved"), Strings(GPoint.Removed));
     Result->SetArrayField(TEXT("packagesSaved"), Strings(GPoint.Saved));
+    // Undo deletes no asset: the call that removes what was created since, ready to send (it asks for consent).
+    const TArray<FString> Created = GPoint.Added.FilterByPredicate([](const FString& Path) { return !GPoint.Removed.Contains(Path); });
+    if (Created.Num() > 0)
+    {
+        TSharedPtr<FJsonObject> Params = MakeShared<FJsonObject>();
+        Params->SetArrayField(TEXT("assetPaths"), Strings(Created));
+        Params->SetBoolField(TEXT("fixupRedirectors"), false);
+        TSharedPtr<FJsonObject> Cleanup = MakeShared<FJsonObject>();
+        Cleanup->SetStringField(TEXT("operation"), TEXT("execute"));
+        Cleanup->SetStringField(TEXT("tool"), TEXT("manage_asset"));
+        Cleanup->SetStringField(TEXT("action"), TEXT("bulk_delete"));
+        Cleanup->SetObjectField(TEXT("params"), Params);
+        Result->SetObjectField(TEXT("cleanupCall"), Cleanup);
+    }
     if (Op == TEXT("rollback"))
     {
         Rollback(Self, Socket, RequestId, Steps, Foreign, bIntact, Result);

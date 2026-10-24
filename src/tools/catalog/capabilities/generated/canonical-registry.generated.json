@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "1219826f8c58798b",
+  "catalogRevision": "2aa5d01a687d438b",
   "recordCount": 421,
   "records": [
     {
@@ -44923,7 +44923,7 @@
                 "redo",
                 "restore_point"
               ],
-              "description": "Which undo variant to run; omit for 'undo'.\nundo: Undo the last editor transaction; the reply names it, and NOTHING_TO_UNDO means there was none.\nredo: Redo the last undone editor transaction; the reply names it, and NOTHING_TO_REDO means there was none.\nrestore_point: Mark a restore point to roll the editor back to, undoing only what calls through this server changed, chosen by op. begin opens it (one at a time; label names it); status lists the editor's transactions since it, newest first, each with byMcp, and the assets created, removed or saved since (assetsCreated, assetsRemoved, packagesSaved); rollback undoes every step since it and refuses before undoing anything when a step was not made through this server (USER_STEP_SINCE_RESTORE_POINT names it) or the editor's history was cleared since (UNDO_HISTORY_CLEARED: a Blueprint compile or a level load clears it); end closes it. Undo deletes no created asset and restores no saved file: rollback lists them, and asset.delete removes a created one. A rollback is refused while Play runs (PIE_RUNNING).",
+              "description": "Which undo variant to run; omit for 'undo'.\nundo: Undo the last editor transaction; the reply names it, and NOTHING_TO_UNDO means there was none.\nredo: Redo the last undone editor transaction; the reply names it, and NOTHING_TO_REDO means there was none.\nrestore_point: Mark a restore point to roll the editor back to, undoing only what calls through this server changed, chosen by op. begin opens it (one at a time; label names it); status lists the editor's transactions since it, newest first, each with byMcp, and the assets created, removed or saved since (assetsCreated, assetsRemoved, packagesSaved); rollback undoes every step since it and refuses before undoing anything when a step was not made through this server (USER_STEP_SINCE_RESTORE_POINT names it) or the editor's history was cleared since (UNDO_HISTORY_CLEARED: a Blueprint compile or a level load clears it); end closes it. Undo deletes no created asset and restores no saved file: status and rollback list them, and cleanupCall is the manage_asset bulk_delete of the created assets still there, ready to send (it asks for consent). A rollback is refused while Play runs (PIE_RUNNING).",
               "default": "undo"
             }
           },
@@ -45011,8 +45011,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "e8626799f406107bd29dd2726f5dd18825d28f73f6d37d01014ca90675b586bf",
-        "content": "c8ec92a899469bb7f64065c90069ea814ee03874bcc34a79e3114c5dc0a7bcf9"
+        "schema": "c6775c4acc0763653f7823fb6f45a9148c2d2105b2c54e8347428c5ca5777a19",
+        "content": "1d5e32ad7ab80523ae604ad8d32b2447d7f4f8b26f663d188b2e0d807419ffcb"
       }
     },
     {

@@ -38,6 +38,13 @@ describe('control_editor restore_point', () => {
     }
   });
 
+  // Undo deletes no asset, so the reply hands back the delete of what was created since and is still there.
+  it('offers the delete of the assets created since, as a call to send', () => {
+    expect(checkpoint).toMatch(/GPoint\.Added\.FilterByPredicate\(\[\]\(const FString& Path\) \{ return !GPoint\.Removed\.Contains\(Path\); \}\)/u);
+    expect(checkpoint).toContain('Cleanup->SetStringField(TEXT("action"), TEXT("bulk_delete"));');
+    expect(checkpoint).toContain('Result->SetObjectField(TEXT("cleanupCall"), Cleanup);');
+  });
+
   it('is pinned in-editor', () => {
     expect(code('Domains', 'ControlEditor', 'Checkpoint', 'McpEditorCheckpointTests.cpp'))
       .toContain('"EngineWire.ControlEditor.RestorePoint.RollsBackOnlyMcpSteps"');

@@ -24,7 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Renders and sequences**: `cancel_render`, camera shutter and overscan, `set_section` `playRate`, clips and keyed bones in the readers.
 - **`setup_global_illumination` `saveToProject`** writes the GI method to Project Settings.
 - **Spawns, moves and re-meshes are checked** and warn on an actor left sunk, floating, intersecting, z-fighting, untextured, labelled "Text", pasted twice, or with a Map Check finding.
-- **Replies say what undo can revert**, and **`restore_point`** rolls back only this server's steps.
+- **Replies say what undo can revert**, and **`restore_point`** rolls back only this server's steps and hands back the delete of assets created since.
 - **`inspect explain`** says why something does not happen and names the call that fixes it.
 - **A call failing three times unchanged is refused** (`REPEATED_FAILURE`).
 - **Batches check every step first**; `build_graph`, `build_material_graph` and `add_widget_tree` take `dryRun`.

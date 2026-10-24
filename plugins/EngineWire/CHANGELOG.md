@@ -15,7 +15,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **`get_frame_cost`**, **`diff_asset`**, **`cancel_render`**, `configure_render_camera` shutter and overscan, `set_section` `playRate`.
 - **`nanite_rebuild_mesh` `assetPaths`**, `get_niagara_info` values, `edit_dynamic_mesh` `append_cuboids`, `append_loft`, `append_mesh` and `delete_triangles`.
 - **Change watch**: what a request spawns or modifies, and an edited Blueprint's placed copies, are checked into `warnings`, the engine's per-actor Map Check (`CheckForErrors`) included.
-- **Undo ledger**: `undo` blocks read from the transaction buffer; **restore points** roll back only this server's steps.
+- **Undo ledger**: `undo` blocks read from the transaction buffer; **restore points** roll back only this server's steps and name the delete of assets created since.
 - **`explain`** fault trees (collision, visible, input, widget, audible, lit), each failure naming the call that fixes it.
 - **Loop guard** on `/mcp`: a call failing three times unchanged is refused (`REPEATED_FAILURE`).
 - **`dryRun`** on `build_graph`, `build_material_graph` and `add_widget_tree`, which check every step first.
