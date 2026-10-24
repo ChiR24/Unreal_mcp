@@ -7456,7 +7456,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "additionalProperties": true,
             "x-unreal-reflection-boundary": true
           },
-          "description": "One row per changed object, oldest change first: object (an actor's label, or an asset's package path), path, kind (actor, asset or level), events (added, modified, deleted, saved, renamed, removed, opened), by (mcp, user, editor), properties (the properties edited, at most 8), actions (the calls through this server that changed it) and oldPath for a renamed asset."
+          "description": "One row per changed object, oldest change first: object (an actor's label, or an asset's package path), path, kind (actor, asset or level), events (added, modified, deleted, saved, renamed, removed, opened), by (mcp, user, editor), properties (the properties edited, at most 8), values (each edited property with from, its value before the first change kept, when the edit announced it beforehand as the Details panel does, and to, its value after the latest; a property changed back is left out), transform (for a live actor that stands elsewhere than when its first change was kept: location, rotation and scale that differ, each {from, to} as [x, y, z] or [pitch, yaw, roll]), actions (the calls through this server that changed it) and oldPath for a renamed asset."
         },
         "class": {
           "type": "string",

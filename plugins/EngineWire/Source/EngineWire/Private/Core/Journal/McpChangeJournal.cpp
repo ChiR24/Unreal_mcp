@@ -29,25 +29,6 @@ FDelegateHandle GPropertyHandle;
 FDelegateHandle GActorAddedHandle;
 FDelegateHandle GActorDeletedHandle;
 
-// The indexes after entries were removed; each package's verdict is judged again.
-void Reindex(FJournalState& State)
-{
-    State.ByObject.Reset();
-    State.ByPackage.Reset();
-    for (int32 Index = 0; Index < State.Entries.Num(); ++Index)
-    {
-        const FJournalEntry& Entry = State.Entries[Index];
-        if (!Entry.bActor)
-        {
-            State.ByPackage.Add(FName(*Entry.Path), Index);
-        }
-        else if (AActor* Actor = Entry.Actor.Get())
-        {
-            State.ByObject.Add(FObjectKey(Actor), Index);
-        }
-    }
-}
-
 // A full journal keeps its newer half; cursors from before the cut can no longer be answered.
 void Trim(FJournalState& State)
 {
@@ -87,6 +68,9 @@ int32 ActorEntry(AActor* Actor)
     Entry.bActor = true;
     Entry.Actor = Actor;
     Entry.Path = Actor->GetPathName();
+    // Modify comes before the edit, so this is where it stood; read against where it is when listed.
+    Entry.Start = Actor->GetActorTransform();
+    Entry.bStart = true;
     State.ByObject.Add(FObjectKey(Actor), Index);
     return Index;
 }
@@ -111,25 +95,6 @@ int32 EditedPackageEntry(UPackage* Package)
     const int32 Index = bJournalled ? PackageEntry(Package->GetFName()) : INDEX_NONE;
     State.ByObject.Add(Key, Index);
     return Index;
-}
-
-int32 EditedEntry(UObject* Object)
-{
-    if (!Object || !IsInGameThread() || GIsReinstancing ||
-        Object->HasAnyFlags(RF_Transient | RF_ClassDefaultObject | RF_ArchetypeObject))
-    {
-        return INDEX_NONE;
-    }
-    AActor* Actor = Cast<AActor>(Object);
-    if (const UActorComponent* Component = Actor ? nullptr : Cast<UActorComponent>(Object))
-    {
-        Actor = Component->GetOwner();
-    }
-    if (Actor)
-    {
-        return IsLevelActor(Actor) ? ActorEntry(Actor) : INDEX_NONE;
-    }
-    return EditedPackageEntry(Object->GetOutermost());
 }
 
 // The engine edits on its own all the time (loading, compiling, rebuilding derived data): a dozen meshes a startup read as
@@ -159,6 +124,7 @@ void OnPropertyChanged(UObject* Object, FPropertyChangedEvent& Event)
     {
         Entry.Properties.AddUnique(Name);
     }
+    NoteValue(Index, Object, Member, false);
 }
 
 // The engine adds and removes actors of its own too (a new level's world settings, navigation data).
@@ -178,6 +144,43 @@ void OnActorDeleted(AActor* Actor)
     }
 }
 } // namespace
+
+void Reindex(FJournalState& State)
+{
+    State.ByObject.Reset();
+    State.ByPackage.Reset();
+    for (int32 Index = 0; Index < State.Entries.Num(); ++Index)
+    {
+        const FJournalEntry& Entry = State.Entries[Index];
+        if (!Entry.bActor)
+        {
+            State.ByPackage.Add(FName(*Entry.Path), Index);
+        }
+        else if (AActor* Actor = Entry.Actor.Get())
+        {
+            State.ByObject.Add(FObjectKey(Actor), Index);
+        }
+    }
+}
+
+int32 EditedEntry(UObject* Object)
+{
+    if (!Object || !IsInGameThread() || GIsReinstancing ||
+        Object->HasAnyFlags(RF_Transient | RF_ClassDefaultObject | RF_ArchetypeObject))
+    {
+        return INDEX_NONE;
+    }
+    AActor* Actor = Cast<AActor>(Object);
+    if (const UActorComponent* Component = Actor ? nullptr : Cast<UActorComponent>(Object))
+    {
+        Actor = Component->GetOwner();
+    }
+    if (Actor)
+    {
+        return IsLevelActor(Actor) ? ActorEntry(Actor) : INDEX_NONE;
+    }
+    return EditedPackageEntry(Object->GetOutermost());
+}
 
 FJournalState& JournalState()
 {

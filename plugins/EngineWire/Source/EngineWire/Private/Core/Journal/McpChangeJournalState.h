@@ -6,6 +6,8 @@
 #include "UObject/WeakObjectPtrTemplates.h"
 
 class AActor;
+class FProperty;
+class UObject;
 class UWorld;
 
 // The journal's state, shared by its recorder (McpChangeJournal.cpp) and its reader (McpChangeJournalRead.cpp).
@@ -29,6 +31,16 @@ enum EJournalBy : uint8
     JournalByEditor = 1 << 2,
 };
 
+/** A property's value as exported text: before the first change the journal saw, and after the latest one. */
+struct FJournalValue
+{
+    FName Property;
+    FString From;
+    FString To;
+    bool bFrom = false;
+    bool bTo = false;
+};
+
 /** One changed object: a level actor, or an asset or level package by name. Every change to it merges here. */
 struct FJournalEntry
 {
@@ -42,7 +54,11 @@ struct FJournalEntry
     uint8 Events = 0;
     uint8 By = 0;
     TArray<FName> Properties;
+    TArray<FJournalValue> Values;
     TArray<FString> Actions;
+    /** An actor's transform when the journal first saw it, compared with where it is when the entry is listed. */
+    FTransform Start;
+    bool bStart = false;
     uint64 LastSeq = 0;
     uint64 LastUserSeq = 0;
 };
@@ -66,6 +82,8 @@ struct FJournalState
 };
 
 FJournalState& JournalState();
+/** The indexes after entries were removed; each package's verdict is judged again. */
+void Reindex(FJournalState& State);
 
 /** Who a change made now is by: mcp inside a request, user inside a transaction no request opened, else editor. */
 uint8 CurrentBy();
@@ -82,4 +100,11 @@ void PublishSeq(uint64 Seq);
 /** The object and level-actor events (McpChangeJournal.cpp); Start and Stop add the package events around them. */
 void BindObjectEvents();
 void UnbindObjectEvents();
+/** The entry an edit of Object belongs to (its actor's or its package's), made on first use; INDEX_NONE if none is kept. */
+int32 EditedEntry(UObject* Object);
+/** Keeps Member's value on Object, before (bBefore) or after a change, in the entry at Index (McpChangeJournalValues.cpp). */
+void NoteValue(int32 Index, UObject* Object, const FProperty* Member, bool bBefore);
+/** The event announcing a property about to change (McpChangeJournalValues.cpp), bound beside the object events. */
+void BindValueEvents();
+void UnbindValueEvents();
 } // namespace McpChangeJournal

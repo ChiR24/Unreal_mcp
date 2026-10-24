@@ -108,6 +108,7 @@ void Start()
     JournalState().Session = FGuid::NewGuid().ToString(EGuidFormats::Digits).Left(8).ToLower();
     PublishSession(JournalState().Session);
     BindObjectEvents();
+    BindValueEvents();
     GSavedHandle = UPackage::PackageSavedWithContextEvent.AddStatic(&OnSaved);
     GMapOpenedHandle = FEditorDelegates::OnMapOpened.AddStatic(&OnMapOpened);
     IAssetRegistry& Registry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry")).Get();
@@ -119,6 +120,7 @@ void Start()
 void Stop()
 {
     UnbindObjectEvents();
+    UnbindValueEvents();
     UPackage::PackageSavedWithContextEvent.Remove(GSavedHandle);
     FEditorDelegates::OnMapOpened.Remove(GMapOpenedHandle);
     if (FAssetRegistryModule* Module = FModuleManager::GetModulePtr<FAssetRegistryModule>(TEXT("AssetRegistry")))

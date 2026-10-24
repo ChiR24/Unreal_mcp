@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "dc376b16d7806593",
+  "catalogRevision": "1219826f8c58798b",
   "recordCount": 421,
   "records": [
     {
@@ -46777,7 +46777,7 @@
           "edits made in the editor",
           "changed since the last call"
         ],
-        "summary": "List what changed in the editor since a cursor: level actors added, deleted or modified (with the properties edited) and assets or levels created, removed, renamed, modified, saved or opened, each marked by who changed it: mcp (a call through this server), user (an edit made in the editor, and its undo and redo) or editor (anything else, such as saving, importing or opening a level by hand). The engine's own work on actors and objects (loading a level, compiling) is not kept. The reply hands back the cursor to send next time; without one it lists the most recent changes kept. Changes merge per object; 4096 objects are kept, and a cursor from before an editor restart or older than what is kept answers CHANGE_CURSOR_EXPIRED.",
+        "summary": "List what changed in the editor since a cursor: level actors added, deleted, moved or modified (with the properties edited and their values) and assets or levels created, removed, renamed, modified, saved or opened, each marked by who changed it: mcp (a call through this server), user (an edit made in the editor, and its undo and redo) or editor (anything else, such as saving, importing or opening a level by hand). The engine's own work on actors and objects (loading a level, compiling) is not kept. The reply hands back the cursor to send next time; without one it lists the most recent changes kept. Changes merge per object; 4096 objects are kept, and a cursor from before an editor restart or older than what is kept answers CHANGE_CURSOR_EXPIRED.",
         "whenToUse": [
           "Work resumes after a pause, or another agent or the user may have changed the level: read what changed instead of listing everything again.",
           "A reply warned that the user changed something in the editor since the last call."
@@ -46846,7 +46846,7 @@
                 "additionalProperties": true,
                 "x-unreal-reflection-boundary": true
               },
-              "description": "One row per changed object, oldest change first: object (an actor's label, or an asset's package path), path, kind (actor, asset or level), events (added, modified, deleted, saved, renamed, removed, opened), by (mcp, user, editor), properties (the properties edited, at most 8), actions (the calls through this server that changed it) and oldPath for a renamed asset."
+              "description": "One row per changed object, oldest change first: object (an actor's label, or an asset's package path), path, kind (actor, asset or level), events (added, modified, deleted, saved, renamed, removed, opened), by (mcp, user, editor), properties (the properties edited, at most 8), values (each edited property with from, its value before the first change kept, when the edit announced it beforehand as the Details panel does, and to, its value after the latest; a property changed back is left out), transform (for a live actor that stands elsewhere than when its first change was kept: location, rotation and scale that differ, each {from, to} as [x, y, z] or [pitch, yaw, roll]), actions (the calls through this server that changed it) and oldPath for a renamed asset."
             }
           },
           "required": [
@@ -46857,7 +46857,7 @@
       },
       "examples": [
         {
-          "title": "List what changed in the editor since a cursor: level actors added, deleted or modified (with the properties edited) and assets or levels created, removed, renamed, modified, saved or opened, each marked by who changed it: mcp (a call through this server), user (an edit made in the editor, and its undo and redo) or editor (anything else, such as saving, importing or opening a level by hand). The engine's own work on actors and objects (loading a level, compiling) is not kept. The reply hands back the cursor to send next time; without one it lists the most recent changes kept. Changes merge per object; 4096 objects are kept, and a cursor from before an editor restart or older than what is kept answers CHANGE_CURSOR_EXPIRED.",
+          "title": "List what changed in the editor since a cursor: level actors added, deleted, moved or modified (with the properties edited and their values) and assets or levels created, removed, renamed, modified, saved or opened, each marked by who changed it: mcp (a call through this server), user (an edit made in the editor, and its undo and redo) or editor (anything else, such as saving, importing or opening a level by hand). The engine's own work on actors and objects (loading a level, compiling) is not kept. The reply hands back the cursor to send next time; without one it lists the most recent changes kept. Changes merge per object; 4096 objects are kept, and a cursor from before an editor restart or older than what is kept answers CHANGE_CURSOR_EXPIRED.",
           "input": {
             "action": "changes_since",
             "since": "3f9a1c2e.120"
@@ -46879,6 +46879,13 @@
                 ],
                 "properties": [
                   "Intensity"
+                ],
+                "values": [
+                  {
+                    "property": "Intensity",
+                    "from": "5000.000000",
+                    "to": "8000.000000"
+                  }
                 ]
               },
               {
@@ -46925,8 +46932,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "a3a3a3e8bdce5a5de1732f8d396a23ed581e3699630189da067a82a0c2ff3baf",
-        "content": "b743ccc58197ac4a0fc791c80c5e722fc125405350e0ab831528b21814e00da2"
+        "schema": "ca9856af03b31cb50d7b7d5a6727ff8d7608ffe1ddc9984283fb87bcb6ca3a06",
+        "content": "8dd2009f78bc541111ea776bed5add897c6be6744a811cb6db6bd090b98ac7ae"
       }
     },
     {

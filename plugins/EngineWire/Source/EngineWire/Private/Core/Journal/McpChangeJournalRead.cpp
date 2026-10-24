@@ -10,6 +10,7 @@
 #include "EngineWireSubsystem.h"
 #include "Foundation/BridgeHelpers/Responses/McpResponseVerify.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 
 #include "GameFramework/Actor.h"
 
@@ -53,6 +54,36 @@ TArray<FString> JournalWords(uint8 Bits, const TCHAR* const* Words, int32 Count)
     return Out;
 }
 
+// Where an actor stood when the journal first saw it and where it stands now, for each of location, rotation and scale
+// that differs.
+void AddTransform(const TSharedPtr<FJsonObject>& Row, const FTransform& From, const FTransform& To)
+{
+    TSharedPtr<FJsonObject> Moved = MakeShared<FJsonObject>();
+    const auto Part = [&Moved](const TCHAR* Name, const TArray<TSharedPtr<FJsonValue>>& Before, const TArray<TSharedPtr<FJsonValue>>& After)
+    {
+        TSharedPtr<FJsonObject> Change = MakeShared<FJsonObject>();
+        Change->SetArrayField(TEXT("from"), Before);
+        Change->SetArrayField(TEXT("to"), After);
+        Moved->SetObjectField(Name, Change);
+    };
+    if (!From.GetLocation().Equals(To.GetLocation(), 0.01))
+    {
+        Part(TEXT("location"), McpHandlerUtils::VectorToJsonArray(From.GetLocation()), McpHandlerUtils::VectorToJsonArray(To.GetLocation()));
+    }
+    if (!From.Rotator().Equals(To.Rotator(), 0.01))
+    {
+        Part(TEXT("rotation"), McpHandlerUtils::RotatorToJsonArray(From.Rotator()), McpHandlerUtils::RotatorToJsonArray(To.Rotator()));
+    }
+    if (!From.GetScale3D().Equals(To.GetScale3D(), 0.0001))
+    {
+        Part(TEXT("scale"), McpHandlerUtils::VectorToJsonArray(From.GetScale3D()), McpHandlerUtils::VectorToJsonArray(To.GetScale3D()));
+    }
+    if (Moved->Values.Num() > 0)
+    {
+        Row->SetObjectField(TEXT("transform"), Moved);
+    }
+}
+
 TSharedPtr<FJsonObject> JournalRow(const FJournalEntry& Entry)
 {
     TSharedPtr<FJsonObject> Row = MakeShared<FJsonObject>();
@@ -79,6 +110,30 @@ TSharedPtr<FJsonObject> JournalRow(const FJournalEntry& Entry)
     if (!Entry.OldPath.IsEmpty())
     {
         Row->SetStringField(TEXT("oldPath"), Entry.OldPath);
+    }
+    TArray<TSharedPtr<FJsonValue>> Values;
+    for (const FJournalValue& Value : Entry.Values)
+    {
+        if (Value.bTo && !(Value.bFrom && Value.From == Value.To))
+        {
+            TSharedPtr<FJsonObject> Changed = MakeShared<FJsonObject>();
+            Changed->SetStringField(TEXT("property"), Value.Property.ToString());
+            if (Value.bFrom)
+            {
+                Changed->SetStringField(TEXT("from"), Value.From);
+            }
+            Changed->SetStringField(TEXT("to"), Value.To);
+            Values.Add(MakeShared<FJsonValueObject>(Changed));
+        }
+    }
+    if (Values.Num() > 0)
+    {
+        Row->SetArrayField(TEXT("values"), Values);
+    }
+    const AActor* Actor = Entry.Actor.Get();
+    if (Actor && Entry.bStart)
+    {
+        AddTransform(Row, Entry.Start, Actor->GetActorTransform());
     }
     return Row;
 }

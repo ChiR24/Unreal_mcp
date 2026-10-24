@@ -33,7 +33,7 @@ describe('change journal', () => {
 
   // OnObjectModified fires on every Modify, thousands of times in one Blueprint compile.
   it('rejects an edit on flags before any string work, and judges each package once', () => {
-    const edited = recorder.slice(recorder.indexOf('int32 EditedEntry(UObject* Object)'), recorder.indexOf('void OnModified('));
+    const edited = recorder.slice(recorder.indexOf('int32 EditedEntry(UObject* Object)'), recorder.indexOf('FJournalState& JournalState()'));
     expect(edited.indexOf('RF_Transient | RF_ClassDefaultObject | RF_ArchetypeObject')).toBeGreaterThan(-1);
     expect(edited.indexOf('GIsReinstancing')).toBeLessThan(edited.indexOf('GetOutermost()'));
     const packageEntry = recorder.slice(recorder.indexOf('int32 EditedPackageEntry('), recorder.indexOf('int32 EditedEntry('));
@@ -70,5 +70,22 @@ describe('change journal', () => {
   it('warns a reply once, never inside a batch step', () => {
     expect(reader).toContain('FMcpResponseCaptureRegistry::Get().IsCapturing(RequestId)');
     expect(reader).toContain('State.WarnedThrough = State.WarnUntil;');
+  });
+
+  // A row named the property edited, never what it held: an agent could not tell 5000 -> 8000 from a click.
+  it('keeps a property\'s first old value from the announcement before an edit, and its latest after', () => {
+    const values = code('Core', 'Journal', 'McpChangeJournalValues.cpp');
+    expect(events).toMatch(/BindObjectEvents\(\);\s*BindValueEvents\(\);/u);
+    expect(events).toMatch(/UnbindObjectEvents\(\);\s*UnbindValueEvents\(\);/u);
+    expect(values).toContain('FCoreUObjectDelegates::OnPreObjectPropertyChanged.AddStatic(&OnPreChange)');
+    expect(values).toMatch(/if \(bBefore && !Value->bFrom && !Value->bTo\)/u);
+    // GetOwnerClass walks past a function to its class: a local variable would be read off the object.
+    expect(values).toContain('Member->GetOwner<UClass>()');
+    expect(recorder).toContain('NoteValue(Index, Object, Member, false);');
+  });
+
+  it('lists where a live actor stood when first kept and where it stands now', () => {
+    expect(recorder).toMatch(/Entry\.Start = Actor->GetActorTransform\(\);\s*Entry\.bStart = true;/u);
+    expect(reader).toContain('AddTransform(Row, Entry.Start, Actor->GetActorTransform());');
   });
 });

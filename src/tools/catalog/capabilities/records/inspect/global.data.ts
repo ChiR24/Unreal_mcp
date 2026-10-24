@@ -138,7 +138,7 @@ export const GLOBAL_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'inspect', action: 'changes_since', dispatchAction: 'changes_since', domain: D, family: 'global',
     topics: ['what changed', 'what changed in the level', 'what did the user change', 'edits made in the editor', 'changed since the last call'],
-    summary: 'List what changed in the editor since a cursor: level actors added, deleted or modified (with the properties edited) and assets or levels created, removed, renamed, modified, saved or opened, each marked by who changed it: mcp (a call through this server), user (an edit made in the editor, and its undo and redo) or editor (anything else, such as saving, importing or opening a level by hand). The engine\'s own work on actors and objects (loading a level, compiling) is not kept. The reply hands back the cursor to send next time; without one it lists the most recent changes kept. Changes merge per object; 4096 objects are kept, and a cursor from before an editor restart or older than what is kept answers CHANGE_CURSOR_EXPIRED.',
+    summary: 'List what changed in the editor since a cursor: level actors added, deleted, moved or modified (with the properties edited and their values) and assets or levels created, removed, renamed, modified, saved or opened, each marked by who changed it: mcp (a call through this server), user (an edit made in the editor, and its undo and redo) or editor (anything else, such as saving, importing or opening a level by hand). The engine\'s own work on actors and objects (loading a level, compiling) is not kept. The reply hands back the cursor to send next time; without one it lists the most recent changes kept. Changes merge per object; 4096 objects are kept, and a cursor from before an editor restart or older than what is kept answers CHANGE_CURSOR_EXPIRED.',
     whenToUse: [
       'Work resumes after a pause, or another agent or the user may have changed the level: read what changed instead of listing everything again.',
       'A reply warned that the user changed something in the editor since the last call.',
@@ -157,13 +157,13 @@ export const GLOBAL_RECORDS: readonly CapabilityRecordSource[] = [
     exampleOutput: {
       success: true, message: '2 changes since 3f9a1c2e.120: the user modified Lamp_1; this server added Crate_3.',
       cursor: '3f9a1c2e.131', count: 2,
-      changes: [{ object: 'Lamp_1', kind: 'actor', events: ['modified'], by: ['user'], properties: ['Intensity'] }, { object: 'Crate_3', kind: 'actor', events: ['added'], by: ['mcp'], actions: ['control_actor spawn'] }],
+      changes: [{ object: 'Lamp_1', kind: 'actor', events: ['modified'], by: ['user'], properties: ['Intensity'], values: [{ property: 'Intensity', from: '5000.000000', to: '8000.000000' }] }, { object: 'Crate_3', kind: 'actor', events: ['added'], by: ['mcp'], actions: ['control_actor spawn'] }],
     },
     outputProps: {
       cursor: { type: 'string', description: 'Send this as since next time to read only what changes after this reply.' },
       count: { type: 'number', description: 'Changes listed.' },
       truncated: { type: 'boolean', description: 'More changes are left after these: call again with the cursor returned.' },
-      changes: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'One row per changed object, oldest change first: object (an actor\'s label, or an asset\'s package path), path, kind (actor, asset or level), events (added, modified, deleted, saved, renamed, removed, opened), by (mcp, user, editor), properties (the properties edited, at most 8), actions (the calls through this server that changed it) and oldPath for a renamed asset.' },
+      changes: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'One row per changed object, oldest change first: object (an actor\'s label, or an asset\'s package path), path, kind (actor, asset or level), events (added, modified, deleted, saved, renamed, removed, opened), by (mcp, user, editor), properties (the properties edited, at most 8), values (each edited property with from, its value before the first change kept, when the edit announced it beforehand as the Details panel does, and to, its value after the latest; a property changed back is left out), transform (for a live actor that stands elsewhere than when its first change was kept: location, rotation and scale that differ, each {from, to} as [x, y, z] or [pitch, yaw, roll]), actions (the calls through this server that changed it) and oldPath for a renamed asset.' },
     },
   }),
 ];

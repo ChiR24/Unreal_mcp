@@ -3,7 +3,10 @@
 #if WITH_DEV_AUTOMATION_TESTS
 #include "Core/Journal/McpChangeJournalState.h"
 #include "Misc/AutomationTest.h"
+#include "PhysicalMaterials/PhysicalMaterial.h"
 #include "ScopedTransaction.h"
+#include "UObject/Package.h"
+#include "UObject/UnrealType.h"
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FMcpChangeJournalTest, "EngineWire.Core.ChangeJournal.Attribution",
                                  EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
@@ -42,6 +45,59 @@ bool FMcpChangeJournalTest::RunTest(const FString& Parameters)
     EndRequest();
     TestEqual(TEXT("an unmatched end changes nothing"), State.RequestDepth, 0);
 
+    State.RequestDepth = Depth;
+    State.RequestId = RequestId;
+    State.Action = Action;
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FMcpChangeJournalValuesTest, "EngineWire.Core.ChangeJournal.Values",
+                                 EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+// A property's value before an edit announced the way the Details panel announces it (PreEditChange with its chain) and
+// after it, on an asset made in memory for the test: never saved, and its row dropped from the journal again.
+bool FMcpChangeJournalValuesTest::RunTest(const FString& Parameters)
+{
+    (void)Parameters;
+    using namespace McpChangeJournal;
+    static const TCHAR* const Path = TEXT("/Game/_McpScratch/McpJournalValueTest");
+    FJournalState& State = JournalState();
+    const int32 Depth = State.RequestDepth;
+    const FString RequestId = State.RequestId;
+    const FString Action = State.Action;
+    State.RequestDepth = 0;
+    State.RequestId.Reset();
+    State.Action.Reset();
+
+    UPackage* Package = CreatePackage(Path);
+    UPhysicalMaterial* Material = NewObject<UPhysicalMaterial>(Package, TEXT("McpJournalValueTest"), RF_Public);
+    FProperty* Friction = FindFProperty<FProperty>(UPhysicalMaterial::StaticClass(), TEXT("Friction"));
+    BeginRequest(TEXT("journal-values-test"), TEXT("inspect journal_values_test"));
+    FEditPropertyChain Chain;
+    Chain.AddHead(Friction);
+    Chain.SetActivePropertyNode(Friction);
+    Chain.SetActiveMemberPropertyNode(Friction);
+    Material->PreEditChange(Chain);
+    Material->Friction = 0.25f;
+    FPropertyChangedEvent Event(Friction);
+    Material->PostEditChangeProperty(Event);
+    EndRequest();
+
+    const FJournalEntry* Entry = State.Entries.FindByPredicate([](const FJournalEntry& Kept) { return Kept.Path == Path; });
+    const FName FrictionName = Friction->GetFName();
+    const FJournalValue* Value = Entry ? Entry->Values.FindByPredicate([&FrictionName](const FJournalValue& Kept) { return Kept.Property == FrictionName; }) : nullptr;
+    TestTrue(TEXT("the edit is kept with the value it changed"), Value != nullptr);
+    if (Value)
+    {
+        TestTrue(TEXT("from is the value before the edit"), Value->bFrom && FMath::IsNearlyEqual(FCString::Atof(*Value->From), 0.7f, 1e-4f));
+        TestTrue(TEXT("to is the value after it"), Value->bTo && FMath::IsNearlyEqual(FCString::Atof(*Value->To), 0.25f, 1e-4f));
+    }
+
+    State.Entries.RemoveAll([](const FJournalEntry& Kept) { return Kept.Path == Path; });
+    Reindex(State);
+    Package->SetDirtyFlag(false);
+    Material->MarkAsGarbage();
+    Package->MarkAsGarbage();
     State.RequestDepth = Depth;
     State.RequestId = RequestId;
     State.Action = Action;
