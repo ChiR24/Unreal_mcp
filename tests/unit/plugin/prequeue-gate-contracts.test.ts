@@ -196,19 +196,6 @@ describe('the gate and the dispatcher cannot resolve DIFFERENT actions', () => {
     );
   });
 
-  it('the TypeScript bridge applies the same reconciliation before the payload crosses', () => {
-    const source = readFileSync(
-      resolve(process.cwd(), 'src/automation/bridge-request-dispatcher.ts'),
-      'utf8'
-    );
-    expect(source, 'the bridge must rewrite action from the authoritative subAction').toMatch(
-      /action:\s*payload\.subAction/u
-    );
-    expect(source, 'a single-field payload must be made consistent too').toMatch(
-      /subAction:\s*payload\.action/u
-    );
-  });
-
   it('the gate file records that payload.action is read by dispatchers', () => {
     expect(
       gateDemand(),
@@ -323,7 +310,7 @@ describe('Task 40 Blocker 9 — a confined write must prove an in-prefix target'
   });
 });
 
-describe('Task 40 — describe advertises the grant execute demands, on BOTH surfaces', () => {
+describe('Task 40 — describe advertises the grant execute demands', () => {
   it('the native capability contract emits consentGrant', () => {
     const source = privateSource('MCP', 'Gateway', 'McpNativeGatewayDescribe.cpp');
     expect(source, 'native describe must emit the field its own tool description names').toContain(
@@ -333,16 +320,6 @@ describe('Task 40 — describe advertises the grant execute demands, on BOTH sur
     // send a consent sibling the gate never asked for.
     expect(source).toMatch(/TEXT\("none"\)[^)]*\)\)\s*return nullptr;/u);
     expect(source).toMatch(/TEXT\("elevated"\)\s*:\s*TEXT\("explicit"\)/u);
-  });
-
-  it('the TypeScript surface answers the same question the same way', () => {
-    const source = readFileSync(
-      resolve(process.cwd(), 'src/server/gateway/gateway-capability-view.ts'),
-      'utf8'
-    );
-    expect(source).toContain('capabilityConsentGrant');
-    expect(source).toMatch(/consent === 'none'\) return undefined/u);
-    expect(source).toMatch(/consent === 'elevated' \? 'elevated' : 'explicit'/u);
   });
 });
 

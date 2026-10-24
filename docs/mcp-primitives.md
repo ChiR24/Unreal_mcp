@@ -1,37 +1,35 @@
 # MCP primitives — resources, prompts, completions, progress
 
-What the server offers beyond `tools`. TypeScript: `src/server/mcp-primitives/` and `src/resources/` (registration in `src/handlers/resource-handlers.ts`). Native `/mcp`: `plugins/.../Private/MCP/Primitives/` and `Private/MCP/Resources/`. There is no automated parity gate between the two; keep them in step by hand.
+What the server offers beyond `tools`, all served by the plugin's native `/mcp`: `plugins/.../Private/MCP/Primitives/` and `Private/MCP/Resources/`. The stdio proxy relays them unchanged.
 
 ## Advertised capabilities
-
-Both transports advertise exactly:
 
 ```jsonc
 { "tools": {}, "resources": {}, "prompts": {}, "completions": {} }
 ```
 
-(`SERVER_CAPABILITIES` in `src/server/mcp-primitives/primitive-wiring.ts`; native `McpNativeTransportToolDiscovery.cpp`.) There are no resource subscriptions and no task API.
+(native `McpNativeTransportToolDiscovery.cpp`.) There are no resource subscriptions and no task API.
 
 ## Resources
 
-| URI | stdio | native `/mcp` |
-| --- | --- | --- |
-| `ue://capability/catalog` | yes | yes |
-| `ue://project` | yes | yes |
-| `ue://state/revisions` | yes | yes |
-| `ue://health` | yes | yes |
-| `ue://automation-bridge` | yes | yes |
-| `ue://assets`, `ue://actors`, `ue://editor`, `ue://selection` | yes | no (`RESOURCE_UNAVAILABLE`) |
+| URI | served |
+| --- | --- |
+| `ue://capability/catalog` | yes |
+| `ue://project` | yes |
+| `ue://state/revisions` | yes |
+| `ue://health` | yes |
+| `ue://automation-bridge` | yes |
+| `ue://assets`, `ue://actors`, `ue://editor`, `ue://selection` | no (`RESOURCE_UNAVAILABLE`) |
 
-Templates (both transports): `ue://capability/{capabilityId}`, `ue://knowledge/{topic}`, `ue://asset/{assetPath}`.
+Templates: `ue://capability/{capabilityId}`, `ue://knowledge/{topic}`, `ue://asset/{assetPath}`.
 
-The four live-state URIs are only valid to read on the game thread. stdio serves them by round-tripping through the automation bridge; native answers `resources/read` on the socket thread, where it may not block on editor work, so it neither lists nor serves them (`McpResourceCatalog::IsNativeUnservedUri`, the same list the read classifier uses).
+The four live-state URIs are only valid to read on the game thread. Native answers `resources/read` on the socket thread, where it may not block on editor work, so it neither lists nor serves them (`McpResourceCatalog::IsNativeUnservedUri`, the same list the read classifier uses). The same data comes from tools: `control_actor` find, `manage_asset` list, `control_editor` and `inspect`.
 
-Reads are bounded (64 KiB) and path inputs are normalized and redacted (`src/resources/resource-errors.ts`). Payloads carry a revision; only `ue://capability/catalog` moves (it follows `configure` visibility changes).
+Reads are bounded (64 KiB). Payloads carry a revision; only `ue://capability/catalog` moves (it follows `configure` visibility changes).
 
 ## Prompts
 
-`prompts/list` and `prompts/get` serve six workflow prompts: `inspect-fix`, `asset-import`, `level-build`, `blueprint-edit`, `validation`, `sequence-render` (`src/server/mcp-primitives/prompts.ts`; native `McpPromptCatalog`). A prompt returns text messages only; getting one never executes anything.
+`prompts/list` and `prompts/get` serve six workflow prompts: `inspect-fix`, `asset-import`, `level-build`, `blueprint-edit`, `validation`, `sequence-render` (`McpPromptCatalog`). A prompt returns text messages only; getting one never executes anything.
 
 ## Completions
 

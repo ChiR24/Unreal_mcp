@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { describeUndeclaredParameter } from '../../src/server/gateway/gateway-schema-validate.js';
+import { describeUndeclaredParameter } from './support/schema-validate.js';
 
 // blueprint.edit_graph declares 33 parameters. Sending `defaultValue` for a pin
 // default used to answer with no "did you mean" (no substring overlap with

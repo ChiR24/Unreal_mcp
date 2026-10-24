@@ -11,7 +11,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { ALL_CAPABILITY_RECORDS } from '../../../src/tools/catalog/capabilities/records/aggregate.js';
-import { applyDeclaredDefaults, validateAgainstCapabilitySchema } from '../../../src/server/gateway/gateway-schema-validate.js';
+import { applyDeclaredDefaults, validateAgainstCapabilitySchema } from '../support/schema-validate.js';
 import { isRecord as isRecordObject } from '../../../src/utils/validation/type-guards.js';
 
 const plain = (value: unknown): unknown => JSON.parse(JSON.stringify(value));

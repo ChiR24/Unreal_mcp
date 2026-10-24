@@ -4,8 +4,7 @@
 
 | Suite | What it covers | Needs Unreal? |
 |-------|----------------|---------------|
-| **Unit** (Vitest) | `src/**/*.test.ts` and `tests/unit/**/*.test.ts`: gateway behavior, security, routing, and source contracts that read the plugin's C++ without compiling it | No |
-| **Smoke** (`scripts/smoke-test.ts`) | The built server in mock mode, over in-memory transports | No |
+| **Unit** (Vitest) | `src/**/*.test.ts` and `tests/unit/**/*.test.ts`: the capability records, and source contracts that read the plugin's C++ without compiling it. No mocks or fakes | No |
 | **Parameter audit** | Every action and parameter in the generated schemas against the integration cases | No |
 | **Search eval** | The search-ranking corpus | No |
 | **Integration** | `tests/integration.mjs` (cross-tool workflows) and `tests/mcp-tools/**/*.test.mjs` (one suite per area), against a live editor | Yes |
@@ -17,7 +16,6 @@ The public surface is the single `unreal` gateway tool. Integration cases still 
 | Command | Description | Needs Unreal? |
 |---------|-------------|---------------|
 | `npm run test:unit` | Vitest unit tests | No |
-| `npm run test:smoke` | Mock-mode MCP check against `dist/` (run `npm run build` first) | No |
 | `npm run test:params` | Static, strict parameter audit | No |
 | `npm run eval:check` | Search-ranking corpus | No |
 | `npm test` or `npm run test:all` | `tests/integration.mjs` | Yes |
@@ -27,8 +25,8 @@ The public surface is the single `unreal` gateway tool. Integration cases still 
 
 ### Prerequisites
 
-1. An Unreal Editor (5.0 to 5.8) running with the EngineWire plugin loaded. The runner waits for its WebSocket listener on `127.0.0.1` port `8090` or `8091`, the default **Listen Ports**.
-2. `UE_PROJECT_PATH` set to that project's folder or `.uproject`. The runner launches the stdio server with its own environment, and the server needs the path to read the capability token (on by default). Alternatively, set `MCP_AUTOMATION_CAPABILITY_TOKEN`.
+1. An Unreal Editor (5.0 to 5.8) running with the EngineWire plugin loaded and **Enable Native MCP Server** on (the default). The runner waits for `/mcp` at `UNREAL_MCP_URL` (default `http://127.0.0.1:3000/mcp`).
+2. `UE_PROJECT_PATH` set to that project's folder or `.uproject`. The runner launches the stdio proxy with its own environment, and the proxy needs the path to read the capability token (on by default). Alternatively, set `MCP_AUTOMATION_CAPABILITY_TOKEN`.
 3. A built server. The runner runs `npm run build` itself when `dist/cli.js` is missing or older than the source; `UNREAL_MCP_NO_AUTO_BUILD=1` turns that off.
 
 ### Running
@@ -120,20 +118,11 @@ npm run test:unit:coverage   # with coverage
 
 The tests under `tests/unit/plugin/` read the plugin's C++ source and assert required or forbidden patterns; they don't compile Unreal. Structure tests enforce file boundaries, resolvable includes and the 250-line ceiling.
 
-## Smoke test
-
-```bash
-npm run build
-npm run test:smoke
-```
-
-It sets `MOCK_UNREAL_CONNECTION` itself, so no editor is involved. It checks that the server lists exactly one tool, `unreal`, that search, describe and configure work, and that a direct call to an internal tool is rejected. CI runs it on Node 20.19 and 26 for pushes and pull requests to `main`.
-
 ## Troubleshooting
 
 | Symptom | Cause |
 |---------|-------|
-| *Automation bridge did not become available before tests started* | The editor isn't running, the plugin isn't loaded, or **Listen Ports** changed: point `MCP_AUTOMATION_WS_PORTS` at the new ports |
-| Every case fails with *not connected* or *handshake rejected* | The server can't find the capability token: set `UE_PROJECT_PATH` |
+| *Native /mcp did not become available before tests started* | The editor isn't running, the plugin isn't loaded, **Enable Native MCP Server** is off, or **Native MCP Port** changed: point `UNREAL_MCP_URL` at the new port |
+| Every case fails with *Invalid capability token* | The proxy can't find the capability token: set `UE_PROJECT_PATH` |
 | One case fails | Check the editor's Output Log and the newest JSON in `tests/reports/`. Suites create assets under `/Game/IntegrationTest` and `/Game/AdvancedIntegrationTest` and actors named `IT_*`, and delete them in their cleanup cases. |
 | A slow case times out | Give it a `timeoutMs`, or raise `UNREAL_MCP_TEST_CASE_TIMEOUT_MS` |

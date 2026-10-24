@@ -22,6 +22,9 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **`run_map_check`**: Map Check as rows (severity, message, actor, map error); **`fix_placement`** moves sunk, floating and intersecting actors by the audit's rules, in one undo step.
 - **Change journal**: `changes_since` lists what changed since a cursor and who changed it (mcp, user, editor); a reply warns once of the user's edits. `/mcp` serves `subscriptions/listen` and `resources/subscribe` for `ue://changes`.
 
+### Changed
+- **Enable Native MCP Server is on by default**: `/mcp` is the only gateway, and the npm package is a stdio proxy in front of it.
+
 ### Fixed
 - **Small fixes**: links on UE 5.0; whole-path `runtime_report` filters; diagnostics records replace their files; exact task principals; the RHI thread in `busiestThreadMs`; effect lifecycle misses name what is missing.
 - **Removals** name what still uses an asset (`*_IN_USE`, `referencedBy`), keep outside-referenced assets, take exact components and undo for tracks and keys; extra sky lights are named, not destroyed.
@@ -39,7 +42,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **Refused instead of overwritten or guessed**: taken names and paths, bakes over another asset kind, engine content, unknown types and modes, empty edits, incompatible pins, character edits on a non-Character (`NOT_A_CHARACTER`, `SKELETON_MISMATCH`).
 - **Calls that now do what they say**: fades, thumbnails, sockets, bones, ragdolls, AI, `merge_actors`, PCG components, widgets, physics bodies, landscape, foliage, water, audio and streaming in Play, `run_benchmark`, splines, volumes, console values, scalability and every view mode.
 - **Saves are reported** (`saved`, `SAVE_FAILED`, `COMPILE_FAILED` with the compiler error) by creators and asset edits; a `save: false` edit stays unsaved.
-- **`/mcp` discovery answers like the stdio door**: search rows, filters and cursors, `describe` by domain and family, name and param guidance, the same input schema.
+- **`/mcp` discovery**: search rows, filters and cursors, `describe` by domain and family, name and param guidance.
 - **A disabled tool's `nextCall` turns it back on** (`configure` `enable_tools`) in search rows, describe and `TOOL_DISABLED`.
 
 ## [0.6.0-beta-f] - 2026-10-16

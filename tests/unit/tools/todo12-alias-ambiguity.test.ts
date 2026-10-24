@@ -12,7 +12,7 @@ import {
   capabilityIndex,
   detectIndexConflicts,
   legacyPairKey
-} from '../../../src/server/gateway/gateway-capability-index.js';
+} from '../support/capability-index.js';
 import type { CapabilityRecord } from '../../../src/tools/catalog/capabilities/model.js';
 import {
   CapabilityAliasSchema,

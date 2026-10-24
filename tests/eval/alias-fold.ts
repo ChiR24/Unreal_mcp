@@ -1,4 +1,4 @@
-import type { CapabilityRecord } from '../model.js';
+import type { CapabilityRecord } from '../../src/tools/catalog/capabilities/model.js';
 
 /**
  * Maps each former capability id that a folded family absorbed (and still

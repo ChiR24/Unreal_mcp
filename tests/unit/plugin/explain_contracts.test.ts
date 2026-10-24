@@ -6,7 +6,7 @@ import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { capabilityIndex, legacyPairKey } from '../../../src/server/gateway/gateway-capability-index.js';
+import { capabilityIndex, legacyPairKey } from '../support/capability-index.js';
 import { EXPLAIN_RECORDS } from '../../../src/tools/catalog/capabilities/records/inspect/explain.data.js';
 
 const PRIVATE = join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private');

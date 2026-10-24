@@ -7,26 +7,24 @@ behavior at the cited path, treat this document as wrong and fix it.
 
 ## The public surface is one tool
 
-Both transports expose exactly **one** public MCP tool, `unreal`. There is no
-opt-out on either surface: the TypeScript `MCP_GATEWAY_MODE` env var and the
-native `bEnableNativeGateway` project setting were both removed.
+The plugin serves exactly **one** public MCP tool, `unreal`, at `/mcp`; the npm
+package is a stdio proxy that relays to it. There is no opt-out: the native
+`bEnableNativeGateway` project setting was removed.
 
-`tools/list` returns `{ "unreal" }` and never changes shape, so
-`notifications/tools/list_changed` is suppressed on both surfaces
-(`src/server/tool-registry.ts`, plugin `Private/MCP/DynamicTools`).
+`tools/list` returns `{ "unreal" }` and never changes shape
+(`Private/MCP/Gateway/McpNativeGatewayDefinition.cpp`).
 
 The 23 canonical parent tools are an **internal routing boundary**: `execute`
-forwards `{ action, ...params }` to the record's parent tool
-(`runCapability()` in `src/server/gateway/gateway-execute-dispatch.ts`). They
-are not a client-visible listing and there is no legacy multi-tool listing to
-restore.
+runs `{ action, ...params }` on the record's parent tool
+(`Private/MCP/Execute/McpNativeTransportGatewayExecute.cpp`). They are not a
+client-visible listing and there is no legacy multi-tool listing to restore.
 
-| Operation | Purpose | Implementation |
+| Operation | Purpose | Implementation (`plugins/.../Private/MCP/`) |
 | --- | --- | --- |
-| `search` | Find capabilities by query and filters | `src/server/gateway/gateway-search.ts` |
-| `describe` | Drill one level into a contract | `src/server/gateway/gateway-describe.ts` |
-| `execute` | Run one validated action | `src/server/gateway/gateway-execute.ts` |
-| `configure` | Internal tool enable/disable (`manage_tools`) | `src/server/tool-registry-gateway.ts` |
+| `search` | Find capabilities by query and filters | `Gateway/McpNativeGatewaySearch.cpp` |
+| `describe` | Drill one level into a contract | `Gateway/McpNativeGatewayDescribe*.cpp` |
+| `execute` | Run one validated action | `Execute/McpNativeTransportGatewayExecute.cpp` |
+| `configure` | Internal tool enable/disable (`manage_tools`) | `DynamicTools/McpDynamicToolManager.cpp` |
 
 The reference table [`action-reference.generated.md`](action-reference.generated.md)
 lists every capability, its effect, required scope and consent mode. It is
@@ -38,50 +36,40 @@ Do not hand-edit it.
 Wrong calls mostly come from guessed names, so the guidance a client sees before
 it calls anything is treated as part of the contract:
 
-- **Tool description** — `UNREAL_GATEWAY_DESCRIPTION` in
-  `src/tools/catalog/unreal-gateway-definition.ts` states the search -> describe
-  -> execute order, the copy-the-`nextCall` rule and the `params` rules. The
-  native listing (`Private/MCP/Gateway/McpNativeGatewayDefinition.cpp`) carries
-  the same bytes and the same input schema;
-  `tests/unit/tools/unreal-gateway-guidance-contract.test.ts` diffs both (the
-  consent nonce is the one schema difference, see
-  [below](#where-the-two-doors-still-differ)).
-- **`instructions` at `initialize`** — `UNREAL_GATEWAY_INSTRUCTIONS` (same file)
-  is passed to the SDK `Server` in `src/server/server-factory.ts`; the native
-  transport reads the identical text from `Resources/MCP/server-info.json`. Most
-  hosts inject it into the model's system prompt once per session, so it holds
-  the longer version: workflow, error-code recovery and path conventions.
+- **Tool description** — `McpNativeGatewayDefinition.cpp` states the search ->
+  describe -> execute order, the copy-the-`nextCall` rule and the `params` rules,
+  beside the input schema.
+- **`instructions` at `initialize`** — the transport reads them from
+  `Resources/MCP/server-info.json` (plus the project's **Server Instructions**
+  setting); the proxy hands the same text on and adds one line about itself.
+  Most hosts inject it into the model's system prompt once per session, so it
+  holds the longer version: workflow, error-code recovery and path conventions.
 - **Every response carries a next step** — search rows, describe replies and
-  guided errors all include an executable `nextCall`; an empty search page
-  (`src/server/gateway/gateway-search.ts`) says how to rephrase and points at
-  `describe {}`; a `{ tool }` summary points at a filtered `search` via `browse`.
+  guided errors all include an executable `nextCall`; an empty search page says
+  how to rephrase and points at `describe {}`; a `{ tool }` summary points at a
+  filtered `search` via `browse`.
 - **Search vocabulary lives on the records** — `discovery.topics` is the
-  highest-weighted free-text ranking field on both surfaces, so a capability
-  declares the phrases a caller types (`topics: ['spawn actor', 'place actor']`
-  on a builder spec, or `withTopics()` from `records/utility/helpers.ts` for the
-  positional builders). `tests/unit/gateway-search-vocabulary.test.ts` pins the
-  plain-language phrasings that must rank the intended capability first.
+  highest-weighted free-text ranking field, so a capability declares the
+  phrases a caller types (`topics: ['spawn actor', 'place actor']` on a builder
+  spec, or `withTopics()` from `records/utility/helpers.ts` for the positional
+  builders). `tests/eval/plain-probe.data.ts` lists the plain-language phrasings
+  that must rank the intended capability first.
 - **A verb the action name does not carry is a declared alias** — `topics` alone
   cannot outrank a record whose action name IS the verb (`asset.move` beats
   every "move actor" phrasing), so such a record declares an alias id
-  (`aliases: ['control_actor.move_actor']`). The ranking index counts a record's
-  own aliases as its names (`src/tools/catalog/capabilities/retrieval/scoring.ts`),
+  (`aliases: ['control_actor.move_actor']`). Search counts a record's own
+  aliases as its names (`Private/MCP/Gateway/McpNativeGatewaySearchMatch.cpp`),
   and the alias resolves on `describe` and `execute` exactly like the canonical
   id, so a model that guesses it lands on the right capability. Question words
-  are function words, so "how do i spawn an actor" ranks like "spawn actor". The
-  native search applies the same word-level rules and reads the same topics and
-  aliases (`Private/MCP/Gateway/McpNativeGatewaySearchMatch.cpp`, kept in step with
-  the TS scorer by hand), so both transports rank these phrasings the same way.
+  are function words, so "how do i spawn an actor" ranks like "spawn actor".
 
 ## Client configuration
 
-Two transports, two lifecycles. Pick one; do not route between them.
-
 ### Native MCP (Streamable HTTP/SSE, no Node.js)
 
-The plugin serves MCP directly. `GET /mcp` opens SSE, `POST /mcp` carries
-JSON-RPC, `DELETE /mcp` tears down a session. Default port `3000`, overridable
-with `MCP_NATIVE_PORT`.
+The plugin serves MCP directly, on by default (**Enable Native MCP Server**).
+`GET /mcp` opens SSE, `POST /mcp` carries JSON-RPC, `DELETE /mcp` tears down a
+session. Default port `3000`, overridable with `MCP_NATIVE_PORT`.
 
 ```json
 {
@@ -91,10 +79,13 @@ with `MCP_NATIVE_PORT`.
 }
 ```
 
-### TypeScript stdio bridge
+### stdio proxy (Node.js)
 
-`node dist/cli.js` connects to the plugin's WebSocket listener (loopback
-`8090,8091` by default) and speaks MCP over stdio.
+`node dist/cli.js` (or `npx unreal-engine-mcp-server`) speaks MCP over stdio and
+relays to the same `/mcp` (`src/proxy/native-proxy.ts`). While the editor is
+down every call answers `NOT_CONNECTED`; the first call after it is back opens
+a new upstream session, so the client never reconnects. It reads the capability
+token from `UE_PROJECT_PATH` and points at `UNREAL_MCP_URL`.
 
 ```json
 {
@@ -108,11 +99,9 @@ with `MCP_NATIVE_PORT`.
 }
 ```
 
-Both surfaces bind loopback-first. Non-loopback requires an explicit opt-in
-(`MCP_AUTOMATION_ALLOW_NON_LOOPBACK` for the Node process,
-`bAllowNonLoopback` for the plugin's own listeners) and, on the native
-transport, `bRequireCapabilityToken` as well — the native transport refuses to
-bind non-loopback without it. See [`security-and-receipts.md`](security-and-receipts.md).
+The plugin binds loopback-first. Non-loopback requires `bAllowNonLoopback` and,
+on the native transport, `bRequireCapabilityToken` as well — the native
+transport refuses to bind non-loopback without it. See [`security-and-receipts.md`](security-and-receipts.md).
 
 ### Which engine you can actually run this against
 
@@ -127,52 +116,32 @@ Read the per-minor table in
 before you pick an engine. Do not infer support for a minor from the badge
 range.
 
-## Protocol version negotiation is asymmetric on purpose
+## Protocol version negotiation
 
-The native `/mcp` transport supports exactly three versions
+The native `/mcp` transport supports exactly three versions at `initialize`
 (`McpSupportedProtocolVersions` in
-`plugins/.../Private/MCP/Transport/McpNativeTransportPrivate.h`):
+`plugins/.../Private/MCP/Transport/McpNativeTransportPrivate.h`), and the proxy
+negotiates the same three:
 
 - `2025-11-25` (latest)
 - `2025-06-18`
 - `2025-03-26`
 
-The TypeScript stdio server negotiates through the MCP SDK's
-`SUPPORTED_PROTOCOL_VERSIONS`, which **additionally** accepts two legacy
-versions: `2024-11-05` and `2024-10-07`.
-
-So a client pinned to a legacy version negotiates with the TypeScript surface
-but not the native one. The native surface is intentionally stricter.
-
-> The native transport deliberately does **not** implement any release
-> candidate later than `2025-11-25`. Do not describe one as supported.
+A client asking for another version, such as the legacy `2024-11-05`, is
+answered with `2025-11-25`, as the spec says; it may then disconnect.
+`2026-07-28` requests carry their own version and need no `initialize` or
+session.
 
 Full negotiation and header-guard behavior: [`protocol.md`](protocol.md).
 
-## Where the two doors still differ
-
-Search, describe and every guided error answer with the same fields on both
-transports, and both take the same input schema.
-`tests/unit/tools/unreal-gateway-guidance-contract.test.ts` rebuilds the native
-schema from its `FMcpSchemaBuilder` chain and diffs it with
-`unrealGatewayToolDefinition.inputSchema`;
-`tests/unit/plugin/native_gateway_describe_contracts.test.ts` compares the
-fields each native discovery builder sets with the TypeScript reply. What still
-differs is deliberate:
-
-| | Native `/mcp` | TypeScript stdio |
-| --- | --- | --- |
-| Consent grant from `describe` | Carries a single-use `nonce`; the same grant sent again is refused with `CONSENT_REUSED` | `capability` + `acknowledge` only; a grant carrying a `nonce` is refused with `INVALID_CONSENT` |
-| Typed error of a refused execute | `typedError` | `receipt.error` |
-| Search ranking | Integer rule weights (`Private/MCP/Gateway/McpNativeGatewaySearchMatch.cpp`) | The BM25 scorer (`src/tools/catalog/capabilities/retrieval/scoring.ts`); one query can order and match records differently |
-| `maxBytes` | Counts the result rows | Counts the whole reply |
-| Protocol versions | The three modern versions | Also two legacy ones (above) |
+A consent grant from `describe` carries a single-use `nonce`; the same grant
+sent again is refused with `CONSENT_REUSED`. A refused execute carries its typed
+error as `typedError`, and `maxBytes` counts the result rows.
 
 ## Discovery is progressive, never a schema dump
 
-`describe` drills exactly one level per call, with the same levels on both doors
-(`src/server/gateway/gateway-describe.ts`; natively
-`Private/MCP/Gateway/McpNativeGatewayDescribe*.cpp`). `perActionSchemas` is
+`describe` drills exactly one level per call
+(`Private/MCP/Gateway/McpNativeGatewayDescribe*.cpp`). `perActionSchemas` is
 `false` only on the `{ tool }` summary; every capability-level answer reports
 `true`:
 
@@ -191,7 +160,7 @@ The three browse levels show 50 rows unless `limit` is sent; `offset` pages
 every listing.
 
 `describe { tool, action }` resolves the legacy pair to its canonical record
-(`describeLegacyPair()` in `src/server/gateway/gateway-describe.ts`) and returns
+(`McpNativeGatewayDescribe.cpp`) and returns
 that action's exact contract: `inputSchema` lists only the parameters the action
 declares, never the parent tool's union. Only the `{ tool }` summary is still a
 legacy view, which is why it also carries `browse`.
@@ -204,8 +173,7 @@ holds the `required` parameters' types (or values), an `oneOf` group, a
 family's `selector` (`name`, `values`, `default`) and one `example`;
 `executeCall` is the execute call describe would hand over. Fill `params` from
 the signature and send `executeCall`, or describe first for the full contract.
-Both doors apply the same rule, and `tests/eval/confident-hit.test.ts` holds it
-to 95% precision on both.
+`tests/eval/confident-hit.test.ts` holds that rule to 95% precision.
 
 ### Folded families
 
@@ -232,14 +200,13 @@ catalog used to call `create_noise_texture`. Nothing was retired:
   folded `tool.action` pair; `describe` always returns the canonical grant.
 
 Every invalid selector returns a structured guided error carrying closest-match
-`suggestions` plus an executable `nextCall` that drills one level deeper
-(`closestMatches()` / `buildNextCall()` in
-`src/server/gateway/gateway-guidance.ts`, `MAX_SUGGESTIONS = 3`).
+`suggestions` (at most 3) plus an executable `nextCall` that drills one level
+deeper (`Private/MCP/Gateway/McpNativeGatewayGuidance.cpp`).
 
 ## The two execute request forms
 
-`resolveExecuteTarget()` in `src/server/gateway/gateway-execute-resolve.ts`
-accepts two forms, and **neither wins by precedence**.
+Execute (`Private/MCP/Execute/McpNativeGatewayExecuteRequest.cpp`) accepts two
+forms, and **neither wins by precedence**.
 
 **Canonical (v2)** — preferred for new clients:
 
@@ -293,8 +260,8 @@ Three distinct removal behaviors exist. They are not interchangeable.
 
 A `tools/call` whose `name` is not `unreal` is **not routed**. It returns a
 bounded, copy-paste-executable `DIRECT_TOOL_CALL_REMOVED` receipt
-(`src/server/gateway/direct-call-migration.ts`; the native transport emits the
-same shape from `McpNativeTransportGateway.cpp`). The receipt's `nextCall`
+(`McpNativeGatewayDirectCallMigration.cpp`, sent from
+`McpNativeTransportGateway.cpp`). The receipt's `nextCall`
 drills exactly one level:
 
 | Situation | `nextCall` |

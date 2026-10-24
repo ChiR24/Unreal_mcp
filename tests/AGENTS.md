@@ -1,11 +1,11 @@
 # TEST KNOWLEDGE BASE
 
-Test infrastructure for the TypeScript MCP server and Unreal bridge contracts. Vitest tests run without Unreal; MCP integration suites normally require a built server plus a connected Unreal Editor.
+Test infrastructure for the capability records, the stdio proxy and the plugin's source contracts. Vitest tests run without Unreal; MCP integration suites need a built server plus an editor serving `/mcp`. No mocks or fakes: there is no mock connection, fake upstream or in-memory server.
 
 ## STRUCTURE
 ```text
 tests/
-|-- test-runner.mjs                 # stdio client, setup/cleanup, expectations, JSON reports
+|-- test-runner.mjs                 # stdio client of dist/cli.js (the proxy), setup/cleanup, expectations, JSON reports
 |-- test-runner-response-utils.mjs  # response-path assertions and filtered capture selection
 |-- integration.mjs                 # compact representative parent-tool integration suite
 |-- expectation-utils.mjs           # shared expectation parsing
@@ -21,7 +21,7 @@ tests/
 `-- reports/                        # generated JSON only; never add AGENTS or hand-authored files
 ```
 
-The mock smoke test is `scripts/smoke-test.ts`, not under this directory. It imports `dist/index.js` (so `npm run build` must run first), uses linked in-memory transports, and self-sets `MOCK_UNREAL_CONNECTION`. It asserts exactly **one public tool (`unreal`)**, that search/describe/configure work, that `perActionSchemas` is `false`, and that a hidden parent tool called directly is **rejected**. It does NOT assert a 23-tool listing.
+Record tests look records up through `unit/support/capability-index.ts` (which also fails on an alias or tool+action pair two records claim) and check examples and schemas with `unit/support/schema-validate.ts`.
 
 ## TIMEOUT LADDER
 | Scope | Default | Override |
@@ -30,10 +30,10 @@ The mock smoke test is `scripts/smoke-test.ts`, not under this directory. It imp
 | Integration per-case | **5s** | `UNREAL_MCP_TEST_CASE_TIMEOUT_MS`, or per-case `timeoutMs` (cleanup cases use 30s) |
 | Per-call server | 60s | `UNREAL_MCP_TEST_CALL_TIMEOUT_MS` |
 | Client / progress | 300s | `UNREAL_MCP_TEST_CLIENT_TIMEOUT_MS` |
-| Bridge port wait | 10s | none; `createConnectedClient` is passed 10000 |
+| `/mcp` port wait | 10s | none; `createConnectedClient` is passed 10000 |
 | Inter-case throttle | 100ms | `UNREAL_MCP_TEST_THROTTLE_MS` |
 
-Other runner env: `MCP_AUTOMATION_WS_HOST` (127.0.0.1), `MCP_AUTOMATION_WS_PORTS` (8090,8091), `UNREAL_MCP_SERVER_CMD/ARGS/CWD`, `UNREAL_MCP_FORCE_DIST`, `UNREAL_MCP_AUTO_BUILD` / `UNREAL_MCP_NO_AUTO_BUILD`, `UNREAL_MCP_ALLOW_TS_FALLBACK`, `UNREAL_MCP_TEST_LOG_RESPONSES`.
+Other runner env: `UNREAL_MCP_URL` (http://127.0.0.1:3000/mcp, also read by the proxy), `UNREAL_MCP_SERVER_CMD/ARGS/CWD`, `UNREAL_MCP_FORCE_DIST`, `UNREAL_MCP_AUTO_BUILD` / `UNREAL_MCP_NO_AUTO_BUILD`, `UNREAL_MCP_ALLOW_TS_FALLBACK`, `UNREAL_MCP_TEST_LOG_RESPONSES`.
 
 The runner AUTO-BUILDS: if `dist/cli.js` is missing, or source is newer than dist, it runs `npm run build` unless `UNREAL_MCP_NO_AUTO_BUILD=1`. It still needs a live editor.
 
@@ -47,12 +47,11 @@ A build that is attempted and FAILS now aborts the run. It used to fall through 
 | Add tool/action coverage | `mcp-tools/<category>/*.test.mjs` | Import `runToolTests` directly and keep setup before dependent cases |
 | Change expectation parsing | `expectation-utils.mjs`, `unit/test_runner.test.ts` | Lock evaluator changes with focused unit cases |
 | Change parameter audit | `parameter-audit-*.mjs` | Schema AST, suite capture, live/static evidence, reporting |
-| Change architectural contracts | `unit/plugin/`, `unit/source_structure.test.ts`, `unit/tools/handler_structure.test.ts` | These inspect source text and layout; they do not compile Unreal |
+| Change architectural contracts | `unit/plugin/`, `unit/source_structure.test.ts` | These inspect source text and layout; they do not compile Unreal |
 
 ## COMMANDS
 ```bash
 npm run test:unit          # Vitest: src/**/*.test.ts and tests/unit/**/*.test.ts
-npm run test:smoke         # mock in-memory MCP check against built dist/
 npm test                   # tests/integration.mjs; Unreal-dependent
 npm run test:params        # static + strict + optional-strict parameter audit
 ```

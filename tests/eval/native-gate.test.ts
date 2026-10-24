@@ -1,14 +1,14 @@
 // tests/eval/native-gate.test.ts
 // The retrieval gate for the native gateway door (the plugin's HTTP /mcp search),
-// measured through its TypeScript copy in native-ranker.ts. The copy is pinned to
-// the C++ source first, so a weight or word list changed on one side fails here.
+// measured through its TypeScript copy in native-ranker.ts. The copy reads its word
+// lists from the C++ source and is pinned to its weights first, so a weight changed
+// on one side fails here.
 // ponytail: only constants are pinned; a change to the C++ scoring LOGIC must be
 // copied into native-ranker.ts by hand.
 
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { RETRIEVAL_FUNCTION_WORDS } from '../../src/tools/catalog/capabilities/retrieval/constants.js';
 import { measureRetrieval } from './measure-retrieval.js';
 import {
   NATIVE_ACTION_COVERED_BONUS, NATIVE_DELETE_INTENT_BONUS, NATIVE_FULL_COVERAGE_BONUS, NATIVE_PHRASE_TOPIC_BONUS, NATIVE_READ_INTENT_BONUS,
@@ -37,13 +37,6 @@ describe('the TypeScript copy matches the native source', () => {
     expect(nativeMatch).toContain('Score += MatchRules[RuleTopic].Weight + McpSearchPhraseTopicBonus;');
     expect(headerConstant('McpSearchReadIntentBonus')).toBe(NATIVE_READ_INTENT_BONUS);
     expect(headerConstant('McpSearchDeleteIntentBonus')).toBe(NATIVE_DELETE_INTENT_BONUS);
-  });
-
-  it('drops the same function words', () => {
-    const start = nativeMatch.indexOf('FunctionWords[]');
-    const block = nativeMatch.slice(start, nativeMatch.indexOf('};', start));
-    const words = [...block.matchAll(/TEXT\("([a-z]+)"\)/gu)].map((match) => String(match[1])).sort();
-    expect(words).toEqual([...RETRIEVAL_FUNCTION_WORDS].sort());
   });
 });
 

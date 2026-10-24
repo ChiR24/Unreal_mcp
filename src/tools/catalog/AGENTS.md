@@ -16,15 +16,13 @@ capabilities/
 |   `-- <parent>/                 # per-parent record dirs
 |-- generated/                    # NEVER HAND-EDIT: canonical-registry.generated.{ts,json},
 |                                 #   capability-cost-index.generated.ts, parent-tool-definitions.generated.ts
-|-- retrieval/                    # scoring.ts, tokenize.ts, alias-fold.ts, constants.ts
-|-- semantic/                     # RUNTIME: execution options, errors, paths, handles, receipts
 `-- model.ts  parser.ts  identifiers.ts  hashing.ts  record-*.ts
 ```
 Generators: `scripts/generate-canonical-registry.ts` (+ `scripts/canonical-registry/`), `scripts/generate-gateway-manifest.ts`.
 
 ## GENERATED — NEVER HAND-EDIT (committed)
 - `capabilities/generated/*` (4 files)
-- `src/gateway/gateway-manifest.generated.{ts,json}`
+- `src/gateway/gateway-manifest.generated.json`
 - `docs/action-reference.generated.md`
 - plugin `Private/MCP/Tools/McpGeneratedParentRegistry.cpp`
 - plugin `Private/MCP/Generated/McpGeneratedCapabilityShards.h` + one `McpCapShard<Parent>.cpp` per parent (24 files; MSVC-chunked at 4,000-char literals)
@@ -35,7 +33,7 @@ Generators: `scripts/generate-canonical-registry.ts` (+ `scripts/canonical-regis
 Declare exactly what the C++ handler reads and emits. The gateway validates strictly (undeclared param → `UNDECLARED_PARAMETER`), and `npm run test:params` (strict) fails on a case param no schema declares or an optional param no case covers.
 
 ## FOLDED FAMILIES (read before adding an action)
-416 records fold 1,356 authored sources; 240 are families, and 1,554 `{tool, action}` pairs stay callable. `records/folds/<parent>.folds.ts` lists, per family, the primary action, a selector parameter (`kind`, `edit`, `setting`, ...) and the member each selector value dispatches to; `routing.dispatchBy` maps selector → bridge action, and each former name is a `legacyIds[]` entry carrying `folded: { <selector>: <value> }` pins that both gateways inject before validation. A family whose primary is one of its members keeps the selector optional with that member as default. Members must share effect, policy, availability, family and id namespace (`applyFolds` throws otherwise). A spec's `topics` come first and its members' own topics follow (search reads them all), and `routing.dispatchBy.declaredBy` names the variants that declare each parameter the members do not all share, which describe shows as `variants` on that parameter.
+416 records fold 1,356 authored sources; 240 are families, and 1,554 `{tool, action}` pairs stay callable. `records/folds/<parent>.folds.ts` lists, per family, the primary action, a selector parameter (`kind`, `edit`, `setting`, ...) and the member each selector value dispatches to; `routing.dispatchBy` maps selector → bridge action, and each former name is a `legacyIds[]` entry carrying `folded: { <selector>: <value> }` pins that the gateway injects before validation. A family whose primary is one of its members keeps the selector optional with that member as default. Members must share effect, policy, availability, family and id namespace (`applyFolds` throws otherwise). A spec's `topics` come first and its members' own topics follow (search reads them all), and `routing.dispatchBy.declaredBy` names the variants that declare each parameter the members do not all share, which describe shows as `variants` on that parameter.
 
 A family's discovery summary is the spec's `summary`; each member's own summary goes under the selector parameter's description, one line per variant (`value: summary`, a sibling action name rewritten to `selector=value`). That line is where a member's defaults, replies and refusals reach a caller, so write member summaries in full; search scores the spec summary, topics and whenToUse, never parameter descriptions.
 
@@ -48,11 +46,10 @@ To add an action to an existing family, author its record in `<parent>/` and add
 4. Add or update the integration case under `tests/mcp-tools/` so `test:params` covers every optional param.
 
 ## RETRIEVAL
-- `discovery.topics` is the search vocabulary (field weight 8 in `retrieval/constants.ts`). Declare 3-6 phrases a caller types, not copies of the action name; BM25 length normalization means extra phrases dilute each match.
+- `discovery.topics` is the search vocabulary (rule weight 12 in `McpNativeGatewaySearchMatch.cpp`). Declare 3-6 phrases a caller types, not copies of the action name.
 - When the caller's verb is not in the action name (`move actor` vs `set_transform`), declare an alias id (`aliases: ['control_actor.move_actor']`). Aliases must be unique across ids and aliases (`GATEWAY_INDEX_CONFLICT`).
-- Both doors add a full-coverage bonus (100) when every word of a multi-word request is named by a record's names, family, domain or topics; summary and whenToUse prose never count. A topic phrase that holds all of a caller's words beats a sibling family whose member names match only some of them. On the native door a topic that holds the whole request as written adds 50 more (`McpSearchPhraseTopicBonus`): "tag an asset" reaches `set_metadata`, not `query_asset` through its `find_by_tag` name.
-- `tests/unit/gateway-search-vocabulary.test.ts` pins the phrasings that must rank first; `npm run eval:check` measures the corpus.
-- Two doors rank differently: the TypeScript door is BM25 (`retrieval/scoring.ts`), the native door word rules (`McpNativeGatewaySearchMatch.cpp`). `tests/eval/native-ranker.ts` is a TypeScript copy of the native ranker; `native-gate.test.ts` pins it to the C++ constants and holds the native door to the corpus floors, and `plain-probe.test.ts` holds both doors to a floor on its plain requests. A record-text change is measured on both: raise a floor when a change gains cases, never lower one to pass. Only the query is capped at 48 tokens; record text is read whole on both doors.
+- Search adds a full-coverage bonus (100) when every word of a multi-word request is named by a record's names, family, domain or topics; summary and whenToUse prose never count. A topic phrase that holds all of a caller's words beats a sibling family whose member names match only some of them. A topic that holds the whole request as written adds 50 more (`McpSearchPhraseTopicBonus`): "tag an asset" reaches `set_metadata`, not `query_asset` through its `find_by_tag` name.
+- `tests/eval/native-ranker.ts` is a TypeScript copy of the native ranker that reads its word lists from the C++. `native-gate.test.ts` pins it to the C++ weights and holds it to the corpus floors, and `plain-probe.test.ts` holds it to a floor on its plain requests (`npm run eval:check`). Raise a floor when a change gains cases, never lower one to pass.
 
 ## ANTI-PATTERNS
 - Editing any `*.generated.*` or plugin `McpGenerated*` by hand.

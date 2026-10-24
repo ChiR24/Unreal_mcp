@@ -4,8 +4,8 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { capabilityIndex } from '../../src/server/gateway/gateway-capability-index.js';
-import { SUPPORTED_SCHEMA_KEYWORDS } from '../../src/server/gateway/gateway-schema-validate.js';
+import { capabilityIndex } from './support/capability-index.js';
+import { SUPPORTED_SCHEMA_KEYWORDS } from './support/schema-validate.js';
 import { isRecord } from '../../src/utils/validation/type-guards.js';
 
 /** The keyword paths in schema that neither validator implements; enum and default hold data, not schemas. */

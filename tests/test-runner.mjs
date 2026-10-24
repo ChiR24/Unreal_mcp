@@ -819,12 +819,10 @@ export function createToolCaller(client, { useProgressTimeouts = false } = {}) {
   };
 }
 
-function automationBridgeTarget() {
-  const host = process.env.MCP_AUTOMATION_WS_HOST ?? '127.0.0.1';
-  const ports = process.env.MCP_AUTOMATION_WS_PORTS
-    ? process.env.MCP_AUTOMATION_WS_PORTS.split(',').map((port) => parseInt(port.trim(), 10)).filter(Boolean)
-    : [8090, 8091];
-  return { host, ports };
+// The server under test is the stdio proxy, so the editor must be serving its native /mcp endpoint.
+function nativeEndpointTarget() {
+  const url = new URL(process.env.UNREAL_MCP_URL ?? 'http://127.0.0.1:3000/mcp');
+  return { host: url.hostname, ports: [Number(url.port) || 80] };
 }
 
 async function waitForAnyPort(host, ports, timeoutMs = 10000) {
@@ -841,7 +839,7 @@ async function waitForAnyPort(host, ports, timeoutMs = 10000) {
           sock.once('error', () => { if (!settled) { settled = true; sock.destroy(); reject(new Error('error')); } });
           sock.connect(port, host);
         });
-        console.log(`✅ Automation bridge appears to be listening on ${host}:${port}`);
+        console.log(`✅ Native /mcp appears to be listening on ${host}:${port}`);
         return port;
       } catch {
         // Ignore and try the next port until the overall timeout expires.
@@ -849,7 +847,7 @@ async function waitForAnyPort(host, ports, timeoutMs = 10000) {
     }
     await new Promise((resolve) => setImmediate(resolve));
   }
-  throw new Error(`Timed out waiting for automation bridge on ports: ${ports.join(',')}`);
+  throw new Error(`Timed out waiting for native /mcp on ports: ${ports.join(',')}`);
 }
 
 async function getLatestMtime(dir) {
@@ -988,12 +986,12 @@ async function resolveServerLaunch() {
 }
 
 async function createConnectedClient(clientName, waitMs) {
-  const { host, ports } = automationBridgeTarget();
-  console.log(`Waiting up to ${waitMs}ms for automation bridge on ${host}:${ports.join(',')}`);
+  const { host, ports } = nativeEndpointTarget();
+  console.log(`Waiting up to ${waitMs}ms for native /mcp on ${host}:${ports.join(',')}`);
   try {
     await waitForAnyPort(host, ports, waitMs);
   } catch (err) {
-    throw new Error(`Automation bridge did not become available before tests started: ${err.message}`);
+    throw new Error(`Native /mcp did not become available before tests started (is Enable Native MCP Server on?): ${err.message}`);
   }
 
   const launch = await resolveServerLaunch();

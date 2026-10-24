@@ -30,7 +30,7 @@ enum class EAutomationQueueRejection : uint8;
  * negotiates 2025-06-18 / 2025-03-26). Validates the MCP-Protocol-Version
  * header on every post-initialize request.
  * SSE streaming for tools/call — progress notifications + final result.
- * Runs alongside existing WebSocket transport — opt-in via bEnableNativeMCP setting.
+ * Runs alongside existing WebSocket transport — on unless the bEnableNativeMCP setting is turned off.
  */
 class FMcpNativeTransport : public FRunnable
 {

@@ -240,6 +240,3 @@ jobs:
 
       - name: Build TypeScript server
         run: npm run build
-
-      - name: Smoke test (mock in-memory MCP)
-        run: npm run test:smoke

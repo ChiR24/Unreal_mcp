@@ -7,8 +7,8 @@ import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { capabilityIndex } from '../../../src/server/gateway/gateway-capability-index.js';
-import { validateAgainstCapabilitySchema } from '../../../src/server/gateway/gateway-schema-validate.js';
+import { capabilityIndex } from '../support/capability-index.js';
+import { validateAgainstCapabilitySchema } from '../support/schema-validate.js';
 import { isRecord } from '../../../src/utils/validation/type-guards.js';
 
 const DOMAINS = join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'Domains');
@@ -3067,21 +3067,18 @@ describe('a float property reads as it was typed', () => {
 
 describe('a world edit in a paused game says nothing will move', () => {
   // A character moved into a game its title card had paused stayed in the air where it was put: it read as broken gravity.
-  it('flags the paused play world on every reply and warns on world edits, on both transports', () => {
+  it('flags the paused play world on every reply and warns on world edits', () => {
     const responses = code('..', 'Core', 'Subsystem', 'EngineWireSubsystemResponses.cpp');
     expect(responses).toMatch(/ContextWorld->IsPlayInEditor\(\) && ContextWorld->IsPaused\(\)\)\s*\{\s*EffectiveResult->SetBoolField\(TEXT\("gamePaused"\), true\);/u);
     const native = code('..', 'MCP', 'Execute', 'McpNativeReceiptEnrichment.cpp');
-    const stdio = readFileSync(join('src', 'server', 'gateway', 'gateway-execute-dispatch.ts'), 'utf8');
     const warning = 'The game is paused (a title screen, a pause menu or control_editor pause): nothing it moves or simulates advances until play resumes (control_editor resume with unpauseGame).';
     expect(native).toContain(warning);
-    expect(stdio).toContain(warning);
-    expect(stdio).toContain('(isRecord(details) && details.gamePaused === true)');
   });
 });
 
 describe('an undeclared key that is a declared parameter value names that parameter', () => {
   // get_transform with motion: true answered "allowed: ..., readMode, ..." and never said motion was a readMode value.
-  it('builds the hint natively as the TypeScript gateway does', () => {
+  it('builds the hint natively', () => {
     const hints = code('..', 'MCP', 'Execute', 'Request', 'McpNativeGatewayParameterHints.h');
     expect(hints).toContain('return FString::Printf(TEXT("did you mean %s: \'%s\'; "), *Name, *Text);');
     const keywords = code('..', 'MCP', 'Execute', 'McpNativeGatewaySchemaKeywords.cpp');

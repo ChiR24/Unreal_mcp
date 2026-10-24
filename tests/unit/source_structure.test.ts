@@ -26,10 +26,6 @@ const sourceRoots = [
     directory: resolve(process.cwd(), 'src/utils'),
     allowedTypeScriptFiles: ['index.ts'],
   },
-  {
-    directory: resolve(process.cwd(), 'src/types'),
-    allowedTypeScriptFiles: ['index.ts'],
-  },
 ] as const;
 
 const repositoryRoot = resolve(process.cwd());

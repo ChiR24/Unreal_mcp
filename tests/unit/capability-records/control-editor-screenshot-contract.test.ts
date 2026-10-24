@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { ALL_CAPABILITY_RECORDS } from '../../../src/tools/catalog/capabilities/records/aggregate.js';
-import { validateAgainstCapabilitySchema } from '../../../src/server/gateway/gateway-schema-validate.js';
+import { validateAgainstCapabilitySchema } from '../support/schema-validate.js';
 
 const inputOf = (id: string) => ALL_CAPABILITY_RECORDS.find((candidate) => String(candidate.id) === id)?.schemas.input;
 const call = (window: unknown) => ({ action: 'screenshot', mode: 'full_editor_window', window });

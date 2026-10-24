@@ -9,7 +9,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { ALL_CAPABILITY_RECORDS } from '../../../src/tools/catalog/capabilities/records/aggregate.js';
-import { validateAgainstCapabilitySchema } from '../../../src/server/gateway/gateway-schema-validate.js';
+import { validateAgainstCapabilitySchema } from '../support/schema-validate.js';
 
 const HANDLER = join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private',
   'Domains', 'Environment', 'Inspection', 'McpEnvInspectClass.cpp');

@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { capabilityIndex } from '../../src/server/gateway/gateway-capability-index.js';
+import { capabilityIndex } from './support/capability-index.js';
 
 
 // Task 21 deferred two native divergences to Task 23, which re-deferred them to

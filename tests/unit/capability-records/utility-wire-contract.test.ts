@@ -20,7 +20,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { ALL_CAPABILITY_RECORDS } from '../../../src/tools/catalog/capabilities/records/aggregate.js';
-import { validateAgainstCapabilitySchema } from '../../../src/server/gateway/gateway-schema-validate.js';
+import { validateAgainstCapabilitySchema } from '../support/schema-validate.js';
 import {
   CONTROL_CAPABILITY_ID,
   ENVELOPE_FIELDS,

@@ -74,10 +74,4 @@ describe('version source consistency', () => {
       expect(workflow.includes(source.file), `bump-version.yml does not reference ${source.file}`).toBe(true);
     }
   });
-
-  it('the plugin reports its VersionName in bridge_ack, under the name the server reads', () => {
-    const ack = readText('plugins/EngineWire/Source/EngineWire/Private/Transport/Connection/McpConnectionManagerAuthority.cpp');
-    expect(ack).toMatch(/SetStringField\(TEXT\("pluginVersion"\), Plugin->GetDescriptor\(\)\.VersionName\)/u);
-    expect(readText('src/automation/message-schema.ts')).toContain('metadata?.pluginVersion');
-  });
 });

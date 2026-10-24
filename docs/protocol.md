@@ -1,38 +1,41 @@
 # MCP Protocol & Gateway Transport Contract
 
-This document describes the protocol behavior shared by the TypeScript stdio
-transport and the native MCP transport, and how the single `unreal` gateway
-tool is exposed on each. It is the source of truth for the contract tests in
-`tests/unit/plugin/` and `tests/unit/`.
+This document describes the protocol behavior of the native MCP transport, the
+stdio proxy in front of it, and how the single `unreal` gateway tool is exposed.
+It is the source of truth for the contract tests in `tests/unit/plugin/` and
+`tests/unit/`.
 
-## Two transports, one gateway contract
+## One gateway, two ways in
 
-| Aspect | TypeScript stdio | Native MCP (`/mcp`) |
-|--------|-----------------|---------------------|
-| Path | `node dist/cli.js` → WebSocket bridge → C++ subsystem | Plugin Streamable HTTP/SSE, no Node.js |
-| Public surface | Permanent single `unreal` gateway tool (no opt-out) | Permanent single `unreal` gateway tool (no opt-out) |
-| Capability token | `bridge_hello.capabilityToken` | `X-MCP-Capability-Token` header |
+| Aspect | stdio proxy | Native MCP (`/mcp`) |
+|--------|-------------|---------------------|
+| Path | `node dist/cli.js` → HTTP → the plugin's `/mcp` | Plugin Streamable HTTP/SSE, no Node.js |
+| Public surface | Whatever `/mcp` lists: the single `unreal` gateway tool | Permanent single `unreal` gateway tool (no opt-out) |
+| Capability token | Read from `UE_PROJECT_PATH`, sent as `X-MCP-Capability-Token` | `X-MCP-Capability-Token` header |
 | Requires | Node.js 20.19.0+, `unreal-engine-mcp-server` | UE 5.0–5.8, no Node.js |
 
-Both surfaces bind loopback-first by default. The plugin's `bAllowNonLoopback`
-project setting governs **both** server-side listeners it owns — the WebSocket
-bridge listen socket and the native MCP HTTP/SSE transport; when enabled, also
-enable `bRequireCapabilityToken`. The TypeScript stdio bridge is a WebSocket
-*client* to that plugin socket, not a second server, so its analogous opt-in is
-the `MCP_AUTOMATION_ALLOW_NON_LOOPBACK` environment variable (paired with
-`MCP_AUTOMATION_HOST=0.0.0.0`) on the Node.js process. The two flags are
-independent: flipping one does not change the other surface's binding posture.
+The proxy (`src/proxy/native-proxy.ts`) answers `initialize` and `ping` itself
+and relays every other message. While the editor is down a `tools/call` answers
+`NOT_CONNECTED` (listings answer from its cache, or empty), and the first request
+after the editor is back opens a new upstream session; an HTTP 404 (the editor
+restarted and forgot the session) opens one and resends once. SSE notifications
+reach the client as they stream.
+
+The plugin binds loopback-first by default. Its `bAllowNonLoopback` project
+setting governs **both** server-side listeners it owns — the WebSocket bridge
+listen socket and the native MCP HTTP/SSE transport; when enabled, also enable
+`bRequireCapabilityToken`.
 
 ## Permanent single-tool surface
 
-The single `unreal` gateway tool is **permanent on both transports**. There is
-no opt-out: the TypeScript `MCP_GATEWAY_MODE` env var and the native
-`bEnableNativeGateway` project setting have both been removed, and there is no
+The single `unreal` gateway tool is **permanent**. There is no opt-out: the
+native `bEnableNativeGateway` project setting has been removed, and there is no
 legacy 23-tool direct listing to restore. The 23 canonical parent tools stay
 registered privately and are reachable only through `unreal.execute`.
 
-`tools/list` always returns only `{ "unreal" }`, and the listing never changes
-shape, so `notifications/tools/list_changed` is suppressed on both surfaces.
+`tools/list` always returns only `{ "unreal" }`. The proxy announces
+`notifications/tools/list_changed` once, when the editor's real listing replaces
+the placeholder or cached one it started with.
 
 A `tools/call` whose name is not `unreal` is **not routed**. It returns a
 bounded, copy-paste-executable `DIRECT_TOOL_CALL_REMOVED` receipt instead of
@@ -45,21 +48,17 @@ a full schema dump:
   "action": "<action>", "params": { ... } }`
 
 Re-running the `nextCall` through the `unreal` tool completes the migration. The
-TypeScript receipt is built in `src/server/gateway/direct-call-migration.ts`; the
-native transport emits the same `DIRECT_TOOL_CALL_REMOVED` shape from
+receipt is built in `McpNativeGatewayDirectCallMigration.cpp` and sent from
 `McpNativeTransportGateway.cpp`.
 
-Both transports also return the same `instructions` text from `initialize`
-(`UNREAL_GATEWAY_INSTRUCTIONS` in `src/tools/catalog/unreal-gateway-definition.ts`;
-the native server reads it from `Resources/MCP/server-info.json`). It states the
-search -> describe -> execute procedure a client should follow and how to
-recover from each guided error.
+`initialize` returns the `instructions` text the native server reads from
+`Resources/MCP/server-info.json` (plus the project's **Server Instructions**);
+the proxy hands it on and adds one line about itself. It states the search ->
+describe -> execute procedure a client should follow and how to recover from
+each guided error.
 
 ## Progressive gateway discovery
 
-Both transports expose the same progressive `unreal` gateway: the same input
-schema, the same discovery levels, the same reply fields and the same guided
-errors, so a client can follow either door's `nextCall` chain on the other.
 Discovery is **never a full schema dump**; `describe` drills down one level per
 call, and `perActionSchemas` is `false` only on the `{ tool }` summary:
 
@@ -77,12 +76,10 @@ call, and `perActionSchemas` is `false` only on the `{ tool }` summary:
 `domain`, `family`, `summary`, `effect`, `availability`, `policy`, `outputs`,
 `runnable` and a `describe` `nextCall`) without `inputSchema` bodies. Every
 invalid `search` or `describe` call returns a structured, **guided error**:
-closest-match `suggestions` plus an executable `nextCall` payload. The native
-gateway serves discovery from the generated capability store
+closest-match `suggestions` plus an executable `nextCall` payload. Discovery is
+served from the generated capability store
 (`Private/MCP/Gateway/McpNativeGatewayCapabilityStore.cpp` over the
-`Private/MCP/Generated/` shards), the same capability records the TS gateway
-reads. The few places the doors still differ on purpose are listed in
-[`gateway-client-guide.md`](gateway-client-guide.md#where-the-two-doors-still-differ).
+`Private/MCP/Generated/` shards, generated from the capability records).
 
 ## Protocol version negotiation
 
@@ -96,7 +93,9 @@ The native transport implements full negotiation. Supported versions, in
 Behavior:
 
 - At `initialize`, the server picks the highest version mutually supported, or
-  the latest for an unknown well-formed request.
+  the latest for an unknown well-formed request. The proxy answers `initialize`
+  itself with the same three versions and the same rule, so a client pinned to
+  a legacy version (`2024-11-05`, `2024-10-07`) is answered with `2025-11-25`.
 - `McpLatestProtocolVersion()` returns `2025-11-25`.
 - `McpDefaultProtocolVersion()` returns `2025-03-26`, used when a
   post-initialize request omits `MCP-Protocol-Version` and no session version
@@ -111,31 +110,26 @@ Behavior:
 
 ### `server/discover` (2026-07-28 discovery)
 
-Both transports answer `server/discover` without a session, handshake or
-`MCP-Protocol-Version` header (the native capability-token check still applies):
+The native transport answers `server/discover` without a session, handshake or
+`MCP-Protocol-Version` header (the capability-token check still applies):
 `resultType: "complete"`, `supportedVersions: ["2026-07-28"]` (the version a request
 names in its `_meta`; `initialize` negotiates the older ones), the same `capabilities`
 and `instructions` as `initialize`, the server identity under
 `_meta["io.modelcontextprotocol/serverInfo"]`, and the cache hints `ttlMs: 3600000`
-and `cacheScope: "public"`. On native, `capabilities.extensions` also lists
-`io.modelcontextprotocol/tasks`.
+and `cacheScope: "public"`. `capabilities.extensions` also lists
+`io.modelcontextprotocol/tasks`. Through the proxy, a `server/discover` sent while the
+editor is down fails, and a client that probes with it falls back to `initialize`.
 
 ### 2026-07-28 requests
 
-Both transports serve a request whose
+The native transport serves a request whose
 `params._meta["io.modelcontextprotocol/protocolVersion"]` is `2026-07-28` with no
 `initialize` and no session; its client capabilities ride in the same `_meta`. The
-stdio server does it through the MCP SDK v2 (`serveStdio`), which picks the era from
-the opening message, stamps `resultType` and the cache hints, refuses `ping`, and
-verifies a signed `requestState` before the handler runs; it asks for consent through
-the client exactly as the native transport does (below). Long calls keep the
-"still running" answer and `manage_tools get_task_result` there: the SDK cannot answer
-`tools/call` with a task.
-
-The native transport:
+proxy sends such a request on its own, outside its session, with the headers below
+filled from the body. The native transport:
 
 - requires `MCP-Protocol-Version`, `Mcp-Method` and (for `tools/call`,
-  `resources/read`, `prompts/get`) `Mcp-Name` headers that match the body
+  `resources/read`, `prompts/get`, `tasks/*`) `Mcp-Name` headers that match the body
   (HTTP 400, `-32020`; a `=?base64?…?=` name is decoded first), and answers an
   unsupported version with HTTP 400, `-32022` and the supported list;
 - stamps `resultType` on every result and `ttlMs`/`cacheScope` on listings and reads;
@@ -150,33 +144,18 @@ The native transport:
   `tasks/update` follow the extension.
 
 Older clients keep `initialize`, sessions and describe's `consentGrant` unchanged.
-
-### Intentional native/TS asymmetry
-
-The native `/mcp` transport is **intentionally stricter than the TypeScript
-surface**. It supports only the three modern versions listed above. The
-TypeScript stdio server negotiates through the MCP SDK's
-`SUPPORTED_PROTOCOL_VERSIONS`, which also accepts two older legacy versions:
-
-- `2024-11-05`
-- `2024-10-07`
-
-A client pinned to a legacy version therefore negotiates with the TS surface
-but not the native surface. `2026-07-28` is served per request on both (above) and is
-not an `initialize` version, so `McpSupportedProtocolVersions` still ends the
-negotiable set at `2025-11-25`.
+`2026-07-28` is not an `initialize` version, so `McpSupportedProtocolVersions` still
+ends the negotiable set at `2025-11-25`.
 
 ## Cancellation
 
-### Native MCP transport (implemented)
-
-`notifications/cancelled` is implemented on the native `/mcp` transport. It
-maps to the queued operation and, once cancelled, a late response for that
-operation is suppressed (the SSE socket closes without a result). This is
-**advisory for already-dispatched work**: a queued request is dropped before it
-runs, but an in-flight (already-executing) editor operation cannot be
-interrupted — it runs to completion, and only its late response is suppressed.
-The behavior is **session-scoped and bounded**:
+`notifications/cancelled` is implemented on the native `/mcp` transport, and the
+proxy relays it on its session. It maps to the queued operation and, once
+cancelled, a late response for that operation is suppressed (the SSE socket
+closes without a result). This is **advisory for already-dispatched work**: a
+queued request is dropped before it runs, but an in-flight (already-executing)
+editor operation cannot be interrupted — it runs to completion, and only its
+late response is suppressed. The behavior is **session-scoped and bounded**:
 
 - Cancellation correlates only to the caller's in-flight request, keyed by the
   client JSON-RPC id and the owning session id, so one session cannot cancel
@@ -186,24 +165,11 @@ The behavior is **session-scoped and bounded**:
 - A client-supplied `_meta.progressToken` is captured and echoed verbatim
   (type-preserving) in `notifications/progress`.
 
+2026-07-28 has no client notifications over HTTP (closing a call's stream is what
+cancels it), so the proxy does not relay a cancel for a modern call; that call runs
+to the end.
+
 Not covered by an automated test; verified against a live editor.
-
-### TypeScript stdio transport (implemented)
-
-Forwarding of inbound `notifications/cancelled` from the TS stdio server to the
-automation bridge **is implemented**. `server-factory.ts` registers
-`CancelledNotificationSchema` and calls `AutomationBridge.cancelMcpRequest`,
-which rejects the matching queued or inflight automation request (keyed by the
-canonicalized JSON-RPC id) and sends a targeted `cancel_request` frame to
-Unreal. Both the explicit notification and the SDK `AbortSignal` converge on the
-same idempotent primitive, and a late `automation_response` for a cancelled
-request is harmless because the tracker entry was already removed. Gateway and
-legacy tool modes both capture `extra.requestId` / `extra.signal` via an
-async-local request context so handlers can be cancelled without changing their
-signatures.
-
-Covered by `src/automation/bridge-request-dispatcher.test.ts`, the
-`natural-timeout-cancellation*.test.ts` suites and `request-context.test.ts`.
 
 ## Progress tokens
 
@@ -221,7 +187,7 @@ support is implemented. Clients must not assume task support is present.
 The neutral gateway manifest is generated from
 `src/tools/catalog/capabilities/generated/parent-tool-definitions.generated.ts` into:
 
-- `src/gateway/gateway-manifest.generated.json` (imported by `src/gateway/gateway-manifest.ts`, compiled into `dist/`)
+- `src/gateway/gateway-manifest.generated.json` (read by the parameter audit, `tests/parameter-audit-context.mjs`)
 
 Run:
 
@@ -243,7 +209,7 @@ asserts these sources agree:
 - `server.json` (`version` and the npm package `version`)
 - `plugins/EngineWire/EngineWire.uplugin` (`VersionName`)
 
-The TypeScript server reads its version from `package.json` at runtime and the
-native server from the `.uplugin` `VersionName`, so neither carries a copy.
+The proxy reports its version from `package.json` at runtime and the native
+server from the `.uplugin` `VersionName`, so neither carries a copy.
 
-> **Removed:** the experimental `UnrealAgent` in-editor OpenCode ACP panel has been removed. External consumers that previously drove OpenCode over ACP through the editor panel must now target the native `/mcp` `unreal` gateway endpoint (or the TypeScript stdio `unreal` gateway tool) instead.
+> **Removed:** the experimental `UnrealAgent` in-editor OpenCode ACP panel has been removed. External consumers that previously drove OpenCode over ACP through the editor panel must now target the native `/mcp` `unreal` gateway endpoint (or the stdio proxy in front of it) instead.

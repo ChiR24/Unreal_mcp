@@ -342,22 +342,10 @@ describe('applyFolds position math and throw paths', () => {
   });
 });
 
-describe('variant labels stay out of search', () => {
-  it('indexes the guidance text without the "selector=value: " label', async () => {
-    const { capabilityIndex } = await import('../../../src/server/gateway/gateway-capability-index.js');
-    const document = capabilityIndex().search.documents.find((entry) => String(entry.record.id) === 'manage_level.get_summary');
-    expect(document?.record.discovery.whenToUse.some((line) => line.startsWith('info=summary: '))).toBe(true);
-    const tokens = document?.fields.find((field) => field.field === 'when_to_use')?.tokens ?? [];
-    expect(tokens.length).toBeGreaterThan(0);
-    expect(tokens).not.toContain('info');
-    expect(tokens).not.toContain('summary');
-  });
-});
-
 // A cap of 6 lines per list cut a 13-variant family to the guidance of its first 6 variants.
 describe('a folded family keeps every variant\'s guidance', () => {
   it('struct.edit_struct lists a line for more than six of its variants', async () => {
-    const { capabilityIndex } = await import('../../../src/server/gateway/gateway-capability-index.js');
+    const { capabilityIndex } = await import('../support/capability-index.js');
     const record = capabilityIndex().records.find((entry) => String(entry.id) === 'struct.edit_struct');
     expect(record?.discovery.whenToUse.length).toBeGreaterThan(6);
   });

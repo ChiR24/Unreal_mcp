@@ -1,23 +1,25 @@
 /**
- * `unreal-engine-mcp-server proxy`: a stdio MCP server in front of the plugin's native HTTP endpoint that
- * survives editor restarts. The client keeps one session for its whole life: while the editor is down every
- * call answers NOT_CONNECTED, and the first call after it is back opens a new upstream session by itself
- * (a client talking to `/mcp` directly loses its session with the editor and needs a manual reconnect).
+ * `unreal-engine-mcp-server`: a stdio MCP server in front of the plugin's native HTTP endpoint that survives
+ * editor restarts. The client keeps one session for its whole life: while the editor is down every call answers
+ * NOT_CONNECTED, and the first call after it is back opens a new upstream session by itself (a client talking to
+ * `/mcp` directly loses its session with the editor and needs a manual reconnect). A 2026-07-28 request carries
+ * its own version and needs no session, so it goes upstream on its own with that version in its headers.
  *
  * Env: UNREAL_MCP_URL (default http://127.0.0.1:3000/mcp); UNREAL_MCP_PROXY_CACHE (the editor's last tool
  * list, instructions and capabilities, so a session that starts before the editor still gets the real tool);
- * the capability token as the stdio server resolves it (MCP_AUTOMATION_CAPABILITY_TOKEN, else the plugin's
- * token file under UE_PROJECT_PATH), sent as X-MCP-Capability-Token.
+ * the capability token (MCP_AUTOMATION_CAPABILITY_TOKEN, else the plugin's token file under UE_PROJECT_PATH),
+ * sent as X-MCP-Capability-Token.
  */
 import { request } from 'node:http';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { createInterface } from 'node:readline';
 import type { Readable, Writable } from 'node:stream';
 
-import { CapabilityTokenProvider } from '../automation/capability-token-provider.js';
 import { PACKAGE } from '../constants.js';
+import { projectRootFromEnv } from '../utils/config/ini-reader.js';
 import { Logger } from '../utils/logging/logger.js';
 
 type Message = Record<string, unknown> & { id?: unknown; method?: string; params?: Record<string, unknown> };
@@ -27,6 +29,25 @@ interface Cache { tools?: unknown[]; instructions?: string; capabilities?: Recor
 
 /** The versions the native endpoint negotiates; a client asking for another gets the newest. */
 const NATIVE_PROTOCOLS = ['2025-11-25', '2025-06-18', '2025-03-26'];
+const MODERN_VERSION_KEY = 'io.modelcontextprotocol/protocolVersion';
+
+/**
+ * The headers native wants on a 2026-07-28 request (McpModern::HeaderMismatch): the body's version and method, and
+ * the name it acts on, base64-wrapped when that is not plain ASCII. Undefined for a request of an earlier version.
+ */
+function modernHeaders(message: Message): Record<string, string> | undefined {
+  const version = (message.params?._meta as Record<string, unknown> | undefined)?.[MODERN_VERSION_KEY];
+  if (typeof version !== 'string') return undefined;
+  const headers: Record<string, string> = { 'MCP-Protocol-Version': version, 'Mcp-Method': message.method ?? '' };
+  const field = message.method === 'resources/read' ? 'uri'
+    : message.method === 'tools/call' || message.method === 'prompts/get' ? 'name'
+      : message.method?.startsWith('tasks/') ? 'taskId' : undefined;
+  const name = field ? message.params?.[field] : undefined;
+  if (typeof name === 'string' && name) {
+    headers['Mcp-Name'] = /^[!-~](?:[ -~]*[!-~])?$/u.test(name) ? name : `=?base64?${Buffer.from(name, 'utf8').toString('base64')}?=`;
+  }
+  return headers;
+}
 const PLACEHOLDER_TOOL = {
   name: 'unreal',
   description: 'Unreal Engine editor: operation search, describe, execute or configure. The editor has not been '
@@ -39,8 +60,27 @@ export interface NativeProxyOptions {
   cacheFile?: string;
   input?: Readable;
   output?: Writable;
-  /** Resolves the capability token for each upstream request; defaults to the stdio server's provider. */
+  /** Resolves the capability token for each upstream request; defaults to readCapabilityToken. */
   token?: () => Promise<string | undefined>;
+}
+
+/**
+ * The capability token: MCP_AUTOMATION_CAPABILITY_TOKEN, else the plugin's token file
+ * <UE_PROJECT_PATH>/Saved/MCP/capability-token (64 hex). Read on every request, so a token the editor writes after
+ * this server starts is picked up. Anything else is undefined, the request goes without one, and the plugin refuses
+ * it. The value is never logged.
+ */
+export async function readCapabilityToken(): Promise<string | undefined> {
+  const fromEnv = process.env.MCP_AUTOMATION_CAPABILITY_TOKEN;
+  if (fromEnv) return fromEnv;
+  const projectRoot = projectRootFromEnv();
+  if (!projectRoot) return undefined;
+  try {
+    const token = (await readFile(join(projectRoot, 'Saved', 'MCP', 'capability-token'), 'utf8')).trim().toLowerCase();
+    return /^[0-9a-f]{64}$/u.test(token) ? token : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 export function startNativeProxy(options: NativeProxyOptions = {}): { close: () => void } {
@@ -52,10 +92,10 @@ export function startNativeProxy(options: NativeProxyOptions = {}): { close: () 
       `proxy-${new URL(upstream).port || '80'}.json`);
   const output = options.output ?? process.stdout;
   const log = new Logger('NativeProxy');
-  const tokenProvider = new CapabilityTokenProvider(undefined, log);
-  const token = options.token ?? (() => tokenProvider.resolve());
+  const token = options.token ?? readCapabilityToken;
   const notConnected = `NOT_CONNECTED: the Unreal Editor is not running (nothing answers at ${upstream}). `
-    + 'Start the editor and call again; this server stays connected, no reconnect is needed.';
+    + 'Start the editor and call again; this server stays connected, no reconnect is needed. If the editor is '
+    + 'running, turn on Project Settings > EngineWire > Enable Native MCP Server and restart it.';
   const proxyNote = 'This server is reached through the unreal-engine-mcp-server proxy: while the editor is not '
     + 'running every call answers NOT_CONNECTED; once the editor is up the next call reaches it, with no reconnect.';
 
@@ -78,13 +118,15 @@ export function startNativeProxy(options: NativeProxyOptions = {}): { close: () 
 
   // One POST per message with Connection: close (pooled sockets trip a libuv assertion on Windows at exit).
   // An SSE reply is parsed as it streams, so progress notifications reach the client while the call runs.
-  const post = async (body: Message, current?: Session, onNotification?: (m: Message) => void): Promise<Upstream> => {
+  const post = async (body: Message, current?: Session, onNotification?: (m: Message) => void,
+    modern?: Record<string, string>): Promise<Upstream> => {
     const payload = JSON.stringify(body);
     const headers: Record<string, string | number> = {
       'Content-Type': 'application/json',
       Accept: 'application/json, text/event-stream',
       Connection: 'close',
-      'Content-Length': Buffer.byteLength(payload)
+      'Content-Length': Buffer.byteLength(payload),
+      ...modern
     };
     const capabilityToken = await token();
     if (capabilityToken) headers['X-MCP-Capability-Token'] = capabilityToken;
@@ -170,6 +212,8 @@ export function startNativeProxy(options: NativeProxyOptions = {}): { close: () 
   };
 
   const forward = async (message: Message): Promise<Upstream> => {
+    const modern = modernHeaders(message);
+    if (modern) return post(message, undefined, write, modern);
     for (let attempt = 1; ; attempt += 1) {
       const current = await openSession();
       let res: Upstream;
@@ -200,7 +244,9 @@ export function startNativeProxy(options: NativeProxyOptions = {}): { close: () 
       'logging/setLevel': {}
     };
     const result = results[message.method ?? ''];
-    return result ? { jsonrpc: '2.0', id: message.id, result } : { jsonrpc: '2.0', id: message.id, error: { code: -32000, message: why } };
+    if (!result) return { jsonrpc: '2.0', id: message.id, error: { code: -32000, message: why } };
+    // A 2026-07-28 result must say it is complete. A server/discover that fails sends the client to initialize.
+    return { jsonrpc: '2.0', id: message.id, result: modernHeaders(message) ? { resultType: 'complete', ...result } : result };
   };
 
   const handle = async (message: Message): Promise<void> => {
@@ -210,6 +256,9 @@ export function startNativeProxy(options: NativeProxyOptions = {}): { close: () 
       if (method === 'notifications/initialized') {
         clientReady = true;
         openSession().catch(() => { /* warm-up only */ });
+      } else if (modernHeaders(message)) {
+        // ponytail: 2026-07-28 has no client notifications over HTTP (closing a call's stream cancels it), so a
+        // cancelled modern call runs to the end; destroy its upstream request here if that ever matters.
       } else if (session) {
         post(message, session).catch(() => { /* best effort, e.g. notifications/cancelled */ });
       }

@@ -227,7 +227,7 @@ CI runs, in order: `eslint --max-warnings=0`, `type-check`, `test:unit`,
 `eval:check`. A separate `dependency-audit`
 job runs `npm audit --omit=dev --audit-level=moderate` (blocking) and
 `npm audit --audit-level=moderate` (`continue-on-error`, informational); a
-second matrix job adds `build` + `test:smoke`.
+second matrix job adds `build`.
 
 The blocking audit is runtime-only, so a green run proves the production
 dependency tree is advisory-free at moderate and above — not the whole tree.

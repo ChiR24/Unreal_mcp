@@ -7,10 +7,8 @@ import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { capabilityIndex } from '../../../src/server/gateway/gateway-capability-index.js';
-import { unreadVariantParams } from '../../../src/server/gateway/gateway-dispatch-by.js';
-import { validateAgainstCapabilitySchema } from '../../../src/server/gateway/gateway-schema-validate.js';
-import { extractChanges, extractHandles } from '../../../src/tools/catalog/capabilities/semantic/receipt-outcome.js';
+import { capabilityIndex } from '../support/capability-index.js';
+import { validateAgainstCapabilitySchema } from '../support/schema-validate.js';
 import { isRecord } from '../../../src/utils/validation/type-guards.js';
 
 import { sliceBetween } from './plugin-contract-fixtures.js';
@@ -496,11 +494,7 @@ describe('the many forms of set_visibility, set_actor_collision, add_tag and set
     expect(source.match(/TEXT\("affectedActors"\)/gu), 'the single form names actorName instead').toHaveLength(1);
   });
 
-  it('a reply shaped like the many form lists the changed actors, and only them, as the receipt\'s changes on both doors', () => {
-    expect(extractChanges({ success: true, visible: false, updatedActors: 2, missing: ['Gone'], affectedActors: ['Sign_1', 'Sign_2'], undo: { undoable: true } }))
-      .toEqual(['Sign_1', 'Sign_2']);
-    expect(extractChanges({ success: true, tag: 'Pickup', taggedCount: 2, missing: ['Gone'], affectedActors: ['Sign_1', 'Sign_2'], undo: { undoable: true } }))
-      .toEqual(['Sign_1', 'Sign_2']);
+  it('the receipt reads the changed actors from affectedActors', () => {
     expect(nativeOutcome).toMatch(/CHANGE_ARRAYS\[\] = \{[^}]*TEXT\("affectedActors"\)/u);
   });
 
@@ -559,22 +553,6 @@ describe('the batch forms of spawn_batch, set_transform and set_blueprint_variab
     expect(many).toContain('Data->SetArrayField(TEXT("affectedActors"), McpHandlerUtils::ToJsonStringArray(Affected));');
     expect(single).toMatch(/if \(Applied\.Num\(\) > 0\) \{\s*Data->SetArrayField\(TEXT\("updated"\), McpHandlerUtils::ToJsonStringArray\(Applied\)\);\s*Data->SetStringField\(TEXT\("actorName"\), McpActorRef\(Found\)\);\s*\}/u);
     expect(single.match(/TEXT\("actorName"\), McpActorRef/gu), 'the actor is named only when a variable was set').toHaveLength(1);
-  });
-
-  it('replies shaped like the three batches give the receipt a change and an actor handle per actor, and nothing from the per-item results', () => {
-    const spawned = { success: true, results: [{ index: 0, success: true, name: 'Block_1', path: '/Temp/Untitled_1.Untitled_1:PersistentLevel.Block_1' }], spawned: 2, failed: 0, affectedActors: ['Block_1', 'Block_2'], unnamedActors: ['StaticMeshActor_3'] };
-    const moved = { success: true, results: [{ actorName: 'Sign_1', success: true, location: [0, 0, 1] }], movedActors: 2, affectedActors: ['Sign_1', 'Sign_2'] };
-    const configured = { success: true, results: [{ actorName: 'Sign_1', success: true, updated: ['Headline'] }], updatedActors: 2, affectedActors: ['Sign_1', 'Sign_2'] };
-    const single = { success: true, data: { updated: ['Headline'], actorName: 'Sign_1' }, warnings: [], error: null };
-
-    expect(extractChanges(spawned)).toEqual(['Block_1', 'Block_2']);
-    expect(extractHandles(spawned)).toEqual([{ kind: 'actor', ref: 'Block_1' }, { kind: 'actor', ref: 'Block_2' }]);
-    for (const reply of [moved, configured]) {
-      expect(extractChanges(reply)).toEqual(['Sign_1', 'Sign_2']);
-      expect(extractHandles(reply)).toEqual([{ kind: 'actor', ref: 'Sign_1' }, { kind: 'actor', ref: 'Sign_2' }]);
-    }
-    expect(extractChanges(single)).toEqual(['Sign_1']);
-    expect(extractHandles(single)).toEqual([{ kind: 'actor', ref: 'Sign_1' }]);
   });
 
   it('the records say where the changed actors come back', () => {
@@ -673,8 +651,6 @@ describe('control_actor find asks which actors use a static mesh or a material',
     const folded = Object.fromEntries((record()?.legacyIds ?? []).map((entry) => [entry.action, entry.folded]));
     expect(folded.find_by_mesh).toEqual({ findBy: 'mesh' });
     expect(folded.find_by_material).toEqual({ findBy: 'material' });
-    expect(unreadVariantParams(record(), ['limit'], { findBy: 'class' })).toEqual([]);
-    expect(unreadVariantParams(record(), ['limit', 'meshPath'], { findBy: 'mesh' })).toEqual([]);
   });
 
   it('the schema takes a path and a limit for each, and refuses an empty limit or a key nothing reads', () => {

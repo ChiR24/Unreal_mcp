@@ -6,7 +6,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { validateAgainstCapabilitySchema } from '../../../src/server/gateway/gateway-schema-validate.js';
+import { validateAgainstCapabilitySchema } from '../support/schema-validate.js';
 
 const AT_LEAST_ONE_SCHEMA = {
   $schema: 'https://json-schema.org/draft/2020-12/schema',

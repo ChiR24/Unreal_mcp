@@ -1,15 +1,31 @@
 // tests/eval/native-ranker.ts
 // A TypeScript copy of the native gateway's search ranker
 // (Private/MCP/Gateway/McpNativeGatewaySearchMatch.cpp and McpNativeGatewaySearch.cpp),
-// so the eval gate measures the door an HTTP client uses as well as the stdio one.
-// native-gate.test.ts pins its weights and word lists to the C++ source: a constant
-// changed on one side only fails there.
+// so the eval gate measures search without an editor. Its word lists are read from
+// the C++ source; native-gate.test.ts pins its weights to it, so a constant changed
+// on one side only fails there.
 
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import type { CapabilityRecord } from '../../src/tools/catalog/capabilities/model.js';
-import { RETRIEVAL_DELETE_INTENT_WORDS, RETRIEVAL_FUNCTION_WORDS, RETRIEVAL_READ_INTENT_WORDS } from '../../src/tools/catalog/capabilities/retrieval/constants.js';
 import { compareAscii } from '../../src/utils/serialization/ordering.js';
 import { finalRegistryRecords } from './fixtures.js';
 import type { GatewayRanker } from './measure-retrieval.js';
+
+const NATIVE_MATCH_SOURCE = readFileSync(
+  join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'MCP', 'Gateway', 'McpNativeGatewaySearchMatch.cpp'), 'utf8');
+
+/** One `const TCHAR* const <name>[] = { TEXT("..."), ... };` array of the C++ ranker. */
+function nativeWordList(name: string): ReadonlySet<string> {
+  const start = NATIVE_MATCH_SOURCE.indexOf(`${name}[]`);
+  if (start < 0) throw new Error(`${name}[] is not in McpNativeGatewaySearchMatch.cpp`);
+  const block = NATIVE_MATCH_SOURCE.slice(start, NATIVE_MATCH_SOURCE.indexOf('};', start));
+  return new Set([...block.matchAll(/TEXT\("([a-z]+)"\)/gu)].map((match) => String(match[1])));
+}
+
+const RETRIEVAL_FUNCTION_WORDS = nativeWordList('FunctionWords');
+const RETRIEVAL_READ_INTENT_WORDS = nativeWordList('ReadIntentWords');
+const RETRIEVAL_DELETE_INTENT_WORDS = nativeWordList('DeleteIntentWords');
 
 export const NATIVE_RULE_WEIGHTS = {
   'id-exact': 100, id: 50, family: 20, domain: 15, topic: 12, summary: 8, parent: 5,

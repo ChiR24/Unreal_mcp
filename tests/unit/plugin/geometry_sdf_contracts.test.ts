@@ -9,7 +9,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { capabilityIndex } from '../../../src/server/gateway/gateway-capability-index.js';
+import { capabilityIndex } from '../support/capability-index.js';
 
 const geometry = resolve(process.cwd(), 'plugins/EngineWire/Source/EngineWire/Private/Domains/Geometry');
 /** Comment bodies explain the rules, so rule checks ignore them. */

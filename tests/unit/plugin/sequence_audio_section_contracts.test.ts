@@ -7,7 +7,7 @@ import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { capabilityIndex } from '../../../src/server/gateway/gateway-capability-index.js';
+import { capabilityIndex } from '../support/capability-index.js';
 import { isRecord } from '../../../src/utils/validation/type-guards.js';
 
 const PRIVATE = join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private');

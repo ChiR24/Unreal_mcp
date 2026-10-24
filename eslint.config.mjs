@@ -94,13 +94,9 @@ export default [
     },
   },
   {
-    // The two files that are ALLOWED to touch console, because they are what
-    // keeps everyone else off it:
-    //   logger.ts        the single sanctioned sink; everything routes here.
-    //   server-factory   routeStdoutLogsToStderr(), which reassigns the
-    //                    console methods so a stray log cannot corrupt the
-    //                    JSON-RPC stdout stream.
-    files: ['src/utils/logging/logger.ts', 'src/server/server-factory.ts'],
+    // logger.ts is the one file ALLOWED to touch console: the single sanctioned
+    // sink, writing to stderr so a log cannot corrupt the JSON-RPC stdout stream.
+    files: ['src/utils/logging/logger.ts'],
     rules: {
       'no-console': 'off',
     },

@@ -3,9 +3,11 @@
 // The population is the final registry the gateway actually serves.
 
 import type { CapabilityRecord } from '../../src/tools/catalog/capabilities/model.js';
-import { capabilityIndex, resolveLegacyPair } from '../../src/server/gateway/gateway-capability-index.js';
-import { canonicalCapabilityId } from '../../src/tools/catalog/capabilities/retrieval/alias-fold.js';
+import { capabilityIndex, resolveLegacyPair } from '../unit/support/capability-index.js';
+import { type AliasFold, canonicalCapabilityId, deriveAliasFold } from './alias-fold.js';
 import { type CapabilityRef, corpus } from './corpus.data.js';
+
+let aliasFold: AliasFold | undefined;
 
 /** The gateway's own default `search` page. "Top-K" is that page. */
 export const GATEWAY_DEFAULT_SEARCH_LIMIT = 12 as const;
@@ -22,7 +24,8 @@ export function finalRegistryRecords(): readonly CapabilityRecord[] {
 function canonicalIdFor(reference: CapabilityRef): string | undefined {
   const resolved = resolveLegacyPair(reference.tool, reference.action);
   if (resolved.kind === 'unknown') return undefined;
-  return canonicalCapabilityId(capabilityIndex().search.aliasFold, String(resolved.record.id));
+  aliasFold ??= deriveAliasFold(capabilityIndex().records);
+  return canonicalCapabilityId(aliasFold, String(resolved.record.id));
 }
 
 export type RetrievalCase = {

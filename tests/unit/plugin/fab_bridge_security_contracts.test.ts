@@ -17,7 +17,6 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { CommandValidator } from '../../../src/utils/commands/command-validator.js';
 import { describe, expect, it } from 'vitest';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -240,11 +239,6 @@ describe('Fab bridge: mutating console commands are blocked by the console-comma
     );
     expect(nativePolicy).toContain('TEXT("mcp.fab.addtoproject")');
     expect(nativePolicy).toContain('TEXT("mcp.fab.describecatalogshape")');
-  });
-
-  it('CommandValidator rejects Mcp.Fab.AddToProject at runtime', () => {
-    expect(() => CommandValidator.validate('Mcp.Fab.AddToProject abc123')).toThrow(/blocked/iu);
-    expect(() => CommandValidator.validate('Mcp.Fab.DescribeCatalogShape')).toThrow(/blocked/iu);
   });
 });
 describe('Fab bridge: one callback owner', () => {

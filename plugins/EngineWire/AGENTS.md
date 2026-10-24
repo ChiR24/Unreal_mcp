@@ -1,6 +1,6 @@
 # MCP AUTOMATION BRIDGE PLUGIN
 
-Editor-only UE 5.0-5.8 plugin. It owns the WebSocket automation bridge, the optional native `/mcp` HTTP/SSE server, and the delay-loaded Fab adapter module. It is the sole authority on security: it re-checks everything the TypeScript server checks. Version: `EngineWire.uplugin` (`0.6.0-beta-b`), rewritten by the `bump-version.yml` workflow with the other version files.
+Editor-only UE 5.0-5.8 plugin. It owns the native `/mcp` HTTP/SSE server (the only gateway; the npm package is a stdio proxy in front of it), the WebSocket automation bridge, and the delay-loaded Fab adapter module. It is the sole authority on security. Version: `EngineWire.uplugin` (`0.6.0-beta-b`), rewritten by the `bump-version.yml` workflow with the other version files.
 
 ## SCOPE MAP
 | Area | Owner | Notes |
@@ -28,9 +28,9 @@ Editor-only UE 5.0-5.8 plugin. It owns the WebSocket automation bridge, the opti
 - WebSocket clients must complete `bridge_hello` before automation requests.
 
 ## VERSION AND SECURITY
-- Defaults: `127.0.0.1`, WebSocket ports `8090,8091`, native `/mcp` off (port `3000` when enabled), non-loopback disabled.
+- Defaults: `127.0.0.1`, native `/mcp` on at port `3000`, WebSocket ports `8090,8091`, non-loopback disabled.
 - LAN binding requires explicit `bAllowNonLoopback`; never add an implicit `0.0.0.0` fallback. Both listeners refuse non-loopback unless `bRequireCapabilityToken` is also on.
-- `bRequireCapabilityToken` is on by default: the plugin generates a per-install token at `<ProjectRoot>/Saved/MCP/capability-token` (64 lowercase hex chars); the TS bridge reads it and never writes it. A token set in Project Settings wins. Both transports compare with `McpConstantTimeTokenEquals`.
+- `bRequireCapabilityToken` is on by default: the plugin generates a per-install token at `<ProjectRoot>/Saved/MCP/capability-token` (64 lowercase hex chars); the stdio proxy reads it and never writes it. A token set in Project Settings wins. Both transports compare with `McpConstantTimeTokenEquals`.
 - Cancellation is advisory for in-flight work: queued requests are dropped, an executing editor operation runs to completion.
 
 ## PACKAGING

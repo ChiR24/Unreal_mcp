@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <summary><b>✨ Added</b></summary>
 
 - **Blueprint runtime errors name their node** (`nodeId`, graph, hits) in frame steps and motion reads, and an Accessed None its `cause`; **`lint_blueprint`** finds such mistakes before Play.
-- **MCP 2026-07-28 on both transports**: sessionless requests and consent through the client (native adds tasks); older clients are unchanged.
+- **MCP 2026-07-28**: sessionless requests, consent through the client and tasks; older clients are unchanged.
 - **`get_editor_state` `focus`**: open editors, the front graph and its selected nodes, selected actors, recent errors.
 - **`describe_view` `points`, `labels` and `coveredBy`**: what is under a spot, numbered actors, what covers one.
 - **Large results come in pages** (`page.nextCall`) instead of `RESULT_TOO_LARGE`.
@@ -29,7 +29,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **A call failing three times unchanged is refused** (`REPEATED_FAILURE`).
 - **Batches check every step first**; `build_graph`, `build_material_graph` and `add_widget_tree` take `dryRun`.
 - **`run_map_check`** reads Map Check as rows; **`fix_placement`** moves sunk, floating and intersecting actors.
-- **`inspect changes_since`** lists what changed since a cursor and who changed it; replies note the user's edits, and `ue://changes` can be subscribed to on both doors.
+- **`inspect changes_since`** lists what changed since a cursor and who changed it; replies note the user's edits, and `ue://changes` can be subscribed to on `/mcp`.
+
+</details>
+
+<details>
+<summary><b>🔄 Changed</b></summary>
+
+- **The npm package is a stdio proxy** in front of the plugin's `/mcp`, with no runtime dependencies: one `unreal` tool, `NOT_CONNECTED` while the editor is down, no reconnect after a restart, 2026-07-28 requests passed through. `UNREAL_MCP_URL` picks the endpoint; `UE_PROJECT_PATH` still finds the token.
+- **Enable Native MCP Server is on by default.**
+
+</details>
+
+<details>
+<summary><b>🗑️ Removed</b></summary>
+
+- **The TypeScript gateway and WebSocket client**, with their resources, telemetry, mock mode and `test:smoke`; `.env` is not read.
+- **Over stdio**: search and describe while the editor is down, the `ue://assets`, `actors`, `editor` and `selection` resources, TLS to a remote editor, and the `2024-11-05` and `2024-10-07` protocol versions.
 
 </details>
 
@@ -56,7 +72,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`manage_effect cleanup` needs destructive consent** and `filter`, is one undo step and refuses during Play; clearing debug shapes moved to `debug_shape`.
 - **Sublevels and paths**: object paths work in `open_level`, `load` and `add_sublevel`; a relative `.t3d` export lands in the project.
 - **Git**: any commit message is safe (a quote could inject options); checkout and submit list skipped paths.
-- **Both doors answer discovery alike**: `/mcp` search rows, `describe` by domain and family, `cursor` and param `suggestions` match stdio, whose rows drop revision hashes.
+- **`/mcp` discovery**: search rows, `describe` by domain and family, `cursor` and param `suggestions`.
 - **A disabled tool's `nextCall` turns it back on** (`configure` `enable_tools`); the `configure` call it named was refused on both transports.
 
 </details>
@@ -64,7 +80,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details>
 <summary><b>🔄 Dependencies</b></summary>
 
-- The stdio server moves from `@modelcontextprotocol/sdk` 1.32.1 to the MCP SDK v2 (`@modelcontextprotocol/server` 2.3.1).
+- The package has no runtime dependencies (`@modelcontextprotocol/sdk`, `ws` and `zod` are gone; `zod` stays for the record build).
 
 </details>
 

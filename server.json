@@ -16,68 +16,22 @@
       "environmentVariables": [
         {
           "name": "UE_PROJECT_PATH",
-          "description": "Your Unreal project folder or its .uproject file. The server reads the capability token from <project>/Saved/MCP/capability-token and the WebSocket port from the project settings.",
+          "description": "Your Unreal project folder or its .uproject file. The server reads the capability token from <project>/Saved/MCP/capability-token.",
           "isRequired": true,
           "format": "filepath",
           "placeholder": "C:/Users/YourName/Documents/Unreal Projects/MyGame"
         },
         {
           "name": "MCP_AUTOMATION_CAPABILITY_TOKEN",
-          "description": "Capability token to present to the editor. Only needed when the server cannot read the project folder, for example over LAN.",
+          "description": "Capability token to present to the editor. Only needed when the server cannot read the project folder.",
           "isRequired": false,
           "isSecret": true
         },
         {
-          "name": "MCP_AUTOMATION_PORT",
-          "description": "Editor WebSocket port. Default: the first Listen Ports entry in the project settings, else 8090.",
+          "name": "UNREAL_MCP_URL",
+          "description": "The editor's native MCP endpoint (Project Settings > EngineWire > Native MCP Port).",
           "isRequired": false,
-          "format": "number",
-          "placeholder": "8090"
-        },
-        {
-          "name": "MCP_AUTOMATION_HOST",
-          "description": "Editor host to connect to. A LAN address also needs MCP_AUTOMATION_ALLOW_NON_LOOPBACK=true and Allow Non Loopback in the plugin settings.",
-          "isRequired": false,
-          "default": "127.0.0.1"
-        },
-        {
-          "name": "MCP_AUTOMATION_ALLOW_NON_LOOPBACK",
-          "description": "SECURITY: allow a non-loopback MCP_AUTOMATION_HOST. Enable only on a trusted network.",
-          "isRequired": false,
-          "format": "boolean",
-          "default": "false"
-        },
-        {
-          "name": "MCP_AUTOMATION_USE_TLS",
-          "description": "Connect with wss:// instead of ws://.",
-          "isRequired": false,
-          "format": "boolean",
-          "default": "false"
-        },
-        {
-          "name": "MCP_ADDITIONAL_PATH_PREFIXES",
-          "description": "Extra content roots to allow besides /Game, /Engine, /Script, /Temp and /Niagara, comma-separated. Example: /MyPluginContent/",
-          "isRequired": false
-        },
-        {
-          "name": "MCP_CONNECTION_TIMEOUT_MS",
-          "description": "How long to wait for the editor connection, in milliseconds.",
-          "isRequired": false,
-          "format": "number",
-          "default": "5000"
-        },
-        {
-          "name": "MCP_REQUEST_TIMEOUT_MS",
-          "description": "Overrides every per-capability request timeout, in milliseconds. Leave unset: each capability gets a budget that fits its cost.",
-          "isRequired": false,
-          "format": "number"
-        },
-        {
-          "name": "MCP_AUTOMATION_MAX_MESSAGES_PER_MINUTE",
-          "description": "Inbound messages per minute from the editor before the server disconnects.",
-          "isRequired": false,
-          "format": "number",
-          "default": "600"
+          "default": "http://127.0.0.1:3000/mcp"
         },
         {
           "name": "LOG_LEVEL",

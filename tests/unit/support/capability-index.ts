@@ -1,5 +1,6 @@
-// src/server/gateway/gateway-capability-index.ts
-// Lookup structures over the generated canonical registry.
+// tests/unit/support/capability-index.ts
+// Lookup structures over the generated canonical registry, for the unit tests. Building it fails on an alias or a
+// tool+action pair two records claim (GATEWAY_INDEX_CONFLICT), as the native index must never see one.
 //
 // The registry is the sole contract source for gateway discovery: the parent
 // manifest is a legacy dispatch view and its per-tool union schema is NOT a
@@ -13,13 +14,9 @@
 import {
   CANONICAL_CAPABILITY_RECORDS,
   CATALOG_REVISION
-} from '../../tools/catalog/capabilities/generated/canonical-registry.generated.js';
-import type { CapabilityRecord } from '../../tools/catalog/capabilities/model.js';
-import {
-  createCapabilitySearchIndex,
-  type CapabilitySearchIndex
-} from '../../tools/catalog/capabilities/retrieval/scoring.js';
-import { compareAscii } from '../../utils/serialization/ordering.js';
+} from '../../../src/tools/catalog/capabilities/generated/canonical-registry.generated.js';
+import type { CapabilityRecord } from '../../../src/tools/catalog/capabilities/model.js';
+import { compareAscii } from '../../../src/utils/serialization/ordering.js';
 
 export type CapabilityIndex = {
   readonly records: readonly CapabilityRecord[];
@@ -32,7 +29,6 @@ export type CapabilityIndex = {
   readonly parentToolByNamespace: ReadonlyMap<string, string>;
   readonly domains: readonly string[];
   readonly familiesByDomain: ReadonlyMap<string, readonly string[]>;
-  readonly search: CapabilitySearchIndex;
 };
 
 // A capability ID is `<namespace>.<action>`, and for 343 of them that namespace
@@ -184,8 +180,7 @@ export function buildCapabilityIndex(source: readonly CapabilityRecord[]): Capab
     actionsByParentTool,
     parentToolByNamespace: deriveNamespaceAliases(records),
     domains: Object.freeze([...byDomain.keys()].sort(compareAscii)),
-    familiesByDomain,
-    search: createCapabilitySearchIndex(records)
+    familiesByDomain
   });
 }
 

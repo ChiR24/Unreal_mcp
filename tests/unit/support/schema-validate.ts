@@ -1,12 +1,10 @@
-// src/server/gateway/gateway-schema-validate.ts
-// Stage 4 schema validation for the canonical execute pipeline: the
-// Draft-2020-12 keyword subset the generated capability records actually use,
-// plus declared-default application. The native `/mcp` validator implements the
-// same subset. Any keyword outside it is rejected fail-closed on both surfaces;
-// tests/unit/generated-execute-suite.test.ts runs every record's generated
-// cases through this pipeline.
+// tests/unit/support/schema-validate.ts
+// Record schema checks for the unit tests: the Draft-2020-12 keyword subset the
+// generated capability records actually use, plus declared-default application.
+// The native `/mcp` validator implements the same subset and rejects any keyword
+// outside it, fail-closed.
 
-import { isRecord } from '../../utils/validation/type-guards.js';
+import { isRecord } from '../../../src/utils/validation/type-guards.js';
 
 export const SUPPORTED_SCHEMA_KEYWORDS: ReadonlySet<string> = new Set([
   '$schema',

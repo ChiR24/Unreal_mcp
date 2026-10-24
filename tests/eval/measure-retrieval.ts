@@ -1,23 +1,12 @@
 // tests/eval/measure-retrieval.ts
-// Top-1 and top-K retrieval, measured through the real gateway `search`.
+// Top-1 and top-K retrieval of a ranker over the corpus.
 
-import { searchGatewayCapabilities } from '../../src/server/gateway/gateway-search.js';
 import { GATEWAY_DEFAULT_SEARCH_LIMIT, retrievalCases } from './fixtures.js';
 
-/** Injection seam: tests substitute a ranker to prove a breach fails the gate. */
+/** The capability ids a search answers, best first. */
 export type GatewayRanker = (intent: string, limit: number) => readonly string[];
 
-export const gatewaySearchRanker: GatewayRanker = (intent, limit) => {
-  const response = searchGatewayCapabilities({ operation: 'search', query: intent, limit });
-  const rows = Array.isArray(response.results) ? response.results : [];
-  return rows.map((row) =>
-    typeof row === 'object' && row !== null && 'capability' in row
-      ? String((row as Record<string, unknown>).capability)
-      : '',
-  );
-};
-
-export function measureRetrieval(rank: GatewayRanker = gatewaySearchRanker): {
+export function measureRetrieval(rank: GatewayRanker): {
   readonly top1Accuracy: number;
   readonly topKRecall: number;
   readonly misses: readonly string[];

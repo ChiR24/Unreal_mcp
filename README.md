@@ -94,17 +94,18 @@ Nearly 400 capabilities in all, behind a single MCP tool. The assistant finds th
 ## How it works
 
 <p align="center">
-  <img src="Public/architecture.svg" alt="Architecture: an AI client reaches the EngineWire plugin inside the Unreal Editor either over Streamable HTTP on port 3000 (Route A) or through the Node.js server over stdio and a WebSocket on port 8090 (Route B); the plugin drives the editor APIs on the game thread" width="100%">
+  <img src="Public/architecture.svg" alt="Architecture: an AI client reaches the EngineWire plugin inside the Unreal Editor over Streamable HTTP on port 3000, either directly (Route A) or through the Node.js stdio proxy (Route B); the plugin drives the editor APIs on the game thread" width="100%">
 </p>
 
-The **EngineWire** plugin runs inside the editor and does all the work, on the editor's game thread. Clients reach it in one of two ways, and both expose the same single tool, `unreal`:
+The **EngineWire** plugin runs inside the editor and does all the work, on the editor's game thread, and serves MCP itself. Clients reach it in one of two ways, and both get the same single tool, `unreal`:
 
 | | 🌐 Route A · Native HTTP | 🧩 Route B · stdio |
 | --- | --- | --- |
-| **Path** | Client → the plugin's Streamable HTTP server at `http://127.0.0.1:3000/mcp` | Client → `unreal-engine-mcp-server` (Node.js, stdio) → the plugin's WebSocket on `127.0.0.1:8090` |
+| **Path** | Client → the plugin's Streamable HTTP server at `http://127.0.0.1:3000/mcp` | Client → `unreal-engine-mcp-server` (Node.js, stdio) → the same `/mcp` |
 | **Node.js** | Not needed | 20.19 or later |
 | **Capability token** | The client sends it in the `X-MCP-Capability-Token` header | Read from the project, given `UE_PROJECT_PATH` |
-| **Best for** | Claude Code, Cursor, VS Code, and several clients sharing one editor | Claude Desktop, and clients that only launch local commands |
+| **Editor restarts** | The client reconnects by hand | The session stays: calls answer `NOT_CONNECTED` until the editor is back |
+| **Best for** | Claude Code, Cursor, VS Code, and several clients sharing one editor | Claude Desktop, clients that only launch local commands, and long sessions across editor restarts |
 
 Everything listens on `127.0.0.1` and requires the project's capability token unless you change it.
 
@@ -122,7 +123,7 @@ MyGame/Plugins/EngineWire/
 
 Or use a clone of this repository: copy `plugins/EngineWire/`, or reference the folder from your `.uproject` with `"AdditionalPluginDirectories": ["C:/Path/To/Unreal_mcp/plugins"]`.
 
-Open the project and let Unreal rebuild the plugin. When it's loaded, the status bar shows **`MCP off`**. If you see *"Engine modules cannot be compiled at runtime"*, build the project once in Visual Studio, Rider or Xcode. More in [Installation](https://github.com/ChiR24/Unreal_mcp/wiki/Installation).
+Open the project and let Unreal rebuild the plugin. When it's loaded, the status bar shows **`MCP :3000 (0)`**: the plugin serves MCP on port `3000`. If you see *"Engine modules cannot be compiled at runtime"*, build the project once in Visual Studio, Rider or Xcode. More in [Installation](https://github.com/ChiR24/Unreal_mcp/wiki/Installation).
 
 https://github.com/user-attachments/assets/d8b86ebc-4364-48c9-9781-de854bf3ef7d
 
@@ -145,7 +146,7 @@ This writes `build/EngineWire-v<version>-UE5.7-<Platform>.zip`, where `<version>
 
 **Route A · Native HTTP (no Node.js)**
 
-1. In **Edit › Project Settings › Plugins › EngineWire**, tick **Enable Native MCP Server** (port `3000` by default), then restart the editor. The status bar now reads **`MCP :3000 (0)`**.
+1. **Enable Native MCP Server** is on by default (**Edit › Project Settings › Plugins › EngineWire**, port `3000`). A project that turned it off needs it back on and an editor restart.
 
    <img src="https://raw.githubusercontent.com/wiki/ChiR24/Unreal_mcp/assets/screenshots/settings-native-mcp.png" alt="The Native MCP section of the plugin settings, with Enable Native MCP Server ticked" width="520">
 
@@ -176,30 +177,9 @@ This writes `build/EngineWire-v<version>-UE5.7-<Platform>.zip`, where `<version>
 
    <img src="https://raw.githubusercontent.com/wiki/ChiR24/Unreal_mcp/assets/screenshots/status-bar.png" alt="Unreal Editor status bar showing MCP :3000 (1): the native MCP server on port 3000 with one client connected" width="520">
 
-<details>
-<summary><b>Keep the session when the editor restarts (proxy, Node.js 20.19+)</b></summary>
-
-<br>
-
-A client connected straight to `/mcp` loses its session whenever the editor closes or crashes, and has to reconnect by hand. The package's `proxy` command sits in between over stdio: while the editor is down every call answers `NOT_CONNECTED`, and the first call after it is back reaches it, with no reconnect. It keeps the editor's last tool list, so a session that starts before the editor still gets the real tool.
-
-```json
-{
-  "mcpServers": {
-    "unreal-engine": {
-      "command": "npx",
-      "args": ["-y", "unreal-engine-mcp-server@beta", "proxy"],
-      "env": { "UE_PROJECT_PATH": "C:/Path/To/YourProject" }
-    }
-  }
-}
-```
-
-The token is found the same way as on Route B (`MCP_AUTOMATION_CAPABILITY_TOKEN`, else the project's token file). `UNREAL_MCP_URL` points it at another endpoint (default `http://127.0.0.1:3000/mcp`). Route B survives editor restarts the same way on its own.
-
-</details>
-
 **Route B · stdio (Node.js 20.19+)**
+
+The package is a small stdio proxy in front of the same `/mcp`. A client connected straight to `/mcp` loses its session whenever the editor closes or crashes, and has to reconnect by hand. Through the proxy, every call answers `NOT_CONNECTED` while the editor is down, and the first call after it is back reaches it, with no reconnect. It keeps the editor's last tool list, so a session that starts before the editor still gets the real tool.
 
 Add this to your client's MCP configuration, for example Claude Desktop's `claude_desktop_config.json`:
 
@@ -217,7 +197,7 @@ Add this to your client's MCP configuration, for example Claude Desktop's `claud
 }
 ```
 
-`UE_PROJECT_PATH` (the project folder or its `.uproject`) is how the server finds the capability token and the plugin's port, so nothing else needs setting. Keep the `@beta` tag: without it, npm installs 0.5.30, which doesn't match a 0.6 plugin.
+`UE_PROJECT_PATH` (the project folder or its `.uproject`) is how the proxy finds the capability token (`MCP_AUTOMATION_CAPABILITY_TOKEN` overrides it). `UNREAL_MCP_URL` points it at another endpoint (default `http://127.0.0.1:3000/mcp`). Keep the `@beta` tag: without it, npm installs 0.5.30, which doesn't match a 0.6 plugin.
 
 ### 3. Try it
 
@@ -259,7 +239,7 @@ A typical exchange:
 
 - **Parameters are strict.** An undeclared name is refused with `UNDECLARED_PARAMETER` and the list of allowed names; every error carries an executable `nextCall`.
 - **Deletes need consent.** 62 capabilities (all destructive ones, plus some writes) only run with the `consentGrant` from `describe`, passed back as a top-level `consent` field.
-- **Names.** Both routes accept the `tool` + `action` pair; the stdio route also accepts a capability id, such as `"capability": "control_actor.spawn"`.
+- **Names.** A call names the `tool` + `action` pair or a capability id, such as `"capability": "control_actor.spawn"`.
 
 Full reference with real replies: [Using the Gateway](https://github.com/ChiR24/Unreal_mcp/wiki/Using-the-Gateway).
 
@@ -269,7 +249,7 @@ The single `unreal` tool is permanent on both routes; there is no opt-out and no
 
 ### Protocol versions
 
-Both routes negotiate the MCP protocol version at `initialize`. The native `/mcp` transport supports `2025-11-25` (latest), `2025-06-18` and `2025-03-26`; the stdio server also accepts the legacy `2024-11-05` and `2024-10-07`. An unsupported `MCP-Protocol-Version` header on the native route gets HTTP 400. Both also serve MCP 2026-07-28 per request, with no `initialize` or session, and answer `server/discover` with it. Details: [docs/protocol.md](https://github.com/ChiR24/Unreal_mcp/blob/dev/docs/protocol.md).
+Both routes negotiate the MCP protocol version at `initialize`: `2025-11-25` (latest), `2025-06-18` or `2025-03-26`. A client asking for an older version is answered with `2025-11-25`. An unsupported `MCP-Protocol-Version` header on the native route gets HTTP 400. Both also serve MCP 2026-07-28 per request, with no `initialize` or session, and answer `server/discover` with it. Details: [docs/protocol.md](https://github.com/ChiR24/Unreal_mcp/blob/dev/docs/protocol.md).
 
 <details>
 <summary><b>The 23 internal tools behind <code>unreal</code></b></summary>
@@ -308,15 +288,15 @@ These route requests inside the gateway; clients never list them. More in the [T
 
 ## Configuration
 
-Most setups touch one setting: **Enable Native MCP Server** for Route A, or `UE_PROJECT_PATH` for Route B. Everything is listed on the [Configuration](https://github.com/ChiR24/Unreal_mcp/wiki/Configuration) page.
+Most setups touch one setting: `UE_PROJECT_PATH` for Route B; Route A needs none. Everything is listed on the [Configuration](https://github.com/ChiR24/Unreal_mcp/wiki/Configuration) page.
 
 **Plugin settings** (Project Settings › Plugins › EngineWire, saved in `Config/DefaultGame.ini`):
 
 | Setting | Default | |
 | --- | --- | --- |
-| Enable Native MCP Server | off | Serve MCP over HTTP at `/mcp` |
+| Enable Native MCP Server | on | Serve MCP over HTTP at `/mcp` (both routes use it) |
 | Native MCP Port | `3000` | The `MCP_NATIVE_PORT` environment variable of the editor process overrides it |
-| Listen Ports | `8090,8091` | WebSocket ports for Route B |
+| Listen Ports | `8090,8091` | The plugin's WebSocket listener; neither route uses it |
 | Require Capability Token | on | Both routes refuse clients without the token |
 | Allow Non Loopback | off | LAN access for both listeners. See [Security](https://github.com/ChiR24/Unreal_mcp/wiki/Security#lan-access). |
 
@@ -324,11 +304,9 @@ Most setups touch one setting: **Enable Native MCP Server** for Route A, or `UE_
 
 | Variable | Default | |
 | --- | --- | --- |
-| `UE_PROJECT_PATH` | unset | Project folder or `.uproject`; used to find the token and the port |
-| `MCP_AUTOMATION_PORT` | the project's first Listen Ports entry, else `8090` | Editor WebSocket port |
-| `MCP_AUTOMATION_HOST` | `127.0.0.1` | A LAN address also needs `MCP_AUTOMATION_ALLOW_NON_LOOPBACK=true` |
-| `MCP_AUTOMATION_CAPABILITY_TOKEN` | read from the token file | Token to present, when the server can't read the project folder |
-| `MCP_ADDITIONAL_PATH_PREFIXES` | empty | Extra content roots such as `/MyPluginContent/`, comma-separated; most content-path arguments also accept the mounts the connected editor reports, so this is needed only with no editor connected, for a mount the editor does not report or the server ignores, and for arguments the server treats as files (`filePath`, `outputPath` and a few others), even where `outputPath` names an asset |
+| `UE_PROJECT_PATH` | unset | Project folder or `.uproject`; used to find the token |
+| `MCP_AUTOMATION_CAPABILITY_TOKEN` | read from the token file | Token to present, when the proxy can't read the project folder |
+| `UNREAL_MCP_URL` | `http://127.0.0.1:3000/mcp` | The editor's `/mcp` endpoint |
 | `LOG_LEVEL` | `info` | `debug`, `info`, `warn` or `error`; logs go to stderr |
 
 ## Security
@@ -336,7 +314,7 @@ Most setups touch one setting: **Enable Native MCP Server** for Route A, or `UE_
 - **Local by default.** Both routes listen on `127.0.0.1` only. LAN access needs **Allow Non Loopback**, and the native server refuses to bind off-loopback unless **Require Capability Token** is on.
 - **Capability token.** Generated per project at `<Project>/Saved/MCP/capability-token` (a value typed into **Capability Token** overrides it) and compared in constant time. Delete the file and restart the editor to rotate it.
 - **Consent for destructive work.** Deletes and some other writes need a per-call consent grant, which the plugin checks itself.
-- **Guard rails.** Asset paths are limited to `/Game`, `/Engine`, `/Script`, `/Temp`, `/Niagara` plus configured prefixes, and a content path may also sit under a mount the connected editor reports; arguments the server treats as files (such as `filePath`, and `outputPath` even where it names an asset) never use the reported mounts; console commands that chain or quit the editor are blocked; the plugin's own settings are out of reach of automation.
+- **Guard rails.** Asset paths are limited to `/Game`, `/Engine`, `/Script`, `/Temp` and `/Niagara`, and a content path may also sit under a mount the connected editor reports; arguments the server treats as files (such as `filePath`, and `outputPath` even where it names an asset) never use the reported mounts; console commands that chain or quit the editor are blocked; the plugin's own settings are out of reach of automation.
 
 Details: [Security](https://github.com/ChiR24/Unreal_mcp/wiki/Security). Please report vulnerabilities privately through [GitHub security advisories](https://github.com/ChiR24/Unreal_mcp/security/advisories/new).
 
@@ -384,7 +362,7 @@ The plugin targets every Unreal Engine minor from 5.0 to 5.8. If it fails to bui
 
 ## Docker
 
-The image runs the stdio server. It has to reach the editor's WebSocket on `127.0.0.1`, so use host networking (Linux), and pass the token because the container can't read your project folder:
+The image runs the stdio proxy. It has to reach the editor's `/mcp` on `127.0.0.1:3000`, so use host networking (Linux), and pass the token because the container can't read your project folder:
 
 ```bash
 docker build -t unreal-mcp .
@@ -416,19 +394,18 @@ npm run dev                # run from source with ts-node
 npm run lint               # ESLint (CI fails on any warning)
 npm run type-check         # tsc --noEmit, sources and tests
 npm run test:unit          # Vitest unit tests (no Unreal required)
-npm run test:smoke         # offline mock-mode MCP check (needs built dist/)
 npm run test:params        # strict parameter audit
 npm run registry:generate  # capability records -> generated contracts, native shards, action reference
 npm run registry:check     # fail if generated artifacts drift
 npm run manifest:check     # fail if the gateway manifest drifts
 npm run eval:check         # search-ranking corpus
 npm run version:check      # all version sources agree
-npm test                   # integration suite (needs a live Unreal Editor + bridge)
+npm test                   # integration suite (needs a live Unreal Editor serving /mcp)
 ```
 
 The capability records in `src/tools/catalog/capabilities/records/` are the single source of truth; every `*.generated.*` file, the plugin's `MCP/Generated/` shards and the action reference are generated from them. Never hand-edit generated files. How to add a capability: [Development](https://github.com/ChiR24/Unreal_mcp/wiki/Development).
 
-**CI** runs, in order: ESLint (`npx eslint . --max-warnings=0`), type-check, unit tests, `registry:check`, `manifest:check`, `headers:check`, the strict parameter audit (`test:params`) and `eval:check`, then a blocking runtime dependency audit (`npm audit --omit=dev --audit-level=moderate`) and an informational full-tree audit. A Node 20.19 / 26 matrix adds `build` and `test:smoke`. Plugin packaging runs only when an Unreal Engine root is configured, because CI runners don't ship an engine. Release archives exclude `Binaries/`, `Intermediate/` and `Saved/`.
+**CI** runs, in order: ESLint (`npx eslint . --max-warnings=0`), type-check, unit tests, `registry:check`, `manifest:check`, `headers:check`, the strict parameter audit (`test:params`) and `eval:check`, then a blocking runtime dependency audit (`npm audit --omit=dev --audit-level=moderate`) and an informational full-tree audit. A Node 20.19 / 26 matrix adds `build`. Plugin packaging runs only when an Unreal Engine root is configured, because CI runners don't ship an engine. Release archives exclude `Binaries/`, `Intermediate/` and `Saved/`.
 
 ## Community
 

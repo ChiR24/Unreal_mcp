@@ -10,7 +10,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { coerceVectorShapes, validateAgainstCapabilitySchema } from '../../../src/server/gateway/gateway-schema-validate.js';
+import { coerceVectorShapes, validateAgainstCapabilitySchema } from '../support/schema-validate.js';
 
 const REGISTRY_PATH = resolve(
   dirname(fileURLToPath(import.meta.url)),

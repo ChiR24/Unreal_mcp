@@ -213,12 +213,12 @@ public:
 
     // ── Native MCP Streamable HTTP ──────────────────────────────────────
 
-    /** Enable native MCP Streamable HTTP endpoint (POST /mcp).
-     * AI clients (Claude Code, Cursor, etc.) connect directly without the TypeScript bridge.
+    /** Enable native MCP Streamable HTTP endpoint (POST /mcp), on by default.
+     * AI clients (Claude Code, Cursor, etc.) connect directly, or through the npm package's stdio proxy.
      * Requires editor restart after changing. */
     UPROPERTY(config, EditAnywhere, Category = "Native MCP",
         meta = (DisplayName = "Enable Native MCP Server"))
-    bool bEnableNativeMCP = false;
+    bool bEnableNativeMCP = true;
 
     /** Port for the native MCP HTTP server. Must differ from WebSocket ports. */
     UPROPERTY(config, EditAnywhere, Category = "Native MCP",
