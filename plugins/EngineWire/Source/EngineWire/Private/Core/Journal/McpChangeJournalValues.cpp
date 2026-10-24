@@ -9,6 +9,7 @@
 
 #include "Core/Journal/McpChangeJournalState.h"
 
+#include "Core/Compatibility/McpVersionCompatibility.h"
 #include "UObject/PropertyPortFlags.h"
 #include "UObject/UnrealType.h"
 #include "UObject/UObjectGlobals.h"
@@ -49,9 +50,25 @@ bool ValueText(UObject* Object, const FProperty* Member, FString& OutText)
         OutText = FString::Printf(TEXT("%d item(s)"), Items);
         return true;
     }
-    Member->ExportText_InContainer(0, OutText, Object, nullptr, Object, PPF_None);
+    MCP_PROPERTY_EXPORT_TEXT(Member, OutText, Value, nullptr, Object, PPF_None);
     OutText = OutText.Len() > MaxValueChars ? OutText.Left(MaxValueChars) + TEXT("...") : OutText;
     return true;
+}
+
+// A change that names no property (an undo or a redo, a PostEditChange after an edit in code): every value kept for a
+// property of Object's class is read again, so a row never shows a value the undo took back.
+void RefreshValues(int32 Index, UObject* Object)
+{
+    for (FJournalValue& Kept : JournalState().Entries[Index].Values)
+    {
+        const FProperty* Member = Object->GetClass()->FindPropertyByName(Kept.Property);
+        FString Text;
+        if (Member && (Kept.bFrom || Kept.bTo) && ValueText(Object, Member, Text))
+        {
+            Kept.To = Text;
+            Kept.bTo = true;
+        }
+    }
 }
 
 // The member about to change: the chain's member node (a struct field's struct), else its head.
@@ -68,6 +85,11 @@ void OnPreChange(UObject* Object, const FEditPropertyChain& Chain)
 
 void NoteValue(int32 Index, UObject* Object, const FProperty* Member, bool bBefore, uint32 ChangeType)
 {
+    if (!Member && !bBefore && Object)
+    {
+        RefreshValues(Index, Object);
+        return;
+    }
     // Only a member of the object's own class reads from it as a container (a local variable's owner is its function).
     const UClass* Owner = Member ? Member->GetOwner<UClass>() : nullptr;
     if (!Object || !Owner || !Object->IsA(Owner) || (!bBefore && (ChangeType & EPropertyChangeType::Interactive)))

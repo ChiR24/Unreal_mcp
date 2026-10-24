@@ -84,6 +84,10 @@ describe('change journal', () => {
     // A container is kept as its item count, a large struct by name only: no full export on the user's editing path.
     expect(values).toContain('Items = FScriptArrayHelper(Array, Value).Num();');
     expect(values).toContain('CastField<FStructProperty>(Member) && Member->GetSize() > MaxStructBytes');
+    // An export with a null delta skips a value equal to zeroed memory: 0 and false journalled as "".
+    expect(values).toContain('MCP_PROPERTY_EXPORT_TEXT(Member, OutText, Value, nullptr, Object, PPF_None);');
+    // An undo names no property: the values kept for that object are read again.
+    expect(values).toMatch(/if \(!Member && !bBefore && Object\)\s*\{\s*RefreshValues\(Index, Object\);/u);
     // GetOwnerClass walks past a function to its class: a local variable would be read off the object.
     expect(values).toContain('Member->GetOwner<UClass>()');
     expect(recorder).toContain('NoteValue(Index, Object, Member, false, Event.ChangeType);');

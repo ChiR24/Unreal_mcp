@@ -81,17 +81,32 @@ bool FMcpChangeJournalValuesTest::RunTest(const FString& Parameters)
     Material->Friction = 0.25f;
     FPropertyChangedEvent Event(Friction);
     Material->PostEditChangeProperty(Event);
-    EndRequest();
 
-    const FJournalEntry* Entry = State.Entries.FindByPredicate([](const FJournalEntry& Kept) { return Kept.Path == Path; });
     const FName FrictionName = Friction->GetFName();
-    const FJournalValue* Value = Entry ? Entry->Values.FindByPredicate([&FrictionName](const FJournalValue& Kept) { return Kept.Property == FrictionName; }) : nullptr;
+    const auto Kept = [&State, &FrictionName]() -> const FJournalValue* {
+        const FJournalEntry* Entry = State.Entries.FindByPredicate([](const FJournalEntry& Row) { return Row.Path == Path; });
+        return Entry ? Entry->Values.FindByPredicate([&FrictionName](const FJournalValue& Row) { return Row.Property == FrictionName; }) : nullptr;
+    };
+    const FJournalValue* Value = Kept();
     TestTrue(TEXT("the edit is kept with the value it changed"), Value != nullptr);
     if (Value)
     {
         TestTrue(TEXT("from is the value before the edit"), Value->bFrom && FMath::IsNearlyEqual(FCString::Atof(*Value->From), 0.7f, 1e-4f));
         TestTrue(TEXT("to is the value after it"), Value->bTo && FMath::IsNearlyEqual(FCString::Atof(*Value->To), 0.25f, 1e-4f));
     }
+    // A value equal to zeroed memory was exported as an empty string.
+    Material->PreEditChange(Chain);
+    Material->Friction = 0.0f;
+    Material->PostEditChangeProperty(Event);
+    Value = Kept();
+    TestTrue(TEXT("a zero is written out, not left empty"), Value && !Value->To.IsEmpty() && FCString::Atof(*Value->To) == 0.0f);
+    // An undo names no property: what is kept for the object is read again.
+    Material->Friction = 0.5f;
+    Material->PostEditChange();
+    Value = Kept();
+    TestTrue(TEXT("a change naming no property reads the kept values again"), Value && FMath::IsNearlyEqual(FCString::Atof(*Value->To), 0.5f, 1e-4f));
+    TestTrue(TEXT("and keeps the first old value"), Value && FMath::IsNearlyEqual(FCString::Atof(*Value->From), 0.7f, 1e-4f));
+    EndRequest();
 
     State.Entries.RemoveAll([](const FJournalEntry& Kept) { return Kept.Path == Path; });
     Reindex(State);
