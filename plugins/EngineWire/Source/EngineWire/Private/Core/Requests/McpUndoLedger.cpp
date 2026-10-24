@@ -96,6 +96,14 @@ void WriteBlock(const TSharedPtr<FJsonObject>& Result, const TArray<const FStep*
         Undo->SetStringField(TEXT("reason"), TEXT("Something this call ran (a Blueprint compile, a level load) cleared the "
             "editor's undo history, so undo cannot go back to before it."));
     }
+    else if (GEditor && GEditor->PlayWorld)
+    {
+        // The running game's objects are transient, so a transaction keeps none of them: an agent took the change as
+        // made in the level and lost it when Play stopped.
+        Undo->SetStringField(TEXT("reasonCode"), TEXT("PLAY_WORLD_ONLY"));
+        Undo->SetStringField(TEXT("reason"), TEXT("Play is running and the editor kept no undo step for this call: it "
+            "changed only the running game (or nothing), which nothing saves or undoes and which ends when Play stops."));
+    }
     else
     {
         Undo->SetStringField(TEXT("reasonCode"), TEXT("NOTHING_CHANGED"));

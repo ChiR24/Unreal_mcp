@@ -59,7 +59,7 @@ describe('the ledger judges by the buffer', () => {
 
   it('keeps a handler refusal and corrects only an unbacked claim', () => {
     expect(ledger).toMatch(/!bClaimed \|\| Kept\.Num\(\) > 0/u);
-    for (const reason of ['NOTHING_CHANGED', 'UNDO_HISTORY_CLEARED']) {
+    for (const reason of ['NOTHING_CHANGED', 'UNDO_HISTORY_CLEARED', 'PLAY_WORLD_ONLY']) {
       expect(ledger).toContain(`TEXT("${reason}")`);
     }
   });
