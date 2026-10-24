@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "d3eeec75edd32187",
-  "recordCount": 419,
+  "catalogRevision": "f09bdfd991cbd26b",
+  "recordCount": 420,
   "records": [
     {
       "id": "animation_physics.analyze_animation",
@@ -46563,6 +46563,178 @@
         "algorithm": "sha256",
         "schema": "bb79ce10e9a5c62a7e237b209a10c9bd8c526065a0b156904bb79aa42a6e531e",
         "content": "3e1dffc8f33dfd267b8b63e5873449d20e4ee95fb72367a208b82236eddeb8a1"
+      }
+    },
+    {
+      "id": "inspect.changes_since",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "inspect",
+          "action": "changes_since"
+        }
+      ],
+      "discovery": {
+        "domain": "inspect",
+        "family": "global",
+        "topics": [
+          "changes_since",
+          "what changed",
+          "what changed in the level",
+          "what did the user change",
+          "edits made in the editor",
+          "changed since the last call"
+        ],
+        "summary": "List what changed in the editor since a cursor: level actors added, deleted or modified (with the properties edited) and assets or levels created, removed, renamed, modified, saved or opened, each marked by who changed it: mcp (a call through this server), user (an edit made in the editor, and its undo and redo) or editor (anything else, such as saving, importing or opening a level by hand). The engine's own work on actors and objects (loading a level, compiling) is not kept. The reply hands back the cursor to send next time; without one it lists the most recent changes kept. Changes merge per object; 4096 objects are kept, and a cursor from before an editor restart or older than what is kept answers CHANGE_CURSOR_EXPIRED.",
+        "whenToUse": [
+          "Work resumes after a pause, or another agent or the user may have changed the level: read what changed instead of listing everything again.",
+          "A reply warned that the user changed something in the editor since the last call."
+        ],
+        "whenNotToUse": [
+          "The level's current contents are wanted, not what changed (use control_actor list).",
+          "Which editor transactions this server made since a restore point (use control_editor restore_point with op status)."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "since": {
+              "type": "string",
+              "description": "The cursor a previous changes_since reply returned. Omit it to get the most recent changes kept, and a cursor to start from."
+            },
+            "limit": {
+              "type": "number",
+              "description": "Most changes to list, oldest first (1-200, default 50). When more are left, truncated is true and the cursor returned continues from the last one listed."
+            }
+          },
+          "required": [
+            "action"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "cursor": {
+              "type": "string",
+              "description": "Send this as since next time to read only what changes after this reply."
+            },
+            "count": {
+              "type": "number",
+              "description": "Changes listed."
+            },
+            "truncated": {
+              "type": "boolean",
+              "description": "More changes are left after these: call again with the cursor returned."
+            },
+            "changes": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "One row per changed object, oldest change first: object (an actor's label, or an asset's package path), path, kind (actor, asset or level), events (added, modified, deleted, saved, renamed, removed, opened), by (mcp, user, editor), properties (the properties edited, at most 8), actions (the calls through this server that changed it) and oldPath for a renamed asset."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "List what changed in the editor since a cursor: level actors added, deleted or modified (with the properties edited) and assets or levels created, removed, renamed, modified, saved or opened, each marked by who changed it: mcp (a call through this server), user (an edit made in the editor, and its undo and redo) or editor (anything else, such as saving, importing or opening a level by hand). The engine's own work on actors and objects (loading a level, compiling) is not kept. The reply hands back the cursor to send next time; without one it lists the most recent changes kept. Changes merge per object; 4096 objects are kept, and a cursor from before an editor restart or older than what is kept answers CHANGE_CURSOR_EXPIRED.",
+          "input": {
+            "action": "changes_since",
+            "since": "3f9a1c2e.120"
+          },
+          "output": {
+            "success": true,
+            "message": "2 changes since 3f9a1c2e.120: the user modified Lamp_1; this server added Crate_3.",
+            "cursor": "3f9a1c2e.131",
+            "count": 2,
+            "changes": [
+              {
+                "object": "Lamp_1",
+                "kind": "actor",
+                "events": [
+                  "modified"
+                ],
+                "by": [
+                  "user"
+                ],
+                "properties": [
+                  "Intensity"
+                ]
+              },
+              {
+                "object": "Crate_3",
+                "kind": "actor",
+                "events": [
+                  "added"
+                ],
+                "by": [
+                  "mcp"
+                ],
+                "actions": [
+                  "control_actor spawn"
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "read",
+        "idempotency": "idempotent",
+        "longRunning": false,
+        "safeToRetry": true
+      },
+      "policy": {
+        "requiredScope": "read",
+        "consent": "none",
+        "dataAccess": "project-read"
+      },
+      "cost": {
+        "latency": "instant",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "inspect",
+        "dispatchAction": "changes_since"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "a3a3a3e8bdce5a5de1732f8d396a23ed581e3699630189da067a82a0c2ff3baf",
+        "content": "b743ccc58197ac4a0fc791c80c5e722fc125405350e0ab831528b21814e00da2"
       }
     },
     {

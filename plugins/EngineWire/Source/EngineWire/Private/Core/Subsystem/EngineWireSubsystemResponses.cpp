@@ -2,6 +2,7 @@
 
 #include "Editor.h"
 #include "MCP/Transport/McpNativeTransport.h"
+#include "Core/Journal/McpChangeJournal.h"
 #include "Core/Requests/McpRequestOriginRegistry.h"
 #include "Core/Requests/McpResponseCaptureRegistry.h"
 #include "Core/Requests/McpUndoLedger.h"
@@ -138,6 +139,7 @@ void UEngineWireSubsystem::SendAutomationResponse(
         EffectiveResult = McpBuildEnrichedResponseResult(Result, WorldName, bTransientWorld, Captured);
         McpChangeWatch::AddWarnings(RequestId, EffectiveResult);
         McpUndoLedger::Describe(RequestId, EffectiveResult);
+        McpChangeJournal::AddUserChangeWarning(RequestId, EffectiveResult);
         // A play world paused by the game (a title screen, a pause menu) or by control_editor pause moves nothing: a
         // character moved into it stayed in the air where it was put, which read as broken gravity.
         if (ContextWorld && ContextWorld->IsPlayInEditor() && ContextWorld->IsPaused())

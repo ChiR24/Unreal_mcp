@@ -7156,6 +7156,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "additionalProperties": false,
           "description": "Camera rotation {pitch, yaw, roll} in degrees; omitted, the viewport's current one."
         },
+        "since": {
+          "type": "string",
+          "description": "The cursor a previous changes_since reply returned. Omit it to get the most recent changes kept, and a cursor to start from."
+        },
         "snapshotName": {
           "type": "string",
           "description": "Snapshot name for create/restore."
@@ -7264,6 +7268,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "find_by_class",
             "runtime_report",
             "get_editor_state",
+            "changes_since",
             "get_stats",
             "explain"
           ],
@@ -7444,6 +7449,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true,
           "description": "Default property values on the Class Default Object."
         },
+        "changes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "One row per changed object, oldest change first: object (an actor's label, or an asset's package path), path, kind (actor, asset or level), events (added, modified, deleted, saved, renamed, removed, opened), by (mcp, user, editor), properties (the properties edited, at most 8), actions (the calls through this server that changed it) and oldPath for a renamed asset."
+        },
         "class": {
           "type": "string",
           "description": "Class name of the inspected object."
@@ -7505,7 +7519,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "count": {
           "type": "number",
-          "description": "Number of actors returned after filtering; absent with actors."
+          "description": "Changes listed."
+        },
+        "cursor": {
+          "type": "string",
+          "description": "Send this as since next time to read only what changes after this reply."
         },
         "defaultGameMode": {
           "type": "string",
@@ -8414,6 +8432,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "triangles": {
           "type": "number",
           "description": "Source triangles (LOD 0)."
+        },
+        "truncated": {
+          "type": "boolean",
+          "description": "More changes are left after these: call again with the cursor returned."
         },
         "useDistanceScaledCamera": {
           "type": "boolean",

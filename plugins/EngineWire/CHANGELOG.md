@@ -15,12 +15,12 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **`get_frame_cost`**, **`diff_asset`**, **`cancel_render`**, `configure_render_camera` shutter and overscan, `set_section` `playRate`.
 - **`nanite_rebuild_mesh` `assetPaths`**, `get_niagara_info` values, `edit_dynamic_mesh` `append_cuboids`, `append_loft`, `append_mesh` and `delete_triangles`.
 - **Change watch**: what a request spawns or modifies, and an edited Blueprint's placed copies, are checked into `warnings`.
-- **Undo ledger**: a reply's `undo` block comes from the transaction buffer, held until its handler's transaction closes; **restore points** (`control_editor restore_point`) roll back only this server's steps.
-- **`explain`** fault trees (`inspect explain`): collision, visible, input, widget, audible, lit; a failed check names the call that fixes it.
-- **Loop guard** on `/mcp`: an unchanged call failing three times in a row is refused `REPEATED_FAILURE` before it runs.
-- **`dryRun`** on `build_graph`, `build_material_graph` and `add_widget_tree`; `build_material_graph` checks every edit and `$id` before a step runs.
-- **`run_map_check`**: the editor's Map Check on the open level as rows (severity, message, actor, map error name), with no Message Log tab.
-- **`fix_placement`**: sunk and floating actors rest on the surface under them, intersecting ones are pushed apart on their collision; one undo step, `dryRun`.
+- **Undo ledger**: `undo` blocks read from the transaction buffer; **restore points** roll back only this server's steps.
+- **`explain`** fault trees (collision, visible, input, widget, audible, lit), each failure naming the call that fixes it.
+- **Loop guard** on `/mcp`: a call failing three times unchanged is refused (`REPEATED_FAILURE`).
+- **`dryRun`** on `build_graph`, `build_material_graph` and `add_widget_tree`, which check every step first.
+- **`run_map_check`**: Map Check as rows (severity, message, actor, map error); **`fix_placement`** moves sunk, floating and intersecting actors by the audit's rules, in one undo step.
+- **Change journal**: `changes_since` lists what changed since a cursor and who changed it (mcp, user, editor); a reply warns once of the user's edits.
 
 ### Fixed
 - **Small fixes**: links on UE 5.0; whole-path `runtime_report` filters; diagnostics records replace their files; exact task principals; the RHI thread in `busiestThreadMs`; effect lifecycle misses name what is missing.

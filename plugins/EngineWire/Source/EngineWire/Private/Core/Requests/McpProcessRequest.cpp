@@ -2,6 +2,7 @@
 #include "Dom/JsonObject.h"
 #include "HAL/PlatformTime.h"
 #include "Core/Module/EngineWireGlobals.h"
+#include "Core/Journal/McpChangeJournal.h"
 #include "Core/Requests/McpUndoLedger.h"
 #include "Core/Security/McpPrequeueGate.h"
 #include "Domains/ControlActor/Placement/McpChangeWatch.h"
@@ -219,6 +220,7 @@ void UEngineWireSubsystem::ProcessAutomationRequest(
 
       McpChangeWatch::End();
       McpUndoLedger::End();
+      McpChangeJournal::EndRequest();
       bProcessingAutomationRequest = false;
       EngineWire::SetInFlightAction(FString(), FString()); // clear the in-flight action on every exit path
       CurrentRequestOrigin = ERequestOrigin::WebSocket;
@@ -259,6 +261,12 @@ void UEngineWireSubsystem::ProcessAutomationRequest(
     // and the undo steps it leaves are read from the transaction buffer (McpUndoLedger::Describe).
     McpChangeWatch::Begin(RequestId);
     McpUndoLedger::Begin(RequestId);
+    // What changes until the handler returns is this server's doing in the change journal, named by the call.
+    {
+      FString SubAction = Payload.IsValid() ? GetJsonStringField(Payload, TEXT("subAction")) : FString();
+      SubAction = SubAction.IsEmpty() && Payload.IsValid() ? GetJsonStringField(Payload, TEXT("action")) : SubAction;
+      McpChangeJournal::BeginRequest(RequestId, SubAction.IsEmpty() ? Action : Action + TEXT(" ") + SubAction);
+    }
 
     // Map this requestId to the requesting socket so responses can be
     // delivered reliably

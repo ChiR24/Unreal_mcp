@@ -5128,6 +5128,7 @@
         "find_by_class",
         "runtime_report",
         "get_editor_state",
+        "changes_since",
         "get_stats",
         "explain"
       ],
@@ -5172,6 +5173,7 @@
         "propertyPath",
         "rays",
         "rotation",
+        "since",
         "snapshotName",
         "snapshotOp",
         "statsKind",
@@ -5600,6 +5602,10 @@
             "additionalProperties": false,
             "description": "Camera rotation {pitch, yaw, roll} in degrees; omitted, the viewport's current one."
           },
+          "since": {
+            "type": "string",
+            "description": "The cursor a previous changes_since reply returned. Omit it to get the most recent changes kept, and a cursor to start from."
+          },
           "snapshotName": {
             "type": "string",
             "description": "Snapshot name for create/restore."
@@ -5708,6 +5714,7 @@
               "find_by_class",
               "runtime_report",
               "get_editor_state",
+              "changes_since",
               "get_stats",
               "explain"
             ],

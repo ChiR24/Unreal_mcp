@@ -6,6 +6,7 @@
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "McpConnectionManager.h"
 #include "Core/Errors/McpRequestErrorDevice.h"
+#include "Core/Journal/McpChangeJournal.h"
 #include "Foundation/Diagnostics/McpDiagnosticsSnapshot.h"
 #include "Foundation/Diagnostics/McpWorldTickTimer.h"
 #include "Domains/ControlEditor/Checkpoint/McpEditorCheckpoint.h"
@@ -41,6 +42,7 @@ void UEngineWireSubsystem::Initialize(FSubsystemCollectionBase& Collection)
     FMcpDiagnosticsSnapshot::Get().RotateOnStartup();
     FMcpLogHistory::Get().Register();
     FMcpScriptErrors::Get().Watch(true);
+    McpChangeJournal::Start();
     McpSystemControlHandlers::McpWatchMaterialUsage(true);
 
     UE_LOG(
@@ -209,6 +211,7 @@ void UEngineWireSubsystem::Deinitialize()
     FMcpDiagnosticsSnapshot::Get().PersistCurrent();
     FMcpLogHistory::Get().Unregister();
     FMcpScriptErrors::Get().Watch(false);
+    McpChangeJournal::Stop();
     McpSystemControlHandlers::McpWatchMaterialUsage(false);
 
     Super::Deinitialize();

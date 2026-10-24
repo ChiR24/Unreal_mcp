@@ -134,6 +134,38 @@ export const GLOBAL_RECORDS: readonly CapabilityRecordSource[] = [
       scriptErrors: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'The Blueprint runtime errors of the last play session, as runtime_report lists them (message, node, nodeId, graph, blueprintPath, count).' },
     },
   }),
+  // An agent listed the level again every turn to learn what had moved, and never heard what the user did between calls.
+  buildCoreRecord({
+    parentTool: 'inspect', action: 'changes_since', dispatchAction: 'changes_since', domain: D, family: 'global',
+    topics: ['what changed', 'what changed in the level', 'what did the user change', 'edits made in the editor', 'changed since the last call'],
+    summary: 'List what changed in the editor since a cursor: level actors added, deleted or modified (with the properties edited) and assets or levels created, removed, renamed, modified, saved or opened, each marked by who changed it: mcp (a call through this server), user (an edit made in the editor, and its undo and redo) or editor (anything else, such as saving, importing or opening a level by hand). The engine\'s own work on actors and objects (loading a level, compiling) is not kept. The reply hands back the cursor to send next time; without one it lists the most recent changes kept. Changes merge per object; 4096 objects are kept, and a cursor from before an editor restart or older than what is kept answers CHANGE_CURSOR_EXPIRED.',
+    whenToUse: [
+      'Work resumes after a pause, or another agent or the user may have changed the level: read what changed instead of listing everything again.',
+      'A reply warned that the user changed something in the editor since the last call.',
+    ],
+    whenNotToUse: [
+      'The level\'s current contents are wanted, not what changed (use control_actor list).',
+      'Which editor transactions this server made since a restore point (use control_editor restore_point with op status).',
+    ],
+    inputProps: {
+      since: { type: 'string', description: 'The cursor a previous changes_since reply returned. Omit it to get the most recent changes kept, and a cursor to start from.' },
+      limit: { type: 'number', description: 'Most changes to list, oldest first (1-200, default 50). When more are left, truncated is true and the cursor returned continues from the last one listed.' },
+    },
+    required: [],
+    effect: 'read',
+    exampleInput: { action: 'changes_since', since: '3f9a1c2e.120' },
+    exampleOutput: {
+      success: true, message: '2 changes since 3f9a1c2e.120: the user modified Lamp_1; this server added Crate_3.',
+      cursor: '3f9a1c2e.131', count: 2,
+      changes: [{ object: 'Lamp_1', kind: 'actor', events: ['modified'], by: ['user'], properties: ['Intensity'] }, { object: 'Crate_3', kind: 'actor', events: ['added'], by: ['mcp'], actions: ['control_actor spawn'] }],
+    },
+    outputProps: {
+      cursor: { type: 'string', description: 'Send this as since next time to read only what changes after this reply.' },
+      count: { type: 'number', description: 'Changes listed.' },
+      truncated: { type: 'boolean', description: 'More changes are left after these: call again with the cursor returned.' },
+      changes: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'One row per changed object, oldest change first: object (an actor\'s label, or an asset\'s package path), path, kind (actor, asset or level), events (added, modified, deleted, saved, renamed, removed, opened), by (mcp, user, editor), properties (the properties edited, at most 8), actions (the calls through this server that changed it) and oldPath for a renamed asset.' },
+    },
+  }),
 ];
 
 export const EDITOR_SETTINGS_RECORD: CapabilityRecordSource = buildCoreRecord({
