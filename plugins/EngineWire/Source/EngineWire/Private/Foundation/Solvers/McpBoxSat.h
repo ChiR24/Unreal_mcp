@@ -30,4 +30,11 @@ inline double Depth(const FFootprint& A, const FFootprint& B)
 
 /** How far Inner's corners reach outside Outer along Outer's axes, summed; 0 when Inner lies within it. */
 double Outside(const FFootprint& Inner, const FFootprint& Outer);
+
+/** Whether a ray from Origin along the unit Direction meets the box; OutDistance is where it first does (0 inside). */
+bool RayHits(const FFootprint& Box, const FVector2D& Origin, const FVector2D& Direction, double& OutDistance);
+
+/** Whether From's front (its own +X axis) looks at To: the ray along it meets To, or points within Grace radians of
+ *  To's centre (a small thing far off). OutOff is how far it points from To's centre, in radians. */
+bool Faces(const FFootprint& From, const FFootprint& To, double Grace, double& OutOff);
 } // namespace McpBoxSat

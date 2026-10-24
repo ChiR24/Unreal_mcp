@@ -2,8 +2,9 @@
 //
 // describe_relations' pairwise relations. on: a bottom resting on a top (down-traces from the centre and four inset
 // corners of the footprint; the actor hit most often within 3 cm); mounted: held from the side by a neighbour (the
-// placement checks' own pair test, McpPlacement::HangsOn); inside: within another's bounds, the tightest such container; nextTo: faces within 2 cm side by
-// side; faces: the forward (X) axis points at another within 20 degrees, the nearest such that is not a copy of it (a
+// placement checks' own pair test, McpPlacement::HangsOn); inside: within another's bounds, the tightest such
+// container; nextTo: sides within 2 cm side by side, on footprints turned with the actors; faces: the line ahead of its
+// front (X axis) meets another or points within 20 degrees of its centre, the nearest such that is not a copy of it (a
 // row of crates all "faced" the next crate). A pair that rests or hangs one on the other is neither nextTo nor faces.
 // Candidates come from a uniform grid over the ground plane, so a level of hundreds of actors checks only neighbours.
 
@@ -23,7 +24,7 @@ namespace McpRelations
 namespace
 {
 constexpr double TouchGap = 2.0;         // cm between faces that touch
-constexpr double FacingCos = 0.93969;    // cos 20 degrees
+constexpr double FacingGrace = 0.34907;  // 20 degrees in radians
 constexpr int32 MaxCellsPerItem = 256;   // an item wider than this many cells is checked against every item
 
 // The items whose boxes reach each cell of a grid over X and Y; an item too wide for it is near everything.
@@ -224,12 +225,11 @@ void FindPairRelations(UWorld* World, const TArray<FItem>& Items, const TSet<FSt
             {
                 Out.Add({A, TEXT("nextTo"), B, FString::Printf(TEXT("touching %s"), *Side.Side)});
             }
-            // The nearest by the gap between the two, so a chair faces the table before the lamp standing on it.
-            FVector Toward = Other.Box.GetCenter() - Item.Box.GetCenter();
-            Toward.Z = 0.0;
+            // The nearest by the gap between the two, so a chair faces the table before the lamp standing on it; facing as
+            // expect judges it (the line ahead meets it, or points within 20 degrees of its centre).
             const double Gap = FlatGap(Item.Box, Other.Box);
-            if (bForward && Gap < FacedGap && Toward.Normalize() && FVector::DotProduct(Forward, Toward) >= FacingCos && !Joined(A, B) &&
-                Other.Shape != Item.Shape)
+            double Off = 0.0;
+            if (bForward && Gap < FacedGap && !Joined(A, B) && Other.Shape != Item.Shape && McpBoxSat::Faces(Item.Print, Other.Print, FacingGrace, Off))
             {
                 Faced = B;
                 FacedGap = Gap;

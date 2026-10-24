@@ -63,9 +63,18 @@ describe('describe_relations', () => {
     expect(code(RELATIONS, 'McpRelationsJudge.cpp')).toContain('const FContact Met = Contact(DrawnFootprint(*A), BoxA, DrawnFootprint(*B), BoxB);');
   });
 
+  // A chair square to the long side of a table points 50 degrees off the table's centre and read as not facing it.
+  it('judges facing as the line ahead meeting the other, or pointing near its centre, the same way expect does', () => {
+    expect(pairs).toContain('McpBoxSat::Faces(Item.Print, Other.Print, FacingGrace, Off)');
+    expect(code(RELATIONS, 'McpRelationsJudge.cpp')).toContain('McpBoxSat::Faces(DrawnFootprint(*A), DrawnFootprint(*B), FMath::DegreesToRadians(FacingDegrees), Off)');
+    expect(code('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'Foundation', 'Solvers', 'McpBoxSat.cpp')).toContain(
+      'return OutOff <= Grace || RayHits(To, From.Center, Front, Distance);',
+    );
+  });
+
   it('never calls a pair that rests or hangs one on the other nextTo or facing, nor copies facing each other', () => {
     expect(pairs).toContain('return Support[A] == B || Support[B] == A || Mount[A] == B || Mount[B] == A;');
-    expect(pairs).toMatch(/!Joined\(A, B\) &&\s*Other\.Shape != Item\.Shape\)/u);
+    expect(pairs).toMatch(/!Joined\(A, B\) &&\s*Other\.Shape != Item\.Shape &&/u);
   });
 });
 

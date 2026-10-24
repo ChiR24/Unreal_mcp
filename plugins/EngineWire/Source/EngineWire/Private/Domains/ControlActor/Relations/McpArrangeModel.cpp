@@ -87,7 +87,8 @@ double Miss(const TArray<FBody>& Bodies, const FGoal& Goal, bool bMargins)
     }
     if (Goal.Kind == TEXT("facing"))
     {
-        return FMath::Square(TurnMiss(A.Yaw, FB.Center - FA.Center));
+        double Off = 0.0;
+        return McpBoxSat::Faces(FA, FB, FacingGrace, Off) ? 0.0 : FMath::Square(Off - FacingGrace);
     }
     // nextTo and against: the boxes touch across one axis and share a side along the other, at a shared height.
     FVector2D Axis = FVector2D::ZeroVector;
@@ -123,12 +124,20 @@ bool WantedYaw(const TArray<FBody>& Bodies, const FGoal& Goal, double& OutYaw)
     const McpBoxSat::FFootprint Self = Footprint(Bodies[Goal.Subject]);
     const McpBoxSat::FFootprint Other = Footprint(Bodies[Goal.Object]);
     FVector2D Want = Other.Center - Self.Center;
+    const FVector2D Local = Turned(-Other.Yaw, Self.Center - Other.Center);
     if (Goal.Kind == TEXT("against"))
     {
         // Its front away from the face of the other it stands at: that face's outward normal.
-        const FVector2D Local = Turned(-Other.Yaw, Self.Center - Other.Center);
         const bool bAlongX = FMath::Abs(Local.X) * Other.Half.Y >= FMath::Abs(Local.Y) * Other.Half.X;
         Want = Turned(Other.Yaw, bAlongX ? FVector2D(FMath::Sign(Local.X), 0.0) : FVector2D(0.0, FMath::Sign(Local.Y)));
+    }
+    else if (FMath::Abs(Local.Y) <= Other.Half.Y && FMath::Abs(Local.X) > Other.Half.X)
+    {
+        Want = Turned(Other.Yaw, FVector2D(-FMath::Sign(Local.X), 0.0)); // square to the side it stands beside
+    }
+    else if (FMath::Abs(Local.X) <= Other.Half.X && FMath::Abs(Local.Y) > Other.Half.Y)
+    {
+        Want = Turned(Other.Yaw, FVector2D(0.0, -FMath::Sign(Local.Y)));
     }
     if (Want.IsNearlyZero())
     {

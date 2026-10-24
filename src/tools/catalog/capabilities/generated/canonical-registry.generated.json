@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "f8938eaa32d771ca",
+  "catalogRevision": "52154d51bbec413e",
   "recordCount": 423,
   "records": [
     {
@@ -35357,7 +35357,7 @@
           "solve a layout",
           "move actors until relations hold"
         ],
-        "summary": "Move actors until the relations stated hold, overlapping nothing, in one undo step: say where things go ([\"Lamp on Table\", \"Chair_1 nextTo Table\", \"Chair_1 facing Table\", \"Shelf against Wall\"]) instead of computing coordinates. The relations are those execute's expect judges: A on B (resting on its top), A inside B, A nextTo B (side by side, touching), A against B (touching, its back to B, its front away), A facing B (its X axis toward B within 20 degrees) and A near B within d (cm, default 100). A solver plans from where the actors stand now, keeping a rough placement wherever it already fits: each actor is a box turned about Z (what it draws), and their places and turns are annealed over how far each relation misses, how deep they overlap each other or the scene around them, and how far they wander; then each contact is snapped exact. What rests on a moved actor moves with it. Each relation is then judged by the engine as expect judges it.",
+        "summary": "Move actors until the relations stated hold, overlapping nothing, in one undo step: say where things go ([\"Lamp on Table\", \"Chair_1 nextTo Table\", \"Chair_1 facing Table\", \"Shelf against Wall\"]) instead of computing coordinates. The relations are those execute's expect judges: A on B (resting on its top), A inside B, A nextTo B (side by side, touching), A against B (touching, its back to B, its front away), A facing B (the line ahead of its front, its X axis, meets B or points within 20 degrees of the centre of B; beside a side of B it turns square to it) and A near B within d (cm, default 100). A solver plans from where the actors stand now, keeping a rough placement wherever it already fits: each actor is a box turned about Z (what it draws), and their places and turns are annealed over how far each relation misses, how deep they overlap each other or the scene around them, and how far they wander; then each contact is snapped exact. What rests on a moved actor moves with it. Each relation is then judged by the engine as expect judges it.",
         "whenToUse": [
           "Furnishing or dressing a scene from a description: the lamp on the table, chairs beside it facing it, the shelf against the wall.",
           "Fixing a rough layout so its pieces touch, rest and face as intended, without reading or computing coordinates.",
@@ -35471,7 +35471,7 @@
       },
       "examples": [
         {
-          "title": "Move actors until the relations stated hold, overlapping nothing, in one undo step: say where things go ([\"Lamp on Table\", \"Chair_1 nextTo Table\", \"Chair_1 facing Table\", \"Shelf against Wall\"]) instead of computing coordinates. The relations are those execute's expect judges: A on B (resting on its top), A inside B, A nextTo B (side by side, touching), A against B (touching, its back to B, its front away), A facing B (its X axis toward B within 20 degrees) and A near B within d (cm, default 100). A solver plans from where the actors stand now, keeping a rough placement wherever it already fits: each actor is a box turned about Z (what it draws), and their places and turns are annealed over how far each relation misses, how deep they overlap each other or the scene around them, and how far they wander; then each contact is snapped exact. What rests on a moved actor moves with it. Each relation is then judged by the engine as expect judges it.",
+          "title": "Move actors until the relations stated hold, overlapping nothing, in one undo step: say where things go ([\"Lamp on Table\", \"Chair_1 nextTo Table\", \"Chair_1 facing Table\", \"Shelf against Wall\"]) instead of computing coordinates. The relations are those execute's expect judges: A on B (resting on its top), A inside B, A nextTo B (side by side, touching), A against B (touching, its back to B, its front away), A facing B (the line ahead of its front, its X axis, meets B or points within 20 degrees of the centre of B; beside a side of B it turns square to it) and A near B within d (cm, default 100). A solver plans from where the actors stand now, keeping a rough placement wherever it already fits: each actor is a box turned about Z (what it draws), and their places and turns are annealed over how far each relation misses, how deep they overlap each other or the scene around them, and how far they wander; then each contact is snapped exact. What rests on a moved actor moves with it. Each relation is then judged by the engine as expect judges it.",
           "input": {
             "action": "arrange_by_relations",
             "relations": [
@@ -35545,7 +35545,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "f774e8f426b54affae6b80939e25eac3620da88b1771487b341d49f90cd0449f",
-        "content": "7c4ef317e1345855e63a511ed374b1a413de7d5fd03b4701b947e5efcbbcb185"
+        "content": "fe2480d1de39a873b5ba595a1d90a49d01561911caa0f364ae107ec56d8fc0e7"
       }
     },
     {
@@ -36454,7 +36454,7 @@
                   "roles"
                 ]
               },
-              "description": "Which relations and patterns to report: on (rests on the actor under it; read from short traces down from its bottom, so an actor without collision rests on nothing), mounted (held from the side, as a picture on a wall), inside (within another's bounds, the tightest such), nextTo (side by side, their sides within 2 cm, judged on boxes turned with the actors), faces (its forward, X axis points at the nearest actor within 20 degrees that is not a copy of it; a prop without a front, such as a crate or a table, faces whatever lies along its X axis), groups, rows (with grids), rings and roles. Omit for all of them but faces, which is listed only when kinds names it or actorNames or nameFilter narrow the report: across a whole level it would name a front for most props."
+              "description": "Which relations and patterns to report: on (rests on the actor under it; read from short traces down from its bottom, so an actor without collision rests on nothing), mounted (held from the side, as a picture on a wall), inside (within another's bounds, the tightest such), nextTo (side by side, their sides within 2 cm, judged on boxes turned with the actors), faces (the line ahead of its front, its X axis, meets the nearest actor that is not a copy of it, or points within 20 degrees of the centre of that actor; a prop without a front, such as a crate or a table, faces whatever lies along its X axis), groups, rows (with grids), rings and roles. Omit for all of them but faces, which is listed only when kinds names it or actorNames or nameFilter narrow the report: across a whole level it would name a front for most props."
             },
             "actorNames": {
               "type": "array",
@@ -36710,8 +36710,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "d0dad38ac47c05cf7dcd0b17763d0b4f2f30302debfaeec80de8a4cb98e407dd",
-        "content": "a8b02bbfcfc0ef041fe6d040103c74e1f3b0e517d10f21e5d1ff2f008e310e3f"
+        "schema": "7ad734a5052fb4cfa62c78800ef838ef2f304d18bf18fc2e8b9532a1894ae6d3",
+        "content": "61bca43455bb6be0f1549c9cd1b01aa7e4ac0a660e0abff0def86951d7a18e9b"
       }
     },
     {

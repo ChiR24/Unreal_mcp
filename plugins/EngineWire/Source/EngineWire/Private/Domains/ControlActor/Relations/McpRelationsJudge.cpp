@@ -69,18 +69,16 @@ bool JudgePair(UWorld* World, AActor* A, const FString& Kind, AActor* B, double 
     }
     if (Kind == TEXT("facing"))
     {
+        // Its front looks at it when the line ahead of it meets it (a chair square to the long side of a table), or points
+        // within 20 degrees of its centre (a lamp across a room).
         FVector Forward = A->GetActorForwardVector();
-        FVector Toward = BoxB.GetCenter() - BoxA.GetCenter();
-        Forward.Z = Toward.Z = 0.0;
-        if (!Forward.Normalize() || !Toward.Normalize())
-        {
-            OutActual = TEXT("one stands straight above the other, or the subject points straight up or down");
-            return false;
-        }
-        const double Degrees = FMath::RadiansToDegrees(FMath::Acos(FVector::DotProduct(Forward, Toward))); // Acos clamps
-        OutActual = Degrees <= FacingDegrees ? FString::Printf(TEXT("its front points at it, %.0f degrees off"), Degrees)
-                                             : FString::Printf(TEXT("its front points %.0f degrees away from it"), Degrees);
-        return Degrees <= FacingDegrees;
+        Forward.Z = 0.0;
+        double Off = 0.0;
+        const bool bFaces = Forward.Normalize() && McpBoxSat::Faces(DrawnFootprint(*A), DrawnFootprint(*B), FMath::DegreesToRadians(FacingDegrees), Off);
+        OutActual = bFaces ? FString(TEXT("its front points at it"))
+            : Forward.IsZero() ? FString(TEXT("it points straight up or down"))
+            : FString::Printf(TEXT("its front points %.0f degrees away from it"), FMath::RadiansToDegrees(Off));
+        return bFaces;
     }
     if (Kind == TEXT("nextTo") || Kind == TEXT("against"))
     {

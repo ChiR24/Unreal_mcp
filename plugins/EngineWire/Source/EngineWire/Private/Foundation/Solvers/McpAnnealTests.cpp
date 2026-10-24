@@ -21,6 +21,11 @@ bool FMcpAnnealTest::RunTest(const FString& Parameters)
     FVector2D Axis;
     TestEqual(TEXT("and stand 0.5 apart"), McpBoxSat::Separation(Unit, {FVector2D(0.0, 2.5), FVector2D(1.0, 1.0), 0.0}, &Axis), 0.5, 1e-9);
     TestTrue(TEXT("along +Y, from the first toward the second"), Axis.Equals(FVector2D(0.0, 1.0), 1e-9));
+    double Distance = 0.0;
+    TestTrue(TEXT("a ray from 5 units out meets the square"), McpBoxSat::RayHits(Unit, FVector2D(-5.0, 0.5), FVector2D(1.0, 0.0), Distance));
+    TestEqual(TEXT("4 units along it"), Distance, 4.0, 1e-9);
+    TestFalse(TEXT("a ray aimed past it misses"), McpBoxSat::RayHits(Unit, FVector2D(-5.0, 1.5), FVector2D(1.0, 0.0), Distance));
+    TestFalse(TEXT("a ray aimed away misses"), McpBoxSat::RayHits(Unit, FVector2D(-5.0, 0.0), FVector2D(-1.0, 0.0), Distance));
     // Turned 45 degrees, the second square reaches sqrt(2) along X: 1 + 1.414 - 2.2.
     constexpr double EighthTurn = 0.78539816339744831; // PI is gone in 5.8 and UE_PI missing in 5.0
     const double Turned = McpBoxSat::Depth(Unit, {FVector2D(2.2, 0.0), FVector2D(1.0, 1.0), EighthTurn});
