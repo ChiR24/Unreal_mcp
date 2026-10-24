@@ -69,6 +69,9 @@ struct FFixRun
                           TSet<AActor*>* OutFlagged);
 };
 
+/** Why an actor is never moved (a floor or landscape, movement locked, attached to another), or empty when it may be. */
+FString PinnedReason(const AActor* Actor);
+
 /** control_actor fix_placement. Find resolves an actor name as every control_actor call does. */
 bool HandleFixPlacement(UEngineWireSubsystem* Bridge, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
                         TSharedPtr<FMcpBridgeWebSocket> Socket, TFunctionRef<AActor*(const FString&)> Find);

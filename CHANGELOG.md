@@ -23,7 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`inspect explain`** says why something does not happen and names the call that fixes it.
 - **A call failing three times unchanged is refused** (`REPEATED_FAILURE`).
 - **Batches check every step first**; `build_graph`, `build_material_graph` and `add_widget_tree` take `dryRun`.
-- **`run_map_check`** reads Map Check as rows; **`fix_placement`** moves sunk, floating and intersecting actors; **`describe_relations`** reads back what rests on, hangs on, touches or faces what, and execute's **`expect`/`require`** options check such facts, values and visibility after or before a call.
+- **`run_map_check`** reads Map Check as rows; **`fix_placement`** moves sunk, floating and intersecting actors; **`describe_relations`** reads back what rests on, hangs on, touches or faces what, **`arrange_by_relations`** moves actors until such relations hold, and execute's **`expect`/`require`** options check them, values and visibility after or before a call.
 - **`inspect changes_since`**: what changed since a cursor, by whom, from and to; replies note the user's edits; `/mcp` serves `ue://changes` subscriptions.
 
 </details>

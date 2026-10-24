@@ -14,7 +14,7 @@ using Detail::EKind;
 using Detail::FToken;
 using Detail::IsNameChar;
 
-const TCHAR* const Relations[] = {TEXT("on"), TEXT("inside"), TEXT("nextTo"), TEXT("facing"), TEXT("near")};
+const TCHAR* const Relations[] = {TEXT("on"), TEXT("inside"), TEXT("nextTo"), TEXT("against"), TEXT("facing"), TEXT("near")};
 const TCHAR* const Predicates[] = {TEXT("exists"), TEXT("hidden"), TEXT("visible"), TEXT("compiles")};
 const TCHAR* const Comparisons[] = {TEXT("=="), TEXT("!="), TEXT("<="), TEXT(">="), TEXT("<"), TEXT(">")};
 

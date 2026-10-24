@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `e23d15348a402ea0`
+Catalog revision: `6ed8e280ba7d12d8`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 422 capabilities across
+The catalog declares 423 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -38,7 +38,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | --- | --- | --- | --- | --- | --- |
 | `animation_physics` | 31 | 5 | 24 | 2 | animation physics |
 | `build_environment` | 40 | 4 | 33 | 3 | environment |
-| `control_actor` | 27 | 9 | 16 | 2 | actor |
+| `control_actor` | 28 | 9 | 17 | 2 | actor |
 | `control_editor` | 24 | 9 | 12 | 3 | editor |
 | `inspect` | 23 | 18 | 4 | 1 | inspect |
 | `manage_ai` | 16 | 2 | 14 | 0 | manage ai |
@@ -62,7 +62,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-65 of 422 capabilities require consent.
+65 of 423 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -262,6 +262,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `build_environment.set_light_channel` | `build_environment` | `set_light_channel` | write | write | none | `build_environment.set_light_channel` `build_environment.set_actor_light_channel` |
 | `control_actor.add_tag` | `control_actor` | `add_tag` | write | write | none | `control_actor.add_tag` `control_actor.remove_tag` |
 | `control_actor.apply_force` | `control_actor` | `apply_force` | write | write | none | `control_actor.apply_force` |
+| `control_actor.arrange_by_relations` | `control_actor` | `arrange_by_relations` | write | write | none | `control_actor.arrange_by_relations` |
 | `control_actor.attach` | `control_actor` | `attach` | write | write | none | `control_actor.attach` `control_actor.attach_actor` |
 | `control_actor.audit_placement` | `control_actor` | `audit_placement` | read | read | none | `control_actor.audit_placement` |
 | `control_actor.call_actor_function` | `control_actor` | `call_actor_function` | destructive | destructive | elevated | `control_actor.call_actor_function` |

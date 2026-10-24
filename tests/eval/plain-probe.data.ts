@@ -642,4 +642,9 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'which props stand in a row', accepted: ['control_actor.describe_relations'] },
   { query: 'is the shelf against the wall', accepted: ['control_actor.describe_relations'] },
   { query: 'what is the chair facing', accepted: ['control_actor.describe_relations'] },
+  { query: 'arrange actors by relations', accepted: ['control_actor.arrange_by_relations'] },
+  { query: 'put the lamp on the table', accepted: ['control_actor.arrange_by_relations'] },
+  { query: 'place the chairs facing the table', accepted: ['control_actor.arrange_by_relations'] },
+  { query: 'push the shelf against the wall', accepted: ['control_actor.arrange_by_relations'] },
+  { query: 'lay out the furniture in a room', accepted: ['control_actor.arrange_by_relations'] },
 ];

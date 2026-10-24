@@ -263,7 +263,7 @@ FVerdict Judge(const TSharedPtr<McpPratt::FNode>& Node, UWorld* World, const TAr
         return !Warnings ? Unknown(TEXT("there is no reply to read yet"))
             : Decide(Warnings->Num() == 0, Warnings->Num() == 0 ? TEXT("the reply has no warnings") : (*Warnings)[0]);
     }
-    if (Op == TEXT("on") || Op == TEXT("inside") || Op == TEXT("nextTo") || Op == TEXT("facing") || Op == TEXT("near"))
+    if (Op == TEXT("on") || Op == TEXT("inside") || Op == TEXT("nextTo") || Op == TEXT("against") || Op == TEXT("facing") || Op == TEXT("near"))
     {
         FVerdict Missing;
         AActor* Subject = NamedActor(*Node->Args[0], Missing);

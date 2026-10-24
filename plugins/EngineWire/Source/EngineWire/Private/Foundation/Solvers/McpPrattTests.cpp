@@ -20,6 +20,7 @@ bool FMcpPrattTest::RunTest(const FString& Parameters)
         {TEXT("Lamp on Table"), TEXT("(on Lamp Table)")},
         {TEXT("lamp ON table"), TEXT("(on lamp table)")},
         {TEXT("Shelf nextto Wall"), TEXT("(nextTo Shelf Wall)")},
+        {TEXT("Shelf against Wall"), TEXT("(against Shelf Wall)")},
         {TEXT("\"Point Light 2\" inside Room"), TEXT("(inside \"Point Light 2\" Room)")},
         {TEXT("Lamp near Table within 50"), TEXT("(near Lamp Table 50)")},
         {TEXT("Chair facing Table"), TEXT("(facing Chair Table)")},

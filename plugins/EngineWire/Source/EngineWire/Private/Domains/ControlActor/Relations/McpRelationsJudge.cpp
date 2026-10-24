@@ -2,9 +2,9 @@
 //
 // One relation between two named actors, for an assertion (McpContracts). on is judged as describe_relations judges
 // it, among the actors around the pair (a lamp on a book on a table rests on the book, not the table), and a picture
-// hanging on a wall is on it too; inside, nextTo, facing and near are measured on the pair alone: inside any container
-// (not only the tightest), facing within 20 degrees (not only the nearest), near within the distance asked (100 cm
-// unless said), gap to gap.
+// hanging on a wall is on it too; inside, nextTo, against, facing and near are measured on the pair alone: inside any
+// container (not only the tightest), against as nextTo with its back to the other, facing within 20 degrees (not only
+// the nearest), near within the distance asked (100 cm unless said), gap to gap.
 
 #include "Domains/ControlActor/Relations/McpRelations.h"
 
@@ -20,6 +20,7 @@ namespace
 constexpr double FacingDegrees = 20.0;
 constexpr double NearDefault = 100.0;
 constexpr double JudgeReach = 500.0; // cm around the pair whose actors may be what the subject rests on
+constexpr double SideTouch = 2.0;    // cm between sides that touch, as describe_relations' nextTo allows
 
 // fix_placement for the one actor, for its sunk and floating kinds.
 TSharedPtr<FJsonObject> PlacementFix(const AActor* Actor)
@@ -33,6 +34,20 @@ TSharedPtr<FJsonObject> PlacementFix(const AActor* Actor)
 }
 } // namespace
 
+McpBoxSat::FFootprint DrawnFootprint(const AActor& Actor)
+{
+    const FRotator Turn(0.0, Actor.GetActorRotation().Yaw, 0.0);
+    const FVector Origin = Actor.GetActorLocation();
+    const FBox Local = McpPlacement::DrawnBoundsIn(Actor, FTransform(Turn, Origin));
+    const FBox Box = Local.IsValid ? Local : McpPlacement::DrawnBounds(Actor).ShiftBy(-Origin);
+    const FVector Center = Local.IsValid ? Turn.RotateVector(Box.GetCenter()) : Box.GetCenter();
+    McpBoxSat::FFootprint Out;
+    Out.Center = FVector2D(Origin.X + Center.X, Origin.Y + Center.Y);
+    Out.Half = FVector2D(Box.GetExtent());
+    Out.Yaw = Local.IsValid ? FMath::DegreesToRadians(Turn.Yaw) : 0.0;
+    return Out;
+}
+
 bool JudgePair(UWorld* World, AActor* A, const FString& Kind, AActor* B, double Within, FString& OutActual,
                TSharedPtr<FJsonObject>& OutNextCall)
 {
@@ -40,7 +55,8 @@ bool JudgePair(UWorld* World, AActor* A, const FString& Kind, AActor* B, double 
     const FBox BoxB = McpPlacement::DrawnBounds(*B);
     if (Kind == TEXT("inside"))
     {
-        const bool bInside = BoxB.ExpandBy(1.0).IsInside(BoxA);
+        const bool bInside = McpBoxSat::Outside(DrawnFootprint(*A), DrawnFootprint(*B)) <= 1.0 && BoxA.Min.Z >= BoxB.Min.Z - 1.0 &&
+                             BoxA.Max.Z <= BoxB.Max.Z + 1.0;
         OutActual = bInside ? TEXT("it is within the other's bounds") : TEXT("part of it is outside the other's bounds");
         return bInside;
     }
@@ -62,17 +78,36 @@ bool JudgePair(UWorld* World, AActor* A, const FString& Kind, AActor* B, double 
             return false;
         }
         const double Degrees = FMath::RadiansToDegrees(FMath::Acos(FVector::DotProduct(Forward, Toward))); // Acos clamps
-        OutActual = FString::Printf(TEXT("its front points %.0f degrees away from it"), Degrees);
+        OutActual = Degrees <= FacingDegrees ? FString::Printf(TEXT("its front points at it, %.0f degrees off"), Degrees)
+                                             : FString::Printf(TEXT("its front points %.0f degrees away from it"), Degrees);
         return Degrees <= FacingDegrees;
     }
-    if (Kind == TEXT("nextTo"))
+    if (Kind == TEXT("nextTo") || Kind == TEXT("against"))
     {
-        const FString Side = TouchingSide(BoxA, BoxB);
-        const double Apart = FlatGap(BoxA, BoxB);
-        OutActual = !Side.IsEmpty() ? FString::Printf(TEXT("touching %s"), *Side)
-            : Apart <= 0.0 ? FString(TEXT("seen from above they overlap: one stands on, over or in the other, not beside it"))
-            : FString::Printf(TEXT("they do not touch side by side (%.0f cm apart)"), Apart);
-        return !Side.IsEmpty();
+        // On the boxes turned with the actors: their bounds' boxes overlap for a chair turned toward a table it touches.
+        const McpBoxSat::FFootprint FA = DrawnFootprint(*A);
+        const McpBoxSat::FFootprint FB = DrawnFootprint(*B);
+        FVector2D Axis = FVector2D::ZeroVector;
+        const double Gap = McpBoxSat::Separation(FA, FB, &Axis);
+        const FVector2D Along(-Axis.Y, Axis.X);
+        const double Shared = McpBoxSat::Reach(FA, Along) + McpBoxSat::Reach(FB, Along) - FMath::Abs(FVector2D::DotProduct(FB.Center - FA.Center, Along));
+        const bool bTouch = FMath::Abs(Gap) <= SideTouch && Shared > 1.0 && FMath::Min(BoxA.Max.Z, BoxB.Max.Z) - FMath::Max(BoxA.Min.Z, BoxB.Min.Z) > 1.0;
+        const TCHAR* Side = FMath::Abs(Axis.X) >= FMath::Abs(Axis.Y) ? (Axis.X > 0.0 ? TEXT("+X") : TEXT("-X")) : (Axis.Y > 0.0 ? TEXT("+Y") : TEXT("-Y"));
+        OutActual = bTouch ? FString::Printf(TEXT("touching its %s side"), Side)
+            : Gap < -SideTouch ? FString(TEXT("seen from above they overlap: one stands on, over or in the other, not beside it"))
+            : Gap > SideTouch ? FString::Printf(TEXT("they do not touch side by side (%.0f cm apart)"), Gap)
+            : FString(TEXT("they meet only at an edge or a corner, or at different heights"));
+        if (!bTouch || Kind == TEXT("nextTo"))
+        {
+            return bTouch;
+        }
+        // against: the side that touches is its back, so its front points away from the other.
+        FVector Forward = A->GetActorForwardVector();
+        Forward.Z = 0.0;
+        const double Off = Forward.Normalize() ? FMath::RadiansToDegrees(FMath::Acos(FVector::DotProduct(Forward, FVector(-Axis.X, -Axis.Y, 0.0)))) : 180.0;
+        OutActual += Off <= FacingDegrees ? FString(TEXT(", its back to it"))
+                                          : FString::Printf(TEXT(", but its front points %.0f degrees off facing away from it"), Off);
+        return Off <= FacingDegrees;
     }
     // on: what the subject rests on (or hangs on) among the actors around the pair.
     const FBox Pair = BoxA + BoxB;

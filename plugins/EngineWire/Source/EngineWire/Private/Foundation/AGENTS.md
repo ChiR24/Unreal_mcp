@@ -13,7 +13,7 @@ domain-local copy of reflection, path, JSON, or response helpers.
 | `Blueprint/` | 5 .cpp | BP pin/type introspection (no public .h; pull via subsystem) |
 | `Diagnostics/` | 6 files | diagnostics snapshot capture/load/rotation + file-name/schema helpers |
 | `GraphLayout/` | 1 file | graph node extent geometry |
-| `Solvers/` | 5 files | general algorithms, one per file, each with a known-answer test: `McpPratt` (the assertion language of execute's `expect`/`require`) |
+| `Solvers/` | 10 files | general algorithms, one per file, each with a known-answer test: `McpPratt` (the assertion language of execute's `expect`/`require`), `McpAnneal` (Metropolis annealing over a caller's state), `McpBoxSat` (boxes turned about Z: separation, depth, containment) |
 | `Render/` | 5 files | post-process volume resolution, console variable writes, stat overlay state |
 | `BridgeHelpers/` | umbrella + 7 groups | asset/actor/BP/property/response/security facade |
 | root | `McpSecureTokenCompare.h` | constant-time token equality |

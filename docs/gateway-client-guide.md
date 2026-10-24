@@ -256,7 +256,7 @@ placement checks; `control_actor audit_placement` sweeps the whole level.
 
 `options.expect` lists assertions the plugin judges once the call succeeds,
 against the editor itself: relations (`Lamp on Table`, `A inside B`,
-`A nextTo B`, `A facing B`, `A near B within 50`), comparisons
+`A nextTo B`, `A against B` (its back to B), `A facing B`, `A near B within 50`), comparisons
 (`Cube.location.z in 0..10`, `Lamp.LightComponent.Intensity > 1000`),
 predicates (`A exists`, `A hidden`, `A visible`, `/Game/BP_Door compiles`) and
 `noWarnings`, combined with `not`, `and`, `or` and parentheses. The receipt's

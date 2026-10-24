@@ -22,6 +22,9 @@ bool IsBoundsOnlyActor(const AActor *Actor);
  */
 FBox DrawnBounds(const AActor &Actor);
 
+/** The same parts' box measured in Frame (an actor's own turned frame, say): invalid when nothing is drawn. */
+FBox DrawnBoundsIn(const AActor &Actor, const FTransform &Frame);
+
 /**
  * The actor Actor hangs on from the side, or null: a window band flush on a hall,
  * an awning on a facade. The placement check only looked for a surface UNDER an

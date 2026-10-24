@@ -4,6 +4,7 @@
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"
+#include "Foundation/Solvers/McpBoxSat.h"
 #include "Templates/Function.h"
 
 class AActor;
@@ -59,10 +60,19 @@ void FindPairRelations(UWorld* World, const TArray<FItem>& Items, const TSet<FSt
 /** Which side of A touches B when the boxes stand side by side (McpRelationsPairs.cpp); empty when they do not. */
 FString TouchingSide(const FBox& A, const FBox& B);
 
-/** One relation between two actors for an assertion (McpRelationsJudge.cpp): Kind is on, inside, nextTo, facing or near
- *  (within Within cm, the default when negative). OutActual says what was found; OutNextCall is the fixing call, if any. */
+/** What an actor draws as a box turned with it about Z, seen from above (McpRelationsJudge.cpp): a chair turned to face
+ *  a table spans less than its bounds' box. */
+McpBoxSat::FFootprint DrawnFootprint(const AActor& Actor);
+
+/** One relation between two actors for an assertion (McpRelationsJudge.cpp): Kind is on, inside, nextTo, against,
+ *  facing or near (within Within cm, the default when negative). OutActual says what was found; OutNextCall is the fixing
+ *  call, if any. */
 bool JudgePair(UWorld* World, AActor* A, const FString& Kind, AActor* B, double Within, FString& OutActual,
                TSharedPtr<FJsonObject>& OutNextCall);
+
+/** control_actor arrange_by_relations (McpArrange.cpp). */
+bool HandleArrangeByRelations(UEngineWireSubsystem* Bridge, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
+                              TSharedPtr<FMcpBridgeWebSocket> Socket, TFunctionRef<AActor*(const FString&)> Find);
 
 /** The wider side of an item's footprint. */
 inline double Footprint(const FItem& Item)

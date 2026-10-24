@@ -61,3 +61,43 @@ describe('describe_relations', () => {
     expect(pairs).toMatch(/!Joined\(A, B\) &&\s*Other\.Shape != Item\.Shape\)/u);
   });
 });
+
+// control_actor arrange_by_relations moves actors until stated relations hold. Wiring contracts only: the solver's known
+// answers are the in-editor Anneal test, the arrangements the integration cases.
+describe('arrange_by_relations', () => {
+  const handler = code(RELATIONS, 'McpArrange.cpp');
+  const solve = code(RELATIONS, 'McpArrangeSolve.cpp');
+
+  // A fuzzy name ("Chair" finding "Chair_Copy") would move the wrong actor.
+  it('is routed by control_actor with an exact-name lookup', () => {
+    expect(code(ACTOR, 'McpActorDispatch.cpp')).toMatch(
+      /LowerSub == TEXT\("arrange_by_relations"\)\)\s*return McpRelations::HandleArrangeByRelations\(this, RequestId, Payload, RequestingSocket,\s*\[this\]\(const FString &Name\) \{ return FindActorByName\(Name, true\); \}\);/u,
+    );
+  });
+
+  it('reads relations in execute\'s assertion language, against included', () => {
+    expect(handler).toContain('McpPratt::Parse(Texts[Index], Root, Why)');
+    expect(code('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'Foundation', 'Solvers', 'McpPratt.cpp')).toMatch(/Relations\[\] = \{[^}]*TEXT\("against"\)/u);
+    expect(code(RELATIONS, 'McpRelationsJudge.cpp')).toContain('if (Kind == TEXT("nextTo") || Kind == TEXT("against"))');
+  });
+
+  it('moves in one undo step, and dryRun moves nothing', () => {
+    expect(handler).toContain('const FScopedTransaction Transaction(NSLOCTEXT("McpRelations", "ArrangeByRelations", "Arrange By Relations"), !bDryRun);');
+    expect(handler).toMatch(/if \(!bDryRun\)\s*\{\s*FRotator Rotation = Body\.Actor->GetActorRotation\(\);[\s\S]*?Body\.Actor->Modify\(\);\s*Body\.Actor->SetActorLocationAndRotation\(/u);
+    expect(handler.match(/SetActorLocationAndRotation\(/gu)).toHaveLength(1);
+  });
+
+  it('never moves a floor, a locked or an attached actor, by fix_placement\'s own rule', () => {
+    expect(handler).toContain('const FString Why = McpPlacementFix::PinnedReason(Actor);');
+  });
+
+  // The model can call a relation met that the engine would not: every verdict of a real run is the engine's.
+  it('judges each relation after the move as expect judges it', () => {
+    expect(handler).toContain('JudgePair(World, Asked[Index].Subject, Asked[Index].Kind, Asked[Index].Object, Asked[Index].Within, Actual, NextCall)');
+  });
+
+  it('answers well inside the client\'s 30 s limit', () => {
+    expect(handler).toContain('constexpr double ArrangeSeconds = 8.0;');
+    expect(solve).toContain('Settings.DeadlineSeconds = DeadlineSeconds;');
+  });
+});

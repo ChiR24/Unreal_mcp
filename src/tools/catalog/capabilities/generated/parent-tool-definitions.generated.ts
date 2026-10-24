@@ -4185,6 +4185,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "items": {
                 "type": "string"
               },
+              "description": "The actors that may move; omit to move every relation's left-hand actor. A floor or landscape, an actor with Lock Actor Movement and an attached actor never move: they come back under skipped with the reason. What is not named stays put and is kept clear of."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
               "minItems": 1,
               "maxItems": 500,
               "description": "Many actors given the same change: the location, offset, rotation or scale beside it (forty frost caps rescaled by one scale, a group raised by one offset). Reported as actors is."
@@ -4707,6 +4714,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Which get transform variant to run; omit for 'transform'.\ntransform: Read the world transform (location, rotation, scale) of an actor.\nmotion: Watch an actor over game time in Play-In-Editor and return its location, velocity, rotation and chosen properties at every interval, plus start/end and min/max extents, in one call; it can also follow points on the actor (bones, sockets, components) with their height over the ground, press keys at exact game times (inputs) and wait for another actor's property to change before it starts (startWhen). The warnings say what the game logged while it ran, and a Blueprint runtime error names the node, graph and Blueprint that raised it.",
           "default": "transform"
         },
+        "relations": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 32,
+          "items": {
+            "type": "string",
+            "maxLength": 300
+          },
+          "description": "What should hold, one relation per entry between two actors by name (names with spaces in double quotes): A on B, A inside B, A nextTo B, A against B, A facing B, or A near B within d. Anything else (a comparison, exists, not, and, or) is refused with INVALID_ARGUMENT, as is a relation from an actor to itself; a name that matches no actor refuses with ACTOR_NOT_FOUND (missing lists them) and nothing moves."
+        },
         "relativeLocation": {
           "type": "array",
           "items": {
@@ -4907,6 +4924,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "fix_coplanar",
             "fix_placement",
             "describe_relations",
+            "arrange_by_relations",
             "attach",
             "detach",
             "set_blueprint_variables",
@@ -5235,7 +5253,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "dryRun": {
           "type": "boolean",
-          "description": "Whether nothing was changed."
+          "description": "Present and true when nothing moved because dryRun was set."
         },
         "end": {
           "type": "array",
@@ -5442,9 +5460,18 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "x-unreal-reflection-boundary": true
               },
               "x-unreal-reflection-boundary": true
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Each actor moved (or that would move under dryRun) as {actorName, from [x, y, z], to [x, y, z], turned (degrees about Z)}."
             }
           ],
-          "description": "One entry per actor: actorName, offset {x, y, z} it moved by, resized when both of its faces on one axis moved (for example \"grew 2.0 units along X\"), and pairs, each face with the other actor and whether it was brought forward or pulled back."
+          "description": "Each actor moved (or that would move under dryRun) as {actorName, from [x, y, z], to [x, y, z], turned (degrees about Z)}."
         },
         "movedActors": {
           "type": "number",
@@ -5554,14 +5581,28 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Present when the relations list was cut at 200: how many there were."
         },
         "relations": {
-          "type": "array",
-          "items": {
-            "type": "array",
-            "items": {
-              "type": "string"
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "description": "One row per relation as [subject, relation, object] or [subject, relation, object, detail], grouped by subject, at most 200: [\"Lamp\", \"on\", \"Table\"], [\"Chair_1\", \"faces\", \"Table\", \"25 cm away\"], [\"Shelf\", \"nextTo\", \"Wall\", \"touching its +Y side\"]. An on row whose detail says an edge of it rests there stands only partly on that actor. What rests on the ground is listed only for the actors asked about by actorNames or nameFilter; roles.ground counts the rest."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Each relation as {relation, verdict (ok or failed), actual}: judged by the engine after the move as expect judges it (actual says what was found: \"touching its -Y side, its back to it\", \"it rests on 'Book' instead\"); under dryRun judged on the plan."
             }
-          },
-          "description": "One row per relation as [subject, relation, object] or [subject, relation, object, detail], grouped by subject, at most 200: [\"Lamp\", \"on\", \"Table\"], [\"Chair_1\", \"faces\", \"Table\", \"25 cm away\"], [\"Shelf\", \"nextTo\", \"Wall\", \"touching its +Y side\"]. An on row whose detail says an edge of it rests there stands only partly on that actor. What rests on the ground is listed only for the actors asked about by actorNames or nameFilter; roles.ground counts the rest."
+          ],
+          "description": "Each relation as {relation, verdict (ok or failed), actual}: judged by the engine after the move as expect judges it (actual says what was found: \"touching its -Y side, its back to it\", \"it rests on 'Book' instead\"); under dryRun judged on the plan."
         },
         "remaining": {
           "type": "number",
@@ -5710,6 +5751,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             {
               "type": "array",
               "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Actors that would move but never do, as {actorName, reason}."
+            },
+            {
+              "type": "array",
+              "items": {
                 "type": "string"
               },
               "description": "Pairs left alone, each with the reason and what to do instead."
@@ -5731,6 +5781,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "number"
           },
           "description": "First sampled location."
+        },
+        "steps": {
+          "type": "number",
+          "description": "Annealing steps run (it stops at a fixed count or after 8 seconds)."
         },
         "success": {
           "type": "boolean",
@@ -5788,6 +5842,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             }
           ],
           "description": "What editor undo takes back: {undoable, transactionScope, steps}; every move of the call is one step. Absent under dryRun."
+        },
+        "unmet": {
+          "type": "number",
+          "description": "How many relations do not hold: 0 when every one does. Relations that contradict each other or leave no free place stay unmet."
         },
         "unnamedActors": {
           "type": "array",

@@ -19,7 +19,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **`explain`** fault trees (collision, visible, input, widget, audible, lit), each failure naming the call that fixes it.
 - **Loop guard** on `/mcp`: a call failing three times unchanged is refused (`REPEATED_FAILURE`).
 - **`dryRun`** on `build_graph`, `build_material_graph` and `add_widget_tree`, which check every step first.
-- **`run_map_check`** reads Map Check as rows; **`fix_placement`** moves sunk, floating and intersecting actors in one undo step; **`describe_relations`** reads the level back as relations, groups, rows, grids, rings and scene roles; execute's `options.expect` is judged after the call (receipt `expectations`, with the fixing call) and `options.require` before it (`PRECONDITION_FAILED`, nothing runs).
+- **`run_map_check`** reads Map Check as rows; **`fix_placement`** moves sunk, floating and intersecting actors in one undo step; **`describe_relations`** reads the level back as relations, groups, rows, grids, rings and scene roles; **`arrange_by_relations`** anneals actors into stated relations, overlapping nothing, in one undo step; execute's `options.expect` is judged after the call (receipt `expectations`, with the fixing call) and `options.require` before it (`PRECONDITION_FAILED`, nothing runs).
 - **Change journal**: `changes_since` lists what changed since a cursor, by whom (mcp, user, editor), from and to; a reply warns once of the user's edits; `/mcp` serves `ue://changes` subscriptions.
 
 ### Changed

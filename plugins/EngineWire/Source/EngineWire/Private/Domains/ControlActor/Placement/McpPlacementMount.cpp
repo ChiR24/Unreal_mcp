@@ -31,15 +31,32 @@ bool IsBoundsOnlyActor(const AActor *Actor) {
          ClassName.EndsWith(TEXT("SubsystemRenderingActor"));
 }
 
+namespace {
+bool IsDrawnPart(const UPrimitiveComponent *Part) {
+  return Part->IsRegistered() && Part->IsVisible() && !Part->bHiddenInGame && !Part->IsEditorOnly();
+}
+} // namespace
+
 FBox DrawnBounds(const AActor &Actor) {
   FBox Box(ForceInit);
   TInlineComponentArray<UPrimitiveComponent *> Parts(&Actor);
   for (const UPrimitiveComponent *Part : Parts) {
-    if (Part->IsRegistered() && Part->IsVisible() && !Part->bHiddenInGame && !Part->IsEditorOnly()) {
+    if (IsDrawnPart(Part)) {
       Box += Part->Bounds.GetBox();
     }
   }
   return Box.IsValid ? Box : Actor.GetComponentsBoundingBox(true);
+}
+
+FBox DrawnBoundsIn(const AActor &Actor, const FTransform &Frame) {
+  FBox Box(ForceInit);
+  TInlineComponentArray<UPrimitiveComponent *> Parts(&Actor);
+  for (const UPrimitiveComponent *Part : Parts) {
+    if (IsDrawnPart(Part)) {
+      Box += Part->CalcBounds(Part->GetComponentTransform().GetRelativeTransform(Frame)).GetBox();
+    }
+  }
+  return Box;
 }
 
 bool HangsOn(const FBox &ActorBox, const FBox &OtherBox, const double Touch) {

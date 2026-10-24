@@ -145,6 +145,9 @@ bool UEngineWireSubsystem::HandleControlActorAction(
   if (LowerSub == TEXT("describe_relations"))
     return McpRelations::HandleDescribeRelations(this, RequestId, Payload, RequestingSocket,
                                                  [this](const FString &Name) { return FindActorByName(Name); });
+  if (LowerSub == TEXT("arrange_by_relations"))
+    return McpRelations::HandleArrangeByRelations(this, RequestId, Payload, RequestingSocket,
+                                                  [this](const FString &Name) { return FindActorByName(Name, true); });
   if (LowerSub == TEXT("set_property"))
     return HandleSetObjectProperty(RequestId, TEXT("set_object_property"), Payload, RequestingSocket);
   if (LowerSub == TEXT("get_property"))

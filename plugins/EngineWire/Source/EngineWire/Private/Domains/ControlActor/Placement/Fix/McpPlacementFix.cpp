@@ -21,8 +21,8 @@ namespace
 constexpr int32 MaxRounds = 3;
 // No round starts past this, so the reply lands well inside a client's 30 s limit.
 constexpr double RoundDeadlineSeconds = 15.0;
+} // namespace
 
-// Why an actor is never moved, or empty when it may be.
 FString PinnedReason(const AActor* Actor)
 {
     if (McpPlacement::McpIsGroundLike(Actor))
@@ -36,7 +36,6 @@ FString PinnedReason(const AActor* Actor)
     const AActor* Parent = Actor->GetAttachParentActor();
     return Parent ? FString::Printf(TEXT("it is attached to '%s', which moves it"), *McpActorRef(Parent)) : FString();
 }
-} // namespace
 
 bool HandleFixPlacement(UEngineWireSubsystem* Bridge, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
                         TSharedPtr<FMcpBridgeWebSocket> Socket, TFunctionRef<AActor*(const FString&)> Find)
