@@ -113,6 +113,9 @@ export function extractHandles(result: unknown): TypedHandle[] {
 export function extractChanges(result: unknown): string[] {
   if (!isRecord(result)) return [];
   const read = makeReader(result);
+  // A dry run changes nothing, though it names what it checked: a widget tree checked with dryRun listed its Widget
+  // Blueprint as changed.
+  if (read('dryRun') === true) return [];
   const collected: string[] = [];
   for (const field of CHANGE_ARRAY_FIELDS) {
     const value = read(field);

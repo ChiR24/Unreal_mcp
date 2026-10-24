@@ -94,7 +94,7 @@ export const OPERATIONS_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Run the editor\'s own Map Check (Build > Map Check) on the level open in the editor and answer its messages '
       + 'as rows: severity (error, warning, performance or info), message, the actor it names (actor, actorPath) and '
       + 'code, the map error\'s name (the key of the engine\'s guidance for it, such as LightingBuildNeeded or '
-      + 'StaticMeshNull). Counts by severity come back as errors, warnings, performanceWarnings and notes, with total; at '
+      + 'StaticMeshNull). Counts by severity come back as errorCount, warningCount, performanceWarningCount and noteCount, with total; at '
       + 'most 200 rows (truncated says when more were found). No Message Log tab opens and nothing in the level changes. '
       + 'NO_WORLD: no level is open.',
     whenToUse: ['The engine\'s own checks must be read for the open level: unbuilt lighting, meshes with no mesh, '
@@ -108,7 +108,7 @@ export const OPERATIONS_RECORDS: readonly CapabilityRecordSource[] = [
     exampleInput: { action: 'run_map_check' },
     exampleOutput: {
       success: true, message: 'Map Check of \'L_Demo\': 1 error(s), 2 warning(s), 0 performance warning(s), 0 note(s).',
-      levelPath: '/Game/Maps/L_Demo', errors: 1, warnings: 2, performanceWarnings: 0, notes: 0, total: 3,
+      levelPath: '/Game/Maps/L_Demo', errorCount: 1, warningCount: 2, performanceWarningCount: 0, noteCount: 0, total: 3,
     },
     outputProps: {
       levelPath: { type: 'string', description: 'The level checked.' },
@@ -117,12 +117,13 @@ export const OPERATIONS_RECORDS: readonly CapabilityRecordSource[] = [
         'x-unreal-reflection-boundary': true,
         description: 'One row per Map Check message: severity, message, actor and actorPath when it names one, code (the map error name).',
       },
-      errors: { type: 'number', description: 'Error messages.' },
-      warnings: { type: 'number', description: 'Warning messages.' },
-      performanceWarnings: { type: 'number', description: 'Performance warnings.' },
-      notes: { type: 'number', description: 'Info messages.' },
+      errorCount: { type: 'number', description: 'Error messages.' },
+      warningCount: { type: 'number', description: 'Warning messages (the reply\'s warnings list only what else the call logged).' },
+      performanceWarningCount: { type: 'number', description: 'Performance warnings.' },
+      noteCount: { type: 'number', description: 'Info messages, the check\'s closing summary left out.' },
       total: { type: 'number', description: 'Every message found, listed or not.' },
       truncated: { type: 'boolean', description: 'True when more than 200 messages were found.' },
+      hiddenByLogFilters: { type: 'number', description: 'Messages the Map Check tab\'s severity filters hide from these rows: tick every severity in that tab to list them. Present only when some are hidden.' },
     },
   }),
   ...OPERATIONS_IO_RECORDS,

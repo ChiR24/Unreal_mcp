@@ -97,6 +97,26 @@ describe('native McpExtractReceiptChanges mirrors the same rule', () => {
   });
 });
 
+// A widget tree checked with dryRun listed its Widget Blueprint as changed: a dry run names what it checked and
+// changes nothing.
+describe('a dry run lists no change', () => {
+  it.each([...CHANGE_ASSET_SINGLE_FIELDS, ...CHANGE_ACTOR_SINGLE_FIELDS])('%s beside dryRun: true is not a change', (field) => {
+    expect(extractChanges({ success: true, [field]: WIDGET, dryRun: true })).toEqual([]);
+    expect(extractChanges({ success: true, changedEntities: ['track A'], details: { [field]: WIDGET, dryRun: true } })).toEqual([]);
+  });
+
+  it('dryRun: false keeps the inference', () => {
+    expect(extractChanges({ success: true, widgetPath: WIDGET, dryRun: false })).toEqual([WIDGET]);
+  });
+
+  it('the native extractor returns before it reads any change field', () => {
+    const source = nativeSource('MCP', 'Execute', 'McpNativeReceiptOutcome.cpp');
+    const body = source.slice(source.indexOf('TArray<FString> McpExtractReceiptChanges('));
+    expect(body).toMatch(/ReadField\(RawResult,\s*TEXT\("dryRun"\)\)[\s\S]*?DryRun->Type == EJson::Boolean && DryRun->AsBool\(\)\)\)\s*\{\s*return Changes;/u);
+    expect(body.indexOf('TEXT("dryRun")')).toBeLessThan(body.indexOf('for (const TCHAR* Field : CHANGE_ARRAYS)'));
+  });
+});
+
 // A move listed its actor twice, by label and by object path, as two changes.
 describe('one actor is one change', () => {
   it('names it by actorName, or by actorPath when there is no name', () => {

@@ -51,6 +51,8 @@ bool UEngineWireSubsystem::HandleLevelAction(
       EffectiveAction = TEXT("set_level_world_settings");
     } else if (LowerSub == TEXT("validate_level")) {
       EffectiveAction = TEXT("validate_level");
+    } else if (LowerSub == TEXT("run_map_check")) {
+      EffectiveAction = TEXT("run_map_check");
     } else if (LowerSub == TEXT("list") || LowerSub == TEXT("list_levels")) {
       EffectiveAction = TEXT("list_levels");
     } else if (LowerSub == TEXT("get_current_level")) {

@@ -6,6 +6,7 @@
 
 #include "Editor.h"
 #include "IMessageLogListing.h"
+#include "Logging/MessageLog.h"
 #include "Logging/TokenizedMessage.h"
 #include "MessageLogModule.h"
 #include "Misc/UObjectToken.h"
@@ -81,11 +82,21 @@ bool HandleRunMapCheckAction(UEngineWireSubsystem& Subsystem, const FString& Req
     GEditor->Exec(World, TEXT("MAP CHECK DONTDISPLAYDIALOG"), *GLog);
     const TSharedRef<IMessageLogListing> Listing =
         FModuleManager::LoadModuleChecked<FMessageLogModule>(TEXT("MessageLog")).GetLogListing(TEXT("MapCheck"));
+    const TArray<TSharedRef<FTokenizedMessage>>& Messages = Listing->GetFilteredMessages();
+    // The check ends its page with a summary note ("Map check complete: ...": its severity mark and text alone), which
+    // is no finding: a clean level answered one note. Findings name an object or a map error.
+    int32 Listed = Messages.Num();
+    if (Listed > 0 && Messages.Last()->GetSeverity() == EMessageSeverity::Info &&
+        !Messages.Last()->GetMessageTokens().ContainsByPredicate([](const TSharedRef<IMessageToken>& Token)
+            { return Token->GetType() != EMessageToken::Severity && Token->GetType() != EMessageToken::Text; }))
+    {
+        --Listed;
+    }
     TArray<TSharedPtr<FJsonValue>> Rows;
     TMap<FString, int32> Counts;
-    for (const TSharedRef<FTokenizedMessage>& Message : Listing->GetFilteredMessages())
+    for (int32 Index = 0; Index < Listed; ++Index)
     {
-        const TSharedPtr<FJsonObject> Row = MapCheckRow(*Message);
+        const TSharedPtr<FJsonObject> Row = MapCheckRow(*Messages[Index]);
         ++Counts.FindOrAdd(Row->GetStringField(TEXT("severity")));
         if (Rows.Num() < MaxMapCheckRows)
         {
@@ -96,10 +107,11 @@ bool HandleRunMapCheckAction(UEngineWireSubsystem& Subsystem, const FString& Req
     Result->SetStringField(TEXT("levelPath"), World->GetOutermost()->GetName());
     Result->SetArrayField(TEXT("messages"), Rows);
     int32 Total = 0;
-    for (const TPair<const TCHAR*, const TCHAR*>& Field : {TPair<const TCHAR*, const TCHAR*>(TEXT("error"), TEXT("errors")),
-                                                           TPair<const TCHAR*, const TCHAR*>(TEXT("warning"), TEXT("warnings")),
-                                                           TPair<const TCHAR*, const TCHAR*>(TEXT("performance"), TEXT("performanceWarnings")),
-                                                           TPair<const TCHAR*, const TCHAR*>(TEXT("info"), TEXT("notes"))})
+    // Counts, not "warnings": a reply's warnings are the engine lines a call logged, and they took that field over.
+    for (const TPair<const TCHAR*, const TCHAR*>& Field : {TPair<const TCHAR*, const TCHAR*>(TEXT("error"), TEXT("errorCount")),
+                                                           TPair<const TCHAR*, const TCHAR*>(TEXT("warning"), TEXT("warningCount")),
+                                                           TPair<const TCHAR*, const TCHAR*>(TEXT("performance"), TEXT("performanceWarningCount")),
+                                                           TPair<const TCHAR*, const TCHAR*>(TEXT("info"), TEXT("noteCount"))})
     {
         const int32 Count = Counts.FindRef(Field.Key);
         Result->SetNumberField(Field.Value, Count);
@@ -110,6 +122,14 @@ bool HandleRunMapCheckAction(UEngineWireSubsystem& Subsystem, const FString& Req
     {
         Result->SetBoolField(TEXT("truncated"), true);
     }
+    // The listing applies the Map Check tab's severity filters; the log itself counts every message, the summary too.
+    const int32 Hidden = FMessageLog(TEXT("MapCheck")).NumMessages(EMessageSeverity::Info) - 1 - Total;
+    if (Hidden > 0)
+    {
+        Result->SetNumberField(TEXT("hiddenByLogFilters"), Hidden);
+    }
+    // Each message is a row already: its copy in the output log is no engine warning of this call.
+    Subsystem.ForgetCapturedMessages([](const FString& Line) { return Line.StartsWith(TEXT("[MapCheck]")); });
     Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true,
         FString::Printf(TEXT("Map Check of '%s': %d error(s), %d warning(s), %d performance warning(s), %d note(s)."),
                         *World->GetName(), Counts.FindRef(TEXT("error")), Counts.FindRef(TEXT("warning")),

@@ -138,7 +138,9 @@ void AddSingleChanges(const TSharedPtr<FJsonObject>& Result, const TCHAR* const 
 TArray<FString> McpExtractReceiptChanges(const TSharedPtr<FJsonObject>& RawResult)
 {
 	TArray<FString> Changes;
-	if (!RawResult.IsValid())
+	// A dry run changes nothing, though it names what it checked. Mirrors extractChanges.
+	const TSharedPtr<FJsonValue> DryRun = RawResult.IsValid() ? ReadField(RawResult, TEXT("dryRun")) : nullptr;
+	if (!RawResult.IsValid() || (DryRun.IsValid() && DryRun->Type == EJson::Boolean && DryRun->AsBool()))
 	{
 		return Changes;
 	}

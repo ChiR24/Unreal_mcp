@@ -9,6 +9,23 @@
 // nothing applied, and dryRun answers with every one and runs nothing.
 namespace McpMaterialAuthoringHandlers
 {
+namespace
+{
+// The node adders the dispatcher runs (each handler's add_* names and McpMatAddClassNode's table): an "add_" prefix let
+// a misspelt adder pass the check and stop the run once the steps before it were applied.
+const TSet<FString>& MaterialNodeAdders()
+{
+  static const TSet<FString> Adders = {
+      TEXT("add_material_node"), TEXT("add_texture_sample"), TEXT("add_texture_coordinate"), TEXT("add_scalar_parameter"),
+      TEXT("add_vector_parameter"), TEXT("add_static_switch_parameter"), TEXT("add_math_node"),
+      TEXT("add_custom_expression"), TEXT("add_landscape_layer"), TEXT("add_function_input"), TEXT("add_function_output"),
+      TEXT("add_world_position"), TEXT("add_vertex_normal"), TEXT("add_pixel_depth"), TEXT("add_fresnel"),
+      TEXT("add_reflection_vector"), TEXT("add_panner"), TEXT("add_rotator"), TEXT("add_noise"), TEXT("add_voronoi"),
+      TEXT("add_if"), TEXT("add_switch")};
+  return Adders;
+}
+} // namespace
+
 // Additive edits only: deleting and disconnecting stay single calls behind
 // their own consent, and creating an asset is not a graph edit.
 bool IsBatchableMaterialEdit(const FString& Edit)
@@ -17,12 +34,12 @@ bool IsBatchableMaterialEdit(const FString& Edit)
       TEXT("connect_nodes"), TEXT("connect_material_pins"), TEXT("use_material_function"),
       TEXT("set_node_position"), TEXT("update_custom_expression"), TEXT("set_blend_mode"),
       TEXT("set_shading_model"), TEXT("set_material_domain"), TEXT("set_two_sided")};
-  return Edit.StartsWith(TEXT("add_")) || Others.Contains(Edit);
+  return MaterialNodeAdders().Contains(Edit) || Others.Contains(Edit);
 }
 
 bool CreatesNode(const FString& Edit)
 {
-  return Edit.StartsWith(TEXT("add_")) || Edit == TEXT("use_material_function");
+  return MaterialNodeAdders().Contains(Edit) || Edit == TEXT("use_material_function");
 }
 
 bool HasPosition(const TSharedPtr<FJsonObject>& Step)
@@ -108,12 +125,17 @@ bool ResolveAliases(const TMap<FString, FString>& Aliases, const TSharedPtr<FJso
 
 FString DescribeUnbatchableMaterialEdit(const FString& Edit)
 {
+  static const TSet<FString> Unbatched = {TEXT("delete_node"), TEXT("remove_material_node"), TEXT("disconnect_nodes"),
+                                          TEXT("break_material_connections")};
+  const TCHAR* Why = Edit.IsEmpty() ? TEXT("each step needs `edit`")
+                     : Unbatched.Contains(Edit)
+                         ? TEXT("that edit is not batched (deleting and disconnecting keep their own consent, so call them on "
+                                "their own); a step's edit is")
+                         : TEXT("no material edit has that name; a step's edit is");
   return FString::Printf(TEXT("%s: a node adder (add_material_node, add_scalar_parameter, add_math_node, "
                               "add_custom_expression, ...), use_material_function, connect_nodes, set_node_position, "
                               "update_custom_expression, set_blend_mode, set_shading_model, set_material_domain or set_two_sided"),
-                         Edit.IsEmpty() ? TEXT("each step needs `edit`")
-                                        : TEXT("that edit is not batched (deleting and disconnecting keep their own consent, so call "
-                                               "them on their own); a step's edit is"));
+                         Why);
 }
 
 TArray<TSharedPtr<FJsonValue>> CheckMaterialBatch(const TSharedPtr<FJsonObject>& Payload, const TArray<TSharedPtr<FJsonValue>>& Steps)

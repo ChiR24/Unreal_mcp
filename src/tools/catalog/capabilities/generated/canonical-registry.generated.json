@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "7aab878b016715a3",
+  "catalogRevision": "e94cb1cf2d1f7221",
   "recordCount": 418,
   "records": [
     {
@@ -78577,7 +78577,7 @@
           "level warnings",
           "unbuilt lighting"
         ],
-        "summary": "Run the editor's own Map Check (Build > Map Check) on the level open in the editor and answer its messages as rows: severity (error, warning, performance or info), message, the actor it names (actor, actorPath) and code, the map error's name (the key of the engine's guidance for it, such as LightingBuildNeeded or StaticMeshNull). Counts by severity come back as errors, warnings, performanceWarnings and notes, with total; at most 200 rows (truncated says when more were found). No Message Log tab opens and nothing in the level changes. NO_WORLD: no level is open.",
+        "summary": "Run the editor's own Map Check (Build > Map Check) on the level open in the editor and answer its messages as rows: severity (error, warning, performance or info), message, the actor it names (actor, actorPath) and code, the map error's name (the key of the engine's guidance for it, such as LightingBuildNeeded or StaticMeshNull). Counts by severity come back as errorCount, warningCount, performanceWarningCount and noteCount, with total; at most 200 rows (truncated says when more were found). No Message Log tab opens and nothing in the level changes. NO_WORLD: no level is open.",
         "whenToUse": [
           "The engine's own checks must be read for the open level: unbuilt lighting, meshes with no mesh, overlapping stationary lights, volumes with a bad brush and the rest.",
           "A level is about to be saved, shipped or reviewed."
@@ -78632,21 +78632,21 @@
               "x-unreal-reflection-boundary": true,
               "description": "One row per Map Check message: severity, message, actor and actorPath when it names one, code (the map error name)."
             },
-            "errors": {
+            "errorCount": {
               "type": "number",
               "description": "Error messages."
             },
-            "warnings": {
+            "warningCount": {
               "type": "number",
-              "description": "Warning messages."
+              "description": "Warning messages (the reply's warnings list only what else the call logged)."
             },
-            "performanceWarnings": {
+            "performanceWarningCount": {
               "type": "number",
               "description": "Performance warnings."
             },
-            "notes": {
+            "noteCount": {
               "type": "number",
-              "description": "Info messages."
+              "description": "Info messages, the check's closing summary left out."
             },
             "total": {
               "type": "number",
@@ -78655,6 +78655,10 @@
             "truncated": {
               "type": "boolean",
               "description": "True when more than 200 messages were found."
+            },
+            "hiddenByLogFilters": {
+              "type": "number",
+              "description": "Messages the Map Check tab's severity filters hide from these rows: tick every severity in that tab to list them. Present only when some are hidden."
             }
           },
           "required": [
@@ -78665,7 +78669,7 @@
       },
       "examples": [
         {
-          "title": "Run the editor's own Map Check (Build > Map Check) on the level open in the editor and answer its messages as rows: severity (error, warning, performance or info), message, the actor it names (actor, actorPath) and code, the map error's name (the key of the engine's guidance for it, such as LightingBuildNeeded or StaticMeshNull). Counts by severity come back as errors, warnings, performanceWarnings and notes, with total; at most 200 rows (truncated says when more were found). No Message Log tab opens and nothing in the level changes. NO_WORLD: no level is open.",
+          "title": "Run the editor's own Map Check (Build > Map Check) on the level open in the editor and answer its messages as rows: severity (error, warning, performance or info), message, the actor it names (actor, actorPath) and code, the map error's name (the key of the engine's guidance for it, such as LightingBuildNeeded or StaticMeshNull). Counts by severity come back as errorCount, warningCount, performanceWarningCount and noteCount, with total; at most 200 rows (truncated says when more were found). No Message Log tab opens and nothing in the level changes. NO_WORLD: no level is open.",
           "input": {
             "action": "run_map_check"
           },
@@ -78673,10 +78677,10 @@
             "success": true,
             "message": "Map Check of 'L_Demo': 1 error(s), 2 warning(s), 0 performance warning(s), 0 note(s).",
             "levelPath": "/Game/Maps/L_Demo",
-            "errors": 1,
-            "warnings": 2,
-            "performanceWarnings": 0,
-            "notes": 0,
+            "errorCount": 1,
+            "warningCount": 2,
+            "performanceWarningCount": 0,
+            "noteCount": 0,
             "total": 3
           }
         }
@@ -78708,8 +78712,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "e2edf91dfe519e5fe34f4fff6f560125d0237e63394b0afe9112735ee00305a4",
-        "content": "1e72f4d9c5a0a1fb4d33da653153b8eec83eee73b15ea3b41c574029ede3e612"
+        "schema": "23ce0ba2e0a41e2117b17aef90db39e190941643afdea476c0c36dffeeeb67b3",
+        "content": "53390c943fea1d3539b484857318a6ecfadf1d1d6fb143e1c8bfee28a04a1f74"
       }
     },
     {

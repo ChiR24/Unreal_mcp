@@ -21750,7 +21750,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Level packages with unsaved changes when the call began, counted in every mode (it read 0 in an interactive editor)."
         },
-        "errors": {
+        "errorCount": {
           "type": "number",
           "description": "Error messages."
         },
@@ -21765,6 +21765,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "gravityZ": {
           "type": "number",
           "description": "World gravity along Z; setting it also enables the global gravity override."
+        },
+        "hiddenByLogFilters": {
+          "type": "number",
+          "description": "Messages the Map Check tab's severity filters hide from these rows: tick every severity in that tab to list them. Present only when some are hidden."
         },
         "killZ": {
           "type": "number",
@@ -21796,9 +21800,9 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true,
           "description": "One row per Map Check message: severity, message, actor and actorPath when it names one, code (the map error name)."
         },
-        "notes": {
+        "noteCount": {
           "type": "number",
-          "description": "Info messages."
+          "description": "Info messages, the check's closing summary left out."
         },
         "objectPath": {
           "type": "string",
@@ -21808,7 +21812,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Package name (asset-registry lookup)."
         },
-        "performanceWarnings": {
+        "performanceWarningCount": {
           "type": "number",
           "description": "Performance warnings."
         },
@@ -21910,9 +21914,9 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether the level is drawn now."
         },
-        "warnings": {
+        "warningCount": {
           "type": "number",
-          "description": "Warning messages."
+          "description": "Warning messages (the reply's warnings list only what else the call logged)."
         },
         "world": {
           "type": "string",
