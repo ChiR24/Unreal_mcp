@@ -11543,7 +11543,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "items": {
             "type": "string"
           },
-          "description": "The parameters this call added."
+          "description": "kind=parameter_collection: the parameters this call added."
         },
         "against": {
           "type": "string",
@@ -11763,7 +11763,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "boolean",
             "number"
           ],
-          "description": "True when the call made the collection, false when it updated one."
+          "description": "With instances: how many were created."
         },
         "currency": {
           "type": "string",
@@ -12614,7 +12614,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "x-unreal-reflection-boundary": true
           },
           "x-unreal-reflection-boundary": true,
-          "description": "Every scalar parameter of the collection after the call: {name, default}."
+          "description": "kind=parameter_collection: every scalar parameter of the collection after the call, {name, default}."
         },
         "scannedAssets": {
           "type": "number",
@@ -12798,7 +12798,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "x-unreal-reflection-boundary": true
           },
           "x-unreal-reflection-boundary": true,
-          "description": "Every vector parameter after the call: {name, default [r, g, b, a]}."
+          "description": "kind=parameter_collection: every vector parameter after the call, {name, default [r, g, b, a]}."
         },
         "versionName": {
           "type": "string",

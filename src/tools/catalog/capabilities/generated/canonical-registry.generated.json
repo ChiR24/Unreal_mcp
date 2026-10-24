@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "1ef7e18dccdef622",
+  "catalogRevision": "08d1f32ad642bec1",
   "recordCount": 421,
   "records": [
     {
@@ -91435,18 +91435,18 @@
             },
             "assetPath": {
               "type": "string",
-              "description": "The collection's object path."
+              "description": "kind=parameter_collection: the collection's object path."
             },
             "created": {
               "type": "boolean",
-              "description": "True when the call made the collection, false when it updated one."
+              "description": "kind=parameter_collection: true when the call made the collection, false when it updated one."
             },
             "added": {
               "type": "array",
               "items": {
                 "type": "string"
               },
-              "description": "The parameters this call added."
+              "description": "kind=parameter_collection: the parameters this call added."
             },
             "scalars": {
               "type": "array",
@@ -91456,7 +91456,7 @@
                 "x-unreal-reflection-boundary": true
               },
               "x-unreal-reflection-boundary": true,
-              "description": "Every scalar parameter of the collection after the call: {name, default}."
+              "description": "kind=parameter_collection: every scalar parameter of the collection after the call, {name, default}."
             },
             "vectors": {
               "type": "array",
@@ -91466,11 +91466,11 @@
                 "x-unreal-reflection-boundary": true
               },
               "x-unreal-reflection-boundary": true,
-              "description": "Every vector parameter after the call: {name, default [r, g, b, a]}."
+              "description": "kind=parameter_collection: every vector parameter after the call, {name, default [r, g, b, a]}."
             },
             "saved": {
               "type": "boolean",
-              "description": "Whether the collection reached disk."
+              "description": "kind=parameter_collection: whether the collection reached disk."
             }
           },
           "required": [
@@ -91576,8 +91576,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "7a837c57e1d11f52db522c46918296f5f52368c337fcc9415b39766f2aa73f22",
-        "content": "075752a4d4e14f0f9e4d5daa411a85a72fcb92a3bde35ee9eefb7473a73a1984"
+        "schema": "ddb0f137f776b24373015bac1938e25ad09bd3ab03b7f86490acc94c1873ae5e",
+        "content": "051cb1ce0efb041e17cc9716f54df08059446efe9dda1faf8034cb6e46ff5aef"
       }
     },
     {
