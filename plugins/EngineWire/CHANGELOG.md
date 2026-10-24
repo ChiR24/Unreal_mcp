@@ -7,20 +7,20 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 ## [Unreleased]
 
 ### Added
-- **Blueprint runtime errors** name their node, graph and Blueprint in frame steps, motion reads and `runtime_report`; an Accessed None names its cause (a destroyed actor, an unset instance variable, a failed cast or call, or nothing assigning it). `lint_blueprint` reads the graphs for these before Play: searches on Event Tick, nodes that never run, re-rolled randoms, endless While Loops, variables never set, object variables used with no Is Valid check on every path (dominators over the exec flow).
+- **Blueprint runtime errors** name their node, graph and Blueprint, and an Accessed None its cause; `lint_blueprint` finds Tick searches, dead nodes, re-rolled randoms, endless While Loops, and unset or unchecked object variables before Play.
 - **`get_editor_focus`**: open editors, the focused graph's selected nodes, selected actors, recent errors.
 - **`describe_view`** `points`, `labels` and `coveredBy`.
 - **MCP 2026-07-28 on `/mcp`**: sessionless requests, header checks, `resultType`, consent by elicitation, the tasks extension.
 - **Result pages** for oversized arrays (`options.pageCursor`), and a **search signature** on a confident first hit.
 - **`get_frame_cost`**, **`diff_asset`**, **`cancel_render`**, `configure_render_camera` shutter and overscan, `set_section` `playRate`.
 - **`nanite_rebuild_mesh` `assetPaths`**, `get_niagara_info` values, `edit_dynamic_mesh` `append_cuboids`, `append_loft`, `append_mesh` and `delete_triangles`.
-- **Change watch**: what a request spawns or modifies, and an edited Blueprint's placed copies, are checked into `warnings`, the engine's per-actor Map Check (`CheckForErrors`) included; the assets a request changed get the editor's save-time Data Validation.
-- **Undo ledger**: `undo` blocks read from the transaction buffer; **restore points** roll back only this server's steps and name the delete of assets created since.
+- **Change watch**: what a request spawns or modifies (and an edited Blueprint's placed copies) is checked into `warnings`, with Map Check (`CheckForErrors`) on its actors and save-time Data Validation on its assets.
+- **Undo ledger**: `undo` blocks come from the transaction buffer; **restore points** undo only this server's steps and name the delete of what they created.
 - **`explain`** fault trees (collision, visible, input, widget, audible, lit), each failure naming the call that fixes it.
 - **Loop guard** on `/mcp`: a call failing three times unchanged is refused (`REPEATED_FAILURE`).
 - **`dryRun`** on `build_graph`, `build_material_graph` and `add_widget_tree`, which check every step first.
-- **`run_map_check`**: Map Check as rows (severity, message, actor, map error); **`fix_placement`** moves sunk, floating and intersecting actors by the audit's rules, in one undo step.
-- **Change journal**: `changes_since` lists what changed since a cursor and who changed it (mcp, user, editor), with property values before and after and a moved actor's transform; a reply warns once of the user's edits. `/mcp` serves `subscriptions/listen` and `resources/subscribe` for `ue://changes`.
+- **`run_map_check`** reads Map Check as rows; **`fix_placement`** moves sunk, floating and intersecting actors in one undo step.
+- **Change journal**: `changes_since` lists what changed since a cursor, by whom (mcp, user, editor), from and to; a reply warns once of the user's edits; `/mcp` serves `ue://changes` subscriptions.
 
 ### Changed
 - **Enable Native MCP Server is on by default**: `/mcp` is the only gateway, and the npm package is a stdio proxy in front of it.
@@ -30,7 +30,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **Removals** name what still uses an asset (`*_IN_USE`, `referencedBy`), keep outside-referenced assets, take exact components and undo for tracks and keys; extra sky lights are named, not destroyed.
 - **Fold variants** enforce their own requirements before dispatch, and describe lists what each one does under the selector.
 - **Renders** honour `renderTimeoutMs`; save_all and restart_editor wait (`RENDER_IN_PROGRESS`).
-- **Dialogs**: while an editor dialog is open, queued and new requests are answered `EDITOR_MODAL_ACTIVE` with `modalWindowTitle` from the modal loop, so `/mcp` calls no longer wait out the heartbeat (`EDITOR_BLOCKED`).
+- **Dialogs**: an open editor dialog answers requests `EDITOR_MODAL_ACTIVE` with its title instead of a wait and `EDITOR_BLOCKED`.
 - **Viewport captures** settle across ticks and warn on demoted video memory; grid edits keep the fields left out and answer with the grid's values.
 - **Properties**: deprecated ones are refused; Niagara systems re-init after a write; settings take object references.
 - **Placement and tracks**: physics-body ground traces, player-start capsules, whole track names, display names and `AMBIGUOUS_TRACK`, `set_bone_key` keeps unsent parts, a display-rate change keeps key times, stop seeks the range start.
@@ -39,8 +39,8 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **Undo** for property writes, spawns, transforms, attachments, components, splines, lighting, post-process, foliage, water, cameras, landscape, meshes, sequences, data table rows, bones and material nodes, also on assets created without `RF_Transactional`.
 - **Git**: commit messages go to git through a file and identities refuse quotes (a quote injected git options); checkout and submit list skipped paths; `enable` switches providers.
 - **Finds** stop at `limit` with `truncated` and `totalCount`; **`cleanup`** is destructive, one transaction, refused in Play.
-- **Refused instead of overwritten or guessed**: taken names and paths, bakes over another asset kind, engine content, unknown types and modes, empty edits, incompatible pins, character edits on a non-Character (`NOT_A_CHARACTER`, `SKELETON_MISMATCH`).
-- **Calls that now do what they say**: fades, thumbnails, sockets, bones, ragdolls, AI, `merge_actors`, PCG components, widgets, physics bodies, landscape, foliage, water, audio and streaming in Play, `run_benchmark`, splines, volumes, console values, scalability and every view mode.
+- **Refused instead of overwritten or guessed**: taken names and paths, bakes over another kind, engine content, unknown types, empty edits, incompatible pins, non-Character edits.
+- **Calls that now do what they say**: fades, thumbnails, sockets, ragdolls, AI, PCG, widgets, landscape, foliage, water, Play audio and streaming, `run_benchmark`, splines, volumes, view modes and more.
 - **Saves are reported** (`saved`, `SAVE_FAILED`, `COMPILE_FAILED` with the compiler error) by creators and asset edits; a `save: false` edit stays unsaved.
 - **`/mcp` discovery**: search rows, filters and cursors, `describe` by domain and family, name and param guidance.
 - **A disabled tool's `nextCall` turns it back on** (`configure` `enable_tools`) in search rows, describe and `TOOL_DISABLED`.

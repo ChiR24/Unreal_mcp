@@ -14,29 +14,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Blueprint runtime errors name their node** (`nodeId`, graph, hits) in frame steps and motion reads, and an Accessed None its `cause`; **`lint_blueprint`** finds such mistakes before Play.
 - **MCP 2026-07-28**: sessionless requests, consent through the client and tasks; older clients are unchanged.
-- **`get_editor_state` `focus`**: open editors, the front graph and its selected nodes, selected actors, recent errors.
-- **`describe_view` `points`, `labels` and `coveredBy`**: what is under a spot, numbered actors, what covers one.
-- **Large results come in pages** (`page.nextCall`) instead of `RESULT_TOO_LARGE`.
-- **Search hands over a clear first hit** with `signature` and `executeCall`.
-- **`get_stats` `frame`**: the thread bounding the frame and what in view weighs on it.
-- **`nanite_rebuild_mesh` `assetPaths`**, **`inspect_asset` `diff`**, and **`get_niagara_info`** defaults and placed values.
-- **Whole parts in one `edit_dynamic_mesh` call**: `append_cuboids`, `append_loft`, `append_mesh`, `delete_triangles`.
+- **Reads**: `get_editor_state` `focus` (open editors, selected nodes and actors, recent errors); `describe_view` `points`, `labels` and `coveredBy`; `get_stats` `frame`.
+- **Large results come in pages** (`page.nextCall`), and **search hands over a clear first hit** (`signature`, `executeCall`).
+- **`nanite_rebuild_mesh` `assetPaths`**, **`inspect_asset` `diff`**, `get_niagara_info` values, `setup_global_illumination` `saveToProject`, and `edit_dynamic_mesh` `append_cuboids`, `append_loft`, `append_mesh`, `delete_triangles`.
 - **Renders and sequences**: `cancel_render`, camera shutter and overscan, `set_section` `playRate`, clips and keyed bones in the readers.
-- **`setup_global_illumination` `saveToProject`** writes the GI method to Project Settings.
-- **Spawns, moves and re-meshes are checked** and warn on an actor left sunk, floating, intersecting, z-fighting, untextured, labelled "Text", pasted twice, or with a Map Check finding; changed assets get the save-time Data Validation.
-- **Replies say what undo can revert**, and **`restore_point`** rolls back only this server's steps and hands back the delete of assets created since.
+- **Writes are checked**: actors left sunk, floating, intersecting, z-fighting, untextured, labelled "Text", pasted twice or with a Map Check finding, and changed assets by save-time Data Validation.
+- **Replies say what undo can revert**; **`restore_point`** undoes only this server's steps and offers the delete of what they created.
 - **`inspect explain`** says why something does not happen and names the call that fixes it.
 - **A call failing three times unchanged is refused** (`REPEATED_FAILURE`).
 - **Batches check every step first**; `build_graph`, `build_material_graph` and `add_widget_tree` take `dryRun`.
 - **`run_map_check`** reads Map Check as rows; **`fix_placement`** moves sunk, floating and intersecting actors.
-- **`inspect changes_since`** lists what changed since a cursor, who changed it and the values before and after; replies note the user's edits, and `ue://changes` can be subscribed to on `/mcp`.
+- **`inspect changes_since`**: what changed since a cursor, by whom, from and to; replies note the user's edits; `/mcp` serves `ue://changes` subscriptions.
 
 </details>
 
 <details>
 <summary><b>🔄 Changed</b></summary>
 
-- **The npm package is a stdio proxy** in front of the plugin's `/mcp`, with no runtime dependencies: one `unreal` tool, `NOT_CONNECTED` while the editor is down, no reconnect after a restart, 2026-07-28 requests passed through. `UNREAL_MCP_URL` picks the endpoint; `UE_PROJECT_PATH` still finds the token.
+- **The npm package is a stdio proxy** to the plugin's `/mcp` with no runtime dependencies: `NOT_CONNECTED` while the editor is down, no reconnect needed; `UNREAL_MCP_URL` picks the endpoint, `UE_PROJECT_PATH` finds the token.
 - **Enable Native MCP Server is on by default.**
 
 </details>
@@ -55,17 +50,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Crashes**: Ability System actions on a non-Actor Blueprint, and creates or mesh bakes over an asset of another class, are refused.
 - **`run_benchmark` measures** frames, FPS, frame and thread times (it measured nothing and opened the GPU Visualizer).
 - **Small fixes**: `RayTraced` GI is refused from UE 5.4; whole-path `runtime_report` filters; UE 5.0 links; rate limits say when to retry; folded descriptions keep plain words.
-- **Removals** take only exact components, name what still uses an asset, keep assets others use, list the nodes `remove_variable` deletes, and undo for tracks and keys.
+- **Removals** take exact components, name and keep assets others use, list what `remove_variable` deletes, and undo for tracks and keys.
 - **Nothing is overwritten unasked**: taken names and paths are refused; edits keep the fields left out; engine content is never edited in place.
-- **A family's variant needs what its action needs**; describe shows `requiredFor`, `variantRequired` and what each variant does.
+- **A family's variant needs what its action needs**, and describe shows each variant's requirements.
 - **Renders** keep their request open for `renderTimeoutMs`; `save_all` and `restart_editor` wait for them.
-- **An open editor dialog** answers every call `EDITOR_MODAL_ACTIVE` with its title on both transports; calls through `/mcp` waited, then failed `EDITOR_BLOCKED`.
+- **An open editor dialog** answers calls `EDITOR_MODAL_ACTIVE` with its title; they waited, then failed `EDITOR_BLOCKED`.
 - **Viewport screenshots wait for streaming** and name video memory over budget.
-- **Property writes**: a deprecated property is refused with its replacement; Niagara `set_property` restarts placed effects; environment settings take object references.
+- **Property writes**: deprecated properties are refused with their replacement, Niagara writes restart placed effects, environment settings take object references.
 - **Placement checks**: `audit_placement` counts simulated bodies, player-start capsules and skips undersides; `fix_coplanar` handles several neighbours.
-- **Tracks and keys**: names match whole; `set_bone_key` keeps what it is not given; a new frame rate keeps key times.
+- **Animation and effects**: whole track names; `set_bone_key` keeps unsent parts; key times survive a frame-rate change; curve keys and axes read back; Niagara creates refuse taken names and unknown types.
 - **Undo** covers property writes, spawns, transforms, meshes, landscape, lights, foliage, sequences, bones, material nodes and more.
-- **Effects and animation**: Niagara creates refuse taken names and unknown types; curve keys and axes read back.
 - **Finds stop at `limit`** (default 200) and say how many matched.
 - **Records and replies say what happens**: defaults, refusals and read-back values; failed saves and compiles say so.
 - **Successes that did nothing now act**: foliage, water, Characters, AI, audio and streaming in Play, splines, volumes, landscape, view modes and more.
@@ -73,14 +67,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Sublevels and paths**: object paths work in `open_level`, `load` and `add_sublevel`; a relative `.t3d` export lands in the project.
 - **Git**: any commit message is safe (a quote could inject options); checkout and submit list skipped paths.
 - **`/mcp` discovery**: search rows, `describe` by domain and family, `cursor` and param `suggestions`.
-- **A disabled tool's `nextCall` turns it back on** (`configure` `enable_tools`); the `configure` call it named was refused on both transports.
+- **A disabled tool's `nextCall` turns it back on** (`configure` `enable_tools`; the call it named was refused).
 
 </details>
 
 <details>
 <summary><b>🔄 Dependencies</b></summary>
 
-- The package has no runtime dependencies (`@modelcontextprotocol/sdk`, `ws` and `zod` are gone; `zod` stays for the record build).
+- `@modelcontextprotocol/sdk`, `ws` and `zod` left the runtime (`zod` stays for the record build).
 
 </details>
 
