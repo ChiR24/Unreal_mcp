@@ -84,27 +84,20 @@ bool JudgePair(UWorld* World, AActor* A, const FString& Kind, AActor* B, double 
     }
     if (Kind == TEXT("nextTo") || Kind == TEXT("against"))
     {
-        // On the boxes turned with the actors: their bounds' boxes overlap for a chair turned toward a table it touches.
-        const McpBoxSat::FFootprint FA = DrawnFootprint(*A);
-        const McpBoxSat::FFootprint FB = DrawnFootprint(*B);
-        FVector2D Axis = FVector2D::ZeroVector;
-        const double Gap = McpBoxSat::Separation(FA, FB, &Axis);
-        const FVector2D Along(-Axis.Y, Axis.X);
-        const double Shared = McpBoxSat::Reach(FA, Along) + McpBoxSat::Reach(FB, Along) - FMath::Abs(FVector2D::DotProduct(FB.Center - FA.Center, Along));
-        const bool bTouch = FMath::Abs(Gap) <= SideTouch && Shared > 1.0 && FMath::Min(BoxA.Max.Z, BoxB.Max.Z) - FMath::Max(BoxA.Min.Z, BoxB.Min.Z) > 1.0;
-        const TCHAR* Side = FMath::Abs(Axis.X) >= FMath::Abs(Axis.Y) ? (Axis.X > 0.0 ? TEXT("+X") : TEXT("-X")) : (Axis.Y > 0.0 ? TEXT("+Y") : TEXT("-Y"));
-        OutActual = bTouch ? FString::Printf(TEXT("touching its %s side"), Side)
-            : Gap < -SideTouch ? FString(TEXT("seen from above they overlap: one stands on, over or in the other, not beside it"))
-            : Gap > SideTouch ? FString::Printf(TEXT("they do not touch side by side (%.0f cm apart)"), Gap)
+        const FContact Met = Contact(DrawnFootprint(*A), BoxA, DrawnFootprint(*B), BoxB);
+        OutActual = Met.bTouching ? FString::Printf(TEXT("touching %s"), *Met.Side)
+            : Met.Gap < -SideTouch ? FString(TEXT("seen from above they overlap: one stands on, over or in the other, not beside it"))
+            : Met.Gap > SideTouch ? FString::Printf(TEXT("they do not touch side by side (%.0f cm apart)"), Met.Gap)
             : FString(TEXT("they meet only at an edge or a corner, or at different heights"));
-        if (!bTouch || Kind == TEXT("nextTo"))
+        if (!Met.bTouching || Kind == TEXT("nextTo"))
         {
-            return bTouch;
+            return Met.bTouching;
         }
         // against: the side that touches is its back, so its front points away from the other.
         FVector Forward = A->GetActorForwardVector();
         Forward.Z = 0.0;
-        const double Off = Forward.Normalize() ? FMath::RadiansToDegrees(FMath::Acos(FVector::DotProduct(Forward, FVector(-Axis.X, -Axis.Y, 0.0)))) : 180.0;
+        const FVector Away(-Met.Toward.X, -Met.Toward.Y, 0.0);
+        const double Off = Forward.Normalize() ? FMath::RadiansToDegrees(FMath::Acos(FVector::DotProduct(Forward, Away))) : 180.0;
         OutActual += Off <= FacingDegrees ? FString(TEXT(", its back to it"))
                                           : FString::Printf(TEXT(", but its front points %.0f degrees off facing away from it"), Off);
         return Off <= FacingDegrees;

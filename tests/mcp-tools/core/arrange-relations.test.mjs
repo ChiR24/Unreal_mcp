@@ -39,6 +39,9 @@ const testCases = [
     { path: 'structuredContent.receipt.expectations.1.verdict', equals: 'ok', label: 'the shelf stands against the wall' },
     { path: 'structuredContent.receipt.expectations.2.verdict', equals: 'ok', label: 'the chair faces the table' },
   ] },
+  { scenario: 'READ: describe_relations reads the turned chair beside the table', toolName: 'control_actor', arguments: { action: 'describe_relations', actorNames: [CHAIR], kinds: ['nextTo'] }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.relations', includesObject: { 0: TABLE, 1: 'nextTo', 2: CHAIR }, label: 'side by side although its bounds overlap the table\'s' },
+  ] },
   { scenario: 'UPDATE: undo puts the room back in one step', toolName: 'control_editor', arguments: { action: 'undo' }, expected: 'success' },
   { scenario: 'READ: the lamp is back on the floor', toolName: 'control_actor', arguments: { action: 'get_transform', actorName: LAMP }, expected: 'success', assertions: [
     { path: 'structuredContent.result.location.0', approximately: 29700, tolerance: 1, label: 'where it stood' },

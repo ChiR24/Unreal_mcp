@@ -4155,7 +4155,7 @@
                     "roles"
                   ]
                 },
-                "description": "Which relations and patterns to report: on (rests on the actor under it; read from short traces down from its bottom, so an actor without collision rests on nothing), mounted (held from the side, as a picture on a wall), inside (within another's bounds, the tightest such), nextTo (side by side, their sides within 2 cm), faces (its forward, X axis points at the nearest actor within 20 degrees that is not a copy of it; a prop without a front, such as a crate or a table, faces whatever lies along its X axis), groups, rows (with grids), rings and roles. Omit for all of them but faces, which is listed only when kinds names it or actorNames or nameFilter narrow the report: across a whole level it would name a front for most props."
+                "description": "Which relations and patterns to report: on (rests on the actor under it; read from short traces down from its bottom, so an actor without collision rests on nothing), mounted (held from the side, as a picture on a wall), inside (within another's bounds, the tightest such), nextTo (side by side, their sides within 2 cm, judged on boxes turned with the actors), faces (its forward, X axis points at the nearest actor within 20 degrees that is not a copy of it; a prop without a front, such as a crate or a table, faces whatever lies along its X axis), groups, rows (with grids), rings and roles. Omit for all of them but faces, which is listed only when kinds names it or actorNames or nameFilter narrow the report: across a whole level it would name a front for most props."
               },
               {
                 "type": "array",

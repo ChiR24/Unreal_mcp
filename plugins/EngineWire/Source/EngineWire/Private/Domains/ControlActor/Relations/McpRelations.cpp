@@ -58,6 +58,7 @@ TArray<FItem> CollectItems(UWorld* World, const TSet<AActor*>& Named, bool bArea
         Item.Box = Box;
         Item.bGround = McpPlacement::McpIsGroundLike(Actor);
         Item.Shape = ShapeOf(Actor, Box);
+        Item.Print = DrawnFootprint(*Actor);
     }
     OutInScope = Items.Num();
     if (Items.Num() > MaxActors)

@@ -30,6 +30,8 @@ struct FItem
     /** Copies of one prop share it: the class, the root static mesh, and the box size to 5 cm (the footprint's sides in
      *  either order). */
     FString Shape;
+    /** What it draws as a box turned with it about Z, seen from above: what side by side is judged on. */
+    McpBoxSat::FFootprint Print;
 };
 
 /** Subject Kind Object, by item index; Detail says more (how much of it rests there, which side touches). */
@@ -57,8 +59,16 @@ TArray<FItem> CollectItems(UWorld* World, const TSet<AActor*>& Named, bool bArea
 /** on, mounted, inside, nextTo and faces between the items (McpRelationsPairs.cpp), for the kinds asked. */
 void FindPairRelations(UWorld* World, const TArray<FItem>& Items, const TSet<FString>& Kinds, TArray<FRelation>& Out);
 
-/** Which side of A touches B when the boxes stand side by side (McpRelationsPairs.cpp); empty when they do not. */
-FString TouchingSide(const FBox& A, const FBox& B);
+/** How two actors meet side by side, judged on their turned footprints (McpRelationsPairs.cpp): describe_relations'
+ *  nextTo and expect's nextTo and against read the same. */
+struct FContact
+{
+    bool bTouching = false; // within 2 cm across one axis, sharing more than 1 cm of side and of height
+    double Gap = 0.0;       // cm along the axis that parts them most; below 0 they overlap
+    FVector2D Toward = FVector2D::ZeroVector; // that axis, from A toward B
+    FString Side;           // the side of A that faces B: "its +X side", by the world axis nearest Toward
+};
+FContact Contact(const McpBoxSat::FFootprint& A, const FBox& BoxA, const McpBoxSat::FFootprint& B, const FBox& BoxB);
 
 /** What an actor draws as a box turned with it about Z, seen from above (McpRelationsJudge.cpp): a chair turned to face
  *  a table spans less than its bounds' box. */

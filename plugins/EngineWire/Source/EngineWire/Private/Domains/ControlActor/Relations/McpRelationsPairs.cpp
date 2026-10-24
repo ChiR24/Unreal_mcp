@@ -140,25 +140,20 @@ double Volume(const FBox& Box)
 }
 } // namespace
 
-// Which side of A touches B, when their boxes stand side by side within TouchGap and overlap in height.
-FString TouchingSide(const FBox& A, const FBox& B)
+// Side by side on the footprints turned with the actors: a chair turned toward a table it touches has a bounds' box
+// that overlaps the table's.
+FContact Contact(const McpBoxSat::FFootprint& A, const FBox& BoxA, const McpBoxSat::FFootprint& B, const FBox& BoxB)
 {
-    const double GapX = FMath::Max(B.Min.X - A.Max.X, A.Min.X - B.Max.X);
-    const double GapY = FMath::Max(B.Min.Y - A.Max.Y, A.Min.Y - B.Max.Y);
-    const bool bHeight = FMath::Min(A.Max.Z, B.Max.Z) - FMath::Max(A.Min.Z, B.Min.Z) > 1.0;
-    if (!bHeight)
-    {
-        return FString();
-    }
-    if (FMath::Abs(GapX) <= TouchGap && GapY < -1.0)
-    {
-        return B.GetCenter().X > A.GetCenter().X ? TEXT("its +X side") : TEXT("its -X side");
-    }
-    if (FMath::Abs(GapY) <= TouchGap && GapX < -1.0)
-    {
-        return B.GetCenter().Y > A.GetCenter().Y ? TEXT("its +Y side") : TEXT("its -Y side");
-    }
-    return FString();
+    FContact Out;
+    Out.Gap = McpBoxSat::Separation(A, B, &Out.Toward);
+    const FVector2D Along(-Out.Toward.Y, Out.Toward.X);
+    const double Shared = McpBoxSat::Reach(A, Along) + McpBoxSat::Reach(B, Along) - FMath::Abs(FVector2D::DotProduct(B.Center - A.Center, Along));
+    const double Tall = FMath::Min(BoxA.Max.Z, BoxB.Max.Z) - FMath::Max(BoxA.Min.Z, BoxB.Min.Z);
+    Out.bTouching = FMath::Abs(Out.Gap) <= TouchGap && Shared > 1.0 && Tall > 1.0;
+    const bool bAlongX = FMath::Abs(Out.Toward.X) >= FMath::Abs(Out.Toward.Y);
+    Out.Side = FString::Printf(TEXT("its %s%s side"), (bAlongX ? Out.Toward.X : Out.Toward.Y) > 0.0 ? TEXT("+") : TEXT("-"),
+                               bAlongX ? TEXT("X") : TEXT("Y"));
+    return Out;
 }
 
 void FindPairRelations(UWorld* World, const TArray<FItem>& Items, const TSet<FString>& Kinds, TArray<FRelation>& Out)
@@ -224,10 +219,10 @@ void FindPairRelations(UWorld* World, const TArray<FItem>& Items, const TSet<FSt
             {
                 Container = B;
             }
-            const FString Side = B > A && Wants(TEXT("nextTo")) && !Joined(A, B) ? TouchingSide(Item.Box, Other.Box) : FString();
-            if (!Side.IsEmpty())
+            const FContact Side = B > A && Wants(TEXT("nextTo")) && !Joined(A, B) ? Contact(Item.Print, Item.Box, Other.Print, Other.Box) : FContact();
+            if (Side.bTouching)
             {
-                Out.Add({A, TEXT("nextTo"), B, FString::Printf(TEXT("touching %s"), *Side)});
+                Out.Add({A, TEXT("nextTo"), B, FString::Printf(TEXT("touching %s"), *Side.Side)});
             }
             // The nearest by the gap between the two, so a chair faces the table before the lamp standing on it.
             FVector Toward = Other.Box.GetCenter() - Item.Box.GetCenter();

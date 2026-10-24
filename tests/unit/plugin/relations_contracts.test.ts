@@ -56,6 +56,13 @@ describe('describe_relations', () => {
     expect(handler).toMatch(/if \(Kinds\.Num\(\) == 0\)\s*\{\s*for \(const TCHAR\* Kind : AllKinds\)\s*\{\s*if \(bFocused \|\| FCString::Strcmp\(Kind, TEXT\("faces"\)\) != 0\)/u);
   });
 
+  // A chair turned toward a table it touches has a bounds' box that overlaps the table's: nextTo was never listed.
+  it('judges side by side on footprints turned with the actors, the same way expect does', () => {
+    expect(code(RELATIONS, 'McpRelations.cpp')).toContain('Item.Print = DrawnFootprint(*Actor);');
+    expect(pairs).toContain('Contact(Item.Print, Item.Box, Other.Print, Other.Box)');
+    expect(code(RELATIONS, 'McpRelationsJudge.cpp')).toContain('const FContact Met = Contact(DrawnFootprint(*A), BoxA, DrawnFootprint(*B), BoxB);');
+  });
+
   it('never calls a pair that rests or hangs one on the other nextTo or facing, nor copies facing each other', () => {
     expect(pairs).toContain('return Support[A] == B || Support[B] == A || Mount[A] == B || Mount[B] == A;');
     expect(pairs).toMatch(/!Joined\(A, B\) &&\s*Other\.Shape != Item\.Shape\)/u);
