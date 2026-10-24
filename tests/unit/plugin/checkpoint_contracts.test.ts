@@ -40,7 +40,9 @@ describe('control_editor restore_point', () => {
 
   // Undo deletes no asset, so the reply hands back the delete of what was created since and is still there.
   it('offers the delete of the assets created since, as a call to send', () => {
-    expect(checkpoint).toMatch(/GPoint\.Added\.FilterByPredicate\(\[\]\(const FString& Path\) \{ return !GPoint\.Removed\.Contains\(Path\); \}\)/u);
+    // Only what a request through this server made: an asset the user made, or one found on disk, is never offered.
+    expect(checkpoint).toMatch(/if \(McpChangeJournal::InRequest\(\)\)\s*\{\s*Note\(GPoint\.AddedByMcp, Asset\.PackageName\.ToString\(\)\);/u);
+    expect(checkpoint).toMatch(/GPoint\.AddedByMcp\.FilterByPredicate\(\[\]\(const FString& Path\) \{ return !GPoint\.Removed\.Contains\(Path\); \}\)/u);
     expect(checkpoint).toContain('Cleanup->SetStringField(TEXT("action"), TEXT("bulk_delete"));');
     expect(checkpoint).toContain('Result->SetObjectField(TEXT("cleanupCall"), Cleanup);');
   });
@@ -48,5 +50,7 @@ describe('control_editor restore_point', () => {
   it('is pinned in-editor', () => {
     expect(code('Domains', 'ControlEditor', 'Checkpoint', 'McpEditorCheckpointTests.cpp'))
       .toContain('"EngineWire.ControlEditor.RestorePoint.RollsBackOnlyMcpSteps"');
+    expect(code('Domains', 'ControlEditor', 'Checkpoint', 'McpEditorCheckpointTests.cpp'))
+      .toContain('"EngineWire.ControlEditor.RestorePoint.CleansUpOnlyItsOwnAssets"');
   });
 });

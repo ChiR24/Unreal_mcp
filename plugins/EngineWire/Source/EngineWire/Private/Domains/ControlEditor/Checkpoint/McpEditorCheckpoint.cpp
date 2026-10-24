@@ -2,6 +2,7 @@
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetRegistry/IAssetRegistry.h"
+#include "Core/Journal/McpChangeJournal.h"
 #include "Core/Requests/McpUndoLedger.h"
 #include "Domains/ControlEditor/McpEditorSupport.h"
 #include "Editor/TransBuffer.h"
@@ -22,6 +23,7 @@ struct FCheckpoint
     FString Label;
     FGuid Marker; // the live step on top at begin; invalid when the stack was empty
     TArray<FString> Added, Removed, Saved;
+    TArray<FString> AddedByMcp; // of Added, those a request through this server made
     FDelegateHandle AddedHandle, RemovedHandle, SavedHandle;
 };
 FCheckpoint GPoint;
@@ -56,6 +58,11 @@ void Bind()
     IAssetRegistry& Registry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry")).Get();
     GPoint.AddedHandle = Registry.OnAssetAdded().AddLambda([](const FAssetData& Asset) {
         Note(GPoint.Added, Asset.PackageName.ToString());
+        // An asset the user made by hand, or the registry found on disk, arrives outside any request.
+        if (McpChangeJournal::InRequest())
+        {
+            Note(GPoint.AddedByMcp, Asset.PackageName.ToString());
+        }
     });
     GPoint.RemovedHandle = Registry.OnAssetRemoved().AddLambda([](const FAssetData& Asset) {
         Note(GPoint.Removed, Asset.PackageName.ToString());
@@ -217,8 +224,9 @@ bool Handle(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedP
     Result->SetArrayField(TEXT("assetsCreated"), Strings(GPoint.Added));
     Result->SetArrayField(TEXT("assetsRemoved"), Strings(GPoint.Removed));
     Result->SetArrayField(TEXT("packagesSaved"), Strings(GPoint.Saved));
-    // Undo deletes no asset: the call that removes what was created since, ready to send (it asks for consent).
-    const TArray<FString> Created = GPoint.Added.FilterByPredicate([](const FString& Path) { return !GPoint.Removed.Contains(Path); });
+    // Undo deletes no asset: the call that removes what calls through this server created since, ready to send (it asks
+    // for consent). Only theirs: an asset the user made is listed in assetsCreated and never offered for deletion.
+    const TArray<FString> Created = GPoint.AddedByMcp.FilterByPredicate([](const FString& Path) { return !GPoint.Removed.Contains(Path); });
     if (Created.Num() > 0)
     {
         TSharedPtr<FJsonObject> Params = MakeShared<FJsonObject>();

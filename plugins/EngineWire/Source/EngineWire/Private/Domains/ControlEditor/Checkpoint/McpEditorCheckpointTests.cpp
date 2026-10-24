@@ -1,13 +1,18 @@
 #include "Domains/ControlEditor/Checkpoint/McpEditorCheckpoint.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
+#include "AssetRegistry/AssetRegistryModule.h"
 #include "Components/SceneComponent.h"
+#include "Core/Journal/McpChangeJournal.h"
+#include "Core/Journal/McpChangeJournalState.h"
 #include "Core/Requests/McpResponseCaptureRegistry.h"
 #include "Core/Requests/McpUndoLedger.h"
 #include "Editor.h"
 #include "EngineWireSubsystem.h"
 #include "Misc/AutomationTest.h"
+#include "PhysicalMaterials/PhysicalMaterial.h"
 #include "ScopedTransaction.h"
+#include "UObject/Package.h"
 
 namespace
 {
@@ -80,6 +85,83 @@ bool FMcpEditorCheckpointTest::RunTest(const FString& Parameters)
 
     TestTrue(TEXT("end closes it"), Run(Subsystem, TEXT("end")).bSuccess);
     GEditor->Trans->Reset(FText::FromString(TEXT("Mcp checkpoint test")));
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FMcpEditorCheckpointCleanupTest, "EngineWire.ControlEditor.RestorePoint.CleansUpOnlyItsOwnAssets",
+                                 EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+// An asset made while a request through this server runs is offered for deletion; one made outside any request (by the
+// user, or found on disk) is listed but never offered. Both are made in memory, never saved, and taken out of the
+// registry and the journal again.
+bool FMcpEditorCheckpointCleanupTest::RunTest(const FString& Parameters)
+{
+    (void)Parameters;
+    using namespace McpChangeJournal;
+    UEngineWireSubsystem* Subsystem = GEditor ? GEditor->GetEditorSubsystem<UEngineWireSubsystem>() : nullptr;
+    if (!Subsystem)
+    {
+        AddError(TEXT("No EngineWire subsystem."));
+        return false;
+    }
+    // The run_build request that runs this test is running: set it aside so the first asset is made outside any.
+    FJournalState& State = JournalState();
+    const int32 Depth = State.RequestDepth;
+    const FString RequestId = State.RequestId;
+    const FString Action = State.Action;
+    State.RequestDepth = 0;
+    State.RequestId.Reset();
+    State.Action.Reset();
+    Run(Subsystem, TEXT("end"));
+    Run(Subsystem, TEXT("begin"));
+    const auto Make = [](const TCHAR* Name)
+    {
+        UPackage* Package = CreatePackage(*FString::Printf(TEXT("/Game/_McpScratch/%s"), Name));
+        UPhysicalMaterial* Asset = NewObject<UPhysicalMaterial>(Package, Name, RF_Public | RF_Standalone);
+        FAssetRegistryModule::AssetCreated(Asset);
+        return Asset;
+    };
+    UPhysicalMaterial* UserAsset = Make(TEXT("McpCheckpointUserAsset"));
+    BeginRequest(TEXT("checkpoint-cleanup-test"), TEXT("control_editor restore_point_test"));
+    UPhysicalMaterial* OwnAsset = Make(TEXT("McpCheckpointOwnAsset"));
+    EndRequest();
+
+    const FMcpCapturedResponse Status = Run(Subsystem, TEXT("status"));
+    const TArray<TSharedPtr<FJsonValue>>* Created = nullptr;
+    const TSharedPtr<FJsonObject>* Cleanup = nullptr;
+    const TSharedPtr<FJsonObject>* Params = nullptr;
+    const TArray<TSharedPtr<FJsonValue>>* Paths = nullptr;
+    if (Status.Result.IsValid())
+    {
+        Status.Result->TryGetArrayField(TEXT("assetsCreated"), Created);
+        if (Status.Result->TryGetObjectField(TEXT("cleanupCall"), Cleanup) && Cleanup && (*Cleanup)->TryGetObjectField(TEXT("params"), Params) && Params)
+        {
+            (*Params)->TryGetArrayField(TEXT("assetPaths"), Paths);
+        }
+    }
+    const auto Holds = [](const TArray<TSharedPtr<FJsonValue>>* List, const TCHAR* Path)
+    {
+        return List && List->ContainsByPredicate([Path](const TSharedPtr<FJsonValue>& Value) { return Value.IsValid() && Value->AsString() == Path; });
+    };
+    TestTrue(TEXT("both are listed as created"), Holds(Created, TEXT("/Game/_McpScratch/McpCheckpointUserAsset")) &&
+                                                 Holds(Created, TEXT("/Game/_McpScratch/McpCheckpointOwnAsset")));
+    TestTrue(TEXT("the one made in a request is offered for deletion"), Holds(Paths, TEXT("/Game/_McpScratch/McpCheckpointOwnAsset")));
+    TestFalse(TEXT("the one made outside any request is not"), Holds(Paths, TEXT("/Game/_McpScratch/McpCheckpointUserAsset")));
+    Run(Subsystem, TEXT("end"));
+
+    for (UPhysicalMaterial* Asset : {UserAsset, OwnAsset})
+    {
+        FAssetRegistryModule::AssetDeleted(Asset);
+        Asset->GetOutermost()->SetDirtyFlag(false);
+        Asset->ClearFlags(RF_Public | RF_Standalone);
+        Asset->MarkAsGarbage();
+        Asset->GetOutermost()->MarkAsGarbage();
+    }
+    State.Entries.RemoveAll([](const FJournalEntry& Kept) { return Kept.Path.StartsWith(TEXT("/Game/_McpScratch/McpCheckpoint")); });
+    Reindex(State);
+    State.RequestDepth = Depth;
+    State.RequestId = RequestId;
+    State.Action = Action;
     return true;
 }
 #endif

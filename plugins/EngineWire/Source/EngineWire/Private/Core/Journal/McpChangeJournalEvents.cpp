@@ -82,6 +82,11 @@ void OnMapOpened(const FString& Filename, bool bAsTemplate)
 }
 } // namespace
 
+bool InRequest()
+{
+    return !JournalState().RequestId.IsEmpty();
+}
+
 void PublishSeq(uint64 Seq)
 {
     GPublishedSeq.store(Seq, std::memory_order_relaxed);

@@ -22,6 +22,9 @@ void Start();
 /** Unbinds them (subsystem Deinitialize). */
 void Stop();
 
+/** Whether a request through this server is running now (game thread): what changes now is this server's doing. */
+bool InRequest();
+
 /** A request through this server starts (game thread, before its handler); Action names it in the rows it changes. */
 void BeginRequest(const FString& RequestId, const FString& Action);
 /** The request ended: what changes from now is not its doing. */
