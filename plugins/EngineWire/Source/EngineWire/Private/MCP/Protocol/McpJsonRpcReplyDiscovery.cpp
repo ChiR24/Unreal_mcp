@@ -12,6 +12,9 @@ const TCHAR* const StockOutputProperties[][2] = {
 
 const TCHAR* const ToolEchoFields[] = {TEXT("parent"), TEXT("parentTool")};
 
+// Search-index and revision bookkeeping a search row may carry (the stdio builder makes them).
+const TCHAR* const SearchRowBookkeepingFields[] = {TEXT("category"), TEXT("hashes"), TEXT("reasons")};
+
 TSharedPtr<FJsonValue> ListedDescription(const FJsonArray& Parameters, const FString& Name)
 {
 	for (const TSharedPtr<FJsonValue>& Parameter : Parameters)
@@ -92,8 +95,20 @@ TSharedPtr<FJsonObject> CompactDescribe(const TSharedPtr<FJsonObject>& Reply)
 	Out->RemoveField(TEXT("hashes"));
 	Out->RemoveField(TEXT("exampleCount"));
 	FString Scope;
-	if (!Out->TryGetStringField(TEXT("scope"), Scope) || !Scope.Equals(TEXT("capability"), ESearchCase::CaseSensitive)) return Out;
+	if (!Out->TryGetStringField(TEXT("scope"), Scope)) return Out;
+	if (!Scope.Equals(TEXT("capability"), ESearchCase::CaseSensitive) && !Scope.Equals(TEXT("parameter"), ESearchCase::CaseSensitive)) return Out;
 	if (IsTrue(Out, TEXT("success"))) Out->RemoveField(TEXT("message"));
+	if (IsTrue(Out, TEXT("runnable"))) Out->RemoveField(TEXT("runnable"));
+	const FJsonArray* Aliases = ArrayField(Out, TEXT("aliases"));
+	if (Aliases && Aliases->Num() == 0) Out->RemoveField(TEXT("aliases"));
+	// One legacy id that is the very pair the reply names says nothing new (compactDescribe in TS).
+	const FJsonArray* LegacyIds = ArrayField(Out, TEXT("legacyIds"));
+	const TSharedPtr<FJsonObject> OnlyPair = LegacyIds && LegacyIds->Num() == 1 ? AsObject((*LegacyIds)[0]) : nullptr;
+	if (OnlyPair && OnlyPair->Values.Num() == 2 && SameField(OnlyPair, TEXT("tool"), Out, TEXT("parentTool")) &&
+		SameField(OnlyPair, TEXT("action"), Out, TEXT("action")))
+	{
+		Out->RemoveField(TEXT("legacyIds"));
+	}
 	for (const TCHAR* Field : ToolEchoFields)
 	{
 		if (SameField(Out, Field, Out, TEXT("tool"))) Out->RemoveField(Field);
@@ -139,7 +154,8 @@ TSharedPtr<FJsonObject> CompactSearch(const TSharedPtr<FJsonObject>& Reply)
 			Kept.Add(Row);
 			continue;
 		}
-		TSharedPtr<FJsonObject> Trimmed = Without(Without(Object, TEXT("matchReasons")), TEXT("score"));
+		TSharedPtr<FJsonObject> Trimmed = Copy(Object);
+		for (const TCHAR* Field : SearchRowBookkeepingFields) Trimmed->RemoveField(Field);
 		const TSharedPtr<FJsonObject> Next = ObjectField(Object, TEXT("nextCall"));
 		for (const TCHAR* Field : ToolEchoFields)
 		{

@@ -68,18 +68,13 @@ The native transport supports **exactly the three modern MCP versions**:
 - **Asymmetry with the TS SDK**: the TypeScript stdio server negotiates through the MCP SDK's `SUPPORTED_PROTOCOL_VERSIONS`, which also accepts two older legacy versions (`2024-11-05` and `2024-10-07`). The native `/mcp` transport is intentionally stricter (modern versions only), so a client pinned to a legacy version will negotiate with the TS surface but not the native surface.
 
 ## GATEWAY DISCOVERY
-The native surface permanently exposes the single `unreal` tool and mirrors the TypeScript gateway's progressive discovery. `describe` drills down in three levels and never dumps a full `inputSchema`:
-1. `describe { tool }` -> tool summary + paginated/filterable action list.
-2. `describe { tool, action }` -> paginated/filterable parameter catalog (the **tool-union**, not action-specific).
-3. `describe { tool, action, param }` -> exactly one parameter's full schema.
+The native surface permanently exposes the single `unreal` tool and answers discovery exactly as the TypeScript gateway does: the same input schema, the same levels, the same reply fields and the same guided errors. A client may follow either door's `nextCall` chain on the other. `describe` drills one level per call and never dumps the catalog:
+- `describe {}` -> the domains, `{ domain }` -> its families, `{ domain?, family }` -> its capabilities (`McpNativeGatewayDescribeOverview.cpp`, mirror of `gateway-describe-browse.ts`; 50 rows unless `limit` is sent).
+- `describe { tool }` -> the parent summary: every action name unless `limit` is sent, and a `browse` call (search filtered to the tool).
+- `describe { capability }` or `{ tool, action }` -> that capability's exact contract (`perActionSchemas` true: only the parameters it declares). `{ ..., param }` -> one parameter's schema (`scope: "parameter"`).
+- `search` rows are the TypeScript `capabilitySearchRow` less its bookkeeping (`McpSearchRow` in `McpNativeGatewayCatalog.cpp`); the envelope echoes `filters` and `maxBytes`, pages with `c:<offset>` cursors and reports clamped integers as `coercions`.
 
-`perActionSchemas` is **always `false`**: parameters are the union catalog across all actions of the parent tool, and a parameter is passed only when relevant to the selected action. Invalid tool/action/param calls return closest-match `suggestions` and an executable `nextCall` payload (guided errors). Native describe is served from the generated parent registry (`McpGeneratedParentRegistry*`), the same capability records the TS gateway reads.
-
-## BARE DESCRIBE (intentional shape asymmetry)
-A bare `describe {}` returns a DIFFERENT drill-down shape per transport, sharing only the `scope: "catalog"` label:
-- **Native** (`McpNativeGatewayDescribeOverview.cpp`): enumerates the 23 canonical parent tools (`tool`, `actionCount`, `nextCall{operation,tool}`), because the native surface has no domain layer to drill through.
-- **TypeScript** (`gateway-describe-browse.ts`): enumerates capability discovery domains (`domain`, `capabilityCount`, `familyCount`, `nextCall{operation,domain}`), then families, then capabilities.
-A client trained on one surface's `nextCall` chain will not find the same levels on the other. Do not "fix" one side to match the other without a deliberate cross-transport decision; the drill-down depth is a per-transport property.
+Every view is sourced from the generated capability store (`McpNativeGatewayCapabilityStore.cpp` over the `Generated/` shards), the same records the TS gateway reads. The doors still differ in a few places on purpose (consent nonce, typed error location, ranking): `docs/gateway-client-guide.md`, "Where the two doors still differ".
 
 ## VALIDATION
 ```bash
@@ -87,5 +82,5 @@ npm run registry:check   # generated shards and parent registry match the record
 npm run test:params
 ```
 
-- There is no automated TS/native gateway parity gate: keep `Gateway/` and `Execute/` in step with `src/server/gateway/` by hand.
+- The parity is pinned by source contracts, not by running the C++: `tests/unit/tools/unreal-gateway-guidance-contract.test.ts` rebuilds the native input schema from the `FMcpSchemaBuilder` chain and diffs it with the TypeScript one; `tests/unit/plugin/native_gateway_describe_contracts.test.ts` compares the fields each native discovery builder sets with the TypeScript reply; `reply_compaction_contracts.test.ts` keeps the two compaction lists equal. Behaviour inside those builders is still kept in step with `src/server/gateway/` by hand.
 - Folded families mirror the TS door exactly: `McpNativeGatewayValidation.cpp` applies `McpApplyFoldedPins` before defaults and schema validation and `McpResolveDispatchAction` after them; `FindByParentAction` falls back to any legacy pair, so every former name still resolves. A consent grant may name the capability by its canonical id, an alias, or a folded `tool.action` pair (`FMcpCapabilityDemand::ConsentNames`).

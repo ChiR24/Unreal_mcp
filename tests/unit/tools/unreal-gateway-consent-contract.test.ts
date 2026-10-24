@@ -88,7 +88,7 @@ describe('Task 40 — consent has a legal input channel on the `unreal` tool', (
     // unrelated TryGetObjectField read, so deleting the schema property left
     // this test green while the sibling became undeclarable.
     expect(
-      cpp.includes('.Object(TEXT("consent")'),
+      cpp.includes('.ClosedObject(TEXT("consent")'),
       'native gateway definition must DECLARE a consent property on the schema'
     ).toBe(true);
   });
@@ -148,9 +148,8 @@ describe('`params` is declared as an open object map, not an underspecified obje
 
   it('the native /mcp gateway declares params open too, or the surfaces disagree', () => {
     const cpp = readFileSync(nativeGatewayDefinitionPath, 'utf8');
-    expect(cpp.includes('.Object(TEXT("params")')).toBe(true);
     expect(
-      cpp.includes('Prop(TEXT("params")).SetBoolField(TEXT("additionalProperties"), true)'),
+      cpp.includes('.OpenObject(TEXT("params")'),
       'native params must publish additionalProperties: true like the TypeScript surface'
     ).toBe(true);
   });

@@ -28,6 +28,22 @@ TSharedPtr<FJsonObject> RequirementOf(const FMcpCapabilityRecord& Record, const 
 	return Record.DispatchByRequires.IsValid() && Record.DispatchByRequires->TryGetObjectField(Action, Requirement) && Requirement
 		? *Requirement : nullptr;
 }
+
+// A required parameter's type, or its values joined by '|'.
+FString SearchSigType(const TSharedPtr<FJsonObject>& Properties, const FString& Name)
+{
+	const TSharedPtr<FJsonObject>* Schema = nullptr;
+	if (!Properties.IsValid() || !Properties->TryGetObjectField(Name, Schema) || !Schema) return TEXT("unknown");
+	const TArray<TSharedPtr<FJsonValue>>* Values = nullptr;
+	if ((*Schema)->TryGetArrayField(TEXT("enum"), Values) && Values)
+	{
+		TArray<FString> Names;
+		for (const TSharedPtr<FJsonValue>& Value : *Values) Names.Add(Value.IsValid() ? Value->AsString() : FString());
+		return FString::Join(Names, TEXT("|"));
+	}
+	FString Type;
+	return (*Schema)->TryGetStringField(TEXT("type"), Type) ? Type : FString(TEXT("unknown"));
+}
 }
 
 // One receipt warning per parameter a call sent (the caller's names, before defaults) that only other
@@ -135,4 +151,59 @@ void McpSetVariantRequirementViews(
 	{
 		View->SetArrayField(TEXT("requiredFor"), GatewayStringArray(RequiredFor));
 	}
+}
+
+TSharedPtr<FJsonObject> McpSearchSignature(const FMcpCapabilityRecord& Record)
+{
+	auto IsControl = [](const FString& Name) { return Name.Equals(TEXT("action"), ESearchCase::CaseSensitive) || Name.Equals(TEXT("subAction"), ESearchCase::CaseSensitive); };
+	const TSharedPtr<FJsonObject> Input = Record.InputSchema.IsValid() ? Record.InputSchema : MakeShared<FJsonObject>();
+	const TSharedPtr<FJsonObject>* PropsPtr = nullptr;
+	const TSharedPtr<FJsonObject> Properties = Input->TryGetObjectField(TEXT("properties"), PropsPtr) && PropsPtr ? *PropsPtr : nullptr;
+	auto Required = MakeShared<FJsonObject>();
+	const TArray<TSharedPtr<FJsonValue>>* Names = nullptr;
+	if (Input->TryGetArrayField(TEXT("required"), Names) && Names)
+	{
+		for (const TSharedPtr<FJsonValue>& Value : *Names)
+		{
+			const FString Name = Value.IsValid() ? Value->AsString() : FString();
+			if (!IsControl(Name) && !Name.Equals(Record.DispatchBySelector, ESearchCase::CaseSensitive)) Required->SetStringField(Name, SearchSigType(Properties, Name));
+		}
+	}
+	auto Signature = MakeShared<FJsonObject>();
+	Signature->SetObjectField(TEXT("required"), Required);
+	const TArray<TSharedPtr<FJsonValue>>* OneOf = nullptr;
+	if (Input->TryGetArrayField(TEXT("requiredOneOf"), OneOf) && OneOf) Signature->SetArrayField(TEXT("oneOf"), *OneOf);
+	const TSharedPtr<FJsonObject> VariantRequired = McpVariantRequired(Record);
+	if (VariantRequired.IsValid()) Signature->SetObjectField(TEXT("variantRequired"), VariantRequired);
+	if (!Record.DispatchBySelector.IsEmpty())
+	{
+		auto Selector = MakeShared<FJsonObject>();
+		Selector->SetStringField(TEXT("name"), Record.DispatchBySelector);
+		const TSharedPtr<FJsonObject>* Schema = nullptr;
+		const bool bSchema = Properties.IsValid() && Properties->TryGetObjectField(Record.DispatchBySelector, Schema) && Schema;
+		const TArray<TSharedPtr<FJsonValue>>* Values = nullptr;
+		Selector->SetArrayField(TEXT("values"), bSchema && (*Schema)->TryGetArrayField(TEXT("enum"), Values) && Values
+			? *Values : TArray<TSharedPtr<FJsonValue>>());
+		if (bSchema && (*Schema)->HasField(TEXT("default"))) Selector->SetField(TEXT("default"), (*Schema)->TryGetField(TEXT("default")));
+		Signature->SetObjectField(TEXT("selector"), Selector);
+	}
+	// The example's own call: the pins its action name implies, then its params, without the gateway-level controls.
+	auto Example = MakeShared<FJsonObject>();
+	const TSharedPtr<FJsonObject>* ExampleInput = nullptr;
+	if (Record.Examples.Num() > 0 && Record.Examples[0].IsValid() && Record.Examples[0]->Type == EJson::Object &&
+		Record.Examples[0]->AsObject()->TryGetObjectField(TEXT("input"), ExampleInput) && ExampleInput)
+	{
+		FString Action;
+		(*ExampleInput)->TryGetStringField(TEXT("action"), Action);
+		const FMcpLegacyPair* Pinned = Record.LegacyPairs.FindByPredicate(
+			[&Action](const FMcpLegacyPair& Pair) { return Pair.IsFolded() && Pair.Action.Equals(Action, ESearchCase::CaseSensitive); });
+		if (Pinned) Example->Values = Pinned->FoldedPins->Values;
+		for (const auto& Field : (*ExampleInput)->Values)
+		{
+			const FString Key(Field.Key.Len(), *Field.Key);  // 5.8 keys are not FString
+			if (!IsControl(Key)) Example->SetField(Key, Field.Value);
+		}
+	}
+	Signature->SetObjectField(TEXT("example"), Example);
+	return Signature;
 }

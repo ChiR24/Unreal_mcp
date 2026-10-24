@@ -3,7 +3,8 @@
 #include "Misc/Guid.h"
 // McpNativeGatewayDescribe.cpp — capability describe for the unreal gateway.
 //
-// Three levels, mirroring the TypeScript discovery reference exactly:
+// The levels below the browse listings (McpNativeGatewayDescribeOverview.cpp), the same replies as the TypeScript
+// discovery reference (gateway-describe.ts, gateway-describe-capability.ts):
 //   1. describe { tool }                -> parent summary + bounded action list
 //   2. describe { tool, action }        -> that capability's EXACT contract
 //   3. describe { tool, action, param } -> exactly one parameter's schema
@@ -15,6 +16,7 @@
 
 #include "MCP/Gateway/McpNativeGatewayGuidance.h"
 #include "MCP/Gateway/McpNativeGatewayCapabilityStore.h"
+#include "MCP/Gateway/McpNativeGatewayCatalog.h"
 #include "MCP/Gateway/McpNativeGatewaySearch.h"
 #include "MCP/Execute/Request/McpFoldVariantRules.h"
 
@@ -104,47 +106,14 @@ void SetObjectOrEmpty(const TSharedPtr<FJsonObject>& Out, const TCHAR* Field, co
 	Out->SetObjectField(Field, Value.IsValid() ? Value : MakeShared<FJsonObject>());
 }
 
-TSharedPtr<FJsonObject> ToolSummary(
-	const FString& Tool, const TArray<const FMcpCapabilityRecord*>& Siblings,
-	const TArray<FString>& Actions, const FString& Query, int32 Limit, int32 Offset,
-	const FString& Revision)
+// The name the caller described the capability by, when it is not the one it answers to (an old folded name).
+void SetMigratedFrom(const TSharedPtr<FJsonObject>& Out, const FMcpDiscoveryQuery& Input, const FMcpCapabilityRecord& Record)
 {
-	TArray<FString> Filtered;
-	if (Query.IsEmpty())
-	{
-		Filtered = Actions;
-	}
-	else
-	{
-		for (const FString& Action : Actions)
-		{
-			if (Action.ToLower().Contains(Query, ESearchCase::CaseSensitive)) Filtered.Add(Action);
-		}
-	}
-	const int32 Total = Filtered.Num();
-	TArray<FString> Paged;
-	for (int32 Index = Offset; Index < Total && Paged.Num() < Limit; ++Index) Paged.Add(Filtered[Index]);
-
-	auto Out = MakeShared<FJsonObject>();
-	Out->SetNumberField(TEXT("actionCount"), Total);
-	Out->SetBoolField(TEXT("actionHasMore"), Offset + Paged.Num() < Total);
-	Out->SetNumberField(TEXT("actionLimit"), Limit);
-	Out->SetNumberField(TEXT("actionOffset"), Offset);
-	Out->SetArrayField(TEXT("actions"), GatewayStringArray(Paged));
-	Out->SetNumberField(TEXT("capabilityCount"), Siblings.Num());
-	Out->SetStringField(TEXT("catalogRevision"), Revision);
-	Out->SetArrayField(TEXT("domains"), GatewayStringArray(
-		McpDistinctSorted(Siblings, [](const FMcpCapabilityRecord& R) -> FString { return R.Domain; })));
-	const FString First = Paged.Num() > 0 ? Paged[0] : (Actions.Num() > 0 ? Actions[0] : FString());
-	Out->SetObjectField(TEXT("drillDown"), GatewayBuildNextCall(TEXT("describe"), Tool, First, FString()));
-	Out->SetArrayField(TEXT("families"), GatewayStringArray(
-		McpDistinctSorted(Siblings, [](const FMcpCapabilityRecord& R) -> FString { return R.Family; })));
-	Out->SetStringField(TEXT("message"), TEXT("Tool summary. Drill into an action to receive that capability's exact contract."));
-	Out->SetStringField(TEXT("operation"), TEXT("describe"));
-	Out->SetStringField(TEXT("scope"), TEXT("tool"));
-	Out->SetBoolField(TEXT("success"), true);
-	Out->SetStringField(TEXT("tool"), Tool);
-	return Out;
+	if (Input.Action.Equals(McpCapabilityPublicAction(Record), ESearchCase::CaseSensitive)) return;
+	auto From = MakeShared<FJsonObject>();
+	From->SetStringField(TEXT("tool"), Input.Tool);
+	From->SetStringField(TEXT("action"), Input.Action);
+	Out->SetObjectField(TEXT("migratedFrom"), From);
 }
 
 // The exact `consent` sibling execute demands for this capability, so a grant is
@@ -170,20 +139,20 @@ TSharedPtr<FJsonObject> ConsentGrant(const FMcpCapabilityRecord& Record)
 	return Grant;
 }
 
+// capabilityContract in gateway-capability-view.ts, field for field.
 TSharedPtr<FJsonObject> CapabilityContract(
 	const FMcpCapabilityRecord& Record, const FString& Tool, const FString& Revision, bool bAvailable)
 {
 	auto Out = MakeShared<FJsonObject>();
 	Out->SetStringField(TEXT("action"), McpCapabilityPublicAction(Record));
-	SetObjectOrEmpty(Out, TEXT("availability"), Record.Availability);
-	Out->SetBoolField(TEXT("available"), bAvailable);
+	Out->SetArrayField(TEXT("aliases"), GatewayStringArray(Record.Aliases));
+	Out->SetObjectField(TEXT("availability"), McpCapabilityAvailabilityView(Record, bAvailable));
 	SetObjectOrEmpty(Out, TEXT("behavior"), Record.Behavior);
 	Out->SetStringField(TEXT("capability"), Record.Id);
 	Out->SetStringField(TEXT("catalogRevision"), Revision);
 	if (const TSharedPtr<FJsonObject> Grant = ConsentGrant(Record)) Out->SetObjectField(TEXT("consentGrant"), Grant);
 	SetObjectOrEmpty(Out, TEXT("cost"), Record.Cost);
 	Out->SetStringField(TEXT("domain"), Record.Domain);
-	Out->SetStringField(TEXT("effect"), Record.Effect);
 	Out->SetNumberField(TEXT("exampleCount"), Record.Examples.Num());
 	if (Record.Examples.Num() > 0)
 	{
@@ -192,8 +161,18 @@ TSharedPtr<FJsonObject> CapabilityContract(
 	Out->SetStringField(TEXT("family"), Record.Family);
 	SetObjectOrEmpty(Out, TEXT("hashes"), Record.Hashes);
 	SetObjectOrEmpty(Out, TEXT("inputSchema"), McpStripActionFromInputSchema(Record.InputSchema));
+	TArray<TSharedPtr<FJsonValue>> LegacyIds;
+	for (const FMcpLegacyPair& Pair : Record.LegacyPairs)
+	{
+		auto Entry = MakeShared<FJsonObject>();
+		Entry->SetStringField(TEXT("tool"), Pair.Tool);
+		Entry->SetStringField(TEXT("action"), Pair.Action);
+		if (Pair.IsFolded()) Entry->SetObjectField(TEXT("folded"), Pair.FoldedPins);
+		LegacyIds.Add(MakeShared<FJsonValueObject>(Entry));
+	}
+	Out->SetArrayField(TEXT("legacyIds"), LegacyIds);
 	Out->SetStringField(TEXT("message"),
-		TEXT("Exact capability contract. Every parameter below is action-specific, not a tool union."));
+		TEXT("Exact capability contract. inputSchema declares every parameter this action accepts."));
 	// The execute call to send with params filled in, as the tool description promises (capabilityNextCall in TS).
 	const TSharedPtr<FJsonObject> Next = GatewayBuildNextCall(bAvailable ? TEXT("execute") : TEXT("configure"), Tool,
 		bAvailable ? McpCapabilityPublicAction(Record) : FString(), FString());
@@ -210,12 +189,12 @@ TSharedPtr<FJsonObject> CapabilityContract(
 		Parameters.Add(MakeShared<FJsonValueObject>(View));
 	}
 	Out->SetArrayField(TEXT("parameters"), Parameters);
-	Out->SetStringField(TEXT("parent"), Record.Parent);
+	Out->SetStringField(TEXT("parentTool"), Record.Parent);
 	SetObjectOrEmpty(Out, TEXT("policy"), Record.Policy);
+	Out->SetBoolField(TEXT("runnable"), bAvailable);
 	Out->SetStringField(TEXT("scope"), TEXT("capability"));
 	Out->SetBoolField(TEXT("success"), true);
 	Out->SetStringField(TEXT("summary"), Record.Summary);
-	Out->SetStringField(TEXT("tool"), Tool);
 	Out->SetArrayField(TEXT("whenNotToUse"), GatewayStringArray(Record.WhenNotToUse));
 	Out->SetArrayField(TEXT("whenToUse"), GatewayStringArray(Record.WhenToUse));
 	return Out;
@@ -229,19 +208,17 @@ TSharedPtr<FJsonObject> McpGatewayDescribeCapability(
 	if (!Store.IsReady()) return McpGatewayCatalogUnavailable(TEXT("describe"), Store);
 
 	const FString& Revision = Store.GetCatalogRevision();
-	const int32 Limit = FMath::Clamp(Input.Limit, 1, McpDescribeMaxLimit);
-	const int32 Offset = FMath::Max(0, Input.Offset);
-	const FString Query = Input.Query.TrimStartAndEnd().ToLower();
-
-	if (Input.Tool.IsEmpty() && !Input.bHasAction) return McpGatewayDescribeToolOverview(Input, Store);
+	if (Input.Tool.IsEmpty()) return McpGatewayDescribeBrowse(Input, Store, IsToolEnabled);
 	const TArray<FString> Parents = Store.GetParents();
 	if (!Parents.ContainsByPredicate([&](const FString& P) { return P.Equals(Input.Tool, ESearchCase::CaseSensitive); }))
 	{
 		TSharedPtr<FJsonObject> Error = GatewayError(TEXT("describe"), TEXT("UNKNOWN_TOOL"),
-			TEXT("Unknown tool. Call search to retrieve canonical capability names."));
-		Error->SetStringField(TEXT("catalogRevision"), Revision);
-		Error->SetObjectField(TEXT("nextCall"), GatewayBuildNextCall(TEXT("search"), FString(), FString(), FString()));
-		Error->SetArrayField(TEXT("suggestions"), GatewayStringArray(GatewayClosestMatches(Input.Tool, Parents, 3)));
+			TEXT("Unknown tool. Call search to retrieve canonical tool names."));
+		const TArray<FString> Suggestions = GatewayClosestMatches(Input.Tool, Parents, 3);
+		Error->SetArrayField(TEXT("suggestions"), GatewayStringArray(Suggestions));
+		Error->SetObjectField(TEXT("nextCall"), Suggestions.Num() > 0
+			? GatewayBuildNextCall(TEXT("describe"), Suggestions[0], FString(), FString())
+			: GatewayBuildNextCall(TEXT("search"), FString(), FString(), FString()));
 		return Error;
 	}
 
@@ -253,7 +230,7 @@ TSharedPtr<FJsonObject> McpGatewayDescribeCapability(
 
 	if (!Input.bHasAction)
 	{
-		return ToolSummary(Input.Tool, Siblings, Actions, Query, Limit, Offset, Revision);
+		return McpGatewayToolSummary(Input.Tool, Actions, Input, IsToolEnabled(Input.Tool));
 	}
 
 	const FMcpCapabilityRecord* Record = Store.FindByParentAction(Input.Tool, Input.Action);
@@ -264,7 +241,6 @@ TSharedPtr<FJsonObject> McpGatewayDescribeCapability(
 		TSharedPtr<FJsonObject> Error = GatewayError(TEXT("describe"), TEXT("UNKNOWN_ACTION"),
 			FString::Printf(TEXT("Unknown action '%s' for %s.%s"), *Input.Action, *Input.Tool, *Guide.Hint));
 		Error->SetArrayField(TEXT("availableActions"), GatewayStringArray(Actions));
-		Error->SetStringField(TEXT("catalogRevision"), Revision);
 		Error->SetObjectField(TEXT("nextCall"), Guide.NextCall);
 		Error->SetArrayField(TEXT("suggestions"), GatewayStringArray(Guide.Suggestions));
 		Error->SetStringField(TEXT("tool"), Input.Tool);
@@ -277,31 +253,39 @@ TSharedPtr<FJsonObject> McpGatewayDescribeCapability(
 		if (!Names.ContainsByPredicate([&](const FString& N) { return N.Equals(Input.Param, ESearchCase::CaseSensitive); }))
 		{
 			TSharedPtr<FJsonObject> Error = GatewayError(TEXT("describe"), TEXT("UNKNOWN_PARAM"),
-				FString::Printf(TEXT("Unknown parameter '%s' for %s."), *Input.Param, *Record->Id));
+				FString::Printf(TEXT("Unknown parameter '%s' for capability '%s'."), *Input.Param, *Record->Id));
+			const TArray<FString> Suggestions = GatewayClosestMatches(Input.Param, Names, 3);
 			Error->SetArrayField(TEXT("availableParameters"), GatewayStringArray(Names));
 			Error->SetStringField(TEXT("capability"), Record->Id);
-			Error->SetStringField(TEXT("catalogRevision"), Revision);
-			Error->SetObjectField(TEXT("nextCall"), GatewayBuildNextCall(TEXT("describe"), Input.Tool, Input.Action, FString()));
-			Error->SetArrayField(TEXT("suggestions"), GatewayStringArray(GatewayClosestMatches(Input.Param, Names, 3)));
+			const TSharedPtr<FJsonObject> Next = GatewayBuildNextCall(TEXT("describe"), FString(), FString(),
+				Suggestions.Num() > 0 ? Suggestions[0] : FString());
+			Next->SetStringField(TEXT("capability"), Record->Id);
+			Error->SetObjectField(TEXT("nextCall"), Next);
+			Error->SetArrayField(TEXT("suggestions"), GatewayStringArray(Suggestions));
 			return Error;
 		}
 		auto Out = MakeShared<FJsonObject>();
+		Out->SetStringField(TEXT("action"), McpCapabilityPublicAction(*Record));
 		Out->SetStringField(TEXT("capability"), Record->Id);
 		Out->SetStringField(TEXT("catalogRevision"), Revision);
 		// Same capability, same consent requirement. Omitting the grant here made
 		// the compact per-parameter describe useless for any consented write: the
 		// caller still had to pay for a full-size describe just to mint a nonce.
 		if (const TSharedPtr<FJsonObject> Grant = ConsentGrant(*Record)) Out->SetObjectField(TEXT("consentGrant"), Grant);
-		Out->SetStringField(TEXT("message"), TEXT("Exact per-action parameter schema. Pass it under params on execute."));
+		Out->SetStringField(TEXT("message"), TEXT("Single parameter schema for this capability. Pass it with the exact casing shown."));
 		Out->SetStringField(TEXT("operation"), TEXT("describe"));
 		Out->SetStringField(TEXT("param"), Input.Param);
+		Out->SetStringField(TEXT("parentTool"), Record->Parent);
 		Out->SetBoolField(TEXT("required"), IsRequired(Record->InputSchema, Input.Param));
 		Out->SetObjectField(TEXT("schema"), ParameterSchema(Record->InputSchema, Input.Param));
-		Out->SetStringField(TEXT("scope"), TEXT("capability"));
+		Out->SetStringField(TEXT("scope"), TEXT("parameter"));
 		Out->SetBoolField(TEXT("success"), true);
 		SetVariants(Out, *Record, Input.Param);
+		SetMigratedFrom(Out, Input, *Record);
 		return Out;
 	}
 
-	return CapabilityContract(*Record, Input.Tool, Revision, IsToolEnabled(Record->Parent));
+	TSharedPtr<FJsonObject> Contract = CapabilityContract(*Record, Input.Tool, Revision, IsToolEnabled(Record->Parent));
+	SetMigratedFrom(Contract, Input, *Record);
+	return Contract;
 }

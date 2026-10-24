@@ -88,8 +88,8 @@ export const unrealGatewayToolDefinition: ToolDefinition = {
         additionalProperties: false,
         description: 'Execution controls for execute only; never put these inside params. Honored keys: idempotencyKey, expectedCatalogRevision, expectedRevisions, timeoutMs, pageCursor.'
       },
-      limit: { type: 'integer', minimum: 1, maximum: 25, description: 'Maximum rows per page: search results (default 12) or describe action rows (default 20). Defaults to 12.' },
-      offset: { type: 'integer', minimum: 0, description: 'Zero-based offset into search results or into a described tool\x27s action list. Defaults to 0.' },
+      limit: { type: 'integer', minimum: 1, maximum: 25, description: 'Maximum rows per page. search: 12 by default. describe: a listing of domains, families or a family\x27s capabilities shows 50 rows unless limit is set, and a tool\x27s action list is whole.' },
+      offset: { type: 'integer', minimum: 0, description: 'Zero-based offset into search results or into a describe listing (domains, families, a family\x27s capabilities or a tool\x27s actions). Defaults to 0.' },
       cursor: { type: 'string', description: 'Opaque search cursor from a previous response nextCursor. Supersedes offset.' },
       maxBytes: { type: 'integer', minimum: 512, maximum: 262144, description: 'Serialized byte ceiling for a search response. Results are dropped from the end until the response fits.' }
     },

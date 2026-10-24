@@ -74,23 +74,33 @@ void FMcpNativeTransport::HandleGatewayCall(
 		DiscoveryQuery.bHasDomain = Params->TryGetStringField(TEXT("domain"), DiscoveryQuery.Domain);
 		DiscoveryQuery.bHasFamily = Params->TryGetStringField(TEXT("family"), DiscoveryQuery.Family);
 		DiscoveryQuery.bHasTool = Params->TryGetStringField(TEXT("tool"), DiscoveryQuery.Tool);
+		DiscoveryQuery.bHasAction = Params->TryGetStringField(TEXT("action"), DiscoveryQuery.Action);
+		DiscoveryQuery.bHasCapability = Params->TryGetStringField(TEXT("capability"), DiscoveryQuery.Capability);
 		DiscoveryQuery.bHasEffect = Params->TryGetStringField(TEXT("effect"), DiscoveryQuery.Effect);
+		// A cursor supersedes offset; only a string is one (resolveOffset in gateway-search.ts).
+		const TSharedPtr<FJsonValue> Cursor = Params->TryGetField(TEXT("cursor"));
+		DiscoveryQuery.bHasCursor = Cursor.IsValid() && Cursor->Type == EJson::String;
+		if (DiscoveryQuery.bHasCursor) DiscoveryQuery.Cursor = Cursor->AsString();
+		// An integer past its bounds is clamped and the reply says so (integerCoercion in gateway-shared.ts).
+		auto ReadBounded = [&](const TCHAR* Name, int32 Min, int32 Max, int32& Out)
+		{
+			int32 Requested = 0;
+			if (!Params->HasField(Name) || !Params->TryGetNumberField(Name, Requested)) return;
+			Out = FMath::Clamp(Requested, Min, Max);
+			if (Out == Requested) return;
+			auto Coercion = MakeShared<FJsonObject>();
+			Coercion->SetStringField(TEXT("parameter"), Name);
+			Coercion->SetNumberField(TEXT("requested"), Requested);
+			Coercion->SetNumberField(TEXT("applied"), Out);
+			Coercion->SetStringField(TEXT("reason"), Requested < Min
+				? FString::Printf(TEXT("%s=%d is below the minimum of %d."), Name, Requested, Min)
+				: FString::Printf(TEXT("%s=%d is above the maximum of %d."), Name, Requested, Max));
+			DiscoveryQuery.Coercions.Add(MakeShared<FJsonValueObject>(Coercion));
+		};
+		if (!DiscoveryQuery.bHasCursor) ReadBounded(TEXT("offset"), 0, MAX_int32, DiscoveryQuery.Offset);
 		DiscoveryQuery.Limit = McpSearchDefaultLimit;
-		if (Params->HasField(TEXT("limit")))
-		{
-			int32 L = 0;
-			if (Params->TryGetNumberField(TEXT("limit"), L)) DiscoveryQuery.Limit = FMath::Clamp(L, 1, McpSearchMaxLimit);
-		}
-		if (Params->HasField(TEXT("offset")))
-		{
-			int32 O = 0;
-			if (Params->TryGetNumberField(TEXT("offset"), O)) DiscoveryQuery.Offset = FMath::Max(0, O);
-		}
-		if (Params->HasField(TEXT("maxBytes")))
-		{
-			int32 B = 0;
-			if (Params->TryGetNumberField(TEXT("maxBytes"), B)) DiscoveryQuery.MaxBytes = FMath::Clamp(B, 512, 262144);
-		}
+		ReadBounded(TEXT("limit"), 1, McpSearchMaxLimit, DiscoveryQuery.Limit);
+		ReadBounded(TEXT("maxBytes"), 512, 262144, DiscoveryQuery.MaxBytes);
 		SendDiscoveryResult(McpGatewaySearchCapabilities(DiscoveryQuery, CapabilityStore, IsToolEnabled));
 		return;
 	}
@@ -101,12 +111,14 @@ void FMcpNativeTransport::HandleGatewayCall(
 		Params->TryGetStringField(TEXT("tool"), DiscoveryQuery.Tool);
 		DiscoveryQuery.bHasAction = Params->TryGetStringField(TEXT("action"), DiscoveryQuery.Action);
 		DiscoveryQuery.bHasParam = Params->TryGetStringField(TEXT("param"), DiscoveryQuery.Param);
+		DiscoveryQuery.bHasDomain = Params->TryGetStringField(TEXT("domain"), DiscoveryQuery.Domain);
+		DiscoveryQuery.bHasFamily = Params->TryGetStringField(TEXT("family"), DiscoveryQuery.Family);
 		Params->TryGetStringField(TEXT("query"), DiscoveryQuery.Query);
-		DiscoveryQuery.Limit = McpDescribeDefaultLimit;
 		if (Params->HasField(TEXT("limit")))
 		{
 			int32 L = 0;
-			if (Params->TryGetNumberField(TEXT("limit"), L)) DiscoveryQuery.Limit = FMath::Clamp(L, 1, McpDescribeMaxLimit);
+			DiscoveryQuery.bHasLimit = Params->TryGetNumberField(TEXT("limit"), L);
+			if (DiscoveryQuery.bHasLimit) DiscoveryQuery.Limit = FMath::Clamp(L, 1, McpDescribeMaxLimit);
 		}
 		// Accept `actionOffset` as an alias of `offset`: the tool summary response
 		// echoes its own paging state as actionOffset/actionLimit/actionHasMore,
@@ -124,10 +136,10 @@ void FMcpNativeTransport::HandleGatewayCall(
 			if (Params->TryGetNumberField(TEXT("actionOffset"), O)) DiscoveryQuery.Offset = FMath::Max(0, O);
 		}
 		// describe takes a capability ID as execute does: it is the ID every search row and execute nextCall carries,
-		// and describe {capability} used to answer with the whole tool list.
+		// and it wins over tool and action (describeCapabilityReference in gateway-describe-capability.ts).
 		FString Capability;
-		if (DiscoveryQuery.Tool.IsEmpty() && !DiscoveryQuery.bHasAction &&
-			Params->TryGetStringField(TEXT("capability"), Capability) && !Capability.IsEmpty())
+		FString ResolvedFromAlias;
+		if (Params->TryGetStringField(TEXT("capability"), Capability))
 		{
 			const FMcpCanonicalRecordIndex& Index = FMcpCanonicalRecordIndex::Get();
 			const FMcpCapabilityRecord* Record = Index.FindById(Capability);
@@ -135,14 +147,18 @@ void FMcpNativeTransport::HandleGatewayCall(
 			if (!Record && Index.ResolveAlias(Capability, AliasTarget) == EMcpAliasResolution::Unique)
 			{
 				Record = Index.FindById(AliasTarget);
+				ResolvedFromAlias = Capability;
 			}
 			if (!Record)
 			{
 				TSharedPtr<FJsonObject> Error = GatewayError(TEXT("describe"), TEXT("UNKNOWN_CAPABILITY"),
-					FString::Printf(TEXT("Unknown capability '%s'. Call search to find one."), *Capability));
-				Error->SetArrayField(TEXT("suggestions"),
-					GatewayStringArray(GatewayClosestMatches(Capability, Index.GetCapabilityIds(), 3)));
-				Error->SetObjectField(TEXT("nextCall"), GatewayBuildNextCall(TEXT("search"), FString(), FString(), FString()));
+					FString::Printf(TEXT("Unknown capability '%s'. Call search to find canonical capability IDs."), *Capability));
+				const TArray<FString> Suggestions = GatewayClosestMatches(Capability, Index.GetCapabilityIds(), 3);
+				Error->SetArrayField(TEXT("suggestions"), GatewayStringArray(Suggestions));
+				const TSharedPtr<FJsonObject> Next = GatewayBuildNextCall(Suggestions.Num() > 0 ? TEXT("describe") : TEXT("search"),
+					FString(), FString(), FString());
+				Next->SetStringField(Suggestions.Num() > 0 ? TEXT("capability") : TEXT("query"), Suggestions.Num() > 0 ? Suggestions[0] : Capability);
+				Error->SetObjectField(TEXT("nextCall"), Next);
 				SendDiscoveryResult(Error);
 				return;
 			}
@@ -150,14 +166,28 @@ void FMcpNativeTransport::HandleGatewayCall(
 			DiscoveryQuery.Action = McpCapabilityPublicAction(*Record);
 			DiscoveryQuery.bHasAction = true;
 		}
+		// param selects one parameter of one capability (paramWithoutCapabilityError in gateway-describe.ts).
+		if (DiscoveryQuery.bHasParam && !DiscoveryQuery.bHasAction)
+		{
+			TSharedPtr<FJsonObject> Error = GatewayError(TEXT("describe"), TEXT("MISSING_ACTION"),
+				TEXT("param selects one parameter of one capability, so it needs a capability, or a tool with an action."));
+			Error->SetObjectField(TEXT("nextCall"), DiscoveryQuery.Tool.IsEmpty()
+				? GatewayBuildNextCall(TEXT("search"), FString(), FString(), FString())
+				: GatewayBuildNextCall(TEXT("describe"), DiscoveryQuery.Tool, FString(), FString()));
+			SendDiscoveryResult(Error);
+			return;
+		}
 		// As on execute, the namespace of a capability ID (asset for asset.list) names its parent tool.
 		const FString AskedTool = DiscoveryQuery.Tool;
 		DiscoveryQuery.Tool = FMcpCanonicalRecordIndex::Get().ResolveToolNamespace(AskedTool);
 		TSharedPtr<FJsonObject> Described = McpGatewayDescribeCapability(DiscoveryQuery, CapabilityStore, IsToolEnabled);
-		if (Described.IsValid() && !DiscoveryQuery.bHasAction && DiscoveryQuery.Tool != AskedTool)
+		bool bDescribed = false;
+		if (Described.IsValid()) Described->TryGetBoolField(TEXT("success"), bDescribed);
+		if (bDescribed && !DiscoveryQuery.bHasAction && DiscoveryQuery.Tool != AskedTool)
 		{
 			Described->SetStringField(TEXT("resolvedFromNamespace"), AskedTool);
 		}
+		if (bDescribed && !ResolvedFromAlias.IsEmpty()) Described->SetStringField(TEXT("resolvedFromAlias"), ResolvedFromAlias);
 		SendDiscoveryResult(Described);
 		return;
 	}

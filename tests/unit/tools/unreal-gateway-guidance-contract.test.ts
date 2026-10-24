@@ -42,6 +42,151 @@ function nativeDescription(): string {
     .join('');
 }
 
+type Json = Record<string, unknown>;
+type BuiltSchema = { properties: Json; required: string[]; closed: boolean };
+
+const isPlainObject = (value: unknown): value is Json =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+/**
+ * The native `unreal` input schema, rebuilt from the FMcpSchemaBuilder chain in BuildUnrealGatewayToolDefinition.
+ * Each method is emulated as McpSchemaBuilder.cpp builds it. A method or argument shape this reader does not know
+ * throws, so a new builder call cannot slip past the diff below.
+ */
+function nativeInputSchema(): Json {
+  const body = nativeDefinition.slice(nativeDefinition.indexOf('BuildUnrealGatewayToolDefinition()'));
+  let at = body.indexOf('FMcpSchemaBuilder()') + 'FMcpSchemaBuilder()'.length;
+  const rest = (): string => body.slice(at);
+  const skip = (): void => {
+    for (let gap = /^(?:\s+|\/\/[^\n]*)/u.exec(rest()); gap !== null; gap = /^(?:\s+|\/\/[^\n]*)/u.exec(rest())) at += gap[0].length;
+  };
+  const peek = (token: string): boolean => {
+    skip();
+    return rest().startsWith(token);
+  };
+  const take = (token: string): void => {
+    if (!peek(token)) throw new Error(`native schema chain: expected '${token}' at '${rest().slice(0, 60)}'`);
+    at += token.length;
+  };
+  const word = (): string => {
+    skip();
+    const match = /^\w+/u.exec(rest());
+    if (match === null) throw new Error(`native schema chain: expected a name at '${rest().slice(0, 60)}'`);
+    at += match[0].length;
+    return match[0];
+  };
+  const text = (): string => {
+    take('TEXT(');
+    let out = '';
+    for (let piece = /^\s*"((?:[^"\\]|\\.)*)"/u.exec(rest()); piece !== null; piece = /^\s*"((?:[^"\\]|\\.)*)"/u.exec(rest())) {
+      out += (piece[1] ?? '').replace(/\\(.)/gu, '$1');
+      at += piece[0].length;
+    }
+    take(')');
+    return out;
+  };
+  const chain = (): BuiltSchema => {
+    const built: BuiltSchema = { properties: {}, required: [], closed: false };
+    while (peek('.')) {
+      take('.');
+      const method = word();
+      take('(');
+      const args: unknown[] = [];
+      while (!peek(')')) {
+        if (args.length > 0) take(',');
+        args.push(argument());
+      }
+      take(')');
+      if (method === 'Build') return built;
+      apply(built, method, args);
+    }
+    return built;
+  };
+  const argument = (): unknown => {
+    if (peek('TEXT(')) return text();
+    if (peek('FString()')) {
+      take('FString()');
+      return '';
+    }
+    if (peek('{')) {
+      take('{');
+      const values = [text()];
+      while (peek(',')) {
+        take(',');
+        values.push(text());
+      }
+      take('}');
+      return values;
+    }
+    if (peek('[]')) {
+      take('[](FMcpSchemaBuilder&');
+      const name = word();
+      take(')');
+      take('{');
+      take(name);
+      const sub = chain();
+      take(';');
+      take('}');
+      return sub;
+    }
+    const number = word();
+    if (!/^\d+$/u.test(number)) throw new Error(`native schema chain: unexpected argument '${number}'`);
+    return Number(number);
+  };
+  const typed = (type: string, description: unknown): Json =>
+    description === '' || description === undefined ? { type } : { type, description };
+  const apply = (built: BuiltSchema, method: string, args: unknown[]): void => {
+    const name = String(args[0]);
+    const arity = `${method}/${args.length}`;
+    switch (arity) {
+      case 'String/2': built.properties[name] = typed('string', args[1]); return;
+      case 'String/4': built.properties[name] = { ...typed('string', args[1]), minLength: args[2], maxLength: args[3] }; return;
+      case 'StringEnum/3': built.properties[name] = { ...typed('string', args[2]), enum: args[1] }; return;
+      case 'Integer/1': built.properties[name] = typed('integer', undefined); return;
+      case 'Integer/2': built.properties[name] = typed('integer', args[1]); return;
+      case 'Integer/3': built.properties[name] = { ...typed('integer', args[1]), minimum: args[2] }; return;
+      case 'Integer/4': built.properties[name] = { ...typed('integer', args[1]), minimum: args[2], maximum: args[3] }; return;
+      case 'ClosedObject/3': {
+        const sub = args[2] as BuiltSchema;
+        built.properties[name] = {
+          ...typed('object', args[1]),
+          properties: sub.properties,
+          ...(sub.required.length > 0 ? { required: sub.required } : {}),
+          additionalProperties: false
+        };
+        return;
+      }
+      case 'OpenObject/2': built.properties[name] = { ...typed('object', args[1]), additionalProperties: true }; return;
+      case 'Required/1':
+        for (const field of args[0] as string[]) if (!built.required.includes(field)) built.required.push(field);
+        return;
+      case 'Closed/0': built.closed = true; return;
+      default: throw new Error(`FMcpSchemaBuilder::${arity} is not read by this test; add it as McpSchemaBuilder.cpp builds it`);
+    }
+  };
+  const built = chain();
+  return {
+    type: 'object',
+    properties: built.properties,
+    ...(built.required.length > 0 ? { required: built.required } : {}),
+    ...(built.closed ? { additionalProperties: false } : {})
+  };
+}
+
+/** JSON pointers at which two schemas disagree; arrays compare whole. */
+function schemaDifferences(left: unknown, right: unknown, path = ''): string[] {
+  if (isPlainObject(left) && isPlainObject(right)) {
+    return [...new Set([...Object.keys(left), ...Object.keys(right)])]
+      .sort()
+      .flatMap((key) => schemaDifferences(left[key], right[key], `${path}/${key}`));
+  }
+  return JSON.stringify(left) === JSON.stringify(right) ? [] : [path];
+}
+
+// The native door mints a single-use nonce with every consent grant (CONSENT_REUSED on replay); the TypeScript door's
+// grants carry none. docs/gateway-client-guide.md lists it under "Where the two doors still differ".
+const INTENDED_SCHEMA_DIFFERENCES = ['/properties/consent/description', '/properties/consent/properties/nonce'];
+
 function validateGatewayArgs(args: unknown): boolean {
   const ajv = new AjvCtor({ strict: false, allErrors: true });
   return ajv.compile(unrealGatewayToolDefinition.inputSchema)(args) === true;
@@ -75,13 +220,16 @@ describe('the `unreal` tool description is one procedure, mirrored on both trans
     expect(UNREAL_GATEWAY_DESCRIPTION).toContain('never put action or subAction inside params');
   });
 
-  it('the native definition mirrors the TypeScript param and query wording', () => {
-    const props = unrealGatewayToolDefinition.inputSchema.properties as Record<string, { description?: string }>;
-    for (const name of ['query', 'tool', 'action', 'param', 'params']) {
-      const piece = nativeDefinition.match(new RegExp(`\\.(?:String|Object)\\(TEXT\\("${name}"\\),\\s*TEXT\\("([^"]*)"\\)`));
-      expect(piece, `native definition must declare ${name}`).not.toBeNull();
-      expect(piece?.[1], `${name} description diverged between surfaces`).toBe(props[name]?.description);
-    }
+});
+
+describe('the `unreal` input schema is the same on both transports', () => {
+  it('the native builder chain states every schema fact, with no edits after Build', () => {
+    const body = nativeDefinition.slice(nativeDefinition.indexOf('BuildUnrealGatewayToolDefinition()'));
+    expect(body).not.toMatch(/InputSchema->|Prop\(/u);
+  });
+
+  it('differs from the TypeScript schema only by the native consent nonce', () => {
+    expect(schemaDifferences(nativeInputSchema(), unrealGatewayToolDefinition.inputSchema)).toEqual(INTENDED_SCHEMA_DIFFERENCES);
   });
 });
 
@@ -90,13 +238,10 @@ describe('initialize `instructions` carry the same procedure on both transports'
     expect(serverInfo.instructions).toBe(UNREAL_GATEWAY_INSTRUCTIONS);
   });
 
-  it('covers workflow, recovery and conventions without naming a transport-only selector', () => {
+  it('covers workflow, recovery and conventions', () => {
     for (const phrase of ['1. search', '2. describe', '3. execute', 'Recovery', 'UNKNOWN_', 'INVALID_PARAMS', 'NOT_CONNECTED', '/Game']) {
       expect(UNREAL_GATEWAY_INSTRUCTIONS).toContain(phrase);
     }
-    // `capability` is a TypeScript-only selector; the shared text must steer a
-    // native client through nextCall, which resolves on both surfaces.
-    expect(UNREAL_GATEWAY_INSTRUCTIONS).not.toMatch(/"capability"\s*:/);
   });
 });
 
@@ -111,10 +256,6 @@ describe('`options` has a legal input channel on the advertised tool', () => {
     const base = { operation: 'execute', tool: 'control_actor', action: 'spawn', params: { classPath: '/Script/Engine.StaticMeshActor' } };
     expect(validateGatewayArgs({ ...base, options: { idempotencyKey: 'spawn-1', timeoutMs: 5000 } })).toBe(true);
     expect(validateGatewayArgs({ ...base, options: { savePolicy: 'none' } })).toBe(false);
-  });
-
-  it('the native /mcp gateway declares the same options sibling', () => {
-    expect(nativeDefinition.includes('.Object(TEXT("options")')).toBe(true);
   });
 });
 

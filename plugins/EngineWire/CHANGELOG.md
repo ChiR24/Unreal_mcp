@@ -39,6 +39,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **Refused instead of overwritten or guessed**: taken names and paths, bakes over another asset kind, engine content, unknown types and modes, empty edits, incompatible pins, character edits on a non-Character (`NOT_A_CHARACTER`, `SKELETON_MISMATCH`).
 - **Calls that now do what they say**: fades, thumbnails, sockets, bones, ragdolls, AI, `merge_actors`, PCG components, widgets, physics bodies, landscape, foliage, water, audio and streaming in Play, `run_benchmark`, splines, volumes, console values, scalability and every view mode.
 - **Saves are reported** (`saved`, `SAVE_FAILED`, `COMPILE_FAILED` with the compiler error) by creators and asset edits; a `save: false` edit stays unsaved.
+- **`/mcp` discovery answers like the stdio door**: search rows, filters and cursors, `describe` by domain and family, name and param guidance, the same input schema.
 
 ## [0.6.0-beta-f] - 2026-10-16
 

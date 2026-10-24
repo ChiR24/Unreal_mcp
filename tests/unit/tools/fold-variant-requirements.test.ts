@@ -96,6 +96,6 @@ describe('a folded variant is held to its own required parameters', () => {
       /McpValidateObjectAgainstCanonicalSchema\(ToValidate, InputSchema, Violation\)\s*\|\| !McpCheckVariantRequirements\(/u);
     expect(native('Gateway', 'McpNativeGatewayFolding.cpp')).toMatch(/TryGetObjectField\(TEXT\("requires"\), Requires\)/u);
     expect(native('Gateway', 'McpNativeGatewayDescribe.cpp')).toContain('McpSetVariantRequirementViews(Out, Record, Name);');
-    expect(native('Gateway', 'McpNativeGatewaySearch.cpp')).toContain('Signature->SetObjectField(TEXT("variantRequired"), VariantRequired);');
+    expect(rules).toContain('Signature->SetObjectField(TEXT("variantRequired"), VariantRequired);');
   });
 });

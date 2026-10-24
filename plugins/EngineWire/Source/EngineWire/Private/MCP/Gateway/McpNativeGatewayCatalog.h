@@ -1,4 +1,5 @@
-// McpNativeGatewayCatalog.h — registry-schema readers for the execute path.
+// McpNativeGatewayCatalog.h — what a capability record shows a caller: its availability, its search row, and the
+// editor-state gate execute applies.
 //
 // Error envelopes and closest-match guidance live in McpNativeGatewayGuidance.h,
 // which this header re-exports so existing execute-path includes keep working.
@@ -14,6 +15,20 @@ class FMcpToolRegistry;
 class FMcpDynamicToolManager;
 class FMcpToolDefinition;
 struct FMcpCapabilityRecord;
+struct FMcpDiscoveryQuery;
+
+/** availability as both doors report it: status and reasons from the parent tool, then the record's plugins and editor states. */
+TSharedPtr<FJsonObject> McpCapabilityAvailabilityView(const FMcpCapabilityRecord& Record, bool bEnabled);
+
+/**
+ * One search row as a client reads it on both doors (capabilitySearchRow in gateway-capability-view.ts, less the
+ * revision hashes, ranking reasons and category both doors leave out). Its nextCall describes the capability, or
+ * enables a disabled tool through configure first.
+ */
+TSharedPtr<FJsonObject> McpSearchRow(const FMcpCapabilityRecord& Record, bool bEnabled);
+
+/** The filters a search applied, as sent (declaredFilters in gateway-search.ts). */
+TSharedPtr<FJsonObject> McpSearchFilters(const FMcpDiscoveryQuery& Input);
 
 // capabilityRevision / schemaRevision on a receipt come straight from the resolved
 // record's content/schema hashes, the same runtime sources the TypeScript receipt

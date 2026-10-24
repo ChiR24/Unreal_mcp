@@ -57,24 +57,32 @@ recover from each guided error.
 
 ## Progressive gateway discovery
 
-Both transports expose the same progressive `unreal` gateway. Discovery is
-**never a full schema dump**; `describe` drills down one level per call, and
-`perActionSchemas` is `false` only on the `{ tool }` summary:
+Both transports expose the same progressive `unreal` gateway: the same input
+schema, the same discovery levels, the same reply fields and the same guided
+errors, so a client can follow either door's `nextCall` chain on the other.
+Discovery is **never a full schema dump**; `describe` drills down one level per
+call, and `perActionSchemas` is `false` only on the `{ tool }` summary:
 
-1. `describe { tool }` -> tool summary + a paginated/filterable action list
-   (no `inputSchema` body), plus a `browse` call: `search` filtered to that
-   tool, whose rows carry per-action summaries.
-2. `describe { tool, action }` -> the exact contract of the capability that
-   pair resolves to: only the parameters the action declares
+1. `describe {}` -> the domains; `{ domain }` -> its families;
+   `{ domain?, family }` -> its capabilities.
+2. `describe { tool }` -> tool summary + its action names (all of them unless
+   `limit` is sent, no `inputSchema` body), plus a `browse` call: `search`
+   filtered to that tool, whose rows carry per-action summaries.
+3. `describe { capability }` or `{ tool, action }` -> the exact contract of that
+   capability: only the parameters the action declares
    (`perActionSchemas: true`), never a parent-tool union.
-3. `describe { tool, action, param }` -> exactly one parameter's full schema.
+4. `describe { ..., param }` -> exactly one parameter's full schema.
 
-`search` returns compact matches (name, category, description, actions) without
-`inputSchema` or `parameterNames` bodies. Every invalid `describe` call
-(tool/action/param) returns a structured, **guided error**: closest-match
-`suggestions` plus an executable `nextCall` payload that drills one level
-deeper. The native gateway serves describe from the generated parent registry
-(`McpGeneratedParentRegistry*`), the same capability records the TS gateway reads.
+`search` returns capability rows (`capability`, `parentTool`, `action`,
+`domain`, `family`, `summary`, `effect`, `availability`, `policy`, `outputs`,
+`runnable` and a `describe` `nextCall`) without `inputSchema` bodies. Every
+invalid `search` or `describe` call returns a structured, **guided error**:
+closest-match `suggestions` plus an executable `nextCall` payload. The native
+gateway serves discovery from the generated capability store
+(`Private/MCP/Gateway/McpNativeGatewayCapabilityStore.cpp` over the
+`Private/MCP/Generated/` shards), the same capability records the TS gateway
+reads. The few places the doors still differ on purpose are listed in
+[`gateway-client-guide.md`](gateway-client-guide.md#where-the-two-doors-still-differ).
 
 ## Protocol version negotiation
 

@@ -28,3 +28,9 @@ TSharedPtr<FJsonObject> McpVariantRequired(const FMcpCapabilityRecord& Record);
 /** describe: requiredFor on a parameter only some variants require, variantRequired on the selector. */
 void McpSetVariantRequirementViews(
 	const TSharedPtr<FJsonObject>& View, const FMcpCapabilityRecord& Record, const FString& Name);
+
+/**
+ * search: what a clear first hit needs to run without describe: each required parameter's type, an at-least-one-of
+ * group, a family's variant selector, and one example with the variant its action name pins (capabilitySignature in TS).
+ */
+TSharedPtr<FJsonObject> McpSearchSignature(const FMcpCapabilityRecord& Record);

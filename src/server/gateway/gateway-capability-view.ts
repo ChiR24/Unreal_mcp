@@ -166,7 +166,7 @@ export function parameterSummaries(record: CapabilityRecord): Array<Record<strin
 /**
  * What a clear first search hit needs to run without describe: each required parameter's type (or its values), an
  * at-least-one-of group, a family's variant selector, and one example with the variant its action name pins. Mirrored
- * by McpSearchSignature in McpNativeGatewaySearch.cpp.
+ * by McpSearchSignature in McpFoldVariantRules.cpp.
  */
 export function capabilitySignature(record: CapabilityRecord): Record<string, unknown> {
   const selector = record.routing.dispatchBy?.param;

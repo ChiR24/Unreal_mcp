@@ -42,8 +42,10 @@ it calls anything is treated as part of the contract:
   `src/tools/catalog/unreal-gateway-definition.ts` states the search -> describe
   -> execute order, the copy-the-`nextCall` rule and the `params` rules. The
   native listing (`Private/MCP/Gateway/McpNativeGatewayDefinition.cpp`) carries
-  the same bytes; `tests/unit/tools/unreal-gateway-guidance-contract.test.ts`
-  diffs them.
+  the same bytes and the same input schema;
+  `tests/unit/tools/unreal-gateway-guidance-contract.test.ts` diffs both (the
+  consent nonce is the one schema difference, see
+  [below](#where-the-two-doors-still-differ)).
 - **`instructions` at `initialize`** — `UNREAL_GATEWAY_INSTRUCTIONS` (same file)
   is passed to the SDK `Server` in `src/server/server-factory.ts`; the native
   transport reads the identical text from `Resources/MCP/server-info.json`. Most
@@ -147,11 +149,32 @@ but not the native one. The native surface is intentionally stricter.
 
 Full negotiation and header-guard behavior: [`protocol.md`](protocol.md).
 
+## Where the two doors still differ
+
+Search, describe and every guided error answer with the same fields on both
+transports, and both take the same input schema.
+`tests/unit/tools/unreal-gateway-guidance-contract.test.ts` rebuilds the native
+schema from its `FMcpSchemaBuilder` chain and diffs it with
+`unrealGatewayToolDefinition.inputSchema`;
+`tests/unit/plugin/native_gateway_describe_contracts.test.ts` compares the
+fields each native discovery builder sets with the TypeScript reply. What still
+differs is deliberate:
+
+| | Native `/mcp` | TypeScript stdio |
+| --- | --- | --- |
+| Consent grant from `describe` | Carries a single-use `nonce`; the same grant sent again is refused with `CONSENT_REUSED` | `capability` + `acknowledge` only; a grant carrying a `nonce` is refused with `INVALID_CONSENT` |
+| Typed error of a refused execute | `typedError` | `receipt.error` |
+| Search ranking | Integer rule weights (`Private/MCP/Gateway/McpNativeGatewaySearchMatch.cpp`) | The BM25 scorer (`src/tools/catalog/capabilities/retrieval/scoring.ts`); one query can order and match records differently |
+| `maxBytes` | Counts the result rows | Counts the whole reply |
+| Protocol versions | The three modern versions | Also two legacy ones (above) |
+
 ## Discovery is progressive, never a schema dump
 
-`describe` drills exactly one level per call
-(`src/server/gateway/gateway-describe.ts`). `perActionSchemas` is `false` only on
-the `{ tool }` summary; every capability-level answer reports `true`:
+`describe` drills exactly one level per call, with the same levels on both doors
+(`src/server/gateway/gateway-describe.ts`; natively
+`Private/MCP/Gateway/McpNativeGatewayDescribe*.cpp`). `perActionSchemas` is
+`false` only on the `{ tool }` summary; every capability-level answer reports
+`true`:
 
 | Call | Returns |
 | --- | --- |
@@ -160,9 +183,12 @@ the `{ tool }` summary; every capability-level answer reports `true`:
 | `describe { domain?, family }` | the capabilities in the family |
 | `describe { capability }` | one exact contract |
 | `describe { capability, param }` | one parameter's schema |
-| `describe { tool }` | parent summary + action list (names only, no `inputSchema` body) + a `browse` call: `search` filtered to that tool, whose rows carry per-action summaries |
+| `describe { tool }` | parent summary + action list (every name unless `limit` is sent, no `inputSchema` body) + a `browse` call: `search` filtered to that tool, whose rows carry per-action summaries |
 | `describe { tool, action }` | the exact contract of the capability that pair resolves to |
 | `describe { tool, action, param }` | one parameter's full schema |
+
+The three browse levels show 50 rows unless `limit` is sent; `offset` pages
+every listing.
 
 `describe { tool, action }` resolves the legacy pair to its canonical record
 (`describeLegacyPair()` in `src/server/gateway/gateway-describe.ts`) and returns

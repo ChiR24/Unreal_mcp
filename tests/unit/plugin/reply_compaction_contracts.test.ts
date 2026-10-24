@@ -11,6 +11,7 @@ import {
   RECEIPT_LISTED_FIELDS,
   RECEIPT_OUTCOME_LISTS,
   RESOLVED_IDENTITY_FIELDS,
+  SEARCH_ROW_BOOKKEEPING_FIELDS,
   STOCK_OUTPUT_PROPERTIES
 } from '../../../src/utils/responses/gateway-reply-compaction.js';
 
@@ -47,6 +48,10 @@ describe('reply compaction on both transports', () => {
   it('treats the same output properties as stock', () => {
     expect(listed(protocol('McpJsonRpcReplyDiscovery.cpp'), 'StockOutputProperties'))
       .toEqual(Object.entries(STOCK_OUTPUT_PROPERTIES).flat());
+  });
+
+  it('leaves the same bookkeeping out of a search row', () => {
+    expect(listed(protocol('McpJsonRpcReplyDiscovery.cpp'), 'SearchRowBookkeepingFields')).toEqual([...SEARCH_ROW_BOOKKEEPING_FIELDS]);
   });
 
   it('compacts the text and structuredContent a client reads, and takes images from the whole reply', () => {

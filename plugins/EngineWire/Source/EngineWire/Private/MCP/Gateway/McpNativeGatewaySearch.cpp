@@ -3,8 +3,10 @@
 #include "MCP/Gateway/McpNativeGatewaySearch.h"
 #include "MCP/Gateway/McpNativeGatewayCanonicalJson.h"
 #include "MCP/Gateway/McpNativeGatewayCapabilityStore.h"
+#include "MCP/Gateway/McpNativeGatewayCatalog.h"
 #include "MCP/Gateway/McpNativeGatewayGuidance.h"
 #include "MCP/Gateway/McpNativeGatewaySearchMatch.h"
+#include "MCP/Execute/McpNativeGatewayCanonicalRecords.h"
 #include "MCP/Execute/Request/McpFoldVariantRules.h"
 
 namespace
@@ -13,91 +15,49 @@ struct FScoredRecord
 {
 	const FMcpCapabilityRecord* Record = nullptr;
 	int32 Score = 0;
-	TArray<FString> Reasons;
 };
 
-TSharedPtr<FJsonObject> GuidedFilterError(
-	const FString& ErrorCode, const FString& Message,
-	const TArray<FString>& Candidates, const FString& Target, const FString& CatalogRevision)
+bool HasExactly(const TArray<FString>& Values, const FString& Value)
+{
+	return Values.ContainsByPredicate([&Value](const FString& Entry) { return Entry.Equals(Value, ESearchCase::CaseSensitive); });
+}
+
+// A rejected filter hands back the same search with that filter replaced by its closest declared value
+// (guidedFilterError in gateway-search-filters.ts).
+TSharedPtr<FJsonObject> GuidedFilterError(const FString& ErrorCode, const FString& Message, const TCHAR* Dimension,
+	const FString& Target, const TArray<FString>& Candidates, const FString& Domain)
 {
 	TSharedPtr<FJsonObject> Error = GatewayError(TEXT("search"), ErrorCode, Message);
-	Error->SetStringField(TEXT("catalogRevision"), CatalogRevision);
-	Error->SetArrayField(TEXT("suggestions"), GatewayStringArray(GatewayClosestMatches(Target, Candidates, 3)));
-	Error->SetObjectField(TEXT("nextCall"), GatewayBuildNextCall(TEXT("search"), FString(), FString(), FString()));
+	const TArray<FString> Suggestions = GatewayClosestMatches(Target, Candidates, 3);
+	Error->SetArrayField(TEXT("suggestions"), GatewayStringArray(Suggestions));
+	TSharedPtr<FJsonObject> Next = GatewayBuildNextCall(TEXT("search"), FString(), FString(), FString());
+	if (!Domain.IsEmpty()) Next->SetStringField(TEXT("domain"), Domain);
+	if (Suggestions.Num() > 0) Next->SetStringField(Dimension, Suggestions[0]);
+	Error->SetObjectField(TEXT("nextCall"), Next);
 	return Error;
 }
 
-// A required parameter's type, or its values joined by '|'.
-FString SearchSigType(const TSharedPtr<FJsonObject>& Properties, const FString& Name)
+// A row is a reply, not a fingerprint: a confident hit's signature example (playRate 1.25) failed the whole search.
+bool RenderedLength(const TSharedPtr<FJsonObject>& View, int32& OutLength)
 {
-	const TSharedPtr<FJsonObject>* Schema = nullptr;
-	if (!Properties.IsValid() || !Properties->TryGetObjectField(Name, Schema) || !Schema) return TEXT("unknown");
-	const TArray<TSharedPtr<FJsonValue>>* Values = nullptr;
-	if ((*Schema)->TryGetArrayField(TEXT("enum"), Values) && Values)
-	{
-		TArray<FString> Names;
-		for (const TSharedPtr<FJsonValue>& Value : *Values) Names.Add(Value.IsValid() ? Value->AsString() : FString());
-		return FString::Join(Names, TEXT("|"));
-	}
-	FString Type;
-	return (*Schema)->TryGetStringField(TEXT("type"), Type) ? Type : FString(TEXT("unknown"));
+	FString Rendered;
+	if (!McpCanonicalJsonObject(View, Rendered, /*bAllowFractions=*/true)) return false;
+	OutLength = Rendered.Len();
+	return true;
 }
 
-// What a clear first hit needs to run without describe: each required parameter's type, an at-least-one-of group, a
-// family's variant selector, and one example with the variant its action name pins (capabilitySignature in TS).
-TSharedPtr<FJsonObject> SearchSignature(const FMcpCapabilityRecord& Record)
+// The offset a nextCursor names, "c:<offset>" (decodeCursor in gateway-search-filters.ts). At most 9 digits, so the
+// offset stays an int32: the catalog holds a few hundred records.
+bool DecodeCursor(const FString& Cursor, int32& OutOffset)
 {
-	auto IsControl = [](const FString& Name) { return Name.Equals(TEXT("action"), ESearchCase::CaseSensitive) || Name.Equals(TEXT("subAction"), ESearchCase::CaseSensitive); };
-	const TSharedPtr<FJsonObject> Input = Record.InputSchema.IsValid() ? Record.InputSchema : MakeShared<FJsonObject>();
-	const TSharedPtr<FJsonObject>* PropsPtr = nullptr;
-	const TSharedPtr<FJsonObject> Properties = Input->TryGetObjectField(TEXT("properties"), PropsPtr) && PropsPtr ? *PropsPtr : nullptr;
-	auto Required = MakeShared<FJsonObject>();
-	const TArray<TSharedPtr<FJsonValue>>* Names = nullptr;
-	if (Input->TryGetArrayField(TEXT("required"), Names) && Names)
+	const FString Digits = Cursor.StartsWith(TEXT("c:"), ESearchCase::CaseSensitive) ? Cursor.RightChop(2) : FString();
+	if (Digits.IsEmpty() || Digits.Len() > 9) return false;
+	for (const TCHAR Ch : Digits)
 	{
-		for (const TSharedPtr<FJsonValue>& Value : *Names)
-		{
-			const FString Name = Value.IsValid() ? Value->AsString() : FString();
-			if (!IsControl(Name) && !Name.Equals(Record.DispatchBySelector, ESearchCase::CaseSensitive)) Required->SetStringField(Name, SearchSigType(Properties, Name));
-		}
+		if (Ch < TEXT('0') || Ch > TEXT('9')) return false;
 	}
-	auto Signature = MakeShared<FJsonObject>();
-	Signature->SetObjectField(TEXT("required"), Required);
-	const TArray<TSharedPtr<FJsonValue>>* OneOf = nullptr;
-	if (Input->TryGetArrayField(TEXT("requiredOneOf"), OneOf) && OneOf) Signature->SetArrayField(TEXT("oneOf"), *OneOf);
-	const TSharedPtr<FJsonObject> VariantRequired = McpVariantRequired(Record);
-	if (VariantRequired.IsValid()) Signature->SetObjectField(TEXT("variantRequired"), VariantRequired);
-	if (!Record.DispatchBySelector.IsEmpty())
-	{
-		auto Selector = MakeShared<FJsonObject>();
-		Selector->SetStringField(TEXT("name"), Record.DispatchBySelector);
-		const TSharedPtr<FJsonObject>* Schema = nullptr;
-		const bool bSchema = Properties.IsValid() && Properties->TryGetObjectField(Record.DispatchBySelector, Schema) && Schema;
-		const TArray<TSharedPtr<FJsonValue>>* Values = nullptr;
-		Selector->SetArrayField(TEXT("values"), bSchema && (*Schema)->TryGetArrayField(TEXT("enum"), Values) && Values
-			? *Values : TArray<TSharedPtr<FJsonValue>>());
-		if (bSchema && (*Schema)->HasField(TEXT("default"))) Selector->SetField(TEXT("default"), (*Schema)->TryGetField(TEXT("default")));
-		Signature->SetObjectField(TEXT("selector"), Selector);
-	}
-	// The example's own call: the pins its action name implies, then its params, without the gateway-level controls.
-	auto Example = MakeShared<FJsonObject>();
-	const TSharedPtr<FJsonObject>* ExampleInput = nullptr;
-	if (Record.Examples.Num() > 0 && Record.Examples[0].IsValid() && Record.Examples[0]->Type == EJson::Object &&
-		Record.Examples[0]->AsObject()->TryGetObjectField(TEXT("input"), ExampleInput) && ExampleInput)
-	{
-		FString Action;
-		(*ExampleInput)->TryGetStringField(TEXT("action"), Action);
-		const FMcpLegacyPair* Pinned = Record.LegacyPairs.FindByPredicate(
-			[&Action](const FMcpLegacyPair& Pair) { return Pair.IsFolded() && Pair.Action.Equals(Action, ESearchCase::CaseSensitive); });
-		if (Pinned) Example->Values = Pinned->FoldedPins->Values;
-		for (const auto& Field : (*ExampleInput)->Values)
-		{
-			const FString Key(Field.Key.Len(), *Field.Key);  // 5.8 keys are not FString
-			if (!IsControl(Key)) Example->SetField(Key, Field.Value);
-		}
-	}
-	Signature->SetObjectField(TEXT("example"), Example);
-	return Signature;
+	OutOffset = FCString::Atoi(*Digits);
+	return true;
 }
 }
 
@@ -120,44 +80,74 @@ TSharedPtr<FJsonObject> McpGatewaySearchCapabilities(
 
 	const FString Query = Input.Query.TrimStartAndEnd().ToLower();
 	const int32 Limit = FMath::Clamp(Input.Limit, 1, McpSearchMaxLimit);
-	const int32 Offset = FMath::Max(0, Input.Offset);
+	int32 Offset = FMath::Max(0, Input.Offset);
 	const FString& Revision = Store.GetCatalogRevision();
 
-	if (Input.bHasDomain)
+	// Every filter is checked before ranking, in the TS order and case-sensitively (validateFilters).
+	if (Input.bHasDomain && !HasExactly(Store.GetDomains(), Input.Domain))
 	{
-		const TArray<FString> Domains = Store.GetDomains();
-		if (!Domains.ContainsByPredicate([&](const FString& D) { return D.Equals(Input.Domain, ESearchCase::CaseSensitive); }))
-		{
-			return GuidedFilterError(TEXT("UNKNOWN_DOMAIN"),
-				FString::Printf(TEXT("Unknown domain '%s'."), *Input.Domain), Domains, Input.Domain, Revision);
-		}
+		return GuidedFilterError(TEXT("UNKNOWN_DOMAIN"),
+			FString::Printf(TEXT("Unknown domain '%s'. Call describe with no selector to list domains."), *Input.Domain),
+			TEXT("domain"), Input.Domain, Store.GetDomains(), FString());
 	}
 	if (Input.bHasFamily)
 	{
-		const TArray<FString> Families = Store.GetFamilies();
-		if (!Families.ContainsByPredicate([&](const FString& F) { return F.Equals(Input.Family, ESearchCase::CaseSensitive); }))
+		// The families of the domain filter when there is one.
+		TArray<const FMcpCapabilityRecord*> InScope;
+		for (const FMcpCapabilityRecord& Record : Store.GetRecords())
+		{
+			if (!Input.bHasDomain || Record.Domain.Equals(Input.Domain, ESearchCase::CaseSensitive)) InScope.Add(&Record);
+		}
+		const TArray<FString> Families = McpDistinctSorted(InScope, [](const FMcpCapabilityRecord& R) -> FString { return R.Family; });
+		if (!HasExactly(Families, Input.Family))
 		{
 			return GuidedFilterError(TEXT("UNKNOWN_FAMILY"),
-				FString::Printf(TEXT("Unknown family '%s'."), *Input.Family), Families, Input.Family, Revision);
+				FString::Printf(TEXT("Unknown family '%s'. Call describe on the domain to list its families."), *Input.Family),
+				TEXT("family"), Input.Family, Families, Input.bHasDomain ? Input.Domain : FString());
 		}
 	}
-	if (Input.bHasTool && !Store.GetParents().Contains(Input.Tool))
+	if (Input.bHasTool && !HasExactly(Store.GetParents(), Input.Tool))
 	{
 		return GuidedFilterError(TEXT("UNKNOWN_TOOL"),
 			FString::Printf(TEXT("Unknown tool '%s'. Call search without a tool filter to browse capabilities."), *Input.Tool),
-			Store.GetParents(), Input.Tool, Revision);
+			TEXT("tool"), Input.Tool, Store.GetParents(), FString());
 	}
 	if (Input.bHasEffect)
 	{
-		TArray<FString> Effects;
-		for (const FMcpCapabilityRecord& Record : Store.GetRecords()) Effects.AddUnique(Record.Effect);
-		Effects.Sort();
-		if (!Effects.Contains(Input.Effect))
+		TArray<const FMcpCapabilityRecord*> All;
+		for (const FMcpCapabilityRecord& Record : Store.GetRecords()) All.Add(&Record);
+		const TArray<FString> Effects = McpDistinctSorted(All, [](const FMcpCapabilityRecord& R) -> FString { return R.Effect; });
+		if (!HasExactly(Effects, Input.Effect))
 		{
 			return GuidedFilterError(TEXT("UNKNOWN_EFFECT"),
 				FString::Printf(TEXT("Unknown effect '%s'. Declared effects: %s."), *Input.Effect, *FString::Join(Effects, TEXT(", "))),
-				Effects, Input.Effect, Revision);
+				TEXT("effect"), Input.Effect, Effects, FString());
 		}
+	}
+
+	if (Input.bHasCursor && !DecodeCursor(Input.Cursor, Offset))
+	{
+		TSharedPtr<FJsonObject> Error = GatewayError(TEXT("search"), TEXT("INVALID_CURSOR"),
+			TEXT("cursor is not a gateway search cursor. Re-run search without a cursor."));
+		Error->SetObjectField(TEXT("nextCall"), GatewayBuildNextCall(TEXT("search"), FString(), FString(), FString()));
+		return Error;
+	}
+
+	// An exact capability (or a unique alias) or an exact tool + action pair is that one record; an action alone matches
+	// either name a caller can mean, the bridge verb or a declared pair (selectCandidates in gateway-search-filters.ts).
+	const FMcpCanonicalRecordIndex& Canonical = FMcpCanonicalRecordIndex::Get();
+	const bool bExact = Input.bHasCapability || (Input.bHasTool && Input.bHasAction);
+	FString ExactId;
+	if (Input.bHasCapability)
+	{
+		ExactId = Input.Capability;
+		FString AliasTarget;
+		if (!Canonical.FindById(ExactId) && Canonical.ResolveAlias(Input.Capability, AliasTarget) == EMcpAliasResolution::Unique) ExactId = AliasTarget;
+	}
+	else if (bExact)
+	{
+		const FMcpCapabilityRecord* Legacy = Canonical.FindByLegacy(Input.Tool, Input.Action);
+		ExactId = Legacy ? Legacy->Id : FString();
 	}
 
 	// Query words are ASCII alphanumeric runs (McpSearchWords), the same split the
@@ -170,10 +160,19 @@ TSharedPtr<FJsonObject> McpGatewaySearchCapabilities(
 	TArray<FScoredRecord> Scored;
 	for (const FMcpCapabilityRecord& Record : Store.GetRecords())
 	{
-		if (Input.bHasDomain && !Record.Domain.Equals(Input.Domain, ESearchCase::CaseSensitive)) continue;
-		if (Input.bHasFamily && !Record.Family.Equals(Input.Family, ESearchCase::CaseSensitive)) continue;
-		if (Input.bHasTool && !Record.Parent.Equals(Input.Tool, ESearchCase::CaseSensitive)) continue;
-		if (Input.bHasEffect && !Record.Effect.Equals(Input.Effect, ESearchCase::CaseSensitive)) continue;
+		if (bExact)
+		{
+			if (!Record.Id.Equals(ExactId, ESearchCase::CaseSensitive)) continue;
+		}
+		else if ((Input.bHasDomain && !Record.Domain.Equals(Input.Domain, ESearchCase::CaseSensitive))
+			|| (Input.bHasFamily && !Record.Family.Equals(Input.Family, ESearchCase::CaseSensitive))
+			|| (Input.bHasTool && !Record.Parent.Equals(Input.Tool, ESearchCase::CaseSensitive))
+			|| (Input.bHasEffect && !Record.Effect.Equals(Input.Effect, ESearchCase::CaseSensitive))
+			|| (Input.bHasAction && !Record.DispatchAction.Equals(Input.Action, ESearchCase::CaseSensitive)
+				&& !Record.LegacyPairs.ContainsByPredicate([&Input](const FMcpLegacyPair& Pair) { return Pair.Action.Equals(Input.Action, ESearchCase::CaseSensitive); })))
+		{
+			continue;
+		}
 
 		FScoredRecord Entry;
 		Entry.Record = &Record;
@@ -185,7 +184,6 @@ TSharedPtr<FJsonObject> McpGatewaySearchCapabilities(
 		FMcpSearchMatch Match;
 		if (!McpSearchScoreRecord(Record, Query, AllWords, ContentWords, Match)) continue;
 		Entry.Score = Match.Score;
-		Entry.Reasons = Match.Reasons;
 		Scored.Add(MoveTemp(Entry));
 	}
 
@@ -210,80 +208,82 @@ TSharedPtr<FJsonObject> McpGatewaySearchCapabilities(
 	const int32 Budget = Input.MaxBytes > 0 ? FMath::Clamp(Input.MaxBytes, 512, 262144) : McpMaxResultBytes;
 	int32 Bytes = 0;
 	bool bTruncated = false;
+	bool bBudgetExceeded = false;
+	bool bSigned = false;
 	for (int32 Index = Offset; Index < Total && Results.Num() < Limit; ++Index)
 	{
-		const FScoredRecord& Entry = Scored[Index];
-		auto View = MakeShared<FJsonObject>();
-		View->SetBoolField(TEXT("available"), IsToolEnabled(Entry.Record->Parent));
-		View->SetStringField(TEXT("capability"), Entry.Record->Id);
-		View->SetStringField(TEXT("domain"), Entry.Record->Domain);
-		View->SetStringField(TEXT("effect"), Entry.Record->Effect);
-		View->SetStringField(TEXT("family"), Entry.Record->Family);
-		View->SetArrayField(TEXT("matchReasons"), GatewayStringArray(Entry.Reasons));
-		View->SetObjectField(TEXT("nextCall"), GatewayBuildNextCall(
-			TEXT("describe"), Entry.Record->Parent, McpCapabilityPublicAction(*Entry.Record), FString()));
-		View->SetStringField(TEXT("parent"), Entry.Record->Parent);
-		View->SetNumberField(TEXT("score"), Entry.Score);
-		View->SetStringField(TEXT("summary"), Entry.Record->Summary);
+		const FMcpCapabilityRecord& Record = *Scored[Index].Record;
+		const TSharedPtr<FJsonObject> View = McpSearchRow(Record, IsToolEnabled(Record.Parent));
 		if (Index == 0 && bConfident)
 		{
-			View->SetObjectField(TEXT("signature"), SearchSignature(*Entry.Record));
+			View->SetObjectField(TEXT("signature"), McpSearchSignature(Record));
 			// The execute call describe hands over (CapabilityContract in McpNativeGatewayDescribe.cpp).
 			const TSharedPtr<FJsonObject> Execute = GatewayBuildNextCall(
-				TEXT("execute"), Entry.Record->Parent, McpCapabilityPublicAction(*Entry.Record), FString());
-			Execute->SetStringField(TEXT("capability"), Entry.Record->Id);
+				TEXT("execute"), Record.Parent, McpCapabilityPublicAction(Record), FString());
+			Execute->SetStringField(TEXT("capability"), Record.Id);
 			Execute->SetObjectField(TEXT("params"), MakeShared<FJsonObject>());
 			View->SetObjectField(TEXT("executeCall"), Execute);
 		}
-
-		// A row is a reply, not a fingerprint: a confident hit's signature example (playRate 1.25) failed the whole search.
-		FString Rendered;
-		if (!McpCanonicalJsonObject(View, Rendered, /*bAllowFractions=*/true))
+		int32 Size = 0;
+		bool bRendered = RenderedLength(View, Size);
+		// The first row's signature goes before the row does; a page no row fits says so (withinByteBudget in TS).
+		if (bRendered && Results.Num() == 0 && Size > Budget && View->HasField(TEXT("signature")))
+		{
+			View->RemoveField(TEXT("signature"));
+			View->RemoveField(TEXT("executeCall"));
+			bRendered = RenderedLength(View, Size);
+		}
+		if (!bRendered)
 		{
 			return GatewayError(TEXT("search"), TEXT("CAPABILITY_RENDER_FAILED"),
-				FString::Printf(TEXT("Capability '%s' could not be rendered deterministically."), *Entry.Record->Id));
+				FString::Printf(TEXT("Capability '%s' could not be rendered deterministically."), *Record.Id));
 		}
-		const int32 Size = Rendered.Len();
-		// The first result is always emitted, so an oversized single entry is
-		// reported rather than silently producing an empty page.
-		if (Bytes + Size > Budget && Results.Num() > 0)
+		if (Bytes + Size > Budget)
 		{
 			bTruncated = true;
+			bBudgetExceeded = Results.Num() == 0;
 			break;
 		}
 		Bytes += Size;
+		bSigned = bSigned || View->HasField(TEXT("signature"));
 		Results.Add(MakeShared<FJsonValueObject>(View));
 	}
 
 	const bool bHasMore = Offset + Results.Num() < Total;
 	auto Out = MakeShared<FJsonObject>();
-	Out->SetStringField(TEXT("catalogRevision"), Revision);
-	Out->SetBoolField(TEXT("hasMore"), bHasMore);
-	Out->SetNumberField(TEXT("limit"), Limit);
-	Out->SetStringField(TEXT("message"), bConfident && Results.Num() > 0
-		? TEXT("The first result carries signature and executeCall: fill params from the signature and send executeCall, or describe it first for the full contract.")
-		: TEXT("Results are capability-level and bounded. Call describe with the exact capability before execute."));
-	Out->SetNumberField(TEXT("offset"), Offset);
-	Out->SetStringField(TEXT("operation"), TEXT("search"));
-	Out->SetStringField(TEXT("query"), Input.Query);
-	Out->SetArrayField(TEXT("results"), Results);
 	Out->SetBoolField(TEXT("success"), true);
+	Out->SetStringField(TEXT("operation"), TEXT("search"));
+	Out->SetStringField(TEXT("catalogRevision"), Revision);
+	Out->SetStringField(TEXT("query"), Input.Query);
+	Out->SetObjectField(TEXT("filters"), McpSearchFilters(Input));
+	Out->SetArrayField(TEXT("results"), Results);
 	Out->SetNumberField(TEXT("total"), Total);
+	Out->SetNumberField(TEXT("offset"), Offset);
+	Out->SetNumberField(TEXT("limit"), Limit);
+	Out->SetNumberField(TEXT("maxBytes"), Budget);
+	Out->SetBoolField(TEXT("hasMore"), bHasMore);
 	Out->SetStringField(TEXT("truncationReason"),
 		bTruncated ? TEXT("byte-budget") : (bHasMore ? TEXT("limit") : TEXT("none")));
+	Out->SetStringField(TEXT("message"), bSigned
+		? TEXT("The first result carries signature and executeCall: fill params from the signature and send executeCall, or describe it first for the full contract.")
+		: TEXT("Results are compact. Call describe with an exact capability before execute."));
+	if (bHasMore && !bBudgetExceeded) Out->SetStringField(TEXT("nextCursor"), FString::Printf(TEXT("c:%d"), Offset + Results.Num()));
+	// Not even one row fits: a cursor would name the page just read, so the reply says the one thing that helps.
+	if (bBudgetExceeded)
+	{
+		Out->SetBoolField(TEXT("budgetExceeded"), true);
+		Out->SetStringField(TEXT("message"), FString::Printf(
+			TEXT("No result fits maxBytes=%d. Raise maxBytes and retry; this page cannot advance at the current budget."), Budget));
+	}
 	// An empty page is where a caller starts inventing names: say what to change
 	// and hand over the one call that always works.
 	if (Results.Num() == 0 && Total == 0)
 	{
-		Out->SetStringField(TEXT("message"), Query.IsEmpty()
-			? FString(TEXT("No capability matches these filters. Remove a filter, or call describe with no selector to browse."))
-			: FString::Printf(TEXT("No capability matched '%s'. Use 2-4 plain words naming the verb and the object (e.g. 'spawn actor'), drop any filter, or call describe with no selector to browse. Game logic no capability makes in one call is built as a Blueprint graph: search 'blueprint logic'."), *Query));
+		Out->SetStringField(TEXT("message"), Input.Query.IsEmpty()
+			? FString(TEXT("No capability matches these filters. Remove a filter, or call describe with no selector to browse domains."))
+			: FString::Printf(TEXT("No capability matched '%s'. Use 2-4 plain words naming the verb and the object (e.g. 'spawn actor'), drop any filter, or call describe with no selector to browse domains. Game logic no capability makes in one call is built as a Blueprint graph: search 'blueprint logic'."), *Input.Query));
 		Out->SetObjectField(TEXT("nextCall"), GatewayBuildNextCall(TEXT("describe"), FString(), FString(), FString()));
 	}
-	if (Input.bHasDomain) Out->SetStringField(TEXT("domain"), Input.Domain);
-	if (Input.bHasFamily) Out->SetStringField(TEXT("family"), Input.Family);
-	if (Input.bHasTool) Out->SetStringField(TEXT("tool"), Input.Tool);
-	if (Input.bHasEffect) Out->SetStringField(TEXT("effect"), Input.Effect);
-	if (bHasMore) Out->SetStringField(TEXT("nextCursor"), FString::FromInt(Offset + Results.Num()));
+	if (Input.Coercions.Num() > 0) Out->SetArrayField(TEXT("coercions"), Input.Coercions);
 	return Out;
 }

@@ -55,6 +55,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`manage_effect cleanup` needs destructive consent** and `filter`, is one undo step and refuses during Play; clearing debug shapes moved to `debug_shape`.
 - **Sublevels and paths**: object paths work in `open_level`, `load` and `add_sublevel`; a relative `.t3d` export lands in the project.
 - **Git commits** take any commit message safely (a quote could inject git options); checkout and submit list the paths they skip; `enable` switches providers.
+- **Both doors answer discovery alike**: `/mcp` search rows, `describe` by domain and family, `cursor` and param `suggestions` match stdio, whose rows drop revision hashes.
 
 </details>
 

@@ -142,11 +142,13 @@ TSharedPtr<FJsonObject> ValidateAndResolveGatewayExecute(
 			McpResolveDispatchAction(*Request.Record, RequestedAction, WithDefaults, LegacyAction), WithDefaults, Violation))
 	{
 		const FString Code = McpSchemaViolationCode(Violation.Reason);
+		// The wording and guidance of validateInput in gateway-execute-static-check.ts.
+		const FString Message = FString::Printf(TEXT("%s for %s. Call describe before execution."), *Violation.Message, *Request.CapabilityId);
 		FMcpSemanticError SchemaError = Violation.Reason == EMcpSchemaViolation::Range
-			? McpRangeError(Violation.Pointer, Violation.Message)
-			: McpValidationError(Code, Violation.Message, Violation.Pointer);
+			? McpRangeError(Violation.Pointer, Message)
+			: McpValidationError(Code, Message, Violation.Pointer);
 		return McpBuildErrorReceipt(Request.CapabilityId, SchemaError, Context,
-			GatewaySchemaGuidance(ParentTool, LegacyAction, Violation.Pointer));
+			GatewaySchemaViolationGuidance(ParentTool, LegacyAction, Violation.Pointer, InputSchema));
 	}
 
 	// Editor-state gate (dogfood #91): a capability whose editorStates exclude

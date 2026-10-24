@@ -53,6 +53,16 @@ FMcpSchemaBuilder& FMcpSchemaBuilder::String(const FString& Name, const FString&
 	return *this;
 }
 
+FMcpSchemaBuilder& FMcpSchemaBuilder::String(const FString& Name, const FString& Description,
+	int32 MinLength, int32 MaxLength)
+{
+	auto Prop = MakeTypedProperty(TEXT("string"), Description);
+	Prop->SetNumberField(TEXT("minLength"), MinLength);
+	Prop->SetNumberField(TEXT("maxLength"), MaxLength);
+	AddProperty(Name, Prop);
+	return *this;
+}
+
 FMcpSchemaBuilder& FMcpSchemaBuilder::StringEnum(const FString& Name,
 	const TArray<FString>& Values, const FString& Description)
 {
@@ -70,27 +80,44 @@ FMcpSchemaBuilder& FMcpSchemaBuilder::Integer(const FString& Name, const FString
 	return *this;
 }
 
-FMcpSchemaBuilder& FMcpSchemaBuilder::Object(const FString& Name, const FString& Description,
-	TFunction<void(FMcpSchemaBuilder&)> SubBuilder)
+FMcpSchemaBuilder& FMcpSchemaBuilder::Integer(const FString& Name, const FString& Description, int64 Minimum)
 {
-	auto Prop = MakeTypedProperty(TEXT("object"), Description);
-
-	if (SubBuilder)
-	{
-		FMcpSchemaBuilder Sub;
-		SubBuilder(Sub);
-		Prop->SetObjectField(TEXT("properties"), Sub.Properties);
-		AddRequiredFields(Prop, Sub.RequiredFields);
-	}
-
+	auto Prop = MakeTypedProperty(TEXT("integer"), Description);
+	Prop->SetNumberField(TEXT("minimum"), static_cast<double>(Minimum));
 	AddProperty(Name, Prop);
 	return *this;
 }
 
-FMcpSchemaBuilder& FMcpSchemaBuilder::FreeformObject(const FString& Name,
-	const FString& Description)
+FMcpSchemaBuilder& FMcpSchemaBuilder::Integer(const FString& Name, const FString& Description,
+	int64 Minimum, int64 Maximum)
+{
+	auto Prop = MakeTypedProperty(TEXT("integer"), Description);
+	Prop->SetNumberField(TEXT("minimum"), static_cast<double>(Minimum));
+	Prop->SetNumberField(TEXT("maximum"), static_cast<double>(Maximum));
+	AddProperty(Name, Prop);
+	return *this;
+}
+
+FMcpSchemaBuilder& FMcpSchemaBuilder::ClosedObject(const FString& Name, const FString& Description,
+	TFunction<void(FMcpSchemaBuilder&)> SubBuilder)
 {
 	auto Prop = MakeTypedProperty(TEXT("object"), Description);
+	FMcpSchemaBuilder Sub;
+	if (SubBuilder)
+	{
+		SubBuilder(Sub);
+	}
+	Prop->SetObjectField(TEXT("properties"), Sub.Properties);
+	AddRequiredFields(Prop, Sub.RequiredFields);
+	Prop->SetBoolField(TEXT("additionalProperties"), false);
+	AddProperty(Name, Prop);
+	return *this;
+}
+
+FMcpSchemaBuilder& FMcpSchemaBuilder::OpenObject(const FString& Name, const FString& Description)
+{
+	auto Prop = MakeTypedProperty(TEXT("object"), Description);
+	Prop->SetBoolField(TEXT("additionalProperties"), true);
 	AddProperty(Name, Prop);
 	return *this;
 }
@@ -104,6 +131,12 @@ FMcpSchemaBuilder& FMcpSchemaBuilder::Required(const TArray<FString>& Names)
 	return *this;
 }
 
+FMcpSchemaBuilder& FMcpSchemaBuilder::Closed()
+{
+	bClosed = true;
+	return *this;
+}
+
 TSharedPtr<FJsonObject> FMcpSchemaBuilder::Build() const
 {
 	auto Schema = MakeShared<FJsonObject>();
@@ -111,6 +144,10 @@ TSharedPtr<FJsonObject> FMcpSchemaBuilder::Build() const
 	Schema->SetObjectField(TEXT("properties"), Properties);
 
 	AddRequiredFields(Schema, RequiredFields);
+	if (bClosed)
+	{
+		Schema->SetBoolField(TEXT("additionalProperties"), false);
+	}
 
 	return Schema;
 }
