@@ -213,15 +213,17 @@
 // =============================================================================
 // FProperty ExportText API Compatibility (UE 5.0 vs 5.1+)
 // =============================================================================
-// UE 5.0: ExportText_Direct() with different parameters
+// UE 5.0: ExportTextItem()
 // UE 5.1+: ExportTextItem_Direct()
+// Both always write the value. UE 5.0's ExportText_Direct skips a value identical to the default it is handed, and a
+// null default reads as zeroed memory, so every 0 and false exported as an empty string there.
 
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
   #define MCP_PROPERTY_EXPORT_TEXT(Property, OutText, ValuePtr, DefaultValuePtr, Container, Flags) \
     (Property)->ExportTextItem_Direct(OutText, ValuePtr, DefaultValuePtr, Container, Flags)
 #else
   #define MCP_PROPERTY_EXPORT_TEXT(Property, OutText, ValuePtr, DefaultValuePtr, Container, Flags) \
-    (Property)->ExportText_Direct(OutText, ValuePtr, DefaultValuePtr, Container, Flags, nullptr)
+    (Property)->ExportTextItem(OutText, ValuePtr, DefaultValuePtr, Container, Flags, nullptr)
 #endif
 
 // =============================================================================

@@ -32,7 +32,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **Renders** honour `renderTimeoutMs`; save_all and restart_editor wait (`RENDER_IN_PROGRESS`).
 - **Dialogs**: an open editor dialog answers requests `EDITOR_MODAL_ACTIVE` with its title instead of a wait and `EDITOR_BLOCKED`.
 - **Viewport captures** settle across ticks and warn on demoted video memory; grid edits keep the fields left out and answer with the grid's values.
-- **Properties**: deprecated ones are refused; Niagara systems re-init after a write; settings take object references; component writes run the component's own change handling.
+- **Properties**: deprecated ones are refused; Niagara systems re-init after a write; settings take object references; component writes run the component's own change handling; reads write out 0 and false.
 - **Placement and tracks**: physics-body ground traces, player-start capsules, whole track names, display names and `AMBIGUOUS_TRACK`, `set_bone_key` keeps unsent parts, a display-rate change keeps key times, stop seeks the range start.
 - **Niagara and animation**: creates refuse taken names and unknown types; a `save: false` system no longer fails; curve keys and axes read back; PIE pause and resume say when nothing changed; legacy mappings report `added`.
 - **Pre-queue scans** walk 262144 values; rate-limit replies carry `retryAfterSeconds`.

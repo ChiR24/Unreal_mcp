@@ -29,7 +29,7 @@ void AddInventoryBlueprintDefaults(const TSharedPtr<FJsonObject>& Result, UBluep
     FString Value = Var.DefaultValue;
     if (Property && CDO) {
       Value.Reset();
-      Property->ExportText_InContainer(0, Value, CDO, nullptr, CDO, PPF_None);
+      MCP_PROPERTY_EXPORT_TEXT(Property, Value, Property->ContainerPtrToValuePtr<void>(CDO), nullptr, CDO, PPF_None);
     }
     TSharedPtr<FJsonObject> VarInfo = McpHandlerUtils::CreateResultObject();
     VarInfo->SetStringField(TEXT("name"), Var.VarName.ToString());

@@ -1,4 +1,5 @@
 #include "Domains/Blueprint/McpBPActionContext.h"
+#include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPAssetLoad.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPDiag.h"
 
@@ -100,7 +101,7 @@ bool HandleBlueprintGet(const FBlueprintActionContext &Context) {
         // The shared resolver edit_scs set_property writes through.
         if (FProperty *Prop = Template ? McpResolvePropertyPath(Template, ComponentPath, Container, ResolvedPath, PathError) : nullptr) {
           FString Text;
-          Prop->ExportText_InContainer(0, Text, Container, nullptr, Template, PPF_None);
+          MCP_PROPERTY_EXPORT_TEXT(Prop, Text, Prop->ContainerPtrToValuePtr<void>(Container), nullptr, Template, PPF_None);
           PropertyValue = MakeShared<FJsonValueString>(Text);
         }
       }

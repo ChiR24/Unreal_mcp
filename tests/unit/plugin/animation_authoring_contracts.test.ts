@@ -70,7 +70,7 @@ describe('set_anim_graph_node_value stores what it was given, where the node kee
   it('reads the stored value back, and the reply names the node it found', () => {
     const flat = compact(handler());
 
-    expect(flat).toContain('Property->ExportText_Direct(Stored, Property->ContainerPtrToValuePtr<void>(Container), nullptr, nullptr, PPF_None);');
+    expect(flat).toContain('MCP_PROPERTY_EXPORT_TEXT(Property, Stored, Property->ContainerPtrToValuePtr<void>(Container), nullptr, nullptr, PPF_None);');
     expect(flat).toContain('Response->SetStringField(TEXT("value"), Stored);');
     expect(flat).toContain('Response->SetStringField(TEXT("nodeName"), FoundNode->GetName());');
     expect(flat).toContain('Response->SetStringField(TEXT("nodeId"), FoundNode->NodeGuid.ToString());');

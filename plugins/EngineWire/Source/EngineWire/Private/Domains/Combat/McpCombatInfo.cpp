@@ -36,7 +36,7 @@ TSharedPtr<FJsonObject> DescribeCombatVariables(UBlueprint* Blueprint, const TSh
         }
 
         FString Text;
-        Property->ExportText_InContainer(0, Text, CDO, nullptr, CDO, PPF_None);
+        MCP_PROPERTY_EXPORT_TEXT(Property, Text, Property->ContainerPtrToValuePtr<void>(CDO), nullptr, CDO, PPF_None);
         Defaults->SetStringField(VarName, Text);
 
         if (FNumericProperty* Numeric = CastField<FNumericProperty>(Property))

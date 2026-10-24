@@ -1,4 +1,5 @@
 #include "Domains/Interaction/McpInteractionPrivate.h"
+#include "Core/Compatibility/McpVersionCompatibility.h"
 
 namespace
 {
@@ -58,7 +59,7 @@ void AddBlueprintStateInfo(UBlueprint* Blueprint, const TSharedPtr<FJsonObject>&
         if (Property && CDO)
         {
             Text.Reset();
-            Property->ExportText_InContainer(0, Text, CDO, nullptr, CDO, PPF_None);
+            MCP_PROPERTY_EXPORT_TEXT(Property, Text, Property->ContainerPtrToValuePtr<void>(CDO), nullptr, CDO, PPF_None);
         }
         Emit(Var.VarName.ToString(), Text);
     }
@@ -71,7 +72,7 @@ void AddBlueprintStateInfo(UBlueprint* Blueprint, const TSharedPtr<FJsonObject>&
                 continue;
             }
             FString Text;
-            It->ExportText_InContainer(0, Text, CDO, nullptr, CDO, PPF_None);
+            MCP_PROPERTY_EXPORT_TEXT(*It, Text, It->ContainerPtrToValuePtr<void>(CDO), nullptr, CDO, PPF_None);
             Emit(It->GetName(), Text);
         }
     }

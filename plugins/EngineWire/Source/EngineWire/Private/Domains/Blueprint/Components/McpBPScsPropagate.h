@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Core/Compatibility/McpVersionCompatibility.h"
 
 #include "Components/SceneComponent.h"
 #include "Dom/JsonObject.h"
@@ -33,7 +34,7 @@ inline bool ExportNested(UObject *Obj, const FString &Path, FString &Out)
   if (!Prop || !Container)
     return false;
   Out.Reset();
-  Prop->ExportText_InContainer(0, Out, Container, nullptr, Obj, PPF_None);
+  MCP_PROPERTY_EXPORT_TEXT(Prop, Out, Prop->ContainerPtrToValuePtr<void>(Container), nullptr, Obj, PPF_None);
   return true;
 }
 

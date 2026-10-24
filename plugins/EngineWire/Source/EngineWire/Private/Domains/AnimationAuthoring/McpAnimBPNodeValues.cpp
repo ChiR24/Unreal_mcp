@@ -82,7 +82,7 @@ TSharedPtr<FJsonObject> HandleBlueprintNodeValueActions(const FString& SubAction
             {
                 ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Failed to set property: %s"), *SetError), TEXT("PROPERTY_SET_FAILED"));
             }
-            Property->ExportText_Direct(Stored, Property->ContainerPtrToValuePtr<void>(Container), nullptr, nullptr, PPF_None);
+            MCP_PROPERTY_EXPORT_TEXT(Property, Stored, Property->ContainerPtrToValuePtr<void>(Container), nullptr, nullptr, PPF_None);
         }
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(AnimBP);
