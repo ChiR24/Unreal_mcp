@@ -57,6 +57,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Sublevels and paths**: object paths work in `open_level`, `load` and `add_sublevel`; a relative `.t3d` export lands in the project.
 - **Git**: any commit message is safe (a quote could inject options); checkout and submit list skipped paths.
 - **Both doors answer discovery alike**: `/mcp` search rows, `describe` by domain and family, `cursor` and param `suggestions` match stdio, whose rows drop revision hashes.
+- **A disabled tool's `nextCall` turns it back on** (`configure` `enable_tools`); the `configure` call it named was refused on both transports.
 
 </details>
 

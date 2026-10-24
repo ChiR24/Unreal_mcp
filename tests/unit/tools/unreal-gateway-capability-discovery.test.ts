@@ -381,14 +381,14 @@ describe('unknown, disabled and unavailable discovery is guided and never runnab
     expect(result.success).toBe(true);
     expect((result.availability as Row).status).toBe('disabled');
     expect(result.runnable).toBe(false);
-    expect(result.nextCall).toEqual({ operation: 'configure', tool: 'manage_asset' });
+    expect(result.nextCall).toEqual({ operation: 'configure', action: 'enable_tools', params: { tools: ['manage_asset'] } });
   });
 
   it('marks a disabled capability disabled in search results too', () => {
     dynamicToolManager.disableTools(['manage_asset']);
     const hit = rows(search({ tool: 'manage_asset', action: 'import' }))[0];
     expect((hit.availability as Row).status).toBe('disabled');
-    expect(hit.nextCall).toEqual({ operation: 'configure', tool: 'manage_asset' });
+    expect(hit.nextCall).toEqual({ operation: 'configure', action: 'enable_tools', params: { tools: ['manage_asset'] } });
   });
 
   it('states why a capability is unavailable rather than hiding the reason', () => {

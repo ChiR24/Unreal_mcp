@@ -242,15 +242,7 @@ function compactSearch(reply: Json): Json {
   const out = omit(reply, ['query']);
   if (out.success === true) delete out.message;
   if (Array.isArray(out.results)) {
-    out.results = out.results.map((row) => {
-      if (!isRecord(row)) return row;
-      const kept = omit(row, SEARCH_ROW_BOOKKEEPING_FIELDS);
-      const nextTool = isRecord(row.nextCall) ? row.nextCall.tool : undefined;
-      for (const key of ['parent', 'parentTool']) {
-        if (same(kept[key], nextTool)) delete kept[key];
-      }
-      return kept;
-    });
+    out.results = out.results.map((row) => (isRecord(row) ? omit(row, SEARCH_ROW_BOOKKEEPING_FIELDS) : row));
   }
   return out;
 }

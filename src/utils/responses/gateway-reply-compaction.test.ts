@@ -239,15 +239,15 @@ describe('compactGatewayReply', () => {
           reasons: [{ field: 'canonical_id', matchedTokens: ['set', 'property'] }],
           nextCall: { operation: 'describe', capability: 'inspect.set_property' }
         },
-        { ...row, runnable: false, nextCall: { operation: 'configure', tool: 'inspect' } }
+        { ...row, runnable: false, nextCall: { operation: 'configure', action: 'enable_tools', params: { tools: ['inspect'] } } }
       ]
     });
     expect(found).toEqual({
       catalogRevision: 'bfcee38a7ffedc73', hasMore: true, limit: 3, offset: 0, operation: 'search', success: true, total: 127, nextCursor: 'c:3',
       results: [
         { ...row, nextCall: { operation: 'describe', capability: 'inspect.set_property' } },
-        { ...row, parentTool: undefined, runnable: false, nextCall: { operation: 'configure', tool: 'inspect' } }
-      ].map((entry) => Object.fromEntries(Object.entries(entry).filter(([, value]) => value !== undefined)))
+        { ...row, runnable: false, nextCall: { operation: 'configure', action: 'enable_tools', params: { tools: ['inspect'] } } }
+      ]
     });
   });
 

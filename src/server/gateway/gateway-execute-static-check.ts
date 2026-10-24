@@ -9,7 +9,7 @@
 import type { Draft202012ObjectSchema } from '../../tools/catalog/capabilities/model.js';
 import { isRecord } from '../../utils/validation/type-guards.js';
 import { dynamicToolManager } from '../../tools/dynamic/dynamic-tool-manager.js';
-import { buildNextCall, closestMatches, MAX_SUGGESTIONS } from './gateway-guidance.js';
+import { buildNextCall, closestMatches, enableToolNextCall, MAX_SUGGESTIONS } from './gateway-guidance.js';
 import type { ExecuteTarget } from './gateway-execute-resolve.js';
 import { capabilityIndex } from './gateway-capability-index.js';
 import { primaryLegacyPair } from './gateway-execute-lookup.js';
@@ -89,7 +89,7 @@ export function checkStaticRequest(target: ExecuteTarget, args: Record<string, u
         [...capabilityIndex().actionsByParentTool.keys()],
         MAX_SUGGESTIONS
       ),
-      nextCall: buildNextCall({ operation: 'configure', tool: record.routing.parentTool })
+      nextCall: enableToolNextCall(record.routing.parentTool)
     });
   }
 

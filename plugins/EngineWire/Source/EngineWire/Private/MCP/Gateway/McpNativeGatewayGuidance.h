@@ -62,6 +62,12 @@ struct FMcpUnknownActionGuide
 FMcpUnknownActionGuide GatewayGuideUnknownAction(const FString& Tool, const FString& Action,
 	const TArray<FString>& Actions, const TArray<FString>& OwningTools);
 
+/**
+ * The call that turns a disabled parent tool back on, its category included (enable_tools re-enables both): the
+ * nextCall of a disabled capability on both doors (enableToolNextCall in gateway-guidance.ts).
+ */
+TSharedPtr<FJsonObject> GatewayEnableToolNextCall(const FString& ParentTool);
+
 /** nextCall envelope pointing a disabled-capability caller at configure. */
 TSharedPtr<FJsonObject> GatewayDisabledCapabilityGuidance(const FString& ParentTool);
 

@@ -99,7 +99,16 @@ describe('execute seam: guided error envelopes are preserved verbatim', () => {
     expect(result.message).toBe("Tool 'manage_asset' is disabled or unavailable.");
     expect(result.tool).toBe('manage_asset');
     expect(Array.isArray(result.suggestions)).toBe(true);
-    expect(result.nextCall).toEqual({ operation: 'configure', tool: 'manage_asset' });
+    expect(result.nextCall).toEqual({ operation: 'configure', action: 'enable_tools', params: { tools: ['manage_asset'] } });
+  });
+
+  it('the TOOL_DISABLED nextCall turns the tool back on, even when its whole category was switched off', async () => {
+    dynamicToolManager.disableCategory('utility');
+    const refused = await execute({ tool: 'manage_sequence', action: 'edit_sequence_bindings' });
+    expect(refused.errorCode).toBe('TOOL_DISABLED');
+    const followed = await handleUnrealGatewayCall(refused.nextCall as Record<string, unknown>, makeContext());
+    expect(followed.success).toBe(true);
+    expect(dynamicToolManager.isToolEnabled('manage_sequence')).toBe(true);
   });
 
   it('INVALID_PARAMS (non-object params) keeps tool/action plus a describe nextCall', async () => {

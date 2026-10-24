@@ -11,6 +11,7 @@ import type { CapabilityRecord } from '../../tools/catalog/capabilities/model.js
 import { capabilityAvailability, isRunnable, type CapabilityAvailability } from './gateway-availability.js';
 import { getParentToolMetadata } from '../../tools/catalog/capabilities/records/parent-metadata.js';
 import { variantRequired, variantsRequiring } from './gateway-dispatch-by.js';
+import { enableToolNextCall } from './gateway-guidance.js';
 
 export type CapabilityNextCall = Record<string, unknown>;
 
@@ -51,9 +52,7 @@ export function capabilityNextCall(
   record: CapabilityRecord,
   availability: CapabilityAvailability
 ): CapabilityNextCall {
-  if (availability.status === 'disabled') {
-    return { operation: 'configure', tool: record.routing.parentTool };
-  }
+  if (availability.status === 'disabled') return enableToolNextCall(record.routing.parentTool);
   // `capability` is the one selector guaranteed to resolve (`index.byId`), so it
   // leads. The legacy pair is emitted only when the record actually declares
   // one for this parent tool, which by construction is a key in `byLegacyPair`.

@@ -173,11 +173,19 @@ TSharedPtr<FJsonObject> CapabilityContract(
 	Out->SetArrayField(TEXT("legacyIds"), LegacyIds);
 	Out->SetStringField(TEXT("message"),
 		TEXT("Exact capability contract. inputSchema declares every parameter this action accepts."));
-	// The execute call to send with params filled in, as the tool description promises (capabilityNextCall in TS).
-	const TSharedPtr<FJsonObject> Next = GatewayBuildNextCall(bAvailable ? TEXT("execute") : TEXT("configure"), Tool,
-		bAvailable ? McpCapabilityPublicAction(Record) : FString(), FString());
-	if (bAvailable) Next->SetStringField(TEXT("capability"), Record.Id);
-	if (bAvailable) Next->SetObjectField(TEXT("params"), MakeShared<FJsonObject>());
+	// The execute call to send with params filled in, as the tool description promises (capabilityNextCall in TS);
+	// a disabled tool is turned back on first.
+	TSharedPtr<FJsonObject> Next;
+	if (bAvailable)
+	{
+		Next = GatewayBuildNextCall(TEXT("execute"), Tool, McpCapabilityPublicAction(Record), FString());
+		Next->SetStringField(TEXT("capability"), Record.Id);
+		Next->SetObjectField(TEXT("params"), MakeShared<FJsonObject>());
+	}
+	else
+	{
+		Next = GatewayEnableToolNextCall(Record.Parent);
+	}
 	Out->SetObjectField(TEXT("nextCall"), Next);
 	Out->SetStringField(TEXT("operation"), TEXT("describe"));
 	SetObjectOrEmpty(Out, TEXT("outputSchema"), Record.OutputSchema);

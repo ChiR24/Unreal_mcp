@@ -14,6 +14,7 @@ import { capabilityIndex } from '../../../src/server/gateway/gateway-capability-
 import { capabilitySearchRow } from '../../../src/server/gateway/gateway-capability-view.js';
 import { describeCatalog, describeDomain, describeFamily } from '../../../src/server/gateway/gateway-describe-browse.js';
 import { describeGatewayCapability } from '../../../src/server/gateway/gateway-describe.js';
+import { enableToolNextCall } from '../../../src/server/gateway/gateway-guidance.js';
 import { searchGatewayCapabilities } from '../../../src/server/gateway/gateway-search.js';
 import { compactGatewayReply } from '../../../src/utils/responses/gateway-reply-compaction.js';
 
@@ -131,6 +132,27 @@ describe('native gateway search', () => {
     expect(branch).toContain('DiscoveryQuery.Coercions.Add(');
     expect(search).toContain('TEXT("INVALID_CURSOR")');
     expect(search).toContain('FString::Printf(TEXT("c:%d"), Offset + Results.Num())');
+  });
+});
+
+describe('a disabled tool is turned back on by its nextCall on both doors', () => {
+  // `{ operation: 'configure', tool }` was refused by both doors: stdio configure routes only to manage_tools, and
+  // the native one needs an action. enable_tools re-enables the tool and its category.
+  it('builds configure enable_tools for the parent tool, natively wherever a capability is disabled', () => {
+    expect(enableToolNextCall('manage_asset')).toEqual({ operation: 'configure', action: 'enable_tools', params: { tools: ['manage_asset'] } });
+    const guidance = mcp('Gateway/McpNativeGatewayGuidance.cpp');
+    const builder = body(guidance, 'TSharedPtr<FJsonObject> GatewayEnableToolNextCall(');
+    expect(builder).toContain('GatewayBuildNextCall(TEXT("configure"), FString(), TEXT("enable_tools"), FString())');
+    expect(builder).toContain('Params->SetArrayField(TEXT("tools"), GatewayStringArray({ ParentTool }))');
+    expect(setKeys(builder, 'Next')).toEqual(['params']);
+    for (const [source, signature] of [
+      [guidance, 'TSharedPtr<FJsonObject> GatewayDisabledCapabilityGuidance('],
+      [catalog, 'TSharedPtr<FJsonObject> McpSearchRow('],
+      [describeSource, 'TSharedPtr<FJsonObject> CapabilityContract(']
+    ] as const) {
+      expect(body(source, signature), signature).toContain('GatewayEnableToolNextCall(');
+      expect(body(source, signature), signature).not.toContain('TEXT("configure")');
+    }
   });
 });
 

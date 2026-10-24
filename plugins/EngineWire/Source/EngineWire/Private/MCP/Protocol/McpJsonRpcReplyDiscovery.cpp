@@ -156,11 +156,6 @@ TSharedPtr<FJsonObject> CompactSearch(const TSharedPtr<FJsonObject>& Reply)
 		}
 		TSharedPtr<FJsonObject> Trimmed = Copy(Object);
 		for (const TCHAR* Field : SearchRowBookkeepingFields) Trimmed->RemoveField(Field);
-		const TSharedPtr<FJsonObject> Next = ObjectField(Object, TEXT("nextCall"));
-		for (const TCHAR* Field : ToolEchoFields)
-		{
-			if (SameField(Trimmed, Field, Next, TEXT("tool"))) Trimmed->RemoveField(Field);
-		}
 		Kept.Add(MakeShared<FJsonValueObject>(Trimmed));
 	}
 	Out->SetArrayField(TEXT("results"), Kept);

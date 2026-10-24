@@ -97,6 +97,14 @@ export function guideUnknownAction(
   return { suggestions, hint: '', nextCall: buildNextCall({ operation: 'describe', tool, action: suggestions[0] }) };
 }
 
+/**
+ * The call that turns a disabled parent tool back on, its category included (enable_tools re-enables both): the
+ * nextCall of a disabled capability on both doors. A bare `{ operation: 'configure', tool }` was refused by both.
+ */
+export function enableToolNextCall(tool: string): Record<string, unknown> {
+  return { operation: 'configure', action: 'enable_tools', params: { tools: [tool] } };
+}
+
 /** Build a directly-invokable gateway request payload. Omitted parts stay absent. */
 export function buildNextCall(parts: {
   operation: string;

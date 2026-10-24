@@ -123,12 +123,20 @@ FMcpUnknownActionGuide GatewayGuideUnknownAction(const FString& Tool, const FStr
 	return Guide;
 }
 
+TSharedPtr<FJsonObject> GatewayEnableToolNextCall(const FString& ParentTool)
+{
+	TSharedPtr<FJsonObject> Params = MakeShared<FJsonObject>();
+	Params->SetArrayField(TEXT("tools"), GatewayStringArray({ ParentTool }));
+	TSharedPtr<FJsonObject> Next = GatewayBuildNextCall(TEXT("configure"), FString(), TEXT("enable_tools"), FString());
+	Next->SetObjectField(TEXT("params"), Params);
+	return Next;
+}
+
 TSharedPtr<FJsonObject> GatewayDisabledCapabilityGuidance(const FString& ParentTool)
 {
 	TSharedPtr<FJsonObject> Guidance = MakeShared<FJsonObject>();
 	Guidance->SetStringField(TEXT("tool"), ParentTool);
-	Guidance->SetObjectField(TEXT("nextCall"),
-		GatewayBuildNextCall(TEXT("configure"), ParentTool, FString(), FString()));
+	Guidance->SetObjectField(TEXT("nextCall"), GatewayEnableToolNextCall(ParentTool));
 	return Guidance;
 }
 

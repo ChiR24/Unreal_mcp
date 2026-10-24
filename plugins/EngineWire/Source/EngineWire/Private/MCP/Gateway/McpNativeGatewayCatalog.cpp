@@ -88,9 +88,16 @@ TSharedPtr<FJsonObject> McpSearchRow(const FMcpCapabilityRecord& Record, bool bE
 	}
 	Row->SetArrayField(TEXT("outputs"), GatewayStringArray(Outputs));
 	Row->SetBoolField(TEXT("runnable"), bEnabled);
-	const TSharedPtr<FJsonObject> Next = GatewayBuildNextCall(bEnabled ? TEXT("describe") : TEXT("configure"),
-		bEnabled ? FString() : Record.Parent, FString(), FString());
-	if (bEnabled) Next->SetStringField(TEXT("capability"), Record.Id);
+	TSharedPtr<FJsonObject> Next;
+	if (bEnabled)
+	{
+		Next = GatewayBuildNextCall(TEXT("describe"), FString(), FString(), FString());
+		Next->SetStringField(TEXT("capability"), Record.Id);
+	}
+	else
+	{
+		Next = GatewayEnableToolNextCall(Record.Parent);
+	}
 	Row->SetObjectField(TEXT("nextCall"), Next);
 	return Row;
 }
