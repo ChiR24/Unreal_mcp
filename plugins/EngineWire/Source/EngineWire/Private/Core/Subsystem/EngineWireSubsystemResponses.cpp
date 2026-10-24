@@ -9,6 +9,7 @@
 #include "Core/Security/McpPrequeueGate.h"
 #include "Core/Subsystem/EngineWireSubsystemResponseEnrichment.h"
 #include "Domains/ControlActor/Placement/McpChangeWatch.h"
+#include "Domains/SystemControl/McpSystemValidateDelta.h"
 #include "Foundation/Diagnostics/McpDiagnosticsSnapshot.h"
 #include "Foundation/McpTelemetryRegistry.h"
 #include "Core/Subsystem/EngineWireSubsystemResponseSanitization.h"
@@ -140,6 +141,7 @@ void UEngineWireSubsystem::SendAutomationResponse(
         McpChangeWatch::AddWarnings(RequestId, EffectiveResult);
         McpUndoLedger::Describe(RequestId, EffectiveResult);
         McpChangeJournal::AddUserChangeWarning(RequestId, EffectiveResult);
+        McpValidateDelta::AddWarnings(RequestId, EffectiveResult);
         // A play world paused by the game (a title screen, a pause menu) or by control_editor pause moves nothing: a
         // character moved into it stayed in the air where it was put, which read as broken gravity.
         if (ContextWorld && ContextWorld->IsPlayInEditor() && ContextWorld->IsPaused())

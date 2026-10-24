@@ -30,6 +30,9 @@ void EndRequest();
 /** One warning in Result when the user changed something in the editor since the previous request (once per change). */
 void AddUserChangeWarning(const FString& RequestId, const TSharedPtr<FJsonObject>& Result);
 
+/** The asset packages the running request RequestId changed so far (made, edited, saved, renamed); none for another. */
+void AssetsChangedBy(const FString& RequestId, TArray<FString>& OutPackages);
+
 /** inspect changes_since: what changed after the cursor in since (or the latest changes kept), and the next cursor. */
 bool HandleChangesSince(UEngineWireSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
                         TSharedPtr<FMcpBridgeWebSocket> Socket);

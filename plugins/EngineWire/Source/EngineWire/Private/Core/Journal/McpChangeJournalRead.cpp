@@ -254,4 +254,21 @@ void AddUserChangeWarning(const FString& RequestId, const TSharedPtr<FJsonObject
         Count, *FString::Join(Named, TEXT(", ")), Count > Named.Num() ? TEXT(", ...") : TEXT(""))));
     Result->SetArrayField(TEXT("warnings"), Warnings);
 }
+
+void AssetsChangedBy(const FString& RequestId, TArray<FString>& OutPackages)
+{
+    const FJournalState& State = JournalState();
+    if (RequestId.IsEmpty() || RequestId != State.RequestId || State.Seq <= State.WarnUntil)
+    {
+        return;
+    }
+    // Inside a request every change kept is its own, so a row touched since it began is one it changed.
+    for (const FJournalEntry& Entry : State.Entries)
+    {
+        if (!Entry.bActor && !Entry.bLevel && Entry.LastSeq > State.WarnUntil)
+        {
+            OutPackages.Add(Entry.Path);
+        }
+    }
+}
 } // namespace McpChangeJournal
