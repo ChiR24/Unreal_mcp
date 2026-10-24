@@ -26,7 +26,7 @@ const testCases = [
   ] },
   { scenario: 'ERROR: a requirement that does not hold runs nothing', toolName: 'control_actor', arguments: { action: 'set_transform', actorName: LAMP, location: { x: 26000, y: 26000, z: 900 } }, options: { require: [`MCP_NoSuchActor_${ts} exists`] }, expected: 'error|PRECONDITION_FAILED' },
   { scenario: 'READ: the lamp did not move', toolName: 'control_actor', arguments: { action: 'get_transform', actorName: LAMP }, expected: 'success', assertions: [
-    { path: 'structuredContent.result.location.z', approximately: 115, tolerance: 1, label: 'still on the table' },
+    { path: 'structuredContent.result.location.2', approximately: 115, tolerance: 1, label: 'still on the table' },
   ] },
   { scenario: 'ERROR: an assertion that does not parse is refused before anything runs', toolName: 'control_actor', arguments: { action: 'get_transform', actorName: LAMP }, options: { expect: [`${LAMP} on`] }, expected: 'error|INVALID_OPTIONS' },
   { scenario: 'ERROR: noWarnings is no requirement', toolName: 'control_actor', arguments: { action: 'get_transform', actorName: LAMP }, options: { require: ['noWarnings'] }, expected: 'error|INVALID_OPTIONS' },
