@@ -39,6 +39,26 @@ describe('blueprint lint', () => {
     expect(cpp).toEqual(LINT_RULES);
   });
 
+  // A use is checked only when every path to it passes a check's valid exit: the other exits, a Sequence pin that skips
+  // the check, an event that never runs it, all leave it unchecked.
+  it('judges a use checked only past a validity check\'s valid exit that dominates it', () => {
+    const guards = code(join(LINT, 'McpBPLintFlow.cpp'));
+    expect(guards).toContain('CastNode->GetValidCastPin()');
+    expect(guards).toContain('Get->FindPin(UEdGraphSchema_K2::PN_Then)');
+    expect(guards).toContain('Macro->GetMacroGraph()->GetName() == TEXT("IsValid")');
+    expect(guards).toContain('Test->GetTargetFunction()->GetFName() == IsValidFunction');
+    expect(guards).toMatch(/const int32 From = Pin == ValidExit && Past != INDEX_NONE \? Past : Pair\.Value;/u);
+    expect(guards).toMatch(/for \(int32 Up = Flow\.Idom\[At\]; Up > 0; Up = Flow\.Idom\[Up\]\)/u);
+  });
+
+  // GetValuePin asserts an output pin, and a Set node's variable pin is its input: calling it crashed the editor once.
+  it('reads a Set node\'s value through its input pin, and an interface message to None is no use', () => {
+    const guards = code(join(LINT, 'McpBPLintGuards.cpp'));
+    expect(guards).toContain('Set->FindPin(Set->GetVarName(), EGPD_Input)');
+    expect(guards + code(join(LINT, 'McpBPLintFlow.cpp'))).not.toContain('GetValuePin(');
+    expect(guards).toContain('Node->IsA<UK2Node_Message>()');
+  });
+
   // A node wired from a reached node is reached, so a dead chain's first node is the one with no wire into it.
   it('names only the first node of a dead chain', () => {
     const rules = code(join(LINT, 'McpBPLintRules.cpp'));

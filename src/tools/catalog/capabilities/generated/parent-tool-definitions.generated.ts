@@ -14921,10 +14921,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "unreachable",
               "random_fanout",
               "infinite_while",
-              "never_assigned"
+              "never_assigned",
+              "unguarded_read"
             ]
           },
-          "description": "The rules to run, default all: tick_heavy, unreachable, random_fanout, infinite_while, never_assigned. An unknown name is INVALID_ARGUMENT."
+          "description": "The rules to run, default all: tick_heavy, unreachable, random_fanout, infinite_while, never_assigned, unguarded_read. An unknown name is INVALID_ARGUMENT."
         },
         "save": {
           "type": "boolean",
@@ -15875,7 +15876,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "x-unreal-reflection-boundary": true
           },
           "x-unreal-reflection-boundary": true,
-          "description": "One row per finding: rule, severity (warning, or error for a loop that never ends), graph, node (its title), nodeId (as edit_graph takes it) and detail (what is wrong and the fix). unreachable names only the first node of each dead chain."
+          "description": "One row per finding: rule, severity (warning, or error for a loop that never ends), graph, node (its title), nodeId (as edit_graph takes it) and detail (what is wrong and the fix). unreachable names only the first node of each dead chain, unguarded_read the first unchecked use of each variable (detail counts the rest)."
         },
         "flaggedCount": {
           "type": "number",

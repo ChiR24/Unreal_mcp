@@ -22,4 +22,6 @@ void Unreachable(const UEdGraph* Graph, TArray<FFinding>& Out);
 void RandomFanout(const UEdGraph* Graph, TArray<FFinding>& Out);
 void InfiniteWhile(const UEdGraph* Graph, TArray<FFinding>& Out);
 void NeverAssigned(const UBlueprint* Blueprint, const TArray<UEdGraph*>& Graphs, TArray<FFinding>& Out);
+/** McpBPLintGuards.cpp: uses of an object variable that can be None, on a path no validity check of it dominates. */
+void UnguardedRead(const UBlueprint* Blueprint, const TArray<UEdGraph*>& Graphs, TArray<FFinding>& Out);
 } // namespace McpBPLint

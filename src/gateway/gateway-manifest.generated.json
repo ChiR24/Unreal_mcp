@@ -11068,10 +11068,11 @@
                 "unreachable",
                 "random_fanout",
                 "infinite_while",
-                "never_assigned"
+                "never_assigned",
+                "unguarded_read"
               ]
             },
-            "description": "The rules to run, default all: tick_heavy, unreachable, random_fanout, infinite_while, never_assigned. An unknown name is INVALID_ARGUMENT."
+            "description": "The rules to run, default all: tick_heavy, unreachable, random_fanout, infinite_while, never_assigned, unguarded_read. An unknown name is INVALID_ARGUMENT."
           },
           "save": {
             "type": "boolean",

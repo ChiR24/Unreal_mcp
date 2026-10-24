@@ -10,7 +10,7 @@ namespace McpBPLint
 namespace
 {
 const TCHAR* const Rules[] = {TEXT("tick_heavy"), TEXT("unreachable"), TEXT("random_fanout"), TEXT("infinite_while"),
-                              TEXT("never_assigned")};
+                              TEXT("never_assigned"), TEXT("unguarded_read")};
 } // namespace
 
 bool HandleLint(const McpBlueprintGraphHandlers::FActionContext& Context)
@@ -33,7 +33,7 @@ bool HandleLint(const McpBlueprintGraphHandlers::FActionContext& Context)
             }
             if (!bKnown)
             {
-                Context.SendError(FString::Printf(TEXT("Unknown rule '%s'. Rules: tick_heavy, unreachable, random_fanout, infinite_while, never_assigned."), *Rule), TEXT("INVALID_ARGUMENT"));
+                Context.SendError(FString::Printf(TEXT("Unknown rule '%s'. Rules: tick_heavy, unreachable, random_fanout, infinite_while, never_assigned, unguarded_read."), *Rule), TEXT("INVALID_ARGUMENT"));
                 return true;
             }
             Wanted.Add(Rule);
@@ -63,6 +63,10 @@ bool HandleLint(const McpBlueprintGraphHandlers::FActionContext& Context)
     if (On(TEXT("never_assigned")))
     {
         NeverAssigned(Context.Blueprint, Graphs, Findings);
+    }
+    if (On(TEXT("unguarded_read")))
+    {
+        UnguardedRead(Context.Blueprint, Graphs, Findings);
     }
 
     TArray<TSharedPtr<FJsonValue>> Rows;

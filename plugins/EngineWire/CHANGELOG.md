@@ -7,7 +7,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 ## [Unreleased]
 
 ### Added
-- **Blueprint runtime errors** name their node, graph and Blueprint in frame steps, motion reads and `runtime_report`; an Accessed None names its cause (a destroyed actor, an unset instance variable, a failed cast or call, or nothing assigning it). `lint_blueprint` reads the graphs for these before Play: searches on Event Tick, nodes that never run, re-rolled randoms, endless While Loops, variables never set.
+- **Blueprint runtime errors** name their node, graph and Blueprint in frame steps, motion reads and `runtime_report`; an Accessed None names its cause (a destroyed actor, an unset instance variable, a failed cast or call, or nothing assigning it). `lint_blueprint` reads the graphs for these before Play: searches on Event Tick, nodes that never run, re-rolled randoms, endless While Loops, variables never set, object variables used with no Is Valid check on every path (dominators over the exec flow).
 - **`get_editor_focus`**: open editors, the focused graph's selected nodes, selected actors, recent errors.
 - **`describe_view`** `points`, `labels` and `coveredBy`.
 - **MCP 2026-07-28 on `/mcp`**: sessionless requests, header checks, `resultType`, consent by elicitation, the tasks extension.
