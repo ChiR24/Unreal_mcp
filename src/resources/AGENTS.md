@@ -4,13 +4,13 @@ Data behind MCP resources. `src/handlers/resource-handlers.ts` owns registration
 
 ## URIs
 - Served by `resource-handlers.ts` directly: `ue://assets` (`AssetResources.list('/Game')` → `manage_asset list`), `ue://actors` (`listActors()` → `control_actor list`), `ue://health`, `ue://automation-bridge`.
-- Served by `resource-read-router.ts` (`ResourceReadRouter.read(uri)`): exact `ue://capability/catalog`, `ue://project`, `ue://editor`, `ue://selection`, `ue://state/revisions`; templates `ue://capability/{capabilityId}`, `ue://knowledge/{topic}`, `ue://asset/{assetPath}`.
+- Served by `resource-read-router.ts` (`ResourceReadRouter.read(uri)`): exact `ue://capability/catalog`, `ue://project`, `ue://editor`, `ue://selection`, `ue://state/revisions`, `ue://changes`; templates `ue://capability/{capabilityId}`, `ue://knowledge/{topic}`, `ue://asset/{assetPath}`.
 
 ## FILES
 - `resource-read-router.ts` — ENTRY for the router URIs; enforces the byte budget and returns MCP `contents`.
 - `resource-catalog.ts` — the static definitions and templates the router serves.
 - `resource-errors.ts` — `RESOURCE_ERROR_CODES` (`INVALID_URI`, `NOT_FOUND`, `UNAVAILABLE`, `TOO_LARGE`, `TRAVERSAL`), `ResourceError`, `enforceByteBudget()` (64 KiB), `normalizeContentPath()` (rejects host paths, traversal, non-mount roots), `redactProjectName()`.
-- `editor-state-resources.ts` — `EditorStateResources` over an injected `EditorStateSource` (default `BridgeEditorStateSource`). Throws `ResourceError` when the editor is unavailable; never mutates. `MAX_SELECTION = 200`.
+- `editor-state-resources.ts` — `EditorStateResources` over an injected `EditorStateSource` (default `BridgeEditorStateSource`). Throws `ResourceError` when the editor is unavailable; never mutates. `MAX_SELECTION = 200`. `ue://changes` answers `{ cursor }` from the cursor the plugin last pushed (`bridge_ack`, then `changes_moved`), never through a request: one would take the agent's user-change warning. Subscriptions to it: `src/server/mcp-primitives/resource-subscriptions.ts`.
 - `capability-resources.ts` — `CapabilityResources` over `GatewayManifestCapabilitySource` (64 catalog entries, 200 actions per record).
 - `knowledge-resources.ts` — static topics; `ue://asset/{assetPath}` normalizes the path and asks `manage_asset exists`.
 - `assets.ts`, `actors.ts` — the two list resources.

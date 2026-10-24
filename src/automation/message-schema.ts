@@ -60,7 +60,9 @@ export const bridgeAckSchema = z.looseObject({
     authority: bridgeAuthoritySchema.optional(),
     // The editor's mounted content roots (`/Game`, `/ShooterCore`, ...), which
     // feed the path allowlist. Absent from plugins that predate it.
-    contentRoots: stringArray.optional()
+    contentRoots: stringArray.optional(),
+    // Where the editor's change journal stands (`<session>.<seq>`), sent to a principal that may read it.
+    changesCursor: z.string().optional()
 });
 
 /**
@@ -69,6 +71,19 @@ export const bridgeAckSchema = z.looseObject({
  * message: it updates the path allowlist and is not forwarded to MCP clients.
  */
 export const CONTENT_ROOTS_CHANGED_EVENT = 'content_roots_changed';
+
+/**
+ * The automation_event the plugin sends, at most once a second, when its change journal moves. Its payload carries
+ * the new `changesCursor`. Internal too: the server tells its subscribers that ue://changes moved instead.
+ */
+export const CHANGES_MOVED_EVENT = 'changes_moved';
+
+/** The `changesCursor` of a bridge_ack's metadata or a changes_moved payload; undefined when there is none. */
+export function readChangesCursor(source: unknown): string | undefined {
+    if (source === null || typeof source !== 'object' || Array.isArray(source)) return undefined;
+    const cursor = (source as Record<string, unknown>).changesCursor;
+    return typeof cursor === 'string' && cursor.length > 0 ? cursor : undefined;
+}
 
 /**
  * The raw `contentRoots` of a bridge_ack's metadata or a content_roots_changed

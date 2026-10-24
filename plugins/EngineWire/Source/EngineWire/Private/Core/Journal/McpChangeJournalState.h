@@ -77,6 +77,8 @@ FJournalEntry& Touch(int32 Index, uint8 Event);
 bool IsJournalledPackage(const FString& Name);
 /** Drops the rows of World's actors: every one of them was made by the level opening. */
 void ForgetActorsOf(const UWorld* World);
+/** Hands Seq to the transports' threads (LatestSeq); the journal itself stays game-thread state. */
+void PublishSeq(uint64 Seq);
 /** The object and level-actor events (McpChangeJournal.cpp); Start and Stop add the package events around them. */
 void BindObjectEvents();
 void UnbindObjectEvents();

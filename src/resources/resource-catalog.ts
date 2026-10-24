@@ -55,6 +55,12 @@ export const NEW_RESOURCE_DEFINITIONS: readonly ResourceDefinition[] = [
     description: 'Current selection, level, asset-registry, and package revision counters',
     mimeType: JSON_MIME,
   },
+  {
+    uri: 'ue://changes',
+    name: 'Changes',
+    description: "The editor change journal's latest cursor; subscribe to hear when something changes, then read what changed with inspect changes_since",
+    mimeType: JSON_MIME,
+  },
 ];
 
 /** Read-only resource templates. */

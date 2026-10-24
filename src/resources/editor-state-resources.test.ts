@@ -18,6 +18,7 @@ function source(overrides: Partial<EditorStateSource> = {}): EditorStateSource {
     currentLevel: async () => ({ name: 'Main', path: '/Game/Maps/Main' }),
     selectedActors: async () => [{ name: 'Cube', path: '/Game/Cube' }],
     liveRevisions: async () => LIVE_REVISIONS,
+    changesCursor: () => '3f9a1c2e.41',
     ...overrides,
   };
 }
@@ -68,6 +69,24 @@ describe('editor-state-resources', () => {
     expect(editor.revision).toBe(3);
     expect(editor.data.pieActive).toBe(true);
     expect(editor.data.currentLevel).toEqual({ name: 'Main', path: '/Game/Maps/Main' });
+  });
+
+  it('reads ue://changes from the cursor the plugin last sent, its number plus one as the revision', async () => {
+    // Given
+    const resources = new EditorStateResources(source(), provider(), 'MyGame');
+
+    // When / Then
+    await expect(resources.readChanges()).resolves.toEqual({ uri: 'ue://changes', revision: 42, data: { cursor: '3f9a1c2e.41' } });
+  });
+
+  it('refuses ue://changes while disconnected, or when the plugin sent no cursor', async () => {
+    // Given
+    const offline = new EditorStateResources(source({ isAvailable: async () => false }), provider(), 'MyGame');
+    const noJournal = new EditorStateResources(source({ changesCursor: () => undefined }), provider(), 'MyGame');
+
+    // When / Then
+    await expect(offline.readChanges()).rejects.toMatchObject({ code: 'RESOURCE_UNAVAILABLE' });
+    await expect(noJournal.readChanges()).rejects.toMatchObject({ code: 'RESOURCE_UNAVAILABLE' });
   });
 
   it('throws UNAVAILABLE for editor and selection when disconnected', async () => {

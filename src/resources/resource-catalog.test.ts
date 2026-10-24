@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { NEW_RESOURCE_DEFINITIONS, RESOURCE_TEMPLATES } from './resource-catalog.js';
 
 describe('resource-catalog', () => {
-  it('defines exactly the five new static resources', () => {
+  it('defines exactly the six new static resources', () => {
     // Given / When
     const uris = NEW_RESOURCE_DEFINITIONS.map((definition) => definition.uri);
 
@@ -13,6 +13,7 @@ describe('resource-catalog', () => {
       'ue://editor',
       'ue://selection',
       'ue://state/revisions',
+      'ue://changes',
     ]);
     expect(new Set(uris).size).toBe(uris.length);
     for (const definition of NEW_RESOURCE_DEFINITIONS) {

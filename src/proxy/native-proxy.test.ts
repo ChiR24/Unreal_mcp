@@ -35,7 +35,7 @@ function fakeEditor() {
         if (msg.method === 'initialize') {
           const id = `S${sessions.size}-${Date.now()}`;
           sessions.add(id);
-          json(200, { jsonrpc: '2.0', id: msg.id, result: { protocolVersion: dig(msg, 'params', 'protocolVersion'), capabilities: { tools: {} }, serverInfo: { name: 'fake', version: '9' }, instructions: 'FAKE INSTRUCTIONS' } }, { 'Mcp-Session-Id': id });
+          json(200, { jsonrpc: '2.0', id: msg.id, result: { protocolVersion: dig(msg, 'params', 'protocolVersion'), capabilities: { tools: {}, resources: { subscribe: true } }, serverInfo: { name: 'fake', version: '9' }, instructions: 'FAKE INSTRUCTIONS' } }, { 'Mcp-Session-Id': id });
           return;
         }
         if (!sessions.has(String(req.headers['mcp-session-id']))) { json(404, { jsonrpc: '2.0', id: msg.id ?? null, error: { code: -32600, message: 'Invalid or expired session ID' } }); return; }
@@ -128,6 +128,7 @@ describe('native proxy: one client session that outlives the editor', () => {
     const again = await q.call('initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'test', version: '1' } });
     expect(dig(again, 'result', 'protocolVersion')).toBe('2025-06-18');
     expect(String(dig(again, 'result', 'instructions')), 'a session started while the editor is down gets the cached instructions').toMatch(/FAKE INSTRUCTIONS[\s\S]*proxy/);
+    expect(dig(again, 'result', 'capabilities', 'resources'), 'resource updates are not relayed, so subscribe is not offered').toEqual({});
     expect(firstTool(await q.call('tools/list'))).toBe('FAKE TOOL');
     q.close();
   });

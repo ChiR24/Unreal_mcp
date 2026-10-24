@@ -8,7 +8,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { isRecord } from '../../../src/utils/validation/type-guards.js';
 import { connectClient, structuredPayload } from '../support/in-memory-server.js';
 
-const EXPECTED_SERVER_CAPABILITIES = { tools: {}, resources: {}, prompts: {}, completions: {} };
+const EXPECTED_SERVER_CAPABILITIES = { tools: {}, resources: { subscribe: true }, prompts: {}, completions: {} };
 const GATEWAY_OPERATIONS = ['search', 'describe', 'execute', 'configure'];
 const WORKFLOW_PROMPT_NAMES = ['inspect-fix', 'asset-import', 'level-build', 'blueprint-edit', 'validation', 'sequence-render'];
 
@@ -25,7 +25,7 @@ afterEach(async () => {
 });
 
 describe('server capability advertisement', () => {
-    it('advertises exactly { tools, resources, prompts, completions }', async () => {
+    it('advertises exactly { tools, resources (subscribable), prompts, completions }', async () => {
         const ctx = await build();
         expect(ctx.client.getServerCapabilities()).toEqual(EXPECTED_SERVER_CAPABILITIES);
     });
@@ -73,6 +73,14 @@ describe('resources', () => {
         expect(Array.isArray(templates.resourceTemplates)).toBe(true);
         expect(read.contents[0]?.uri).toBe('ue://capability/catalog');
     });
+
+    it('lists ue://changes and answers resources/subscribe and unsubscribe for it', async () => {
+        const ctx = await build();
+        const listed = await ctx.client.listResources(undefined, { timeout: 15000 });
+        expect(listed.resources.map((resource) => resource.uri)).toContain('ue://changes');
+        await expect(ctx.client.subscribeResource({ uri: 'ue://changes' }, { timeout: 15000 })).resolves.toEqual({});
+        await expect(ctx.client.unsubscribeResource({ uri: 'ue://changes' }, { timeout: 15000 })).resolves.toEqual({});
+    });
 });
 
 describe('prompts', () => {
@@ -106,7 +114,7 @@ describe('completions', () => {
 });
 
 describe('unadvertised methods', () => {
-    it.each(['tasks/list', 'resources/subscribe', 'logging/setLevel'])('%s is MethodNotFound', async (method) => {
+    it.each(['tasks/list', 'logging/setLevel'])('%s is MethodNotFound', async (method) => {
         const ctx = await build();
         const error = await ctx.client.request({ method, params: {} }, z.looseObject({}), { timeout: 15000 }).then(() => undefined, (caught: unknown) => caught);
         expect(isRecord(error) ? error.code : undefined).toBe(ProtocolErrorCode.MethodNotFound);

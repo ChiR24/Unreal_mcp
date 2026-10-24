@@ -1,5 +1,6 @@
 #include "Transport/Connection/McpConnectionManagerPrivate.h"
 
+#include "Core/Journal/McpChangeJournal.h"
 #include "Core/Security/McpPrequeueGate.h"
 #include "Foundation/McpCapabilityPrincipal.h"
 #include "Interfaces/IPluginManager.h"
@@ -94,6 +95,12 @@ void FMcpConnectionManager::SendBridgeAck(
 	// game-feature roots before the first request. Updates follow as
 	// content_roots_changed events (McpConnectionManagerContentRoots.cpp).
 	Ack->SetArrayField(TEXT("contentRoots"), McpBuildContentRootValues());
+	// Where the change journal stands, for a principal that may read it; changes_moved events follow
+	// (McpConnectionManagerChanges.cpp).
+	if (Principal.IsScopeAuthorized(EMcpCapabilityScope::Read))
+	{
+		Ack->SetStringField(TEXT("changesCursor"), McpChangeJournal::LatestCursor());
+	}
 
 	// Additive and secret-free: the resolved profile, its granted scopes, and
 	// boolean flags only. The token, the path prefixes and the numeric limits are

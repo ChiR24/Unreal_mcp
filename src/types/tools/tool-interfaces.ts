@@ -10,6 +10,8 @@ export interface AutomationRequestBridge {
     getVersionMismatch?(): string | undefined;
     /** Resolved bridge URL (`ws://host:port`), for diagnostics. */
     getClientUrl?(): string;
+    /** Where the connected editor's change journal stands (ue://changes). */
+    getChangesCursor?(): string | undefined;
 }
 
 export interface AutomationStatusBridge {

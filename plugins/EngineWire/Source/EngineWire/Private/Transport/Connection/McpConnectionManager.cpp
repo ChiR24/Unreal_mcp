@@ -113,6 +113,7 @@ void FMcpConnectionManager::SetOnMessageReceived(
 
 bool FMcpConnectionManager::Tick(float DeltaTime) {
   FlushContentRootsUpdate();
+  FlushChangesUpdate();
 
   // Handle reconnect countdown
   if (bReconnectEnabled && TimeUntilReconnect > 0.0f) {

@@ -206,6 +206,7 @@ void FMcpNativeTransport::CloseSessionConnections(const FString& SessionId)
 	{
 		FScopeLock Lock(&LogEventSubscriptionsMutex);
 		LogEventSubscribedSessions.Remove(SessionId);
+		ChangesSubscribedSessions.Remove(SessionId);
 	}
 
 	TArray<TSharedPtr<FNotificationStream>> NotificationStreamsToClose;

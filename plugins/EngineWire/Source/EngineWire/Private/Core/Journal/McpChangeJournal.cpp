@@ -217,6 +217,7 @@ FJournalEntry& Touch(int32 Index, uint8 Event)
     Entry.Events |= Event;
     Entry.By |= By;
     Entry.LastSeq = ++State.Seq;
+    PublishSeq(State.Seq);
     if (By == JournalByUser)
     {
         Entry.LastUserSeq = State.Seq;

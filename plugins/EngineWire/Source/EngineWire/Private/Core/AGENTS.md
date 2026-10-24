@@ -20,6 +20,7 @@ Core owns the request queue, the game-thread drain and the per-tool handler map:
 - Hot path: `OnObjectModified` fires on every Modify, thousands of times in one compile. Reject on pointers and flags first and judge each package once by its pointer; no string work for a package already judged.
 - Attribution: inside a request = mcp; inside an editor transaction (`GUndo` or `GIsTransacting`) no request opened = user; else editor. The editor's own actor and object edits are not kept (loading, compiling, a new level's actors); a level that opens forgets the rows of its actors once the editor's `LoadMap` is done (`OnMapOpened` comes last).
 - Never name a reply field "token": the receipt redaction masks it. The cursor is `<session>.<seq>`.
+- The journal is game-thread state. The transports' threads read only what it publishes: `LatestSeq()` (atomic) and `LatestCursor()` (the session under a lock), which back `ue://changes`, the native subscription sweep and the bridge's `changes_moved`.
 
 ## HANDLER REGISTRATION
 The wire contract is the 23 parent tools plus `console_command`. `InitializeHandlers()` in `...HandlerRegistration.cpp` is one table:

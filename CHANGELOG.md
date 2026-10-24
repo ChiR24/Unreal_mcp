@@ -29,7 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **A call failing three times unchanged is refused** (`REPEATED_FAILURE`).
 - **Batches check every step first**; `build_graph`, `build_material_graph` and `add_widget_tree` take `dryRun`.
 - **`run_map_check`** reads Map Check as rows; **`fix_placement`** moves sunk, floating and intersecting actors.
-- **`inspect changes_since`** lists what changed since a cursor and who changed it; replies note the user's edits.
+- **`inspect changes_since`** lists what changed since a cursor and who changed it; replies note the user's edits, and `ue://changes` can be subscribed to on both doors.
 
 </details>
 

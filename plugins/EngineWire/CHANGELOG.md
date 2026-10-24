@@ -20,7 +20,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 - **Loop guard** on `/mcp`: a call failing three times unchanged is refused (`REPEATED_FAILURE`).
 - **`dryRun`** on `build_graph`, `build_material_graph` and `add_widget_tree`, which check every step first.
 - **`run_map_check`**: Map Check as rows (severity, message, actor, map error); **`fix_placement`** moves sunk, floating and intersecting actors by the audit's rules, in one undo step.
-- **Change journal**: `changes_since` lists what changed since a cursor and who changed it (mcp, user, editor); a reply warns once of the user's edits.
+- **Change journal**: `changes_since` lists what changed since a cursor and who changed it (mcp, user, editor); a reply warns once of the user's edits. `/mcp` serves `subscriptions/listen` and `resources/subscribe` for `ue://changes`.
 
 ### Fixed
 - **Small fixes**: links on UE 5.0; whole-path `runtime_report` filters; diagnostics records replace their files; exact task principals; the RHI thread in `busiestThreadMs`; effect lifecycle misses name what is missing.

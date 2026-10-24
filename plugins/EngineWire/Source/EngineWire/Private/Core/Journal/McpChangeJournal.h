@@ -33,4 +33,9 @@ void AddUserChangeWarning(const FString& RequestId, const TSharedPtr<FJsonObject
 /** inspect changes_since: what changed after the cursor in since (or the latest changes kept), and the next cursor. */
 bool HandleChangesSince(UEngineWireSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
                         TSharedPtr<FMcpBridgeWebSocket> Socket);
+
+/** The latest change's number, on any thread: it moves whenever a change is kept (0 before the first). */
+uint64 LatestSeq();
+/** The cursor changes_since would return now, on any thread, and its number; empty while the journal is stopped. */
+FString LatestCursor(uint64* OutSeq = nullptr);
 } // namespace McpChangeJournal

@@ -25,6 +25,7 @@ Connection/
 - `McpConnectionManagerResponses.cpp` — response correlation back to the originating socket.
 - `McpConnectionManagerTelemetry.cpp` — connection telemetry.
 - `McpConnectionManagerContentRoots.cpp` — the editor's content roots for the TypeScript path allowlist (`bridge_ack.contentRoots`, `content_roots_changed`).
+- `McpConnectionManagerChanges.cpp` — `changes_moved` (the change journal's cursor) from the ticker, at most once a second, to authenticated sockets whose principal holds Read; `bridge_ack.changesCursor` under the same rule. The TypeScript server turns it into `notifications/resources/updated` for `ue://changes` and never forwards it raw.
 
 ## CONNECTION LIFECYCLE
 

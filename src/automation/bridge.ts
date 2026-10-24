@@ -9,9 +9,11 @@ import { ConnectionManager } from './connection-manager.js';
 import { HandshakeHandler } from './handshake.js';
 import { AutomationLogger } from './log-redaction.js';
 import {
+    CHANGES_MOVED_EVENT,
     CONTENT_ROOTS_CHANGED_EVENT,
     pluginVersionMismatch,
     readBridgeAuthority,
+    readChangesCursor,
     readContentRoots,
     type BridgeAuthority
 } from './message-schema.js';
@@ -64,6 +66,15 @@ export class AutomationBridge extends EventEmitter {
                 // allowlist and is not forwarded to MCP clients as a notification.
                 if (event.event === CONTENT_ROOTS_CHANGED_EVENT) {
                     setEditorContentRoots(readContentRoots(event.payload));
+                    return;
+                }
+                // Internal as well: the server tells its own subscribers that ue://changes moved (resource-subscriptions.ts).
+                if (event.event === CHANGES_MOVED_EVENT) {
+                    const cursor = readChangesCursor(event.payload);
+                    if (cursor !== undefined && cursor !== this.state.changesCursor) {
+                        this.state.changesCursor = cursor;
+                        this.emitAutomation('changesMoved', cursor);
+                    }
                     return;
                 }
                 this.emitAutomation('automationEvent', event);
@@ -168,6 +179,7 @@ export class AutomationBridge extends EventEmitter {
         this.connectionManager.close(1001, 'Server shutdown');
         // close() detaches the socket's listeners, so its close handler never clears the mounts.
         clearEditorContentRoots();
+        this.state.changesCursor = undefined;
     }
 
     /** Connect now (the same lazy connect a request runs); false when Unreal is unreachable. */
@@ -199,6 +211,11 @@ export class AutomationBridge extends EventEmitter {
 
     getAuthority(): BridgeAuthority | undefined {
         return readBridgeAuthority(this.state.lastHandshakeMetadata);
+    }
+
+    /** Where the connected editor's change journal stands; undefined while disconnected or for a token that may not read. */
+    getChangesCursor(): string | undefined {
+        return this.isConnected() ? this.state.changesCursor : undefined;
     }
 
     /** Set while connected to a plugin from another release: both versions and the install that fixes it. */

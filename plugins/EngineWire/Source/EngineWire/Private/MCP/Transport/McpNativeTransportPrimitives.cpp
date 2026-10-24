@@ -8,6 +8,7 @@
 #include "MCP/Primitives/McpPromptCatalog.h"
 #include "MCP/Primitives/McpPromptRender.h"
 #include "MCP/Primitives/McpCompletions.h"
+#include "MCP/Protocol/McpModernRequest.h"
 
 // resources/*, prompts/* and completion/complete. Static capability/project
 // reads are served from the socket thread; editor-state URIs answer a typed
@@ -48,6 +49,12 @@ bool FMcpNativeTransport::HandlePrimitiveMethod(
 		}
 	}
 
+	// Earlier versions only: 2026-07-28 replaced both with subscriptions/listen, so a modern request finds neither.
+	if ((Method == TEXT("resources/subscribe") || Method == TEXT("resources/unsubscribe")) && !McpModern::Current().bActive)
+	{
+		Reply(HandleResourceSubscription(Method, Uri, Id, SessionId));
+		return true;
+	}
 	if (Method == TEXT("resources/list"))
 	{
 		auto Result = MakeShared<FJsonObject>();

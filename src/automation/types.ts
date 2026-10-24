@@ -220,6 +220,8 @@ export type AutomationBridgeEvents = {
     disconnected: (info: AutomationBridgeDisconnectedEvent) => void;
     message: (message: AutomationBridgeMessage) => void;
     automationEvent: (event: AutomationBridgeAutomationEvent) => void;
+    /** The editor's change journal moved to this cursor (a changes_moved event; at most one a second). */
+    changesMoved: (cursor: string) => void;
     error: (error: AutomationBridgePortError) => void;
     handshakeFailed: (info: { reason: string; port: number }) => void;
 };

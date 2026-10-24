@@ -4,6 +4,7 @@
 #include "MCP/Resources/McpResourceHealthContent.h"
 #include "MCP/Resources/McpResourceUri.h"
 #include "MCP/Gateway/McpNativeGatewayCapabilityStore.h"
+#include "Core/Journal/McpChangeJournal.h"
 #include "Foundation/McpLiveStateRevisions.h"
 #include "Dom/JsonObject.h"
 #include "Serialization/JsonSerializer.h"
@@ -111,6 +112,13 @@ namespace McpResourceRead
 			const FMcpLiveStateRevisionSnapshot Snapshot = FMcpLiveStateRevisions::Get().Snapshot();
 			Revision = Snapshot.Max();
 			Data = Snapshot.ToJson();
+		}
+		else if (Uri == McpResourceCatalog::ChangesUri())
+		{
+			// Read on this thread: only the published cursor, never the journal itself. The revision moves with it.
+			uint64 Seq = 0;
+			Data->SetStringField(TEXT("cursor"), McpChangeJournal::LatestCursor(&Seq));
+			Revision = static_cast<FMcpResourceRevision>(Seq) + 1;
 		}
 		else
 		{

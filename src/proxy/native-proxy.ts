@@ -218,12 +218,16 @@ export function startNativeProxy(options: NativeProxyOptions = {}): { close: () 
     if (method === 'initialize') {
       const requested = message.params?.protocolVersion;
       clientProtocol = typeof requested === 'string' && NATIVE_PROTOCOLS.includes(requested) ? requested : NATIVE_PROTOCOLS[0];
+      // Resource updates ride the upstream session's GET stream, which this proxy never opens (and a restart replaces
+      // that session), so it does not offer resources/subscribe.
+      const upstreamCapabilities = cache.capabilities ?? { resources: {}, prompts: {}, completions: {} };
+      const { subscribe: _unrelayed, ...resources } = (upstreamCapabilities.resources ?? {}) as Record<string, unknown>;
       write({
         jsonrpc: '2.0',
         id,
         result: {
           protocolVersion: clientProtocol,
-          capabilities: { ...(cache.capabilities ?? { resources: {}, prompts: {}, completions: {} }), tools: { listChanged: true } },
+          capabilities: { ...upstreamCapabilities, ...('resources' in upstreamCapabilities ? { resources } : {}), tools: { listChanged: true } },
           serverInfo: { name: `${PACKAGE.name} proxy`, version: PACKAGE.version },
           instructions: cache.instructions ? `${cache.instructions}\n\n${proxyNote}` : proxyNote
         }

@@ -63,6 +63,11 @@ public:
 	void UnsubscribeContentRootChanges();
 	bool HasPendingContentRootsUpdate() const;
 	void FlushContentRootsUpdate();
+	/**
+	 * The change journal moved: Tick sends one changes_moved automation_event (its cursor) to the authenticated
+	 * sockets whose principal may read, at most once a second; bridge_ack carries the cursor at connect.
+	 */
+	void FlushChangesUpdate();
 
 	void SetOnMessageReceived(FMcpMessageReceivedCallback InCallback);
 	void SetOnAutomationRequestCancelled(FMcpRequestCancelledCallback InCallback);
@@ -149,6 +154,9 @@ private:
 	FDelegateHandle ContentPathMountedHandle;
 	FDelegateHandle ContentPathDismountedHandle;
 	std::atomic<bool> bContentRootsDirty{false};
+	// The change journal number last sent as changes_moved, and when (Tick, game thread).
+	uint64 LastChangesSeq = 0;
+	double LastChangesPushTime = 0.0;
 	FMcpMessageReceivedCallback OnMessageReceived;
 	FMcpRequestCancelledCallback OnAutomationRequestCancelled;
 

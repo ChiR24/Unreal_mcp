@@ -12,7 +12,8 @@ import { getPrompt, listPrompts } from './prompts.js';
 
 export const SERVER_CAPABILITIES: ServerCapabilities = {
   tools: {},
-  resources: {},
+  // ue://changes can be subscribed to (resource-subscriptions.ts), as on the native door.
+  resources: { subscribe: true },
   prompts: {},
   completions: {},
 };

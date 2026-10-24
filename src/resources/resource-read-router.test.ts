@@ -25,6 +25,7 @@ function editorSource(overrides: Partial<EditorStateSource> = {}): EditorStateSo
     currentLevel: async () => ({ name: 'Main', path: '/Game/Maps/Main' }),
     selectedActors: async () => [{ name: 'Cube', path: '/Game/Cube' }],
     liveRevisions: async () => LIVE_REVISIONS,
+    changesCursor: () => '3f9a1c2e.41',
     ...overrides,
   };
 }

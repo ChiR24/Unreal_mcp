@@ -46,6 +46,11 @@ export interface SelectionData {
   readonly actors: readonly SelectionEntry[];
 }
 
+export interface ChangesData {
+  /** What changes_since would return now: send it as since to read what changes after this. */
+  readonly cursor: string;
+}
+
 /**
  * Injected game-thread boundary for editor-state reads. Task 31 defines the
  * contract and tests it with fakes; the default binds it to the automation
@@ -58,6 +63,8 @@ export interface EditorStateSource {
   currentLevel(): Promise<{ name: string; path: string }>;
   selectedActors(): Promise<readonly SelectionEntry[]>;
   liveRevisions(): Promise<LiveStateRevisions | undefined>;
+  /** The change journal cursor the plugin last sent (bridge_ack, then changes_moved); no request is made. */
+  changesCursor(): string | undefined;
 }
 
 export class EditorStateResources {
@@ -115,6 +122,28 @@ export class EditorStateResources {
       uri,
       revision: Math.max(1, data.selection, data.level, data.assetRegistry, data.package) as RevisionedResource<LiveStateRevisions>['revision'],
       data,
+    };
+  }
+
+  /**
+   * ue://changes: where the change journal stands, read without a request to the plugin (a request would take the
+   * user-change warning the agent's next call should carry). The revision is the cursor's number plus one, as on the
+   * native door.
+   */
+  async readChanges(): Promise<RevisionedResource<ChangesData>> {
+    const uri = 'ue://changes';
+    if (!(await this.source.isAvailable())) {
+      throw new ResourceError(RESOURCE_ERROR_CODES.UNAVAILABLE, uri, 'The change journal requires a connected Unreal Editor');
+    }
+    const cursor = this.source.changesCursor();
+    if (cursor === undefined) {
+      throw new ResourceError(RESOURCE_ERROR_CODES.UNAVAILABLE, uri, 'The connected Unreal bridge reported no change journal (an older plugin, or a token without read scope)');
+    }
+    const seq = Number(cursor.slice(cursor.lastIndexOf('.') + 1));
+    return {
+      uri,
+      revision: ((Number.isSafeInteger(seq) ? seq : 0) + 1) as RevisionedResource<ChangesData>['revision'],
+      data: { cursor },
     };
   }
 }
@@ -181,6 +210,10 @@ export class BridgeEditorStateSource implements EditorStateSource {
     const response = await this.request('inspect', { action: 'pie_report' });
     const parsed = LiveStateRevisionsSchema.safeParse(response?.liveRevisions);
     return parsed.success ? parsed.data : undefined;
+  }
+
+  changesCursor(): string | undefined {
+    return this.automationBridge?.getChangesCursor?.();
   }
 
   private async request(action: string, payload: Record<string, unknown>): Promise<Record<string, unknown> | undefined> {

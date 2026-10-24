@@ -42,6 +42,13 @@ namespace McpResourceCatalog
 		return Uri;
 	}
 
+	// The one resource that changes while the server runs: the only one a subscription ever hears of.
+	inline const FString& ChangesUri()
+	{
+		static const FString Uri = TEXT("ue://changes");
+		return Uri;
+	}
+
 	// Listed == servable: the read classifier uses this same list.
 	inline const TArray<FMcpResourceDefinition>& AllListedResources()
 	{
@@ -55,6 +62,8 @@ namespace McpResourceCatalog
 				TEXT("Redacted project name, engine version, and content root"), JsonMimeType() },
 			{ LiveStateRevisionUri(), TEXT("Live State Revisions"),
 				TEXT("Current selection, level, asset-registry, and package revision counters"), JsonMimeType() },
+			{ ChangesUri(), TEXT("Changes"),
+				TEXT("The editor change journal's latest cursor; subscribe to hear when something changes, then read what changed with inspect changes_since"), JsonMimeType() },
 		};
 		return Defs;
 	}

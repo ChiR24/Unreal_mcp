@@ -49,6 +49,8 @@ export class ResourceReadRouter {
         return this.editorState.readSelection();
       case 'ue://state/revisions':
         return this.editorState.readStateRevisions();
+      case 'ue://changes':
+        return this.editorState.readChanges();
       default:
         break;
     }

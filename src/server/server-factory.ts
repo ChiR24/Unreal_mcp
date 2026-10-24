@@ -8,6 +8,7 @@ import { HealthMonitor } from '../services/health-monitor.js';
 import { UNREAL_GATEWAY_INSTRUCTIONS } from '../tools/catalog/unreal-gateway-definition.js';
 import { UnrealBridge } from '../unreal-bridge.js';
 import { CACHE_HINTS, SERVER_CAPABILITIES, wirePrimitives } from './mcp-primitives/primitive-wiring.js';
+import { wireResourceSubscriptions } from './mcp-primitives/resource-subscriptions.js';
 import { consentStateCodec } from './gateway/gateway-execute-consent.js';
 
 const { name: SERVER_NAME, version: SERVER_VERSION } = PACKAGE;
@@ -108,6 +109,7 @@ export function createServer() {
     serverSetup.setup();
 
     wirePrimitives(server);
+    const unwireSubscriptions = wireResourceSubscriptions(server, automationBridge);
 
     // notifications/cancelled stays the SDK's: it aborts the request's signal, which the tool registry turns into
     // automationBridge.cancelMcpRequest, and the SDK then sends no late response. A handler set here replaced the
@@ -117,6 +119,7 @@ export function createServer() {
     const previousOnClose = server.onclose;
     server.onclose = (): void => {
       automationBridge.off('automationEvent', forwardAutomationEvent);
+      unwireSubscriptions();
       previousOnClose?.();
     };
     return server;

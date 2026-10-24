@@ -1,7 +1,8 @@
 // Copyright (c) 2024 EngineWire Contributors
 //
 // The journal's package events: assets the registry hears created, removed or renamed, packages saved, levels opened;
-// and the journal's Start and Stop, which bind them around the object events (McpChangeJournal.cpp).
+// the journal's Start and Stop, which bind them around the object events (McpChangeJournal.cpp); and what the
+// transports' threads may read of it: the session under a lock, the latest number atomically.
 
 #include "Core/Journal/McpChangeJournal.h"
 
@@ -10,14 +11,28 @@
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Editor.h"
 #include "Misc/PackageName.h"
+#include "Misc/ScopeLock.h"
 #include "Modules/ModuleManager.h"
 #include "UObject/ObjectSaveContext.h"
 #include "UObject/Package.h"
+
+#include <atomic>
 
 namespace McpChangeJournal
 {
 namespace
 {
+FCriticalSection GPublishedLock;
+FString GPublishedSession;
+std::atomic<uint64> GPublishedSeq{0};
+
+void PublishSession(const FString& Session)
+{
+    FScopeLock Lock(&GPublishedLock);
+    GPublishedSession = Session;
+    GPublishedSeq.store(0, std::memory_order_relaxed);
+}
+
 FDelegateHandle GAssetAddedHandle;
 FDelegateHandle GAssetRemovedHandle;
 FDelegateHandle GAssetRenamedHandle;
@@ -67,9 +82,31 @@ void OnMapOpened(const FString& Filename, bool bAsTemplate)
 }
 } // namespace
 
+void PublishSeq(uint64 Seq)
+{
+    GPublishedSeq.store(Seq, std::memory_order_relaxed);
+}
+
+uint64 LatestSeq()
+{
+    return GPublishedSeq.load(std::memory_order_relaxed);
+}
+
+FString LatestCursor(uint64* OutSeq)
+{
+    FScopeLock Lock(&GPublishedLock);
+    const uint64 Seq = LatestSeq();
+    if (OutSeq)
+    {
+        *OutSeq = Seq;
+    }
+    return GPublishedSession.IsEmpty() ? FString() : GPublishedSession + TEXT(".") + LexToString(Seq);
+}
+
 void Start()
 {
     JournalState().Session = FGuid::NewGuid().ToString(EGuidFormats::Digits).Left(8).ToLower();
+    PublishSession(JournalState().Session);
     BindObjectEvents();
     GSavedHandle = UPackage::PackageSavedWithContextEvent.AddStatic(&OnSaved);
     GMapOpenedHandle = FEditorDelegates::OnMapOpened.AddStatic(&OnMapOpened);
@@ -91,5 +128,6 @@ void Stop()
         Module->Get().OnAssetRenamed().Remove(GAssetRenamedHandle);
     }
     JournalState() = FJournalState();
+    PublishSession(FString());
 }
 } // namespace McpChangeJournal

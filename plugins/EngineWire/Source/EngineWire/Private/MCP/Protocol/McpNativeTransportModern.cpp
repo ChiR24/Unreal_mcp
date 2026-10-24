@@ -77,6 +77,12 @@ void FMcpNativeTransport::HandleModernRequest(
 		HandleToolsCall(Rpc.Params, Rpc.Id, ClientSocket, SessionId, HttpReq.Origin);
 		return;
 	}
+	if (Rpc.Method == TEXT("subscriptions/listen"))
+	{
+		// An answer that stays open: acknowledged first, then what changes (McpNativeTransportListen.cpp).
+		HandleSubscriptionsListen(ClientSocket, HttpReq, Rpc, SessionId);
+		return;
+	}
 	if (Rpc.Method == TEXT("tasks/get") || Rpc.Method == TEXT("tasks/cancel") || Rpc.Method == TEXT("tasks/update"))
 	{
 		FString CancelId;

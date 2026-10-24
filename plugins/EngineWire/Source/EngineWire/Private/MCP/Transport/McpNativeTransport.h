@@ -141,6 +141,16 @@ private:
 	// session per principal that is never shown to the client (Protocol/McpNativeTransportModern.cpp).
 	void HandleModernRequest(FSocket* ClientSocket, const FParsedHttpRequest& HttpReq, const FMcpJsonRpcRequest& Rpc);
 	FString EnsureModernSession(const FString& PresentedToken);
+	// subscriptions/listen (2026-07-28): an SSE answer that stays open, acknowledged first, then told when ue://changes
+	// moves; resources/subscribe and unsubscribe (earlier versions) do the same on the session's GET stream. The
+	// keepalive thread sends the updates (SweepChangeNotifications); ListenEndFrame closes a listen at shutdown
+	// (Protocol/McpNativeTransportListen.cpp).
+	void HandleSubscriptionsListen(FSocket* ClientSocket, const FParsedHttpRequest& HttpReq, const FMcpJsonRpcRequest& Rpc,
+		const FString& SessionId);
+	FString HandleResourceSubscription(const FString& Method, const FString& Uri, const TSharedPtr<FJsonValue>& Id,
+		const FString& SessionId);
+	void SweepChangeNotifications();
+	FString ListenEndFrame(const TSharedPtr<FJsonValue>& ListenId) const;
 	// tasks/get, tasks/cancel and tasks/update (the tasks extension); OutCancelId names a call still waiting in the
 	// queue, cancelled once the answer is sent.
 	FString HandleTaskMethod(const FString& Method, const TSharedPtr<FJsonObject>& Params,
@@ -356,6 +366,9 @@ private:
 	TMap<FString, TSharedPtr<FNotificationStream>> NotificationStreams;
 	mutable FCriticalSection NotificationStreamsMutex;
 	TSet<FString> LogEventSubscribedSessions;
+	// Sessions that sent resources/subscribe for ue://changes, with the change journal number each last heard of.
+	// Guarded by LogEventSubscriptionsMutex, like the log subscriptions.
+	TMap<FString, uint64> ChangesSubscribedSessions;
 	mutable FCriticalSection LogEventSubscriptionsMutex;
 
 	// ─── Lock-order convention (audit before adding nested critical sections) ───

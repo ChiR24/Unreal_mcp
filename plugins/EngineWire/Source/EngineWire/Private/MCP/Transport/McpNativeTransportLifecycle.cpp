@@ -284,6 +284,11 @@ void FMcpNativeTransport::Shutdown()
 		{
 			if (Stream.IsValid())
 			{
+				// A listen ends with its own result, so the client knows the server closed it.
+				if (Stream->ListenId.IsValid() && Stream->bReady.load())
+				{
+					WriteNotificationEvent(*Stream, ListenEndFrame(Stream->ListenId));
+				}
 				CloseNotificationStream(Stream);
 			}
 		}
@@ -299,6 +304,7 @@ void FMcpNativeTransport::Shutdown()
 	{
 		FScopeLock Lock(&LogEventSubscriptionsMutex);
 		LogEventSubscribedSessions.Empty();
+		ChangesSubscribedSessions.Empty();
 	}
 
 	ListenSocket = nullptr;

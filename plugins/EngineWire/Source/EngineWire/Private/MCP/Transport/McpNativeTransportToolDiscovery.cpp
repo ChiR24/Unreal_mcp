@@ -230,8 +230,11 @@ TSharedPtr<FJsonObject> FMcpNativeTransport::DescribeServer(const TSharedPtr<FJs
 	// never changes, so the tools capability omits listChanged entirely (omission
 	// and an explicit false are different claims); the tools object is still sent.
 	Capabilities->SetObjectField(TEXT("tools"), MakeShared<FJsonObject>());
-	// resources, prompts and completions are all answered by HandlePrimitiveMethod.
-	Capabilities->SetObjectField(TEXT("resources"), MakeShared<FJsonObject>());
+	// resources, prompts and completions are all answered by HandlePrimitiveMethod. ue://changes can be subscribed to:
+	// subscriptions/listen in 2026-07-28, resources/subscribe before it (Protocol/McpNativeTransportListen.cpp).
+	const TSharedPtr<FJsonObject> Resources = MakeShared<FJsonObject>();
+	Resources->SetBoolField(TEXT("subscribe"), true);
+	Capabilities->SetObjectField(TEXT("resources"), Resources);
 	Capabilities->SetObjectField(TEXT("prompts"), MakeShared<FJsonObject>());
 	Capabilities->SetObjectField(TEXT("completions"), MakeShared<FJsonObject>());
 	Result->SetObjectField(TEXT("capabilities"), Capabilities);

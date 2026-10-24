@@ -119,4 +119,9 @@ struct FNotificationStream
 	FCriticalSection WriteMutex;
 	std::atomic<bool> bReady{false};
 	std::atomic<bool> bMarkedForRemoval{false};
+	// A subscriptions/listen answer instead of GET /mcp: the listen request's id, stamped on all it carries; whether it
+	// asked for ue://changes, and the change journal number it last heard of (keepalive thread, under the stream map).
+	TSharedPtr<FJsonValue> ListenId;
+	bool bListenChanges = false;
+	uint64 ChangesSeq = 0;
 };

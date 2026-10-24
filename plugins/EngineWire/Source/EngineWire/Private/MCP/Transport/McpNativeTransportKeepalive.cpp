@@ -41,6 +41,7 @@ void FMcpNativeTransport::RunKeepaliveLoop()
 			break;
 		}
 		SweepNotificationKeepalives();
+		SweepChangeNotifications();
 		SweepRequestProgress();
 	}
 }
