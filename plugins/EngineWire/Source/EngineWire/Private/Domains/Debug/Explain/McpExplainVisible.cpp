@@ -80,15 +80,33 @@ TArray<UPrimitiveComponent*> Drawn(AActor* Actor, const bool bPlay)
     return Out;
 }
 
-// Seen: sight lines from the camera to the centre and corners of its bounds on the Visibility channel. Occluded only when
-// every one is stopped by something else (a corner resting in the floor is blocked by the floor itself).
+// Seen: sight lines from the camera on the Visibility channel to the centre of its bounds and to a 4 x 4 grid of cell
+// centres spanning the bounds as the camera sees them (on the plane through the centre that faces the camera): stratified,
+// so every part of what it shows is tried. Occluded only when every one is stopped by something else (the lowest cells
+// of a piece resting on a floor meet the floor itself).
 void CheckSightLines(FTree& Tree, AActor* Actor, const FBox& Bounds, const FView& View)
 {
-    const FVector& Lo = Bounds.Min;
-    const FVector& Hi = Bounds.Max;
-    const FVector Points[9] = {FVector(Lo.X, Lo.Y, Lo.Z), FVector(Hi.X, Lo.Y, Lo.Z), FVector(Lo.X, Hi.Y, Lo.Z), FVector(Hi.X, Hi.Y, Lo.Z),
-                               FVector(Lo.X, Lo.Y, Hi.Z), FVector(Hi.X, Lo.Y, Hi.Z), FVector(Lo.X, Hi.Y, Hi.Z), FVector(Hi.X, Hi.Y, Hi.Z),
-                               Bounds.GetCenter()};
+    constexpr int32 Cells = 4;
+    const FVector Centre = Bounds.GetCenter();
+    const FVector Extent = Bounds.GetExtent();
+    const FVector Facing = (Centre - View.Location).GetSafeNormal();
+    const FVector Side = FVector::CrossProduct(FMath::Abs(Facing.Z) > 0.99 ? FVector::ForwardVector : FVector::UpVector, Facing).GetSafeNormal();
+    const FVector Rise = FVector::CrossProduct(Facing, Side);
+    // How far the box reaches along an axis through its centre.
+    const auto Reach = [&Extent](const FVector& Axis)
+    {
+        return FMath::Abs(Axis.X) * Extent.X + FMath::Abs(Axis.Y) * Extent.Y + FMath::Abs(Axis.Z) * Extent.Z;
+    };
+    TArray<FVector> Points = {Centre};
+    for (int32 Row = 0; Row < Cells; ++Row)
+    {
+        for (int32 Column = 0; Column < Cells; ++Column)
+        {
+            const double Across = (Column + 0.5) / Cells * 2.0 - 1.0;
+            const double Height = (Row + 0.5) / Cells * 2.0 - 1.0;
+            Points.Add(Centre + Side * (Across * Reach(Side)) + Rise * (Height * Reach(Rise)));
+        }
+    }
     FCollisionQueryParams Params(SCENE_QUERY_STAT(McpExplainSightLine), true, Actor);
     int32 Blocked = 0;
     const AActor* Blocker = nullptr;
@@ -101,15 +119,15 @@ void CheckSightLines(FTree& Tree, AActor* Actor, const FBox& Bounds, const FView
             Blocker = Blocker ? Blocker : Hit.GetActor();
         }
     }
-    if (Blocked == UE_ARRAY_COUNT(Points))
+    if (Blocked == Points.Num())
     {
         Tree.Fail(TEXT("sightLines"), TEXT("OCCLUDED"), FString::Printf(TEXT("Every sight line from the camera is blocked, first by '%s'."),
                                                                         Blocker ? *McpActorRef(Blocker) : TEXT("something without an actor")));
     }
     else
     {
-        Tree.Pass(TEXT("sightLines"), FString::Printf(TEXT("%d of %d sight lines from the camera reach it."), static_cast<int32>(UE_ARRAY_COUNT(Points)) - Blocked,
-                                                      static_cast<int32>(UE_ARRAY_COUNT(Points))));
+        Tree.Pass(TEXT("sightLines"), FString::Printf(TEXT("%d of %d sight lines from the camera reach it."), Points.Num() - Blocked,
+                                                      Points.Num()));
     }
 }
 

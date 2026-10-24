@@ -81,4 +81,13 @@ describe('inspect explain', () => {
     expect(input).not.toContain('#include "K2Node_EnhancedInputAction.h"');
     expect(input).toContain('TEXT("K2Node_EnhancedInputAction")');
   });
+
+  // The bounds' corners lie off most shapes (a corner resting in the floor met the floor): the sight lines are a grid
+  // over what the camera sees of the bounds.
+  it('tries sight lines over a stratified grid facing the camera, not the bounds\' corners', () => {
+    const visible = code(EXPLAIN, 'McpExplainVisible.cpp');
+    expect(visible).toContain('constexpr int32 Cells = 4;');
+    expect(visible).toMatch(/Points\.Add\(Centre \+ Side \* \(Across \* Reach\(Side\)\) \+ Rise \* \(Height \* Reach\(Rise\)\)\);/u);
+    expect(visible).not.toContain('FVector(Lo.X, Lo.Y, Lo.Z)');
+  });
 });
