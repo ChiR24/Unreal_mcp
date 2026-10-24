@@ -5,10 +5,10 @@ What the server offers beyond `tools`, all served by the plugin's native `/mcp`:
 ## Advertised capabilities
 
 ```jsonc
-{ "tools": {}, "resources": {}, "prompts": {}, "completions": {} }
+{ "tools": {}, "resources": { "subscribe": true }, "prompts": {}, "completions": {} }
 ```
 
-(native `McpNativeTransportToolDiscovery.cpp`.) There are no resource subscriptions and no task API.
+(native `McpNativeTransportToolDiscovery.cpp`.) `ue://changes` can be subscribed to: `subscriptions/listen` (2026-07-28) holds one SSE answer open, and `resources/subscribe` (earlier versions) sends updates on the session's GET stream (`Protocol/McpNativeTransportListen.cpp`). The stdio proxy opens no GET stream, so it leaves `subscribe` out of what it advertises.
 
 ## Resources
 
@@ -19,6 +19,7 @@ What the server offers beyond `tools`, all served by the plugin's native `/mcp`:
 | `ue://state/revisions` | yes |
 | `ue://health` | yes |
 | `ue://automation-bridge` | yes |
+| `ue://changes` | yes: where the change journal stands (`{cursor}`); read what changed with `inspect changes_since` |
 | `ue://assets`, `ue://actors`, `ue://editor`, `ue://selection` | no (`RESOURCE_UNAVAILABLE`) |
 
 Templates: `ue://capability/{capabilityId}`, `ue://knowledge/{topic}`, `ue://asset/{assetPath}`.

@@ -1,6 +1,5 @@
-// Subscriptions to ue://changes on the plugin's doors: subscriptions/listen and resources/subscribe on native /mcp,
-// and the changes_moved event the bridge pushes to the TypeScript server. Wiring and safety contracts only: the wire
-// shapes are the TypeScript SDK's (src/server/mcp-primitives/resource-subscriptions.test.ts drives them there).
+// Subscriptions to ue://changes: subscriptions/listen and resources/subscribe on native /mcp, and the changes_moved
+// event the bridge pushes to a WebSocket client. Wiring and safety contracts only.
 
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
