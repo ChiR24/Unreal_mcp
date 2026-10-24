@@ -8254,7 +8254,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "additionalProperties": true,
                 "x-unreal-reflection-boundary": true
               },
-              "description": "Blueprint runtime errors (an Accessed None, an infinite loop) of this play session, or of the last one until the next play starts: message, blueprintPath, graph, node and nodeId (as edit_graph takes them; function when no node resolves), objects that raised it, count, firstGameSeconds, and values (the object's Blueprint variables at the first hit). Absent when none fired."
+              "description": "Blueprint runtime errors (an Accessed None, an infinite loop) of this play session, or of the last one until the next play starts: message, blueprintPath, graph, node and nodeId (as edit_graph takes them; function when no node resolves), objects that raised it, count, firstGameSeconds, values (the object's Blueprint variables at the first hit), and for an Accessed None its cause: kind (destroyed, instance_editable_unset, never_set, cast_failed, function_returned_none, set_but_none, other), property, detail, nodeId of the Set or cast or call that left it None, and nextCall when one call fixes it. Absent when none fired."
             },
             {
               "type": "array",
@@ -8263,10 +8263,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "additionalProperties": true,
                 "x-unreal-reflection-boundary": true
               },
-              "description": "The Blueprint runtime errors of the last play session, as runtime_report lists them (message, node, nodeId, graph, blueprintPath, count)."
+              "description": "The Blueprint runtime errors of the last play session, as runtime_report lists them (message, node, nodeId, graph, blueprintPath, count, and cause for an Accessed None)."
             }
           ],
-          "description": "Blueprint runtime errors (an Accessed None, an infinite loop) of this play session, or of the last one until the next play starts: message, blueprintPath, graph, node and nodeId (as edit_graph takes them; function when no node resolves), objects that raised it, count, firstGameSeconds, and values (the object's Blueprint variables at the first hit). Absent when none fired."
+          "description": "Blueprint runtime errors (an Accessed None, an infinite loop) of this play session, or of the last one until the next play starts: message, blueprintPath, graph, node and nodeId (as edit_graph takes them; function when no node resolves), objects that raised it, count, firstGameSeconds, values (the object's Blueprint variables at the first hit), and for an Accessed None its cause: kind (destroyed, instance_editable_unset, never_set, cast_failed, function_returned_none, set_but_none, other), property, detail, nodeId of the Set or cast or call that left it None, and nextCall when one call fixes it. Absent when none fired."
         },
         "seamEdges": {
           "type": "number",

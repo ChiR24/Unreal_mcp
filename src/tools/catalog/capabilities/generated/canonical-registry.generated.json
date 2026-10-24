@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "f09bdfd991cbd26b",
+  "catalogRevision": "3e39ad1d3c01e988",
   "recordCount": 420,
   "records": [
     {
@@ -48890,7 +48890,7 @@
                 "additionalProperties": true,
                 "x-unreal-reflection-boundary": true
               },
-              "description": "The Blueprint runtime errors of the last play session, as runtime_report lists them (message, node, nodeId, graph, blueprintPath, count)."
+              "description": "The Blueprint runtime errors of the last play session, as runtime_report lists them (message, node, nodeId, graph, blueprintPath, count, and cause for an Accessed None)."
             }
           },
           "required": [
@@ -48951,8 +48951,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "1119a645bcf58feac948e089cafb4041c6436df1d53cf9263edae2a52afe611a",
-        "content": "eed3993cd07716eb809e41715bd293032b134d86df755fd7ef919c5249206cdc"
+        "schema": "3589de428fa6e342cbe54a6bb4d5b870342d4886e93b25367bdeb1d1c2e53226",
+        "content": "4ddb53cea56ba3f796a5806e7c345438d13d7f6cd56d9a81d5191bc2940e5256"
       }
     },
     {
@@ -51248,7 +51248,7 @@
                 "additionalProperties": true,
                 "x-unreal-reflection-boundary": true
               },
-              "description": "Blueprint runtime errors (an Accessed None, an infinite loop) of this play session, or of the last one until the next play starts: message, blueprintPath, graph, node and nodeId (as edit_graph takes them; function when no node resolves), objects that raised it, count, firstGameSeconds, and values (the object's Blueprint variables at the first hit). Absent when none fired."
+              "description": "Blueprint runtime errors (an Accessed None, an infinite loop) of this play session, or of the last one until the next play starts: message, blueprintPath, graph, node and nodeId (as edit_graph takes them; function when no node resolves), objects that raised it, count, firstGameSeconds, values (the object's Blueprint variables at the first hit), and for an Accessed None its cause: kind (destroyed, instance_editable_unset, never_set, cast_failed, function_returned_none, set_but_none, other), property, detail, nodeId of the Set or cast or call that left it None, and nextCall when one call fixes it. Absent when none fired."
             }
           },
           "required": [
@@ -51304,8 +51304,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "63fe2e692231acbce0d14dc9805e136b5bb8957deac3efab29f301cb17f230df",
-        "content": "3ae2f0f60bb6f8e65a8c4b91f9579c7de80e07f2ec92199d0b577c4c238fb0d7"
+        "schema": "f709e481cbe68d411ebe3570bbe7f0e9de807cbb3da0c356be75099daff5aa86",
+        "content": "937b82ef2e24cbb4884f3d02b72008b61927560010fbd407dcc54f96b696c312"
       }
     },
     {

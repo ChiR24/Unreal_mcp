@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details>
 <summary><b>✨ Added</b></summary>
 
-- **Blueprint runtime errors name their node** (`nodeId`, graph, hits) in frame steps and motion reads.
+- **Blueprint runtime errors name their node** (`nodeId`, graph, hits) in frame steps and motion reads, and an Accessed None its `cause`.
 - **MCP 2026-07-28 on both transports**: sessionless requests and consent through the client (native adds tasks); older clients are unchanged.
 - **`get_editor_state` `focus`**: open editors, the front graph and its selected nodes, selected actors, recent errors.
 - **`describe_view` `points`, `labels` and `coveredBy`**: what is under a spot, numbered actors, what covers one.

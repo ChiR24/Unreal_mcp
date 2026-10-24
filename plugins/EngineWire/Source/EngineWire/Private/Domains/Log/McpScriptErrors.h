@@ -41,6 +41,8 @@ private:
         int32 Count = 0;
         TArray<double> Times;
         TSharedPtr<FJsonObject> Values;
+        // Why an Accessed None fired (McpScriptErrorCause), read at the first hit.
+        TSharedPtr<FJsonObject> Cause;
     };
 
     void OnScriptException(const UObject* ActiveObject, const FFrame& StackFrame, const FBlueprintExceptionInfo& Info);

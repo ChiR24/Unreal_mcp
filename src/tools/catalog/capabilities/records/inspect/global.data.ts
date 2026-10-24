@@ -131,7 +131,7 @@ export const GLOBAL_RECORDS: readonly CapabilityRecordSource[] = [
       blueprints: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Each open Blueprint editor, most recently used first: blueprint (path), graph (the graph whose editor last had keyboard focus; absent until one has) and selectedNodes [{title, nodeId, class}]; nodeId is what the graph tools take.' },
       selectedActors: { type: 'array', items: { type: 'string' }, description: 'Labels of the actors selected in the level (at most 50).' },
       recentWarnings: { type: 'array', items: { type: 'string' }, description: 'The distinct warnings and errors logged in the last minute ("3x Category: message"), at most 10, a Blueprint runtime error first with the node that raised it.' },
-      scriptErrors: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'The Blueprint runtime errors of the last play session, as runtime_report lists them (message, node, nodeId, graph, blueprintPath, count).' },
+      scriptErrors: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'The Blueprint runtime errors of the last play session, as runtime_report lists them (message, node, nodeId, graph, blueprintPath, count, and cause for an Accessed None).' },
     },
   }),
   // An agent listed the level again every turn to learn what had moved, and never heard what the user did between calls.

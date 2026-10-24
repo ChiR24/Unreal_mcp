@@ -2,6 +2,7 @@
 
 #include "Components/ActorComponent.h"
 #include "Domains/Log/McpLogHistory.h"
+#include "Domains/Log/McpScriptErrorCause.h"
 #include "EdGraph/EdGraph.h"
 #include "EdGraph/EdGraphNode.h"
 #include "Editor.h"
@@ -154,6 +155,7 @@ void FMcpScriptErrors::OnScriptException(
     }
     Error.GameSeconds = World->GetTimeSeconds();
     Error.Values = BlueprintValues(ActiveObject);
+    Error.Cause = McpScriptErrorCause::Diagnose(ActiveObject, StackFrame, Info);
     Record(Error, ActiveObject);
 }
 
@@ -192,8 +194,9 @@ TArray<FString> FMcpScriptErrors::LinesSince(double SinceSeconds, TArray<FString
             : FString::Printf(TEXT("at node '%s' (nodeId %s) in %s of %s"), *Error.Node, *Error.NodeId, *Error.Graph,
                   *Error.BlueprintPath);
         const FString Times = Hits > 1 ? FString::Printf(TEXT(" (%dx)"), Hits) : FString();
-        Lines.Add(FString::Printf(TEXT("Blueprint runtime error%s: %s, %s, on %s"), *Times, *Error.Message, *Where,
-            *FString::Join(Error.Objects, TEXT(", "))));
+        const FString Why = Error.Cause.IsValid() ? TEXT(". ") + Error.Cause->GetStringField(TEXT("detail")) : FString();
+        Lines.Add(FString::Printf(TEXT("Blueprint runtime error%s: %s, %s, on %s%s"), *Times, *Error.Message, *Where,
+            *FString::Join(Error.Objects, TEXT(", ")), *Why));
     }
     return Lines;
 }
@@ -222,6 +225,10 @@ TArray<TSharedPtr<FJsonValue>> FMcpScriptErrors::ToJson() const
         if (Error.Values.IsValid())
         {
             Entry->SetObjectField(TEXT("values"), Error.Values);
+        }
+        if (Error.Cause.IsValid())
+        {
+            Entry->SetObjectField(TEXT("cause"), Error.Cause);
         }
         Out.Add(MakeShared<FJsonValueObject>(Entry));
     }
