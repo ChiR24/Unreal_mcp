@@ -51,48 +51,17 @@ bool HandleInspectViewContentsAction(
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    if (GEditor->PlayWorld && !GEditor->bIsSimulatingInEditor)
+    FMcpViewCapture View;
+    FString CaptureError, CaptureCode;
+    if (!McpCaptureView(Payload, TEXT("describe_view"), false, View, CaptureError, CaptureCode))
     {
-        Bridge.SendAutomationError(RequestingSocket, RequestId,
-            TEXT("describe_view reads the level viewport, which does not show the running game; stop Play In Editor first (Simulate is fine)."),
-            TEXT("PIE_RUNNING"));
+        Bridge.SendAutomationError(RequestingSocket, RequestId, CaptureError, CaptureCode);
         return true;
     }
-    // A level viewport under another major tab is not painted and reads back black.
-    if (BringLevelEditorTabToFrontForMcp())
-    {
-        Bridge.SendAutomationError(RequestingSocket, RequestId,
-            TEXT("The level viewport was under another tab and has been brought forward; call again to read it."),
-            TEXT("VIEWPORT_NOT_READY"));
-        return true;
-    }
-    FEditorViewportClient *Client = GetActiveEditorViewportClientForMcp();
-    FViewport *Viewport = Client ? Client->Viewport : nullptr;
-    const FIntPoint Size = Viewport ? Viewport->GetSizeXY() : FIntPoint::ZeroValue;
-    if (Size.X <= 0 || Size.Y <= 0)
-    {
-        Bridge.SendAutomationError(RequestingSocket, RequestId, TEXT("No level viewport with a size is open."),
-            TEXT("VIEWPORT_NOT_AVAILABLE"));
-        return true;
-    }
-
-    // The first frames after a camera move still carry the old view's occlusion; a few frames later they match.
-    const bool bMoved = Payload->HasField(TEXT("location")) || Payload->HasField(TEXT("rotation"));
-    Client->SetViewLocation(ExtractVectorField(Payload, TEXT("location"), Client->GetViewLocation()));
-    Client->SetViewRotation(ExtractRotatorField(Payload, TEXT("rotation"), Client->GetViewRotation()));
-    Client->Invalidate();
-    DrawViewportFramesForMcp(Viewport, Client->GetWorld(), bMoved ? 3 : 1);
-    TArray<FColor> Colors;
-    Viewport->ReadPixels(Colors, FReadSurfaceDataFlags(RCM_UNorm));
-    Viewport->InvalidateHitProxy();
-    const TArray<FColor> &Ids = Viewport->GetRawHitProxyData(FIntRect(0, 0, Size.X, Size.Y));
-    const int32 PixelCount = Size.X * Size.Y;
-    if (Colors.Num() != PixelCount || Ids.Num() != PixelCount)
-    {
-        Bridge.SendAutomationError(RequestingSocket, RequestId, TEXT("The viewport's pixels or ids could not be read."),
-            TEXT("CAPTURE_FAILED"));
-        return true;
-    }
+    FEditorViewportClient *Client = View.Client;
+    const FIntPoint Size = View.Size;
+    const TArray<FColor> &Colors = View.Colors;
+    const TArray<FColor> &Ids = View.Ids;
 
     TMap<uint32, FMcpViewProxy> Proxies;
     TMap<AActor *, FMcpViewActor> Seen;

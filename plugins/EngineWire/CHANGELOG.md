@@ -9,7 +9,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 ### Added
 - **Blueprint runtime errors** name their node, graph and Blueprint, and an Accessed None its cause; `lint_blueprint` finds Tick searches, dead nodes, re-rolled randoms, endless loops, and unset or unchecked object variables before Play.
 - **`get_editor_focus`**: open editors, the focused graph's selected nodes, selected actors, recent errors.
-- **`describe_view`** `points`, `labels` and `coveredBy`.
+- **`describe_view`** `points`, `labels` and `coveredBy`; **`analyze_view`** judges the frame: where the eye goes, palette and hue harmony, exposure and key to fill, shader cost.
 - **MCP 2026-07-28 on `/mcp`**: sessionless requests, header checks, `resultType`, consent by elicitation, the tasks extension.
 - **Result pages** for oversized arrays (`options.pageCursor`), and a **search signature** on a confident first hit.
 - **`get_frame_cost`**, **`diff_asset`**, **`cancel_render`**, `configure_render_camera` shutter and overscan, `set_section` `playRate`.

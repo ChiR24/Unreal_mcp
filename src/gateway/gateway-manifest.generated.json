@@ -5191,6 +5191,7 @@
         "raycast_mesh",
         "check_mesh",
         "describe_view",
+        "analyze_view",
         "capture_passes",
         "raycast_world",
         "get_property",
@@ -5215,6 +5216,7 @@
         "actorName",
         "actorNames",
         "actors",
+        "aspects",
         "blueprintPath",
         "channel",
         "className",
@@ -5256,6 +5258,7 @@
         "snapshotOp",
         "statsKind",
         "structPath",
+        "subject",
         "tag",
         "targetActor",
         "traceComplex",
@@ -5289,6 +5292,19 @@
               "type": "string"
             },
             "description": "Only these actors (label, name or path): their rows under actors (a row whose box nearer actors partly cover names them under coveredBy, as a sign half behind a row of blocks), and under notVisible each one that drew no pixel with its reason, outside the frame or hidden, with hiddenBy naming the actors drawn over its box (up to three, by share of the box). Names that match no actor are listed under notFound. limit does not apply."
+          },
+          "aspects": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "saliency",
+                "palette",
+                "light",
+                "cost"
+              ]
+            },
+            "description": "What to judge (default saliency, palette and light; cost draws the viewport once in another view mode). Any other name refuses with INVALID_ARGUMENT."
           },
           "blueprintPath": {
             "type": "string",
@@ -5407,20 +5423,41 @@
             "description": "Maximum objects to return (default 100)."
           },
           "location": {
-            "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  },
+                  "z": {
+                    "type": "number"
+                  }
+                },
+                "additionalProperties": false,
+                "description": "Camera location {x, y, z} in cm; omitted, the viewport's current one. The camera stays there afterwards, as describe_view leaves it."
               },
-              "y": {
-                "type": "number"
-              },
-              "z": {
-                "type": "number"
+              {
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  },
+                  "z": {
+                    "type": "number"
+                  }
+                },
+                "additionalProperties": false,
+                "description": "Camera location {x, y, z} in cm; omitted, the viewport's current one. The camera stays there."
               }
-            },
-            "additionalProperties": false,
-            "description": "Camera location {x, y, z} in cm; omitted, the viewport's current one. The camera stays there."
+            ],
+            "description": "Camera location {x, y, z} in cm; omitted, the viewport's current one. The camera stays there afterwards, as describe_view leaves it."
           },
           "lookup": {
             "type": "string",
@@ -5711,6 +5748,10 @@
             "type": "string",
             "description": "UserDefinedStruct asset /Game path to introspect."
           },
+          "subject": {
+            "type": "string",
+            "description": "The actor the shot is about (label, name or path): its saliency share and rank, and its key to fill ratio against the sun. A name that matches no actor refuses with ACTOR_NOT_FOUND."
+          },
           "tag": {
             "type": "string",
             "description": "Actor tag to match."
@@ -5777,6 +5818,7 @@
               "raycast_mesh",
               "check_mesh",
               "describe_view",
+              "analyze_view",
               "capture_passes",
               "raycast_world",
               "get_property",

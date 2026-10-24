@@ -647,4 +647,9 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'place the chairs facing the table', accepted: ['control_actor.arrange_by_relations'] },
   { query: 'push the shelf against the wall', accepted: ['control_actor.arrange_by_relations'] },
   { query: 'lay out the furniture in a room', accepted: ['control_actor.arrange_by_relations'] },
+  { query: 'where does the eye go in the shot', accepted: ['inspect.analyze_view'] },
+  { query: 'is the subject salient', accepted: ['inspect.analyze_view'] },
+  { query: 'judge the colour harmony', accepted: ['inspect.analyze_view'] },
+  { query: 'is the lighting flat', accepted: ['inspect.analyze_view'] },
+  { query: 'which actors are expensive to shade', accepted: ['inspect.analyze_view'] },
 ];

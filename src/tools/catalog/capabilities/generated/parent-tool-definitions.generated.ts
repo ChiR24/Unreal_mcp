@@ -6947,6 +6947,19 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Only these actors (label, name or path): their rows under actors (a row whose box nearer actors partly cover names them under coveredBy, as a sign half behind a row of blocks), and under notVisible each one that drew no pixel with its reason, outside the frame or hidden, with hiddenBy naming the actors drawn over its box (up to three, by share of the box). Names that match no actor are listed under notFound. limit does not apply."
         },
+        "aspects": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "saliency",
+              "palette",
+              "light",
+              "cost"
+            ]
+          },
+          "description": "What to judge (default saliency, palette and light; cost draws the viewport once in another view mode). Any other name refuses with INVALID_ARGUMENT."
+        },
         "blueprintPath": {
           "type": "string",
           "description": "Blueprint asset /Game path (for CDO/component inspection without spawning)."
@@ -7064,20 +7077,41 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Maximum objects to return (default 100)."
         },
         "location": {
-          "type": "object",
-          "properties": {
-            "x": {
-              "type": "number"
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "x": {
+                  "type": "number"
+                },
+                "y": {
+                  "type": "number"
+                },
+                "z": {
+                  "type": "number"
+                }
+              },
+              "additionalProperties": false,
+              "description": "Camera location {x, y, z} in cm; omitted, the viewport's current one. The camera stays there afterwards, as describe_view leaves it."
             },
-            "y": {
-              "type": "number"
-            },
-            "z": {
-              "type": "number"
+            {
+              "type": "object",
+              "properties": {
+                "x": {
+                  "type": "number"
+                },
+                "y": {
+                  "type": "number"
+                },
+                "z": {
+                  "type": "number"
+                }
+              },
+              "additionalProperties": false,
+              "description": "Camera location {x, y, z} in cm; omitted, the viewport's current one. The camera stays there."
             }
-          },
-          "additionalProperties": false,
-          "description": "Camera location {x, y, z} in cm; omitted, the viewport's current one. The camera stays there."
+          ],
+          "description": "Camera location {x, y, z} in cm; omitted, the viewport's current one. The camera stays there afterwards, as describe_view leaves it."
         },
         "lookup": {
           "type": "string",
@@ -7368,6 +7402,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "UserDefinedStruct asset /Game path to introspect."
         },
+        "subject": {
+          "type": "string",
+          "description": "The actor the shot is about (label, name or path): its saliency share and rank, and its key to fill ratio against the sun. A name that matches no actor refuses with ACTOR_NOT_FOUND."
+        },
         "tag": {
           "type": "string",
           "description": "Actor tag to match."
@@ -7434,6 +7472,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "raycast_mesh",
             "check_mesh",
             "describe_view",
+            "analyze_view",
             "capture_passes",
             "raycast_world",
             "get_property",
@@ -7630,6 +7669,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true,
           "description": "Default property values on the Class Default Object."
         },
+        "cellsAcross": {
+          "type": "number",
+          "description": "Cells across the frame: each is the average of a square block of pixels, about 240 across whatever the viewport size."
+        },
+        "cellsDown": {
+          "type": "number",
+          "description": "Cells down the frame."
+        },
         "changes": {
           "type": "array",
           "items": {
@@ -7697,6 +7744,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "copyrightNotice": {
           "type": "string",
           "description": "Copyright notice."
+        },
+        "cost": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "With cost: high (percent of the frame in the top quarter of the shader complexity ramp), mean (0 to 1) and actors [{actorName, frameShare, ofItself}] (up to 5 drawing at a high cost over at least 1% of the frame), or note when the view could not be read."
         },
         "count": {
           "type": "number",
@@ -8095,6 +8148,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Current level name."
         },
+        "light": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "With light: histogram (8 lightness bins, percent of cells, dark to bright), clipped and crushed (percent near white or black), contrast (lightness from the darker 5 percent to the brighter 5 percent), medianLightness, flat (contrast under 0.25), exposure (dark, balanced or bright) and, with subject and a directional light, subject {lit, shadowed (percent of its cells facing toward or away from the sun), keyFill (stops brighter the lit side is drawn) or keyFillNote}; a subject whose materials are all unlit has only keyFillNote, since no light shades it."
+        },
         "location": {
           "type": "object",
           "x-unreal-reflection-boundary": true,
@@ -8269,6 +8328,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Package name of the world asset."
         },
+        "palette": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "With palette: colors [{hex, share}] (OKLab k-means, up to 5, largest first), harmony {chromatic (percent of cells with colour), template (i, V, L, I, T, Y or X), rotation (degrees), offBy (degrees the hues stray outside the template, weighted by chroma), verdict} and cast {tint (neutral, warm, cool, green or magenta), a, b (the mean OKLab shift of near-neutral surfaces)}. A score only: nothing is recoloured."
+        },
         "parentClass": {
           "type": "string",
           "description": "Immediate super-class name (\"None\" when the class has no super)."
@@ -8412,6 +8477,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "object",
           "x-unreal-reflection-boundary": true,
           "description": "World rotation as {pitch, yaw, roll} in degrees."
+        },
+        "saliency": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "With saliency (Boolean Map Saliency, Zhang and Sclaroff): top (up to 5 actors, ranked by density: its mean saliency per cell against the frame's mean, 1 for average, so above 1 draws the eye more than its size alone; share is its percent of the whole frame's saliency, which a large wall can hold without being what the eye goes to), background (the share where no actor is drawn), focus {x, y} (0 to 1 across and down, the most salient cell: blurred as fixations are, it can sit just beside the actor that draws it) and, with subject, subject {actorName, density, share, rank} (rank 1 draws the eye most; 0 draws no cell)."
         },
         "saveSkippedReason": {
           "type": "string",

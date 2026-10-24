@@ -1,11 +1,13 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Engine/EngineTypes.h" // ESceneCaptureSource: unscoped in 5.0, so it cannot be forward-declared
 
 class AActor;
 class FEditorViewportClient;
 class FJsonObject;
 class FJsonValue;
+class UWorld;
 
 // The level viewport's hit proxy map holds, per pixel, the id of what was drawn there (what a click selects by).
 // describe_view counts it per actor; capture_passes paints it as an id image.
@@ -59,4 +61,23 @@ bool McpDescribeViewPoints(const FEditorViewportClient &Client, const FIntPoint 
 // describe_view labels: the frame, at most 960 px wide, with each box drawn and numbered from 1 in list order; a
 // base64 PNG.
 FString McpLabelledViewPng(const TArray<FColor> &Colors, const FIntPoint &Size, const TArray<FIntRect> &Boxes);
+
+// The level viewport as describe_view reads it: its client, size, pixels and hit proxy ids.
+struct FMcpViewCapture {
+    FEditorViewportClient *Client = nullptr;
+    FIntPoint Size = FIntPoint::ZeroValue;
+    TArray<FColor> Colors;
+    TArray<FColor> Ids;
+};
+
+// Reads the level viewport, first moved to the payload's location and rotation when it names them (and drawn a few
+// frames so occlusion catches up). False with OutError and OutCode (PIE_RUNNING, VIEWPORT_NOT_READY,
+// VIEWPORT_NOT_AVAILABLE, CAPTURE_FAILED) when it cannot be read; What names the caller in the Play refusal. With
+// bGameView the frame is drawn as the game shows it (no axes, icons or gizmos) and the viewport's own setting put back.
+bool McpCaptureView(const TSharedPtr<FJsonObject> &Payload, const TCHAR *What, bool bGameView, FMcpViewCapture &Out,
+                    FString &OutError, FString &OutCode);
+
+// A scene capture of World from the view into a float target of Size: SCS_SceneDepth (cm), SCS_Normal (world normal).
+TArray<FLinearColor> McpCapturePass(UWorld *World, const FVector &Location, const FRotator &Rotation, float Fov,
+                                    const FIntPoint &Size, ESceneCaptureSource Source);
 } // namespace McpEnvironmentHandlers

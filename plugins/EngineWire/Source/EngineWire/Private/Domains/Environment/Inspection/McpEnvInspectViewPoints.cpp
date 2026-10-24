@@ -1,4 +1,5 @@
 #include "Domains/Environment/Inspection/McpEnvInspectViewIds.h"
+#include "Domains/ControlEditor/McpEditorScreenshotSupport.h"
 #include "Domains/Environment/McpEnvShared.h"
 
 #include "CollisionQueryParams.h"
@@ -157,5 +158,58 @@ FString McpLabelledViewPng(const TArray<FColor> &Colors, const FIntPoint &Size, 
     TArray64<uint8> Png;
     FImageUtils::PNGCompressImageArray(Width, Height, TArrayView64<const FColor>(Image.GetData(), Image.Num()), Png);
     return FBase64::Encode(Png.GetData(), static_cast<uint32>(Png.Num()));
+}
+
+bool McpCaptureView(const TSharedPtr<FJsonObject> &Payload, const TCHAR *What, bool bGameView, FMcpViewCapture &Out,
+                    FString &OutError, FString &OutCode)
+{
+    const auto Fail = [&OutError, &OutCode](const FString &Error, const TCHAR *Code) {
+        OutError = Error;
+        OutCode = Code;
+        return false;
+    };
+    if (GEditor->PlayWorld && !GEditor->bIsSimulatingInEditor)
+    {
+        return Fail(FString::Printf(TEXT("%s reads the level viewport, which does not show the running game; stop Play In "
+                                         "Editor first (Simulate is fine)."), What), TEXT("PIE_RUNNING"));
+    }
+    // A level viewport under another major tab is not painted and reads back black.
+    if (BringLevelEditorTabToFrontForMcp())
+    {
+        return Fail(TEXT("The level viewport was under another tab and has been brought forward; call again to read it."),
+                    TEXT("VIEWPORT_NOT_READY"));
+    }
+    Out.Client = GetActiveEditorViewportClientForMcp();
+    FViewport *Viewport = Out.Client ? Out.Client->Viewport : nullptr;
+    Out.Size = Viewport ? Viewport->GetSizeXY() : FIntPoint::ZeroValue;
+    if (Out.Size.X <= 0 || Out.Size.Y <= 0)
+    {
+        return Fail(TEXT("No level viewport with a size is open."), TEXT("VIEWPORT_NOT_AVAILABLE"));
+    }
+    // The first frames after a camera move still carry the old view's occlusion; a few frames later they match.
+    const bool bMoved = Payload->HasField(TEXT("location")) || Payload->HasField(TEXT("rotation"));
+    const bool bSwitch = bGameView && !Out.Client->IsInGameView();
+    Out.Client->SetViewLocation(ExtractVectorField(Payload, TEXT("location"), Out.Client->GetViewLocation()));
+    Out.Client->SetViewRotation(ExtractRotatorField(Payload, TEXT("rotation"), Out.Client->GetViewRotation()));
+    if (bSwitch)
+    {
+        Out.Client->SetGameView(true);
+    }
+    Out.Client->Invalidate();
+    DrawViewportFramesForMcp(Viewport, Out.Client->GetWorld(), bMoved || bSwitch ? 3 : 1);
+    Viewport->ReadPixels(Out.Colors, FReadSurfaceDataFlags(RCM_UNorm));
+    Viewport->InvalidateHitProxy();
+    Out.Ids = Viewport->GetRawHitProxyData(FIntRect(0, 0, Out.Size.X, Out.Size.Y));
+    if (bSwitch)
+    {
+        Out.Client->SetGameView(false);
+        Out.Client->Invalidate();
+    }
+    const int32 PixelCount = Out.Size.X * Out.Size.Y;
+    if (Out.Colors.Num() != PixelCount || Out.Ids.Num() != PixelCount)
+    {
+        return Fail(TEXT("The viewport's pixels or ids could not be read."), TEXT("CAPTURE_FAILED"));
+    }
+    return true;
 }
 } // namespace McpEnvironmentHandlers

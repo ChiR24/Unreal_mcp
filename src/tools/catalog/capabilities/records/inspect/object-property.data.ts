@@ -243,6 +243,49 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
     },
     outputRequired: ['visibleActors', 'actors', 'background', 'brightness'],
   }),
+  // A model that cannot see a picture could not judge one: where the eye goes, how its colours sit, how it is lit.
+  buildCoreRecord({
+    parentTool: 'inspect', action: 'analyze_view', dispatchAction: 'analyze_view', domain: D, family: 'object',
+    editorStates: ['edit', 'simulate'],
+    summary: 'Judge the level viewport\'s picture as a reviewer would, in numbers: saliency (where the eye goes: how strongly each actor draws it, the focus point, and a named subject\'s rank), palette (five colours with their shares, the hue template of Cohen-Or et al. they fit best and how far the rest stray from it, and the colour cast of surfaces that should be grey), light (a lightness histogram, clipped and crushed shares, contrast, exposure, flat lighting and, on a subject lit by the sun, its key to fill ratio in stops) and cost (how much of the frame, and of each actor, the shader complexity view draws at a high cost). Read only: the camera moves only when location or rotation is given, and cost puts the viewport\'s view mode back after one frame in the shader complexity view.',
+    topics: ['analyze view', 'judge the shot', 'where does the eye go', 'saliency', 'composition of the shot', 'colour harmony', 'colour palette of the shot', 'key to fill ratio', 'is the lighting flat', 'which actors are expensive to shade'],
+    whenToUse: [
+      'Checking whether a shot draws the eye to its subject, without looking at it.',
+      'Judging a scene\'s palette and colour cast, or whether its lighting is flat, too dark or blown out.',
+      'Finding which actors cost the most to shade in a view.',
+    ],
+    whenNotToUse: [
+      'Listing which actors are in view and their share of the frame (use describe_view).',
+      'A picture to look at is wanted (use control_editor screenshot).',
+      'Play In Editor runs: the level viewport does not show the running game (stop it, or use Simulate).',
+    ],
+    inputProps: {
+      aspects: { type: 'array', items: { type: 'string', enum: ['saliency', 'palette', 'light', 'cost'] }, description: 'What to judge (default saliency, palette and light; cost draws the viewport once in another view mode). Any other name refuses with INVALID_ARGUMENT.' },
+      subject: { type: 'string', description: 'The actor the shot is about (label, name or path): its saliency share and rank, and its key to fill ratio against the sun. A name that matches no actor refuses with ACTOR_NOT_FOUND.' },
+      location: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }, additionalProperties: false, description: 'Camera location {x, y, z} in cm; omitted, the viewport\'s current one. The camera stays there afterwards, as describe_view leaves it.' },
+      rotation: { type: 'object', properties: { pitch: { type: 'number' }, yaw: { type: 'number' }, roll: { type: 'number' } }, additionalProperties: false, description: 'Camera rotation {pitch, yaw, roll} in degrees; omitted, the viewport\'s current one.' },
+    },
+    required: [],
+    effect: 'read',
+    costLatency: 'interactive',
+    exampleInput: { action: 'analyze_view', subject: 'Statue', aspects: ['saliency', 'light'] },
+    exampleOutput: {
+      success: true, message: 'Analyzed the view (240 x 135 cells): saliency, light.', cellsAcross: 240, cellsDown: 135,
+      saliency: { top: [{ actorName: 'Statue', density: 3.1, share: 41.5 }, { actorName: 'Floor', density: 0.8, share: 20.2 }], background: 12, focus: { x: 0.52, y: 0.44 }, subject: { actorName: 'Statue', density: 3.1, share: 41.5, rank: 1 } },
+      light: { histogram: [2.1, 6, 14.2, 25.5, 30.1, 15.4, 5.2, 1.5], clipped: 0.4, crushed: 2.1, contrast: 0.52, medianLightness: 0.48, flat: false, exposure: 'balanced', subject: { lit: 58, shadowed: 31, keyFill: 1.6 } },
+    },
+    outputProps: {
+      cellsAcross: { type: 'number', description: 'Cells across the frame: each is the average of a square block of pixels, about 240 across whatever the viewport size.' },
+      cellsDown: { type: 'number', description: 'Cells down the frame.' },
+      saliency: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'With saliency (Boolean Map Saliency, Zhang and Sclaroff): top (up to 5 actors, ranked by density: its mean saliency per cell against the frame\'s mean, 1 for average, so above 1 draws the eye more than its size alone; share is its percent of the whole frame\'s saliency, which a large wall can hold without being what the eye goes to), background (the share where no actor is drawn), focus {x, y} (0 to 1 across and down, the most salient cell: blurred as fixations are, it can sit just beside the actor that draws it) and, with subject, subject {actorName, density, share, rank} (rank 1 draws the eye most; 0 draws no cell).' },
+      palette: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'With palette: colors [{hex, share}] (OKLab k-means, up to 5, largest first), harmony {chromatic (percent of cells with colour), template (i, V, L, I, T, Y or X), rotation (degrees), offBy (degrees the hues stray outside the template, weighted by chroma), verdict} and cast {tint (neutral, warm, cool, green or magenta), a, b (the mean OKLab shift of near-neutral surfaces)}. A score only: nothing is recoloured.' },
+      light: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'With light: histogram (8 lightness bins, percent of cells, dark to bright), clipped and crushed (percent near white or black), contrast (lightness from the darker 5 percent to the brighter 5 percent), medianLightness, flat (contrast under 0.25), exposure (dark, balanced or bright) and, with subject and a directional light, subject {lit, shadowed (percent of its cells facing toward or away from the sun), keyFill (stops brighter the lit side is drawn) or keyFillNote}; a subject whose materials are all unlit has only keyFillNote, since no light shades it.' },
+      cost: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'With cost: high (percent of the frame in the top quarter of the shader complexity ramp), mean (0 to 1) and actors [{actorName, frameShare, ofItself}] (up to 5 drawing at a high cost over at least 1% of the frame), or note when the view could not be read.' },
+      cameraLocation: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Where the camera was.' },
+      cameraRotation: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Where it looked.' },
+    },
+    outputRequired: ['cellsAcross', 'cellsDown'],
+  }),
   // A picture could only be judged by eye: no pass said which actor a region belongs to, how far it is or which way
   // it faces.
   buildCoreRecord({

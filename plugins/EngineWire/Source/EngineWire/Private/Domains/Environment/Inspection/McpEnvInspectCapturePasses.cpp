@@ -19,6 +19,7 @@ namespace {
 // Scene depth past this (cm) is the sky or nothing.
 constexpr float McpFarDepth = 1.0e7f;
 constexpr int32 McpMaxLegend = 256;
+} // namespace
 
 // Renders World from the view into a float target of Size and returns its pixels; Source picks depth or normal.
 TArray<FLinearColor> McpCapturePass(UWorld *World, const FVector &Location, const FRotator &Rotation, float Fov,
@@ -43,6 +44,7 @@ TArray<FLinearColor> McpCapturePass(UWorld *World, const FVector &Location, cons
     return Pixels;
 }
 
+namespace {
 bool McpWriteFile(const FString &Path, const TArray64<uint8> &Bytes)
 {
     return Bytes.Num() > 0 && FFileHelper::SaveArrayToFile(Bytes, *Path);

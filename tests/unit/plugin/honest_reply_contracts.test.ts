@@ -2615,10 +2615,13 @@ describe('validate_assets materialUsage lists the usage flags a cooked game woul
 describe('describe_view counts what the game draws in the camera view', () => {
   it('reads a fresh id map, leaves editor-only drawing out, and refuses a running game', () => {
     const view = code('Environment', 'Inspection', 'McpEnvInspectViewContents.cpp');
-    expect(view).toMatch(/Viewport->InvalidateHitProxy\(\);\s*const TArray<FColor> &Ids = Viewport->GetRawHitProxyData\(/u);
+    // The capture is shared with analyze_view.
+    const capture = code('Environment', 'Inspection', 'McpEnvInspectViewPoints.cpp');
+    expect(view).toContain('McpCaptureView(Payload, TEXT("describe_view"), false, View, CaptureError, CaptureCode)');
+    expect(capture).toMatch(/Viewport->InvalidateHitProxy\(\);\s*Out\.Ids = Viewport->GetRawHitProxyData\(/u);
     expect(view).toContain('const bool bGameDraws = Actor && !(Component && (Component->IsEditorOnly() || Component->bHiddenInGame));');
-    expect(view).toContain('if (GEditor->PlayWorld && !GEditor->bIsSimulatingInEditor)');
-    expect(view).toContain('DrawViewportFramesForMcp(Viewport, Client->GetWorld(), bMoved ? 3 : 1);');
+    expect(capture).toContain('if (GEditor->PlayWorld && !GEditor->bIsSimulatingInEditor)');
+    expect(capture).toContain('DrawViewportFramesForMcp(Viewport, Out.Client->GetWorld(), bMoved || bSwitch ? 3 : 1);');
     expect(view).toContain('McpHandlerUtils::MarkNoAssetsChanged(Result);');
     const inspect = code('Environment', 'Inspection', 'McpEnvInspect.cpp');
     expect(inspect).toContain('return HandleInspectViewContentsAction(*this, RequestId, Payload, RequestingSocket);');
