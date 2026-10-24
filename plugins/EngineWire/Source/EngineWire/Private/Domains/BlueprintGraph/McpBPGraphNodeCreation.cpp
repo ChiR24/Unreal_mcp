@@ -59,6 +59,12 @@ static bool TryCreateMacroNode(
             TArray<FString> Supported;
             StandardMacroByType().GenerateKeyArray(Supported);
             Supported.Sort();
+            // IsValid alone is the pure function (the common functions answer first): the macro is K2Node_IsValid.
+            const int32 BareIsValid = Supported.IndexOfByKey(TEXT("IsValid"));
+            if (BareIsValid != INDEX_NONE)
+            {
+                Supported[BareIsValid] = TEXT("K2Node_IsValid");
+            }
             Context.SendError(
                 FString::Printf(
                     TEXT("'MacroInstance' is the node class, not a macro, and "
