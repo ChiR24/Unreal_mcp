@@ -2,7 +2,10 @@
 //
 // What a changed property held, as exported text: before the first change the journal saw, and after the latest one. An
 // edit in the editor's Details panel announces the property before it changes (OnPreObjectPropertyChanged, through
-// PreEditChange with its property chain); a change made in code announces only after, so it has no before.
+// PreEditChange with its property chain, inside the transaction it opened first); a change made in code announces only
+// after, so it has no before. The cost stays bounded on the user's editing path: a slider drag's every-frame
+// interactive changes are skipped (the drag ends with a value set), a container is kept as its item count and a large
+// struct (post-process settings and the like) by name only.
 
 #include "Core/Journal/McpChangeJournalState.h"
 
@@ -16,14 +19,39 @@ namespace
 {
 constexpr int32 MaxJournalValues = 8;
 constexpr int32 MaxValueChars = 96;
+constexpr int32 MaxStructBytes = 256;
 
 FDelegateHandle GPreChangeHandle;
 
-FString ValueText(UObject* Object, const FProperty* Member)
+// False when the value is not kept: a struct too large to export on every edit.
+bool ValueText(UObject* Object, const FProperty* Member, FString& OutText)
 {
-    FString Text;
-    Member->ExportText_InContainer(0, Text, Object, nullptr, Object, PPF_None);
-    return Text.Len() > MaxValueChars ? Text.Left(MaxValueChars) + TEXT("...") : Text;
+    const void* Value = Member->ContainerPtrToValuePtr<void>(Object);
+    int32 Items = INDEX_NONE;
+    if (const FArrayProperty* Array = CastField<FArrayProperty>(Member))
+    {
+        Items = FScriptArrayHelper(Array, Value).Num();
+    }
+    else if (const FSetProperty* Set = CastField<FSetProperty>(Member))
+    {
+        Items = FScriptSetHelper(Set, Value).Num();
+    }
+    else if (const FMapProperty* Map = CastField<FMapProperty>(Member))
+    {
+        Items = FScriptMapHelper(Map, Value).Num();
+    }
+    else if (CastField<FStructProperty>(Member) && Member->GetSize() > MaxStructBytes)
+    {
+        return false;
+    }
+    if (Items != INDEX_NONE)
+    {
+        OutText = FString::Printf(TEXT("%d item(s)"), Items);
+        return true;
+    }
+    Member->ExportText_InContainer(0, OutText, Object, nullptr, Object, PPF_None);
+    OutText = OutText.Len() > MaxValueChars ? OutText.Left(MaxValueChars) + TEXT("...") : OutText;
+    return true;
 }
 
 // The member about to change: the chain's member node (a struct field's struct), else its head.
@@ -33,23 +61,28 @@ void OnPreChange(UObject* Object, const FEditPropertyChain& Chain)
     const int32 Index = Node && CurrentBy() != JournalByEditor ? EditedEntry(Object) : INDEX_NONE;
     if (Index != INDEX_NONE)
     {
-        NoteValue(Index, Object, Node->GetValue(), true);
+        NoteValue(Index, Object, Node->GetValue(), true, EPropertyChangeType::Unspecified);
     }
 }
 } // namespace
 
-void NoteValue(int32 Index, UObject* Object, const FProperty* Member, bool bBefore)
+void NoteValue(int32 Index, UObject* Object, const FProperty* Member, bool bBefore, uint32 ChangeType)
 {
     // Only a member of the object's own class reads from it as a container (a local variable's owner is its function).
     const UClass* Owner = Member ? Member->GetOwner<UClass>() : nullptr;
-    if (!Object || !Owner || !Object->IsA(Owner))
+    if (!Object || !Owner || !Object->IsA(Owner) || (!bBefore && (ChangeType & EPropertyChangeType::Interactive)))
     {
         return;
     }
     TArray<FJournalValue>& Values = JournalState().Entries[Index].Values;
     const FName Name = Member->GetFName();
     FJournalValue* Value = Values.FindByPredicate([&Name](const FJournalValue& Known) { return Known.Property == Name; });
-    if (!Value && Values.Num() >= MaxJournalValues)
+    if ((!Value && Values.Num() >= MaxJournalValues) || (bBefore && Value && (Value->bFrom || Value->bTo)))
+    {
+        return; // full, or the first old value is kept already
+    }
+    FString Text;
+    if (!ValueText(Object, Member, Text))
     {
         return;
     }
@@ -58,14 +91,14 @@ void NoteValue(int32 Index, UObject* Object, const FProperty* Member, bool bBefo
         Value = &Values.AddDefaulted_GetRef();
         Value->Property = Name;
     }
-    if (bBefore && !Value->bFrom && !Value->bTo)
+    if (bBefore)
     {
-        Value->From = ValueText(Object, Member); // the first old value: later edits keep it
+        Value->From = Text;
         Value->bFrom = true;
     }
-    else if (!bBefore)
+    else
     {
-        Value->To = ValueText(Object, Member);
+        Value->To = Text;
         Value->bTo = true;
     }
 }

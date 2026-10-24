@@ -124,7 +124,7 @@ void OnPropertyChanged(UObject* Object, FPropertyChangedEvent& Event)
     {
         Entry.Properties.AddUnique(Name);
     }
-    NoteValue(Index, Object, Member, false);
+    NoteValue(Index, Object, Member, false, Event.ChangeType);
 }
 
 // The engine adds and removes actors of its own too (a new level's world settings, navigation data).

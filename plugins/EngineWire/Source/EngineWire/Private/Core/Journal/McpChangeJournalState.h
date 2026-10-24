@@ -102,8 +102,11 @@ void BindObjectEvents();
 void UnbindObjectEvents();
 /** The entry an edit of Object belongs to (its actor's or its package's), made on first use; INDEX_NONE if none is kept. */
 int32 EditedEntry(UObject* Object);
-/** Keeps Member's value on Object, before (bBefore) or after a change, in the entry at Index (McpChangeJournalValues.cpp). */
-void NoteValue(int32 Index, UObject* Object, const FProperty* Member, bool bBefore);
+/**
+ * Keeps Member's value on Object, before (bBefore) or after a change, in the entry at Index (McpChangeJournalValues.cpp);
+ * ChangeType is the change event's EPropertyChangeType flags (an interactive change is skipped).
+ */
+void NoteValue(int32 Index, UObject* Object, const FProperty* Member, bool bBefore, uint32 ChangeType);
 /** The event announcing a property about to change (McpChangeJournalValues.cpp), bound beside the object events. */
 void BindValueEvents();
 void UnbindValueEvents();

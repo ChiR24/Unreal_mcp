@@ -78,10 +78,15 @@ describe('change journal', () => {
     expect(events).toMatch(/BindObjectEvents\(\);\s*BindValueEvents\(\);/u);
     expect(events).toMatch(/UnbindObjectEvents\(\);\s*UnbindValueEvents\(\);/u);
     expect(values).toContain('FCoreUObjectDelegates::OnPreObjectPropertyChanged.AddStatic(&OnPreChange)');
-    expect(values).toMatch(/if \(bBefore && !Value->bFrom && !Value->bTo\)/u);
+    // The first old value stays; a slider drag's interactive changes export nothing (the drag ends with a value set).
+    expect(values).toContain('(bBefore && Value && (Value->bFrom || Value->bTo))');
+    expect(values).toContain('(!bBefore && (ChangeType & EPropertyChangeType::Interactive))');
+    // A container is kept as its item count, a large struct by name only: no full export on the user's editing path.
+    expect(values).toContain('Items = FScriptArrayHelper(Array, Value).Num();');
+    expect(values).toContain('CastField<FStructProperty>(Member) && Member->GetSize() > MaxStructBytes');
     // GetOwnerClass walks past a function to its class: a local variable would be read off the object.
     expect(values).toContain('Member->GetOwner<UClass>()');
-    expect(recorder).toContain('NoteValue(Index, Object, Member, false);');
+    expect(recorder).toContain('NoteValue(Index, Object, Member, false, Event.ChangeType);');
   });
 
   it('lists where a live actor stood when first kept and where it stands now', () => {
