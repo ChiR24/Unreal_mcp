@@ -56,7 +56,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Renders** keep their request open for `renderTimeoutMs`; `save_all` and `restart_editor` wait for them.
 - **An open editor dialog** answers calls `EDITOR_MODAL_ACTIVE` with its title; they waited, then failed `EDITOR_BLOCKED`.
 - **Viewport screenshots wait for streaming** and name video memory over budget.
-- **Property writes**: deprecated properties are refused with their replacement, Niagara writes restart placed effects, environment settings take object references.
+- **Property writes**: deprecated properties are refused with their replacement, Niagara writes restart placed effects, environment settings take object references, component writes run the component's own change handling.
 - **Placement checks**: `audit_placement` counts simulated bodies, player-start capsules and skips undersides; `fix_coplanar` handles several neighbours.
 - **Animation and effects**: whole track names; `set_bone_key` keeps unsent parts; key times survive a frame-rate change; curve keys and axes read back; Niagara creates refuse taken names and unknown types.
 - **Undo** covers property writes, spawns, transforms, meshes, landscape, lights, foliage, sequences, bones, material nodes and more.

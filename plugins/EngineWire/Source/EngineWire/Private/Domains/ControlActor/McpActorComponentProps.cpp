@@ -118,6 +118,16 @@ void McpApplyComponentProperties(UActorComponent *Component, const TSharedPtr<FJ
       OutApplied.Add(PropertyName);
       // A raw write into BodyInstance never reaches the physics scene on its own.
       bPhysicsChanged |= ResolvedPath.StartsWith(TEXT("BodyInstance."));
+      // The details panel names the property it changed; with nothing posted, a component that works one value out from
+      // another in its own change handling kept the old one, and the change journal saw no property. No PreEditChange:
+      // its reregister context reruns the construction script, which replaces the component under the caller.
+      FString Head = ResolvedPath, Rest;
+      ResolvedPath.Split(TEXT("."), &Head, &Rest);
+      FPropertyChangedEvent Changed(Property, EPropertyChangeType::ValueSet);
+      if (FProperty *Member = Component->GetClass()->FindPropertyByName(FName(*Head))) {
+        Changed.MemberProperty = Member;
+      }
+      Component->PostEditChangeProperty(Changed);
     } else {
       OutWarnings.Add(FString::Printf(TEXT("Failed to set %s: %s"), *PropertyName, *ApplyError));
     }

@@ -960,6 +960,37 @@ describe('a spawn_batch item\'s properties go on the component it spawned', () =
   });
 });
 
+// edit_component wrote a component property raw: a point light's Intensity set to 8000 left the change journal's row
+// naming no property and no value, and a light whose inverse-squared falloff went off kept its old intensity units.
+describe('an edit_component write names the property it changed to the component', () => {
+  const props = (): string => read('McpActorComponentProps.cpp');
+
+  it('posts a value-set event for the resolved property and its member once the raw write took', () => {
+    const apply = sliceBetween(props(), 'void McpApplyComponentProperties(', 'FString McpApplySpawnItemProperties(');
+    const write = apply.indexOf('if (ApplyJsonValueToProperty(Container, Property, Pair.Value, ApplyError)) {');
+    const post = apply.indexOf('Component->PostEditChangeProperty(Changed);');
+
+    expect(apply).toContain('FPropertyChangedEvent Changed(Property, EPropertyChangeType::ValueSet);');
+    expect(apply).toContain('if (FProperty *Member = Component->GetClass()->FindPropertyByName(FName(*Head))) {');
+    expect(apply).toContain('Changed.MemberProperty = Member;');
+    expect(write).toBeGreaterThan(-1);
+    expect(post, 'after the write').toBeGreaterThan(write);
+    expect(post, 'and only when it took').toBeLessThan(apply.indexOf('*PropertyName, *ApplyError));', write));
+    expect(post, 'before the physics state is rebuilt').toBeLessThan(apply.indexOf('Component->RecreatePhysicsState();'));
+    expect(apply, 'its reregister context would rerun the construction script and replace the component').not.toContain('PreEditChange');
+  });
+
+  it('lands inside the call\'s one undo step, before the render refresh', () => {
+    const handler = sliceBetween(props(), 'HandleControlActorSetComponentProperties(', 'Transaction.DescribeInto(Data);');
+    const opened = handler.indexOf('FMcpScopedEditorTransaction Transaction(');
+    const applied = handler.indexOf('McpApplyComponentProperties(TargetComponent, PropertiesObject, AppliedProperties, PropertyWarnings);');
+
+    expect(opened).toBeGreaterThan(-1);
+    expect(applied).toBeGreaterThan(opened);
+    expect(applied).toBeLessThan(handler.indexOf('McpRefreshComponentAfterEdit(TargetComponent);'));
+  });
+});
+
 // A one-frame force of 60000 moved a crate 0 cm while the reply said "Force applied", and in the editor world the
 // call left the placed actor simulating while nothing moved.
 describe('apply_force pushes once, in the running game only', () => {
