@@ -64,6 +64,18 @@ describe('inspect explain', () => {
     expect(input).toMatch(/SetStringField\(TEXT\("contextPath"\), Target\[0\]->GetPathName\(\)\);/u);
   });
 
+  // A press no event handles: the fix is that event, in the pawn's Blueprint, with the params create_node declares.
+  it('fixes NOT_HANDLED with the action\'s event node, in the pawn\'s Blueprint first', () => {
+    const input = code(EXPLAIN, 'McpExplainInput.cpp');
+    expect(input).toContain('Blueprint->GeneratedClass->IsChildOf(APawn::StaticClass())');
+    expect(input).toMatch(/MakeNextCall\(TEXT\("manage_blueprint"\), TEXT\("create_node"\), Params\)/u);
+    const record = capabilityIndex().byLegacyPair.get(legacyPairKey('manage_blueprint', 'create_node'));
+    const declared = Object.keys((record?.schemas.input as { properties?: Record<string, unknown> } | undefined)?.properties ?? {});
+    for (const param of ['blueprintPath', 'graphName', 'nodeType', 'actionPath']) {
+      expect(declared, param).toContain(param);
+    }
+  });
+
   it('reads the input event node by reflection, so its editor module stays unlinked', () => {
     const input = code(EXPLAIN, 'McpExplainInput.cpp');
     expect(input).not.toContain('#include "K2Node_EnhancedInputAction.h"');

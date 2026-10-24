@@ -21,6 +21,7 @@
 #include "GameFramework/GameModeBase.h"
 #include "Misc/PackageName.h"
 #include "GameFramework/HUD.h"
+#include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/WorldSettings.h"
 #include "InputAction.h"
@@ -74,6 +75,16 @@ bool AddsContext(const UBlueprint* Blueprint, const TArray<UInputMappingContext*
         const UEdGraphPin* Pin = Call && Call->FunctionReference.GetMemberName() == TEXT("AddMappingContext") ? Call->FindPin(TEXT("MappingContext")) : nullptr;
         // A context wired in from a variable cannot be read here: counted as adding one of them.
         return Pin && (Pin->LinkedTo.Num() > 0 || Contexts.Contains(Cast<UInputMappingContext>(Pin->DefaultObject)));
+    });
+}
+
+// An Add Mapping Context node naming this very context (not one fed from a variable).
+bool AddsExactly(const UBlueprint* Blueprint, const UInputMappingContext* Context)
+{
+    return AnyNode(Blueprint, [Context](const UEdGraphNode* Node) {
+        const UK2Node_CallFunction* Call = Cast<UK2Node_CallFunction>(Node);
+        const UEdGraphPin* Pin = Call && Call->FunctionReference.GetMemberName() == TEXT("AddMappingContext") ? Call->FindPin(TEXT("MappingContext")) : nullptr;
+        return Pin && Pin->DefaultObject == Context;
     });
 }
 
@@ -191,16 +202,24 @@ bool ExplainInput(UEngineWireSubsystem& Self, const FString& RequestId, const TS
     UWorld* World = GEditor && GEditor->PlayWorld ? GEditor->PlayWorld.Get() : McpHandlerUtils::GetEditorWorld();
     FTree Tree;
     const TArray<UInputMappingContext*> Contexts = ContextsMapping(Action, Key);
+    const TArray<UBlueprint*> Blueprints = PlayerBlueprints(World);
     if (Contexts.Num() > 0)
     {
         Tree.Pass(TEXT("mapped"), FString::Printf(TEXT("'%s' maps it%s."), *Contexts[0]->GetName(), Key.IsValid() ? *FString::Printf(TEXT(" to %s"), *Key.ToString()) : TEXT("")));
     }
     else
     {
-        // The fix maps it in a context that already maps the action to another key, else in any context; with none
-        // under /Game, the fix makes one beside the action. Without a key asked about, SpaceBar stands in for the key.
+        // The fix maps it in a context that already maps the action to another key, else in any context, one a player
+        // Blueprint adds first (a mapping in a context nobody adds stays dead); with none under /Game, the fix makes one
+        // beside the action. Without a key asked about, SpaceBar stands in for the key.
         const TArray<UInputMappingContext*> Others = ContextsMapping(Action, FKey());
-        const TArray<UInputMappingContext*> Target = Others.Num() > 0 ? Others : ContextsMapping(nullptr, FKey());
+        TArray<UInputMappingContext*> Target = Others.Num() > 0 ? Others : ContextsMapping(nullptr, FKey());
+        Target.StableSort([&Blueprints](const UInputMappingContext& A, const UInputMappingContext& B) {
+            const auto Added = [&Blueprints](const UInputMappingContext* Context) {
+                return Blueprints.ContainsByPredicate([Context](const UBlueprint* Blueprint) { return AddsExactly(Blueprint, Context); });
+            };
+            return Added(&A) && !Added(&B);
+        });
         TSharedPtr<FJsonObject> Params = MakeShared<FJsonObject>();
         Params->SetStringField(TEXT("setting"), Target.Num() > 0 ? TEXT("add_mapping") : TEXT("create_mapping_context"));
         if (Target.Num() > 0)
@@ -218,7 +237,6 @@ bool ExplainInput(UEngineWireSubsystem& Self, const FString& RequestId, const TS
                   FString::Printf(TEXT("No mapping context under /Game maps '%s'%s."), *Action->GetName(), Key.IsValid() ? *FString::Printf(TEXT(" to %s"), *Key.ToString()) : TEXT("")),
                   MakeNextCall(TEXT("manage_networking"), TEXT("configure_input"), Params));
     }
-    const TArray<UBlueprint*> Blueprints = PlayerBlueprints(World);
     const bool bAdds = Blueprints.ContainsByPredicate([&Contexts](const UBlueprint* Blueprint) { return AddsContext(Blueprint, Contexts); });
     const bool bHandles = Blueprints.ContainsByPredicate([Action](const UBlueprint* Blueprint) { return HandlesAction(Blueprint, Action); });
     if (World && World->IsPlayInEditor())
@@ -240,8 +258,22 @@ bool ExplainInput(UEngineWireSubsystem& Self, const FString& RequestId, const TS
     }
     else
     {
+        // The fix puts the action's event in the pawn's Blueprint (where a press usually acts), else the first one.
+        const UBlueprint* const* Pawn = Blueprints.FindByPredicate([](const UBlueprint* Blueprint) {
+            return Blueprint->GeneratedClass && Blueprint->GeneratedClass->IsChildOf(APawn::StaticClass());
+        });
+        const UBlueprint* Home = Pawn ? *Pawn : (Blueprints.Num() > 0 ? Blueprints[0] : nullptr);
+        TSharedPtr<FJsonObject> Params = MakeShared<FJsonObject>();
+        if (Home)
+        {
+            Params->SetStringField(TEXT("blueprintPath"), Home->GetPathName());
+            Params->SetStringField(TEXT("graphName"), TEXT("EventGraph"));
+            Params->SetStringField(TEXT("nodeType"), TEXT("K2Node_EnhancedInputAction"));
+            Params->SetStringField(TEXT("actionPath"), Action->GetPathName());
+        }
         Tree.Fail(TEXT("handled"), TEXT("NOT_HANDLED"),
-                  FString::Printf(TEXT("No Blueprint of the player (%s) has an event for '%s', so firing it runs nothing."), *Names(Blueprints), *Action->GetName()));
+                  FString::Printf(TEXT("No Blueprint of the player (%s) has an event for '%s', so firing it runs nothing."), *Names(Blueprints), *Action->GetName()),
+                  Home ? MakeNextCall(TEXT("manage_blueprint"), TEXT("create_node"), Params) : TSharedPtr<FJsonObject>());
     }
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Tree.WriteTo(Result);
