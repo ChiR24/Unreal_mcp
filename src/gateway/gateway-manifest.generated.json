@@ -9599,6 +9599,7 @@
         "edit_timeline",
         "delete_node",
         "inspect_graph",
+        "lint_blueprint",
         "add_function",
         "remove_function",
         "implement_interface",
@@ -9754,6 +9755,7 @@
         "maxAlive",
         "maxDesiredHeight",
         "maxDesiredWidth",
+        "maxFindings",
         "maxHealth",
         "maxValue",
         "maxVisibleObjectives",
@@ -9823,6 +9825,7 @@
         "rotation",
         "rowCount",
         "rows",
+        "rules",
         "save",
         "saveAfterCompile",
         "savePath",
@@ -10669,6 +10672,12 @@
             "type": "number",
             "description": "Maximum desired width of a size box."
           },
+          "maxFindings": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 200,
+            "description": "Most findings listed (1-200, default 50); counts and findingCount still count them all."
+          },
           "maxHealth": {
             "type": "number",
             "description": "Starting and largest health (default 100)."
@@ -11049,6 +11058,20 @@
           "rows": {
             "type": "number",
             "description": "Inventory grid rows (1-12, default 4)."
+          },
+          "rules": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "tick_heavy",
+                "unreachable",
+                "random_fanout",
+                "infinite_while",
+                "never_assigned"
+              ]
+            },
+            "description": "The rules to run, default all: tick_heavy, unreachable, random_fanout, infinite_while, never_assigned. An unknown name is INVALID_ARGUMENT."
           },
           "save": {
             "type": "boolean",
@@ -11478,6 +11501,7 @@
               "edit_timeline",
               "delete_node",
               "inspect_graph",
+              "lint_blueprint",
               "add_function",
               "remove_function",
               "implement_interface",

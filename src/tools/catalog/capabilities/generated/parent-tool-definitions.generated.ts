@@ -14525,6 +14525,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Maximum desired width of a size box."
         },
+        "maxFindings": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 200,
+          "description": "Most findings listed (1-200, default 50); counts and findingCount still count them all."
+        },
         "maxHealth": {
           "type": "number",
           "description": "Starting and largest health (default 100)."
@@ -14905,6 +14911,20 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "rows": {
           "type": "number",
           "description": "Inventory grid rows (1-12, default 4)."
+        },
+        "rules": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "tick_heavy",
+              "unreachable",
+              "random_fanout",
+              "infinite_while",
+              "never_assigned"
+            ]
+          },
+          "description": "The rules to run, default all: tick_heavy, unreachable, random_fanout, infinite_while, never_assigned. An unknown name is INVALID_ARGUMENT."
         },
         "save": {
           "type": "boolean",
@@ -15334,6 +15354,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "edit_timeline",
             "delete_node",
             "inspect_graph",
+            "lint_blueprint",
             "add_function",
             "remove_function",
             "implement_interface",
@@ -15673,6 +15694,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Total number of node types listed."
         },
+        "counts": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number"
+          },
+          "description": "Findings per rule, listed or not."
+        },
         "created": {
           "type": "boolean",
           "description": "True when this call made the timeline."
@@ -15834,6 +15862,20 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "string"
           },
           "description": "Each properties name that was not set, as \"Name: reason\"; the Blueprint is created anyway."
+        },
+        "findingCount": {
+          "type": "number",
+          "description": "Every finding, listed or not."
+        },
+        "findings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "x-unreal-reflection-boundary": true,
+          "description": "One row per finding: rule, severity (warning, or error for a loop that never ends), graph, node (its title), nodeId (as edit_graph takes it) and detail (what is wrong and the fix). unreachable names only the first node of each dead chain."
         },
         "flaggedCount": {
           "type": "number",
@@ -16024,6 +16066,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "graphName": {
           "type": "string",
           "description": "Target graph name (Event Graph, Construction Script, etc.)."
+        },
+        "graphsChecked": {
+          "type": "number",
+          "description": "Graphs read: event graphs, functions and the graphs they collapse; macros and delegate signatures are not."
         },
         "hasCompileErrors": {
           "type": "boolean",
@@ -16538,7 +16584,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "truncated": {
           "type": "boolean",
-          "description": "With path: true when the folder holds more than 300 Blueprints and the rest were not opened."
+          "description": "True when there were more findings than maxFindings: the rest are counted, not listed."
         },
         "unmoved": {
           "type": "array",

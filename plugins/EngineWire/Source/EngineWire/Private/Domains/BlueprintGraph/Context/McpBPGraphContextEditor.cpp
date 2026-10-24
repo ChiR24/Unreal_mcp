@@ -205,7 +205,7 @@ static FString DescribeMissingGraph(UBlueprint* Blueprint, const FString& GraphN
     return FString::Printf(TEXT("Could not find graph '%s' in blueprint. Its graphs: %s."), *GraphName, *FString::Join(Names, TEXT(", ")));
 }
 
-bool PrepareBlueprintAndGraph(FActionContext& Context)
+bool PrepareBlueprintAndGraph(FActionContext& Context, bool bRequireGraph)
 {
     // blueprintPath is the declared name, so it wins over the legacy assetPath.
     FString AssetPath = McpGetFirstStringField(Context.Payload, {TEXT("blueprintPath"), TEXT("assetPath")});
@@ -239,7 +239,7 @@ bool PrepareBlueprintAndGraph(FActionContext& Context)
     FString GraphName;
     Context.Payload->TryGetStringField(TEXT("graphName"), GraphName);
     Context.TargetGraph = FindTargetGraph(Context.Blueprint, GraphName);
-    if (!Context.TargetGraph)
+    if (!Context.TargetGraph && bRequireGraph)
     {
         Context.SendError(DescribeMissingGraph(Context.Blueprint, GraphName), TEXT("GRAPH_NOT_FOUND"));
         return false;

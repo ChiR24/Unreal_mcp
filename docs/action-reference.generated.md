@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `3e39ad1d3c01e988`
+Catalog revision: `1ef7e18dccdef622`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 420 capabilities across
+The catalog declares 421 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -44,7 +44,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_ai` | 16 | 2 | 14 | 0 | manage ai |
 | `manage_asset` | 47 | 10 | 32 | 5 | asset, datatable, enum, material, struct, texture |
 | `manage_audio` | 14 | 3 | 11 | 0 | audio |
-| `manage_blueprint` | 32 | 7 | 19 | 6 | blueprint, widget |
+| `manage_blueprint` | 33 | 8 | 19 | 6 | blueprint, widget |
 | `manage_character` | 10 | 2 | 8 | 0 | manage character |
 | `manage_combat` | 6 | 1 | 5 | 0 | manage combat |
 | `manage_effect` | 13 | 2 | 9 | 2 | manage effect |
@@ -62,7 +62,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-65 of 420 capabilities require consent.
+65 of 421 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -211,6 +211,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `blueprint.get_widget_info` | `manage_blueprint` | `get_widget_info` | read | read | none | `manage_blueprint.get_widget_info` `manage_blueprint.get_widget_slot_info` |
 | `blueprint.implement_interface` | `manage_blueprint` | `implement_interface` | write | write | none | `manage_blueprint.implement_interface` |
 | `blueprint.inspect_graph` | `manage_blueprint` | `get_graph_details` | read | read | none | `manage_blueprint.inspect_graph` `manage_blueprint.get_graph_details` `manage_blueprint.get_node_details` `manage_blueprint.get_pin_details` `manage_blueprint.list_node_types` `manage_blueprint.find_functions` |
+| `blueprint.lint_blueprint` | `manage_blueprint` | `lint_blueprint` | read | read | none | `manage_blueprint.lint_blueprint` |
 | `blueprint.preview_widget` | `manage_blueprint` | `preview_widget` | read | read | none | `manage_blueprint.preview_widget` |
 | `blueprint.probe_handle` | `manage_blueprint` | `probe_handle` | read | read | none | `manage_blueprint.probe_handle` |
 | `blueprint.remove_function` | `manage_blueprint` | `remove_function` | destructive | destructive | explicit | `manage_blueprint.remove_function` `manage_blueprint.remove_event` |

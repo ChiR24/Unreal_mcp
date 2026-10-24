@@ -5,6 +5,7 @@ import { BEHAVIOURS_RECORDS } from './behaviours.js';
 import { BLUEPRINT_LIFECYCLE_RECORDS } from './blueprint-lifecycle.js';
 import { FUNCTIONS_EVENTS_RECORDS } from './functions-events.js';
 import { GRAPH_BATCH_RECORDS } from './graph-batch.js';
+import { GRAPH_LINT_RECORDS } from './graph-lint.js';
 import { GRAPH_NODES_RECORDS } from './graph-nodes.js';
 import { GRAPH_PINS_RECORDS } from './graph-pins.js';
 import { PROBE_RECORDS } from './probe.js';
@@ -30,6 +31,7 @@ export const MANAGE_BLUEPRINT_UNFOLDED_SOURCES: readonly CapabilityRecordSource[
   ...GRAPH_NODES_RECORDS,
   ...GRAPH_PINS_RECORDS,
   ...GRAPH_BATCH_RECORDS,
+  ...GRAPH_LINT_RECORDS,
   ...FUNCTIONS_EVENTS_RECORDS,
   ...BEHAVIOURS_RECORDS,
   ...PROBE_RECORDS,

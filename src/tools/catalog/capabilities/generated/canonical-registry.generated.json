@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "3e39ad1d3c01e988",
-  "recordCount": 420,
+  "catalogRevision": "1ef7e18dccdef622",
+  "recordCount": 421,
   "records": [
     {
       "id": "animation_physics.analyze_animation",
@@ -22897,6 +22897,197 @@
         "algorithm": "sha256",
         "schema": "6d5de3fac41eaec597a392d90bee945ec6c4d8494e7c8d67423cbafb97ac9af0",
         "content": "6338896425575de0c9dcc8dbdf6062cf8cfa9b9405a21c2bde9b49d49f7a44d7"
+      }
+    },
+    {
+      "id": "blueprint.lint_blueprint",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "manage_blueprint",
+          "action": "lint_blueprint"
+        }
+      ],
+      "discovery": {
+        "domain": "blueprint",
+        "family": "lint",
+        "topics": [
+          "lint_blueprint",
+          "lint blueprint",
+          "blueprint mistakes",
+          "check a blueprint for bugs",
+          "slow event tick",
+          "nodes that never run",
+          "accessed none before play"
+        ],
+        "summary": "Read every graph of a Blueprint for the mistakes that show in Play, each with the node to fix: tick_heavy (Event Tick reaches a level search such as Get All Actors Of Class, or a spawn, every frame), unreachable (no event or function leads to a node, so it never runs), random_fanout (one pure Random node read by several nodes rolls once per read), infinite_while (a While Loop whose Condition is always true), never_assigned (an object variable read but never set, neither Instance Editable nor Expose on Spawn, with no default: every read is None). Nothing compiles or changes, and a function library is read too.",
+        "whenToUse": [
+          "A Blueprint should be checked before Play, or after an edit, for mistakes that only show while the game runs.",
+          "A game runs slowly and a Blueprint's Event Tick may search the level every frame.",
+          "An Accessed None should be found before it fires (never_assigned)."
+        ],
+        "whenNotToUse": [
+          "An error already fired in Play: inspect runtime_report lists it, with the cause of an Accessed None.",
+          "The Blueprint does not compile: compile it and read its messages (manage_blueprint compile)."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "blueprintPath": {
+              "type": "string",
+              "description": "Canonical /Game Blueprint asset path."
+            },
+            "rules": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "tick_heavy",
+                  "unreachable",
+                  "random_fanout",
+                  "infinite_while",
+                  "never_assigned"
+                ]
+              },
+              "description": "The rules to run, default all: tick_heavy, unreachable, random_fanout, infinite_while, never_assigned. An unknown name is INVALID_ARGUMENT."
+            },
+            "maxFindings": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 200,
+              "description": "Most findings listed (1-200, default 50); counts and findingCount still count them all."
+            }
+          },
+          "required": [
+            "action",
+            "blueprintPath"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "findings": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "x-unreal-reflection-boundary": true,
+              "description": "One row per finding: rule, severity (warning, or error for a loop that never ends), graph, node (its title), nodeId (as edit_graph takes it) and detail (what is wrong and the fix). unreachable names only the first node of each dead chain."
+            },
+            "counts": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "number"
+              },
+              "description": "Findings per rule, listed or not."
+            },
+            "findingCount": {
+              "type": "number",
+              "description": "Every finding, listed or not."
+            },
+            "truncated": {
+              "type": "boolean",
+              "description": "True when there were more findings than maxFindings: the rest are counted, not listed."
+            },
+            "graphsChecked": {
+              "type": "number",
+              "description": "Graphs read: event graphs, functions and the graphs they collapse; macros and delegate signatures are not."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Read every graph of a Blueprint for the mistakes that show in Play, each with the node to fix: tick_heavy (Event Tick reaches a level search such as Get All Actors Of Class, or a spawn, every frame), unreachable (no event or function leads to a node, so it never runs), random_fanout (one pure Random node read by several nodes rolls once per read), infinite_while (a While Loop whose Condition is always true), never_assigned (an object variable read but never set, neither Instance Editable nor Expose on Spawn, with no default: every read is None). Nothing compiles or changes, and a function library is read too.",
+          "input": {
+            "action": "lint_blueprint",
+            "blueprintPath": "/Game/Blueprints/BP_Door",
+            "rules": [
+              "tick_heavy",
+              "never_assigned"
+            ]
+          },
+          "output": {
+            "success": true,
+            "message": "1 finding(s) in BP_Door.",
+            "findings": [
+              {
+                "rule": "never_assigned",
+                "severity": "warning",
+                "graph": "EventGraph",
+                "node": "Get Key",
+                "nodeId": "8C1D0E6A4F2B4C1D9E0F1A2B3C4D5E6F",
+                "detail": "Key is read but nothing assigns it, it is not Instance Editable nor Expose on Spawn, and it has no default: every read is None (Accessed None in Play)."
+              }
+            ],
+            "counts": {
+              "never_assigned": 1
+            },
+            "findingCount": 1,
+            "truncated": false,
+            "graphsChecked": 2
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [
+          "EditorScriptingUtilities"
+        ],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "read",
+        "idempotency": "idempotent",
+        "longRunning": false,
+        "safeToRetry": true
+      },
+      "policy": {
+        "requiredScope": "read",
+        "consent": "none",
+        "dataAccess": "project-read"
+      },
+      "cost": {
+        "latency": "interactive",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "manage_blueprint",
+        "dispatchAction": "lint_blueprint"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "0cc0343b9a05f2510458b599fefefc2cc9fd197a53de3307da6ae85765af1644",
+        "content": "677d004e3e61c0c4ac551f9593709f3815f126d2c7814c42621bfb5a641f9ac0"
       }
     },
     {

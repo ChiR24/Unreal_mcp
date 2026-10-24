@@ -404,6 +404,10 @@ const testCases = [
     { edit: 'connect_pins', from: '$delay.then', to: '$print.execute' },
   ] }, expected: 'success', assertions: [{ path: 'structuredContent.result.succeeded', equals: 3, label: 'build_graph ran all three steps' }, { path: 'structuredContent.receipt.handles.0.kind', equals: 'asset', label: 'the receipt names the Blueprint the batch edited' }, { path: 'structuredContent.receipt.changes', length: 1, label: 'and lists it once as changed' }] },
 
+  // === LINT: lint_blueprint reads every graph for the mistakes that show in Play (the batch chain above has no event) ===
+  { scenario: 'LINT: lint_blueprint names a chain no event leads to', toolName: 'manage_blueprint', arguments: { action: 'lint_blueprint', blueprintPath: BP_PATH, rules: ['unreachable'], maxFindings: 5 }, expected: 'success', assertions: [{ path: 'structuredContent.result.findings.0.rule', equals: 'unreachable', label: 'a node no event leads to is named' }, { path: 'structuredContent.result.counts.unreachable', min: 1, label: 'findings are counted per rule' }] },
+  { scenario: 'ERROR: lint_blueprint refuses a rule it does not have', toolName: 'manage_blueprint', arguments: { action: 'lint_blueprint', blueprintPath: BP_PATH, rules: ['no_such_rule'] }, expected: 'error|INVALID_PARAMETER_VALUE' },
+
   // === BATCH: dryRun checks a batch and runs none of it ===
   { scenario: 'BATCH: build_graph dryRun checks every step and runs none', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: BP_PATH, graphName: 'EventGraph', dryRun: true, operations: [
     { edit: 'add_variable', variableName: 'DryRunOnly', variableType: 'int' },

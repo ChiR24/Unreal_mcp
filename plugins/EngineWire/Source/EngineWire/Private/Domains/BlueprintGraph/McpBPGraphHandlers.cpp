@@ -1,4 +1,5 @@
 #include "Domains/BlueprintGraph/McpBPGraphPrivate.h"
+#include "Domains/BlueprintGraph/Lint/McpBPLint.h"
 
 #include "EdGraphSchema_K2.h"
 #include "Kismet/GameplayStatics.h"
@@ -236,9 +237,16 @@ bool UEngineWireSubsystem::HandleBlueprintGraphAction(
         return true;
     }
 
-    if (!McpBlueprintGraphHandlers::PrepareBlueprintAndGraph(Context))
+    // A lint reads every graph, so a Blueprint without an event graph (a function library) is linted too.
+    const bool bLint = Context.SubAction == TEXT("lint_blueprint");
+    if (!McpBlueprintGraphHandlers::PrepareBlueprintAndGraph(Context, /*bRequireGraph=*/!bLint))
     {
         return true;
+    }
+    if (bLint)
+    {
+        Context.bDeferCompile = true; // a read never compiles
+        return McpBPLint::HandleLint(Context);
     }
 
     if (McpBlueprintGraphHandlers::HandleGraphBatchAction(Context) ||

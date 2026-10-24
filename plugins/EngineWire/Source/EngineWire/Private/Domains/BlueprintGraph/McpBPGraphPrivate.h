@@ -184,7 +184,8 @@ struct FActionContext
 };
 
 bool ValidateProvidedPaths(const FActionContext& Context);
-bool PrepareBlueprintAndGraph(FActionContext& Context);
+// Loads the Blueprint and the graph the payload names; bRequireGraph false lets a read of every graph go on without one.
+bool PrepareBlueprintAndGraph(FActionContext& Context, bool bRequireGraph = true);
 bool HandleListNodeTypes(FActionContext& Context);
 bool HandleFindFunctions(FActionContext& Context);
 bool HandleNodeCreationAction(FActionContext& Context);
