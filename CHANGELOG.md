@@ -23,7 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Whole parts in one `edit_dynamic_mesh` call**: `append_cuboids`, `append_loft`, `append_mesh`, `delete_triangles`.
 - **Renders and sequences**: `cancel_render`, camera shutter and overscan, `set_section` `playRate`, clips and keyed bones in the readers.
 - **`setup_global_illumination` `saveToProject`** writes the GI method to Project Settings.
-- **Spawns, moves and re-meshes are checked** and warn on an actor left sunk, floating, intersecting, z-fighting, untextured, labelled "Text" or pasted twice.
+- **Spawns, moves and re-meshes are checked** and warn on an actor left sunk, floating, intersecting, z-fighting, untextured, labelled "Text", pasted twice, or with a Map Check finding.
 - **Replies say what undo can revert**, and **`restore_point`** rolls back only this server's steps.
 - **`inspect explain`** says why something does not happen and names the call that fixes it.
 - **A call failing three times unchanged is refused** (`REPEATED_FAILURE`).

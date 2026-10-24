@@ -10,6 +10,7 @@
 #include "Domains/ControlActor/McpActorSupport.h"
 #include "Domains/ControlActor/Placement/McpAuditFinding.h"
 #include "Domains/ControlActor/Placement/McpCoplanarFaces.h"
+#include "Domains/Level/Lifecycle/McpLevelMapCheck.h"
 #include "Editor.h"
 #include "Engine/Blueprint.h"
 #include "Engine/Engine.h"
@@ -179,6 +180,7 @@ void AddWarnings(const FString& RequestId, const TSharedPtr<FJsonObject>& Result
     TMap<AActor*, TSharedPtr<FJsonObject>> Rows; // judged together, so faces two changed actors share are found once
     TArray<FString> Content;
     TSet<const AActor*> Doubled; // named as another's twin: one warning covers the pair
+    TArray<AActor*> Checked; // and given the engine's own Map Check, so its findings on what changed are said too
     int32 Changed = 0;
     // Where it stands is judged when it moved, what it shows when that changed: a new material alone repeats no placement.
     const auto Consider = [&](AActor* Actor, const FWatchBefore& Before) {
@@ -194,6 +196,7 @@ void AddWarnings(const FString& RequestId, const TSharedPtr<FJsonObject>& Result
         {
             return; // renamed, tagged, foldered: nothing it shows or where it stands moved
         }
+        Checked.Add(Actor);
         // A copy on its original intersects it and shares every face with it; the duplicate warning says all of that.
         const AActor* Twin = bMoved ? McpContentAudit::FindTwin(Actor) : nullptr;
         if (Twin)
@@ -228,6 +231,7 @@ void AddWarnings(const FString& RequestId, const TSharedPtr<FJsonObject>& Result
             Consider(Copy, Pair.Value);
         }
     }
+    McpLevelHandlers::MapCheckActors(Checked, Content);
     McpCoplanar::AddCoplanarToRows(Rows);
     TArray<FString> Found;
     for (const TPair<AActor*, TSharedPtr<FJsonObject>>& Row : Rows)

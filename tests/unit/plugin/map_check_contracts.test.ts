@@ -48,4 +48,16 @@ describe('run_map_check', () => {
     expect(code(SOURCE, 'EngineWire.Build.cs')).toMatch(/"MessageLog"/u);
     expect(check).not.toContain('CriticalError');
   });
+
+  // The validator delta: a write that leaves an actor with a Map Check finding says so in its own reply.
+  it('runs the engine\'s per-actor Map Check on the actors a call changed, and keeps only its findings', () => {
+    const watch = code(SOURCE, 'Private', 'Domains', 'ControlActor', 'Placement', 'McpChangeWatch.cpp');
+    expect(watch).toMatch(/return;\s*\}\s*Checked\.Add\(Actor\);/u);
+    expect(watch).toMatch(/McpLevelHandlers::MapCheckActors\(Checked, Content\);\s*McpCoplanar::AddCoplanarToRows\(Rows\);/u);
+    const delta = check.slice(check.indexOf('void MapCheckActors('));
+    expect(delta).toContain('Actor->CheckForErrors();');
+    expect(delta).toMatch(/if \(Message\.GetSeverity\(\) == EMessageSeverity::Info\)\s*\{\s*continue;/u);
+    // Named by label, as calls address actors: the message's own object token is the internal name.
+    expect(delta).toContain('FString::Printf(TEXT("\'%s\': %s: %s"), *Actor, *Kind, *Text.TrimStartAndEnd())');
+  });
 });

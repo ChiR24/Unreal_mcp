@@ -2,8 +2,9 @@
 // Message Log tab: each message's severity, text, the actor it names and the map error it is (the key of the engine's
 // own guidance for that error). Unbuilt lighting, meshes with no mesh, overlapping stationary lights, volumes with a bad
 // brush and the rest of what the engine checks are only readable here.
-#include "Domains/Level/McpLevelActions.h"
+#include "Domains/Level/Lifecycle/McpLevelMapCheck.h"
 
+#include "Domains/Level/McpLevelActions.h"
 #include "Editor.h"
 #include "IMessageLogListing.h"
 #include "Logging/MessageLog.h"
@@ -136,5 +137,49 @@ bool HandleRunMapCheckAction(UEngineWireSubsystem& Subsystem, const FString& Req
                         Counts.FindRef(TEXT("performance")), Counts.FindRef(TEXT("info"))),
         Result);
     return true;
+}
+
+// Called while a reply is built: its captured log lines were taken before, so the [MapCheck] copies of these messages
+// in the output log are no warning of the call.
+void MapCheckActors(const TArray<AActor*>& Actors, TArray<FString>& OutIssues)
+{
+    if (Actors.Num() == 0)
+    {
+        return;
+    }
+    const TSharedRef<IMessageLogListing> Listing =
+        FModuleManager::LoadModuleChecked<FMessageLogModule>(TEXT("MessageLog")).GetLogListing(TEXT("MapCheck"));
+    const int32 Before = Listing->GetFilteredMessages().Num();
+    for (AActor* Actor : Actors)
+    {
+        if (IsValid(Actor))
+        {
+            Actor->CheckForErrors();
+        }
+    }
+    // ponytail: the listing applies the Map Check tab's severity filters, so a severity hidden there is not reported.
+    const TArray<TSharedRef<FTokenizedMessage>>& Messages = Listing->GetFilteredMessages();
+    for (int32 Index = Before; Index < Messages.Num(); ++Index)
+    {
+        const FTokenizedMessage& Message = *Messages[Index];
+        if (Message.GetSeverity() == EMessageSeverity::Info)
+        {
+            continue;
+        }
+        // Named by its label, as every call addresses it (the message's object token is its internal name), with the
+        // map error's name when it has one.
+        FString Text;
+        for (const TSharedRef<IMessageToken>& Token : Message.GetMessageTokens())
+        {
+            Text += Token->GetType() == EMessageToken::Text ? Token->ToText().ToString() : FString();
+        }
+        const TSharedPtr<FJsonObject> Row = MapCheckRow(Message);
+        FString Actor, Code;
+        Row->TryGetStringField(TEXT("actor"), Actor);
+        Row->TryGetStringField(TEXT("code"), Code);
+        const FString Kind = Code.IsEmpty() ? FString(TEXT("Map Check")) : FString::Printf(TEXT("Map Check (%s)"), *Code);
+        OutIssues.Add(Actor.IsEmpty() ? Kind + TEXT(": ") + Message.ToText().ToString().TrimStartAndEnd()
+                                      : FString::Printf(TEXT("'%s': %s: %s"), *Actor, *Kind, *Text.TrimStartAndEnd()));
+    }
 }
 } // namespace McpLevelHandlers
