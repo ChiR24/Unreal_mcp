@@ -186,7 +186,7 @@ void FindArrangements(const TArray<FItem>& Items, const TArray<int32>& Copies, c
     {
         AddRowsAndGrids(Items, Copies, Out);
     }
-    FVector Centre;
+    FVector Centre = FVector::ZeroVector;
     double Radius = 0.0;
     if ((Kinds.Num() == 0 || Kinds.Contains(TEXT("rings"))) && Copies.Num() >= 5 && IsRing(Items, Copies, Centre, Radius))
     {
