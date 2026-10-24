@@ -73,6 +73,21 @@ FMcpSchemaBuilder& FMcpSchemaBuilder::StringEnum(const FString& Name,
 	return *this;
 }
 
+FMcpSchemaBuilder& FMcpSchemaBuilder::StringArray(const FString& Name, const FString& Description,
+	int32 MinItems, int32 MaxItems, int32 MaxLength)
+{
+	auto Item = MakeShared<FJsonObject>();
+	Item->SetStringField(TEXT("type"), TEXT("string"));
+	Item->SetNumberField(TEXT("minLength"), 1);
+	Item->SetNumberField(TEXT("maxLength"), MaxLength);
+	auto Prop = MakeTypedProperty(TEXT("array"), Description);
+	Prop->SetObjectField(TEXT("items"), Item);
+	Prop->SetNumberField(TEXT("minItems"), MinItems);
+	Prop->SetNumberField(TEXT("maxItems"), MaxItems);
+	AddProperty(Name, Prop);
+	return *this;
+}
+
 FMcpSchemaBuilder& FMcpSchemaBuilder::Integer(const FString& Name, const FString& Description)
 {
 	auto Prop = MakeTypedProperty(TEXT("integer"), Description);

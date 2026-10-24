@@ -6,6 +6,7 @@
 #include "Core/Requests/McpUndoLedger.h"
 #include "Core/Security/McpPrequeueGate.h"
 #include "Domains/ControlActor/Placement/McpChangeWatch.h"
+#include "Domains/Debug/Contracts/McpContracts.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/McpTelemetryRegistry.h"
 #include "EngineWireSubsystem.h"
@@ -273,6 +274,13 @@ void UEngineWireSubsystem::ProcessAutomationRequest(
     if (!RequestId.IsEmpty() && RequestingSocket.IsValid() &&
         ConnectionManager.IsValid()) {
       ConnectionManager->RegisterRequestSocket(RequestId, RequestingSocket);
+    }
+
+    // What the call requires (options.require) is judged here, inside the request's brackets, so a refusal is
+    // answered like any reply and nothing has run.
+    if (!McpContracts::Admit(*this, RequestId, RequestingSocket)) {
+      bDispatchHandled = true;
+      return;
     }
 
     // ---------------------------------------------------------

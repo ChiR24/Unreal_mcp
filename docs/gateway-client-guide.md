@@ -252,6 +252,27 @@ In Editor caveats and engine warnings logged during the call land there too.
 A reply sent after its handler returned (a long-running task) carries no
 placement checks; `control_actor audit_placement` sweeps the whole level.
 
+### Stating what should hold: `expect` and `require`
+
+`options.expect` lists assertions the plugin judges once the call succeeds,
+against the editor itself: relations (`Lamp on Table`, `A inside B`,
+`A nextTo B`, `A facing B`, `A near B within 50`), comparisons
+(`Cube.location.z in 0..10`, `Lamp.LightComponent.Intensity > 1000`),
+predicates (`A exists`, `A hidden`, `A visible`, `/Game/BP_Door compiles`) and
+`noWarnings`, combined with `not`, `and`, `or` and parentheses. The receipt's
+`expectations[]` gives each one's verdict (`ok`, `failed`, or `unknown` when it
+cannot be observed yet), what was found, and for a failure the call that fixes
+it; a failure also adds a warning. An expectation never fails the call it
+judges: the change was made, and answering failure would hand back a
+single-use consent grant and make a retry repeat it.
+
+`options.require` lists assertions that must hold before the call runs. They
+are judged on the game thread just before the handler: when one fails or
+cannot be judged, nothing runs and the call answers `PRECONDITION_FAILED`,
+naming each unmet requirement (a consent grant is handed back). Both lists are
+part of the idempotency fingerprint, so a key resent with other assertions is
+refused with `IDEMPOTENCY_CONFLICT`, never served the first call's receipt.
+
 ## Deprecation and removal behavior
 
 Three distinct removal behaviors exist. They are not interchangeable.

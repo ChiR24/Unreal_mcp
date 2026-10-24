@@ -17,6 +17,8 @@ class UWorld;
 // more reliably than it reads coordinates, so this is the level read back in its own terms. Read only.
 namespace McpRelations
 {
+constexpr double SupportTolerance = 3.0; // cm between a bottom and the top it rests on
+
 /** One actor of the scene: its bounds (every primitive, as a viewer sees it), whether it is ground, and its shape. */
 struct FItem
 {
@@ -46,8 +48,21 @@ inline double FlatGap(const FBox& A, const FBox& B)
     return FMath::Sqrt(X * X + Y * Y);
 }
 
+/** The scene judged (McpRelations.cpp): every visible actor with bounds, within Radius of Center when bArea, at most
+ *  MaxActors (the Named first, then the nearest the centre, else the largest). OutInScope counts them before the cap. */
+TArray<FItem> CollectItems(UWorld* World, const TSet<AActor*>& Named, bool bArea, const FVector& Center, double Radius,
+                           int32 MaxActors, int32& OutInScope);
+
 /** on, mounted, inside, nextTo and faces between the items (McpRelationsPairs.cpp), for the kinds asked. */
 void FindPairRelations(UWorld* World, const TArray<FItem>& Items, const TSet<FString>& Kinds, TArray<FRelation>& Out);
+
+/** Which side of A touches B when the boxes stand side by side (McpRelationsPairs.cpp); empty when they do not. */
+FString TouchingSide(const FBox& A, const FBox& B);
+
+/** One relation between two actors for an assertion (McpRelationsJudge.cpp): Kind is on, inside, nextTo, facing or near
+ *  (within Within cm, the default when negative). OutActual says what was found; OutNextCall is the fixing call, if any. */
+bool JudgePair(UWorld* World, AActor* A, const FString& Kind, AActor* B, double Within, FString& OutActual,
+               TSharedPtr<FJsonObject>& OutNextCall);
 
 /** The wider side of an item's footprint. */
 inline double Footprint(const FItem& Item)

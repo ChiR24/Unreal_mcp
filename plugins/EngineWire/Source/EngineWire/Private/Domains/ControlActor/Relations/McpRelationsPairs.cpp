@@ -22,7 +22,6 @@ namespace McpRelations
 {
 namespace
 {
-constexpr double SupportTolerance = 3.0; // cm between a bottom and the top it rests on
 constexpr double TouchGap = 2.0;         // cm between faces that touch
 constexpr double FacingCos = 0.93969;    // cos 20 degrees
 constexpr int32 MaxCellsPerItem = 256;   // an item wider than this many cells is checked against every item
@@ -139,6 +138,7 @@ double Volume(const FBox& Box)
     const FVector Size = Box.GetSize();
     return Size.X * Size.Y * Size.Z;
 }
+} // namespace
 
 // Which side of A touches B, when their boxes stand side by side within TouchGap and overlap in height.
 FString TouchingSide(const FBox& A, const FBox& B)
@@ -160,7 +160,6 @@ FString TouchingSide(const FBox& A, const FBox& B)
     }
     return FString();
 }
-} // namespace
 
 void FindPairRelations(UWorld* World, const TArray<FItem>& Items, const TSet<FString>& Kinds, TArray<FRelation>& Out)
 {

@@ -18,12 +18,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Large results come in pages** (`page.nextCall`), and **search hands over a clear first hit** (`signature`, `executeCall`).
 - **`nanite_rebuild_mesh` `assetPaths`**, **`inspect_asset` `diff`**, `get_niagara_info` values, `setup_global_illumination` `saveToProject`, and `edit_dynamic_mesh` `append_cuboids`, `append_loft`, `append_mesh`, `delete_triangles`.
 - **Renders and sequences**: `cancel_render`, camera shutter and overscan, `set_section` `playRate`, clips and keyed bones in the readers.
-- **Writes are checked**: actors left sunk, floating, intersecting, z-fighting, untextured, labelled "Text", pasted twice or with a Map Check finding, and changed assets by save-time Data Validation.
+- **Writes are checked**: actors left sunk, floating, intersecting, z-fighting, untextured, labelled "Text", pasted twice or with a Map Check finding, and assets by Data Validation.
 - **Replies say what undo can revert**; **`restore_point`** undoes only this server's steps and offers the delete of what they created.
 - **`inspect explain`** says why something does not happen and names the call that fixes it.
 - **A call failing three times unchanged is refused** (`REPEATED_FAILURE`).
 - **Batches check every step first**; `build_graph`, `build_material_graph` and `add_widget_tree` take `dryRun`.
-- **`run_map_check`** reads Map Check as rows; **`fix_placement`** moves sunk, floating and intersecting actors; **`describe_relations`** reads back what rests on, hangs on, touches or faces what.
+- **`run_map_check`** reads Map Check as rows; **`fix_placement`** moves sunk, floating and intersecting actors; **`describe_relations`** reads back what rests on, hangs on, touches or faces what, and execute's **`expect`/`require`** options check such facts, values and visibility after or before a call.
 - **`inspect changes_since`**: what changed since a cursor, by whom, from and to; replies note the user's edits; `/mcp` serves `ue://changes` subscriptions.
 
 </details>

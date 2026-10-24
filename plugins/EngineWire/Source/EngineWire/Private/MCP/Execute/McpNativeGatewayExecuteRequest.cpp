@@ -2,6 +2,7 @@
 
 #include "MCP/Execute/McpNativeGatewayExecuteRequest.h"
 #include "MCP/Execute/McpNativeGatewayCanonicalRecords.h"
+#include "MCP/Execute/Request/McpExecuteContractOptions.h"
 #include "MCP/Execute/Request/McpNativeGatewayReservedParams.h"
 #include "MCP/Gateway/McpNativeGatewayCapabilityStore.h"
 #include "MCP/Gateway/McpNativeGatewayCatalog.h"
@@ -14,6 +15,8 @@ const TArray<FString>& McpExecutionOptionKeys()
 		TEXT("expectedRevisions"),
 		TEXT("timeoutMs"),
 		TEXT("pageCursor"),
+		TEXT("expect"),
+		TEXT("require"),
 	};
 	return Keys;
 }
@@ -89,8 +92,9 @@ bool McpValidateExecutionOptions(
 	// McpNativeTransportGatewayExecute, left Context.IdempotencyId empty and took
 	// the no-ledger path: a retry re-ran the mutation that the stdio surface had
 	// already refused. A dedup guard that cannot be honoured must refuse. It lives
-	// in McpNativeGatewayIdempotency.cpp because this file is at the line ceiling.
-	return McpValidateIdempotencyKeyOption(Options, OutError);
+	// in McpNativeGatewayIdempotency.cpp because this file is at the line ceiling,
+	// as the expect and require checks live in Request/McpExecuteContractOptions.cpp.
+	return McpValidateIdempotencyKeyOption(Options, OutError) && McpExecuteContracts::Validate(Options, OutError);
 }
 
 namespace

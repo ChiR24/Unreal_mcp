@@ -211,6 +211,12 @@ TSharedPtr<FJsonObject> McpBuildCanonicalReceipt(
 			Warnings.Add(MakeShared<FJsonValueString>(McpRedactText(Warning)));
 		}
 		Receipt->SetArrayField(TEXT("warnings"), McpBoundJsonArray(MoveTemp(Warnings)));
+		// The verdicts on what the call expected (options.expect, McpContracts), beside its warnings.
+		const TArray<TSharedPtr<FJsonValue>>* Verdicts = nullptr;
+		if (RawResult.IsValid() && RawResult->TryGetArrayField(TEXT("expectations"), Verdicts))
+		{
+			Receipt->SetArrayField(TEXT("expectations"), *Verdicts);
+		}
 		TSharedPtr<FJsonObject> Validation = MakeShared<FJsonObject>();
 		Validation->SetStringField(TEXT("outputSchema"), TEXT("passed"));
 		Receipt->SetObjectField(TEXT("validation"), Validation);

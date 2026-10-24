@@ -9,6 +9,7 @@
 #include "Core/Security/McpPrequeueGate.h"
 #include "Core/Subsystem/EngineWireSubsystemResponseEnrichment.h"
 #include "Domains/ControlActor/Placement/McpChangeWatch.h"
+#include "Domains/Debug/Contracts/McpContracts.h"
 #include "Domains/SystemControl/McpSystemValidateDelta.h"
 #include "Foundation/Diagnostics/McpDiagnosticsSnapshot.h"
 #include "Foundation/McpTelemetryRegistry.h"
@@ -149,6 +150,9 @@ void UEngineWireSubsystem::SendAutomationResponse(
             EffectiveResult->SetBoolField(TEXT("gamePaused"), true);
         }
     }
+    // What the call expects (options.expect) is judged once its own warnings are in; a failed call judges nothing.
+    if (bSuccess) { McpContracts::AddExpectations(RequestId, EffectiveResult); }
+    else { McpContracts::Forget(RequestId); }
 
     // Dozens of dispatch wrappers hand the handler's `error` sentence straight
     // to the ErrorCode parameter, so a failure rendered as

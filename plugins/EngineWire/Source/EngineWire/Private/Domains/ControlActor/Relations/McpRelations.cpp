@@ -31,9 +31,9 @@ FString ShapeOf(const AActor* Actor, const FBox& Box)
                            Root && Root->GetStaticMesh() ? *Root->GetStaticMesh()->GetName() : TEXT("-"),
                            FMath::Max(Size.X, Size.Y), FMath::Min(Size.X, Size.Y), Size.Z);
 }
+} // namespace
 
 // The items, named as replies name actors (the label, or the object name when another actor shares the label).
-// OutInScope counts them before the cap.
 TArray<FItem> CollectItems(UWorld* World, const TSet<AActor*>& Named, bool bArea, const FVector& Center, double Radius,
                            int32 MaxActors, int32& OutInScope)
 {
@@ -76,6 +76,8 @@ TArray<FItem> CollectItems(UWorld* World, const TSet<AActor*>& Named, bool bArea
     return Items;
 }
 
+namespace
+{
 FString ReadKinds(const TSharedPtr<FJsonObject>& Payload, TSet<FString>& OutKinds)
 {
     for (const FString& Kind : McpHandlerUtils::GetStringArrayField(Payload, TEXT("kinds")))

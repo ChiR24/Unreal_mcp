@@ -49,7 +49,7 @@ TSharedPtr<FJsonObject> BuildUnrealGatewayToolDefinition()
 		// client had no legal way to send an idempotency key or a timeout.
 		.ClosedObject(TEXT("options"),
 			TEXT("Execution controls for execute only; never put these inside params. Honored keys: "
-				"idempotencyKey, expectedCatalogRevision, expectedRevisions, timeoutMs, pageCursor."),
+				"idempotencyKey, expectedCatalogRevision, expectedRevisions, timeoutMs, pageCursor, expect, require."),
 			[](FMcpSchemaBuilder& Sub)
 			{
 				Sub.String(TEXT("idempotencyKey"),
@@ -71,7 +71,18 @@ TSharedPtr<FJsonObject> BuildUnrealGatewayToolDefinition()
 					.Integer(TEXT("timeoutMs"), TEXT("Deadline for this call in milliseconds."), 1, 600000)
 					.String(TEXT("pageCursor"),
 						TEXT("Read the next page of a result too large for one reply: the cursor its page block named, sent with "
-							"the same capability and params (page.nextCall is that call). Nothing runs again."), 1, 64);
+							"the same capability and params (page.nextCall is that call). Nothing runs again."), 1, 64)
+					.StringArray(TEXT("expect"),
+						TEXT("What should hold once the call succeeds, judged in the editor: relations (Lamp on Table, A inside B, "
+							"A nextTo B, A facing B, A near B within 50), comparisons (Cube.location.z in 0..10, "
+							"Lamp.LightComponent.Intensity > 1000), predicates (A exists, A hidden, A visible, /Game/BP_Door compiles) "
+							"and noWarnings, combined with not, and, or and parentheses; names with spaces in double quotes. The "
+							"reply's expectations[] gives each verdict (ok, failed or unknown) with what was found and, for a failure, "
+							"the call that fixes it. A failed expectation never undoes the call."), 1, 16, 300)
+					.StringArray(TEXT("require"),
+						TEXT("What must hold before the call runs, in the same language as expect (without noWarnings). When one "
+							"fails or cannot be judged yet, nothing runs: PRECONDITION_FAILED names each unmet requirement."),
+						1, 16, 300);
 			})
 		.Integer(TEXT("limit"), TEXT("Maximum rows per page. search: 12 by default. describe: a listing of domains, families or a family's capabilities shows 50 rows unless limit is set, and a tool's action list is whole."), 1, 25)
 		.Integer(TEXT("offset"), TEXT("Zero-based offset into search results or into a describe listing (domains, families, a family's capabilities or a tool's actions). Defaults to 0."), 0)
@@ -83,9 +94,7 @@ TSharedPtr<FJsonObject> BuildUnrealGatewayToolDefinition()
 
 	auto Tool = MakeShared<FJsonObject>();
 	Tool->SetStringField(TEXT("name"), TEXT("unreal"));
-	// Byte-identical to UNREAL_GATEWAY_DESCRIPTION in
-	// src/tools/catalog/unreal-gateway-definition.ts; the unit test
-	// unreal-gateway-guidance-contract.test.ts joins these pieces and diffs them.
+	// The description every client lists the tool by; the stdio proxy serves the copy it last read from here.
 	Tool->SetStringField(TEXT("description"),
 		TEXT("Unreal Engine editor automation: one tool, four operations. Always in this order: "
 			"(1) search with query = 2-4 plain words naming the verb and the object, e.g. 'spawn actor', 'add variable blueprint', 'save level'; every result row carries a one-line summary, its effect and a ready-made nextCall. "

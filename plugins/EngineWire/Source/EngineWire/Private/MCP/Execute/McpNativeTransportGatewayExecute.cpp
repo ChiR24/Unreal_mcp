@@ -9,6 +9,8 @@
 #include "MCP/Execute/McpNativeGatewayValidation.h"
 #include "MCP/Execute/McpNativeReceiptEnrichment.h"
 #include "MCP/Execute/McpNativeGatewayAuthorization.h"
+#include "MCP/Execute/Request/McpExecuteContractOptions.h"
+#include "Domains/Debug/Contracts/McpContracts.h"
 #include "MCP/Gateway/McpNativeGatewayGuidance.h"
 #include "MCP/Gateway/McpNativeGatewayExecuteReceiptBuild.h"
 #include "MCP/Protocol/McpModernConsent.h"
@@ -30,10 +32,12 @@ void FMcpNativeTransport::HandleGatewayExecute(
 	Context.RequestId = McpCanonicalizeRequestId(Id);
 	Context.QueueRequestId = FGuid::NewGuid().ToString();
 	Context.StartTimeSeconds = FPlatformTime::Seconds();
+	TSharedPtr<FJsonObject> ExecOptions;
 	{
 		const TSharedPtr<FJsonObject>* Options = nullptr;
 		if (Params.IsValid() && Params->TryGetObjectField(TEXT("options"), Options) && Options)
 		{
+			ExecOptions = *Options;
 			(*Options)->TryGetStringField(TEXT("idempotencyKey"), Context.IdempotencyId);
 		}
 	}
@@ -222,7 +226,9 @@ void FMcpNativeTransport::HandleGatewayExecute(
 	if (!Context.IdempotencyId.IsEmpty())
 	{
 		const FString PrincipalIdentity = GetSessionPrincipal(SessionId).Identity;
-		const FString Fingerprint = McpCanonicalFingerprint(Plan.CapabilityId, Plan.Arguments);
+		// The assertions are part of the call: a replay with others must not be served the first one's receipt.
+		const FString Fingerprint =
+			McpCanonicalFingerprint(Plan.CapabilityId + McpExecuteContracts::FingerprintPart(ExecOptions), Plan.Arguments);
 		FString Slot;
 		FString ReplayReceiptJson;
 		const EMcpIdempotencyOutcome Outcome = FMcpIdempotencyLedger::Get().Begin(
@@ -266,6 +272,9 @@ void FMcpNativeTransport::HandleGatewayExecute(
 		}
 	}
 
+	// Judged on the game thread: the requirements before the handler runs, the expectations when it answers.
+	McpContracts::Register(Context.QueueRequestId, McpExecuteContracts::Read(ExecOptions, TEXT("expect")),
+		McpExecuteContracts::Read(ExecOptions, TEXT("require")));
 	StreamToolCall(
 		Plan.ParentTool, Plan.DispatchAction, Plan.Arguments, Id, ClientSocket,
 		SessionId, CorsOrigin, ProgressToken, Plan.CapabilityId, Plan.OutputSchema,

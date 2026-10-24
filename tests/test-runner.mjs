@@ -796,6 +796,11 @@ export function createToolCaller(client, { useProgressTimeouts = false } = {}) {
     if (isRecord(consent)) {
       gatewayCall.arguments = { ...gatewayCall.arguments, consent };
     }
+    // Execute options a case states for itself (expect, require) ride at the case level for the
+    // same reason: explain_collision has an `expect` param of its own.
+    if (isRecord(callOptions.options)) {
+      gatewayCall.arguments = { ...gatewayCall.arguments, options: { ...gatewayCall.arguments.options, ...callOptions.options } };
+    }
     const outgoing = withServerTimeout(gatewayCall, serverTimeoutMs);
     const callTarget = outgoing.name === 'unreal' && typeof outgoing.arguments?.tool === 'string'
       ? `${outgoing.name}:${outgoing.arguments.tool}`
@@ -1494,7 +1499,8 @@ export async function runToolTests(toolName, suiteCases, { folder } = {}) {
           {
             name: testCase.toolName,
             arguments: resolvedArgs,
-            ...(testCase.consent === undefined ? {} : { consent: testCase.consent })
+            ...(testCase.consent === undefined ? {} : { consent: testCase.consent }),
+            ...(testCase.options === undefined ? {} : { options: testCase.options })
           },
           testCaseTimeoutMs
         );

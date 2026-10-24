@@ -36,6 +36,10 @@ public:
 	FMcpSchemaBuilder& StringEnum(const FString& Name, const TArray<FString>& Values,
 		const FString& Description);
 
+	/** Array of MinItems..MaxItems strings, each of 1..MaxLength characters. */
+	FMcpSchemaBuilder& StringArray(const FString& Name, const FString& Description, int32 MinItems, int32 MaxItems,
+		int32 MaxLength);
+
 	/** Integer property. */
 	FMcpSchemaBuilder& Integer(const FString& Name, const FString& Description = FString());
 
