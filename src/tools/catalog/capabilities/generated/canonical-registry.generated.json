@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "08d1f32ad642bec1",
+  "catalogRevision": "4c78b8442c765f8b",
   "recordCount": 421,
   "records": [
     {
@@ -92150,7 +92150,9 @@
           "inspect material graph",
           "read material graph",
           "material graph nodes",
-          "material node details"
+          "material node details",
+          "list material nodes",
+          "nodes in a material"
         ],
         "summary": "Inspect a material or material function: summary with its parameters and overrides, node lookup, node details/properties/connections, node chains and connected subgraphs.",
         "whenToUse": [
@@ -92557,7 +92559,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "ab5d61f4f46bb848054e730dd300d8bb07c649df89784ef488362082a35cb0bb",
-        "content": "6419ef5a7622741abd86ddc5974d118a7811617d848a6c1c0ab04a6169334312"
+        "content": "86892eecf19497f99ec503faf879dcb30375a2c004aa27bcfd2b46ffaeb324b0"
       }
     },
     {
