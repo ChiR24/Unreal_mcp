@@ -58,6 +58,40 @@ const PATH_REFUSAL_HEADERS: readonly string[] = [
 const HANDLER_UTILS = /\bMcpHandlerUtils::/u;
 const withoutComments = (body: string): string => body.replace(/\/\*[\s\S]*?\*\//gu, '').replace(/\/\/.*$/gmu, '');
 
+/** The editor's undo buffer: GEditor->Trans is a TObjectPtr<UTransactor>, complete only with its header. A checkpoint test
+ *  that called GEditor->Trans->Reset compiled while a blob neighbour included Editor/Transactor.h, then failed when two
+ *  relations files reshuffled the blobs. */
+const TRANSACTOR = /\bGEditor->Trans->|\bUTransactor\b|\bUTransBuffer\b/u;
+const TRANSACTOR_HEADERS: readonly string[] = ['Editor/Transactor.h', 'Editor/TransBuffer.h'];
+
+/** The constants and types a file declares directly in an anonymous namespace, each as `Enclosing::Namespace::Name`. */
+const anonymousNames = (body: string): readonly string[] => {
+  const code = withoutComments(body).replace(/"(?:[^"\\\n]|\\.)*"/gu, '""').replace(/^\s*#.*$/gmu, '');
+  const scopes: (string | null | undefined)[] = []; // a namespace's name, null for an anonymous one, undefined for any other brace
+  const names: string[] = [];
+  let opening: string | null | undefined;
+  for (const line of code.split('\n')) {
+    const namespace = /^\s*namespace\b\s*([\w:]+)?\s*(\{)?/u.exec(line);
+    if (namespace && !/=|\busing\b/u.test(line)) {
+      opening = namespace[1] ?? null;
+      if (!namespace[2]) continue;
+    } else if (scopes.at(-1) === null && opening === undefined) {
+      const declared = /^\s*(?:static\s+)?(?:constexpr|const)\s+[\w:<>,\s*&]+?\s+(\w+)\s*(?:=|\[|\{)/u.exec(line)
+        ?? /^\s*(?:struct|class|enum(?:\s+class)?)\s+(\w+)\s*(?::[^;{]*)?\{?\s*$/u.exec(line);
+      if (declared) names.push(`${scopes.filter((scope): scope is string => typeof scope === 'string').join('::')}::${declared[1]}`);
+    }
+    for (const character of line) {
+      if (character === '{') {
+        scopes.push(opening);
+        opening = undefined;
+      } else if (character === '}') {
+        scopes.pop();
+      }
+    }
+  }
+  return names;
+};
+
 const INCLUDE = /#include\s+"([^"]+)"/gu;
 
 const collectSources = (directory: string, out: Map<string, string>): void => {
@@ -141,6 +175,31 @@ describe('plugin translation units do not borrow declarations from unity-blob ne
       expect(users.length, helper).toBeGreaterThan(0);
       expect(users.map(([path]) => path).filter((path) => !providers.includes(path) && !reachesDeclaringHeader(path, providers)).sort(), helper).toEqual([]);
     }
+  });
+
+  it('every user of the editor transactor includes its header', () => {
+    const users = [...sources].filter(([path, body]) => path.endsWith('.cpp') && TRANSACTOR.test(withoutComments(body)));
+    expect(users.length).toBeGreaterThan(4);
+    expect(users.map(([path]) => path).filter((path) => !reachesDeclaringHeader(path, TRANSACTOR_HEADERS)).sort()).toEqual([]);
+  });
+
+  // A unity blob is one translation unit, so the anonymous namespaces two files open inside the same namespace are one
+  // namespace there: a constant or type both declare is a redefinition once a reshuffle puts them in one blob
+  // (SupportTolerance in two relations files; Note and Fingerprint in two change-watch files before that).
+  it('reads the names a file declares in an anonymous namespace, by the namespace around it', () => {
+    const body = 'namespace McpA\n{\nnamespace\n{\nconstexpr double Tolerance = 3.0; // cm\nstruct FRow\n{\n    int32 Count = 0;\n};\n'
+      + 'void Helper() { const int32 Local = 1; }\n} // namespace\n} // namespace McpA\nnamespace McpB {\nnamespace {\nenum class EKind : uint8\n{\n};\n}\n}\n';
+    expect(anonymousNames(body)).toEqual(['McpA::Tolerance', 'McpA::FRow', 'McpB::EKind']);
+  });
+
+  it('no two files declare the same constant or type in an anonymous namespace of the same namespace', () => {
+    const owners = new Map<string, string[]>();
+    for (const [path, body] of sources) {
+      if (!path.endsWith('.cpp')) continue;
+      for (const name of new Set(anonymousNames(body))) owners.set(name, [...(owners.get(name) ?? []), path]);
+    }
+    expect(owners.size, 'no anonymous-namespace names found; the scan is broken').toBeGreaterThan(200);
+    expect([...owners].filter(([, paths]) => paths.length > 1).map(([name, paths]) => `${name}: ${paths.join(', ')}`).sort()).toEqual([]);
   });
 
   it('every user of the path refusal wording includes the header that declares it', () => {
