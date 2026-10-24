@@ -8,6 +8,7 @@
 #include "Core/Requests/McpResponseCaptureRegistry.h"
 #include "Core/Requests/McpUndoLedger.h"
 #include "Editor.h"
+#include "Editor/Transactor.h"
 #include "EngineWireSubsystem.h"
 #include "Misc/AutomationTest.h"
 #include "PhysicalMaterials/PhysicalMaterial.h"
