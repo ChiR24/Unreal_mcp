@@ -40,24 +40,6 @@ bool McpIsSlab(const FVector &Extent) {
   return Extent.Z * 4.0 < FMath::Min(Extent.X, Extent.Y);
 }
 
-// Only a floor can tell you whether something is sunk. The ground trace used to
-// accept whatever it hit first on the way down from an actor's top, so a
-// neighbouring tree's canopy, a market awning or a roof overhang became "the
-// surface under it" -- and every actor standing beneath one was reported as sunk
-// by the height of the thing above it, with no overlap to explain why.
-bool McpIsGroundLike(const AActor *Actor) {
-  if (!Actor) {
-    return false;
-  }
-  if (Actor->GetClass()->GetName().Contains(TEXT("Landscape"))) {
-    return true;
-  }
-  FVector GroundOrigin = FVector::ZeroVector;
-  FVector GroundExtent = FVector::ZeroVector;
-  Actor->GetActorBounds(true, GroundOrigin, GroundExtent);
-  return McpIsSlab(GroundExtent);
-}
-
 /** Overlap along the shallowest axis -- how far the boxes actually interpenetrate. */
 double McpPenetrationDepth(const FBox &A, const FBox &B) {
   const FBox Shared = A.Overlap(B);
@@ -100,6 +82,24 @@ bool McpIsOverlapOnly(const AActor *Actor) {
 }
 
 } // namespace
+
+// Only a floor can tell you whether something is sunk. The ground trace used to
+// accept whatever it hit first on the way down from an actor's top, so a
+// neighbouring tree's canopy, a market awning or a roof overhang became "the
+// surface under it" -- and every actor standing beneath one was reported as sunk
+// by the height of the thing above it, with no overlap to explain why.
+bool McpIsGroundLike(const AActor *Actor) {
+  if (!Actor) {
+    return false;
+  }
+  if (Actor->GetClass()->GetName().Contains(TEXT("Landscape"))) {
+    return true;
+  }
+  FVector GroundOrigin = FVector::ZeroVector;
+  FVector GroundExtent = FVector::ZeroVector;
+  Actor->GetActorBounds(true, GroundOrigin, GroundExtent);
+  return McpIsSlab(GroundExtent);
+}
 
 // A geometric test cannot tell a mistake from a composition. A keep is built by
 // bedding its towers, walls and stairs into its platform; an island is meant to

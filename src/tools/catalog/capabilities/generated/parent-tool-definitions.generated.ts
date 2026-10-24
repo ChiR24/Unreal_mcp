@@ -4129,6 +4129,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "items": {
                 "type": "string"
               },
+              "description": "Only these actors may move, by the names audit_placement reports. Names not found come back under missing; what they intersect stays put and they are pushed off it. A floor, a locked or an attached actor among them is listed under skipped with the reason."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
               "description": "Several actors to change in one call and one undo step, in place of actorName; names not found are listed back under missing, and the actors changed under affectedActors (which the receipt lists as changes, with an actor handle each)."
             },
             {
@@ -4341,7 +4348,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "dryRun": {
           "type": "boolean",
-          "description": "List the moves without making them (default false)."
+          "description": "List the first round of moves without making them (default false)."
         },
         "durationSeconds": {
           "type": "number",
@@ -4431,21 +4438,39 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Game seconds between samples (default 0.05; 0 samples every frame). At most 400 samples are kept."
         },
         "kinds": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "enum": [
-              "sunk",
-              "floating",
-              "overlapping",
-              "unsupported",
-              "tilted",
-              "coplanar",
-              "default_material",
-              "placeholder_text",
-              "duplicate"
-            ]
-          },
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "sunk",
+                  "floating",
+                  "overlapping",
+                  "unsupported",
+                  "tilted",
+                  "coplanar",
+                  "default_material",
+                  "placeholder_text",
+                  "duplicate"
+                ]
+              },
+              "description": "Report only these problem kinds, e.g. [\"coplanar\"] to list z-fighting alone in a platformer full of platforms that float on purpose. default_material: a visible mesh slot drawing the engine's default grid (no material, or one made from it). placeholder_text: a text render still reading the engine default \"Text\" (give it its label, or an empty text when a script writes it in play). duplicate: an actor that is a copy of another in the same place with the same meshes, drawn twice. An actor whose worst problem is another kind still counts for these, as for coplanar, when its contentIssues hold them. An actor whose worst problem is another kind still counts for coplanar when it has coplanarFaces. An actor whose bounds touch or overlap another actor's vertical face (a window band on a hall, an awning on a facade) is mounted, never floating or unsupported. Two faces pointing down with something solid right below them (pieces lying on a floor) are not reported as coplanar: no camera sees them. Omit for every kind."
+            },
+            {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "enum": [
+                  "sunk",
+                  "floating",
+                  "overlapping"
+                ]
+              },
+              "description": "What to fix, as audit_placement names it: sunk (moved up by its depth, onto the surface under it), floating (moved down by its clearance onto that surface; mounted actors, held from the side, are never floating), overlapping (pushed out of the actors it intersects). Required: every kind can be deliberate."
+            }
+          ],
           "description": "Report only these problem kinds, e.g. [\"coplanar\"] to list z-fighting alone in a platformer full of platforms that float on purpose. default_material: a visible mesh slot drawing the engine's default grid (no material, or one made from it). placeholder_text: a text render still reading the engine default \"Text\" (give it its label, or an empty text when a script writes it in play). duplicate: an actor that is a copy of another in the same place with the same meshes, drawn twice. An actor whose worst problem is another kind still counts for these, as for coplanar, when its contentIssues hold them. An actor whose worst problem is another kind still counts for coplanar when it has coplanarFaces. An actor whose bounds touch or overlap another actor's vertical face (a window band on a hall, an awning on a facade) is mounted, never floating or unsupported. Two faces pointing down with something solid right below them (pieces lying on a floor) are not reported as coplanar: no camera sees them. Omit for every kind."
         },
         "limit": {
@@ -4519,7 +4544,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "nameFilter": {
           "type": "string",
-          "description": "Only examine actors whose label or object name contains this text (an actor that shares its label with another is reported by object name, e.g. StaticMeshActor_75). Omit to sweep the whole level."
+          "description": "Only actors whose label or object name contains this text may move. Omit it, with no actorNames, to fix every actor in the level."
         },
         "near": {
           "type": "array",
@@ -4826,6 +4851,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "find",
             "audit_placement",
             "fix_coplanar",
+            "fix_placement",
             "attach",
             "detach",
             "set_blueprint_variables",
@@ -4952,6 +4978,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "items": {
                 "type": "string"
               },
+              "description": "The actors moved (not under dryRun); the receipt lists them as changes."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
               "description": "The actors moved; the receipt lists them as changes, with an actor handle each."
             },
             {
@@ -4976,7 +5009,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "description": "actors or actorNames: the actors that took their transform, each by name and once; the receipt lists them as changes, with an actor handle each."
             }
           ],
-          "description": "The actors moved; the receipt lists them as changes, with an actor handle each."
+          "description": "The actors moved (not under dryRun); the receipt lists them as changes."
         },
         "blueprintPath": {
           "type": "string",
@@ -5275,6 +5308,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "items": {
                 "type": "string"
               },
+              "description": "actorNames that matched no actor."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
               "description": "actorNames: the names that matched no actor."
             }
           ],
@@ -5299,14 +5339,29 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "The actor this one hangs on from the side (a window band flush on a hall, an awning on a facade): its bounds touch or overlap that actor's vertical face, so it is held up and is not reported floating or without a surface below. Present only then."
         },
         "moved": {
-          "type": "array",
-          "description": "One entry per actor: actorName, offset {x, y, z} it moved by, resized when both of its faces on one axis moved (for example \"grew 2.0 units along X\"), and pairs, each face with the other actor and whether it was brought forward or pulled back.",
-          "items": {
-            "type": "object",
-            "additionalProperties": true,
-            "x-unreal-reflection-boundary": true
-          },
-          "x-unreal-reflection-boundary": true
+          "oneOf": [
+            {
+              "type": "array",
+              "description": "One entry per actor: actorName, offset {x, y, z} it moved by, resized when both of its faces on one axis moved (for example \"grew 2.0 units along X\"), and pairs, each face with the other actor and whether it was brought forward or pulled back.",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "x-unreal-reflection-boundary": true
+            },
+            {
+              "type": "array",
+              "description": "One row per actor moved (or that would move): actorName, offset {x, y, z} in total, fixed (the kinds it was moved for) and remainingWarning, the audit's words for what is still wrong with it.",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "x-unreal-reflection-boundary": true
+            }
+          ],
+          "description": "One entry per actor: actorName, offset {x, y, z} it moved by, resized when both of its faces on one axis moved (for example \"grew 2.0 units along X\"), and pairs, each face with the other actor and whether it was brought forward or pulled back."
         },
         "movedActors": {
           "type": "number",
@@ -5411,6 +5466,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Wall-clock time the run took."
         },
+        "remaining": {
+          "type": "number",
+          "description": "Actors still showing a kind asked for afterwards: flagged ones it could not move, and moved ones a move left wrong (their rows carry remainingWarning). Under dryRun, every flagged one."
+        },
         "remainingPairs": {
           "type": "number",
           "description": "Coplanar pairs still found afterwards; run audit_placement with kinds [\"coplanar\"] to see them."
@@ -5468,6 +5527,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Rotation as [pitch, yaw, roll] in degrees."
         },
+        "rounds": {
+          "type": "number",
+          "description": "Rounds made: a move can land an actor in another, so what moved is checked again (at most three; one under dryRun)."
+        },
         "sampleCount": {
           "type": "number",
           "description": "How many samples were taken."
@@ -5510,11 +5573,30 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Only when nothing matched: up to 10 labels that contain the query once case, separators and leading zeros are ignored (\"Bug1\" finds Bug_01 and Bug_10)."
         },
         "skipped": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Pairs left alone, each with the reason and what to do instead."
+          "oneOf": [
+            {
+              "type": "array",
+              "description": "Actors left alone, each {actorName, reason}: one that never moves, a pair whose collision cannot be measured (instanced, skeletal or landscape bodies: separate those by hand) or whose collision does not touch (only their bounding boxes overlap).",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "x-unreal-reflection-boundary": true
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Pairs left alone, each with the reason and what to do instead."
+            }
+          ],
+          "description": "Actors left alone, each {actorName, reason}: one that never moves, a pair whose collision cannot be measured (instanced, skeletal or landscape bodies: separate those by hand) or whose collision does not touch (only their bounding boxes overlap)."
+        },
+        "solverLimitReached": {
+          "type": "boolean",
+          "description": "Present when the call stopped at its 4096 collision queries: run it again, or narrow it with nameFilter."
         },
         "spawned": {
           "type": "number",
@@ -5545,6 +5627,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "actorNames: how many actors were tagged."
         },
+        "timeLimitReached": {
+          "type": "boolean",
+          "description": "Present when no further round started because the call had run 15 seconds: run it again for the rest."
+        },
         "totalCount": {
           "type": "number",
           "description": "Listable actors matching the filter, before the limit is applied."
@@ -5563,6 +5649,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "type": "object",
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true,
+              "description": "What editor undo takes back: {undoable, transactionScope, steps}; every move of the call is one step. Absent under dryRun."
+            },
+            {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
               "description": "Whether editor undo takes the move back: {undoable, transactionScope}."
             },
             {
@@ -5572,7 +5664,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "description": "Whether editor undo takes the spawn back: {undoable: true, transactionScope: \"Spawn Actors\"} (control_editor undo removes every actor the call made), or {undoable: false, reasonCode, reason}."
             }
           ],
-          "description": "Whether editor undo takes the move back: {undoable, transactionScope}."
+          "description": "What editor undo takes back: {undoable, transactionScope, steps}; every move of the call is one step. Absent under dryRun."
         },
         "unnamedActors": {
           "type": "array",

@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `e94cb1cf2d1f7221`
+Catalog revision: `d3eeec75edd32187`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 418 capabilities across
+The catalog declares 419 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -38,7 +38,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | --- | --- | --- | --- | --- | --- |
 | `animation_physics` | 31 | 5 | 24 | 2 | animation physics |
 | `build_environment` | 40 | 4 | 33 | 3 | environment |
-| `control_actor` | 25 | 8 | 15 | 2 | actor |
+| `control_actor` | 26 | 8 | 16 | 2 | actor |
 | `control_editor` | 24 | 9 | 12 | 3 | editor |
 | `inspect` | 22 | 17 | 4 | 1 | inspect |
 | `manage_ai` | 16 | 2 | 14 | 0 | manage ai |
@@ -62,7 +62,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-65 of 418 capabilities require consent.
+65 of 419 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -272,6 +272,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `control_actor.find` | `control_actor` | `find_by_class` | read | read | none | `control_actor.find` `control_actor.find_by_class` `control_actor.find_by_name` `control_actor.find_by_mesh` `control_actor.find_by_material` `control_actor.find_actors_by_class` `control_actor.find_actors_by_name` |
 | `control_actor.find_by_tag` | `control_actor` | `find_by_tag` | read | read | none | `control_actor.find_by_tag` `control_actor.find_actors_by_tag` |
 | `control_actor.fix_coplanar` | `control_actor` | `fix_coplanar` | write | write | none | `control_actor.fix_coplanar` |
+| `control_actor.fix_placement` | `control_actor` | `fix_placement` | write | write | none | `control_actor.fix_placement` |
 | `control_actor.get_component_property` | `control_actor` | `get_component_property` | read | read | none | `control_actor.get_component_property` |
 | `control_actor.get_components` | `control_actor` | `get_components` | read | read | none | `control_actor.get_components` `control_actor.get_actor_bounds` `control_actor.get_actor_components` |
 | `control_actor.get_transform` | `control_actor` | `get_transform` | read | read | none | `control_actor.get_transform` `control_actor.sample_motion` `control_actor.get_actor_transform` |

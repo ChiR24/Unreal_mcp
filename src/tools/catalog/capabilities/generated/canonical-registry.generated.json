@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "e94cb1cf2d1f7221",
-  "recordCount": 418,
+  "catalogRevision": "d3eeec75edd32187",
+  "recordCount": 419,
   "records": [
     {
       "id": "animation_physics.analyze_animation",
@@ -37222,6 +37222,244 @@
         "algorithm": "sha256",
         "schema": "04f7a4e8e53f386cdeb211934a93996020eb867569578fa7fb1f6aa11f34245e",
         "content": "91bb89bd607b8ff4d158d5b25714d41130cbd0c3906c7b7482475a5aab5ea5f2"
+      }
+    },
+    {
+      "id": "control_actor.fix_placement",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "control_actor",
+          "action": "fix_placement"
+        }
+      ],
+      "discovery": {
+        "domain": "actor",
+        "family": "find",
+        "topics": [
+          "fix_placement",
+          "fix sunk actors",
+          "fix floating actors",
+          "fix overlapping actors",
+          "push intersecting actors apart"
+        ],
+        "summary": "Fix what audit_placement reports, judged by its own rules: a sunk actor moves up and a floating one down onto the surface under it, and intersecting actors are pushed apart the shortest way out of each other, measured on their collision (the smaller moves further; floors, landscapes, locked and attached actors never move). kinds names which of sunk, floating and overlapping to fix, since each can be deliberate. Every move is one undo step; a run checks what it moved again, up to three rounds, and dryRun lists the moves without making them.",
+        "whenToUse": [
+          "audit_placement, or the warnings of a spawn or a move, reported actors sunk into the floor, floating above it or intersecting each other.",
+          "A layout built by spawning at guessed heights must be settled onto its floor and pulled out of itself in one call."
+        ],
+        "whenNotToUse": [
+          "Faces that flicker (z-fighting): use fix_coplanar.",
+          "An overlap or a height that is deliberate (a rock bedded in terrain, a floating platform, a kitbashed cliff): leave its kind out of kinds, limit the call with actorNames or nameFilter, or tag the actor mcp.placement.ok (control_actor.add_tag) so neither the audit nor this call judges it."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "kinds": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "enum": [
+                  "sunk",
+                  "floating",
+                  "overlapping"
+                ]
+              },
+              "description": "What to fix, as audit_placement names it: sunk (moved up by its depth, onto the surface under it), floating (moved down by its clearance onto that surface; mounted actors, held from the side, are never floating), overlapping (pushed out of the actors it intersects). Required: every kind can be deliberate."
+            },
+            "actorNames": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Only these actors may move, by the names audit_placement reports. Names not found come back under missing; what they intersect stays put and they are pushed off it. A floor, a locked or an attached actor among them is listed under skipped with the reason."
+            },
+            "nameFilter": {
+              "type": "string",
+              "description": "Only actors whose label or object name contains this text may move. Omit it, with no actorNames, to fix every actor in the level."
+            },
+            "dryRun": {
+              "type": "boolean",
+              "description": "List the first round of moves without making them (default false)."
+            }
+          },
+          "required": [
+            "action",
+            "kinds"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "examined": {
+              "type": "number",
+              "description": "Actors that may move and were checked."
+            },
+            "flagged": {
+              "type": "number",
+              "description": "Of those, how many showed a kind asked for."
+            },
+            "actorsMoved": {
+              "type": "number",
+              "description": "Actors moved (0 under dryRun)."
+            },
+            "rounds": {
+              "type": "number",
+              "description": "Rounds made: a move can land an actor in another, so what moved is checked again (at most three; one under dryRun)."
+            },
+            "remaining": {
+              "type": "number",
+              "description": "Actors still showing a kind asked for afterwards: flagged ones it could not move, and moved ones a move left wrong (their rows carry remainingWarning). Under dryRun, every flagged one."
+            },
+            "dryRun": {
+              "type": "boolean",
+              "description": "Whether nothing was changed."
+            },
+            "moved": {
+              "type": "array",
+              "description": "One row per actor moved (or that would move): actorName, offset {x, y, z} in total, fixed (the kinds it was moved for) and remainingWarning, the audit's words for what is still wrong with it.",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "x-unreal-reflection-boundary": true
+            },
+            "skipped": {
+              "type": "array",
+              "description": "Actors left alone, each {actorName, reason}: one that never moves, a pair whose collision cannot be measured (instanced, skeletal or landscape bodies: separate those by hand) or whose collision does not touch (only their bounding boxes overlap).",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "x-unreal-reflection-boundary": true
+            },
+            "missing": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "actorNames that matched no actor."
+            },
+            "affectedActors": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "The actors moved (not under dryRun); the receipt lists them as changes."
+            },
+            "undo": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "What editor undo takes back: {undoable, transactionScope, steps}; every move of the call is one step. Absent under dryRun."
+            },
+            "solverLimitReached": {
+              "type": "boolean",
+              "description": "Present when the call stopped at its 4096 collision queries: run it again, or narrow it with nameFilter."
+            },
+            "timeLimitReached": {
+              "type": "boolean",
+              "description": "Present when no further round started because the call had run 15 seconds: run it again for the rest."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Fix what audit_placement reports, judged by its own rules: a sunk actor moves up and a floating one down onto the surface under it, and intersecting actors are pushed apart the shortest way out of each other, measured on their collision (the smaller moves further; floors, landscapes, locked and attached actors never move). kinds names which of sunk, floating and overlapping to fix, since each can be deliberate. Every move is one undo step; a run checks what it moved again, up to three rounds, and dryRun lists the moves without making them.",
+          "input": {
+            "action": "fix_placement",
+            "kinds": [
+              "sunk",
+              "overlapping"
+            ],
+            "nameFilter": "Crate",
+            "dryRun": true
+          },
+          "output": {
+            "success": true,
+            "message": "Would move 2 actors for 2 flagged of 12 examined; see moved and skipped.",
+            "examined": 12,
+            "flagged": 2,
+            "actorsMoved": 0,
+            "rounds": 1,
+            "remaining": 2,
+            "dryRun": true,
+            "moved": [
+              {
+                "actorName": "Crate_2",
+                "offset": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 40
+                },
+                "fixed": [
+                  "sunk"
+                ]
+              }
+            ],
+            "skipped": []
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "write",
+        "idempotency": "non-idempotent",
+        "longRunning": false,
+        "safeToRetry": false
+      },
+      "policy": {
+        "requiredScope": "write",
+        "consent": "none",
+        "dataAccess": "project-write"
+      },
+      "cost": {
+        "latency": "interactive",
+        "resources": "medium"
+      },
+      "routing": {
+        "parentTool": "control_actor",
+        "dispatchAction": "fix_placement"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "20b65fcc68e07b80e37090de314deeca7e0bbc9c4e68582714c84201ce40c67b",
+        "content": "cbc70ade223a15eb912dedfe5e9608e6385a67fca8a808ce07bb9c4355e4d127"
       }
     },
     {

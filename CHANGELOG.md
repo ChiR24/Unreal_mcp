@@ -28,7 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`inspect explain`** says why something does not happen (collision, visibility, input, widget, sound, light) and names the call that fixes it.
 - **An unchanged call failing three times in a row is refused** (`REPEATED_FAILURE`) on both transports.
 - **Batches check before they run**: a misspelled `$id` in `build_material_graph` applies nothing, and `build_graph`, `build_material_graph` and `add_widget_tree` take `dryRun`.
-- **`manage_level run_map_check`** answers the editor's Map Check as rows: severity, message, actor and map error name.
+- **`manage_level run_map_check`** answers the editor's Map Check as rows, and **`control_actor fix_placement`** moves the sunk, floating and intersecting actors the audit flags, in one undo step.
 
 </details>
 

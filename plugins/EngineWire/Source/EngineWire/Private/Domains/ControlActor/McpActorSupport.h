@@ -310,6 +310,8 @@ namespace McpPlacement {
 void DescribePlacement(AActor *Actor, const TSharedPtr<FJsonObject> &Data);
 /** True when a caller has marked this actor's placement deliberate. */
 bool McpPlacementAccepted(const AActor *Actor);
+/** A landscape, or a slab far wider than it is thick: what other actors stand on, judged sunk or floating against. */
+bool McpIsGroundLike(const AActor *Actor);
 } // namespace McpPlacement
 
 // A spawn's outliner folder and actor tags (folder, tags), for a single spawn and a spawn_batch item alike; applied before

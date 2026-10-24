@@ -65,7 +65,11 @@ describe('audit_placement confirms a box overlap on the real shapes', () => {
   it('tests two triangle meshes by one mesh\'s turned box against the other', () => {
     const source = shapes();
     expect(source).toContain('return McpBoxApartFrom(A, B) || McpBoxApartFrom(B, A);');
-    expect(source).toContain('return !Struck->GetBodyInstance()->OverlapTest(Xf.TransformPosition(Local.Origin), Xf.GetRotation(), Box);');
+    expect(source).toContain('return !Struck->GetBodyInstance()->OverlapTest(Center, Rotation, Box);');
+    // On the mesh bounds' origin, turned with the mesh (a corner-pivoted kit piece keeps it off its pivot): the one box
+    // fix_placement measures its pushes with.
+    expect(source).toContain('OutCenter = Xf.TransformPosition(Local.Origin);');
+    expect(source).toMatch(/bool McpQueryShape\([\s\S]*?McpMeshBox\(Mesh, OutShape, OutCenter, OutRotation\);/u);
   });
 });
 

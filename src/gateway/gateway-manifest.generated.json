@@ -3679,6 +3679,7 @@
         "find",
         "audit_placement",
         "fix_coplanar",
+        "fix_placement",
         "attach",
         "detach",
         "set_blueprint_variables",
@@ -3787,6 +3788,13 @@
                   "description": "Actor name."
                 },
                 "description": "Actor names to act on (batch delete)."
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Only these actors may move, by the names audit_placement reports. Names not found come back under missing; what they intersect stays put and they are pushed off it. A floor, a locked or an attached actor among them is listed under skipped with the reason."
               },
               {
                 "type": "array",
@@ -4005,7 +4013,7 @@
           },
           "dryRun": {
             "type": "boolean",
-            "description": "List the moves without making them (default false)."
+            "description": "List the first round of moves without making them (default false)."
           },
           "durationSeconds": {
             "type": "number",
@@ -4095,21 +4103,39 @@
             "description": "Game seconds between samples (default 0.05; 0 samples every frame). At most 400 samples are kept."
           },
           "kinds": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "enum": [
-                "sunk",
-                "floating",
-                "overlapping",
-                "unsupported",
-                "tilted",
-                "coplanar",
-                "default_material",
-                "placeholder_text",
-                "duplicate"
-              ]
-            },
+            "oneOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "sunk",
+                    "floating",
+                    "overlapping",
+                    "unsupported",
+                    "tilted",
+                    "coplanar",
+                    "default_material",
+                    "placeholder_text",
+                    "duplicate"
+                  ]
+                },
+                "description": "Report only these problem kinds, e.g. [\"coplanar\"] to list z-fighting alone in a platformer full of platforms that float on purpose. default_material: a visible mesh slot drawing the engine's default grid (no material, or one made from it). placeholder_text: a text render still reading the engine default \"Text\" (give it its label, or an empty text when a script writes it in play). duplicate: an actor that is a copy of another in the same place with the same meshes, drawn twice. An actor whose worst problem is another kind still counts for these, as for coplanar, when its contentIssues hold them. An actor whose worst problem is another kind still counts for coplanar when it has coplanarFaces. An actor whose bounds touch or overlap another actor's vertical face (a window band on a hall, an awning on a facade) is mounted, never floating or unsupported. Two faces pointing down with something solid right below them (pieces lying on a floor) are not reported as coplanar: no camera sees them. Omit for every kind."
+              },
+              {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "sunk",
+                    "floating",
+                    "overlapping"
+                  ]
+                },
+                "description": "What to fix, as audit_placement names it: sunk (moved up by its depth, onto the surface under it), floating (moved down by its clearance onto that surface; mounted actors, held from the side, are never floating), overlapping (pushed out of the actors it intersects). Required: every kind can be deliberate."
+              }
+            ],
             "description": "Report only these problem kinds, e.g. [\"coplanar\"] to list z-fighting alone in a platformer full of platforms that float on purpose. default_material: a visible mesh slot drawing the engine's default grid (no material, or one made from it). placeholder_text: a text render still reading the engine default \"Text\" (give it its label, or an empty text when a script writes it in play). duplicate: an actor that is a copy of another in the same place with the same meshes, drawn twice. An actor whose worst problem is another kind still counts for these, as for coplanar, when its contentIssues hold them. An actor whose worst problem is another kind still counts for coplanar when it has coplanarFaces. An actor whose bounds touch or overlap another actor's vertical face (a window band on a hall, an awning on a facade) is mounted, never floating or unsupported. Two faces pointing down with something solid right below them (pieces lying on a floor) are not reported as coplanar: no camera sees them. Omit for every kind."
           },
           "limit": {
@@ -4183,7 +4209,7 @@
           },
           "nameFilter": {
             "type": "string",
-            "description": "Only examine actors whose label or object name contains this text (an actor that shares its label with another is reported by object name, e.g. StaticMeshActor_75). Omit to sweep the whole level."
+            "description": "Only actors whose label or object name contains this text may move. Omit it, with no actorNames, to fix every actor in the level."
           },
           "near": {
             "type": "array",
@@ -4490,6 +4516,7 @@
               "find",
               "audit_placement",
               "fix_coplanar",
+              "fix_placement",
               "attach",
               "detach",
               "set_blueprint_variables",

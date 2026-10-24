@@ -321,6 +321,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "control_actor::find_by_name": "interactive|low",
   "control_actor::find_by_tag": "instant|low",
   "control_actor::fix_coplanar": "interactive|medium",
+  "control_actor::fix_placement": "interactive|medium",
   "control_actor::get_actor_bounds": "instant|low",
   "control_actor::get_actor_components": "instant|low",
   "control_actor::get_actor_transform": "interactive|low",
@@ -1611,4 +1612,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1598;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1599;

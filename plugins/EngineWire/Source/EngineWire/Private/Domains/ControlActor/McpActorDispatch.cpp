@@ -1,6 +1,7 @@
 #include "Domains/ControlActor/McpActorSupport.h"
 #include "Domains/ControlActor/Find/McpFindByAsset.h"
 #include "Domains/ControlActor/Placement/McpCoplanarFaces.h"
+#include "Domains/ControlActor/Placement/Fix/McpPlacementFix.h"
 
 bool UEngineWireSubsystem::HandleControlActorAction(
     const FString &RequestId, const FString &Action,
@@ -137,6 +138,9 @@ bool UEngineWireSubsystem::HandleControlActorAction(
     return HandleControlActorAuditPlacement(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("fix_coplanar"))
     return McpCoplanar::HandleFixCoplanar(this, RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("fix_placement"))
+    return McpPlacementFix::HandleFixPlacement(this, RequestId, Payload, RequestingSocket,
+                                               [this](const FString &Name) { return FindActorByName(Name); });
   if (LowerSub == TEXT("set_property"))
     return HandleSetObjectProperty(RequestId, TEXT("set_object_property"), Payload, RequestingSocket);
   if (LowerSub == TEXT("get_property"))

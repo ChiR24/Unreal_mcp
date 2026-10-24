@@ -20,4 +20,12 @@ bool McpHasBody(const UPrimitiveComponent *Comp);
  * bounding-box verdict, so this returns false for it.
  */
 bool McpShapesApart(AActor *Actor, AActor *Other);
+/**
+ * How far Actor, moved by Offset, must move to leave Other (OutPush; zero when apart), measured on every colliding
+ * component pair with each side's shape (a mesh's bounds box, or a box, sphere or capsule component's own shape)
+ * against the other's body, the shorter of the two pushes kept and the deepest pair winning. False when no pair could
+ * be measured (instanced or skeletal bodies, no collision): then nothing is known about the pair. InOutCalls counts the
+ * engine queries made.
+ */
+bool McpMeasurePush(AActor *Actor, AActor *Other, const FVector &Offset, FVector &OutPush, int32 &InOutCalls);
 } // namespace McpPlacement

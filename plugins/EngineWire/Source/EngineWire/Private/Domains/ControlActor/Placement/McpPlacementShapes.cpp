@@ -5,6 +5,7 @@
 #include "CollisionQueryParams.h"
 #include "CollisionShape.h"
 #include "Components/InstancedStaticMeshComponent.h"
+#include "Components/ShapeComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
 #include "GameFramework/Actor.h"
@@ -68,18 +69,62 @@ bool McpCanBeStruck(const UPrimitiveComponent *Comp) {
   return Setup && (Setup->GetCollisionTraceFlag() == CTF_UseComplexAsSimple || Setup->AggGeom.GetElementCount() > 0);
 }
 
-// The mesh's own box, turned and scaled with it, holds every triangle: when that
-// box strikes nothing of Struck, the mesh does not either. Two triangle meshes
-// cannot be tested against each other any other way.
+// The mesh's own box, turned and scaled with it: centred on the mesh bounds' origin, which a corner-pivoted kit piece
+// keeps off its pivot. It holds every triangle, so what it misses the mesh misses too.
+void McpMeshBox(const UStaticMeshComponent *Mesh, FCollisionShape &OutShape, FVector &OutCenter, FQuat &OutRotation) {
+  const FBoxSphereBounds Local = Mesh->GetStaticMesh()->GetBounds();
+  const FTransform &Xf = Mesh->GetComponentTransform();
+  OutShape = FCollisionShape::MakeBox(Local.BoxExtent * Xf.GetScale3D().GetAbs());
+  OutCenter = Xf.TransformPosition(Local.Origin);
+  OutRotation = Xf.GetRotation();
+}
+
+// When that box strikes nothing of Struck, the mesh does not either. Two triangle meshes cannot be tested against each
+// other any other way.
 bool McpBoxApartFrom(const UPrimitiveComponent *BoxOf, const UPrimitiveComponent *Struck) {
   const UStaticMeshComponent *Mesh = Cast<UStaticMeshComponent>(BoxOf);
   if (!Mesh || !Mesh->GetStaticMesh() || !McpCanBeStruck(Struck)) {
     return false;
   }
-  const FBoxSphereBounds Local = Mesh->GetStaticMesh()->GetBounds();
-  const FTransform &Xf = BoxOf->GetComponentTransform();
-  const FCollisionShape Box = FCollisionShape::MakeBox(Local.BoxExtent * Xf.GetScale3D().GetAbs());
-  return !Struck->GetBodyInstance()->OverlapTest(Xf.TransformPosition(Local.Origin), Xf.GetRotation(), Box);
+  FCollisionShape Box;
+  FVector Center;
+  FQuat Rotation;
+  McpMeshBox(Mesh, Box, Center, Rotation);
+  return !Struck->GetBodyInstance()->OverlapTest(Center, Rotation, Box);
+}
+
+// What a component is measured with: a box, sphere or capsule component's own shape, else a plain static mesh's box.
+// Instanced, skeletal and other bodies have no single shape here.
+bool McpQueryShape(const UPrimitiveComponent *Comp, FCollisionShape &OutShape, FVector &OutCenter, FQuat &OutRotation) {
+  if (Comp->IsA<UShapeComponent>()) {
+    OutShape = Comp->GetCollisionShape();
+    OutCenter = Comp->GetComponentLocation();
+    OutRotation = Comp->GetComponentQuat();
+    return true;
+  }
+  const UStaticMeshComponent *Mesh = Cast<UStaticMeshComponent>(Comp);
+  if (!Mesh || Mesh->IsA<UInstancedStaticMeshComponent>() || !Mesh->GetStaticMesh()) {
+    return false;
+  }
+  McpMeshBox(Mesh, OutShape, OutCenter, OutRotation);
+  return true;
+}
+
+// How far ShapeOf, moved by Offset, must move to leave Struck's body (zero when apart). False when it cannot be asked.
+bool McpShapePush(const UPrimitiveComponent *ShapeOf, UPrimitiveComponent *Struck, const FVector &Offset, FVector &OutPush,
+                  int32 &InOutCalls) {
+  FCollisionShape Shape;
+  FVector Center;
+  FQuat Rotation;
+  const bool bStruckQueryable = Struck->IsA<UShapeComponent>() ? McpHasBody(Struck) : McpCanBeStruck(Struck);
+  if (!bStruckQueryable || !McpQueryShape(ShapeOf, Shape, Center, Rotation)) {
+    return false;
+  }
+  ++InOutCalls;
+  FMTDResult Mtd;
+  OutPush = Struck->ComputePenetration(Mtd, Shape, Center + Offset, Rotation) ? FVector(Mtd.Direction) * Mtd.Distance
+                                                                              : FVector::ZeroVector;
+  return true;
 }
 
 // ponytail: a triangle mesh is a surface, so a part wholly inside its solid,
@@ -115,6 +160,32 @@ bool McpShapesApart(AActor *Actor, AActor *Other) {
     }
   }
   return true;
+}
+
+bool McpMeasurePush(AActor *Actor, AActor *Other, const FVector &Offset, FVector &OutPush, int32 &InOutCalls) {
+  OutPush = FVector::ZeroVector;
+  bool bMeasured = false;
+  TInlineComponentArray<UPrimitiveComponent *> Mine(Actor), Theirs(Other);
+  for (UPrimitiveComponent *A : Mine) {
+    for (UPrimitiveComponent *B : Theirs) {
+      if (!A->IsCollisionEnabled() || !B->IsCollisionEnabled() || !McpBlocksSolids(A) || !McpBlocksSolids(B) ||
+          !McpHasBody(A) || !McpHasBody(B) || !A->Bounds.GetBox().ShiftBy(Offset).Intersect(B->Bounds.GetBox())) {
+        continue;
+      }
+      // Each side's shape overstates it (a box holds a round rock with air to spare), so the shorter push is nearer the
+      // truth, and a measured zero means apart. Back moves Other out of Actor, so Actor goes the other way.
+      FVector Forward, Back;
+      const bool bForward = McpShapePush(A, B, Offset, Forward, InOutCalls);
+      const bool bBack = McpShapePush(B, A, -Offset, Back, InOutCalls);
+      if (!bForward && !bBack) {
+        continue;
+      }
+      bMeasured = true;
+      const FVector Push = (!bBack || (bForward && Forward.SizeSquared() <= Back.SizeSquared())) ? Forward : -Back;
+      OutPush = Push.SizeSquared() > OutPush.SizeSquared() ? Push : OutPush;
+    }
+  }
+  return bMeasured;
 }
 
 } // namespace McpPlacement
