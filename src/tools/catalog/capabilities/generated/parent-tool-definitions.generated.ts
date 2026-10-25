@@ -15697,6 +15697,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "delete_node",
             "inspect_graph",
             "lint_blueprint",
+            "read_graph_as_code",
             "add_function",
             "remove_function",
             "implement_interface",
@@ -15976,6 +15977,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "checked": {
           "type": "number",
           "description": "dryRun: the steps checked."
+        },
+        "code": {
+          "type": "string",
+          "description": "The text: each graph after a \"; graph Name\" comment line, its events and functions top to bottom."
         },
         "compileStatus": {
           "type": "string",
@@ -16409,6 +16414,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Target graph name (Event Graph, Construction Script, etc.)."
         },
+        "graphs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "x-unreal-reflection-boundary": true,
+          "description": "One row per graph read: name, kind (event_graph, function, macro or graph), nodes, and notInCode (the ids of nodes no event or function reaches, so the code leaves them out; reroutes are never printed)."
+        },
         "graphsChecked": {
           "type": "number",
           "description": "Graphs read: event graphs, functions and the graphs they collapse; macros and delegate signatures are not."
@@ -16495,6 +16510,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Its length in seconds."
         },
+        "linkCount": {
+          "type": "number",
+          "description": "Wires in the graphs read, listed or not."
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Every wire as \"id.OutPin -> id.InPin\". At most 1000."
+        },
         "literalNodeId": {
           "type": "string",
           "description": "Guid of the MakeLiteral node carrying the value when the pin itself takes no literal; setting the pin again updates that node."
@@ -16553,6 +16579,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Node comment, empty when it has none."
         },
+        "nodeCount": {
+          "type": "number",
+          "description": "Nodes in the graphs read, listed or not."
+        },
         "nodeGuid": {
           "type": "string",
           "description": "Node guid: the function's entry node, or the event node. A built-in event that already exists in the graph may be bound without one."
@@ -16607,14 +16637,29 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Available Blueprint node types, each an object with className and displayName."
         },
         "nodes": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "additionalProperties": true,
-            "x-unreal-reflection-boundary": true
-          },
-          "description": "Node descriptors (nodeId, nodeName, nodeTitle, and position x and y; pins if includePins=true).",
-          "x-unreal-reflection-boundary": true
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Node descriptors (nodeId, nodeName, nodeTitle, and position x and y; pins if includePins=true).",
+              "x-unreal-reflection-boundary": true
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "x-unreal-reflection-boundary": true,
+              "description": "Every node: id (as the code names it), nodeId (its GUID) and type (its action-menu id). At most 500."
+            }
+          ],
+          "description": "Every node: id (as the code names it), nodeId (its GUID) and type (its action-menu id). At most 500."
         },
         "note": {
           "type": "string",
@@ -16926,7 +16971,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "truncated": {
           "type": "boolean",
-          "description": "True when there were more findings than maxFindings: the rest are counted, not listed."
+          "description": "Present and true when nodes or links stopped at their limit."
         },
         "unmoved": {
           "type": "array",

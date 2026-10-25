@@ -620,7 +620,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'find function by what it does', accepted: ['blueprint.inspect_graph'] },
   { query: 'write my own logic', accepted: ['blueprint.edit_graph'] },
   { query: 'my own game mechanic', accepted: ['blueprint.edit_graph'] },
-  { query: 'blueprint code', accepted: ['blueprint.edit_graph'] },
+  { query: 'blueprint code', accepted: ['blueprint.edit_graph', 'blueprint.read_graph_as_code'] },
   { query: 'write blueprint code', accepted: ['blueprint.edit_graph'] },
   { query: 'code a mechanic in blueprint', accepted: ['blueprint.edit_graph'] },
   { query: 'program a blueprint', accepted: ['blueprint.edit_graph'] },
@@ -658,4 +658,8 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'contact sheet of an actor', accepted: ['inspect.contact_sheet'] },
   { query: 'show the prop from every side', accepted: ['inspect.contact_sheet'] },
   { query: 'front side and top views of an actor', accepted: ['inspect.contact_sheet'] },
+  { query: 'read blueprint as code', accepted: ['blueprint.read_graph_as_code'] },
+  { query: 'decompile a blueprint', accepted: ['blueprint.read_graph_as_code'] },
+  { query: 'blueprint logic as text', accepted: ['blueprint.read_graph_as_code'] },
+  { query: 'what does this blueprint do', accepted: ['blueprint.read_graph_as_code', 'blueprint.inspect_graph'] },
 ];

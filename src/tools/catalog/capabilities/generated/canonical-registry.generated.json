@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "401fe1971a4cbf8e",
-  "recordCount": 425,
+  "catalogRevision": "5c3edc74aa2d4650",
+  "recordCount": 426,
   "records": [
     {
       "id": "animation_physics.analyze_animation",
@@ -23397,6 +23397,201 @@
         "algorithm": "sha256",
         "schema": "d17b9c21a789ca01718eb77c18ac5bb45d724ed94d0e49ca57dccc877b875fd0",
         "content": "49476100274e9e031f20be4f6435f58bcb44806ad75c7ec0f4ad99cbbf7a6fce"
+      }
+    },
+    {
+      "id": "blueprint.read_graph_as_code",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "manage_blueprint",
+          "action": "read_graph_as_code"
+        }
+      ],
+      "discovery": {
+        "domain": "blueprint",
+        "family": "code",
+        "topics": [
+          "read_graph_as_code",
+          "blueprint as code",
+          "read blueprint logic as text",
+          "decompile blueprint",
+          "blueprint to text",
+          "what does this blueprint do"
+        ],
+        "summary": "Read a Blueprint's event graphs and functions as text, in the S-expression grammar of Epic's UE 5.8 Blueprint DSL (read_graph_dsl / write_graph_dsl), on every UE 5.x: one (event Name (Params) ...) or (fn Name (Params) ...) per event or function; a statement per node that runs, (Category|Title args...) named by the node's action-menu id (Development|PrintString, Variables|Default|SetHealth), with trailing arguments still at their defaults left out; (bind var (Call ...)) where an output is read later (by output position, _ for one not read); (if cond ... (elif cond ...) (else ...)), (for i (range n) ...), (for elem array ...), (while cond ...), (break), (switch Type value (:Case ...)), (return ...); pure nodes inline: (+ a b), (== a b), (and a b), (not x), (select cond a b), (.x vector), (.yaw rotator), (.location transform), self, literals (\"text\", 5, true); a node with named exec outputs takes (:Pin ...) continuations (pin names with spaces quoted). Every statement ends with a ; comment naming its node by id: n and the first hex digits of the node's GUID (6, more where two nodes read together share them), so ids do not change between reads; nodes gives each id its nodeId (the full GUID other graph actions take) and type, links every wire as \"id.Pin -> id.Pin\". Where a path runs on into a node already printed, (goto id) says so (Epic's own reader leaves that path out); a pure value two statements read is bound once at the top, tagged \"pure, runs at each read\" (Blueprint works it out again at each read). Reads only: nothing is created, compiled or changed. The first read after the editor starts takes several seconds while the editor builds its node menu.",
+        "whenToUse": [
+          "What a Blueprint does must be read or reviewed in one call, instead of node by node.",
+          "Before editing a graph: the code shows what runs and in what order, and the node ids to edit.",
+          "A Blueprint's logic should be explained, compared with another, or checked against what it is meant to do."
+        ],
+        "whenNotToUse": [
+          "One node's pins, defaults or position are needed: get_node_details.",
+          "Mistakes that show only in Play should be found: lint_blueprint."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "blueprintPath": {
+              "type": "string",
+              "description": "Canonical /Game Blueprint asset path."
+            },
+            "graphName": {
+              "type": "string",
+              "description": "One graph: EventGraph, a function's name, or a macro or collapsed graph by name (GRAPH_NOT_FOUND lists the graphs). Default: every event graph and function."
+            }
+          },
+          "required": [
+            "action",
+            "blueprintPath"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "code": {
+              "type": "string",
+              "description": "The text: each graph after a \"; graph Name\" comment line, its events and functions top to bottom."
+            },
+            "graphs": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "x-unreal-reflection-boundary": true,
+              "description": "One row per graph read: name, kind (event_graph, function, macro or graph), nodes, and notInCode (the ids of nodes no event or function reaches, so the code leaves them out; reroutes are never printed)."
+            },
+            "nodes": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "x-unreal-reflection-boundary": true,
+              "description": "Every node: id (as the code names it), nodeId (its GUID) and type (its action-menu id). At most 500."
+            },
+            "links": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Every wire as \"id.OutPin -> id.InPin\". At most 1000."
+            },
+            "nodeCount": {
+              "type": "number",
+              "description": "Nodes in the graphs read, listed or not."
+            },
+            "linkCount": {
+              "type": "number",
+              "description": "Wires in the graphs read, listed or not."
+            },
+            "truncated": {
+              "type": "boolean",
+              "description": "Present and true when nodes or links stopped at their limit."
+            }
+          },
+          "required": [
+            "success",
+            "code"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Read a Blueprint's event graphs and functions as text, in the S-expression grammar of Epic's UE 5.8 Blueprint DSL (read_graph_dsl / write_graph_dsl), on every UE 5.x: one (event Name (Params) ...) or (fn Name (Params) ...) per event or function; a statement per node that runs, (Category|Title args...) named by the node's action-menu id (Development|PrintString, Variables|Default|SetHealth), with trailing arguments still at their defaults left out; (bind var (Call ...)) where an output is read later (by output position, _ for one not read); (if cond ... (elif cond ...) (else ...)), (for i (range n) ...), (for elem array ...), (while cond ...), (break), (switch Type value (:Case ...)), (return ...); pure nodes inline: (+ a b), (== a b), (and a b), (not x), (select cond a b), (.x vector), (.yaw rotator), (.location transform), self, literals (\"text\", 5, true); a node with named exec outputs takes (:Pin ...) continuations (pin names with spaces quoted). Every statement ends with a ; comment naming its node by id: n and the first hex digits of the node's GUID (6, more where two nodes read together share them), so ids do not change between reads; nodes gives each id its nodeId (the full GUID other graph actions take) and type, links every wire as \"id.Pin -> id.Pin\". Where a path runs on into a node already printed, (goto id) says so (Epic's own reader leaves that path out); a pure value two statements read is bound once at the top, tagged \"pure, runs at each read\" (Blueprint works it out again at each read). Reads only: nothing is created, compiled or changed. The first read after the editor starts takes several seconds while the editor builds its node menu.",
+          "input": {
+            "action": "read_graph_as_code",
+            "blueprintPath": "/Game/Blueprints/BP_Door",
+            "graphName": "EventGraph"
+          },
+          "output": {
+            "success": true,
+            "message": "BP_Door as code: 1 graph(s), 2 node(s).",
+            "code": "; graph EventGraph\n(event EventBeginPlay  ; n8c1d0e\n  (Development|PrintString \"Door ready\"))  ; n1f2e3d\n",
+            "graphs": [
+              {
+                "name": "EventGraph",
+                "kind": "event_graph",
+                "nodes": 2
+              }
+            ],
+            "nodes": [
+              {
+                "id": "n8c1d0e",
+                "nodeId": "8C1D0E6A4F2B4C1D9E0F1A2B3C4D5E6F",
+                "type": "AddEvent|EventBeginPlay"
+              },
+              {
+                "id": "n1f2e3d",
+                "nodeId": "1F2E3D4C5B6A49788796A5B4C3D2E1F0",
+                "type": "Development|PrintString"
+              }
+            ],
+            "links": [
+              "n8c1d0e.then -> n1f2e3d.execute"
+            ],
+            "nodeCount": 2,
+            "linkCount": 1
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [
+          "EditorScriptingUtilities"
+        ],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "read",
+        "idempotency": "idempotent",
+        "longRunning": false,
+        "safeToRetry": true
+      },
+      "policy": {
+        "requiredScope": "read",
+        "consent": "none",
+        "dataAccess": "project-read"
+      },
+      "cost": {
+        "latency": "interactive",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "manage_blueprint",
+        "dispatchAction": "read_graph_as_code"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "a5496089aa634a688329349ab3fa780ececc569c662c2b5e60d32ef196b29a77",
+        "content": "678f24f840b996157eea30fafa4aaf958a113482443b2aa45663886078097b03"
       }
     },
     {

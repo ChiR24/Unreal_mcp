@@ -1,4 +1,5 @@
 #include "Domains/BlueprintGraph/McpBPGraphPrivate.h"
+#include "Domains/BlueprintGraph/Code/McpGraphCode.h"
 #include "Domains/BlueprintGraph/Lint/McpBPLint.h"
 
 #include "EdGraphSchema_K2.h"
@@ -237,16 +238,18 @@ bool UEngineWireSubsystem::HandleBlueprintGraphAction(
         return true;
     }
 
-    // A lint reads every graph, so a Blueprint without an event graph (a function library) is linted too.
+    // A lint reads every graph, so a Blueprint without an event graph (a function library) is linted too; so does
+    // read_graph_as_code unless it names one graph.
     const bool bLint = Context.SubAction == TEXT("lint_blueprint");
-    if (!McpBlueprintGraphHandlers::PrepareBlueprintAndGraph(Context, /*bRequireGraph=*/!bLint))
+    const bool bCode = Context.SubAction == TEXT("read_graph_as_code");
+    if (!McpBlueprintGraphHandlers::PrepareBlueprintAndGraph(Context, /*bRequireGraph=*/bCode ? Payload->HasField(TEXT("graphName")) : !bLint))
     {
         return true;
     }
-    if (bLint)
+    if (bLint || bCode)
     {
         Context.bDeferCompile = true; // a read never compiles
-        return McpBPLint::HandleLint(Context);
+        return bLint ? McpBPLint::HandleLint(Context) : McpGraphCode::HandleReadGraphAsCode(Context);
     }
 
     if (McpBlueprintGraphHandlers::HandleGraphBatchAction(Context) ||

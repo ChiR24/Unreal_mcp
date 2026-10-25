@@ -24,6 +24,8 @@ const ENGINE_BASIC_MATERIAL = '/Engine/BasicShapes/BasicShapeMaterial.BasicShape
 const ENGINE_DEFAULT_TEXTURE = '/Engine/EngineResources/DefaultTexture.DefaultTexture';
 const ENGINE_SOUND = '/Engine/EditorSounds/Notifications/CompileSuccess.CompileSuccess';
 const SOUND_BP_NAME = `BP_SoundProbe_${ts}`;
+const CODE_BP_NAME = `BP_CodeProbe_${ts}`;
+const CODE_BP_PATH = `${TEST_FOLDER}/${CODE_BP_NAME}`;
 
 const testCases = [
   // === SETUP ===
@@ -407,6 +409,28 @@ const testCases = [
   // === LINT: lint_blueprint reads every graph for the mistakes that show in Play (the batch chain above has no event) ===
   { scenario: 'LINT: lint_blueprint names a chain no event leads to', toolName: 'manage_blueprint', arguments: { action: 'lint_blueprint', blueprintPath: BP_PATH, rules: ['unreachable'], maxFindings: 5 }, expected: 'success', assertions: [{ path: 'structuredContent.result.findings.0.rule', equals: 'unreachable', label: 'a node no event leads to is named' }, { path: 'structuredContent.result.counts.unreachable', min: 1, label: 'findings are counted per rule' }] },
   { scenario: 'ERROR: lint_blueprint refuses a rule it does not have', toolName: 'manage_blueprint', arguments: { action: 'lint_blueprint', blueprintPath: BP_PATH, rules: ['no_such_rule'] }, expected: 'error|INVALID_PARAMETER_VALUE' },
+
+  // === CODE: read_graph_as_code reads graphs as the text of Epic's Blueprint DSL, on a Blueprint of its own ===
+  { scenario: 'Setup: create the code probe blueprint', toolName: 'manage_blueprint', arguments: { action: 'create_blueprint', name: CODE_BP_NAME, savePath: TEST_FOLDER, parentClass: 'Actor' }, expected: 'success|already exists' },
+  { scenario: 'Setup: a custom event that branches to two prints', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: CODE_BP_PATH, graphName: 'EventGraph', operations: [
+    { edit: 'create_node', id: 'ev', nodeType: 'CustomEvent', customEventName: 'OnCodeProbe' },
+    { edit: 'create_node', id: 'br', nodeType: 'Branch', pinDefaults: { Condition: true } },
+    { edit: 'create_node', id: 'yes', nodeType: 'CallFunction', memberName: 'PrintString', pinDefaults: { InString: 'yes' } },
+    { edit: 'create_node', id: 'no', nodeType: 'CallFunction', memberName: 'PrintString', pinDefaults: { InString: 'no' } },
+    { edit: 'connect_pins', from: '$ev.then', to: '$br.execute' },
+    { edit: 'connect_pins', from: '$br.then', to: '$yes.execute' },
+    { edit: 'connect_pins', from: '$br.else', to: '$no.execute' },
+  ] }, expected: 'success' },
+  { scenario: 'INFO: read_graph_as_code reads the event as an if with an else', toolName: 'manage_blueprint', arguments: { action: 'read_graph_as_code', blueprintPath: CODE_BP_PATH, graphName: 'EventGraph' }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.code', includes: '(event Custom|OnCodeProbe', label: 'the custom event heads its code' },
+    { path: 'structuredContent.result.code', includes: '(if true', label: 'the Branch is an if on its condition' },
+    { path: 'structuredContent.result.code', includes: '(Development|PrintString "yes")', label: 'a call by its menu id, trailing defaults left out' },
+    { path: 'structuredContent.result.code', includes: '(else', label: 'the false side is the else' },
+    { path: 'structuredContent.result.linkCount', gte: 3, label: 'every wire is listed' },
+  ] },
+  { scenario: 'INFO: read_graph_as_code reads every event graph and function by default', toolName: 'manage_blueprint', arguments: { action: 'read_graph_as_code', blueprintPath: CODE_BP_PATH }, expected: 'success', assertions: [{ path: 'structuredContent.result.graphs', length: 2, label: 'the event graph and the construction script' }, { path: 'structuredContent.result.graphs.1.kind', equals: 'function', label: 'the construction script is a function' }] },
+  { scenario: 'ERROR: read_graph_as_code names the graphs when one is missing', toolName: 'manage_blueprint', arguments: { action: 'read_graph_as_code', blueprintPath: CODE_BP_PATH, graphName: 'NoSuchGraph' }, expected: 'error|GRAPH_NOT_FOUND' },
+  { scenario: 'Cleanup: delete the code probe blueprint', toolName: 'manage_asset', arguments: { action: 'delete', path: CODE_BP_PATH, force: true }, expected: 'success|not found' },
 
   // === BATCH: dryRun checks a batch and runs none of it ===
   { scenario: 'BATCH: build_graph dryRun checks every step and runs none', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: BP_PATH, graphName: 'EventGraph', dryRun: true, operations: [

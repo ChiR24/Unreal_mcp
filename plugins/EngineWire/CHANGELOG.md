@@ -7,7 +7,7 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 ## [Unreleased]
 
 ### Added
-- **Blueprint runtime errors** name their node and an Accessed None its cause; `lint_blueprint` finds such mistakes before Play.
+- **Blueprint runtime errors** name their node and an Accessed None its cause; `lint_blueprint` finds such mistakes before Play; **`read_graph_as_code`** reads graphs as the text of Epic's 5.8 Blueprint DSL, on every 5.x.
 - **`get_editor_focus`**: open editors, the focused graph's selected nodes, selected actors, recent errors.
 - **`describe_view`** `points` (`tolerance`), `labels`, `coveredBy`, `compareWith` (what changed since `saveAs`); **`analyze_view`** (saliency, palette, light, shader cost); **`contact_sheet`** (an actor from every side).
 - **MCP 2026-07-28 on `/mcp`**: sessionless requests, header checks, `resultType`, consent by elicitation, the tasks extension.
