@@ -2,6 +2,7 @@
 #include "Domains/BlueprintGraph/McpBPGraphBatchSteps.h"
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
 
+#include "Foundation/GraphLayout/McpLayered.h"
 #include "Foundation/McpScopedEditorTransaction.h"
 #include "ScopedTransaction.h"
 
@@ -121,7 +122,9 @@ bool DeleteNodes(FActionContext& Context)
 // arrange_nodes: the listed nodes move beside the nodes they are wired to, as a build_graph step's
 // auto-placed nodes do (SettleAutoPlacedNodes); the nodes left out stay put and anchor them. The listed
 // ones are parked out of the way first, so their old spots block nothing; one with no wired neighbour
-// left in place, or no free slot near it, goes back where it was and is named under unmoved.
+// left in place, or no free slot near it, goes back where it was and is named under unmoved. layout
+// "layered" instead lays the listed nodes out in columns along the links among them (McpLayered), the
+// first listed staying where it is.
 bool ArrangeNodes(FActionContext& Context)
 {
     if (Context.SubAction != TEXT("arrange_nodes"))
@@ -152,21 +155,31 @@ bool ArrangeNodes(FActionContext& Context)
     TArray<TSharedPtr<FJsonValue>> Stayed;
     TArray<TSharedPtr<FJsonValue>> InPlace;
     TMap<UEdGraphNode*, FIntPoint> Original;
+    const bool bLayered = GetJsonStringField(Context.Payload, TEXT("layout")) == TEXT("layered");
     {
         // One undo step for the moves. It closes before the save below: a save inside it left the file holding
         // the new positions while undo put the old ones back in memory.
         const FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Arrange Nodes")),
                                                       EMcpMutationDurability::EditorStateOnly, Nodes);
         GraphBatch::FBatchState State;
+        TArray<UEdGraphNode*> Listed;
         for (UObject* Object : Nodes)
         {
             UEdGraphNode* Node = CastChecked<UEdGraphNode>(Object);
             Original.Add(Node, FIntPoint(Node->NodePosX, Node->NodePosY));
-            Node->NodePosX = -1000000 - Original.Num() * 480;
-            Node->NodePosY = -1000000;
-            State.AutoPlacedGuids.Add(Node->NodeGuid.ToString());
+            Listed.Add(Node);
+            if (!bLayered)
+            {
+                Node->NodePosX = -1000000 - Original.Num() * 480;
+                Node->NodePosY = -1000000;
+                State.AutoPlacedGuids.Add(Node->NodeGuid.ToString());
+            }
         }
-        const TArray<UEdGraphNode*> Unmoved = GraphBatch::SettleAutoPlacedNodes(Context.Blueprint, State);
+        if (bLayered)
+        {
+            McpLayered::LayoutNodes(Listed);
+        }
+        const TArray<UEdGraphNode*> Unmoved = bLayered ? TArray<UEdGraphNode*>() : GraphBatch::SettleAutoPlacedNodes(Context.Blueprint, State);
         for (const TPair<UEdGraphNode*, FIntPoint>& Entry : Original)
         {
             UEdGraphNode* Node = Entry.Key;
@@ -202,8 +215,10 @@ bool ArrangeNodes(FActionContext& Context)
     Result->SetArrayField(TEXT("moved"), Moved);
     Result->SetArrayField(TEXT("unmoved"), Stayed);
     Result->SetArrayField(TEXT("alreadyInPlace"), InPlace);
-    Context.SendResponse(FString::Printf(TEXT("Moved %d of %d nodes beside the nodes they are wired to (%d already there)."),
-                                         Moved.Num(), Original.Num(), InPlace.Num()), Result);
+    Context.SendResponse(FString::Printf(TEXT("Moved %d of %d nodes %s (%d already there)."), Moved.Num(), Original.Num(),
+                                         bLayered ? TEXT("into columns along their links") : TEXT("beside the nodes they are wired to"),
+                                         InPlace.Num()),
+                         Result);
     return true;
 }
 }

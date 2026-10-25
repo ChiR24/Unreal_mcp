@@ -14266,6 +14266,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Widget clipping mode."
         },
+        "code": {
+          "type": "string",
+          "description": "One or more (event Name [(Params)] stmts...) and (fn Name (Params) stmts...) forms, as read_graph_as_code prints them; ; comments are ignored except the node ids gotos name."
+        },
         "collectorClass": {
           "type": "string",
           "description": "Instead of heal: the class that collects it (a Blueprint path such as /Game/Blueprints/BP_Player), whose variableName goes up by amount."
@@ -14418,7 +14422,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "rename_widget",
             "reparent_widget"
           ],
-          "description": "Which edit graph variant to run.\nadd_node: Add a node to a Blueprint graph (alias of edit=create_node with simplified type resolution).\ncreate_node: Create a graph node (function call, event, variable, branch, etc.) in a Blueprint graph.\ncreate_reroute_node: Create a reroute node for organizing exec/data wire paths in a Blueprint graph.\ncreate_struct_make_break_nodes: Create a Make or Break Struct node in a Blueprint graph from a UserDefinedStruct or native UScriptStruct.\nconnect_pins: Connect two graph pins (exec or data) by nodeGuid and pin name. A pin the editor adds on demand is added: a Sequence's then_2, a Make Array's [2], a Switch on Int's case 7 (a new switch has only Default).\nset_node_property: Set a property on a graph node by nodeGuid.\nset_pin_default_value: Set the default value of a data pin on a graph node; a read-only (const reference) pin gets it through a MakeLiteral node wired into it.\nadd_construction_script: Add or open the Construction Script graph for a Blueprint.\narrange_nodes: Tidy a graph: move the listed nodes beside the nodes they are wired to (right of what runs them, below-left of what reads them), each to the nearest free slot; the nodes left out stay put and anchor them. An unknown nodeId is refused before anything moves. The Blueprint then compiles and is saved; that compile clears the editor's undo history whenever the history holds the Blueprint (undoBufferReset, and undo.undoable false with UNDO_CLEARED_BY_COMPILE), so the move usually cannot be undone: run edit=arrange_nodes again or set positions back with edit=set_node_property.\nbatch: Run many graph edits in one call: add variables, functions (with their bodies), events and event dispatchers, create nodes, connect pins, set pin defaults and node properties, with $id references between steps. dryRun checks a batch without running any step."
+          "description": "Which edit graph variant to run.\nadd_node: Add a node to a Blueprint graph (alias of edit=create_node with simplified type resolution).\ncreate_node: Create a graph node (function call, event, variable, branch, etc.) in a Blueprint graph.\ncreate_reroute_node: Create a reroute node for organizing exec/data wire paths in a Blueprint graph.\ncreate_struct_make_break_nodes: Create a Make or Break Struct node in a Blueprint graph from a UserDefinedStruct or native UScriptStruct.\nconnect_pins: Connect two graph pins (exec or data) by nodeGuid and pin name. A pin the editor adds on demand is added: a Sequence's then_2, a Make Array's [2], a Switch on Int's case 7 (a new switch has only Default).\nset_node_property: Set a property on a graph node by nodeGuid.\nset_pin_default_value: Set the default value of a data pin on a graph node; a read-only (const reference) pin gets it through a MakeLiteral node wired into it.\nadd_construction_script: Add or open the Construction Script graph for a Blueprint.\narrange_nodes: Tidy a graph: move the listed nodes beside the nodes they are wired to (right of what runs them, below-left of what reads them), each to the nearest free slot; the nodes left out stay put and anchor them. layout layered instead lays the listed nodes out in columns along their links (a layered, Sugiyama-style layout), the first listed staying where it is. An unknown nodeId is refused before anything moves. The Blueprint then compiles and is saved; that compile clears the editor's undo history whenever the history holds the Blueprint (undoBufferReset, and undo.undoable false with UNDO_CLEARED_BY_COMPILE), so the move usually cannot be undone: run edit=arrange_nodes again or set positions back with edit=set_node_property.\nbatch: Run many graph edits in one call: add variables, functions (with their bodies), events and event dispatchers, create nodes, connect pins, set pin defaults and node properties, with $id references between steps. dryRun checks a batch without running any step."
         },
         "effectPath": {
           "type": "string",
@@ -14796,6 +14800,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "maxItems": 3,
           "description": "Launch velocity [x, y, z] in units per second, world axes (default [0, 0, 1200], straight up)."
         },
+        "layout": {
+          "type": "string",
+          "enum": [
+            "beside",
+            "layered"
+          ],
+          "description": "beside (default): each listed node to the nearest free slot beside a node left in place that it is wired to. layered: the listed nodes in columns along the links among them, left to right as the flow runs, a pure value in the column before its first reader, crossings reduced; the first listed node stays where it is and nodes left out are ignored (for a whole event, list the event first, then its nodes)."
+        },
         "layoutProperty": {
           "type": "string",
           "enum": [
@@ -14891,6 +14903,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "memberName": {
           "type": "string",
           "description": "The function, variable or event the node uses (PrintString, GetGameTimeInSeconds). A function whose name is not known: inspect_graph info functions finds it by what it does. A variable Blueprints cannot read, or for VariableSet write (not Blueprint-visible, read-only), is refused with VARIABLE_NOT_ACCESSIBLE."
+        },
+        "menuId": {
+          "type": "string",
+          "description": "In place of nodeType: any node by its action-menu id, Category|Title with spaces removed, as read_graph_as_code prints it (Development|PrintString, Utilities|FlowControl|Branch, Variables|GetHealth, Utilities|Operators|Add); AddEvent|Custom|Name makes a custom event named Name. An id this graph's menu does not offer is refused (MENU_ID_NOT_FOUND) with the ids it offers for that title."
         },
         "meshPath": {
           "type": "string",
@@ -15698,6 +15714,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "inspect_graph",
             "lint_blueprint",
             "read_graph_as_code",
+            "write_graph_from_code",
             "add_function",
             "remove_function",
             "implement_interface",
@@ -15982,6 +15999,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "The text: each graph after a \"; graph Name\" comment line, its events and functions top to bottom."
         },
+        "compileMessages": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Compiler messages on the nodes made, as \"line N error: ...\" or \"line N warning: ...\", N the line of the statement that made the node."
+        },
         "compileStatus": {
           "type": "string",
           "description": "Last compile status."
@@ -16049,8 +16073,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Findings per rule, listed or not."
         },
         "created": {
-          "type": "boolean",
-          "description": "True when this call made the timeline."
+          "type": [
+            "boolean",
+            "number"
+          ],
+          "description": "Nodes made, new events included."
         },
         "createdAssets": {
           "type": "array",
@@ -16111,6 +16138,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "x-unreal-reflection-boundary": true
               },
               "description": "blueprintPath: every compiler message and graph-check finding, each {severity, message}."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "x-unreal-reflection-boundary": true,
+              "description": "Compile messages: { severity, message }."
             }
           ],
           "description": "Compile messages: { severity, message }."
@@ -16235,6 +16272,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "fontSize": {
           "type": "number",
           "description": "Font size."
+        },
+        "forms": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "x-unreal-reflection-boundary": true,
+          "description": "One row per form: form (\"event Name\" or \"fn Name\"), graph, nodes (made for it) and entryMade (true when its event was made)."
         },
         "frameNumber": {
           "type": "number",
@@ -16483,6 +16530,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "isVisible": {
           "type": "boolean",
           "description": "Whether the widget draws, derived from `visibility` (false only for Collapsed and Hidden)."
+        },
+        "kept": {
+          "type": "number",
+          "description": "Old-body nodes kept by the ids in the code's ; comments."
         },
         "key": {
           "type": "string",
@@ -16786,10 +16837,19 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Number of animations left on the Widget Blueprint."
         },
         "removed": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Guids of the nodes that were deleted."
+            },
+            {
+              "type": "number",
+              "description": "Nodes of the old bodies removed."
+            }
+          ],
           "description": "Guids of the nodes that were deleted."
         },
         "removedCount": {

@@ -112,17 +112,6 @@ void FDecompiler::Stmts(FPinRef At, FState& State, int32 BreakNode, int32 StopNo
             At = FollowExec(Node, TEXT("Completed"));
             continue;
         }
-        case EKind::Sequence:
-            // A sequence prints its outputs one after another; this line marks where, for a (goto) to it.
-            State.Lines.Add(FForm{State.Pad(), Node.Id + TEXT(" sequence"), {}, 0});
-            for (const FPin& Pin : Node.Outs)
-            {
-                if (Pin.bExec && Pin.Links.Num() > 0)
-                {
-                    Stmts(Pin.Links[0], State);
-                }
-            }
-            return;
         case EKind::Knot:
         {
             const FPin* Out = Node.Outs.FindByPredicate([](const FPin& Pin) { return Pin.bExec && Pin.Links.Num() > 0; });

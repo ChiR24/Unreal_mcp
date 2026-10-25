@@ -77,29 +77,59 @@ FSExpr::EType NumberType(const FString& Atom)
     return bDot || bExponent ? FSExpr::EType::Float : FSExpr::EType::Int;
 }
 
-bool Tokenize(const FString& Text, TArray<FToken>& Out, FString& OutError)
+// A read_graph_as_code tag: n and 6 or more hex digits.
+bool IsNodeTag(const FString& Word)
+{
+    bool bHex = Word.Len() >= 7 && Word[0] == TEXT('n');
+    for (int32 At = 1; bHex && At < Word.Len(); ++At)
+    {
+        bHex = FChar::IsHexDigit(Word[At]);
+    }
+    return bHex;
+}
+
+bool Tokenize(const FString& Text, TArray<FToken>& Out, TMap<int32, FString>& Tags, FString& OutError)
 {
     int32 At = 0;
+    int32 Line = 1;
+    // Moves At to To, counting the line breaks passed (a string may hold some).
+    const auto Advance = [&Text, &At, &Line](int32 To)
+    {
+        for (; At < To; ++At)
+        {
+            Line += Text[At] == TEXT('\n') ? 1 : 0;
+        }
+    };
     while (At < Text.Len())
     {
         const TCHAR Ch = Text[At];
         if (Ch == TEXT(';'))
         {
-            while (At < Text.Len() && Text[At] != TEXT('\n'))
+            int32 End = At;
+            while (End < Text.Len() && Text[End] != TEXT('\n'))
             {
-                ++At;
+                ++End;
             }
+            const FString Comment = Text.Mid(At + 1, End - At - 1).TrimStartAndEnd();
+            FString Word = Comment;
+            Comment.Split(TEXT(" "), &Word, nullptr);
+            if (IsNodeTag(Word) && !Tags.Contains(Line))
+            {
+                Tags.Add(Line, Word);
+            }
+            Advance(End);
         }
         else if (Ch == TEXT('(') || Ch == TEXT(')'))
         {
             FToken& Token = Out.AddDefaulted_GetRef();
             Token.bParen = true;
             Token.Atom.Text = FString::Chr(Ch);
-            ++At;
+            Token.Atom.Line = Line;
+            Advance(At + 1);
         }
         else if (Ch == TEXT(' ') || Ch == TEXT('\t') || Ch == TEXT('\n') || Ch == TEXT('\r'))
         {
-            ++At;
+            Advance(At + 1);
         }
         else
         {
@@ -127,6 +157,7 @@ bool Tokenize(const FString& Text, TArray<FToken>& Out, FString& OutError)
             // A string, or a keyword quoted after its colon (:"Pin Name").
             const int32 Open = bString ? At : Atom == TEXT(":") && End < Text.Len() && Text[End] == TEXT('"') ? End : INDEX_NONE;
             FToken& Token = Out.AddDefaulted_GetRef();
+            Token.Atom.Line = Line;
             if (Open != INDEX_NONE)
             {
                 const int32 Close = StringEnd(Text, Open);
@@ -137,14 +168,14 @@ bool Tokenize(const FString& Text, TArray<FToken>& Out, FString& OutError)
                 }
                 Token.Atom.Type = bString ? FSExpr::EType::String : FSExpr::EType::Symbol;
                 Token.Atom.Text = (bString ? FString() : FString(TEXT(":"))) + Unescape(Text.Mid(Open + 1, Close - Open - 1));
-                At = Close + 1;
+                Advance(Close + 1);
                 continue;
             }
             const bool bBool = Atom.Equals(TEXT("true"), ESearchCase::IgnoreCase) || Atom.Equals(TEXT("false"), ESearchCase::IgnoreCase);
             Token.Atom.Type = bBool ? FSExpr::EType::Bool : NumberType(Atom);
             Token.Atom.bTrue = Atom.Equals(TEXT("true"), ESearchCase::IgnoreCase);
             Token.Atom.Text = Atom;
-            At = End;
+            Advance(End);
         }
     }
     return true;
@@ -155,11 +186,11 @@ bool IsClose(const FToken& Token)
     return Token.bParen && Token.Atom.Text == TEXT(")");
 }
 
-bool ReadForm(const TArray<FToken>& Tokens, int32& Pos, FSExpr& Out, FString& OutError)
+bool ReadForm(const TArray<FToken>& Tokens, int32& Pos, TMap<int32, FString>& Tags, FSExpr& Out, FString& OutError)
 {
     if (!Tokens.IsValidIndex(Pos) || IsClose(Tokens[Pos]))
     {
-        OutError = Tokens.IsValidIndex(Pos) ? TEXT("Unexpected )") : TEXT("Unexpected end of input");
+        OutError = Tokens.IsValidIndex(Pos) ? FString::Printf(TEXT("Line %d: unexpected )"), Tokens[Pos].Atom.Line) : FString(TEXT("Unexpected end of input"));
         return false;
     }
     if (!Tokens[Pos].bParen)
@@ -167,8 +198,14 @@ bool ReadForm(const TArray<FToken>& Tokens, int32& Pos, FSExpr& Out, FString& Ou
         Out = Tokens[Pos++].Atom;
         return true;
     }
-    ++Pos;
     Out.Type = FSExpr::EType::List;
+    Out.Line = Tokens[Pos++].Atom.Line;
+    // The line's tag goes to the first list opened on it: the statement, not a call inside it.
+    if (const FString* Tag = Tags.Find(Out.Line))
+    {
+        Out.Tag = *Tag;
+        Tags.Remove(Out.Line);
+    }
     while (Tokens.IsValidIndex(Pos))
     {
         if (IsClose(Tokens[Pos]))
@@ -176,12 +213,12 @@ bool ReadForm(const TArray<FToken>& Tokens, int32& Pos, FSExpr& Out, FString& Ou
             ++Pos;
             return true;
         }
-        if (!ReadForm(Tokens, Pos, Out.Items.AddDefaulted_GetRef(), OutError))
+        if (!ReadForm(Tokens, Pos, Tags, Out.Items.AddDefaulted_GetRef(), OutError))
         {
             return false;
         }
     }
-    OutError = TEXT("Unclosed parenthesis");
+    OutError = FString::Printf(TEXT("Line %d: unclosed parenthesis"), Out.Line);
     return false;
 }
 } // namespace ParseParts
@@ -189,13 +226,14 @@ bool ReadForm(const TArray<FToken>& Tokens, int32& Pos, FSExpr& Out, FString& Ou
 bool ParseSExpr(const FString& Text, TArray<FSExpr>& OutForms, FString& OutError)
 {
     TArray<ParseParts::FToken> Tokens;
-    if (!ParseParts::Tokenize(Text, Tokens, OutError))
+    TMap<int32, FString> Tags;
+    if (!ParseParts::Tokenize(Text, Tokens, Tags, OutError))
     {
         return false;
     }
     for (int32 Pos = 0; Pos < Tokens.Num();)
     {
-        if (!ParseParts::ReadForm(Tokens, Pos, OutForms.AddDefaulted_GetRef(), OutError))
+        if (!ParseParts::ReadForm(Tokens, Pos, Tags, OutForms.AddDefaulted_GetRef(), OutError))
         {
             return false;
         }

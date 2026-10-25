@@ -1,18 +1,13 @@
 #include "Domains/BlueprintGraph/Code/McpGraphCode.h"
 
-#include "BlueprintActionDatabase.h"
-#include "BlueprintActionFilter.h"
-#include "BlueprintNodeSpawner.h"
 #include "EdGraph/EdGraph.h"
 #include "EdGraphSchema_K2.h"
 #include "Engine/Blueprint.h"
 #include "K2Node_CustomEvent.h"
-#include "K2Node_ExecutionSequence.h"
 #include "K2Node_FunctionResult.h"
 #include "K2Node_IfThenElse.h"
 #include "K2Node_Knot.h"
 #include "K2Node_MacroInstance.h"
-#include "K2Node_MultiGate.h"
 #include "K2Node_Select.h"
 #include "K2Node_Self.h"
 #include "K2Node_Switch.h"
@@ -34,21 +29,11 @@ FString WithoutWhitespace(const FString& Text)
     return Out;
 }
 
-// Epic's _get_node_type_id: menu category and list title, whitespace removed; a custom event is AddEvent|Custom|Name.
-FString TypeIdOf(const UK2Node* Node)
-{
-    const FString Title = WithoutWhitespace(Node->GetNodeTitle(ENodeTitleType::ListView).ToString());
-    return Node->IsA<UK2Node_CustomEvent>() ? TEXT("AddEvent|Custom|") + Title
-                                            : WithoutWhitespace(Node->GetMenuCategory().ToString()) + TEXT("|") + Title;
-}
-
 EKind KindOf(const UK2Node* Node)
 {
     const TPair<UClass*, EKind> Classes[] = {
         {UK2Node_Knot::StaticClass(), EKind::Knot}, {UK2Node_FunctionResult::StaticClass(), EKind::Return},
         {UK2Node_Self::StaticClass(), EKind::Self}, {UK2Node_IfThenElse::StaticClass(), EKind::Branch},
-        // A multigate fires one output per run, which the generic (:Out 0 ...) form says; it is a sequence subclass.
-        {UK2Node_MultiGate::StaticClass(), EKind::Call}, {UK2Node_ExecutionSequence::StaticClass(), EKind::Sequence},
         {UK2Node_Switch::StaticClass(), EKind::Switch}, {UK2Node_Select::StaticClass(), EKind::Select}};
     for (const TPair<UClass*, EKind>& Entry : Classes)
     {
@@ -77,6 +62,28 @@ EKind KindOf(const UK2Node* Node)
 } // namespace SnapshotParts
 
 using namespace SnapshotParts;
+
+// Epic's _get_node_type_id: menu category and list title, whitespace removed; a custom event is AddEvent|Custom|Name.
+FString TypeIdOf(const UK2Node* Node)
+{
+    const FString Title = WithoutWhitespace(Node->GetNodeTitle(ENodeTitleType::ListView).ToString());
+    return Node->IsA<UK2Node_CustomEvent>() ? TEXT("AddEvent|Custom|") + Title
+                                            : WithoutWhitespace(Node->GetMenuCategory().ToString()) + TEXT("|") + Title;
+}
+
+bool IsEntry(const FNode& Node)
+{
+    const auto HasExec = [](const TArray<FPin>& Pins) { return Pins.ContainsByPredicate([](const FPin& Pin) { return Pin.bExec; }); };
+    return Node.Kind != EKind::Return && HasExec(Node.Outs) && !HasExec(Node.Ins);
+}
+
+FString EntryName(const FString& TypeId)
+{
+    int32 Bar = INDEX_NONE;
+    return TypeId.StartsWith(TEXT("AddEvent|"), ESearchCase::CaseSensitive) ? TypeId.Mid(9)
+           : TypeId.FindLastChar(TEXT('|'), Bar)                             ? TypeId.Mid(Bar + 1)
+                                                                             : TypeId;
+}
 
 // Each id is n and the first hex digits of the node's GUID: enough to tell it from every other node read, 6 at least, so a
 // node keeps its id from one read to the next.
@@ -170,11 +177,9 @@ FGraph Snapshot(UEdGraph* Graph)
     return Out;
 }
 
-// Epic's _expand_type_id: a node with no menu category (a variable get, a timeline...) is named by the action-menu id
-// ending in its title, a Variables| id first, then Components|; ties go to the id first in byte order. One pass over the
-// action database finds the spawners whose default title is a wanted one; only those are filtered for each graph and
-// named as that graph's menu shows them. Asking a spawner's UI spec in a graph's context before filtering asserts for a
-// node that fits no graph of the Blueprint (an animation node in an Actor).
+// Epic's _expand_type_id, applied to every node that runs as a call: its id stays when its graph's menu shows that id;
+// otherwise (the '|Name' id of a node with no menu category, a call whose node category is not its menu's) it becomes the
+// menu id ending in its title, a Variables| id first, then Components|, ties to the id first in byte order.
 void ExpandTypeIds(UBlueprint* Blueprint, const TArray<UEdGraph*>& Graphs, TArray<FGraph>& Reads)
 {
     TArray<TMap<FString, TArray<int32>>> Wanted;
@@ -187,73 +192,42 @@ void ExpandTypeIds(UBlueprint* Blueprint, const TArray<UEdGraph*>& Graphs, TArra
             const FNode& Node = Read.Nodes[At];
             const bool bEntry = !Node.Ins.ContainsByPredicate([](const FPin& Pin) { return Pin.bExec; }) &&
                                 Node.Outs.ContainsByPredicate([](const FPin& Pin) { return Pin.bExec; });
-            if (Node.Kind == EKind::Call && !bEntry && Node.TypeId.StartsWith(TEXT("|"), ESearchCase::CaseSensitive))
+            if (Node.Kind == EKind::Call && !bEntry)
             {
-                Names.FindOrAdd(Node.TypeId.Mid(1).ToLower()).Add(At);
-                Titles.Add(Node.TypeId.Mid(1).ToLower());
+                Names.FindOrAdd(MenuTitleKey(Node.TypeId)).Add(At);
+                Titles.Add(MenuTitleKey(Node.TypeId));
             }
         }
     }
-    if (Titles.Num() == 0)
+    const TArray<FMenuEntry> Candidates = MenuCandidates(Titles);
+    const auto Rank = [](const FString& Id)
     {
-        return;
-    }
-    TArray<TPair<UObject*, const UBlueprintNodeSpawner*>> Candidates;
-    for (auto It = FBlueprintActionDatabase::Get().GetAllActions().CreateConstIterator(); It; ++It)
-    {
-        UObject* Owner = It->Key.ResolveObjectPtr();
-        for (const UBlueprintNodeSpawner* Spawner : It->Value)
-        {
-            if (!Owner || !Spawner)
-            {
-                continue;
-            }
-            // The default title, primed as the database primes every spawner (GetUiSpec with no Blueprint in the context
-            // indexes its empty Blueprint list in some spawners, a variable's, and asserts). One that has no title without
-            // a graph is named in the graph's context below.
-            const FString Title = Spawner->PrimeDefaultUiSpec().MenuName.ToString().Replace(TEXT(" "), TEXT(""));
-            if (Title.IsEmpty() || Titles.Contains(Title.ToLower()))
-            {
-                Candidates.Add(TPair<UObject*, const UBlueprintNodeSpawner*>(Owner, Spawner));
-            }
-        }
-    }
+        return Id.StartsWith(TEXT("Variables|"), ESearchCase::CaseSensitive) ? 0 : Id.StartsWith(TEXT("Components|"), ESearchCase::CaseSensitive) ? 1 : 2;
+    };
     for (int32 GraphAt = 0; GraphAt < Graphs.Num(); ++GraphAt)
     {
-        if (Wanted[GraphAt].Num() == 0)
+        TSet<FString> GraphTitles;
+        Wanted[GraphAt].GetKeys(GraphTitles);
+        const TArray<FMenuEntry> Entries = GraphTitles.Num() > 0 ? MenuEntries(Blueprint, Graphs[GraphAt], Candidates, GraphTitles) : TArray<FMenuEntry>();
+        TMap<FString, FString> Best;
+        for (const FMenuEntry& Entry : Entries)
         {
-            continue;
-        }
-        FBlueprintActionFilter Filter;
-        Filter.Context.Graphs.Add(Graphs[GraphAt]);
-        Filter.Context.Blueprints.Add(Blueprint);
-        TMap<FString, TPair<int32, FString>> Best;
-        for (const TPair<UObject*, const UBlueprintNodeSpawner*>& Candidate : Candidates)
-        {
-            FBlueprintActionInfo Info(Candidate.Key, Candidate.Value);
-            if (Filter.IsFiltered(Info))
+            const FString* Held = Best.Find(MenuTitleKey(Entry.Id));
+            if (!Held || Rank(Entry.Id) < Rank(*Held))
             {
-                continue;
-            }
-            const FBlueprintActionUiSpec Spec = Candidate.Value->GetUiSpec(Filter.Context, Info.GetBindings());
-            const FString Title = Spec.MenuName.ToString().Replace(TEXT(" "), TEXT(""));
-            if (!Wanted[GraphAt].Contains(Title.ToLower()))
-            {
-                continue;
-            }
-            const FString Id = Spec.Category.ToString().Replace(TEXT(" "), TEXT("")) + TEXT("|") + Title;
-            const int32 Rank = Id.StartsWith(TEXT("Variables|"), ESearchCase::CaseSensitive) ? 0 : Id.StartsWith(TEXT("Components|"), ESearchCase::CaseSensitive) ? 1 : 2;
-            const TPair<int32, FString>* Held = Best.Find(Title.ToLower());
-            if (!Held || Rank < Held->Key || (Rank == Held->Key && Id.Compare(Held->Value, ESearchCase::CaseSensitive) < 0))
-            {
-                Best.Add(Title.ToLower(), TPair<int32, FString>(Rank, Id));
+                Best.Add(MenuTitleKey(Entry.Id), Entry.Id);
             }
         }
-        for (const TPair<FString, TPair<int32, FString>>& Found : Best)
+        for (const TPair<FString, TArray<int32>>& Name : Wanted[GraphAt])
         {
-            for (const int32 At : Wanted[GraphAt][Found.Key])
+            for (const int32 At : Name.Value)
             {
-                Reads[GraphAt].Nodes[At].TypeId = Found.Value.Value;
+                FNode& Node = Reads[GraphAt].Nodes[At];
+                const bool bOnMenu = Entries.ContainsByPredicate([&Node](const FMenuEntry& Entry) { return Entry.Id.Equals(Node.TypeId, ESearchCase::CaseSensitive); });
+                if (const FString* Found = bOnMenu ? nullptr : Best.Find(Name.Key))
+                {
+                    Node.TypeId = *Found;
+                }
             }
         }
     }

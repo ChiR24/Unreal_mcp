@@ -620,8 +620,8 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'find function by what it does', accepted: ['blueprint.inspect_graph'] },
   { query: 'write my own logic', accepted: ['blueprint.edit_graph'] },
   { query: 'my own game mechanic', accepted: ['blueprint.edit_graph'] },
-  { query: 'blueprint code', accepted: ['blueprint.edit_graph', 'blueprint.read_graph_as_code'] },
-  { query: 'write blueprint code', accepted: ['blueprint.edit_graph'] },
+  { query: 'blueprint code', accepted: ['blueprint.edit_graph', 'blueprint.read_graph_as_code', 'blueprint.write_graph_from_code'] },
+  { query: 'write blueprint code', accepted: ['blueprint.edit_graph', 'blueprint.write_graph_from_code'] },
   { query: 'code a mechanic in blueprint', accepted: ['blueprint.edit_graph'] },
   { query: 'program a blueprint', accepted: ['blueprint.edit_graph'] },
   { query: 'program a game mechanic', accepted: ['blueprint.edit_graph'] },
@@ -662,4 +662,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'decompile a blueprint', accepted: ['blueprint.read_graph_as_code'] },
   { query: 'blueprint logic as text', accepted: ['blueprint.read_graph_as_code'] },
   { query: 'what does this blueprint do', accepted: ['blueprint.read_graph_as_code', 'blueprint.inspect_graph'] },
+  { query: 'write blueprint from code', accepted: ['blueprint.write_graph_from_code'] },
+  { query: 'rewrite an event body as text', accepted: ['blueprint.write_graph_from_code'] },
+  { query: 'turn code into blueprint nodes', accepted: ['blueprint.write_graph_from_code'] },
 ];

@@ -23,6 +23,10 @@ struct FSExpr
     FString Text;
     bool bTrue = false;
     TArray<FSExpr> Items;
+    // The line it starts on (1-based), and the node id of a "; n1a2b3c" comment ending that line, given to the first list
+    // opened on the line (read_graph_as_code tags each statement so).
+    int32 Line = 0;
+    FString Tag;
 };
 
 /** The top-level forms of Text; false with OutError (and the line) on an unterminated string or unbalanced parens. */

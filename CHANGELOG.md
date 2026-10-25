@@ -12,9 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details>
 <summary><b>✨ Added</b></summary>
 
-- **Blueprint runtime errors name their node** and an Accessed None its `cause`; **`lint_blueprint`** finds such mistakes before Play.
+- **Blueprint runtime errors name their node** and an Accessed None its `cause`; **`lint_blueprint`** finds such mistakes before Play; **`read_graph_as_code`** and **`write_graph_from_code`** read and write graphs as Epic's 5.8 Blueprint DSL text, on every 5.x (a rewrite keeps the nodes its ids name); `create_node` `menuId`, `arrange_nodes` `layout: 'layered'`.
 - **MCP 2026-07-28**: sessionless requests, client consent and tasks; older clients unchanged.
-- **Reads**: `get_editor_state` `focus`; `describe_view` `points`, `labels`, `coveredBy`, `compareWith` (what changed since `saveAs`); **`analyze_view`** (saliency, palette, light, shader cost); **`contact_sheet`** (an actor from every side); **`read_graph_as_code`** (Blueprint graphs as Epic's 5.8 Blueprint DSL text, on every 5.x); `get_stats` `frame`.
+- **Reads**: `get_editor_state` `focus`; `describe_view` `points`, `labels`, `coveredBy`, `compareWith` (what changed since `saveAs`); **`analyze_view`** (saliency, palette, light, shader cost); **`contact_sheet`** (an actor from every side); `get_stats` `frame`.
 - **Large results come in pages** (`page.nextCall`), and **search hands over a clear first hit** (`signature`, `executeCall`).
 - **`nanite_rebuild_mesh` `assetPaths`**, **`inspect_asset` `diff`**, `get_niagara_info` values, `setup_global_illumination` `saveToProject`, four `edit_dynamic_mesh` operations.
 - **Renders and sequences**: `cancel_render`, camera shutter and overscan, `set_section` `playRate`, clips and keyed bones in the readers.

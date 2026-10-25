@@ -133,12 +133,13 @@ export const GRAPH_PINS_RECORDS: readonly CapabilityRecordSource[] = [
     family: FAMILY,
     domain: DOMAIN,
     topics: ['arrange nodes', 'tidy graph', 'clean up graph layout', 'move nodes next to each other', 'layout nodes'],
-    summary: 'Tidy a graph: move the listed nodes beside the nodes they are wired to (right of what runs them, below-left of what reads them), each to the nearest free slot; the nodes left out stay put and anchor them. An unknown nodeId is refused before anything moves. The Blueprint then compiles and is saved; that compile clears the editor\'s undo history whenever the history holds the Blueprint (undoBufferReset, and undo.undoable false with UNDO_CLEARED_BY_COMPILE), so the move usually cannot be undone: run arrange_nodes again or set positions back with set_node_property.',
+    summary: 'Tidy a graph: move the listed nodes beside the nodes they are wired to (right of what runs them, below-left of what reads them), each to the nearest free slot; the nodes left out stay put and anchor them. layout layered instead lays the listed nodes out in columns along their links (a layered, Sugiyama-style layout), the first listed staying where it is. An unknown nodeId is refused before anything moves. The Blueprint then compiles and is saved; that compile clears the editor\'s undo history whenever the history holds the Blueprint (undoBufferReset, and undo.undoable false with UNDO_CLEARED_BY_COMPILE), so the move usually cannot be undone: run arrange_nodes again or set positions back with set_node_property.',
     whenToUse: ['Nodes of a chain sit far from each other or from the event they hang off, and should be laid out beside what they are wired to.'],
     whenNotToUse: ['One node must go to an exact position (use set_node_property with NodePosX and NodePosY).', 'Every listed node is wired only to other listed nodes: nothing anchors them, so none moves; leave the head of the chain (its event) out of nodeIds.'],
     inputProps: {
       blueprintPath: P.blueprintPath, graphName: P.graphName,
       nodeIds: { type: 'array', items: { type: 'string' }, minItems: 1, maxItems: 500, description: 'The nodes to move, by nodeId or nodeGuid. Nodes left out stay where they are and anchor the ones listed; a node wired to nothing left in place goes back where it was and is listed under unmoved.' },
+      layout: { type: 'string', enum: ['beside', 'layered'], description: 'beside (default): each listed node to the nearest free slot beside a node left in place that it is wired to. layered: the listed nodes in columns along the links among them, left to right as the flow runs, a pure value in the column before its first reader, crossings reduced; the first listed node stays where it is and nodes left out are ignored (for a whole event, list the event first, then its nodes).' },
     },
     required: ['blueprintPath', 'nodeIds'],
     outputProps: {

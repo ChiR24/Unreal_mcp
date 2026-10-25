@@ -19,7 +19,7 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
     domain: 'build',
     family: 'build',
     // No "add code to project": it took "add file to project" from asset import on the TS door.
-    topics: ['create c++ class', 'new c++ class', 'add c++ class', 'create cpp file', 'c++ source file', 'c++ header file', 'native class', 'c++ actor class', 'c++ component', 'c++ code', 'write c++ code'],
+    topics: ['create c++ class', 'new c++ class', 'add c++ class', 'create cpp file', 'c++ source file', 'c++ header file', 'native class', 'c++ actor class', 'c++ component', 'c++ code', 'write c++ code', 'write code in c++'],
     summary: 'Create a new C++ class in a project module, as the editor\'s New C++ Class does: a header and a .cpp from a parent class (Actor, Character, ActorComponent, Object ..., or None for a plain class), then the editor\'s own compile.',
     whenToUse: ['Gameplay logic or a base class belongs in C++: a new class file pair must be added to the project source.'],
     whenNotToUse: ['A Blueprint class is enough (use manage_blueprint create).', 'Existing C++ only needs compiling (use run_ubt, or console_command LiveCoding.Compile).'],

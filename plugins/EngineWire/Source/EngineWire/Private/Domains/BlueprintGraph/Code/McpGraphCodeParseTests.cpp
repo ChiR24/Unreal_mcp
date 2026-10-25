@@ -42,8 +42,8 @@ bool FMcpGraphCodeParseTest::RunTest(const FString& Parameters)
     }
     TestEqual(TEXT("Equal(==) stays one symbol"), ItemText(TEXT("(Utilities|Operators|Equal(==) a b)"), 0), FString(TEXT("Utilities|Operators|Equal(==)")));
     TestTrue(TEXT("two top-level forms, comment lines skipped"), Parse(TEXT("; only a comment\n(event A)\n(event B)"), Error).Num() == 2);
-    TestTrue(TEXT("an unclosed paren is refused"), Parse(TEXT("(event A"), Error).Num() == 0 && Error == TEXT("Unclosed parenthesis"));
-    TestTrue(TEXT("a stray close paren is refused"), Parse(TEXT(")"), Error).Num() == 0 && Error == TEXT("Unexpected )"));
+    TestTrue(TEXT("an unclosed paren is refused"), Parse(TEXT("(event A"), Error).Num() == 0 && Error == TEXT("Line 1: unclosed parenthesis"));
+    TestTrue(TEXT("a stray close paren is refused"), Parse(TEXT(")"), Error).Num() == 0 && Error == TEXT("Line 1: unexpected )"));
     TestTrue(TEXT("an unterminated string is refused with its line"), Parse(TEXT("(a\n\"open)"), Error).Num() == 0 && Error.StartsWith(TEXT("Line 2: unterminated string")));
 
     FPin Pin;

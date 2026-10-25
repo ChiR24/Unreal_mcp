@@ -975,6 +975,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_blueprint::set_widget_layout": "instant|low",
   "manage_blueprint::set_widget_parent_class": "interactive|low",
   "manage_blueprint::set_z_order": "instant|low",
+  "manage_blueprint::write_graph_from_code": "interactive|medium",
   "manage_character::build_metahuman": "long-running|high",
   "manage_character::configure_camera_component": "interactive|low",
   "manage_character::configure_capsule_component": "interactive|low",
@@ -1619,4 +1620,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1606;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1607;

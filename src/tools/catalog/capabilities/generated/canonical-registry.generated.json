@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "5c3edc74aa2d4650",
-  "recordCount": 426,
+  "catalogRevision": "0b875b14b2156784",
+  "recordCount": 427,
   "records": [
     {
       "id": "animation_physics.analyze_animation",
@@ -18726,6 +18726,10 @@
               "type": "string",
               "description": "For nodeType Timeline: the timeline it plays, which edit_timeline keys; a name the Blueprint lacks makes one (omitted, a new Timeline_N). One node plays a timeline, in the event graph of an Actor Blueprint."
             },
+            "menuId": {
+              "type": "string",
+              "description": "In place of nodeType: any node by its action-menu id, Category|Title with spaces removed, as read_graph_as_code prints it (Development|PrintString, Utilities|FlowControl|Branch, Variables|GetHealth, Utilities|Operators|Add); AddEvent|Custom|Name makes a custom event named Name. An id this graph's menu does not offer is refused (MENU_ID_NOT_FOUND) with the ids it offers for that title."
+            },
             "pure": {
               "type": "boolean",
               "description": "Build a Cast node pure (no exec pins, as in the editor's Convert to pure cast); default false."
@@ -18836,6 +18840,14 @@
               "maxItems": 500,
               "description": "The nodes to move, by nodeId or nodeGuid. Nodes left out stay where they are and anchor the ones listed; a node wired to nothing left in place goes back where it was and is listed under unmoved."
             },
+            "layout": {
+              "type": "string",
+              "enum": [
+                "beside",
+                "layered"
+              ],
+              "description": "beside (default): each listed node to the nearest free slot beside a node left in place that it is wired to. layered: the listed nodes in columns along the links among them, left to right as the flow runs, a pure value in the column before its first reader, crossings reduced; the first listed node stays where it is and nodes left out are ignored (for a whole event, list the event first, then its nodes)."
+            },
             "operations": {
               "type": "array",
               "items": {
@@ -18864,7 +18876,7 @@
                 "arrange_nodes",
                 "batch"
               ],
-              "description": "Which edit graph variant to run.\nadd_node: Add a node to a Blueprint graph (alias of edit=create_node with simplified type resolution).\ncreate_node: Create a graph node (function call, event, variable, branch, etc.) in a Blueprint graph.\ncreate_reroute_node: Create a reroute node for organizing exec/data wire paths in a Blueprint graph.\ncreate_struct_make_break_nodes: Create a Make or Break Struct node in a Blueprint graph from a UserDefinedStruct or native UScriptStruct.\nconnect_pins: Connect two graph pins (exec or data) by nodeGuid and pin name. A pin the editor adds on demand is added: a Sequence's then_2, a Make Array's [2], a Switch on Int's case 7 (a new switch has only Default).\nset_node_property: Set a property on a graph node by nodeGuid.\nset_pin_default_value: Set the default value of a data pin on a graph node; a read-only (const reference) pin gets it through a MakeLiteral node wired into it.\nadd_construction_script: Add or open the Construction Script graph for a Blueprint.\narrange_nodes: Tidy a graph: move the listed nodes beside the nodes they are wired to (right of what runs them, below-left of what reads them), each to the nearest free slot; the nodes left out stay put and anchor them. An unknown nodeId is refused before anything moves. The Blueprint then compiles and is saved; that compile clears the editor's undo history whenever the history holds the Blueprint (undoBufferReset, and undo.undoable false with UNDO_CLEARED_BY_COMPILE), so the move usually cannot be undone: run edit=arrange_nodes again or set positions back with edit=set_node_property.\nbatch: Run many graph edits in one call: add variables, functions (with their bodies), events and event dispatchers, create nodes, connect pins, set pin defaults and node properties, with $id references between steps. dryRun checks a batch without running any step."
+              "description": "Which edit graph variant to run.\nadd_node: Add a node to a Blueprint graph (alias of edit=create_node with simplified type resolution).\ncreate_node: Create a graph node (function call, event, variable, branch, etc.) in a Blueprint graph.\ncreate_reroute_node: Create a reroute node for organizing exec/data wire paths in a Blueprint graph.\ncreate_struct_make_break_nodes: Create a Make or Break Struct node in a Blueprint graph from a UserDefinedStruct or native UScriptStruct.\nconnect_pins: Connect two graph pins (exec or data) by nodeGuid and pin name. A pin the editor adds on demand is added: a Sequence's then_2, a Make Array's [2], a Switch on Int's case 7 (a new switch has only Default).\nset_node_property: Set a property on a graph node by nodeGuid.\nset_pin_default_value: Set the default value of a data pin on a graph node; a read-only (const reference) pin gets it through a MakeLiteral node wired into it.\nadd_construction_script: Add or open the Construction Script graph for a Blueprint.\narrange_nodes: Tidy a graph: move the listed nodes beside the nodes they are wired to (right of what runs them, below-left of what reads them), each to the nearest free slot; the nodes left out stay put and anchor them. layout layered instead lays the listed nodes out in columns along their links (a layered, Sugiyama-style layout), the first listed staying where it is. An unknown nodeId is refused before anything moves. The Blueprint then compiles and is saved; that compile clears the editor's undo history whenever the history holds the Blueprint (undoBufferReset, and undo.undoable false with UNDO_CLEARED_BY_COMPILE), so the move usually cannot be undone: run edit=arrange_nodes again or set positions back with edit=set_node_property.\nbatch: Run many graph edits in one call: add variables, functions (with their bodies), events and event dispatchers, create nodes, connect pins, set pin defaults and node properties, with $id references between steps. dryRun checks a batch without running any step."
             }
           },
           "required": [
@@ -19354,6 +19366,9 @@
               "add_node",
               "create_node"
             ],
+            "menuId": [
+              "create_node"
+            ],
             "pure": [
               "create_node"
             ],
@@ -19433,6 +19448,9 @@
             "nodeIds": [
               "arrange_nodes"
             ],
+            "layout": [
+              "arrange_nodes"
+            ],
             "operations": [
               "batch"
             ],
@@ -19447,8 +19465,9 @@
               ]
             },
             "create_node": {
-              "required": [
-                "nodeType"
+              "oneOf": [
+                "nodeType",
+                "menuId"
               ]
             },
             "create_struct_make_break_nodes": {
@@ -19491,8 +19510,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "f1890ef34a9b84a83da06f44e0ec7f1e00545bd0f2fbe1760091de23a1279326",
-        "content": "ce45d505d695ba13466fc3cb8d21ea6ed2c596711df7b59fecbf87b6cb855309"
+        "schema": "6f24f58d25fbdceb477ce3c41b65402b8ab690265a24b0b09e215b26cc470a98",
+        "content": "de7a783ccf526a1acd6002914e264f0e85006e2c2dc53d5dbea57b26d57dc6bc"
       }
     },
     {
@@ -25041,6 +25060,207 @@
         "algorithm": "sha256",
         "schema": "460bbbe8aba77513a85e6575e112ea66182d809d218341f5243a4b37cd929dba",
         "content": "e52693b22770fde5536dfa998567f44ce76fd9ab2f99769a98d48a34d8d6e28d"
+      }
+    },
+    {
+      "id": "blueprint.write_graph_from_code",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "manage_blueprint",
+          "action": "write_graph_from_code"
+        }
+      ],
+      "discovery": {
+        "domain": "blueprint",
+        "family": "code",
+        "topics": [
+          "write_graph_from_code",
+          "write blueprint as code",
+          "blueprint from text",
+          "rewrite event body",
+          "rewrite function body",
+          "code into blueprint nodes"
+        ],
+        "summary": "Write a Blueprint's logic from text, on every UE 5.x: each (event Name ...) or (fn Name (Params) ...) form replaces that event's or function's body with nodes made from its statements, in the grammar read_graph_as_code prints (Epic's UE 5.8 Blueprint DSL), so the way to edit is read, change the text, write it back. A statement is (Category|Title args... :Pin value (:ExecPin stmts...)), the node named by its action-menu id as read_graph_as_code prints it (positional arguments fill the data inputs in order, :Pin names one, a (:Pin ...) continuation runs from that exec output and sees the node's outputs as _pin_name); (bind name (Call ...)) or (bind (first _ third) (Call ...)) names outputs for later statements (a name is bound once); (if cond ... (elif cond ...) (else ...)), (for i (range n) ...), (for i (range a b) ...), (for item array ...), (while cond ...), (break), (switch int|string|name value (:Case ...) (:Default ...)), (return values...), (goto id [Pin]) on to the node with that id (a statement of this code by its ; comment, or a node the write leaves in the graph, so one event can be rewritten alone). Values: names, literals (\"text\", 5, 1.5, true), (+ - * / % == != < <= > >= and or xor a b), (not x), (- x), (select cond a b), (.x .y .z .pitch .yaw .roll .location .rotation .scale value), self. An entry's inputs are names by their pin names, as read_graph_as_code lists them (an (fn) head must list only names the function has; an (event) head's list is optional): code names inputs, add_function or add_event makes them. An event the graph lacks is made (a custom event as Custom|Name); a function must exist (FUNCTION_NOT_FOUND). A form with no statements leaves that body as it is. What goes: the nodes only that event or function reached (its flow and the values that flow read); a node another event also runs stays, and events and functions the code does not name are not touched; a function keeps its return nodes when the new body makes none. A statement whose ; comment names a node of the old body by its id (as read_graph_as_code tags every statement) keeps that node when it is of the same kind (its GUID, position and comment stay; its links and inputs are set afresh), so read, edit, write changes only what was edited; new nodes then go beside the nodes they are wired to. Code without such ids makes every node new, laid out in columns from its event, a new event below the graph. All or nothing: a parse error, an unknown node id (the reply lists the ids the menu offers for that title), an undefined name, too many arguments, a pin the node lacks, or code that leaves a Blueprint that compiled not compiling is refused with its line and nothing changes (CODE_PARSE_ERROR, CODE_INVALID, CODE_BREAKS_COMPILE with compileMessages). The reply reads the written graphs back as code with the new nodes' ids. Refused during Play In Editor (PIE_ACTIVE). The first call after the editor starts takes several seconds while the editor builds its node menu.",
+        "whenToUse": [
+          "An event's or function's logic should be written or rewritten in one call instead of node by node.",
+          "A graph read with read_graph_as_code should be changed: edit the text and write it back."
+        ],
+        "whenNotToUse": [
+          "One node, link or pin default should change and the rest stay exactly as it is (node GUIDs included): create_node, connect_pins, set_pin_default_value.",
+          "Variables, functions or event inputs must be added: add_variable, add_function, add_event."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "blueprintPath": {
+              "type": "string",
+              "description": "Canonical /Game Blueprint asset path."
+            },
+            "code": {
+              "type": "string",
+              "description": "One or more (event Name [(Params)] stmts...) and (fn Name (Params) stmts...) forms, as read_graph_as_code prints them; ; comments are ignored except the node ids gotos name."
+            },
+            "graphName": {
+              "type": "string",
+              "description": "The event graph (event) forms go into (default: the first). An (fn) form always goes into its own function."
+            }
+          },
+          "required": [
+            "action",
+            "blueprintPath",
+            "code"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "code": {
+              "type": "string",
+              "description": "The written graphs read back as read_graph_as_code prints them, with the new nodes' ids."
+            },
+            "forms": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "x-unreal-reflection-boundary": true,
+              "description": "One row per form: form (\"event Name\" or \"fn Name\"), graph, nodes (made for it) and entryMade (true when its event was made)."
+            },
+            "created": {
+              "type": "number",
+              "description": "Nodes made, new events included."
+            },
+            "kept": {
+              "type": "number",
+              "description": "Old-body nodes kept by the ids in the code's ; comments."
+            },
+            "removed": {
+              "type": "number",
+              "description": "Nodes of the old bodies removed."
+            },
+            "compileMessages": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Compiler messages on the nodes made, as \"line N error: ...\" or \"line N warning: ...\", N the line of the statement that made the node."
+            },
+            "compiled": {
+              "type": "boolean",
+              "description": "True when the Blueprint compiles after the write (warnings allowed)."
+            },
+            "compilerStatus": {
+              "type": "string",
+              "description": "Blueprint status after the compile."
+            },
+            "diagnostics": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "x-unreal-reflection-boundary": true,
+              "description": "Compile messages: { severity, message }."
+            },
+            "saved": {
+              "type": "boolean",
+              "description": "Whether the Blueprint was saved."
+            }
+          },
+          "required": [
+            "success",
+            "code"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Write a Blueprint's logic from text, on every UE 5.x: each (event Name ...) or (fn Name (Params) ...) form replaces that event's or function's body with nodes made from its statements, in the grammar read_graph_as_code prints (Epic's UE 5.8 Blueprint DSL), so the way to edit is read, change the text, write it back. A statement is (Category|Title args... :Pin value (:ExecPin stmts...)), the node named by its action-menu id as read_graph_as_code prints it (positional arguments fill the data inputs in order, :Pin names one, a (:Pin ...) continuation runs from that exec output and sees the node's outputs as _pin_name); (bind name (Call ...)) or (bind (first _ third) (Call ...)) names outputs for later statements (a name is bound once); (if cond ... (elif cond ...) (else ...)), (for i (range n) ...), (for i (range a b) ...), (for item array ...), (while cond ...), (break), (switch int|string|name value (:Case ...) (:Default ...)), (return values...), (goto id [Pin]) on to the node with that id (a statement of this code by its ; comment, or a node the write leaves in the graph, so one event can be rewritten alone). Values: names, literals (\"text\", 5, 1.5, true), (+ - * / % == != < <= > >= and or xor a b), (not x), (- x), (select cond a b), (.x .y .z .pitch .yaw .roll .location .rotation .scale value), self. An entry's inputs are names by their pin names, as read_graph_as_code lists them (an (fn) head must list only names the function has; an (event) head's list is optional): code names inputs, add_function or add_event makes them. An event the graph lacks is made (a custom event as Custom|Name); a function must exist (FUNCTION_NOT_FOUND). A form with no statements leaves that body as it is. What goes: the nodes only that event or function reached (its flow and the values that flow read); a node another event also runs stays, and events and functions the code does not name are not touched; a function keeps its return nodes when the new body makes none. A statement whose ; comment names a node of the old body by its id (as read_graph_as_code tags every statement) keeps that node when it is of the same kind (its GUID, position and comment stay; its links and inputs are set afresh), so read, edit, write changes only what was edited; new nodes then go beside the nodes they are wired to. Code without such ids makes every node new, laid out in columns from its event, a new event below the graph. All or nothing: a parse error, an unknown node id (the reply lists the ids the menu offers for that title), an undefined name, too many arguments, a pin the node lacks, or code that leaves a Blueprint that compiled not compiling is refused with its line and nothing changes (CODE_PARSE_ERROR, CODE_INVALID, CODE_BREAKS_COMPILE with compileMessages). The reply reads the written graphs back as code with the new nodes' ids. Refused during Play In Editor (PIE_ACTIVE). The first call after the editor starts takes several seconds while the editor builds its node menu.",
+          "input": {
+            "action": "write_graph_from_code",
+            "blueprintPath": "/Game/Blueprints/BP_Door",
+            "code": "(event EventBeginPlay\n  (Development|PrintString \"Door ready\"))"
+          },
+          "output": {
+            "success": true,
+            "message": "Wrote 1 form(s) into BP_Door: 1 node(s) made, 0 kept, 1 removed.",
+            "code": "; graph EventGraph\n(event EventBeginPlay  ; n8c1d0e\n  (Development|PrintString \"Door ready\"))  ; n5a6b7c\n",
+            "forms": [
+              {
+                "form": "event EventBeginPlay",
+                "graph": "EventGraph",
+                "nodes": 1,
+                "entryMade": false
+              }
+            ],
+            "created": 1,
+            "kept": 0,
+            "removed": 1,
+            "compiled": true,
+            "compilerStatus": "UpToDate",
+            "saved": true
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [
+          "EditorScriptingUtilities"
+        ],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "destructive",
+        "idempotency": "non-idempotent",
+        "longRunning": false,
+        "safeToRetry": false
+      },
+      "policy": {
+        "requiredScope": "destructive",
+        "consent": "explicit",
+        "dataAccess": "project-write"
+      },
+      "cost": {
+        "latency": "interactive",
+        "resources": "medium"
+      },
+      "routing": {
+        "parentTool": "manage_blueprint",
+        "dispatchAction": "write_graph_from_code"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "0a0d905452c6a4c51bd3a7b76548d608f9483c5badea916e26746c5e8a180927",
+        "content": "c9c97ca2877fc2ad4b56000f0dd0565d724571b85cfc5aa0900a28db182a5349"
       }
     },
     {
@@ -103333,7 +103553,8 @@
           "c++ actor class",
           "c++ component",
           "c++ code",
-          "write c++ code"
+          "write c++ code",
+          "write code in c++"
         ],
         "summary": "Create a new C++ class in a project module, as the editor's New C++ Class does: a header and a .cpp from a parent class (Actor, Character, ActorComponent, Object ..., or None for a plain class), then the editor's own compile.",
         "whenToUse": [
@@ -103486,7 +103707,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "600314501a4aeca82e644a36a6505a13ce12de4ddf1473f9377d56b252b7e521",
-        "content": "e0ef7e0526707e2f4be50bf96a54d310289961d030474fc885ae322f6b30a235"
+        "content": "c327bb7793afddb90e98b8b2a42969edc9b97719e6156d552107ae8b087f8b79"
       }
     },
     {

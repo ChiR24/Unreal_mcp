@@ -120,8 +120,7 @@ FString FDecompiler::Run(TSet<int32>& OutPlaced, TArray<FString>& OutWarnings)
     const auto HasExec = [](const TArray<FPin>& Pins) { return Pins.ContainsByPredicate([](const FPin& Pin) { return Pin.bExec; }); };
     for (int32 At = 0; At < Graph.Nodes.Num(); ++At)
     {
-        const FNode& Node = Graph.Nodes[At];
-        if (Node.Kind != EKind::Return && HasExec(Node.Outs) && !HasExec(Node.Ins))
+        if (IsEntry(Graph.Nodes[At]))
         {
             Entries.Add(At);
         }
@@ -166,9 +165,8 @@ FString FDecompiler::Run(TSet<int32>& OutPlaced, TArray<FString>& OutWarnings)
         const FNode& Node = Graph.Nodes[Entry];
         Visited.Add(Entry);
         Placed.Add(Entry);
-        int32 Bar = INDEX_NONE;
         const bool bEvent = Node.TypeId.StartsWith(TEXT("AddEvent|"), ESearchCase::CaseSensitive);
-        const FString Name = bEvent ? Node.TypeId.Mid(9) : Node.TypeId.FindLastChar(TEXT('|'), Bar) ? Node.TypeId.Mid(Bar + 1) : Node.TypeId;
+        const FString Name = EntryName(Node.TypeId);
         TArray<FString> Params;
         FBindings Bindings;
         for (int32 Out = 0; Out < Node.Outs.Num(); ++Out)

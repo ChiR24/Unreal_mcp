@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `5c3edc74aa2d4650`
+Catalog revision: `0b875b14b2156784`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 426 capabilities across
+The catalog declares 427 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -44,7 +44,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_ai` | 16 | 2 | 14 | 0 | manage ai |
 | `manage_asset` | 47 | 10 | 32 | 5 | asset, datatable, enum, material, struct, texture |
 | `manage_audio` | 14 | 3 | 11 | 0 | audio |
-| `manage_blueprint` | 34 | 9 | 19 | 6 | blueprint, widget |
+| `manage_blueprint` | 35 | 9 | 19 | 7 | blueprint, widget |
 | `manage_character` | 10 | 2 | 8 | 0 | manage character |
 | `manage_combat` | 6 | 1 | 5 | 0 | manage combat |
 | `manage_effect` | 13 | 2 | 9 | 2 | manage effect |
@@ -62,7 +62,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-65 of 426 capabilities require consent.
+66 of 427 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -89,6 +89,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `blueprint.remove_scs_component` | `manage_blueprint` | `remove_scs_component` | destructive | explicit |
 | `blueprint.remove_variable` | `manage_blueprint` | `remove_variable` | destructive | explicit |
 | `blueprint.remove_widget` | `manage_blueprint` | `remove_widget` | destructive | explicit |
+| `blueprint.write_graph_from_code` | `manage_blueprint` | `write_graph_from_code` | destructive | explicit |
 | `build_environment.delete` | `build_environment` | `delete` | destructive | explicit |
 | `build_environment.remove_foliage` | `build_environment` | `remove_foliage` | destructive | explicit |
 | `build_environment.remove_spline_point` | `build_environment` | `remove_spline_point` | destructive | explicit |
@@ -221,6 +222,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `blueprint.remove_widget` | `manage_blueprint` | `remove_widget` | destructive | destructive | explicit | `manage_blueprint.remove_widget` |
 | `blueprint.set_font` | `manage_blueprint` | `set_font` | write | write | none | `manage_blueprint.set_font` `manage_blueprint.set_margin` |
 | `blueprint.set_widget_layout` | `manage_blueprint` | `set_anchor` | write | write | none | `manage_blueprint.set_widget_layout` `manage_blueprint.set_anchor` `manage_blueprint.set_position` `manage_blueprint.set_size` `manage_blueprint.set_alignment` `manage_blueprint.set_padding` `manage_blueprint.set_z_order` `manage_blueprint.set_visibility` `manage_blueprint.set_clipping` `manage_blueprint.set_render_transform` `manage_blueprint.set_style` |
+| `blueprint.write_graph_from_code` | `manage_blueprint` | `write_graph_from_code` | destructive | destructive | explicit | `manage_blueprint.write_graph_from_code` |
 | `build_environment.add_foliage` | `build_environment` | `add_foliage` | write | write | none | `build_environment.add_foliage` `build_environment.add_foliage_instances` `build_environment.paint_foliage` |
 | `build_environment.bake_lightmap` | `build_environment` | `bake_lightmap` | write | write | none | `build_environment.bake_lightmap` |
 | `build_environment.build_lighting` | `build_environment` | `build_lighting` | write | write | none | `build_environment.build_lighting` |

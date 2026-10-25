@@ -1,7 +1,7 @@
 /**
- * read_graph_as_code: a Blueprint's graphs as the S-expression text of Epic's UE 5.8 Blueprint DSL (plugin
- * Domains/BlueprintGraph/Code). Its own record: folded into a family, its action name's words would join the
- * family primary's aliases.
+ * read_graph_as_code and write_graph_from_code: a Blueprint's graphs as the S-expression text of Epic's UE 5.8
+ * Blueprint DSL, and that text written back as nodes (plugin Domains/BlueprintGraph/Code). Own records: folded into a
+ * family, their action names' words would join the family primary's aliases.
  */
 import type { CapabilityRecordSource } from '../../model.js';
 import { BP_PLUGINS, buildRecord } from './helpers.js';
@@ -55,6 +55,59 @@ export const GRAPH_CODE_RECORDS: readonly CapabilityRecordSource[] = [
       links: ['n8c1d0e.then -> n1f2e3d.execute'],
       nodeCount: 2,
       linkCount: 1,
+    },
+  }),
+  buildRecord({
+    id: 'blueprint.write_graph_from_code',
+    action: 'write_graph_from_code',
+    family: 'code',
+    domain: 'blueprint',
+    topics: ['write blueprint as code', 'blueprint from text', 'rewrite event body', 'rewrite function body', 'code into blueprint nodes'],
+    summary: 'Write a Blueprint\'s logic from text, on every UE 5.x: each (event Name ...) or (fn Name (Params) ...) form replaces that event\'s or function\'s body with nodes made from its statements, in the grammar read_graph_as_code prints (Epic\'s UE 5.8 Blueprint DSL), so the way to edit is read, change the text, write it back. A statement is (Category|Title args... :Pin value (:ExecPin stmts...)), the node named by its action-menu id as read_graph_as_code prints it (positional arguments fill the data inputs in order, :Pin names one, a (:Pin ...) continuation runs from that exec output and sees the node\'s outputs as _pin_name); (bind name (Call ...)) or (bind (first _ third) (Call ...)) names outputs for later statements (a name is bound once); (if cond ... (elif cond ...) (else ...)), (for i (range n) ...), (for i (range a b) ...), (for item array ...), (while cond ...), (break), (switch int|string|name value (:Case ...) (:Default ...)), (return values...), (goto id [Pin]) on to the node with that id (a statement of this code by its ; comment, or a node the write leaves in the graph, so one event can be rewritten alone). Values: names, literals ("text", 5, 1.5, true), (+ - * / % == != < <= > >= and or xor a b), (not x), (- x), (select cond a b), (.x .y .z .pitch .yaw .roll .location .rotation .scale value), self. An entry\'s inputs are names by their pin names, as read_graph_as_code lists them (an (fn) head must list only names the function has; an (event) head\'s list is optional): code names inputs, add_function or add_event makes them. An event the graph lacks is made (a custom event as Custom|Name); a function must exist (FUNCTION_NOT_FOUND). A form with no statements leaves that body as it is. What goes: the nodes only that event or function reached (its flow and the values that flow read); a node another event also runs stays, and events and functions the code does not name are not touched; a function keeps its return nodes when the new body makes none. A statement whose ; comment names a node of the old body by its id (as read_graph_as_code tags every statement) keeps that node when it is of the same kind (its GUID, position and comment stay; its links and inputs are set afresh), so read, edit, write changes only what was edited; new nodes then go beside the nodes they are wired to. Code without such ids makes every node new, laid out in columns from its event, a new event below the graph. All or nothing: a parse error, an unknown node id (the reply lists the ids the menu offers for that title), an undefined name, too many arguments, a pin the node lacks, or code that leaves a Blueprint that compiled not compiling is refused with its line and nothing changes (CODE_PARSE_ERROR, CODE_INVALID, CODE_BREAKS_COMPILE with compileMessages). The reply reads the written graphs back as code with the new nodes\' ids. Refused during Play In Editor (PIE_ACTIVE). The first call after the editor starts takes several seconds while the editor builds its node menu.',
+    whenToUse: [
+      'An event\'s or function\'s logic should be written or rewritten in one call instead of node by node.',
+      'A graph read with read_graph_as_code should be changed: edit the text and write it back.',
+    ],
+    whenNotToUse: [
+      'One node, link or pin default should change and the rest stay exactly as it is (node GUIDs included): create_node, connect_pins, set_pin_default_value.',
+      'Variables, functions or event inputs must be added: add_variable, add_function, add_event.',
+    ],
+    inputProps: {
+      blueprintPath: P.blueprintPath,
+      code: { type: 'string', description: 'One or more (event Name [(Params)] stmts...) and (fn Name (Params) stmts...) forms, as read_graph_as_code prints them; ; comments are ignored except the node ids gotos name.' },
+      graphName: { type: 'string', description: 'The event graph (event) forms go into (default: the first). An (fn) form always goes into its own function.' },
+    },
+    required: ['blueprintPath', 'code'],
+    outputProps: {
+      code: { type: 'string', description: 'The written graphs read back as read_graph_as_code prints them, with the new nodes\' ids.' },
+      forms: { type: 'array', items: ROW, 'x-unreal-reflection-boundary': true, description: 'One row per form: form ("event Name" or "fn Name"), graph, nodes (made for it) and entryMade (true when its event was made).' },
+      created: { type: 'number', description: 'Nodes made, new events included.' },
+      kept: { type: 'number', description: 'Old-body nodes kept by the ids in the code\'s ; comments.' },
+      removed: { type: 'number', description: 'Nodes of the old bodies removed.' },
+      compileMessages: { type: 'array', items: { type: 'string' }, description: 'Compiler messages on the nodes made, as "line N error: ..." or "line N warning: ...", N the line of the statement that made the node.' },
+      compiled: { type: 'boolean', description: 'True when the Blueprint compiles after the write (warnings allowed).' },
+      compilerStatus: { type: 'string', description: 'Blueprint status after the compile.' },
+      diagnostics: { type: 'array', items: ROW, 'x-unreal-reflection-boundary': true, description: 'Compile messages: { severity, message }.' },
+      saved: { type: 'boolean', description: 'Whether the Blueprint was saved.' },
+    },
+    outputRequired: ['code'],
+    effect: 'destructive',
+    behavior: { safeToRetry: false },
+    latency: 'interactive',
+    resources: 'medium',
+    plugins: BP_PLUGINS,
+    exampleInput: { action: 'write_graph_from_code', blueprintPath: '/Game/Blueprints/BP_Door', code: '(event EventBeginPlay\n  (Development|PrintString "Door ready"))' },
+    exampleOutput: {
+      success: true,
+      message: 'Wrote 1 form(s) into BP_Door: 1 node(s) made, 0 kept, 1 removed.',
+      code: '; graph EventGraph\n(event EventBeginPlay  ; n8c1d0e\n  (Development|PrintString "Door ready"))  ; n5a6b7c\n',
+      forms: [{ form: 'event EventBeginPlay', graph: 'EventGraph', nodes: 1, entryMade: false }],
+      created: 1,
+      kept: 0,
+      removed: 1,
+      compiled: true,
+      compilerStatus: 'UpToDate',
+      saved: true,
     },
   }),
 ];

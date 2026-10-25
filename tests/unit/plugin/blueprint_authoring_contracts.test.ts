@@ -183,7 +183,7 @@ describe('build_graph: an overlapping explicit position moves the node instead o
   it('every create path places a node that named no position instead of refusing it', () => {
     const overlap = read('Foundation', 'GraphLayout', 'McpGraphOverlap.h');
     expect(overlap).toContain('for (int32 Step = 0; bOverlaps && bAutoPlace && Step < 8; ++Step)');
-    expect(read('Domains', 'BlueprintGraph', 'McpBPGraphPrivate.h')).toContain('McpGraphLayout::NamesNoPosition(Payload)))');
+    expect(read('Domains', 'BlueprintGraph', 'Context', 'McpBPGraphContextShared.cpp')).toContain('McpGraphLayout::NamesNoPosition(Payload)))');
     for (const file of ['McpBPGraphNodeCreationDynamic.cpp', 'McpBPGraphSpecialNodes.cpp', 'McpBPGraphConstructObjectNodes.cpp',
       'Behaviour/McpBPBehaviourBindNodes.cpp', 'Behaviour/McpBPBehaviourNodes.cpp']) {
       expect(read('Domains', 'BlueprintGraph', ...file.split('/'))).toContain('McpGraphLayout::NamesNoPosition(Context.Payload)))');

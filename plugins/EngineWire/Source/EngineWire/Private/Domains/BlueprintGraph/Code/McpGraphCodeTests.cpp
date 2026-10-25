@@ -194,7 +194,7 @@ bool FMcpGraphCodeDecompileTest::RunTest(const FString& Parameters)
     {
         FFakeGraph G;
         const int32 Event = G.Event();
-        const int32 Sequence = G.Add(TEXT("Utilities|FlowControl|Sequence"), {ExecPin(TEXT("execute"))}, {ExecPin(TEXT("then_0")), ExecPin(TEXT("then_1"))}, EKind::Sequence);
+        const int32 Sequence = G.Add(TEXT("Utilities|FlowControl|Sequence"), {ExecPin(TEXT("execute"))}, {ExecPin(TEXT("then_0")), ExecPin(TEXT("then_1"))});
         const int32 A = G.Print(TEXT("a"));
         const int32 B = G.Print(TEXT("b"));
         const int32 Shared = G.Print(TEXT("shared"));
@@ -204,7 +204,8 @@ bool FMcpGraphCodeDecompileTest::RunTest(const FString& Parameters)
         G.Link(A, TEXT("then"), Shared);
         G.Link(B, TEXT("then"), Shared);
         const FString Text = G.Read();
-        TestTrue(TEXT("a second path into a printed node says where it goes"), Has(Text, TEXT("; n2 sequence")) && Has(Text, TEXT("(goto n5)")));
+        TestTrue(TEXT("a sequence keeps its outputs; a second path into a printed node says where it goes"),
+                 Has(Text, TEXT("(Utilities|FlowControl|Sequence  ; n2")) && Has(Text, TEXT("(:then_0")) && Has(Text, TEXT("(:then_1")) && Has(Text, TEXT("(goto n5)")));
         Parses(TEXT("goto"), Text);
     }
     {

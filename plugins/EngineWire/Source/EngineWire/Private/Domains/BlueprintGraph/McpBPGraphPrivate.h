@@ -142,45 +142,12 @@ struct FActionContext
         NewNode->NodePosX = X;
         NewNode->NodePosY = Y;
         NodeCreator.Finalize();
-        // Refuse stacked placements: the node is already in the graph at this
-        // point (FGraphNodeCreator adds it on CreateNode), so pull it back out
-        // on overlap and fail with coordinates instead of silently stacking.
-        FString OverlapMessage;
-        TSharedPtr<FJsonObject> OverlapDetails;
-        if (McpGraphLayout::RefuseOverlappingNode(TargetGraph, NewNode, X, Y, OverlapMessage, OverlapDetails,
-                                                  McpGraphLayout::NamesNoPosition(Payload)))
-        {
-            SendErrorWithDetails(OverlapMessage, TEXT("NODE_OVERLAP"), OverlapDetails);
-            return;
-        }
-        FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-        SaveLoadedAssetThrottled(Blueprint);
-
-        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-        // `nodeGuid` is the name blueprint.create_node/add_event declare and
-        // mark REQUIRED in their output schema. The gateway projects the result
-        // to schema-declared names only, so emitting just `nodeId` projected to
-        // an empty payload and turned every successful node creation into
-        // OUTPUT_SCHEMA_VIOLATION — the node existed in the graph while the
-        // caller was told it failed. Both names are emitted: `nodeGuid` for the
-        // canonical contract, `nodeId` for the WebSocket surface and for
-        // delete_node/connect_pins, which consume that spelling.
-        const FString NodeGuidText = NewNode->NodeGuid.ToString();
-        Result->SetStringField(TEXT("nodeGuid"), NodeGuidText);
-        Result->SetStringField(TEXT("nodeId"), NodeGuidText);
-        Result->SetStringField(TEXT("nodeName"), NewNode->GetName());
-        // Callers place nodes by coordinate but were told nothing back about
-        // where the node actually landed or how big it is, so consecutive
-        // creates silently stacked on top of each other.
-        const FString PlacementWarning =
-            McpGraphLayout::AddNodePlacementFields(Result, *NewNode);
-        McpHandlerUtils::AddVerification(Result, Blueprint);
-        SendResponse(
-            PlacementWarning.IsEmpty()
-                ? FString(TEXT("Node created."))
-                : FString::Printf(TEXT("Node created. %s"), *PlacementWarning),
-            Result);
+        FinishCreatedNode(NewNode, X, Y);
     }
+
+    // The node is in the graph at (X, Y): refuse it on an overlap (pulled back out, with coordinates), else mark the
+    // Blueprint changed, save and reply with nodeGuid and where it landed.
+    void FinishCreatedNode(UEdGraphNode* NewNode, float X, float Y) const;
 };
 
 bool ValidateProvidedPaths(const FActionContext& Context);

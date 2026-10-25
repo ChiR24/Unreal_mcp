@@ -342,6 +342,7 @@ const testCases = [
   { scenario: 'VERIFY: native-field connected pin state', toolName: 'manage_blueprint', arguments: { action: 'get_pin_details', blueprintPath: BP_PATH, nodeId: '${captured:seqNodeId}', pinName: 'then_0', graphName: 'EventGraph' }, expected: 'success', assertions: [{ path: 'structuredContent.result.pins', includesObject: { pinName: 'then_0', linkedTo: { length: 1 } }, label: 'then_0 has one real graph link after native-field connect_pins' }] },
   { scenario: 'INFO: get_node_details followExec walks the exec wires', toolName: 'manage_blueprint', arguments: { action: 'get_node_details', blueprintPath: BP_PATH, nodeGuid: '${captured:seqNodeId}', graphName: 'EventGraph', followExec: 3 }, expected: 'success', assertions: [{ path: 'structuredContent.result.chain', includesObject: { nodeTitle: 'Print String' }, label: 'the Sequence reaches Print String through then_0' }] },
   { scenario: 'ACTION: arrange_nodes moves a node beside what runs it', toolName: 'manage_blueprint', arguments: { action: 'arrange_nodes', blueprintPath: BP_PATH, graphName: 'EventGraph', nodeIds: ['${captured:printNodeId}'] }, expected: 'success', assertions: [{ path: 'structuredContent.result.moved', includesObject: { nodeTitle: 'Print String' }, label: 'the Print String moved beside the Sequence that runs it' }] },
+  { scenario: 'ACTION: arrange_nodes lays nodes out in columns along their links', toolName: 'manage_blueprint', arguments: { action: 'arrange_nodes', blueprintPath: BP_PATH, graphName: 'EventGraph', nodeIds: ['${captured:seqNodeId}', '${captured:printNodeId}'], layout: 'layered' }, expected: 'success' },
 
   // === ACTION: break_pin_links via nodeId alias ===
   { scenario: 'ACTION: break_pin_links via nodeId', toolName: 'manage_blueprint', arguments: { action: 'break_pin_links', blueprintPath: BP_PATH, nodeId: '${captured:seqNodeId}', pinName: 'then_0', graphName: 'EventGraph' }, expected: 'success' },
@@ -430,6 +431,36 @@ const testCases = [
   ] },
   { scenario: 'INFO: read_graph_as_code reads every event graph and function by default', toolName: 'manage_blueprint', arguments: { action: 'read_graph_as_code', blueprintPath: CODE_BP_PATH }, expected: 'success', assertions: [{ path: 'structuredContent.result.graphs', length: 2, label: 'the event graph and the construction script' }, { path: 'structuredContent.result.graphs.1.kind', equals: 'function', label: 'the construction script is a function' }] },
   { scenario: 'ERROR: read_graph_as_code names the graphs when one is missing', toolName: 'manage_blueprint', arguments: { action: 'read_graph_as_code', blueprintPath: CODE_BP_PATH, graphName: 'NoSuchGraph' }, expected: 'error|GRAPH_NOT_FOUND' },
+  // === CODE: write_graph_from_code writes such text back as nodes ===
+  { scenario: 'CODE: write_graph_from_code replaces the event body with a loop', toolName: 'manage_blueprint', arguments: { action: 'write_graph_from_code', blueprintPath: CODE_BP_PATH, graphName: 'EventGraph', code: '(event Custom|OnCodeProbe\n  (for _ (range 3)\n    (Development|PrintString "loop")))' }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.code', includes: '(for _ (range 3)', label: 'the event reads back as written' },
+    { path: 'structuredContent.result.removed', equals: 3, label: 'the old branch and its two prints are gone' },
+    { path: 'structuredContent.result.forms.0.nodes', equals: 2, label: 'a loop and a print were made' },
+    { path: 'structuredContent.result.compiled', equals: true, label: 'the Blueprint compiles' },
+  ] },
+  { scenario: 'INFO: read the loop back with its node ids', toolName: 'manage_blueprint', arguments: { action: 'read_graph_as_code', blueprintPath: CODE_BP_PATH, graphName: 'EventGraph' }, expected: 'success', captureResult: { key: 'codeLoopText', fromField: 'result.code' } },
+  { scenario: 'CODE: write_graph_from_code keeps the nodes its ids name', toolName: 'manage_blueprint', arguments: { action: 'write_graph_from_code', blueprintPath: CODE_BP_PATH, graphName: 'EventGraph', code: '${captured:codeLoopText}' }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.kept', equals: 2, label: 'the loop and the print kept their nodes' },
+    { path: 'structuredContent.result.created', equals: 0, label: 'nothing new was made' },
+    { path: 'structuredContent.result.removed', equals: 0, label: 'nothing was removed' },
+  ] },
+  { scenario: 'INFO: read the loop print node id', toolName: 'manage_blueprint', arguments: { action: 'read_graph_as_code', blueprintPath: CODE_BP_PATH, graphName: 'EventGraph' }, expected: 'success', captureResult: { key: 'codePrintId', fromField: 'result.nodes', where: { path: 'type', equals: 'Development|PrintString' }, selectField: 'id' } },
+  { scenario: 'CODE: write_graph_from_code goes on into a node of an event it leaves alone', toolName: 'manage_blueprint', arguments: { action: 'write_graph_from_code', blueprintPath: CODE_BP_PATH, graphName: 'EventGraph', code: '(event Custom|OnCodeGoto\n  (goto ${captured:codePrintId}))' }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.forms.0.entryMade', equals: true, label: 'the new event was made' },
+    { path: 'structuredContent.result.code', includes: '(goto n', label: 'it runs on into the print the loop event keeps' },
+  ] },
+  { scenario: 'Setup: a function with an input and a return value', toolName: 'manage_blueprint', arguments: { action: 'add_function', blueprintPath: CODE_BP_PATH, functionName: 'Twice', inputs: [{ name: 'Value', type: 'Integer' }], outputs: [{ name: 'Result', type: 'Integer' }] }, expected: 'success' },
+  { scenario: 'CODE: write_graph_from_code writes a function body that returns a value', toolName: 'manage_blueprint', arguments: { action: 'write_graph_from_code', blueprintPath: CODE_BP_PATH, code: '(fn Twice (Value)\n  (return (* Value 2)))' }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.code', includes: '(return (* Value 2))', label: 'the function reads back as written' },
+    { path: 'structuredContent.result.compiled', equals: true, label: 'the Blueprint compiles' },
+  ] },
+  { scenario: 'ERROR: write_graph_from_code refuses a name nothing binds', toolName: 'manage_blueprint', arguments: { action: 'write_graph_from_code', blueprintPath: CODE_BP_PATH, code: '(event Custom|OnCodeProbe\n  (Development|PrintString Missing))' }, expected: 'error|CODE_INVALID' },
+  { scenario: 'INFO: the refused write changed nothing', toolName: 'manage_blueprint', arguments: { action: 'read_graph_as_code', blueprintPath: CODE_BP_PATH, graphName: 'EventGraph' }, expected: 'success', assertions: [{ path: 'structuredContent.result.code', includes: '(for _ (range 3)', label: 'the loop is still the body' }] },
+  { scenario: 'ERROR: write_graph_from_code refuses a function the Blueprint lacks', toolName: 'manage_blueprint', arguments: { action: 'write_graph_from_code', blueprintPath: CODE_BP_PATH, code: '(fn NoSuchFunction ()\n  (return))' }, expected: 'error|FUNCTION_NOT_FOUND' },
+  { scenario: 'CODE: write_graph_from_code adds a string switch case by its name', toolName: 'manage_blueprint', arguments: { action: 'write_graph_from_code', blueprintPath: CODE_BP_PATH, code: '(event Custom|OnCodeProbe\n  (switch string "Hello"\n    (:Hello\n      (Development|PrintString "hi"))))' }, expected: 'success', assertions: [{ path: 'structuredContent.result.code', includes: '(:Hello', label: 'the case pin is named as written' }] },
+  { scenario: 'CODE: create_node makes a node by its action-menu id', toolName: 'manage_blueprint', arguments: { action: 'create_node', blueprintPath: CODE_BP_PATH, graphName: 'EventGraph', menuId: 'Development|PrintString', posX: 3000, posY: 3000 }, expected: 'success' },
+  { scenario: 'ERROR: create_node refuses a menu id the graph does not offer', toolName: 'manage_blueprint', arguments: { action: 'create_node', blueprintPath: CODE_BP_PATH, graphName: 'EventGraph', menuId: 'Development|NoSuchNodeTitle' }, expected: 'error|MENU_ID_NOT_FOUND' },
+  { scenario: 'ERROR: write_graph_from_code refuses unbalanced code', toolName: 'manage_blueprint', arguments: { action: 'write_graph_from_code', blueprintPath: CODE_BP_PATH, code: '(event Custom|OnCodeProbe' }, expected: 'error|CODE_PARSE_ERROR' },
   { scenario: 'Cleanup: delete the code probe blueprint', toolName: 'manage_asset', arguments: { action: 'delete', path: CODE_BP_PATH, force: true }, expected: 'success|not found' },
 
   // === BATCH: dryRun checks a batch and runs none of it ===

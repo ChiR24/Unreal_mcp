@@ -1,6 +1,7 @@
 #include "Domains/BlueprintGraph/McpBPGraphPrivate.h"
 
 #include "Domains/BlueprintGraph/Behaviour/McpBPBehaviourNodes.h"
+#include "Domains/BlueprintGraph/Code/McpGraphCode.h"
 #include "Editor.h"
 #include "K2Node_MacroInstance.h"
 #include "ScopedTransaction.h"
@@ -152,7 +153,8 @@ bool HandleNodeCreationAction(FActionContext& Context)
         Context.Payload->TryGetNumberField(TEXT("y"), Y);
     }
 
-    if (!(TryCreateCommonFunctionNode(Context, NodeType, X, Y) ||
+    if (!(McpGraphCode::TryCreateMenuNode(Context, X, Y) ||
+          TryCreateCommonFunctionNode(Context, NodeType, X, Y) ||
           TryCreateVariableNode(Context, NodeType, X, Y) ||
           TryCreateFunctionOrEventNode(Context, NodeType, X, Y) ||
           TryCreateCustomEventNode(Context, NodeType, X, Y) ||
