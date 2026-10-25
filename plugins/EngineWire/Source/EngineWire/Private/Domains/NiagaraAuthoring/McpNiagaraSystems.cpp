@@ -95,7 +95,7 @@ static bool CreateNiagaraEmitter(FActionContext& Context)
     Factory->bAddDefaultModulesAndRenderersToEmptyEmitter = true;
     UNiagaraEmitter* NewEmitter = Cast<UNiagaraEmitter>(static_cast<UFactory*>(Factory)->FactoryCreateNew(
         UNiagaraEmitter::StaticClass(), Package, FName(*Context.Name), EmitterFlags, nullptr, GWarn));
-    if (NewEmitter) { NewEmitter->SetUniqueEmitterName(Context.Name); }
+    if (NewEmitter) { McpNameNewEmitterAsset(*NewEmitter); }
 #else
     UNiagaraEmitter* NewEmitter = NewObject<UNiagaraEmitter>(Package, FName(*Context.Name), EmitterFlags);
 #endif
